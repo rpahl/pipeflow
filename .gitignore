@@ -4,7 +4,6 @@
 
 # Session Data files
 .RData
-.RDataTmp
 
 # User-specific files
 .Ruserdata
@@ -20,6 +19,7 @@
 
 # RStudio files
 .Rproj.user/
+*.Rproj
 
 # produced vignettes
 vignettes/*.html
@@ -45,5 +45,11 @@ docs/
 # translation temp files
 po/*~
 
-# RStudio Connect folder
-rsconnect/
+# Visual Studio Code folder
+.vscode
+
+# Temporary office files
+~$*
+
+# rcmdcheck folder
+check

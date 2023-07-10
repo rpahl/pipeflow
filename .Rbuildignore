@@ -1,0 +1,13 @@
+^renv$
+^renv\.lock$
+^.*\.Rproj$
+^\.Rproj\.user$
+^app\.R$
+
+
+.lintr
+.vscode
+
+azure-templates
+azure-pipeline.yml
+README.md
