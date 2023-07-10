@@ -1,7 +1,8 @@
 .replace_string = function(x, target, replacement) {
 
-    if (length(x) == 0)
+    if (length(x) == 0) {
         return(x)
+    }
 
     stopifnot(
         is.character(x),
@@ -11,6 +12,7 @@
     x[x %in% target] = replacement
     x
 }
+
 
 #' @title Pipeline Class
 #'
@@ -37,8 +39,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param name the name of the Pipeline
         #' @param data optional data used in the pipeline (can be set later)
         #' @return returns the `Pipeline` object invisibly
-        initialize = function(name = "", data = NULL)
+        initialize = function(name, data = NULL)
         {
+            if (!is_string(name)) {
+                stop("name must be a string")
+            }
+
+            if (!nzchar(name)) {
+                stop("name must not be empty")
+            }
+
             self$name = name
             self$pipeline <- data.table::data.table(
                 name = character(0),
