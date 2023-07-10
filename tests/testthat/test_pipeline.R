@@ -58,7 +58,7 @@ test_that("pipeline name must be a non-empty string",
 
     expect_error(
         Pipeline$new(name = 1),
-        "name must be a non-empty string"
+        "name must be a string"
     )
 
     expect_error(
