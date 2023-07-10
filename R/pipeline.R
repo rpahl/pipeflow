@@ -26,6 +26,7 @@
 #' @docType class
 #' @importFrom R6 R6Class
 #' @import data.table
+#' @import utils
 #' @export
 Pipeline = R6::R6Class("Pipeline", #nolint
     public = list(

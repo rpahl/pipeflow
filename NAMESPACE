@@ -3,5 +3,6 @@
 export(Pipeline)
 export(pipe_add)
 import(data.table)
+import(utils)
 importFrom(R6,R6Class)
 importFrom(jsonlite,toJSON)

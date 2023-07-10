@@ -53,3 +53,5 @@ po/*~
 
 # rcmdcheck folder
 check
+
+dev

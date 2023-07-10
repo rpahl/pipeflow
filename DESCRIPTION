@@ -7,7 +7,7 @@ Description: Simple but flexible framework for composing, combining and
     modifying custom data analysis pipelines. In nonlinear pipelines,
     dependencies among analysis steps are tracked and can be used to
     re-run only steps that are affected by changes.
-License: MIT
+License: GPL-3
 Imports:
     data.table,
     jsonlite,
@@ -15,8 +15,6 @@ Imports:
     methods,
     R6,
     utils
-Suggests:
-    testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Config/testthat/parallel: true
 Encoding: UTF-8
