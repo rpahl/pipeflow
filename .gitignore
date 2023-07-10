@@ -55,3 +55,7 @@ po/*~
 check
 
 dev
+
+# renv
+renv/
+renv.lock
