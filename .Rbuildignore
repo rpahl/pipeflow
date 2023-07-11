@@ -11,3 +11,7 @@
 azure-templates
 azure-pipeline.yml
 README.md
+
+.github
+.gitignore
+.git
