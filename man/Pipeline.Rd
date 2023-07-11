@@ -61,7 +61,7 @@ Roman Pahl
 \subsection{Method \code{new()}}{
 constructor
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$new(name = "", data = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$new(name, data = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
