@@ -1333,7 +1333,7 @@ lg$config(
     list(
         threshold = "info",
         propagate = FALSE,
-        appenders = lgr::AppenderConsole$new(layout = MyLogLayoutJson$new())
+        appenders = lgr::AppenderConsole$new(layout = LogLayoutJson$new())
     )
 )
 

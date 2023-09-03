@@ -2,7 +2,9 @@
 
 export(Pipeline)
 export(pipe_add)
+export(set_pipeflow_log_layout)
 import(data.table)
 import(utils)
 importFrom(R6,R6Class)
 importFrom(jsonlite,toJSON)
+importFrom(lgr,get_logger)

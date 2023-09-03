@@ -20,7 +20,7 @@ lg$config(
     list(
         threshold = "info",
         propagate = FALSE,
-        appenders = lgr::AppenderConsole$new(layout = MyLogLayoutJson$new())
+        appenders = lgr::AppenderConsole$new(layout = LogLayoutJson$new())
     )
 )
 
@@ -259,7 +259,7 @@ test_that("unsupported condition throws",
 
 layout <- switch(oldLayout,
     "text" = lgr::LayoutFormat$new(),
-    "myJson" = MyLogLayoutJson$new()
+    "myJson" = LogLayoutJson$new()
 )
 
 lg$config(
