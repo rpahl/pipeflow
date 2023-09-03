@@ -5,12 +5,15 @@
 \alias{Pipeline}
 \title{Pipeline Class}
 \description{
-This class implements an analysis pipeline. A pipeline is
-consists of several steps, which can be added one by one and depend on each
-other. The pipeline manages the dependencies among these steps and how
-output is stored once the pipeline is being executed. Several pipelines can
-be bound together while preserving all dependencies within each
-sub-pipeline.
+This class implements an analysis pipeline. A pipeline consists
+of a sequence of analysis steps, which can be added one by one. Each added
+step may or may not depend on one or more previous steps. The pipeline
+keeps track of the dependencies among these steps and will ensure that
+all dependencies are met on creation of the pipeline, that is, before the
+the pipeline is executed. Once the pipeline is executed, the output is
+stored in the pipeline along with each step and can be accessed later.
+Different pipelines can be bound together while preserving all dependencies
+within each pipeline.
 }
 \author{
 Roman Pahl
