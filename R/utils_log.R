@@ -122,8 +122,8 @@ tryCatchLog <- function (expr, ..., # nolint
 #' @importFrom lgr get_logger
 #' @export
 #' @examples
-#' set_pipeflow_log_layout("json")
-set_pipeflow_log_layout <- function(layout)
+#' set_log_layout("json")
+set_log_layout <- function(layout)
 {
     selected_layout <- switch(
         layout,
@@ -132,7 +132,7 @@ set_pipeflow_log_layout <- function(layout)
         stop("unknown log layout '", layout, "'")
     )
 
-    lg = lgr::get_logger(name = "pipeflow")
+    lg = lgr::get_logger(name = .this_package_name())
 
     lg$config(
         list(
