@@ -16,5 +16,7 @@ invisibly returns logger object
 Set pipeflow log layout
 }
 \examples{
-set_log_layout("json")
+lg <- set_log_layout("json")
+print(lg)
+set_log_layout("text")
 }

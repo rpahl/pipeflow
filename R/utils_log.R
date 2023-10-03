@@ -122,7 +122,9 @@ tryCatchLog <- function (expr, ..., # nolint
 #' @importFrom lgr get_logger
 #' @export
 #' @examples
-#' set_log_layout("json")
+#' lg <- set_log_layout("json")
+#' print(lg)
+#' set_log_layout("text")
 set_log_layout <- function(layout)
 {
     selected_layout <- switch(
