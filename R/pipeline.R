@@ -343,7 +343,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             step <- self$get_step(name)
 
-            step[['params']] |>
+            step[["params"]] |>
                 unlist1() |>
                 filter_desired_parameters() |>
                 as.list()
