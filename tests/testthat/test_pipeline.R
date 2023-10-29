@@ -1,52 +1,3 @@
-lgr::suspend_logging()
-
-# replace string in vector
-
-test_that("x must be a character unless its of zero length", {
-    expect_error(.replace_string(1:4, "1", "2"))
-    expect_no_error(.replace_string(as.character(1:4), "1", "2"))
-
-    x = list()
-    expect_equal(.replace_string(x, "1", "2"), x)
-
-    x = numeric(0)
-    expect_equal(.replace_string(x, "1", "2"), x)
-})
-
-test_that("target and replacement must be strings", {
-
-    f = .replace_string
-    x = c("1", "2")
-
-    expect_no_error(f(x, target = "1", replacement = "2"))
-
-    expect_error(f(x, target = 1, replacement = "2"))
-    expect_error(f(x, target = c("1", "2"), replacement = "2"))
-    expect_error(f(x, target = "1", replacement = 2))
-    expect_error(f(x, target = "1", replacement = c("1", "2")))
-})
-
-test_that("if target string does not exist, x is not altered", {
-
-    x = character(0)
-    target = "old"
-    res = .replace_string(x, target, "new")
-    expect_equal(res, x)
-
-    x = c("a", "b", "c")
-    res = .replace_string(x, target, "new")
-    expect_equal(res, x)
-})
-
-test_that("if target string exists, it is replaced correctly", {
-
-    x = c("a", "b", "c", "a")
-    res = .replace_string(x, target = "a", replacement = "z")
-    expect_equal(res, c("z", "b", "c", "z"))
-
-    res = .replace_string(x, target = "b", replacement = "z")
-    expect_equal(res, c("a", "z", "c", "a"))
-})
 
 # Pipeline
 
@@ -67,6 +18,7 @@ test_that("pipeline name must be a non-empty string",
     )
 })
 
+
 ## add
 
 test_that("name must be non-empty string", {
@@ -84,9 +36,85 @@ test_that("duplicated names are signaled", {
     foo <- function(a = 0) a
 
     pip$add("f1", foo)
-    expect_error(pip$add("f1", foo), "name 'f1' already exists")
-    expect_error(pip$add("f1", function(x) x), "name 'f1' already exists")
+    expect_error(pip$add("f1", foo), "step 'f1' already exists")
+    expect_error(pip$add("f1", function(x) x), "step 'f1' already exists")
 })
+
+
+# append
+
+test_that("combined pipelines must not have the same names", {
+    pip1 <- Pipeline$new("pipe1")
+    pip2 <- Pipeline$new("pipe2")
+
+    expect_no_error(pip1$append(pip2))
+
+    pip2$name = pip1$name
+    expect_error(pip1$append(pip2))
+})
+
+test_that("pipelines can be combined even if their steps share names", {
+    pip1 <- Pipeline$new("pipe1", data = 1) |>
+        pipe_add("f1", function(a = 1) a, keepOut = TRUE) |>
+        pipe_add("f2", function(b = ~f1, c = ~.data, keepOut = FALSE) b + c)
+
+    pip2 <- Pipeline$new("pipe2") |>
+        pipe_add("f1", function(a = 10) a, keepOut = FALSE) |>
+        pipe_add("f2", function(b = ~f1) b, keepOut = TRUE)
+
+    pp <- pip1$append(pip2)
+    expect_equal(pp$length(), pip1$length() + pip2$length())
+
+    out1 <- pip1$execute()$collect_out()
+    out2 <- pip2$execute()$collect_out()
+
+    out <- pp$execute()$collect_out()
+
+    expect_equivalent(out, c(out1, out2))
+})
+
+test_that("output of first can be used as data input of appended pipeline", {
+
+    pip1 <- Pipeline$new("pipe1", data = 1) |>
+        pipe_add("f1", function(a = ~.data) a, keepOut = TRUE) |>
+        pipe_add("f2", function(b = 2) b + b, keepOut = TRUE)
+
+    pip2 <- Pipeline$new("pipe2") |>
+        pipe_add("f3", function(a2 = ~.data) 2 * a2, keepOut = TRUE) |>
+        pipe_add("f4", function(b = 3, c = 4) b + c, keepOut = TRUE) |>
+        pipe_add("f5", function(x = ~.data, y = ~f4) x * y, keepOut = TRUE)
+
+    pp <- pip1$append(pip2, outAsIn = TRUE)
+
+    out <- pp$execute()$collect_out()
+
+    expect_equal(out[["f3"]][[1]], 2 * out[["f2"]][[1]])
+    expect_equal(out[["f5"]][[1]], out[["f2"]][[1]] * out[["f4"]][[1]])
+})
+
+test_that("out of previous can be used as input of appended pipelines", {
+
+    pip1 <- Pipeline$new("pipe1", data = 1) |>
+        pipe_add("f1", function(a = ~.data) a + a)
+
+    pip2 <- Pipeline$new("pipe2") |>
+        pipe_add("f1", function(a = ~.data) a + a)
+
+    pip3 <- Pipeline$new("pipe3") |>
+        pipe_add("f1", function(a = ~.data) a + a, keepOut = TRUE)
+
+    pp <- pip1$append(pip2, outAsIn = TRUE)$append(pip3, outAsIn = TRUE)
+
+    out <- pp$execute()$collect_out()
+
+    a = 1
+    f1 = a + a
+    f2 = f1 + f1
+    f3 = f2 + f2
+
+    expect_equal(out[["f1"]][["pipe3.f1"]], f3)
+})
+
 
 # get_data
 
@@ -105,7 +133,7 @@ test_that("pipeline can be printed", {
 test_that("data is set as first step but not part of output by default", {
     dat <- data.frame(a = 1:2, b = 1:2)
     pip <- Pipeline$new("pipe1", data = dat)
-    expect_equal(pip$pipeline[["name"]], ".data")
+    expect_equal(pip$pipeline[["step"]], ".data")
 
     out <- pip$execute()$collect_out()
     expect_equal(out, list())
@@ -213,7 +241,7 @@ test_that("step names be retrieved", {
         pipe_add("f1", function() {}) |>
         pipe_add("f2", function(x = 1) x)
 
-    expect_equal(pip$get_step_names(), pip$pipeline[["name"]])
+    expect_equal(pip$get_step_names(), pip$pipeline[["step"]])
 })
 
 test_that("if function result is a list, all names are preserved", {
@@ -330,8 +358,8 @@ test_that("output can be grouped", {
         )
     )
 
-    out_ungrouped = pip$collect_out(groupBy = "name")
-    expect_equal(names(out_ungrouped), pip$pipeline[["name"]][-1])
+    out_ungrouped = pip$collect_out(groupBy = "step")
+    expect_equal(names(out_ungrouped), pip$pipeline[["step"]][-1])
     names(out_ungrouped)
 
     hasSameOutValues = setequal(unlist(out_grouped), unlist(out_ungrouped))
@@ -383,88 +411,6 @@ test_that("pipeline execution can cope with void functions", {
     expect_equal(out, list(f1 = list(f1 = list()), f2 = list(f2 = 2)))
 })
 
-# append pipelines
-
-test_that("combined pipelines must not have the same names", {
-    pip1 <- Pipeline$new("pipe1")
-    pip2 <- Pipeline$new("pipe2")
-
-    expect_no_error(pip1$append(pip2))
-
-    pip2$name = pip1$name
-    expect_error(pip1$append(pip2))
-})
-
-test_that("pipelines can be combined even if their steps share names", {
-    pip1 <- Pipeline$new("pipe1", data = 1) |>
-        pipe_add("f1", function(a = 1) a, keepOut = TRUE) |>
-        pipe_add("f2", function(b = ~f1, c = ~.data, keepOut = FALSE) b + c)
-
-    pip2 <- Pipeline$new("pipe2") |>
-        pipe_add("f1", function(a = 10) a, keepOut = FALSE) |>
-        pipe_add("f2", function(b = ~f1) b, keepOut = TRUE)
-
-    pp <- pip1$append(pip2)
-    expect_equal(pp$length(), pip1$length() + pip2$length())
-
-    out1 <- pip1$execute()$collect_out()
-    out2 <- pip2$execute()$collect_out()
-
-    out <- pp$execute()$collect_out()
-
-    expect_equivalent(out, c(out1, out2))
-})
-
-test_that("output of first can be used as data input of appended pipeline", {
-
-    pip1 <- Pipeline$new("pipe1", data = 1) |>
-        pipe_add("f1", function(a = ~.data) a, keepOut = TRUE) |>
-        pipe_add("f2", function(b = 2) b + b, keepOut = TRUE)
-
-    pip2 <- Pipeline$new("pipe2") |>
-        pipe_add("f3", function(a2 = ~.data) 2 * a2, keepOut = TRUE) |>
-        pipe_add("f4", function(b = 3, c = 4) b + c, keepOut = TRUE) |>
-        pipe_add("f5", function(x = ~.data, y = ~f4) x * y, keepOut = TRUE)
-
-    pp <- pip1$append(pip2, outAsIn = TRUE)
-
-    out <- pp$execute()$collect_out()
-
-    expect_equal(out[["f3"]][[1]], 2 * out[["f2"]][[1]])
-    expect_equal(out[["f5"]][[1]], out[["f2"]][[1]] * out[["f4"]][[1]])
-})
-
-test_that("out of previous can be used as input of appended pipelines", {
-
-    pip1 <- Pipeline$new("pipe1", data = 1) |>
-        pipe_add("f1", function(a = ~.data) a + a)
-
-    pip2 <- Pipeline$new("pipe2") |>
-        pipe_add("f1", function(a = ~.data) a + a)
-
-    pip3 <- Pipeline$new("pipe3") |>
-        pipe_add("f1", function(a = ~.data) a + a, keepOut = TRUE)
-
-    pp <- pip1$append(pip2, outAsIn = TRUE)$append(pip3, outAsIn = TRUE)
-
-    out <- pp$execute()$collect_out()
-
-    a = 1
-    f1 = a + a
-    f2 = f1 + f1
-    f3 = f2 + f2
-
-    expect_equal(out[["f1"]][["pipe3.f1"]], f3)
-})
-
-
-test_that("if pipelines fails, the error message is returned as error", {
-    pip <- Pipeline$new("pipe1") |>
-        pipe_add("f1", function(a = 1) a) |>
-        pipe_add("f2", function(b = ~f1) stop("something went wrong"))
-
-    expect_error(pip$execute(), "something went wrong")
-})
 
 # get_parameters
 
@@ -786,13 +732,13 @@ test_that("parameters can be set at given step", {
     expect_equal(pip$get_parameters_at_step("f2"), list(x = 9))
 })
 
-test_that("name must be passed as a string and params as a list", {
+test_that("step must be passed as a string and params as a list", {
     pip <- Pipeline$new("pipe1") |>
         pipe_add("f1", function(a = 1, b = 2) a + b)
 
     expect_error(
         pip$set_parameters_at_step(1, list(a = 9, b = 99)),
-        "is_string(name) is not TRUE",
+        "is_string(step) is not TRUE",
         fixed = TRUE
     )
 
@@ -971,14 +917,14 @@ test_that("last pipeline step can be popped", {
 
 # remove_step
 
-test_that("pipeline step can be removed by its name", {
+test_that("pipeline step can be removed by its step", {
     pip <- Pipeline$new("pipe1") |>
         pipe_add("f1", function(a = 1) a) |>
         pipe_add("f2", function(b = 1) b)
 
     pip$remove_step("f1")
 
-    expect_equal(pip$pipeline[["name"]], c(".data", "f2"))
+    expect_equal(pip$pipeline[["step"]], c(".data", "f2"))
 })
 
 test_that("pipeline step-to-be-removed must exist", {
@@ -1018,7 +964,7 @@ test_that("pipeline steps can be discarded by pattern", {
 
     suppressMessages(pip$discard_steps("plot"))
 
-    expect_equal(pip$pipeline[["name"]], c(".data", "calc"))
+    expect_equal(pip$pipeline[["step"]], c(".data", "calc"))
 })
 
 test_that("if no pipeline step matches pattern, pipeline remains unchanged", {
@@ -1027,10 +973,10 @@ test_that("if no pipeline step matches pattern, pipeline remains unchanged", {
         pipe_add("plot1", function(x = ~calc) x) |>
         pipe_add("plot2", function(x = ~plot1) x)
 
-    steps_before = pip$pipeline[["name"]]
+    steps_before = pip$pipeline[["step"]]
 
     expect_silent(pip$discard_steps("bla"))
-    expect_equal(pip$pipeline[["name"]], steps_before)
+    expect_equal(pip$pipeline[["step"]], steps_before)
 })
 
 
@@ -1263,18 +1209,18 @@ test_that("deps are updated correctly, if data split on subset of pipeline", {
     ee = expect_equivalent
     pp = pip$pipeline
 
-    f2_deps1 = pp[["deps"]][pp[["name"]] == "1.f2"][[1]]
+    f2_deps1 = pp[["deps"]][pp[["step"]] == "1.f2"][[1]]
     ee(f2_deps1, c(a = "1.f1", b = "1..data"))
 
-    f2_deps2 = pp[["deps"]][pp[["name"]] == "2.f2"][[1]]
+    f2_deps2 = pp[["deps"]][pp[["step"]] == "2.f2"][[1]]
     ee(f2_deps2, c(a = "2.f1", b = "2..data"))
 
-    f3_deps = pp[["deps"]][pp[["name"]] == "f3"][[1]]
+    f3_deps = pp[["deps"]][pp[["step"]] == "f3"][[1]]
     ee(f3_deps,
         list(x = c("1.f1", "2.f1"), y = c("1.f2", "2.f2"))
     )
 
-    f4_deps = pp[["deps"]][pp[["name"]] == "f4"][[1]]
+    f4_deps = pp[["deps"]][pp[["step"]] == "f4"][[1]]
     ee(f4_deps, c(x = "f3"))
 
     out <- pip$execute()$collect_out()
@@ -1318,8 +1264,15 @@ test_that("split data set can be created dynamically", {
     expect_equivalent(unlist1(out), split(data, data[, "group"]))
 })
 
-lgr::unsuspend_logging()
+# error handling
 
+test_that("if pipeline fails, the error message is returned as error", {
+    pip <- Pipeline$new("pipe1") |>
+        pipe_add("f1", function(a = 1) a) |>
+        pipe_add("f2", function(b = ~f1) stop("something went wrong"))
+
+    expect_error(pip$execute(), "something went wrong")
+})
 
 
 # Pipeline logging
