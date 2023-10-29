@@ -1416,4 +1416,3 @@ test_that("pipeline can be constructed with a pipe operator", {
 
     expect_equal(pip1, pip2)
 })
-
