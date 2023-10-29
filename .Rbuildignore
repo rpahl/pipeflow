@@ -15,3 +15,6 @@ README.md
 .github
 .gitignore
 .git
+
+tags
+tags.lock

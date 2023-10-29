@@ -61,3 +61,6 @@ renv/
 renv.lock
 
 .Rprofile
+
+tags
+tags.lock
