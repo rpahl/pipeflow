@@ -15,8 +15,8 @@
 
 #' @importFrom R6 R6Class
 #' @importFrom jsonlite toJSON
-MyLogLayoutJson <- R6::R6Class(
-    "MyLogLayoutJson",
+LogLayoutJson <- R6::R6Class(
+    "LogLayoutJson",
     inherit = lgr::LayoutJson,
     public = list(
         format_event = function(event) {
@@ -112,4 +112,37 @@ tryCatchLog <- function (expr, ..., # nolint
         ...,
         finally = finally
     )
+}
+
+
+#' @title Set pipeflow log layout
+#' @description Set pipeflow log layout
+#' @param layout Layout name
+#' @return invisibly returns logger object
+#' @importFrom lgr get_logger
+#' @export
+#' @examples
+#' lg <- set_log_layout("json")
+#' print(lg)
+#' set_log_layout("text")
+set_log_layout <- function(layout)
+{
+    selected_layout <- switch(
+        layout,
+        "text" = lgr::LayoutFormat$new(),
+        "json" = LogLayoutJson$new(),
+        stop("unknown log layout '", layout, "'")
+    )
+
+    lg = lgr::get_logger(name = .this_package_name())
+
+    lg$config(
+        list(
+            threshold = "info",
+            propagate = FALSE,
+            appenders = lgr::AppenderConsole$new(layout = selected_layout)
+        )
+    )
+
+    invisible(lg)
 }

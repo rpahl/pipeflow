@@ -1324,105 +1324,90 @@ lgr::unsuspend_logging()
 
 # Pipeline logging
 
-skip_if_not_installed("lgr")
+test_that("pipeline logging works as expected",
+{
+    expect_no_error(set_log_layout("json"))
+    on.exit(set_log_layout("text"))
 
-oldLayout <- Sys.getenv("log_layout")
-lg = lgr::get_logger(name = .this_package_name())
+    test_that("pipeline logging is done in json format", {
 
-lg$config(
-    list(
-        threshold = "info",
-        propagate = FALSE,
-        appenders = lgr::AppenderConsole$new(layout = MyLogLayoutJson$new())
-    )
-)
+        dat <- data.frame(a = 1:2, b = 1:2)
+        pip <- Pipeline$new("pipe1", data = dat)
 
-test_that("pipeline logging is done in json format", {
-
-    dat <- data.frame(a = 1:2, b = 1:2)
-    pip <- Pipeline$new("pipe1", data = dat)
-
-    log <- utils::capture.output(pip$execute())
-    isValidJSON <- sapply(log, jsonlite::validate)
-    expect_true(all(isValidJSON))
-})
-
-test_that("each step is logged with its name", {
-
-    dat <- data.frame(a = 1:2, b = 1:2)
-    pip <- Pipeline$new("pipe1") |>
-        pipe_add("f1", function(x = ~.data) x)
-
-    log <- utils::capture.output(pip$execute())
-
-    step1 = jsonlite::fromJSON(log[2])
-    step2 = jsonlite::fromJSON(log[3])
-
-    expect_equal(step1[["message"]], "Step 1/2 .data")
-    expect_equal(step2[["message"]], "Step 2/2 f1")
-})
-
-test_that("upon warning during execute, both context and warn msg are logged", {
-
-    dat <- data.frame(a = 1:2, b = 1:2)
-    pip <- Pipeline$new("pipe1") |>
-        pipe_add("f1", function(a = 1) a) |>
-        pipe_add("f2", function() warning("this is a warning"))
-
-    log <- utils::capture.output(pip$execute())
-
-    log_fields = lapply(head(log, -1), jsonlite::fromJSON)
-    warnings = Filter(log_fields, f = function(x) x[["level"]] == "warn")[[1]]
-
-    expect_equal(warnings[["message"]],
-        "Context: pipeline at step 3 ('f2'), this is a warning")
-    expect_equal(warnings[["warn"]], "this is a warning")
-})
-
-
-test_that("upon error during execute, both context and error msg are logged", {
-
-    dat <- data.frame(a = 1:2, b = 1:2)
-    pip <- Pipeline$new("pipe1") |>
-        pipe_add("f1", function(a = 1) a) |>
-        pipe_add("f2", function() stop("technical error message"))
-
-    log <- utils::capture.output({
-        tryCatch(pip$execute(), error = identity)
+        log <- utils::capture.output(pip$execute())
+        isValidJSON <- sapply(log, jsonlite::validate)
+        expect_true(all(isValidJSON))
     })
 
-    log_fields = lapply(head(log, -1), jsonlite::fromJSON)
-    last = tail(log_fields, 1)[[1]]
+    test_that("each step is logged with its name", {
 
-    expect_equal(last[["message"]],
-        "Context: pipeline at step 3 ('f2'), technical error message")
-    expect_equal(last[["error"]], "technical error message")
+        dat <- data.frame(a = 1:2, b = 1:2)
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(x = ~.data) x)
+
+        log <- utils::capture.output(pip$execute())
+
+        step1 = jsonlite::fromJSON(log[2])
+        step2 = jsonlite::fromJSON(log[3])
+
+        expect_equal(step1[["message"]], "Step 1/2 .data")
+        expect_equal(step2[["message"]], "Step 2/2 f1")
+    })
+
+    test_that(
+        "upon warning during execute, both context and warn msg are logged", {
+
+        dat <- data.frame(a = 1:2, b = 1:2)
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function() warning("this is a warning"))
+
+        log <- utils::capture.output(pip$execute())
+
+        log_fields = lapply(head(log, -1), jsonlite::fromJSON)
+        warnings = Filter(
+            log_fields,
+            f = function(x) x[["level"]] == "warn"
+        )[[1]]
+
+        expect_equal(warnings[["message"]],
+            "Context: pipeline at step 3 ('f2'), this is a warning")
+        expect_equal(warnings[["warn"]], "this is a warning")
+    })
+
+
+    test_that(
+        "upon error during execute, both context and error msg are logged", {
+
+        dat <- data.frame(a = 1:2, b = 1:2)
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function() stop("technical error message"))
+
+        log <- utils::capture.output({
+            tryCatch(pip$execute(), error = identity)
+        })
+
+        log_fields = lapply(head(log, -1), jsonlite::fromJSON)
+        last = tail(log_fields, 1)[[1]]
+
+        expect_equal(last[["message"]],
+            "Context: pipeline at step 3 ('f2'), technical error message")
+        expect_equal(last[["error"]], "technical error message")
+    })
+
+    test_that(
+        "pipeline start is marked in the log and has the pipeline's name", {
+
+        dat <- data.frame(a = 1:2, b = 1:2)
+        pipeName = "pipe1"
+        pip <- Pipeline$new(pipeName, data = dat)
+
+        log <- utils::capture.output(pip$execute())
+        logStart = log[[1]]
+        log_fields = jsonlite::fromJSON(logStart)
+
+        expect_equal(log_fields[["type"]], "start_pipeline")
+        expect_equal(log_fields[["pipeline_name"]], pipeName)
+    })
 })
-
-test_that("pipeline start is marked in the log and has the pipeline's name", {
-
-    dat <- data.frame(a = 1:2, b = 1:2)
-    pipeName = "pipe1"
-    pip <- Pipeline$new(pipeName, data = dat)
-
-    log <- utils::capture.output(pip$execute())
-    logStart = log[[1]]
-    log_fields = jsonlite::fromJSON(logStart)
-
-    expect_equal(log_fields[["type"]], "start_pipeline")
-    expect_equal(log_fields[["pipeline_name"]], pipeName)
-})
-
-# Restore log layout
-layout <- switch(oldLayout,
-    "text" = lgr::LayoutFormat$new(),
-    "jsonSSE" = LayoutJsonSSE$new()
-)
-
-lg$config(
-    list(
-        threshold = "info",
-        propagate = FALSE,
-        appenders = lgr::AppenderConsole$new(layout = layout)
-    )
-)
