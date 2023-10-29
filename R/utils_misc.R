@@ -23,3 +23,18 @@ unlist1 = function(x, ...)
     if (is.null(x))
         y else x
 }
+
+.replace_string = function(x, target, replacement) {
+
+    if (length(x) == 0) {
+        return(x)
+    }
+
+    stopifnot(
+        is.character(x),
+        is_string(target),  # nolint
+        is_string(replacement)
+    )
+    x[x %in% target] = replacement
+    x
+}
