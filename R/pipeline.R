@@ -238,23 +238,46 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Execute pipeline steps.
         #' @param from `numeric` start from this step
         #' @param to `numeric` execute until this step
+        #' @param recursive `logical` if `TRUE` and a step returns a new
+        #' pipeline, the run of the current pipeline is aborted and the
+        #' new pipeline is executed recursively.
         #' @return returns the `Pipeline` object invisibly
-        execute = function(from = 1, to = self$length())
-        {
+        execute = function(
+            from = 1,
+            to = self$length(),
+            recursive = TRUE
+        ) {
+            stopifnot(
+                is_number(from),
+                is_number(to),
+                from <= to,
+                is.logical(recursive)
+            )
+
+            # nolint start
+            # TODO: create function
+            #   execute_step(
+            #       step,
+            #       downstream = TRUE,  # execute all depdendent steps downstream
+            #       upstream = TRUE,    # execute all depdendent upstream steps first
+            #       overwrite = FALSE,  # overwrite output if already present
+            #       recursive = TRUE    # if step returns a pipeline, execute it recursive
+            #   ),
+            # TODO: change interface to  execute(steps, ...)
+            # nolint end
             gettextf("Start execution of '%s' pipeline:", self$name) |>
                 log_info(type = "start_pipeline", pipeline_name = self$name)
 
-            for (i in from:to) {
+            for (i in seq(from = from, to = to)) {
                 stepName = as.character(self$pipeline[i, "step"])
                 gettextf("Step %i/%i %s",  i, to, stepName) |> log_info()
 
                 res = private$.execute_row(i)
 
-                if (inherits(res, "Pipeline")) {
-                    # Allows to run pipelines created by pipelines
+                if (inherits(res, "Pipeline") && recursive) {
                     log_info("Abort pipeline execution and restart on new.")
                     self = res
-                    self$execute()
+                    self$execute(recursive = TRUE)
                     return(invisible(self))
                 }
 
@@ -614,39 +637,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Set parameters in the pipeline. If a parameter occurs
-        #' in several steps, the parameter is set commonly in all steps.
-        #' @param params `list` of parameters to be set
-        #' @param warnUndefined `logical` whether to give a warning if a
-        #' parameter is not defined in the pipeline.
-        #' @return returns the `Pipeline` object invisibly
-        set_common_parameters = function(params, warnUndefined = TRUE)
-        {
-            pipe_param_names = lapply(
-                self$get_unique_parameters(ignoreHidden = FALSE),
-                FUN = names
-            )
-            extra = setdiff(names(params), unlist(pipe_param_names))
-
-            if (warnUndefined && length(extra) > 0) {
-                warning(
-                    "Trying to set parameters not defined in the pipeline: ",
-                    toString(extra)
-                )
-            }
-
-            for (i in seq_len(nrow(self$pipeline))) {
-                params_ith_step = self$pipeline[["params"]][[i]]
-                overlap = intersect(names(params), names(params_ith_step))
-
-                if (length(overlap) > 0) {
-                    params_ith_step[overlap] = params[overlap]
-                    self$pipeline[["params"]][[i]] = params_ith_step
-                }
-            }
-            invisible(self)
-        },
-
         #' @description Set data in first step of pipeline.
         #' @param data `data.frame` initial data set.
         #' @return returns the `Pipeline` object invisibly
@@ -733,6 +723,39 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             self$pipeline = combined$pipeline
+            invisible(self)
+        },
+
+        #' @description Set parameters in the pipeline. If a parameter occurs
+        #' in several steps, the parameter is set commonly in all steps.
+        #' @param params `list` of parameters to be set
+        #' @param warnUndefined `logical` whether to give a warning if a
+        #' parameter is not defined in the pipeline.
+        #' @return returns the `Pipeline` object invisibly
+        set_parameters = function(params, warnUndefined = TRUE)
+        {
+            pipe_param_names = lapply(
+                self$get_unique_parameters(ignoreHidden = FALSE),
+                FUN = names
+            )
+            extra = setdiff(names(params), unlist(pipe_param_names))
+
+            if (warnUndefined && length(extra) > 0) {
+                warning(
+                    "Trying to set parameters not defined in the pipeline: ",
+                    toString(extra)
+                )
+            }
+
+            for (i in seq_len(nrow(self$pipeline))) {
+                params_ith_step = self$pipeline[["params"]][[i]]
+                overlap = intersect(names(params), names(params_ith_step))
+
+                if (length(overlap) > 0) {
+                    params_ith_step[overlap] = params[overlap]
+                    self$pipeline[["params"]][[i]] = params_ith_step
+                }
+            }
             invisible(self)
         },
 
