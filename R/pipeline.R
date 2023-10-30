@@ -1,4 +1,70 @@
 
+.derive_dependencies <- function(
+    self,
+    params,
+    from_step,
+    to_step = self$length()
+) {
+    stopifnot(
+        inherits(self, "Pipeline"),
+        is.null(params) || is.list(params),
+        is_string(from_step),
+        is_number(to_step)
+    )
+
+    if (is.null(params)) {
+        return(list())
+    }
+
+    deps <- params |>
+        Filter(f = function(x) methods::is(x, "formula")) |>
+        sapply(FUN = function(x) deparse(x[[2]]))
+
+    if (length(deps) == 0) {
+        return(list())
+    }
+
+    available_steps = self$pipeline[["step"]][seq_len(to_step)]
+
+    # Handle relative index numbers
+    are_negative_numbers = function(x) grepl("^-[0-9]*", x = x)
+    relative_deps = Filter(deps, f = are_negative_numbers)
+    indices = sapply(relative_deps, as.numeric)
+    abs_indices = .relative_to_absolute_indices(
+        self = self,
+        relative_indices = indices,
+        from_step = from_step,
+        to_step = to_step
+    )
+    deps[names(relative_deps)] = available_steps[abs_indices]
+
+    deps
+}
+
+.relative_to_absolute_indices = function(
+    self,
+    relative_indices,
+    from_step,
+    to_step = self$length()
+) {
+    if (length(relative_indices) == 0)
+        return(integer(0))
+
+    absolute_indices = to_step + relative_indices + 1
+    exceeding = Filter(absolute_indices, f = function(x) x < 1)
+    if (length(exceeding) > 0) {
+        stop(
+            "in step '", from_step, "' one or more relative indices ",
+            "exceed the pipeline: ",
+            paste0("'", names(exceeding), "'", collapse = ", ")
+        )
+    }
+
+    absolute_indices
+}
+
+
+
 #' @title Pipeline Class
 #'
 #' @description This class implements an analysis pipeline. A pipeline consists
@@ -111,7 +177,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             # Verify function parameters and determine and verify dependencies
             private$.verify_fun_params(fun, funcName, params)
-            deps = private$.derive_dependencies(params, step)
+            deps = private$.derive_dependencies(
+                self = self,
+                params = params,
+                from_step = step
+            )
             private$.verify_dependencies(deps, step)
 
             self$pipeline <- self$pipeline |>
@@ -610,14 +680,15 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             # Verify function parameters and determine and verify dependencies
             private$.verify_fun_params(fun, funcName, params)
             deps = private$.derive_dependencies(
+                self,
                 params = params,
-                step = step,
-                to = step_number - 1
+                from_step = step,
+                to_step = step_number - 1
             )
             private$.verify_dependencies(
                 deps = deps,
-                step = step,
-                to = step_number - 1
+                from_step = step,
+                to_step = step_number - 1
             )
 
             new_step = list(
@@ -855,68 +926,22 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             res
         },
 
-        .derive_dependencies = function(params, step, to = self$length())
+        .derive_dependencies = .derive_dependencies,
+
+        .verify_dependencies = function(deps, from_step, to_step = self$length())
         {
-            if (is.null(params)) {
-                return(list())
-            }
-
-            deps <- params |>
-                Filter(f = function(x) methods::is(x, "formula")) |>
-                sapply(FUN = function(x) deparse(x[[2]]))
-
-            if (length(deps) == 0) {
-                return(list())
-            }
-
-            available_steps = self$pipeline[["step"]][seq_len(to)]
-
-            # Handle relative index numbers
-            are_negative_numbers = function(x) grepl("^-[0-9]*", x = x)
-            relative_deps = Filter(deps, f = are_negative_numbers)
-            indices = sapply(relative_deps, as.numeric)
-            abs_indices = private$.relative_to_absolute_indices(
-                indices, step, to
-            )
-            deps[names(relative_deps)] = available_steps[abs_indices]
-
-            deps
-        },
-
-        .relative_to_absolute_indices = function(
-            relative_indices, step, to = self$length()
-        ) {
-            if (length(relative_indices) == 0)
-                return(integer(0))
-
-            absolute_indices = to + relative_indices + 1
-            exceeding = Filter(absolute_indices, f = function(x) x < 1)
-            if (length(exceeding) > 0) {
-                stop(
-                    "in step '", step, "' one or more relative indices ",
-                    "exceed the pipeline: ",
-                    paste0("'", names(exceeding), "'", collapse = ", ")
-                )
-            }
-
-            absolute_indices
-        },
-
-
-        .verify_dependencies = function(deps, step, to = self$length())
-        {
-            existing_steps = self$pipeline[["step"]][seq_len(to)]
+            existing_steps = self$pipeline[["step"]][seq_len(to_step)]
             if (length(deps) == 0)
                 return(invisible(TRUE))
 
             stop_on_missing_dep = function(dep) {
                 msg = paste0(
-                    "step '", step, "': dependency '", dep, "' not found"
+                    "step '", from_step, "': dependency '", dep, "' not found"
                 )
 
-                if (to != self$length()) {
+                if (to_step != self$length()) {
                     msg = paste0(msg,
-                        " up to step '", existing_steps[to], "'"
+                        " up to step '", existing_steps[to_step], "'"
                     )
                 }
                 stop(msg, call. = FALSE)
