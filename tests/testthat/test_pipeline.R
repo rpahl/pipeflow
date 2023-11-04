@@ -143,6 +143,30 @@ test_that("combined pipelines must not have the same names",
 })
 
 
+# append_to_step_names
+
+test_that("postfix can be appended to step names",
+{
+    pip <- Pipeline$new("pipe", data = 1)
+
+    pip$add("f1", function(a = ~.data) a + 1)
+    pip$add("f2", function(a = ~.data, b = ~f1) a + b)
+    pip$append_to_step_names("foo")
+
+    expected_names <- c(".data.foo", "f1.foo", "f2.foo")
+    expect_equal(pip$get_step_names(), expected_names)
+
+    expected_deps <- list(
+        .data.foo = character(0),
+        f1.foo = c(a = ".data.foo"),
+        f2.foo = c(a = ".data.foo", b = "f1.foo")
+    )
+
+    deps <- pip$get_dependencies()
+    expect_equal(pip$get_dependencies(), expected_deps)
+})
+
+
 # collect_out
 
 test_that("pipelines can be combined even if their steps share names",
@@ -224,7 +248,7 @@ test_that("out of previous can be used as input of appended pipelines",
     f2 = f1 + f1
     f3 = f2 + f2
 
-    expect_equal(out[["f1"]][["pipe3.f1"]], f3)
+    expect_equal(out[["f1"]][["f1.pipe3"]], f3)
 })
 
 
@@ -366,6 +390,7 @@ test_that("start point of pipeline execution can be customized",
     pip$keep_all_out()
 
     out <- pip$execute(from = 3)$collect_out()
+    expect_equal(out[["B"]][[1]], list())
 })
 
 test_that("if function result is a list, all names are preserved",
@@ -430,6 +455,27 @@ test_that("data can be retrieved",
     pip <- Pipeline$new("pipe1", data = 9)
 
     expect_equal(pip$get_data(), 9)
+})
+
+
+# get_dependencies
+
+test_that("dependencies can be retrieved and are named after the steps",
+{
+    pip <- Pipeline$new("pipe", data = 1)
+
+    pip$add("f1", function(a = ~.data) a + 1)
+    pip$add("f2", function(b = ~f1) b + 1)
+
+    deps <- pip$get_dependencies()
+    expected_deps <- list(
+        .data = character(0),
+        f1 = c(a = ".data"),
+        f2 = c(b = "f1")
+    )
+
+    expect_equal(deps, expected_deps)
+    expect_equal(names(deps), pip$get_step_names())
 })
 
 
@@ -733,6 +779,19 @@ test_that("the name of the arg is set to the name of the Param object",
     expect_false(l[["name"]][[2]] == "my y")
     hasArgName <- l[["name"]][[2]] == "y"
 })
+
+
+# has_step
+
+test_that("it can be checked if pipeline has a step",
+{
+    pip <- Pipeline$new("pipe1") |>
+        pipe_add("f1", function(a = 1) a)
+
+    expect_true(pip$has_step("f1"))
+    expect_false(pip$has_step("f2"))
+})
+
 
 # keep_all_out
 
@@ -1104,7 +1163,7 @@ test_that("grouping by data split can be omitted",
         paste0(rep(names(dataList), each = 2), ".", c("f2", "id"))
     )
 
-    expect_equal(names(out[["A.id"]]), c("A.f0", "A.f1"))
+    expect_equal(names(out[["A.id"]]), c("f0.A", "f1.A"))
 })
 
 
@@ -1122,9 +1181,9 @@ test_that("split pipeline works for list of data frames",
 
     out <- pip$execute()$collect_out()
 
-    expect_equal(out[["A"]], c(A.f2 = list(dat), A.f3 = list(dat[, 2:3])))
-    expect_equal(out[["B"]], c(B.f2 = list(dat), B.f3 = list(dat[, 2:3])))
-    expect_equal(out[["C"]], c(C.f2 = list(dat), C.f3 = list(dat[, 2:3])))
+    expect_equal(out[["A"]], c(f2.A = list(dat), f3.A = list(dat[, 2:3])))
+    expect_equal(out[["B"]], c(f2.B = list(dat), f3.B = list(dat[, 2:3])))
+    expect_equal(out[["C"]], c(f2.C = list(dat), f3.C = list(dat[, 2:3])))
 })
 
 
@@ -1140,15 +1199,17 @@ test_that("if unnamed list of data frames, they are named with numbers",
 
     out <- pip$execute()$collect_out()
 
-    expect_equal(out[["1"]], c(`1.f2` = list(dat)))
-    expect_equal(out[["2"]], c(`2.f2` = list(dat)))
+    expect_equal(out[["1"]], c(`f2.1` = list(dat)))
+    expect_equal(out[["2"]], c(`f2.2` = list(dat)))
 })
 
 
 test_that("deps are updated correctly, if data split on subset of pipeline",
 {
-    dat <- data.frame(x = 1:2, y = 1:2, z = 1:2)
-    dataList <- list(dat, dat)
+    dat1 <- data.frame(x = 1:2)
+    dat2 <- data.frame(y = 1:2)
+    dataList <- list(dat1, dat2)
+
     pip <- Pipeline$new("pipe") |>
         pipe_add("f1", function(a = 1) a) |>
         pipe_add("f2", function(a = ~f1, b = ~.data) b, keepOut = TRUE) |>
@@ -1160,27 +1221,29 @@ test_that("deps are updated correctly, if data split on subset of pipeline",
     ee = expect_equivalent
     pp = pip$pipeline
 
-    f2_deps1 = pp[["deps"]][pp[["step"]] == "1.f2"][[1]]
-    ee(f2_deps1, c(a = "1.f1", b = "1..data"))
+    deps <- pip$get_dependencies()
 
-    f2_deps2 = pp[["deps"]][pp[["step"]] == "2.f2"][[1]]
-    ee(f2_deps2, c(a = "2.f1", b = "2..data"))
+    expect_equal(deps[["f2.1"]], c(a = "f1.1", b = ".data.1"))
+    expect_equal(deps[["f2.2"]], c(a = "f1.2", b = ".data.2"))
 
-    f3_deps = pp[["deps"]][pp[["step"]] == "f3"][[1]]
-    ee(f3_deps,
-        list(x = c("1.f1", "2.f1"), y = c("1.f2", "2.f2"))
+    # Pipeline was not split for f3, which therefore has parameters that
+    # each depend on two steps
+    expect_equal(
+        deps[["f3"]],
+        list(x = c("f1.1", "f1.2"), y = c("f2.1", "f2.2"))
     )
 
-    f4_deps = pp[["deps"]][pp[["step"]] == "f4"][[1]]
-    ee(f4_deps, c(x = "f3"))
+    # Pipeline was not split for f4, so just depdends on f3
+    ee(deps[["f4"]], c(x = "f3"))
+
 
     out <- pip$execute()$collect_out()
 
-    expect_equal(out[["1"]][["1.f2"]], dat)
-    expect_equal(out[["2"]][["2.f2"]], dat)
+    expect_equal(out[["1"]][["f2.1"]], dat1)
+    expect_equal(out[["2"]][["f2.2"]], dat2)
     expected_f3_res = list(
-        list("1.f1" = 1, "2.f1" = 1),
-        list("1.f2" = dat, "2.f2" = dat)
+        list("f1.1" = 1, "f1.2" = 1),
+        list("f2.1" = dat1, "f2.2" = dat2)
     )
     expect_equal(out[["f3"]][["f3"]], expected_f3_res)
     expect_equal(out[["f4"]][["f4"]], expected_f3_res[[1]])
@@ -1473,6 +1536,43 @@ test_that("pipeline logging works as expected",
         expect_equal(log_fields[["pipeline_name"]], pipeName)
     })
 })
+
+# ---------------
+# private methods
+# ---------------
+
+test_that("private methods work as expected",
+{
+    # Helper function to access private fields
+    get_private <- function(x) {
+        x[['.__enclos_env__']]$private
+    }
+
+    pip <- Pipeline$new("pipe")
+    expect_true(is.environment(get_private(pip)))
+
+
+    # .get_last_step
+    test_that("returns the last step",
+    {
+        pip <- Pipeline$new("pipe")
+        f <- get_private(pip)$.get_last_step
+
+        expect_equal(f(), ".data")
+
+        pip$add("f1", function(a = 1) a)
+        expect_equal(f(), "f1")
+
+        pip$add("f2", function(a = 1) a)
+        expect_equal(f(), "f2")
+
+        pip$pop_step()
+        expect_equal(f(), "f1")
+    })
+
+
+})
+
 
 
 # pipe_add
