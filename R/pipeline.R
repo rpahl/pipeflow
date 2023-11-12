@@ -58,10 +58,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Add pipeline step
         #' @param step `string` the name of the step. Each step name must
         #' be unique.
-        #' @param fun `string` or `function` operation to be applied at the
-        #' step. Both existing and lambda/anonymous functions can be used.
-        #' @param params `list` list of parameters to overwrite default
-        #' parameters of existing functions.
+        #' @param fun `function` or name of the function to be applied at
+        #' the step. Both existing and lambda/anonymous functions can be used.
+        #' @param params `list` list of parameters to set or overwrite
+        #' parameters of the passed function.
         #' @param description `string` optional description of the step
         #' @param group `string` grouping information (by default the same as
         #' the name of the step. Any output collected later (see function
@@ -76,7 +76,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         add = function(
             step,
             fun,
-            params = NULL,
+            params = list(),
             description = "",
             group = step,
             keepOut = FALSE
@@ -93,7 +93,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             # Update default function params by custom params
-            if (is.null(params)) {
+            if (length(params) == 0) {
                 params = formals(fun)
             } else {
                 params = replace(formals(fun), names(params), params)
@@ -108,18 +108,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
             params[isDefined] = lapply(params[isDefined], eval)
 
+            private$.verify_fun_params(fun, funcName, as.list(params))
 
-            private$.verify_fun_params(fun, funcName, params)
-
-            # Ensure that all upstream dependencies are met
-            deps = private$.derive_dependencies(
+            deps <- private$.derive_dependencies(
                 params = params,
-                from_step = step
+                step = step
             )
-            private$.verify_dependencies(
-                deps = deps,
-                from_step = step
-            )
+
+            sapply(deps, FUN = private$.verify_dependency, step = step)
 
             self$pipeline <- self$pipeline |>
                 rbind(
@@ -623,10 +619,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             group = step,
             keepOut = FALSE
         ) {
-            steps <- self$get_step_names()
-            if (!(step %in% steps)) {
-                stop("step '", step, "' does not exist", call. = FALSE)
-            }
+            private$.verify_step_exists(step)
 
             # Function can be either a function or a character string
             if (is.function(fun)) {
@@ -654,20 +647,22 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
             params[isDefined] <- lapply(params[isDefined], eval)
 
-
             private$.verify_fun_params(fun, funcName, params)
 
-            # Ensure that upstream dependencies are met
-            step_index <- match(step, steps)
+            # Derive and verify dependencies
+            all_steps <- self$get_step_names()
+            step_index <- match(step, all_steps)
+
             deps <- private$.derive_dependencies(
                 params = params,
-                from_step = step,
-                to_step = steps[step_index - 1]
+                step = step,
+                to_step = all_steps[step_index - 1]
             )
-            private$.verify_dependencies(
-                deps = deps,
-                from_step = step,
-                to_step = steps[step_index - 1]
+            sapply(
+                deps,
+                FUN = private$.verify_dependency,
+                step = step,
+                to_step = all_steps[step_index - 1]
             )
 
             new_step <- list(
@@ -859,47 +854,63 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         .derive_dependencies = function(
             params,
-            from_step,
+            step,
             to_step = private$.get_last_step()
         ) {
-            if (is.null(params) || length(to_step) == 0) {
+            if (length(to_step) == 0) {
                 return(character())
             }
 
             stopifnot(
-                is.list(params),
-                is_string(from_step),
+                is_string(step),
                 is_string(to_step)
             )
 
             private$.verify_step_exists(to_step)
 
-            if (from_step == to_step) {
+            deps <- private$.extract_deps_from_param_list(params)
+
+            # Handle any relative dependencies
+            all_steps <- self$get_step_names()
+            to_index <- private$.get_step_index(to_step)
+            considered_steps = all_steps[seq_len(to_index)]
+            relative_deps <- deps |>
+                Filter(f = function(x) x |> startsWith("-")) |>
+                sapply(as.numeric)
+
+            step_indices <- mapply(
+                relative_dep = relative_deps,
+                dependency_name = names(relative_deps),
+                FUN = private$.relative_dependency_to_index,
+                MoreArgs = list(
+                    start_index = to_index + 1,
+                    step = step
+                )
+            ) |> as.integer()
+            deps[names(relative_deps)] = considered_steps[step_indices]
+
+
+            deps
+        },
+
+        .extract_deps_from_param_list = function(
+            params
+        ) {
+            if (length(params) == 0) {
                 return(character())
             }
 
-            steps <- self$get_step_names()
-            to_index <- match(to_step, steps)
-            considered_steps = steps[seq_len(to_index)]
+            stopifnot(is.list(params))
 
+            # Extract the dependency name from the formula, that is, ~x
+            # becomes "x" and ~-1 becomes -1
             deps <- params |>
                 Filter(f = function(x) methods::is(x, "formula")) |>
                 sapply(FUN = function(x) deparse(x[[2]]))
 
             if (length(deps) == 0) {
-                return(character())
+                return(character()) # otherwise named list() would be returned
             }
-
-            # Handle relative index numbers
-            are_negative_numbers = function(x) grepl("^-[0-9]*", x = x)
-            relative_deps = Filter(deps, f = are_negative_numbers)
-            indices = sapply(relative_deps, as.numeric)
-            abs_indices = private$.relative_to_absolute_indices(
-                relative_indices = indices,
-                from_step = from_step,
-                to_step = to_step
-            )
-            deps[names(relative_deps)] = considered_steps[abs_indices]
 
             deps
         },
@@ -948,90 +959,104 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             self$get_step_names() |> utils::tail(1)
         },
 
-        .relative_to_absolute_indices = function(
-            relative_indices,
-            from_step,
-            to_step = private$.get_last_step()
+        .get_step_index = function(step) {
+            private$.verify_step_exists(step)
+            match(step, self$get_step_names())
+        },
+
+        .relative_dependency_to_index = function(
+            relative_dep,
+            dependency_name,
+            start_index,
+            step   # required for error message
         ) {
-            if (length(relative_indices) == 0) {
-                return(integer(0))
-            }
+            stopifnot(
+                is_number(relative_dep),
+                relative_dep < 0,
+                is_string(dependency_name),
+                is_number(start_index),
+                start_index > 0,
+                is_string(step)
+            )
+            dep_name <- names(relative_dep)
 
-            steps <- self$get_step_names()
-            to <- match(to_step, steps)
+            abs_index <- relative_dep + start_index
 
-            absolute_indices = to + relative_indices + 1
-            exceeding = Filter(absolute_indices, f = function(x) x < 1)
-            if (length(exceeding) > 0) {
+            if (abs_index < 1) {
                 stop(
-                    "in step '", from_step, "' one or more relative indices ",
-                    "exceed the pipeline: ",
-                    paste0("'", names(exceeding), "'", collapse = ", ")
+                    "step '", step, "': relative dependency ",
+                    paste0(dependency_name, "=", relative_dep),
+                    " points to outside the pipeline"
                 )
             }
 
-            absolute_indices
+            abs_index
         },
 
-        .verify_dependencies = function(
-            deps,
-            from_step,
+        .verify_dependency = function(
+            dep,
+            step,   # required for error message
             to_step = private$.get_last_step()
         ) {
-            if (length(deps) == 0 || length(to_step) == 0) {
-                return(invisible(TRUE))
-            }
-
             stopifnot(
-                is.character(deps),
-                is_string(from_step),
+                is_string(dep),
+                is_string(step),
                 is_string(to_step)
             )
 
-            stop_on_missing_dep = function(dep) {
+            private$.verify_step_exists(to_step)
+
+            all_steps <- self$get_step_names()
+            to_index <- match(to_step, all_steps)
+            considered_steps <- all_steps[seq_len(to_index)]
+
+            if (dep %!in% considered_steps) {
                 msg = paste0(
-                    "step '", from_step, "': dependency '", dep, "' not found"
+                    "step '", step, "': dependency '", dep, "' not found"
                 )
 
-                if (to_step != self$length()) {
-                    msg = paste0(msg,
-                        " up to step '", considered_steps[to], "'"
+                if (to_step != private$.get_last_step()) {
+                    msg = paste0(
+                        msg, " up to step '", considered_steps[to_index], "'"
                     )
                 }
                 stop(msg, call. = FALSE)
-            }
-
-            steps <- self$get_step_names()
-            to <- match(to_step, steps)
-            considered_steps <- steps[seq_len(to)]
-
-            for (dep in deps) {
-                if (dep %!in% considered_steps) {
-                    stop_on_missing_dep(dep)
-                }
             }
 
             invisible(TRUE)
         },
 
 
-        .verify_fun_params = function(fun, funcName, params)
+        .verify_fun_params = function(fun, funcName, params = list())
         {
+            stopifnot(
+                is.function(fun),
+                is_string(funcName),
+                is.list(params)
+            )
+
             fargs = formals(fun)
-            defined_params = Filter(params, f = Negate(is.name))
             unknown_params = setdiff(names(params), names(fargs))
+            if (length(unknown_params) > 0) {
+                stop(
+                    paste0("'", unknown_params, "'", collapse = ", "),
+                    " are no function parameters of '", funcName, "'",
+                    call. = FALSE
+                )
+            }
 
-            if (length(unknown_params) > 0)
-                stop(paste0("'", unknown_params, "'", collapse = ", "),
-                     " are no function parameters of '", funcName, "'",
-                     call. = FALSE)
 
-            argsWithNoDefault = names(Filter(fargs, f = function(x) is.name(x)))
+            defined_params = Filter(params, f = Negate(is.name))
+            argsWithNoDefault = names(Filter(fargs, f = \(x) is.name(x)))
             undefinedArgs = setdiff(argsWithNoDefault, names(defined_params))
             if (length(undefinedArgs) > 0) {
-                stop(paste0("'", undefinedArgs, "'", collapse = ", "),
-                     " parameter(s) must have default values", call. = FALSE)
+                stop(
+                    paste0("'", undefinedArgs, "'", collapse = ", "),
+                    " parameter(s) must have default values",
+                    call. = FALSE
+                )
             }
+
             invisible(TRUE)
         },
 

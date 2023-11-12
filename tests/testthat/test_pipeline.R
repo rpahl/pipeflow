@@ -98,11 +98,9 @@ test_that("step can refer to previous step by relative number",
 test_that("a bad relative step referal is signalled",
 {
     pip <- Pipeline$new("pipe1")
-    pip$add("f1", function(a = 5) a)
-    pip$add("f2", function(x = ~-1) x)
     expect_error(
-        pip$add("f3", function(z = ~-10) x),
-        "in step 'f3' one or more relative indices exceed the pipeline: 'z'",
+        pip$add("f1", function(x = ~-10) x),
+        "step 'f1': relative dependency x=-10 points to outside the pipeline",
         fixed = TRUE
     )
 })
@@ -395,7 +393,6 @@ test_that("start point of pipeline execution can be customized",
 
 test_that("if function result is a list, all names are preserved",
 {
-
     # Result list length == 1 - the critical case
     resultList = list(foo = 1)
 
@@ -1076,15 +1073,18 @@ test_that("if replacing a pipeline step, dependencies are verifed correctly",
         pipe_add("f2", function(b = 2) b) |>
         pipe_add("f3", function(c = ~f2) c, keepOut = TRUE)
 
-    expect_error(pip$replace_step("f2", function(z = ~foo) z),
+    expect_error(
+        pip$replace_step("f2", function(z = ~foo) z),
         "dependency 'foo' not found up to step 'f1'"
     )
 
-    expect_error(pip$replace_step("f2", function(z = ~f2) z),
+    expect_error(
+        pip$replace_step("f2", function(z = ~f2) z),
         "dependency 'f2' not found up to step 'f1'"
     )
 
-    expect_error(pip$replace_step("f2", function(z = ~f3) z),
+    expect_error(
+        pip$replace_step("f2", function(z = ~f3) z),
         "dependency 'f3' not found up to step 'f1'"
     )
 })
@@ -1552,10 +1552,128 @@ test_that("private methods work as expected",
     expect_true(is.environment(get_private(pip)))
 
 
-    # .get_last_step
-    test_that("returns the last step",
+    # .derive_dependencies
+    test_that("private .derive_dependencies works as expected",
     {
-        pip <- Pipeline$new("pipe")
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.derive_dependencies
+
+        test_that("if no params are defined, dependencies are empty",
+        {
+            expect_equal(f(params = list(), step = "step"), character(0))
+            expect_equal(f(params = list(a = 1), step = "step"), character(0))
+        })
+
+        test_that("signals bad input",
+        {
+            expect_error(
+                f(params = list(), step = 1),
+                "is_string(step) is not TRUE",
+                fixed = TRUE
+            )
+            expect_error(
+                f(params = list(), step = "step", to_step = 2),
+                "is_string(to_step) is not TRUE",
+                fixed = TRUE
+            )
+        })
+
+        test_that("extracts all dependencies defined via step name",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.derive_dependencies
+            pip$add("f1", function(a = 1) a)
+            pip$add("f2", function(b = 2) b)
+
+            expect_equal(
+                f(params = list(x = ~f1), step = "step3"),
+                c(x = "f1")
+            )
+            expect_equal(
+                f(params = list(x = ~f1, y = ~f2), step = "step3"),
+                c(x = "f1", y = "f2")
+            )
+        })
+
+        test_that("extracts all dependencies defined relative",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.derive_dependencies
+            pip$add("f1", function(a = 1) a)
+            pip$add("f2", function(b = 2) b)
+
+            expect_equal(
+                f(params = list(x = ~-1), step = "step3"),
+                c(x = "f2")
+            )
+
+            expect_equal(
+                f(params = list(x = ~-1, y = ~-2), step = "step3"),
+                c(x = "f2", y = "f1")
+            )
+        })
+
+        test_that("extracts all dependencies if defined both ways",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.derive_dependencies
+            pip$add("f1", function(a = 1) a)
+            pip$add("f2", function(b = 2) b)
+
+            expect_equal(
+                f(params = list(x = ~-1, y = ~f2), step = "step3"),
+                c(x = "f2", y = "f2")
+            )
+        })
+    })
+
+
+    # .extract_deps_from_param_list
+    test_that("private .extract_deps_from_param_list works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.extract_deps_from_param_list
+
+        test_that("if no params are defined, dependencies are empty",
+        {
+            expect_equal(f(params = list()), character(0))
+        })
+
+        test_that("params must be a list or NULL",
+        {
+            expect_equal(f(params = NULL), character(0))
+
+            expect_error(
+                f(params = c(a = 1)),
+                "is.list(params) is not TRUE",
+                fixed = TRUE
+            )
+        })
+
+        test_that("if no dependencies are defined, nothing is extracted",
+        {
+            expect_equal(f(params = list(a = 1)), character(0))
+            expect_equal(f(params = list(a = 1, b = 2)), character(0))
+        })
+
+        test_that("if dependencies are defined, they are extracted",
+        {
+            expect_equal(f(params = list(a = ~x)), c(a = "x"))
+            expect_equal(
+                f(params = list(a = ~x, b = ~-1)),
+                c(a = "x", b = "-1")
+            )
+            expect_equal(
+                f(params = list(a = ~x, b = ~-1, c = 1)),
+                c(a = "x", b = "-1")
+            )
+        })
+    })
+
+    # .get_last_step
+    test_that("private .get_last_step works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.get_last_step
 
         expect_equal(f(), ".data")
@@ -1570,7 +1688,241 @@ test_that("private methods work as expected",
         expect_equal(f(), "f1")
     })
 
+    # .get_step_index
+    test_that("private .get_step_index works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.get_step_index
 
+        pip$add("f1", function(a = 1) a)
+        pip$add("f2", function(a = 1) a)
+
+        f("f1") |> expect_equal(2)
+        f("f2") |> expect_equal(3)
+    })
+
+    # .relative_dependency_to_index
+    test_that("private .relative_dependency_to_index works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.relative_dependency_to_index
+
+        test_that("signals bad input",
+        {
+            expect_error(
+                f(relative_dep = "-1"),
+                "is_number(relative_dep) is not TRUE",
+                fixed = TRUE
+            )
+            expect_error(
+                f(relative_dep = 1),
+                "relative_dep < 0",
+                fixed = TRUE
+            )
+            expect_error(
+                f(-1, dependency_name = NULL),
+                "is_string(dependency_name) is not TRUE",
+                fixed = TRUE
+            )
+            expect_error(
+                f(-1, "dep-name", start_index = "2"),
+                "is_number(start_index) is not TRUE",
+                fixed = TRUE
+            )
+            expect_error(
+                f(-1, "dep-name", start_index = -2),
+                "start_index > 0 is not TRUE",
+                fixed = TRUE
+            )
+            expect_error(
+                f(-1, "dep-name", 2, step = 3),
+                "is_string(step) is not TRUE",
+                fixed = TRUE
+            )
+            expect_no_error(
+                f(-1, "dep-name", 2, step = "foo"),
+            )
+        })
+
+        test_that("signals if relative dependency exceeds pipeline",
+        {
+            expect_error(
+                f(
+                    relative_dep = -10,
+                    dependency_name = "dep-name",
+                    start_index = 1,
+                    step = "step-name"
+                ),
+                paste(
+                    "step 'step-name': relative dependency dep-name=-10",
+                    "points to outside the pipeline"
+                ),
+                fixed = TRUE
+            )
+
+            expect_error(f(-1, "dep-name", start_index = 1, "step-name"))
+            expect_error(f(-2, "dep-name", start_index = 2, "step-name"))
+        })
+
+        test_that("returns correct index for relative dependency",
+        {
+            expect_equal(
+                f(
+                    relative_dep = -1,
+                    dependency_name = "dep-name",
+                    start_index = 3,
+                    step = "step-name"
+                ),
+                2
+            )
+            expect_equal(
+                f(
+                    relative_dep = -2,
+                    dependency_name = "dep-name",
+                    start_index = 3,
+                    step = "step-name"
+                ),
+                1
+            )
+        })
+    })
+
+    # .verify_dependency
+    test_that("private .verify_dependency works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.verify_dependency
+
+        test_that("signals badly typed input",
+        {
+            expect_error(
+                f(dep = 1),
+                "is_string(dep) is not TRUE",
+                fixed = TRUE
+            )
+            expect_error(
+                f(dep = "dep", step = 1),
+                "is_string(step) is not TRUE",
+                fixed = TRUE
+            )
+            expect_error(
+                f(dep = "dep", step = "step", to_step = 1),
+                "is_string(to_step) is not TRUE",
+                fixed = TRUE
+            )
+        })
+
+        test_that("signals non existing to_step",
+        {
+            expect_error(
+                f("dep", "step", to_step = "non-existent"),
+                "step 'non-existent' does not exists",
+                fixed = TRUE
+            )
+        })
+
+        test_that("verifies valid depdendencies",
+        {
+            pip <- expect_no_error(Pipeline$new("pipe"))
+            f <- get_private(pip)$.verify_dependency
+
+            pip$add("f1", function(a = 1) a)
+            pip$add("f2", function(a = 1) a)
+
+            expect_true(f(dep = "f1", "new-step"))
+            expect_true(f(dep = "f2", "new-step"))
+        })
+
+        test_that("signals if dependency is not defined",
+        {
+            pip <- expect_no_error(Pipeline$new("pipe"))
+            f <- get_private(pip)$.verify_dependency
+
+            pip$add("f1", function(a = 1) a)
+            pip$add("f2", function(a = 1) a)
+
+            expect_error(
+                f(dep = "f3", "new-step"),
+                "dependency 'f3' not found",
+                fixed = TRUE
+            )
+
+            expect_error(
+                f(dep = "f2", "new-step", to_step = "f1"),
+                "dependency 'f2' not found up to step 'f1'",
+                fixed = TRUE
+            )
+        })
+    })
+
+    # .verify_fun_params
+    test_that(".verify_fun_params works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.verify_fun_params
+
+        test_that("returns TRUE if args are defined with default values",
+        {
+            fun <- function(x = 1, y = 2) x + y
+            expect_true(f(fun, "funcName", params = list()))
+        })
+
+        test_that("if not defined with default values, params can be
+            passed in addition",
+        {
+            fun <- function(x, y) x + y
+            expect_true(f(fun, "funcName", params = list(x = 1, y = 2)))
+        })
+
+        test_that("signals parameters with no default values",
+        {
+            fun <- function(x, y, z = 1) x + y
+            expect_error(
+                f(fun, "funcName"),
+                "'x', 'y' parameter(s) must have default values",
+                fixed = TRUE
+            )
+
+            fun <- function(x, y = 1, z) x + y
+            expect_error(
+                f(fun, "funcName"),
+                "'x', 'z' parameter(s) must have default values",
+                fixed = TRUE
+            )
+        })
+
+        test_that("signals undefined parameters",
+        {
+            fun <- function(x = 1, y = 1) x + y
+            params <- list(x = 1, undef1 = 1, undef2 = 2)
+            expect_error(
+                f(fun, "funcName", params = params),
+                "'undef1', 'undef2' are no function parameters of 'funcName'",
+                fixed = TRUE
+            )
+        })
+
+        test_that("signals badly typed input",
+        {
+            expect_error(
+                f("mean"),
+                "is.function(fun) is not TRUE",
+                fixed = TRUE
+            )
+
+            expect_error(
+                f(mean, funcName = 1),
+                "is_string(funcName) is not TRUE",
+                fixed = TRUE
+            )
+
+            expect_error(
+                f(mean, funcName = "mean", params = 1),
+                "is.list(params) is not TRUE",
+                fixed = TRUE
+            )
+        })
+    })
 })
 
 
