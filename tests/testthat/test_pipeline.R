@@ -1545,7 +1545,7 @@ test_that("private methods work as expected",
 {
     # Helper function to access private fields
     get_private <- function(x) {
-        x[['.__enclos_env__']]$private
+        x[[".__enclos_env__"]]$private
     }
 
     pip <- Pipeline$new("pipe")

@@ -875,7 +875,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             to_index <- private$.get_step_index(to_step)
             considered_steps = all_steps[seq_len(to_index)]
             relative_deps <- deps |>
-                Filter(f = function(x) x |> startsWith("-")) |>
+                Filter(f = function(x) startsWith(x, "-")) |>
                 sapply(as.numeric)
 
             step_indices <- mapply(
