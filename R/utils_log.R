@@ -65,12 +65,14 @@ log_error <- function(msg, ...) {
 }
 
 
-tryCatchLog <- function (expr, ..., # nolint
-                         execution_context = NULL,
-                         finally = NULL,
-                         silent_warnings = TRUE,
-                         silent_messages = TRUE)
-{
+tryCatchLog <- function(
+    expr,
+    ...,
+    execution_context = NULL,
+    finally = NULL,
+    silent_warnings = TRUE,
+    silent_messages = TRUE
+) {
     condition_handler <- function(cond) {
         cond_message <- cond[["message"]]
         msg = cond_message
