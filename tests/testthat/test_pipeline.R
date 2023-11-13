@@ -1627,6 +1627,153 @@ test_that("private methods work as expected",
         })
     })
 
+    # .execute_step
+    test_that("private .execute_step works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.execute_step
+
+        test_that("returns the result of the function at the given step",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = 1) a) |>
+                pipe_add("B", function(b = 2) b)
+
+            f <- get_private(pip)$.execute_step
+
+            expect_equal(f(step = "A"), 1)
+            expect_equal(f(step = "B"), 2)
+        })
+
+        test_that("uses output of dependent steps",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = 1) a) |>
+                pipe_add("B", function(b = ~A) b)
+
+            f <- get_private(pip)$.execute_step
+
+            expect_equal(f(step = "B"), list())
+
+            # Now set output for step 'A'
+            i <- match("A", pip$get_step_names())
+            pip$pipeline[i, "out"] <- 2
+
+            expect_equal(f(step = "B"), 2)
+        })
+
+        test_that("accepts Param object args",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add(
+                    "A",
+                    function(a = new("NumericParam", "a", value = 1)) a
+                )
+
+            f <- get_private(pip)$.execute_step
+        })
+
+        test_that("if error, the failing step is given in the log",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = 1) stop("something went wrong"))
+
+            f <- get_private(pip)$.execute_step
+            log <- capture.output(expect_error(f("A")))
+            hasInfo <- grepl(
+                log[1],
+                pattern = "pipeline at step 2 ('A'), something went wrong",
+                fixed = TRUE
+            )
+            expect_true(hasInfo)
+        })
+
+        test_that("handles Param object args",
+        {
+            skip("for now: enable that the default can be an expression?")
+            x <- 1
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = x) a)
+
+            f <- get_private(pip)$.execute_step
+        })
+
+        test_that("handles Param object args",
+        {
+            skip("for now: enable that the default can be an expression?")
+            p <- new("NumericParam", "a", value = 1)
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = p) a)
+
+            f <- get_private(pip)$.execute_step
+        })
+    })
+
+
+    # .extract_dependent_out
+    test_that("private .extract_dependent_out works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.extract_dependent_out
+
+        test_that("if no deps, NULL is returned",
+        {
+            expect_true(is.null(f(deps = list(), out = list())))
+        })
+
+        test_that("signals badly typed input",
+        {
+            expect_error(
+                f(1:2, list()),
+                "is.character(deps) || is.list(deps) is not TRUE",
+                fixed = TRUE
+            )
+            expect_error(
+                f(list(), 1),
+                "is.list(out) is not TRUE",
+                fixed = TRUE
+            )
+        })
+
+        test_that("signals if dependency is not found in out",
+        {
+            expect_no_error(
+                f(deps = "foo", out = list("foo" = 1))
+            )
+            expect_error(
+                f(deps = "foo", out = list()),
+                "all(unlist(deps) %in% names(out)) is not TRUE",
+                fixed = TRUE
+            )
+
+            # Dependencies can be lists of dependencies
+            deps <- list(x = c("a", "b"))
+            out <- list(a = 1)
+            expect_error(f(deps, out))
+        })
+
+        test_that("output is extracted as expected",
+        {
+            out <- list(a = 1, b = 2, c = 3, d = 4)
+            expect_equal(
+                f(c(x = "a"), out),
+                list(x = 1)
+            )
+
+            expect_equal(
+                f(c(x = "a", y = "c"), out),
+                list(x = 1, y = 3)
+            )
+
+            expect_equal(
+                f(list(x = c("a", "c"), y = c("b", "d")), out),
+                list(
+                    x = list(a = 1, c = 3),
+                    y = list(b = 2, d = 4)
+                )
+            )
+        })
+    })
 
     # .extract_deps_from_param_list
     test_that("private .extract_deps_from_param_list works as expected",

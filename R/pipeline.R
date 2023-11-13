@@ -297,10 +297,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 log_info(type = "start_pipeline", pipeline_name = self$name)
 
             for (i in seq(from = from, to = to)) {
-                stepName = as.character(self$pipeline[i, "step"])
-                gettextf("Step %i/%i %s",  i, to, stepName) |> log_info()
+                step <- as.character(self$pipeline[i, "step"])
+                gettextf("Step %i/%i %s",  i, to, step) |> log_info()
 
-                res = private$.execute_row(i)
+                res = private$.execute_step(step)
 
                 if (inherits(res, "Pipeline") && recursive) {
                     log_info("Abort pipeline execution and restart on new.")
@@ -310,7 +310,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 }
 
                 if (length(res) > 0) {
-                    self$pipeline[["out"]][[i]] = res
+                    self$pipeline[["out"]][[i]] <- res
                 }
             }
 
@@ -893,6 +893,71 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             deps
         },
 
+        .execute_step = function(step)
+        {
+            private$.verify_step_exists(step)
+            pip <- self$pipeline
+            step_number <- private$.get_step_index(step)
+
+            row <- pip[step_number, ] |> unlist1()
+            fun <- row[["fun"]]
+            args <- row[["params"]]
+            deps <- row[["deps"]]
+
+            # If calculation depends on results of earlier steps, get them from
+            # respective output slots of the pipeline.
+            hasDeps <- length(deps) > 0
+            if (hasDeps) {
+                out <- pip[["out"]] |> stats::setNames(pip[["step"]])
+                dependent_out <- private$.extract_dependent_out(deps, out)
+                args[names(dependent_out)] <- dependent_out
+            }
+
+            # If arg is encapsulated in a Param object, get the value
+            args <- lapply(
+                args,
+                FUN = function(arg) {
+                    if (methods::is(arg, "Param")) arg@value else arg
+                }
+            )
+
+            step <- pip[["step"]][[step_number]]
+            context <- gettextf("pipeline at step %i ('%s')", step_number, step)
+
+            res = tryCatchLog(
+                do.call(fun, args = args),
+                execution_context = context
+            )
+
+            res
+        },
+
+        .extract_dependent_out = function(
+            deps,
+            out
+        ) {
+            stopifnot(
+                is.character(deps) || is.list(deps),
+                is.list(out),
+                all(unlist(deps) %in% names(out))
+            )
+
+            if (length(deps) == 0) {
+                return(NULL)
+            }
+
+            extract_out <- function(x) {
+                if (length(x) == 1) {
+                    out[[x]]
+                } else {
+                    # If multiple dependencies are given, return a list
+                    out[x]
+                }
+            }
+
+            lapply(deps, FUN = extract_out)
+        },
+
         .extract_deps_from_param_list = function(
             params
         ) {
@@ -913,46 +978,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             deps
-        },
-
-        .execute_row = function(i)
-        {
-            fun = self$pipeline[["fun"]][[i]]
-            args = as.list(self$pipeline[["params"]][[i]])
-
-            deps = self$pipeline[["deps"]][[i]]
-
-            # If calculation depends on results of earlier steps, get them from
-            # respective output slots of the pipeline.
-            hasDeps = length(deps) > 0
-            if (hasDeps) {
-                out = self$pipeline[["out"]][1:i]
-                names(out) = self$pipeline[["step"]][1:i]
-
-                dependent_args = lapply(
-                    deps,
-                    function(x) if (length(x) == 1) out[[x]] else out[x]
-                )
-                args[names(dependent_args)] = dependent_args
-            }
-
-            # If arg is encapsulated in a Param object, get the value
-            args = lapply(args,
-                          function(arg) {
-                              if (methods::is(arg, "Param"))
-                                  arg@value else arg
-                          }
-            )
-
-            step = self$pipeline[["step"]][[i]]
-            context = paste0("pipeline at step ", i, " ('", step, "')")
-
-            res = tryCatchLog(
-                do.call(fun, args = args),
-                execution_context = context
-            )
-
-            res
         },
 
         .get_last_step = function() {
