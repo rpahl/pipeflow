@@ -357,11 +357,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         ) {
             private$.verify_step_exists(step)
 
-            private$.get_downstream_deps(
+            deps <- private$.get_downstream_deps(
                 step = step,
                 deps = self$get_dependencies(),
                 recursive = recursive
             )
+
+            # Ensure order matches the step order of the pipeline
+            intersect(self$get_step_names(), deps)
         },
 
         #' @description Get all function parameters defined in the pipeline.
@@ -508,11 +511,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         ) {
             private$.verify_step_exists(step)
 
-            private$.get_upstream_deps(
+            deps <- private$.get_upstream_deps(
                 step = step,
                 deps = self$get_dependencies(),
                 recursive = recursive
             )
+
+            # Ensure order matches the step order of the pipeline
+            intersect(self$get_step_names(), deps)
         },
 
         #' @description Determine whether pipeline has given step.

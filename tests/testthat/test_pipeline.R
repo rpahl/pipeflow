@@ -888,9 +888,9 @@ test_that("works with complex dependencies as created by data splits",
     expect_equal(pip$get_upstream_dependencies("f2.1"), c("f1.1"))
     expect_equal(pip$get_upstream_dependencies("f2.2"), c("f1.2"))
 
-    expect_equal(
+    expect_equivalent(
         pip$get_upstream_dependencies("f3"),
-        c("f1.1", "f1.2", "f2.1", "f2.2")
+        c("f1.1", "f2.1", "f1.2", "f2.2")
     )
 })
 
