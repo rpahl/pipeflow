@@ -66,58 +66,6 @@ log_error <- function(msg, ...) {
 }
 
 
-tryCatchLog <- function(
-    expr,
-    ...,
-    execution_context = NULL,
-    finally = NULL,
-    silent_warnings = TRUE,
-    silent_messages = TRUE
-) {
-    condition_handler <- function(cond) {
-        cond_message <- cond[["message"]]
-        msg = cond_message
-
-        if (!is.null(execution_context)) {
-            msg = paste0("Context: ", execution_context, ", ", msg)
-        }
-
-        supported_conditions = c("message", "warning", "error")
-
-        severity <- supported_conditions |>
-            sapply(FUN = function(x) inherits(cond, x)) |>
-            Filter(f = isTRUE) |>
-            names()
-
-        if (length(severity) == 0) {
-            stop(sprintf("Unsupported condition %s", toString(class(cond))))
-        }
-
-        switch(
-            severity[1],
-            "message" = log_info(msg),
-            "warning" = log_warn(msg, warn = cond_message),
-            "error" = log_error(msg, error = cond_message),
-            stop(sprintf("Unsupported severity level %s", severity))
-        )
-
-        if (silent_warnings && inherits(cond, "warning")) {
-            invokeRestart("muffleWarning")
-        }
-
-        if (silent_messages && inherits(cond, "message")) {
-            invokeRestart("muffleMessage")
-        }
-    }
-
-    tryCatch(
-        withCallingHandlers(expr, condition = condition_handler),
-        ...,
-        finally = finally
-    )
-}
-
-
 #' @title Set pipeflow log layout
 #' @description Set pipeflow log layout
 #' @param layout Layout name

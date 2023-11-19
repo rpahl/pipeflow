@@ -968,9 +968,19 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             step <- pip[["step"]][[step_number]]
             context <- gettextf("pipeline at step %i ('%s')", step_number, step)
 
-            res = tryCatchLog(
+            res <- tryCatch(
                 do.call(fun, args = args),
-                execution_context = context
+
+                error = function(e) {
+                    msg <- paste0("Context: ", context, ", ", e$message)
+                    log_error(msg)
+                    stop(e$message)
+                },
+                warning = function(w) {
+                    msg <- paste0("Context: ", context, ", ", w$message)
+                    log_warn(msg)
+                    warning(msg)
+                }
             )
 
             res
