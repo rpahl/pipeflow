@@ -496,6 +496,25 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             jsonlite::toJSON(params, auto_unbox = TRUE, pretty = TRUE)
         },
 
+        #' @description Get all upstream dependencies of given step, by
+        #' default descending recursively.
+        #' @param step `string` name of step
+        #' @param recursive `logical` if `TRUE`, dependencies of dependencies
+        #' are also returned.
+        #' @return `list` of upstream dependencies
+        get_upstream_dependencies = function(
+            step,
+            recursive = TRUE
+        ) {
+            private$.verify_step_exists(step)
+
+            private$.get_upstream_deps(
+                step = step,
+                deps = self$get_dependencies(),
+                recursive = recursive
+            )
+        },
+
         #' @description Determine whether pipeline has given step.
         #' @param step `string` name of step
         #' @return `logical` whether step exists
@@ -1036,6 +1055,38 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         .get_step_index = function(step) {
             private$.verify_step_exists(step)
             match(step, self$get_step_names())
+        },
+
+        .get_upstream_deps = function(
+            step,
+            deps,
+            recursive = TRUE
+        ) {
+            stopifnot(
+                is_string(step),
+                is.character(deps) || is.list(deps),
+                is.logical(recursive)
+            )
+
+            if (length(deps) == 0) {
+                return(character())
+            }
+
+            result <- unlist(deps[[step]]) |> as.character()
+
+            if (recursive) {
+                result <- c(
+                    result,
+                    sapply(
+                        result,
+                        FUN = private$.get_upstream_deps,
+                        deps = deps,
+                        recursive = TRUE
+                    )
+                )
+            }
+
+            unique(unlist(result)) |> as.character()
         },
 
         .relative_dependency_to_index = function(
