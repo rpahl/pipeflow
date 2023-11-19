@@ -337,12 +337,31 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             self$pipeline[["fun"]][[1]]()
         },
 
-        #' @description Get dependencies of pipeline
+        #' @description Get all dependencies defined in the pipeline
         #' @return named `list` of dependencies for each step
         get_dependencies = function()
         {
             self$pipeline[["deps"]] |>
                 stats::setNames(self$get_step_names())
+        },
+
+        #' @description Get all downstream dependencies of given step, by
+        #' default descending recursively.
+        #' @param step `string` name of step
+        #' @param recursive `logical` if `TRUE`, dependencies of dependencies
+        #' are also returned.
+        #' @return `list` of downstream dependencies
+        get_downstream_dependencies = function(
+            step,
+            recursive = TRUE
+        ) {
+            private$.verify_step_exists(step)
+
+            private$.get_downstream_deps(
+                step = step,
+                deps = self$get_dependencies(),
+                recursive = recursive
+            )
         },
 
         #' @description Get all function parameters defined in the pipeline.
@@ -978,6 +997,36 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             deps
+        },
+
+        .get_downstream_deps = function(
+            step,
+            deps,
+            recursive = TRUE
+        ) {
+            stopifnot(
+                is_string(step),
+                is.character(deps) || is.list(deps),
+                is.logical(recursive)
+            )
+
+            result <- deps |>
+                Filter(f = function(x) step %in% unlist(x)) |>
+                names()
+
+            if (recursive) {
+                result <- c(
+                    result,
+                    sapply(
+                        result,
+                        FUN = private$.get_downstream_deps,
+                        deps = deps,
+                        recursive = TRUE
+                    )
+                )
+            }
+
+            unique(unlist(result)) |> as.character()
         },
 
         .get_last_step = function() {

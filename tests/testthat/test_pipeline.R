@@ -476,6 +476,67 @@ test_that("dependencies can be retrieved and are named after the steps",
 })
 
 
+# get_downstream_dependencies
+
+test_that("dependencies can be determined recursively for given step",
+{
+    pip <- Pipeline$new("pipe")
+
+    pip$add("f1", function(a = 1) a)
+    pip$add("f2", function(a = ~f1) a)
+    pip$add("f3", function(a = ~f1, b = ~f2) a + b)
+    pip$add("f4", function(a = ~f1, b = ~f2, c = ~f3) a + b + c)
+
+    expect_equal(pip$get_downstream_dependencies("f3"), c("f4"))
+    expect_equal(pip$get_downstream_dependencies("f2"), c("f3", "f4"))
+    expect_equal(pip$get_downstream_dependencies("f1"), c("f2", "f3", "f4"))
+})
+
+test_that("if no dependencies an empty character vector is returned",
+{
+    pip <- Pipeline$new("pipe")
+
+    pip$add("f1", function(a = 1) a)
+    expect_equal(pip$get_downstream_dependencies("f1"), character(0))
+})
+
+test_that("step must exist",
+{
+    pip <- Pipeline$new("pipe")
+
+    expect_error(
+        pip$get_downstream_dependencies("f1"),
+        "step 'f1' does not exists"
+    )
+})
+
+test_that("works with complex dependencies as created by data splits",
+{
+    dat1 <- data.frame(x = 1:2)
+    dat2 <- data.frame(y = 1:2)
+    dataList <- list(dat1, dat2)
+
+    pip <- Pipeline$new("pipe") |>
+        pipe_add("f1", function(a = 1) a) |>
+        pipe_add("f2", function(a = ~f1, b = 2) b) |>
+        pipe_add("f3", function(x = ~f1, y = ~f2) x + y)
+
+    pip$set_data_split(dataList, to_step = "f2")
+
+    expect_equal(
+        pip$get_downstream_dependencies("f1.1"),
+        c("f2.1", "f3")
+    )
+
+    expect_equal(
+        pip$get_downstream_dependencies("f1.2"),
+        c("f2.2", "f3")
+    )
+
+    expect_equal(pip$get_downstream_dependencies("f2.1"), "f3")
+    expect_equal(pip$get_downstream_dependencies("f2.2"), "f3")
+})
+
 # get_parameters
 
 test_that("parameters can be retrieved",
@@ -1816,6 +1877,97 @@ test_that("private methods work as expected",
             )
         })
     })
+
+    # .get_downstream_deps
+    test_that("private .get_downstream_deps works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.get_downstream_deps
+
+        test_that("badly typed inputs are signalled",
+        {
+            expect_error(
+                f(step = 1),
+                "is_string(step) is not TRUE",
+                fixed = TRUE
+            )
+
+            expect_error(
+                f(step = "foo", deps = c(a = 1)),
+                "is.character(deps) || is.list(deps) is not TRUE",
+                fixed = TRUE
+            )
+
+            expect_error(
+                f(step = "foo", deps = list(), recursive = 1),
+                "is.logical(recursive)",
+                fixed = TRUE
+            )
+        })
+
+
+        test_that("if no dependencies, empty character vector is returned",
+        {
+            expect_equal(f(step = "foo", deps = character()), character(0))
+            expect_equal(f(step = "foo", deps = list()), character(0))
+        })
+
+        test_that("dependencies by default are determined recursively",
+        {
+            deps <- list(
+                f1 = c(a = "f0"),
+                f2 = c(a = "f1"),
+                f3 = c(a = "f2")
+            )
+
+            expect_equal(f("f3", deps), character(0))
+            expect_equal(f("f2", deps), c("f3"))
+            expect_equal(f("f1", deps), c("f2", "f3"))
+            expect_equal(f("f0", deps), c("f1", "f2", "f3"))
+        })
+
+        test_that("returned dependencies are unique",
+        {
+            deps <- list(
+                f1 = c(a = "f0"),
+                f2 = c(a = "f0", b = "f1"),
+                f3 = c(a = "f0", b = "f1", c = "f2")
+            )
+
+            expect_equal(f("f3", deps), character(0))
+            expect_equal(f("f2", deps), c("f3"))
+            expect_equal(f("f1", deps), c("f2", "f3"))
+            expect_equal(f("f0", deps), c("f1", "f2", "f3"))
+        })
+
+        test_that("dependencies can be determined non-recursively",
+        {
+            deps <- list(
+                f1 = c(a = "f0"),
+                f2 = c(a = "f1"),
+                f3 = c(a = "f2")
+            )
+
+            expect_equal(f("f3", deps, recursive = FALSE), character(0))
+            expect_equal(f("f2", deps, recursive = FALSE), c("f3"))
+            expect_equal(f("f1", deps, recursive = FALSE), c("f2"))
+            expect_equal(f("f0", deps, recursive = FALSE), c("f1"))
+        })
+
+        test_that("works with multiple dependencies given in sublist",
+        {
+            deps <- list(
+                f2 = c(a = "f1", b = ".data"),
+                f3 = list(
+                    x = c("f0", "f1"),
+                    y = c("f1", "f2")
+                )
+            )
+
+            expect_equal(f("f1", deps), c("f2", "f3"))
+        })
+    })
+
 
     # .get_last_step
     test_that("private .get_last_step works as expected",
