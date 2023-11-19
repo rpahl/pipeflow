@@ -26,15 +26,45 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description constructor
         #' @param name the name of the Pipeline
         #' @param data optional data used in the pipeline (can be set later)
+        #' @param logger logger to be used for logging.
+        #' If you want to use your own custom log function, you need to
+        #' provide a function with the following signature:
+        #' `function(level, msg, ...)`. The `level` argument is a
+        #' string, which can be one of `info`, `warn`, or `error`. The `msg`
+        #' argument is a string containing the message to be logged. The
+        #' `...` argument is a list of named parameters, which can be used to
+        #' add additional information to the log message. If no logger is
+        #' provided, the default logger is used. Note that with the
+        #' default logger, the log layout can be altered any time via
+        #' [set_log_layout()].
         #' @return returns the `Pipeline` object invisibly
-        initialize = function(name, data = NULL)
-        {
+        initialize = function(
+            name,
+            data = NULL,
+            logger = NULL
+        ) {
             if (!is_string(name)) {
                 stop("name must be a string")
             }
 
             if (!nzchar(name)) {
                 stop("name must not be empty")
+            }
+
+            stopifnot(is.null(logger) || is.function(logger))
+            if (is.null(logger)) {
+                private$.lg <- lgr::get_logger(name = .this_package_name())$log
+            }
+            if (is.function(logger)) {
+                expected_formals <- c("level", "msg", "...")
+                if (!setequal(names(formals(logger)), expected_formals)) {
+                    stop(
+                        "logger function must have the following signature: ",
+                        "function(", paste(expected_formals, collapse = ", "),
+                        ")"
+                    )
+                }
+                private$.lg <- logger
             }
 
             self$name = name
@@ -190,6 +220,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Append string to all step names.
         #' @param postfix `string` to be appended to each step name.
+        #' @param sep `string` separator between step name and postfix.
         #' @return returns the `Pipeline` object invisibly
         append_to_step_names = function(postfix, sep = ".") {
 
@@ -256,7 +287,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             # To respect dependencies, remove steps from last to first
             for (step in rev(steps2remove)) {
-                log_info(gettextf("Removing step '%s'", step))
+                msg <- gettextf("Removing step '%s'", step)
+                private$.lg(level = "info", msg = msg)
                 self$remove_step(step)
             }
 
@@ -293,6 +325,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             #   ),
             # TODO: change interface to  execute(steps, ...)
             # nolint end
+            log_info <- function(msg, ...) {
+                private$.lg(level = "info", msg = msg, ...)
+            }
             gettextf("Start execution of '%s' pipeline:", self$name) |>
                 log_info(type = "start_pipeline", pipeline_name = self$name)
 
@@ -889,6 +924,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
     ),
 
     private = list(
+        .lg = NULL, # the logger function
         deep_clone = function(name, value) {
             if (name == "pipeline")
                 return(data.table::copy(value))
@@ -973,13 +1009,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
                 error = function(e) {
                     msg <- paste0("Context: ", context, ", ", e$message)
-                    log_error(msg)
-                    stop(e$message)
+                    private$.lg(level = "error", msg = msg)
+                    stop(e$message, call. = FALSE)
                 },
                 warning = function(w) {
                     msg <- paste0("Context: ", context, ", ", w$message)
-                    log_warn(msg)
-                    warning(msg)
+                    private$.lg(level = "warn", msg = msg)
+                    warning(msg, call. = FALSE)
                 }
             )
 

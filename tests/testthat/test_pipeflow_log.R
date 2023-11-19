@@ -14,11 +14,11 @@ test_that("time can be formatted to contain GMT offset", {
 
 test_that("json logging works as expected",
 {
-    expect_no_error(set_log_layout("json"))
+    expect_no_error(lg <- set_log_layout("json"))
     on.exit(set_log_layout("text"))
 
     test_that("standard log call has all expected fields", {
-        out <- utils::capture.output(.log("my message"))
+        out <- utils::capture.output(lg$info("my message"))
         fields <- jsonlite::fromJSON(out)
 
         expected_fields = c(
@@ -31,14 +31,14 @@ test_that("json logging works as expected",
     })
 
     test_that("log application is this package name", {
-        out <- utils::capture.output(.log("my message"))
+        out <- utils::capture.output(lg$info("my message"))
         fields <- jsonlite::fromJSON(out)
 
-        expect_equal(fields[["application"]], methods::getPackageName())
+        expect_equal(fields[["application"]], .this_package_name())
     })
 
     test_that("log has time", {
-        out <- utils::capture.output(.log("my message"))
+        out <- utils::capture.output(lg$info("my message"))
         fields <- jsonlite::fromJSON(out)
 
         expect_true(hasName(fields, "time"))
@@ -46,7 +46,7 @@ test_that("json logging works as expected",
 
     test_that("additional log fields can be added on the fly", {
         out <- utils::capture.output({
-            .log("my message", my_field = "hello", some_type = "foo")
+            lg$info("my message", my_field = "hello", some_type = "foo")
         })
         fields <- jsonlite::fromJSON(out)
         expect_equal(fields[["my_field"]], "hello")
@@ -55,28 +55,28 @@ test_that("json logging works as expected",
 
     test_that("additional log fields can be passed as variables", {
         s <- "hello"
-        out <- utils::capture.output(.log("my message", my_field = s))
+        out <- utils::capture.output(lg$info("my message", my_field = s))
         fields <- jsonlite::fromJSON(out)
 
         expect_equal(fields[["my_field"]], s)
     })
 
     test_that("info log has level 'info'", {
-        out <- utils::capture.output(log_info("my message"))
+        out <- utils::capture.output(lg$info("my message"))
         fields <- jsonlite::fromJSON(out)
 
         expect_equal(fields[["level"]], "info")
     })
 
     test_that("warn log has level 'warn'", {
-        out <- utils::capture.output(log_warn("my message"))
+        out <- utils::capture.output(lg$warn("my message"))
         fields <- jsonlite::fromJSON(out)
 
         expect_equal(fields[["level"]], "warn")
     })
 
     test_that("error log has level 'error'", {
-        out <- utils::capture.output(log_error("my message"))
+        out <- utils::capture.output(lg$error("my message"))
         fields <- jsonlite::fromJSON(out)
 
         expect_equal(fields[["level"]], "error")

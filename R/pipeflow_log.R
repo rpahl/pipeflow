@@ -44,28 +44,6 @@ LogLayoutJson <- R6::R6Class(
 )
 
 
-.log <- function(
-    msg, ...,
-    level = "info",
-    logger = lgr::get_logger(name = methods::getPackageName())
-) {
-    logfun <- logger[[level]]
-    logfun(msg, ...)
-}
-
-log_info <- function(msg, ...) {
-    .log(msg, level = "info", ...)
-}
-
-log_warn <- function(msg, ...) {
-    .log(msg, level = "warn", ...)
-}
-
-log_error <- function(msg, ...) {
-    .log(msg, level = "error", ...)
-}
-
-
 #' @title Set pipeflow log layout
 #' @description Set pipeflow log layout
 #' @param layout Layout name
