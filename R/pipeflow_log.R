@@ -1,5 +1,6 @@
 
-.get_formatted_time <- function(time = Sys.time()) {
+.get_formatted_time <- function(time = Sys.time())
+{
     local <- time
     gmt <- strptime(
         as.POSIXlt(time, "GMT"),
@@ -8,7 +9,7 @@
     hours_diff <- round(as.numeric(difftime(local, gmt, units = "hours")))
 
     sign_str <- if (sign(hours_diff) > 0) "+" else "-"
-    number_str <- paste0(toString(hours_diff), ":00")
+    number_str <- paste0(toString(abs(hours_diff)), ":00")
 
     paste0(format(local, format = "%Y-%m-%dT%H:%M:%S"), sign_str, number_str)
 }

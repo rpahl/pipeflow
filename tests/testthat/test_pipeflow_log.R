@@ -1,6 +1,21 @@
-# utils log
+# .get_formatted_time
 
-test_that("time can be formatted to contain GMT offset", {
+test_that("time can be formatted to contain GMT offset",
+{
+    ft <- .get_formatted_time()
+
+    hasCorrectFormat <- grepl(
+        "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+|-][0-9]{1}:00",
+        x = ft
+    )
+    expect_true(hasCorrectFormat)
+})
+
+test_that("time formatting works even if we are before GMT",
+{
+    timezone <- Sys.getenv("TZ")
+    on.exit(Sys.setenv(TZ = timezone))
+    Sys.setenv(TZ = "America/Los_Angeles")
     ft <- .get_formatted_time()
 
     hasCorrectFormat <- grepl(
@@ -11,6 +26,7 @@ test_that("time can be formatted to contain GMT offset", {
 })
 
 
+# logging
 
 test_that("json logging works as expected",
 {
