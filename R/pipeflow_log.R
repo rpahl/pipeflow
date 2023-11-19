@@ -1,3 +1,4 @@
+
 .get_formatted_time <- function(time = Sys.time()) {
     local <- time
     gmt <- strptime(

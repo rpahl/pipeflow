@@ -164,7 +164,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 first_step2 = p2$pipeline[1, "step"][[1]]
                 deps2_updated = lapply(
                     p2$pipeline[["deps"]],
-                    FUN = .replace_string,
+                    FUN = pipeflow_replace_string,
                     target = first_step2,
                     replacement = last_step1
                 )
@@ -1141,7 +1141,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             to_index <- match(to_step, all_steps)
             considered_steps <- all_steps[seq_len(to_index)]
 
-            if (dep %!in% considered_steps) {
+            if (!(dep %in% considered_steps)) {
                 msg = paste0(
                     "step '", step, "': dependency '", dep, "' not found"
                 )
