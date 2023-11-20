@@ -47,6 +47,7 @@ Roman Pahl
 \item \href{#method-Pipeline-get_parameters_at_step}{\code{Pipeline$get_parameters_at_step()}}
 \item \href{#method-Pipeline-get_step}{\code{Pipeline$get_step()}}
 \item \href{#method-Pipeline-get_step_names}{\code{Pipeline$get_step_names()}}
+\item \href{#method-Pipeline-get_step_number}{\code{Pipeline$get_step_number()}}
 \item \href{#method-Pipeline-get_unique_parameters}{\code{Pipeline$get_unique_parameters()}}
 \item \href{#method-Pipeline-get_unique_parameters_json}{\code{Pipeline$get_unique_parameters_json()}}
 \item \href{#method-Pipeline-get_upstream_dependencies}{\code{Pipeline$get_upstream_dependencies()}}
@@ -297,7 +298,7 @@ returns the `Pipeline` object invisibly
 \subsection{Method \code{execute_step()}}{
 Execute given pipeline step
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$execute_step(step, upstream = FALSE, downstream = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$execute_step(step, upstream = TRUE, downstream = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -464,6 +465,26 @@ Get step names of pipeline
 
 \subsection{Returns}{
 `character` vector of step names
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-get_step_number"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_step_number}{}}}
+\subsection{Method \code{get_step_number()}}{
+Get step number
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_step_number(step)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{`string` name of step}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the step number in the pipeline
 }
 }
 \if{html}{\out{<hr>}}
