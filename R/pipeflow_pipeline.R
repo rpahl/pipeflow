@@ -251,7 +251,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return returns the `Pipeline` object invisibly
         clean_out_at_step = function(step)
         {
-            index <- private$.get_step_index(step)
+            index <- self$get_step_number(step)
             self$pipeline[["out"]][[index]] <- list()
 
             invisible(self)
@@ -383,7 +383,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return returns the `Pipeline` object invisibly
         execute_step = function(
             step,
-            upstream = FALSE,
+            upstream = TRUE,
             downstream = FALSE
         ) {
             private$.verify_step_exists(step)
@@ -484,10 +484,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return returns the `Pipeline` object invisibly
         get_out_at_step = function(step)
         {
-            index <- private$.get_step_index(step)
+            index <- self$get_step_number(step)
             self$pipeline[["out"]][[index]]
-
-            invisible(self)
         },
 
         #' @description Get all function parameters defined in the pipeline.
@@ -563,6 +561,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         {
             self$pipeline[["step"]]
         },
+
+        #' @description Get step number
+        #' @param step `string` name of step
+        #' @return the step number in the pipeline
+        get_step_number = function(step)
+        {
+            private$.verify_step_exists(step)
+            match(step, self$get_step_names())
+        },
+
 
         #' @description Get all function parameters defined in the pipeline,
         #' but only list each parameter once, that is, once a parameter is used
@@ -959,7 +967,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
             private$.verify_step_exists(step)
 
-            index <- private$.get_step_index(step)
+            index <- self$get_step_number(step)
             self$pipeline[index, "keepOut"] <- status
 
             invisible(self)
@@ -1065,7 +1073,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             # Handle any relative dependencies
             all_steps <- self$get_step_names()
-            to_index <- private$.get_step_index(to_step)
+            to_index <- self$get_step_number(to_step)
             considered_steps = all_steps[seq_len(to_index)]
             relative_deps <- deps |>
                 Filter(f = function(x) startsWith(x, "-")) |>
@@ -1090,7 +1098,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         {
             private$.verify_step_exists(step)
             pip <- self$pipeline
-            step_number <- private$.get_step_index(step)
+            step_number <- self$get_step_number(step)
 
             row <- pip[step_number, ] |> unlist1()
             fun <- row[["fun"]]
@@ -1219,11 +1227,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         .get_last_step = function() {
             self$get_step_names() |> utils::tail(1)
-        },
-
-        .get_step_index = function(step) {
-            private$.verify_step_exists(step)
-            match(step, self$get_step_names())
         },
 
         .get_upstream_deps = function(
@@ -1364,7 +1367,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         .verify_step_exists = function(step)
         {
             if (!self$has_step(step)) {
-                stop("step '", step, "' does not exists", call. = FALSE)
+                stop("step '", step, "' does not exist", call. = FALSE)
             }
         }
     )

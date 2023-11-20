@@ -558,17 +558,28 @@ test_that("execute_step",
     test_that("pipeline can be executed at given step",
     {
         pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a)
+
+        pip$keep_all_out()$execute_step("A")
+        expect_equal(pip$get_out_at_step("A"), 1)
+    })
+
+
+    test_that("upstream steps are by default executed with given step",
+    {
+        pip <- Pipeline$new("pipe") |>
             pipe_add("A", function(a = 1) a) |>
             pipe_add("B", function(b = ~A) c(b, 2)) |>
             pipe_add("C", function(c = ~B) c(c, 3))
 
         pip$keep_all_out()$execute_step("B")
-        expect_false(pip$has_out_at_step("A"))
-        expect_equal(pip$get_out_at_step("B"), list(2))
+
+        expect_equal(pip$get_out_at_step("A"), 1)
+        expect_equal(pip$get_out_at_step("B"), c(1, 2))
         expect_false(pip$has_out_at_step("C"))
     })
 
-    test_that("pipeline can be executed at given step including
+    test_that("pipeline can be executed at given step excluding
         all upstream dependencies",
     {
         pip <- Pipeline$new("pipe") |>
@@ -576,14 +587,14 @@ test_that("execute_step",
             pipe_add("B", function(b = ~A) c(b, 2)) |>
             pipe_add("C", function(c = ~B) c(c, 3))
 
-        pip$keep_all_out()$execute_step("B", upstream = TRUE)
-        expect_equal(pip$get_out_at_step("A"), 1)
-        expect_equal(pip$get_out_at_step("B"), c(1, 2))
+        pip$keep_all_out()$execute_step("B", upstream = FALSE)
+        expect_false(pip$has_out_at_step("A"))
+        expect_equal(pip$get_out_at_step("B"), list(2))
         expect_false(pip$has_out_at_step("C"))
     })
 
-    test_that("pipeline can be executed at given step including
-        all downstream dependencies",
+    test_that("pipeline can be executed at given step excluding upstream
+        but including downstream dependencies",
     {
         pip <- Pipeline$new("pipe") |>
             pipe_add("A", function(a = 1) a) |>
@@ -591,7 +602,11 @@ test_that("execute_step",
             pipe_add("C", function(c = ~B) c(c, 3))
 
 
-        pip$keep_all_out()$execute_step("B", downstream = TRUE)
+        pip$keep_all_out()$execute_step(
+            "B",
+            upstream = FALSE,
+            downstream = TRUE
+        )
         expect_false(pip$has_out_at_step("A"))
         expect_equal(pip$get_out_at_step("B"), list(2))
         expect_equal(pip$get_out_at_step("C"), list(2, 3))
@@ -677,7 +692,7 @@ test_that("step must exist",
 
     expect_error(
         pip$get_downstream_dependencies("f1"),
-        "step 'f1' does not exists"
+        "step 'f1' does not exist"
     )
 })
 
@@ -868,6 +883,36 @@ test_that("dependencies are recorded as expected",
         c("a" = ".data", b = "f1")
     )
 })
+
+
+
+test_that("get_step_number",
+{
+    expect_true(is.function(Pipeline$new("pipe")$get_step_number))
+
+    test_that("get_step_number works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        pip$add("f1", function(a = 1) a)
+        pip$add("f2", function(a = 1) a)
+
+        pip$get_step_number("f1") |> expect_equal(2)
+        pip$get_step_number("f2") |> expect_equal(3)
+    })
+
+    test_that("signals non-existent step",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        pip$add("f1", function(a = 1) a)
+
+        expect_error(
+            pip$get_step_number("non-existent"),
+            "step 'non-existent' does not exist"
+        )
+    })
+})
+
+
 
 # get_step_names
 
@@ -1061,7 +1106,7 @@ test_that("step must exist",
 
     expect_error(
         pip$get_upstream_dependencies("f1"),
-        "step 'f1' does not exists"
+        "step 'f1' does not exist"
     )
 })
 
@@ -1135,7 +1180,7 @@ test_that("has_out_at_step",
 
         expect_error(
             pip$has_out_at_step("f2"),
-            "step 'f2' does not exists",
+            "step 'f2' does not exist",
             fixed = TRUE
         )
     })
@@ -1657,7 +1702,7 @@ test_that("set_keep_out",
 
         expect_error(
             pip$set_keep_out("f2"),
-            "step 'f2' does not exists",
+            "step 'f2' does not exist",
             fixed = TRUE
         )
     })
@@ -2335,19 +2380,6 @@ test_that("private methods work as expected",
         expect_equal(f(), "f1")
     })
 
-    # .get_step_index
-    test_that("private .get_step_index works as expected",
-    {
-        pip <- expect_no_error(Pipeline$new("pipe"))
-        f <- get_private(pip)$.get_step_index
-
-        pip$add("f1", function(a = 1) a)
-        pip$add("f2", function(a = 1) a)
-
-        f("f1") |> expect_equal(2)
-        f("f2") |> expect_equal(3)
-    })
-
     # .get_upstream_deps
     test_that("private .get_upstream_deps works as expected",
     {
@@ -2558,7 +2590,7 @@ test_that("private methods work as expected",
         {
             expect_error(
                 f("dep", "step", to_step = "non-existent"),
-                "step 'non-existent' does not exists",
+                "step 'non-existent' does not exist",
                 fixed = TRUE
             )
         })
