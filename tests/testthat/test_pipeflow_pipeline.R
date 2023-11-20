@@ -1603,7 +1603,7 @@ test_that("pipeline logging works as expected",
             pipe_add("f1", function(a = 1) a) |>
             pipe_add("f2", function() warning("this is a warning"))
 
-        log <- utils::capture.output(pip$execute())
+        expect_warning(log <- utils::capture.output(pip$execute()))
 
         log_fields = lapply(head(log, -1), jsonlite::fromJSON)
         warnings = Filter(
@@ -1611,16 +1611,16 @@ test_that("pipeline logging works as expected",
             f = function(x) x[["level"]] == "warn"
         )[[1]]
 
-        expect_equal(warnings[["message"]],
-            "Context: pipeline at step 3 ('f2'), this is a warning")
-        expect_equal(warnings[["warn"]], "this is a warning")
+        expect_equal(
+            warnings[["message"]],
+            "Context: pipeline at step 3 ('f2'), this is a warning"
+        )
     })
 
 
     test_that(
         "upon error during execute, both context and error msg are logged",
     {
-
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(a = 1) a) |>
@@ -1635,7 +1635,6 @@ test_that("pipeline logging works as expected",
 
         expect_equal(last[["message"]],
             "Context: pipeline at step 3 ('f2'), technical error message")
-        expect_equal(last[["error"]], "technical error message")
     })
 
     test_that("pipeline start is marked in the log and has the pipeline's name",

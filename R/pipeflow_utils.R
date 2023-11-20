@@ -14,17 +14,7 @@ unlist1 = function(x, ...)
 }
 
 
-`%!in%` <- Negate(`%in%`)
-
-
-# Ternary NULL operator
-`%||%` <- function(x, y) {
-
-    if (is.null(x))
-        y else x
-}
-
-.replace_string = function(x, target, replacement) {
+pipeflow_replace_string = function(x, target, replacement) {
 
     if (length(x) == 0) {
         return(x)
@@ -32,7 +22,7 @@ unlist1 = function(x, ...)
 
     stopifnot(
         is.character(x),
-        is_string(target),  # nolint
+        is_string(target),
         is_string(replacement)
     )
     x[x %in% target] = replacement
