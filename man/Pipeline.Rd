@@ -47,6 +47,7 @@ Roman Pahl
 \item \href{#method-Pipeline-get_unique_parameters}{\code{Pipeline$get_unique_parameters()}}
 \item \href{#method-Pipeline-get_unique_parameters_json}{\code{Pipeline$get_unique_parameters_json()}}
 \item \href{#method-Pipeline-get_upstream_dependencies}{\code{Pipeline$get_upstream_dependencies()}}
+\item \href{#method-Pipeline-has_output_at_step}{\code{Pipeline$has_output_at_step()}}
 \item \href{#method-Pipeline-has_step}{\code{Pipeline$has_step()}}
 \item \href{#method-Pipeline-keep_all_out}{\code{Pipeline$keep_all_out()}}
 \item \href{#method-Pipeline-length}{\code{Pipeline$length()}}
@@ -58,6 +59,7 @@ Roman Pahl
 \item \href{#method-Pipeline-replace_step}{\code{Pipeline$replace_step()}}
 \item \href{#method-Pipeline-set_data}{\code{Pipeline$set_data()}}
 \item \href{#method-Pipeline-set_data_split}{\code{Pipeline$set_data_split()}}
+\item \href{#method-Pipeline-set_keep_out}{\code{Pipeline$set_keep_out()}}
 \item \href{#method-Pipeline-set_parameters}{\code{Pipeline$set_parameters()}}
 \item \href{#method-Pipeline-set_parameters_at_step}{\code{Pipeline$set_parameters_at_step()}}
 \item \href{#method-Pipeline-clone}{\code{Pipeline$clone()}}
@@ -244,7 +246,7 @@ the `Pipeline` object invisibly
 \if{html}{\out{<a id="method-Pipeline-execute"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-execute}{}}}
 \subsection{Method \code{execute()}}{
-Execute pipeline steps.
+Execute all pipeline steps.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$execute(from = 1, to = self$length(), recursive = TRUE)}\if{html}{\out{</div>}}
 }
@@ -467,6 +469,26 @@ are also returned.}
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-has_output_at_step"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-has_output_at_step}{}}}
+\subsection{Method \code{has_output_at_step()}}{
+Checks whether step has output.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$has_output_at_step(step)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{`string` name of step}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+`logical` TRUE if step is defined to keep output
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-has_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-has_step}{}}}
 \subsection{Method \code{has_step()}}{
@@ -498,7 +520,7 @@ debugging.
 }
 
 \subsection{Returns}{
-`logical` original set of output flags.
+the `Pipeline` object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -694,6 +716,28 @@ to data split.}
 \subsection{Returns}{
 new combined `Pipeline` with each sub-pipeline having set
 one of the data sets.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-set_keep_out"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-set_keep_out}{}}}
+\subsection{Method \code{set_keep_out()}}{
+Set pipeline to keep or omit output of given step.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_keep_out(step, status = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{`string` name of step}
+
+\item{\code{status}}{`logical` whether to keep output of step}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the `Pipeline` object invisibly
 }
 }
 \if{html}{\out{<hr>}}
