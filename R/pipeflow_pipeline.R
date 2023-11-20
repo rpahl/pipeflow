@@ -178,8 +178,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is.logical(outAsIn)
             )
 
-            p1 = self$clone()
-            p2 = p$clone()
+            p1 <- self$clone()
+            p2 <- p$clone()
 
             if (p1$name == p2$name) {
                 stop("pipelines cannot have the same name ('", p2$name, "')")
@@ -189,33 +189,35 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             p2$append_to_step_names(p2$name)
 
             if (outAsIn) {
-                len1 = p1$length()
-                last_step1 = p1$pipeline[len1, "step"][[1]]
-                first_step2 = p2$pipeline[1, "step"][[1]]
+                # Replace first step of p2, which usually holds the data, with
+                # the output of last step of p1
+                lastStep1 = utils::tail(p1$get_step_names(), 1)
+                firstStep2 = utils::head(p2$get_step_names(), 1)
                 deps2_updated = lapply(
                     p2$pipeline[["deps"]],
                     FUN = pipeflow_replace_string,
-                    target = first_step2,
-                    replacement = last_step1
+                    target = firstStep2,
+                    replacement = lastStep1
                 )
-                p2$pipeline[["deps"]] = deps2_updated
+                p2$pipeline[["deps"]] <- deps2_updated
             }
 
             # Build combined pipeline
-            combined_name = paste0(p1$name, ".", p2$name)
-            combined_pipe = Pipeline$new(combined_name)
+            combinedName <- paste0(p1$name, ".", p2$name)
+            combinedPipe <- Pipeline$new(combinedName)
 
-            combined_pipe$pipeline = rbind(p1$pipeline, p2$pipeline)
+            combinedPipe$pipeline <- rbind(p1$pipeline, p2$pipeline)
 
-            step_names = combined_pipe$pipeline[["step"]]
-            if (any(duplicated(step_names))) {  # this should never happen
-                duplicatedNames = step_names[duplicated(step_names)]
-                stop("Combined pipeline has duplicated step names:",
+            newStepNames <- combinedPipe$get_step_names()
+            if (any(duplicated(newStepNames))) {  # this should never happen
+                duplicatedNames <- newStepNames[duplicated(newStepNames)]
+                stop(
+                    "Combined pipeline has duplicated step names:",
                     paste0("'", duplicatedNames, "'", sep = ", ")
                 )
             }
 
-            combined_pipe
+            combinedPipe
         },
 
         #' @description Append string to all step names.
@@ -819,8 +821,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             # Combine pipelines
             pipe_names = sapply(pipes, function(x) x$name)
-            combined_name = paste(self$name, "split")
-            pip = Pipeline$new(combined_name)
+            combinedName = paste(self$name, "split")
+            pip = Pipeline$new(combinedName)
             combined = Reduce(c(pip, pipes), f = function(x, y) x$append(y))
             combined$remove_step(".data")
 

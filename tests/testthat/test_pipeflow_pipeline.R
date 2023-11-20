@@ -127,17 +127,103 @@ test_that("added step can use lambda functions",
 })
 
 
-# append
-
-test_that("combined pipelines must not have the same names",
+test_that("append",
 {
-    pip1 <- Pipeline$new("pipe1")
-    pip2 <- Pipeline$new("pipe2")
+    expect_true(is.function(Pipeline$new("pipe")$append))
 
-    expect_no_error(pip1$append(pip2))
+    test_that("combined pipelines must not have the same names",
+    {
+        pip1 <- Pipeline$new("pipe1")
+        pip2 <- Pipeline$new("pipe2")
 
-    pip2$name = pip1$name
-    expect_error(pip1$append(pip2))
+        expect_no_error(pip1$append(pip2))
+
+        pip2$name = pip1$name
+        expect_error(
+            pip1$append(pip2),
+            "pipelines cannot have the same name ('pipe1')",
+            fixed = TRUE
+        )
+    })
+
+    test_that(
+        "pipelines with identical steps can be combined without name clash",
+    {
+        pip1 <- Pipeline$new("pipe1")
+        pip2 <- Pipeline$new("pipe2")
+
+        pip1$add("f1", function(a = ~.data) a + 1)
+        pip2$add("f1", function(a = ~.data) a + 1)
+
+        pp <- pip1$append(pip2)
+
+        expected_step_names <- c(".data", "f1", ".data.pipe2", "f1.pipe2")
+        expect_equal(pp$get_step_names(), expected_step_names)
+    })
+
+    test_that(
+        "output of first pipeline can be set as input of appended pipeline",
+    {
+        pip1 <- Pipeline$new("pipe1")
+        pip2 <- Pipeline$new("pipe2")
+
+        pip1$add("f1", function(a = ~.data) a + 1)
+        pip2$add("f1", function(a = ~.data) a + 1)
+        pip2$add("f2", function(a = ~.data) a + 2)
+
+        pp <- pip1$append(pip2, outAsIn = TRUE)
+
+        deps <- pp$get_dependencies()
+        expect_equal(deps[["f1.pipe2"]], c(a = "f1"))
+        expect_equal(deps[["f2.pipe2"]], c(a = "f1"))
+
+        pp$keep_all_out()
+        out <- pp$set_data(1)$execute()$collect_out()
+        expect_equal(out[["f2"]][["f2.pipe2"]], 1 + 1 + 2)
+    })
+
+    test_that(
+        "output of first pipeline can be set as input of appended pipeline",
+    {
+        pip1 <- Pipeline$new("pipe1")
+        pip2 <- Pipeline$new("pipe2")
+
+        pip1$add("f1", function(a = ~.data) a + 1)
+        pip2$add("f1", function(a = ~.data) a + 1)
+        pip2$add("f2", function(a = ~.data) a + 2)
+
+        pp <- pip1$append(pip2, outAsIn = TRUE)
+
+        deps <- pp$get_dependencies()
+        expect_equal(deps[["f1.pipe2"]], c(a = "f1"))
+        expect_equal(deps[["f2.pipe2"]], c(a = "f1"))
+
+        pp$keep_all_out()
+        out <- pp$set_data(1)$execute()$collect_out()
+        expect_equal(out[["f2"]][["f2.pipe2"]], 1 + 1 + 2)
+    })
+
+
+    test_that("if duplicated step names would be created, an error is given",
+    {
+        pip1 <- Pipeline$new("pipe1")
+        pip2 <- Pipeline$new("pipe2")
+
+        mockery::stub(
+            where = pip1$append,
+            what = "duplicated",
+            how = mockery::mock(TRUE, cycle = TRUE)
+        )
+
+        pip1$add("f1", function(a = ~.data) a + 1)
+        pip2$add("f1", function(a = ~.data) a + 1)
+
+        expect_error(
+            pip1$append(pip2),
+            "Combined pipeline has duplicated step names",
+            fixed = TRUE
+        )
+    })
 })
 
 
