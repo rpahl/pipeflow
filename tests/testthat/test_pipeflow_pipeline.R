@@ -127,17 +127,103 @@ test_that("added step can use lambda functions",
 })
 
 
-# append
-
-test_that("combined pipelines must not have the same names",
+test_that("append",
 {
-    pip1 <- Pipeline$new("pipe1")
-    pip2 <- Pipeline$new("pipe2")
+    expect_true(is.function(Pipeline$new("pipe")$append))
 
-    expect_no_error(pip1$append(pip2))
+    test_that("combined pipelines must not have the same names",
+    {
+        pip1 <- Pipeline$new("pipe1")
+        pip2 <- Pipeline$new("pipe2")
 
-    pip2$name = pip1$name
-    expect_error(pip1$append(pip2))
+        expect_no_error(pip1$append(pip2))
+
+        pip2$name = pip1$name
+        expect_error(
+            pip1$append(pip2),
+            "pipelines cannot have the same name ('pipe1')",
+            fixed = TRUE
+        )
+    })
+
+    test_that(
+        "pipelines with identical steps can be combined without name clash",
+    {
+        pip1 <- Pipeline$new("pipe1")
+        pip2 <- Pipeline$new("pipe2")
+
+        pip1$add("f1", function(a = ~.data) a + 1)
+        pip2$add("f1", function(a = ~.data) a + 1)
+
+        pp <- pip1$append(pip2)
+
+        expected_step_names <- c(".data", "f1", ".data.pipe2", "f1.pipe2")
+        expect_equal(pp$get_step_names(), expected_step_names)
+    })
+
+    test_that(
+        "output of first pipeline can be set as input of appended pipeline",
+    {
+        pip1 <- Pipeline$new("pipe1")
+        pip2 <- Pipeline$new("pipe2")
+
+        pip1$add("f1", function(a = ~.data) a + 1)
+        pip2$add("f1", function(a = ~.data) a + 1)
+        pip2$add("f2", function(a = ~.data) a + 2)
+
+        pp <- pip1$append(pip2, outAsIn = TRUE)
+
+        deps <- pp$get_dependencies()
+        expect_equal(deps[["f1.pipe2"]], c(a = "f1"))
+        expect_equal(deps[["f2.pipe2"]], c(a = "f1"))
+
+        pp$keep_all_out()
+        out <- pp$set_data(1)$execute()$collect_out()
+        expect_equal(out[["f2"]][["f2.pipe2"]], 1 + 1 + 2)
+    })
+
+    test_that(
+        "output of first pipeline can be set as input of appended pipeline",
+    {
+        pip1 <- Pipeline$new("pipe1")
+        pip2 <- Pipeline$new("pipe2")
+
+        pip1$add("f1", function(a = ~.data) a + 1)
+        pip2$add("f1", function(a = ~.data) a + 1)
+        pip2$add("f2", function(a = ~.data) a + 2)
+
+        pp <- pip1$append(pip2, outAsIn = TRUE)
+
+        deps <- pp$get_dependencies()
+        expect_equal(deps[["f1.pipe2"]], c(a = "f1"))
+        expect_equal(deps[["f2.pipe2"]], c(a = "f1"))
+
+        pp$keep_all_out()
+        out <- pp$set_data(1)$execute()$collect_out()
+        expect_equal(out[["f2"]][["f2.pipe2"]], 1 + 1 + 2)
+    })
+
+
+    test_that("if duplicated step names would be created, an error is given",
+    {
+        pip1 <- Pipeline$new("pipe1")
+        pip2 <- Pipeline$new("pipe2")
+
+        mockery::stub(
+            where = pip1$append,
+            what = "duplicated",
+            how = mockery::mock(TRUE, cycle = TRUE)
+        )
+
+        pip1$add("f1", function(a = ~.data) a + 1)
+        pip2$add("f1", function(a = ~.data) a + 1)
+
+        expect_error(
+            pip1$append(pip2),
+            "Combined pipeline has duplicated step names",
+            fixed = TRUE
+        )
+    })
 })
 
 
@@ -162,6 +248,26 @@ test_that("postfix can be appended to step names",
 
     deps <- pip$get_dependencies()
     expect_equal(pip$get_dependencies(), expected_deps)
+})
+
+
+test_that("clean_out_at_step",
+{
+    expect_true(is.function(Pipeline$new("pipe")$clean_out_at_step))
+
+    test_that("output at given step can be cleaned",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a)
+
+        expect_false(pip$has_out_at_step("A"))
+
+        pip$keep_all_out()$execute()
+        expect_true(pip$has_out_at_step("A"))
+
+        pip$clean_out_at_step("A")
+        expect_false(pip$has_out_at_step("A"))
+    })
 })
 
 
@@ -445,6 +551,122 @@ test_that("pipeline execution can cope with void functions",
 
 
 
+test_that("execute_step",
+{
+    expect_true(is.function(Pipeline$new("pipe")$execute_step))
+
+    test_that("pipeline can be executed at given step",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a)
+
+        pip$keep_all_out()$execute_step("A")
+        expect_equal(pip$get_out_at_step("A"), 1)
+    })
+
+
+    test_that("upstream steps are by default executed with given step",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+        pip$keep_all_out()$execute_step("B")
+
+        expect_equal(pip$get_out_at_step("A"), 1)
+        expect_equal(pip$get_out_at_step("B"), c(1, 2))
+        expect_false(pip$has_out_at_step("C"))
+    })
+
+    test_that("pipeline can be executed at given step excluding
+        all upstream dependencies",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+        pip$keep_all_out()$execute_step("B", upstream = FALSE)
+        expect_false(pip$has_out_at_step("A"))
+        expect_equal(pip$get_out_at_step("B"), list(2))
+        expect_false(pip$has_out_at_step("C"))
+    })
+
+    test_that("pipeline can be executed at given step excluding upstream
+        but including downstream dependencies",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+
+        pip$keep_all_out()$execute_step(
+            "B",
+            upstream = FALSE,
+            downstream = TRUE
+        )
+        expect_false(pip$has_out_at_step("A"))
+        expect_equal(pip$get_out_at_step("B"), list(2))
+        expect_equal(pip$get_out_at_step("C"), list(2, 3))
+    })
+
+    test_that("pipeline can be executed at given step including
+        up- and downstream dependencies",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+
+        pip$keep_all_out()$execute_step(
+            "B", upstream = TRUE, downstream = TRUE
+        )
+        expect_equal(pip$get_out_at_step("A"), 1)
+        expect_equal(pip$get_out_at_step("B"), c(1, 2))
+        expect_equal(pip$get_out_at_step("C"), c(1, 2, 3))
+    })
+
+    test_that("if not marked as keepOut, output of executed steps is discarded",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a)
+
+
+        pip$execute_step("A")
+        expect_false(pip$has_out_at_step("A"))
+
+        pip$set_keep_out("A", TRUE)$execute_step("A")
+        expect_true(pip$has_out_at_step("A"))
+    })
+
+    test_that("up- and downstream steps are marked in log",
+    {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+        logOut <- utils::capture.output(
+            pip$execute_step("B", upstream = TRUE, downstream = TRUE)
+        )
+
+        contains <- function(x, pattern) {
+            grepl(pattern = pattern, x = x, fixed = TRUE)
+        }
+
+        expect_true(logOut[2] |> contains("Step 1/3 A (upstream)"))
+        expect_true(logOut[3] |> contains("Step 2/3 B"))
+        expect_true(logOut[4] |> contains("Step 3/3 C (downstream)"))
+    })
+})
+
+
 # get_data
 
 test_that("data can be retrieved",
@@ -506,7 +728,7 @@ test_that("step must exist",
 
     expect_error(
         pip$get_downstream_dependencies("f1"),
-        "step 'f1' does not exists"
+        "step 'f1' does not exist"
     )
 })
 
@@ -536,6 +758,28 @@ test_that("works with complex dependencies as created by data splits",
     expect_equal(pip$get_downstream_dependencies("f2.1"), "f3")
     expect_equal(pip$get_downstream_dependencies("f2.2"), "f3")
 })
+
+
+
+test_that("get_out_at_step",
+{
+    expect_true(is.function(Pipeline$new("pipe")$get_out_at_step))
+
+    test_that("output at given step can be retrieved",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = 2) b)
+
+        expect_equal(pip$get_out_at_step("A"), list())
+        expect_equal(pip$get_out_at_step("B"), list())
+
+        pip$keep_all_out()$execute()
+        expect_equal(pip$get_out_at_step("A"), 1)
+        expect_equal(pip$get_out_at_step("B"), 2)
+    })
+})
+
 
 # get_parameters
 
@@ -675,6 +919,36 @@ test_that("dependencies are recorded as expected",
         c("a" = ".data", b = "f1")
     )
 })
+
+
+
+test_that("get_step_number",
+{
+    expect_true(is.function(Pipeline$new("pipe")$get_step_number))
+
+    test_that("get_step_number works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        pip$add("f1", function(a = 1) a)
+        pip$add("f2", function(a = 1) a)
+
+        pip$get_step_number("f1") |> expect_equal(2)
+        pip$get_step_number("f2") |> expect_equal(3)
+    })
+
+    test_that("signals non-existent step",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        pip$add("f1", function(a = 1) a)
+
+        expect_error(
+            pip$get_step_number("non-existent"),
+            "step 'non-existent' does not exist"
+        )
+    })
+})
+
+
 
 # get_step_names
 
@@ -868,7 +1142,7 @@ test_that("step must exist",
 
     expect_error(
         pip$get_upstream_dependencies("f1"),
-        "step 'f1' does not exists"
+        "step 'f1' does not exist"
     )
 })
 
@@ -895,45 +1169,78 @@ test_that("works with complex dependencies as created by data splits",
 })
 
 
-# has_step
 
-test_that("it can be checked if pipeline has a step",
+test_that("has_step",
 {
-    pip <- Pipeline$new("pipe1") |>
-        pipe_add("f1", function(a = 1) a)
+    expect_true(is.function(Pipeline$new("pipe")$has_step))
 
-    expect_true(pip$has_step("f1"))
-    expect_false(pip$has_step("f2"))
+    test_that("it can be checked if pipeline has a step",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a)
+
+        expect_true(pip$has_step("f1"))
+        expect_false(pip$has_step("f2"))
+    })
 })
 
 
-# keep_all_out
 
-test_that("pipeline can be set to keep all output",
+test_that("has_out_at_step",
 {
+    expect_true(is.function(Pipeline$new("pipe")$set_keep_out))
 
-    pip <- Pipeline$new("pipe1", data = 0) |>
-        pipe_add("f1", function(a = 1) a)
+    test_that("it can be checked if pipeline has output at a step",
+    {
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = 1) a, keepOut = TRUE)
 
-    out = pip$execute()$collect_out()
-    expect_equal(out, list())
+        pip$execute()
 
-    pip$keep_all_out()
-    out = pip$execute()$collect_out()
+        expect_false(pip$has_out_at_step("f1"))
+        expect_true(pip$has_out_at_step("f2"))
+    })
 
-    expect_equal(out, list(.data = list(.data = 0), f1 = list(f1 = 1)))
+    test_that("step must be a string and exist",
+    {
+        pip <- Pipeline$new("pipe1")
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a)
+
+        expect_error(
+            pip$has_out_at_step(1),
+            "is_string(step)",
+            fixed = TRUE
+        )
+
+        expect_error(
+            pip$has_out_at_step("f2"),
+            "step 'f2' does not exist",
+            fixed = TRUE
+        )
+    })
 })
 
-test_that("when setting to keep all output, the old config is returned",
+
+test_that("keep_all_out",
 {
+    expect_true(is.function(Pipeline$new("pipe")$keep_all_out))
 
-    pip <- Pipeline$new("pipe1", data = 0) |>
-        pipe_add("f1", function(a = 1) a, keepOut = TRUE) |>
-        pipe_add("f2", function(b = 2) b)
+    test_that("pipeline can be set to keep all output",
+    {
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a)
 
-    old = pip$keep_all_out()
-    expect_equal(old, c(.data = FALSE, f1 = TRUE, f2 = FALSE))
+        expect_false(pip$has_out_at_step(".data"))
+        expect_false(pip$has_out_at_step("f1"))
+
+        pip$keep_all_out()$execute()
+        expect_true(pip$has_out_at_step(".data"))
+        expect_true(pip$has_out_at_step("f1"))
+    })
 })
+
 
 
 # print
@@ -1225,7 +1532,7 @@ test_that("data can be set later after pipeline definition",
 })
 
 
-# pipeline with split data set
+# set_data_split
 
 test_that("simple split pipeline works",
 {
@@ -1394,6 +1701,59 @@ test_that("split data set can be created dynamically",
     out <- pip$execute()$collect_out()
 
     expect_equivalent(unlist1(out), split(data, data[, "group"]))
+})
+
+
+test_that("set_keep_out",
+{
+    expect_true(is.function(Pipeline$new("pipe")$set_keep_out))
+
+    test_that("keep-out status can be set",
+    {
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a)
+
+        pip$execute()
+        expect_false(pip$has_out_at_step("f1"))
+
+        pip$set_keep_out("f1", status = TRUE)$execute()
+        expect_true(pip$has_out_at_step("f1"))
+
+        pip$clean_out_at_step("f1")
+        pip$set_keep_out("f1", status = FALSE)$execute()
+        expect_false(pip$has_out_at_step("f1"))
+    })
+
+    test_that("step must be a string and exist",
+    {
+        pip <- Pipeline$new("pipe1")
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a)
+
+        expect_error(
+            pip$set_keep_out(1),
+            "is_string(step)",
+            fixed = TRUE
+        )
+
+        expect_error(
+            pip$set_keep_out("f2"),
+            "step 'f2' does not exist",
+            fixed = TRUE
+        )
+    })
+
+    test_that("status must be logical",
+    {
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a)
+
+        expect_error(
+            pip$set_keep_out("f1", status = 1),
+            "is.logical(status)",
+            fixed = TRUE
+        )
+    })
 })
 
 
@@ -1581,6 +1941,9 @@ test_that("pipeline logging works as expected",
 
     test_that("each step is logged with its name",
     {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
+
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(x = ~.data) x)
@@ -1597,6 +1960,8 @@ test_that("pipeline logging works as expected",
     test_that(
         "upon warning during execute, both context and warn msg are logged",
     {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
 
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1") |>
@@ -1621,6 +1986,9 @@ test_that("pipeline logging works as expected",
     test_that(
         "upon error during execute, both context and error msg are logged",
     {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
+
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(a = 1) a) |>
@@ -1639,6 +2007,8 @@ test_that("pipeline logging works as expected",
 
     test_that("pipeline start is marked in the log and has the pipeline's name",
     {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
 
         dat <- data.frame(a = 1:2, b = 1:2)
         pipeName = "pipe1"
@@ -1761,6 +2131,20 @@ test_that("private methods work as expected",
             expect_equal(f(step = "B"), 2)
         })
 
+        test_that("stores the result at the given step",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = 1) a) |>
+                pipe_add("B", function(b = 2) b)
+
+            f <- get_private(pip)$.execute_step
+
+            expect_equal(f(step = "A"), 1)
+            expect_equal(pip$get_out_at_step("A"), 1)
+            expect_equal(f(step = "B"), 2)
+            expect_equal(pip$get_out_at_step("B"), 2)
+        })
+
         test_that("uses output of dependent steps",
         {
             pip <- Pipeline$new("pipe") |>
@@ -1791,6 +2175,9 @@ test_that("private methods work as expected",
 
         test_that("if error, the failing step is given in the log",
         {
+            lgr::unsuspend_logging()
+            on.exit(lgr::suspend_logging())
+
             pip <- Pipeline$new("pipe") |>
                 pipe_add("A", function(a = 1) stop("something went wrong"))
 
@@ -2042,19 +2429,6 @@ test_that("private methods work as expected",
         expect_equal(f(), "f1")
     })
 
-    # .get_step_index
-    test_that("private .get_step_index works as expected",
-    {
-        pip <- expect_no_error(Pipeline$new("pipe"))
-        f <- get_private(pip)$.get_step_index
-
-        pip$add("f1", function(a = 1) a)
-        pip$add("f2", function(a = 1) a)
-
-        f("f1") |> expect_equal(2)
-        f("f2") |> expect_equal(3)
-    })
-
     # .get_upstream_deps
     test_that("private .get_upstream_deps works as expected",
     {
@@ -2265,7 +2639,7 @@ test_that("private methods work as expected",
         {
             expect_error(
                 f("dep", "step", to_step = "non-existent"),
-                "step 'non-existent' does not exists",
+                "step 'non-existent' does not exist",
                 fixed = TRUE
             )
         })

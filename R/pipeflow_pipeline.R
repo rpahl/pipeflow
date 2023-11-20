@@ -178,8 +178,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is.logical(outAsIn)
             )
 
-            p1 = self$clone()
-            p2 = p$clone()
+            p1 <- self$clone()
+            p2 <- p$clone()
 
             if (p1$name == p2$name) {
                 stop("pipelines cannot have the same name ('", p2$name, "')")
@@ -189,33 +189,35 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             p2$append_to_step_names(p2$name)
 
             if (outAsIn) {
-                len1 = p1$length()
-                last_step1 = p1$pipeline[len1, "step"][[1]]
-                first_step2 = p2$pipeline[1, "step"][[1]]
+                # Replace first step of p2, which usually holds the data, with
+                # the output of last step of p1
+                lastStep1 = utils::tail(p1$get_step_names(), 1)
+                firstStep2 = utils::head(p2$get_step_names(), 1)
                 deps2_updated = lapply(
                     p2$pipeline[["deps"]],
                     FUN = pipeflow_replace_string,
-                    target = first_step2,
-                    replacement = last_step1
+                    target = firstStep2,
+                    replacement = lastStep1
                 )
-                p2$pipeline[["deps"]] = deps2_updated
+                p2$pipeline[["deps"]] <- deps2_updated
             }
 
             # Build combined pipeline
-            combined_name = paste0(p1$name, ".", p2$name)
-            combined_pipe = Pipeline$new(combined_name)
+            combinedName <- paste0(p1$name, ".", p2$name)
+            combinedPipe <- Pipeline$new(combinedName)
 
-            combined_pipe$pipeline = rbind(p1$pipeline, p2$pipeline)
+            combinedPipe$pipeline <- rbind(p1$pipeline, p2$pipeline)
 
-            step_names = combined_pipe$pipeline[["step"]]
-            if (any(duplicated(step_names))) {  # this should never happen
-                duplicatedNames = step_names[duplicated(step_names)]
-                stop("Combined pipeline has duplicated step names:",
+            newStepNames <- combinedPipe$get_step_names()
+            if (any(duplicated(newStepNames))) {  # this should never happen
+                duplicatedNames <- newStepNames[duplicated(newStepNames)]
+                stop(
+                    "Combined pipeline has duplicated step names:",
                     paste0("'", duplicatedNames, "'", sep = ", ")
                 )
             }
 
-            combined_pipe
+            combinedPipe
         },
 
         #' @description Append string to all step names.
@@ -240,6 +242,17 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             self$pipeline[["step"]] <- add_postfix(steps)
             self$pipeline[["deps"]] <- lapply(deps, add_postfix)
+
+            invisible(self)
+        },
+
+        #' @description Clean output of given step.
+        #' @param step `string` name of step
+        #' @return returns the `Pipeline` object invisibly
+        clean_out_at_step = function(step)
+        {
+            index <- self$get_step_number(step)
+            self$pipeline[["out"]][[index]] <- list()
 
             invisible(self)
         },
@@ -295,7 +308,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Execute pipeline steps.
+        #' @description Execute all pipeline steps.
         #' @param from `numeric` start from this step
         #' @param to `numeric` execute until this step
         #' @param recursive `logical` if `TRUE` and a step returns a new
@@ -314,20 +327,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is.logical(recursive)
             )
 
-            # nolint start
-            # TODO: create function
-            #   execute_step(
-            #       step,
-            #       downstream = TRUE,  # execute all depdendent steps downstream
-            #       upstream = TRUE,    # execute all depdendent upstream steps first
-            #       overwrite = FALSE,  # overwrite output if already present
-            #       recursive = TRUE    # if step returns a pipeline, execute it recursive
-            #   ),
-            # TODO: change interface to  execute(steps, ...)
-            # nolint end
+            if (to > self$length()) {
+                stop("to must not be larger than pipeline length")
+            }
+
             log_info <- function(msg, ...) {
                 private$.lg(level = "info", msg = msg, ...)
             }
+
             gettextf("Start execution of '%s' pipeline:", self$name) |>
                 log_info(type = "start_pipeline", pipeline_name = self$name)
 
@@ -343,23 +350,86 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                     self$execute(recursive = TRUE)
                     return(invisible(self))
                 }
-
-                if (length(res) > 0) {
-                    self$pipeline[["out"]][[i]] <- res
-                }
             }
 
             log_info("Finished execution of steps.")
 
-            # Clean output that shall not be kept
             log_info("Clean temporary results.")
-            areNotKept = !self$pipeline[["keepOut"]]
-            data.table::set(
-                self$pipeline,
-                i = which(areNotKept),
-                j = "out",
-                value = list(list())
+            private$.clean_out_not_kept()
+
+            log_info("Done.")
+            invisible(self)
+        },
+
+        #' @description Execute given pipeline step
+        #' @param step `string` name of step
+        #' @param upstream `logical` if `TRUE`, execute all dependent upstream
+        #' steps first.
+        #' @param downstream `logical` if `TRUE`, execute all depdendent
+        #' downstream afterwards.
+        #' @return returns the `Pipeline` object invisibly
+        execute_step = function(
+            step,
+            upstream = TRUE,
+            downstream = FALSE
+        ) {
+            private$.verify_step_exists(step)
+            stopifnot(
+                is.logical(upstream),
+                is.logical(downstream)
             )
+
+            upstream_steps <- character(0)
+            steps <- step
+            downstream_steps <- character(0)
+
+            if (upstream) {
+                upstream_steps <- private$.get_upstream_deps(
+                    step = step,
+                    deps = self$get_dependencies(),
+                    recursive = TRUE
+                )
+                steps <- c(upstream_steps, step)
+            }
+
+            if (downstream) {
+                downstream_steps <- private$.get_downstream_deps(
+                    step = step,
+                    deps = self$get_dependencies(),
+                    recursive = TRUE
+                )
+                steps <- c(steps, downstream_steps)
+            }
+
+            nStep <- length(steps)
+
+            log_info <- function(msg, ...) {
+                private$.lg(level = "info", msg = msg, ...)
+            }
+
+            gettextf("Start step execution of '%s' pipeline:", self$name) |>
+                log_info(type = "start_pipeline", pipeline_name = self$name)
+
+
+            for (i in seq_along(steps)) {
+                step <- steps[i]
+                stream <- ""
+                if (step %in% upstream_steps) {
+                    stream <- " (upstream)"
+                }
+                if (step %in% downstream_steps) {
+                    stream <- " (downstream)"
+                }
+                gettextf("Step %i/%i %s%s",  i, nStep, step, stream) |>
+                    log_info()
+
+                private$.execute_step(step)
+            }
+
+            log_info("Finished execution of steps.")
+
+            log_info("Clean temporary results.")
+            private$.clean_out_not_kept()
 
             log_info("Done.")
             invisible(self)
@@ -400,6 +470,15 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             # Ensure order matches the step order of the pipeline
             intersect(self$get_step_names(), deps)
+        },
+
+        #' @description Get output of given step.
+        #' @param step `string` name of step
+        #' @return returns the `Pipeline` object invisibly
+        get_out_at_step = function(step)
+        {
+            index <- self$get_step_number(step)
+            self$pipeline[["out"]][[index]]
         },
 
         #' @description Get all function parameters defined in the pipeline.
@@ -475,6 +554,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         {
             self$pipeline[["step"]]
         },
+
+        #' @description Get step number
+        #' @param step `string` name of step
+        #' @return the step number in the pipeline
+        get_step_number = function(step)
+        {
+            private$.verify_step_exists(step)
+            match(step, self$get_step_names())
+        },
+
 
         #' @description Get all function parameters defined in the pipeline,
         #' but only list each parameter once, that is, once a parameter is used
@@ -556,6 +645,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             intersect(self$get_step_names(), deps)
         },
 
+        #' @description Checks whether step has output.
+        #' @param step `string` name of step
+        #' @return `logical` TRUE if step is defined to keep output
+        has_out_at_step = function(step)
+        {
+            length(self$get_out_at_step(step)) > 0
+        },
+
         #' @description Determine whether pipeline has given step.
         #' @param step `string` name of step
         #' @return `logical` whether step exists
@@ -571,14 +668,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Set pipeline to keep all output regardless of the flags
         #' that were set for the individual steps. This can be useful for
         #' debugging.
-        #' @return `logical` original set of output flags.
-        keep_all_out = function() {
-            old = self$pipeline[["keepOut"]]
-            names(old) = self$pipeline[["step"]]
+        #' @return the `Pipeline` object invisibly
+        keep_all_out = function()
+        {
+            steps <- self$get_step_names()
+            sapply(steps, FUN = self$set_keep_out, status = TRUE)
 
-            self$pipeline[, "keepOut"] = TRUE
-
-            old
+            invisible(self)
         },
 
         #' @description Length of the pipeline aka number of pipeline steps.
@@ -819,8 +915,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             # Combine pipelines
             pipe_names = sapply(pipes, function(x) x$name)
-            combined_name = paste(self$name, "split")
-            pip = Pipeline$new(combined_name)
+            combinedName = paste(self$name, "split")
+            pip = Pipeline$new(combinedName)
             combined = Reduce(c(pip, pipes), f = function(x, y) x$append(y))
             combined$remove_step(".data")
 
@@ -849,6 +945,24 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             self$pipeline = combined$pipeline
+            invisible(self)
+        },
+
+        #' @description Set pipeline to keep or omit output of given step.
+        #' @param step `string` name of step
+        #' @param status `logical` whether to keep output of step
+        #' @return the `Pipeline` object invisibly
+        set_keep_out = function(step, status = TRUE)
+        {
+            stopifnot(
+                is_string(step),
+                is.logical(status)
+            )
+            private$.verify_step_exists(step)
+
+            index <- self$get_step_number(step)
+            self$pipeline[index, "keepOut"] <- status
+
             invisible(self)
         },
 
@@ -932,6 +1046,18 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             value
         },
 
+        .clean_out_not_kept = function()
+        {
+            areNotKept = !self$pipeline[["keepOut"]]
+            data.table::set(
+                self$pipeline,
+                i = which(areNotKept),
+                j = "out",
+                value = list(list())
+            )
+
+        },
+
         .derive_dependencies = function(
             params,
             step,
@@ -952,7 +1078,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             # Handle any relative dependencies
             all_steps <- self$get_step_names()
-            to_index <- private$.get_step_index(to_step)
+            to_index <- self$get_step_number(to_step)
             considered_steps = all_steps[seq_len(to_index)]
             relative_deps <- deps |>
                 Filter(f = function(x) startsWith(x, "-")) |>
@@ -977,7 +1103,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         {
             private$.verify_step_exists(step)
             pip <- self$pipeline
-            step_number <- private$.get_step_index(step)
+            step_number <- self$get_step_number(step)
 
             row <- pip[step_number, ] |> unlist1()
             fun <- row[["fun"]]
@@ -1019,7 +1145,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 }
             )
 
-            res
+            if (length(res) > 0) {
+                self$pipeline[["out"]][[step_number]] <- res
+            }
+
+            invisible(res)
         },
 
         .extract_dependent_out = function(
@@ -1102,11 +1232,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         .get_last_step = function() {
             self$get_step_names() |> utils::tail(1)
-        },
-
-        .get_step_index = function(step) {
-            private$.verify_step_exists(step)
-            match(step, self$get_step_names())
         },
 
         .get_upstream_deps = function(
@@ -1247,7 +1372,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         .verify_step_exists = function(step)
         {
             if (!self$has_step(step)) {
-                stop("step '", step, "' does not exists", call. = FALSE)
+                stop("step '", step, "' does not exist", call. = FALSE)
             }
         }
     )
