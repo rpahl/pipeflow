@@ -246,6 +246,17 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
+        #' @description Clean output of given step.
+        #' @param step `string` name of step
+        #' @return returns the `Pipeline` object invisibly
+        clean_out_at_step = function(step)
+        {
+            index <- private$.get_step_index(step)
+            self$pipeline[["out"]][[index]] <- list()
+
+            invisible(self)
+        },
+
         #' @description Collect all output that was stored and kept during the
         #' pipeline execution.
         #' @param groupBy `string` column of pipeline by which to group the
@@ -297,7 +308,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Execute pipeline steps.
+        #' @description Execute all pipeline steps.
         #' @param from `numeric` start from this step
         #' @param to `numeric` execute until this step
         #' @param recursive `logical` if `TRUE` and a step returns a new
@@ -345,10 +356,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                     self$execute(recursive = TRUE)
                     return(invisible(self))
                 }
-
-                if (length(res) > 0) {
-                    self$pipeline[["out"]][[i]] <- res
-                }
             }
 
             log_info("Finished execution of steps.")
@@ -364,6 +371,74 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
 
             log_info("Done.")
+            invisible(self)
+        },
+
+        #' @description Execute given pipeline step
+        #' @param step `string` name of step
+        #' @param upstream `logical` if `TRUE`, execute all dependent upstream
+        #' steps first.
+        #' @param downstream `logical` if `TRUE`, execute all depdendent
+        #' downstream afterwards.
+        #' @return returns the `Pipeline` object invisibly
+        execute_step = function(
+            step,
+            upstream = FALSE,
+            downstream = FALSE
+        ) {
+            private$.verify_step_exists(step)
+            stopifnot(
+                is.logical(upstream),
+                is.logical(downstream)
+            )
+
+            upstream_steps <- character(0)
+            steps <- step
+            downstream_steps <- character(0)
+
+            if (upstream) {
+                upstream_steps <- private$.get_upstream_deps(
+                    step = step,
+                    deps = self$get_dependencies(),
+                    recursive = TRUE
+                )
+                steps <- c(upstream_steps, step)
+            }
+
+            if (downstream) {
+                downstream_steps <- private$.get_downstream_deps(
+                    step = step,
+                    deps = self$get_dependencies(),
+                    recursive = TRUE
+                )
+                steps <- c(steps, downstream_steps)
+            }
+
+            nStep <- length(steps)
+
+            log_info <- function(msg, ...) {
+                private$.lg(level = "info", msg = msg, ...)
+            }
+
+            gettextf("Start step execution of '%s' pipeline:", self$name) |>
+                log_info(type = "start_pipeline", pipeline_name = self$name)
+
+
+            for (i in seq_along(steps)) {
+                step <- steps[i]
+                stream <- ""
+                if (step %in% upstream_steps) {
+                    stream <- "(upstream)"
+                }
+                if (step %in% downstream_steps) {
+                    stream <- "(downstream)"
+                }
+                gettextf("Step %i/%i %s %s",  i, nStep, stream, step) |>
+                    log_info()
+
+                private$.execute_step(step)
+            }
+
             invisible(self)
         },
 
@@ -402,6 +477,17 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             # Ensure order matches the step order of the pipeline
             intersect(self$get_step_names(), deps)
+        },
+
+        #' @description Get output of given step.
+        #' @param step `string` name of step
+        #' @return returns the `Pipeline` object invisibly
+        get_out_at_step = function(step)
+        {
+            index <- private$.get_step_index(step)
+            self$pipeline[["out"]][[index]]
+
+            invisible(self)
         },
 
         #' @description Get all function parameters defined in the pipeline.
@@ -561,11 +647,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Checks whether step has output.
         #' @param step `string` name of step
         #' @return `logical` TRUE if step is defined to keep output
-        has_output_at_step = function(step)
+        has_out_at_step = function(step)
         {
-            private$.verify_step_exists(step)
-            index <- private$.get_step_index(step)
-            self$pipeline[["keepOut"]][[index]]
+            length(self$get_out_at_step(step)) > 0
         },
 
         #' @description Determine whether pipeline has given step.
@@ -1048,7 +1132,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 }
             )
 
-            res
+            if (length(res) > 0) {
+                self$pipeline[["out"]][[step_number]] <- res
+            }
+
+            invisible(res)
         },
 
         .extract_dependent_out = function(
