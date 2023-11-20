@@ -558,6 +558,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             intersect(self$get_step_names(), deps)
         },
 
+        #' @description Checks whether step has output.
+        #' @param step `string` name of step
+        #' @return `logical` TRUE if step is defined to keep output
+        has_output_at_step = function(step)
+        {
+            private$.verify_step_exists(step)
+            index <- private$.get_step_index(step)
+            self$pipeline[["keepOut"]][[index]]
+        },
+
         #' @description Determine whether pipeline has given step.
         #' @param step `string` name of step
         #' @return `logical` whether step exists
@@ -573,14 +583,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Set pipeline to keep all output regardless of the flags
         #' that were set for the individual steps. This can be useful for
         #' debugging.
-        #' @return `logical` original set of output flags.
-        keep_all_out = function() {
-            old = self$pipeline[["keepOut"]]
-            names(old) = self$pipeline[["step"]]
+        #' @return the `Pipeline` object invisibly
+        keep_all_out = function()
+        {
+            steps <- self$get_step_names()
+            sapply(steps, FUN = self$set_keep_out, status = TRUE)
 
-            self$pipeline[, "keepOut"] = TRUE
-
-            old
+            invisible(self)
         },
 
         #' @description Length of the pipeline aka number of pipeline steps.
@@ -851,6 +860,24 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             self$pipeline = combined$pipeline
+            invisible(self)
+        },
+
+        #' @description Set pipeline to keep or omit output of given step.
+        #' @param step `string` name of step
+        #' @param status `logical` whether to keep output of step
+        #' @return the `Pipeline` object invisibly
+        set_keep_out = function(step, status = TRUE)
+        {
+            stopifnot(
+                is_string(step),
+                is.logical(status)
+            )
+            private$.verify_step_exists(step)
+
+            index <- private$.get_step_index(step)
+            self$pipeline[index, "keepOut"] <- status
+
             invisible(self)
         },
 

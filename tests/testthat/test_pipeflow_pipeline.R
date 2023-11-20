@@ -981,45 +981,76 @@ test_that("works with complex dependencies as created by data splits",
 })
 
 
-# has_step
 
-test_that("it can be checked if pipeline has a step",
+test_that("has_step",
 {
-    pip <- Pipeline$new("pipe1") |>
-        pipe_add("f1", function(a = 1) a)
+    expect_true(is.function(Pipeline$new("pipe")$has_step))
 
-    expect_true(pip$has_step("f1"))
-    expect_false(pip$has_step("f2"))
+    test_that("it can be checked if pipeline has a step",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a)
+
+        expect_true(pip$has_step("f1"))
+        expect_false(pip$has_step("f2"))
+    })
 })
 
 
-# keep_all_out
 
-test_that("pipeline can be set to keep all output",
+test_that("has_output_at_step",
 {
+    expect_true(is.function(Pipeline$new("pipe")$set_keep_out))
 
-    pip <- Pipeline$new("pipe1", data = 0) |>
-        pipe_add("f1", function(a = 1) a)
+    test_that("it can be checked if pipeline has output at a step",
+    {
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = 1) a, keepOut = TRUE)
 
-    out = pip$execute()$collect_out()
-    expect_equal(out, list())
+        expect_false(pip$has_output_at_step("f1"))
+        expect_true(pip$has_output_at_step("f2"))
+    })
 
-    pip$keep_all_out()
-    out = pip$execute()$collect_out()
+    test_that("step must be a string and exist",
+    {
+        pip <- Pipeline$new("pipe1")
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a)
 
-    expect_equal(out, list(.data = list(.data = 0), f1 = list(f1 = 1)))
+        expect_error(
+            pip$has_output_at_step(1),
+            "is_string(step)",
+            fixed = TRUE
+        )
+
+        expect_error(
+            pip$has_output_at_step("f2"),
+            "step 'f2' does not exists",
+            fixed = TRUE
+        )
+    })
 })
 
-test_that("when setting to keep all output, the old config is returned",
+
+test_that("keep_all_out",
 {
+    expect_true(is.function(Pipeline$new("pipe")$keep_all_out))
 
-    pip <- Pipeline$new("pipe1", data = 0) |>
-        pipe_add("f1", function(a = 1) a, keepOut = TRUE) |>
-        pipe_add("f2", function(b = 2) b)
+    test_that("pipeline can be set to keep all output",
+    {
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a)
 
-    old = pip$keep_all_out()
-    expect_equal(old, c(.data = FALSE, f1 = TRUE, f2 = FALSE))
+        expect_false(pip$has_output_at_step(".data"))
+        expect_false(pip$has_output_at_step("f1"))
+
+        pip$keep_all_out()
+        expect_true(pip$has_output_at_step(".data"))
+        expect_true(pip$has_output_at_step("f1"))
+    })
 })
+
 
 
 # print
@@ -1311,7 +1342,7 @@ test_that("data can be set later after pipeline definition",
 })
 
 
-# pipeline with split data set
+# set_data_split
 
 test_that("simple split pipeline works",
 {
@@ -1480,6 +1511,57 @@ test_that("split data set can be created dynamically",
     out <- pip$execute()$collect_out()
 
     expect_equivalent(unlist1(out), split(data, data[, "group"]))
+})
+
+
+test_that("set_keep_out",
+{
+    expect_true(is.function(Pipeline$new("pipe")$set_keep_out))
+
+    test_that("keep-out status can be set",
+    {
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a)
+
+        expect_false(pip$has_output_at_step("f1"))
+
+        pip$set_keep_out("f1", status = TRUE)
+        expect_true(pip$has_output_at_step("f1"))
+
+        pip$set_keep_out("f1", status = FALSE)
+        expect_false(pip$has_output_at_step("f1"))
+    })
+
+    test_that("step must be a string and exist",
+    {
+        pip <- Pipeline$new("pipe1")
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a)
+
+        expect_error(
+            pip$set_keep_out(1),
+            "is_string(step)",
+            fixed = TRUE
+        )
+
+        expect_error(
+            pip$set_keep_out("f2"),
+            "step 'f2' does not exists",
+            fixed = TRUE
+        )
+    })
+
+    test_that("status must be logical",
+    {
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a)
+
+        expect_error(
+            pip$set_keep_out("f1", status = 1),
+            "is.logical(status)",
+            fixed = TRUE
+        )
+    })
 })
 
 
