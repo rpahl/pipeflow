@@ -415,12 +415,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 step <- steps[i]
                 stream <- ""
                 if (step %in% upstream_steps) {
-                    stream <- "(upstream)"
+                    stream <- " (upstream)"
                 }
                 if (step %in% downstream_steps) {
-                    stream <- "(downstream)"
+                    stream <- " (downstream)"
                 }
-                gettextf("Step %i/%i %s %s",  i, nStep, stream, step) |>
+                gettextf("Step %i/%i %s%s",  i, nStep, step, stream) |>
                     log_info()
 
                 private$.execute_step(step)

@@ -641,6 +641,29 @@ test_that("execute_step",
         pip$set_keep_out("A", TRUE)$execute_step("A")
         expect_true(pip$has_out_at_step("A"))
     })
+
+    test_that("up- and downstream steps are marked in log",
+    {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+        logOut <- utils::capture.output(
+            pip$execute_step("B", upstream = TRUE, downstream = TRUE)
+        )
+
+        contains <- function(x, pattern) {
+            grepl(pattern = pattern, x = x, fixed = TRUE)
+        }
+
+        expect_true(logOut[2] |> contains("Step 1/3 A (upstream)"))
+        expect_true(logOut[3] |> contains("Step 2/3 B"))
+        expect_true(logOut[4] |> contains("Step 3/3 C (downstream)"))
+    })
 })
 
 
@@ -1918,6 +1941,9 @@ test_that("pipeline logging works as expected",
 
     test_that("each step is logged with its name",
     {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
+
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(x = ~.data) x)
@@ -1934,6 +1960,8 @@ test_that("pipeline logging works as expected",
     test_that(
         "upon warning during execute, both context and warn msg are logged",
     {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
 
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1") |>
@@ -1958,6 +1986,9 @@ test_that("pipeline logging works as expected",
     test_that(
         "upon error during execute, both context and error msg are logged",
     {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
+
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(a = 1) a) |>
@@ -1976,6 +2007,8 @@ test_that("pipeline logging works as expected",
 
     test_that("pipeline start is marked in the log and has the pipeline's name",
     {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
 
         dat <- data.frame(a = 1:2, b = 1:2)
         pipeName = "pipe1"
@@ -2142,6 +2175,9 @@ test_that("private methods work as expected",
 
         test_that("if error, the failing step is given in the log",
         {
+            lgr::unsuspend_logging()
+            on.exit(lgr::suspend_logging())
+
             pip <- Pipeline$new("pipe") |>
                 pipe_add("A", function(a = 1) stop("something went wrong"))
 
