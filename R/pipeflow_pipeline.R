@@ -327,20 +327,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is.logical(recursive)
             )
 
-            # nolint start
-            # TODO: create function
-            #   execute_step(
-            #       step,
-            #       downstream = TRUE,  # execute all depdendent steps downstream
-            #       upstream = TRUE,    # execute all depdendent upstream steps first
-            #       overwrite = FALSE,  # overwrite output if already present
-            #       recursive = TRUE    # if step returns a pipeline, execute it recursive
-            #   ),
-            # TODO: change interface to  execute(steps, ...)
-            # nolint end
+            if (to > self$length()) {
+                stop("to must not be larger than pipeline length")
+            }
+
             log_info <- function(msg, ...) {
                 private$.lg(level = "info", msg = msg, ...)
             }
+
             gettextf("Start execution of '%s' pipeline:", self$name) |>
                 log_info(type = "start_pipeline", pipeline_name = self$name)
 
@@ -360,15 +354,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             log_info("Finished execution of steps.")
 
-            # Clean output that shall not be kept
             log_info("Clean temporary results.")
-            areNotKept = !self$pipeline[["keepOut"]]
-            data.table::set(
-                self$pipeline,
-                i = which(areNotKept),
-                j = "out",
-                value = list(list())
-            )
+            private$.clean_out_not_kept()
 
             log_info("Done.")
             invisible(self)
@@ -439,6 +426,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 private$.execute_step(step)
             }
 
+            log_info("Finished execution of steps.")
+
+            log_info("Clean temporary results.")
+            private$.clean_out_not_kept()
+
+            log_info("Done.")
             invisible(self)
         },
 
@@ -1051,6 +1044,18 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 return(data.table::copy(value))
 
             value
+        },
+
+        .clean_out_not_kept = function()
+        {
+            areNotKept = !self$pipeline[["keepOut"]]
+            data.table::set(
+                self$pipeline,
+                i = which(areNotKept),
+                j = "out",
+                value = list(list())
+            )
+
         },
 
         .derive_dependencies = function(

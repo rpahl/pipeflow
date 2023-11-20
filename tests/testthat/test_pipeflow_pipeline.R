@@ -628,6 +628,19 @@ test_that("execute_step",
         expect_equal(pip$get_out_at_step("B"), c(1, 2))
         expect_equal(pip$get_out_at_step("C"), c(1, 2, 3))
     })
+
+    test_that("if not marked as keepOut, output of executed steps is discarded",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a)
+
+
+        pip$execute_step("A")
+        expect_false(pip$has_out_at_step("A"))
+
+        pip$set_keep_out("A", TRUE)$execute_step("A")
+        expect_true(pip$has_out_at_step("A"))
+    })
 })
 
 
