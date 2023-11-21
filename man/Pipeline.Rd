@@ -21,9 +21,9 @@ Roman Pahl
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{name}}{`string` name of the pipeline}
+\item{\code{name}}{\code{string} name of the pipeline}
 
-\item{\code{pipeline}}{`data.table` the pipeline where each row represents on step.}
+\item{\code{pipeline}}{\code{data.table} the pipeline where each row represents on step.}
 }
 \if{html}{\out{</div>}}
 }
@@ -88,19 +88,19 @@ constructor
 \item{\code{logger}}{logger to be used for logging.
 If you want to use your own custom log function, you need to
 provide a function with the following signature:
-`function(level, msg, ...)`. The `level` argument is a
-string, which can be one of `info`, `warn`, or `error`. The `msg`
+\verb{function(level, msg, ...)}. The \code{level} argument is a
+string, which can be one of \code{info}, \code{warn}, or \code{error}. The \code{msg}
 argument is a string containing the message to be logged. The
-`...` argument is a list of named parameters, which can be used to
+\code{...} argument is a list of named parameters, which can be used to
 add additional information to the log message. If no logger is
 provided, the default logger is used. Note that with the
 default logger, the log layout can be altered any time via
-[set_log_layout()].}
+\code{\link[=set_log_layout]{set_log_layout()}}.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-returns the `Pipeline` object invisibly
+returns the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -122,32 +122,32 @@ Add pipeline step
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` the name of the step. Each step name must
+\item{\code{step}}{\code{string} the name of the step. Each step name must
 be unique.}
 
-\item{\code{fun}}{`function` or name of the function to be applied at
+\item{\code{fun}}{\code{function} or name of the function to be applied at
 the step. Both existing and lambda/anonymous functions can be used.}
 
-\item{\code{params}}{`list` list of parameters to set or overwrite
+\item{\code{params}}{\code{list} list of parameters to set or overwrite
 parameters of the passed function.}
 
-\item{\code{description}}{`string` optional description of the step}
+\item{\code{description}}{\code{string} optional description of the step}
 
-\item{\code{group}}{`string` grouping information (by default the same as
+\item{\code{group}}{\code{string} grouping information (by default the same as
 the name of the step. Any output collected later (see function
-`collect_out` by default is put together by these group names. This,
+\code{collect_out} by default is put together by these group names. This,
 for example, comes in handy when the pipeline is copy-appended
 multiple times to keep the results of the same function/step at one
 place.}
 
-\item{\code{keepOut}}{`logical` if `FALSE` the output of the function will
+\item{\code{keepOut}}{\code{logical} if \code{FALSE} the output of the function will
 be cleaned at the end of the whole pipeline execution. This option
 is used to only keep the results that matter.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-returns the `Pipeline` object invisibly
+returns the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -163,15 +163,15 @@ clashes and dependencies, which will be changed after the append.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{p}}{`Pipeline` object to be appended.}
+\item{\code{p}}{\code{Pipeline} object to be appended.}
 
-\item{\code{outAsIn}}{`logical` if `TRUE`, output of first pipeline is used
+\item{\code{outAsIn}}{\code{logical} if \code{TRUE}, output of first pipeline is used
 as data input of appended pipeline.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-returns new combined `Pipeline`.
+returns new combined \code{Pipeline}.
 }
 }
 \if{html}{\out{<hr>}}
@@ -186,14 +186,14 @@ Append string to all step names.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{postfix}}{`string` to be appended to each step name.}
+\item{\code{postfix}}{\code{string} to be appended to each step name.}
 
-\item{\code{sep}}{`string` separator between step name and postfix.}
+\item{\code{sep}}{\code{string} separator between step name and postfix.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-returns the `Pipeline` object invisibly
+returns the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -208,12 +208,12 @@ Clean output of given step.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-returns the `Pipeline` object invisibly
+returns the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -229,13 +229,13 @@ pipeline execution.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{groupBy}}{`string` column of pipeline by which to group the
+\item{\code{groupBy}}{\code{string} column of pipeline by which to group the
 output.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-`list` containing the output, named after the groups, which,
+\code{list} containing the output, named after the groups, which,
 by default, are the steps.
 }
 }
@@ -243,27 +243,26 @@ by default, are the steps.
 \if{html}{\out{<a id="method-Pipeline-discard_steps"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-discard_steps}{}}}
 \subsection{Method \code{discard_steps()}}{
-Discard all steps that match the given `pattern`.
+Discard all steps that match the given \code{pattern}.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$discard_steps(pattern, fixed = TRUE, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$discard_steps(pattern, recursive = FALSE, fixed = TRUE, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{pattern}}{`string` containing a regular expression (or
-character string for `fixed = TRUE`) to be matched.}
+\item{\code{pattern}}{\code{string} containing a regular expression (or
+character string for \code{fixed = TRUE}) to be matched.}
 
-\item{\code{fixed}}{`logical` If `TRUE`, `pattern` is a string to
+\item{\code{recursive}}{\code{logical} if \code{TRUE} the step is removed together
+with all its downstream dependencies.}
+
+\item{\code{fixed}}{\code{logical} If \code{TRUE}, \code{pattern} is a string to
 be matched as is. Overrides all conflicting arguments.}
 
-\item{\code{...}}{further arguments passed to `[grep()]`.
-#' @seealso `[grep()]`}
+\item{\code{...}}{further arguments passed to \code{\link[=grep]{grep()}}.}
 }
 \if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-the `Pipeline` object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -278,18 +277,18 @@ Execute all pipeline steps.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{from}}{`numeric` start from this step}
+\item{\code{from}}{\code{numeric} start from this step}
 
-\item{\code{to}}{`numeric` execute until this step}
+\item{\code{to}}{\code{numeric} execute until this step}
 
-\item{\code{recursive}}{`logical` if `TRUE` and a step returns a new
+\item{\code{recursive}}{\code{logical} if \code{TRUE} and a step returns a new
 pipeline, the run of the current pipeline is aborted and the
 new pipeline is executed recursively.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-returns the `Pipeline` object invisibly
+returns the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -304,18 +303,18 @@ Execute given pipeline step
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 
-\item{\code{upstream}}{`logical` if `TRUE`, execute all dependent upstream
+\item{\code{upstream}}{\code{logical} if \code{TRUE}, execute all dependent upstream
 steps first.}
 
-\item{\code{downstream}}{`logical` if `TRUE`, execute all depdendent
+\item{\code{downstream}}{\code{logical} if \code{TRUE}, execute all depdendent
 downstream afterwards.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-returns the `Pipeline` object invisibly
+returns the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -341,7 +340,7 @@ Get all dependencies defined in the pipeline
 }
 
 \subsection{Returns}{
-named `list` of dependencies for each step
+named \code{list} of dependencies for each step
 }
 }
 \if{html}{\out{<hr>}}
@@ -357,15 +356,15 @@ default descending recursively.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 
-\item{\code{recursive}}{`logical` if `TRUE`, dependencies of dependencies
+\item{\code{recursive}}{\code{logical} if \code{TRUE}, dependencies of dependencies
 are also returned.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-`list` of downstream dependencies
+\code{list} of downstream dependencies
 }
 }
 \if{html}{\out{<hr>}}
@@ -380,12 +379,12 @@ Get output of given step.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-returns the `Pipeline` object invisibly
+returns the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -400,13 +399,13 @@ Get all function parameters defined in the pipeline.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{ignoreHidden}}{`logical` if TRUE, hidden parameters (i.e. all
+\item{\code{ignoreHidden}}{\code{logical} if TRUE, hidden parameters (i.e. all
 names starting with a dot) are ignored and thus not returned.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-`list` of parameters, sorted and named by step. Steps with
+\code{list} of parameters, sorted and named by step. Steps with
 no parameters are filtered out.
 }
 }
@@ -422,15 +421,15 @@ Get all function parameters at given step name.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 
-\item{\code{ignoreHidden}}{`logical` if TRUE, hidden parameters (i.e. all
+\item{\code{ignoreHidden}}{\code{logical} if TRUE, hidden parameters (i.e. all
 names starting with a dot) are ignored and thus not returned.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-`list` of parameters defined at given step.
+\code{list} of parameters defined at given step.
 }
 }
 \if{html}{\out{<hr>}}
@@ -445,12 +444,12 @@ Get step of pipeline
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-`data.table` row containing the step. If step not found, an
+\code{data.table} row containing the step. If step not found, an
 error is given.
 }
 }
@@ -464,7 +463,7 @@ Get step names of pipeline
 }
 
 \subsection{Returns}{
-`character` vector of step names
+\code{character} vector of step names
 }
 }
 \if{html}{\out{<hr>}}
@@ -479,7 +478,7 @@ Get step number
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 }
 \if{html}{\out{</div>}}
 }
@@ -501,13 +500,13 @@ in a step, it is ignored in the listings of later steps.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{ignoreHidden}}{`logical` if TRUE, hidden parameters (i.e. all
+\item{\code{ignoreHidden}}{\code{logical} if TRUE, hidden parameters (i.e. all
 names starting with a dot) are ignored and thus not returned.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-`list` of unique parameters, sorted and named by step. Steps
+\code{list} of unique parameters, sorted and named by step. Steps
 with no parameters are filtered out.
 }
 }
@@ -523,15 +522,15 @@ Get all unique function parameters in json format.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{ignoreHidden}}{`logical` if TRUE, hidden parameters (i.e. all
+\item{\code{ignoreHidden}}{\code{logical} if TRUE, hidden parameters (i.e. all
 names starting with a dot) are ignored and thus not returned.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-`list` flat unnamed json list of unique function parameters,
- at this point with no information of the steps were parameters are
- defined first.
+\code{list} flat unnamed json list of unique function parameters,
+at this point with no information of the steps were parameters are
+defined first.
 }
 }
 \if{html}{\out{<hr>}}
@@ -547,15 +546,15 @@ default descending recursively.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 
-\item{\code{recursive}}{`logical` if `TRUE`, dependencies of dependencies
+\item{\code{recursive}}{\code{logical} if \code{TRUE}, dependencies of dependencies
 are also returned.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-`list` of upstream dependencies
+\code{list} of upstream dependencies
 }
 }
 \if{html}{\out{<hr>}}
@@ -570,12 +569,12 @@ Checks whether step has output.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-`logical` TRUE if step is defined to keep output
+\code{logical} TRUE if step is defined to keep output
 }
 }
 \if{html}{\out{<hr>}}
@@ -590,12 +589,12 @@ Determine whether pipeline has given step.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-`logical` whether step exists
+\code{logical} whether step exists
 }
 }
 \if{html}{\out{<hr>}}
@@ -610,7 +609,7 @@ debugging.
 }
 
 \subsection{Returns}{
-the `Pipeline` object invisibly
+the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -623,7 +622,7 @@ Length of the pipeline aka number of pipeline steps.
 }
 
 \subsection{Returns}{
-`numeric` length of pipeline.
+\code{numeric} length of pipeline.
 }
 }
 \if{html}{\out{<hr>}}
@@ -646,7 +645,7 @@ Remove last step from the pipeline.
 }
 
 \subsection{Returns}{
-`string` the name of the step that was removed
+\code{string} the name of the step that was removed
 }
 }
 \if{html}{\out{<hr>}}
@@ -661,12 +660,12 @@ Remove all steps after the given step.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-`character` vector of steps that were removed.
+\code{character} vector of steps that were removed.
 }
 }
 \if{html}{\out{<hr>}}
@@ -681,12 +680,12 @@ Remove all steps from and including the given step.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-`character` vector of steps that were removed.
+\code{character} vector of steps that were removed.
 }
 }
 \if{html}{\out{<hr>}}
@@ -694,20 +693,24 @@ Remove all steps from and including the given step.
 \if{latex}{\out{\hypertarget{method-Pipeline-remove_step}{}}}
 \subsection{Method \code{remove_step()}}{
 Remove certain step from the pipeline. If step does
-not exist, an error is given.
+not exist, an error is given. If other steps depend on the step to
+be removed, an error is given, unless \code{recursive = TRUE}.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$remove_step(step)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$remove_step(step, recursive = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` the name of the step to be removed.}
+\item{\code{step}}{\code{string} the name of the step to be removed.}
+
+\item{\code{recursive}}{\code{logical} if \code{TRUE} the step is removed together
+with all its downstream dependencies.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-the `Pipeline` object invisibly
+the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -729,32 +732,32 @@ Replace pipeline step
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` the name of the step to be replaced. Step must
+\item{\code{step}}{\code{string} the name of the step to be replaced. Step must
 exist.}
 
-\item{\code{fun}}{`string` or `function` operation to be applied at the
+\item{\code{fun}}{\code{string} or \code{function} operation to be applied at the
 step. Both existing and lambda/anonymous functions can be used.}
 
-\item{\code{params}}{`list` list of parameters to overwrite default
+\item{\code{params}}{\code{list} list of parameters to overwrite default
 parameters of existing functions.}
 
-\item{\code{description}}{`string` optional description of the step}
+\item{\code{description}}{\code{string} optional description of the step}
 
-\item{\code{group}}{`string` grouping information (by default the same as
+\item{\code{group}}{\code{string} grouping information (by default the same as
 the name of the step. Any output collected later (see function
-`collect_out` by default is put together by these group names. This,
+\code{collect_out} by default is put together by these group names. This,
 for example, comes in handy when the pipeline is copy-appended
 multiple times to keep the results of the same function/step at one
 place.}
 
-\item{\code{keepOut}}{`logical` if `FALSE` the output of the function will
+\item{\code{keepOut}}{\code{logical} if \code{FALSE} the output of the function will
 be cleaned at the end of the whole pipeline execution. This option
 is used to only keep the results that matter.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-the `Pipeline` object invisibly
+the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -769,12 +772,12 @@ Set data in first step of pipeline.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{data}}{`data.frame` initial data set.}
+\item{\code{data}}{\code{data.frame} initial data set.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-returns the `Pipeline` object invisibly
+returns the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -793,18 +796,18 @@ Split-copy pipeline by list of data sets
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{dataList}}{`list` of data sets}
+\item{\code{dataList}}{\code{list} of data sets}
 
-\item{\code{to_step}}{`string` step name marking optional subset of
+\item{\code{to_step}}{\code{string} step name marking optional subset of
 the pipeline, at which the data split should be applied to.}
 
-\item{\code{groupBySplit}}{`logical` whether to set step groups according
+\item{\code{groupBySplit}}{\code{logical} whether to set step groups according
 to data split.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-new combined `Pipeline` with each sub-pipeline having set
+new combined \code{Pipeline} with each sub-pipeline having set
 one of the data sets.
 }
 }
@@ -820,14 +823,14 @@ Set pipeline to keep or omit output of given step.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` name of step}
+\item{\code{step}}{\code{string} name of step}
 
-\item{\code{status}}{`logical` whether to keep output of step}
+\item{\code{status}}{\code{logical} whether to keep output of step}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-the `Pipeline` object invisibly
+the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -843,15 +846,15 @@ in several steps, the parameter is set commonly in all steps.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{params}}{`list` of parameters to be set}
+\item{\code{params}}{\code{list} of parameters to be set}
 
-\item{\code{warnUndefined}}{`logical` whether to give a warning if a
+\item{\code{warnUndefined}}{\code{logical} whether to give a warning if a
 parameter is not defined in the pipeline.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-returns the `Pipeline` object invisibly
+returns the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -866,17 +869,17 @@ Set unbound parameter values at given pipeline step.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{step}}{`string` the name of the step}
+\item{\code{step}}{\code{string} the name of the step}
 
-\item{\code{params}}{`list` of parameters to be set}
+\item{\code{params}}{\code{list} of parameters to be set}
 
-\item{\code{warnUndefined}}{`logical` whether to give a warning if a
+\item{\code{warnUndefined}}{\code{logical} whether to give a warning if a
 parameter is not defined in the pipeline.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-returns the `Pipeline` object invisibly
+returns the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}

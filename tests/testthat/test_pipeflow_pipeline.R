@@ -414,45 +414,72 @@ test_that("output can be grouped",
 })
 
 
-# discard steps
 
-test_that("pipeline steps can be discarded by pattern",
+test_that("discard_steps",
 {
-    pip <- Pipeline$new("pipe1") |>
-        pipe_add("calc", function(a = 1) a) |>
-        pipe_add("plot1", function(x = ~calc) x) |>
-        pipe_add("plot2", function(x = ~plot1) x)
+    expect_true(is.function(Pipeline$new("pipe")$discard_steps))
 
-    suppressMessages(pip$discard_steps("plot"))
+    test_that("pipeline steps can be discarded by pattern",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("calc", function(a = 1) a) |>
+            pipe_add("plot1", function(x = ~calc) x) |>
+            pipe_add("plot2", function(x = ~plot1) x)
 
-    expect_equal(pip$pipeline[["step"]], c(".data", "calc"))
+        out <- capture.output(
+            pip$discard_steps("plot"),
+            type = "message"
+        )
+        expect_equal(
+            out,
+            c(
+                "step 'plot2' was removed",
+                "step 'plot1' was removed"
+            )
+        )
+
+        expect_equal(pip$pipeline[["step"]], c(".data", "calc"))
+    })
+
+    test_that("if no pipeline step matches pattern, pipeline remains unchanged",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("calc", function(a = 1) a) |>
+            pipe_add("plot1", function(x = ~calc) x) |>
+            pipe_add("plot2", function(x = ~plot1) x)
+
+        steps_before = pip$pipeline[["step"]]
+
+        expect_silent(pip$discard_steps("bla"))
+        expect_equal(pip$pipeline[["step"]], steps_before)
+    })
+
+
+    test_that("if step has downstream dependencies, an error is given",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = ~f1) b)
+
+        expect_error(
+            pip$discard_steps("f1"),
+            paste(
+                "cannot remove step 'f1' because the following",
+                "steps depend on it: 'f2'"
+            )
+        )
+
+        pip$add("f3", function(x = ~f1) x)
+        expect_error(
+            pip$discard_steps("f1"),
+            paste(
+                "cannot remove step 'f1' because the following",
+                "steps depend on it: 'f2', 'f3'"
+            )
+        )
+    })
 })
 
-test_that("if no pipeline step matches pattern, pipeline remains unchanged",
-{
-    pip <- Pipeline$new("pipe1") |>
-        pipe_add("calc", function(a = 1) a) |>
-        pipe_add("plot1", function(x = ~calc) x) |>
-        pipe_add("plot2", function(x = ~plot1) x)
-
-    steps_before = pip$pipeline[["step"]]
-
-    expect_silent(pip$discard_steps("bla"))
-    expect_equal(pip$pipeline[["step"]], steps_before)
-})
-
-
-test_that("if discarded step has dependencies, an error is given",
-{
-    pip <- Pipeline$new("pipe1") |>
-        pipe_add("f1", function(a = 1) a) |>
-        pipe_add("f2", function(b = ~f1) b)
-
-    expect_error(
-        pip$discard_steps("f1"),
-        "cannot remove step 'f1' as other steps depend on it, namely, 'f2'"
-    )
-})
 
 
 # execute
@@ -1375,47 +1402,101 @@ test_that("if given step is the last step, one step removed",
 })
 
 
-# remove_step
 
-test_that("pipeline step can be removed by its step",
+test_that("remove_step",
 {
-    pip <- Pipeline$new("pipe1") |>
-        pipe_add("f1", function(a = 1) a) |>
-        pipe_add("f2", function(b = 1) b)
+    expect_true(is.function(Pipeline$new("pipe")$remove_step))
 
-    pip$remove_step("f1")
+    test_that("pipeline step can be removed",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = 1) b)
 
-    expect_equal(pip$pipeline[["step"]], c(".data", "f2"))
+        pip$remove_step("f1")
+
+        expect_equal(pip$get_step_names(), c(".data", "f2"))
+    })
+
+    test_that("step must exist",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a)
+
+        expect_error(
+            pip$remove_step("non-existent-step"),
+            "step 'non-existent-step' does not exist"
+        )
+    })
+
+    test_that("if step has downstream dependencies, an error is given",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = ~f1) b)
+
+        expect_error(
+            pip$remove_step("f1"),
+            paste(
+                "cannot remove step 'f1' because the following",
+                "steps depend on it: 'f2'"
+            )
+        )
+
+        pip$add("f3", function(x = ~f1) x)
+        expect_error(
+            pip$remove_step("f1"),
+            paste(
+                "cannot remove step 'f1' because the following",
+                "steps depend on it: 'f2', 'f3'"
+            )
+        )
+    })
+
+    test_that(
+        "if error, only the direct downstream dependencies are reported",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = ~f1) b) |>
+            pipe_add("f3", function(c = ~f2) c) |>
+            pipe_add("f4", function(d = ~f1) d)
+
+        expect_error(
+            pip$remove_step("f1"),
+            paste(
+                "cannot remove step 'f1' because the following",
+                "steps depend on it: 'f2', 'f4'"
+            )
+        )
+    })
+
+    test_that(
+        "step can be removed together with is downstream dependencies",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = ~f1) b) |>
+            pipe_add("f3", function(c = ~f2) c) |>
+            pipe_add("f4", function(d = ~f1) d) |>
+            pipe_add("f5", function(x = ~.data) x)
+
+        out <- utils::capture.output(
+            pip$remove_step("f1", recursive = TRUE),
+            type = "message"
+        )
+
+        expect_equal(pip$get_step_names(), c(".data", "f5"))
+        expect_equal(
+            out,
+            paste(
+                "Removing step 'f1' and its downstream dependencies:",
+                "'f2', 'f3', 'f4'"
+            )
+        )
+    })
 })
 
-test_that("pipeline step-to-be-removed must exist",
-{
-    pip <- Pipeline$new("pipe1") |>
-        pipe_add("f1", function(a = 1) a)
-
-    expect_error(
-        pip$remove_step("non-existent-step"),
-        "step 'non-existent-step' does not exist"
-    )
-})
-
-test_that("if step-to-be-removed has dependencies, an error is given",
-{
-    pip <- Pipeline$new("pipe1") |>
-        pipe_add("f1", function(a = 1) a) |>
-        pipe_add("f2", function(b = ~f1) b)
-
-    expect_error(
-        pip$remove_step("f1"),
-        "cannot remove step 'f1' as other steps depend on it, namely, 'f2'"
-    )
-
-    pip$add("f", function(x = ~f1) x)
-    expect_error(
-        pip$remove_step("f1"),
-        "cannot remove step 'f1' as other steps depend on it, namely, 'f2', 'f'"
-    )
-})
 
 
 # replace_step

@@ -283,16 +283,21 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Discard all steps that match the given `pattern`.
         #' @param pattern `string` containing a regular expression (or
         #' character string for `fixed = TRUE`) to be matched.
+        #' @param recursive `logical` if `TRUE` the step is removed together
+        #' with all its downstream dependencies.
         #' @param fixed `logical` If `TRUE`, `pattern` is a string to
         #' be matched as is. Overrides all conflicting arguments.
-        #' @param ... further arguments passed to `[grep()]`.
-        #' #' @seealso `[grep()]`
-        #' @return the `Pipeline` object invisibly
-        discard_steps = function(pattern, fixed = TRUE, ...) {
-            step_names = self$pipeline[["step"]]
+        #' @param ... further arguments passed to [grep()].
+        #:' @return the `Pipeline` object invisibly
+        discard_steps = function(
+            pattern,
+            recursive = FALSE,
+            fixed = TRUE,
+            ...
+        ) {
             steps2remove = grep(
                 pattern = pattern,
-                x = step_names,
+                x = self$get_step_names(),
                 fixed = fixed,
                 value = TRUE,
                 ...
@@ -300,9 +305,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             # To respect dependencies, remove steps from last to first
             for (step in rev(steps2remove)) {
-                msg <- gettextf("Removing step '%s'", step)
-                private$.lg(level = "info", msg = msg)
-                self$remove_step(step)
+                self$remove_step(step, recursive = recursive)
+                message(gettextf("step '%s' was removed", step))
             }
 
             invisible(self)
@@ -740,30 +744,40 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
 
         #' @description Remove certain step from the pipeline. If step does
-        #' not exist, an error is given.
+        #' not exist, an error is given. If other steps depend on the step to
+        #' be removed, an error is given, unless `recursive = TRUE`.
         #' @param step `string` the name of the step to be removed.
+        #' @param recursive `logical` if `TRUE` the step is removed together
+        #' with all its downstream dependencies.
         #' @return the `Pipeline` object invisibly
-        remove_step = function(step) {
+        remove_step = function(
+            step,
+            recursive = FALSE
+        ) {
+            private$.verify_step_exists(step)
 
-            existing_steps = self$pipeline[["step"]]
-            step_number = match(step, existing_steps)
+            deps <- self$get_downstream_dependencies(step, recursive)
+            hasDeps <- length(deps) > 0
 
-            if (is.na(step_number)) {
-                stop("step '", step, "' does not exist", call. = FALSE)
-            }
+            if (hasDeps) {
+                stepsString <- paste0("'", deps, "'", collapse = ", ")
 
-            # Verify that step to be removed has no dependencies relying on it
-            deps = self$pipeline[["deps"]]
-            names(deps) = self$pipeline[["step"]]
-            dependents = names(Filter(x = deps, f = function(x) step %in% x))
+                if (!recursive) {
+                    stop(
+                        "cannot remove step '", step, "' because the ",
+                        "following steps depend on it: ", stepsString
+                    )
+                }
 
-            if (length(dependents) > 0) {
-                stop("cannot remove step '", step,
-                    "' as other steps depend on it, namely, ",
-                    paste0("'", dependents, "'", collapse = ", ")
+                # Remove all downstream dependencies starting from the end
+                message(
+                    "Removing step '", step, "' and its downstream ",
+                    "dependencies: ", stepsString
                 )
+                sapply(rev(deps), FUN = self$remove_step)
             }
 
+            step_number <- self$get_step_number(step)
             self$pipeline = self$pipeline[-step_number, ]
             invisible(self)
         },
