@@ -2562,12 +2562,21 @@ test_that("private methods work as expected",
             )
         })
 
-
         test_that("if no dependencies, empty character vector is returned",
         {
             expect_equal(f(step = "foo", deps = character()), character(0))
             expect_equal(f(step = "foo", deps = list()), character(0))
         })
+
+        test_that(
+            "if no deps, recursive should give same as non-recursiv call",
+        {
+            expect_equal(
+                f(step = "foo", deps = list()),
+                f(step = "foo", deps = list(), recursive = FALSE)
+            )
+        })
+
 
         test_that("dependencies by default are determined recursively",
         {
