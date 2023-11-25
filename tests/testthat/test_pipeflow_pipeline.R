@@ -766,27 +766,6 @@ test_that("get_dependencies",
 test_that("get_downstream_dependencies",
 {
     expect_true(is.function(Pipeline$new("pipe")$get_downstream_dependencies))
-})
-
-
-
-test_that("get_out_at_step",
-{
-    expect_true(is.function(Pipeline$new("pipe")$get_out_at_step))
-
-    test_that("output at given step can be retrieved",
-    {
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("A", function(a = 1) a) |>
-            pipe_add("B", function(b = 2) b)
-
-        expect_equal(pip$get_out_at_step("A"), list())
-        expect_equal(pip$get_out_at_step("B"), list())
-
-        pip$keep_all_out()$execute()
-        expect_equal(pip$get_out_at_step("A"), 1)
-        expect_equal(pip$get_out_at_step("B"), 2)
-    })
 
     test_that("dependencies can be determined recursively for given step",
     {
@@ -846,6 +825,27 @@ test_that("get_out_at_step",
 
         expect_equal(pip$get_downstream_dependencies("f2.1"), "f3")
         expect_equal(pip$get_downstream_dependencies("f2.2"), "f3")
+    })
+})
+
+
+
+test_that("get_out_at_step",
+{
+    expect_true(is.function(Pipeline$new("pipe")$get_out_at_step))
+
+    test_that("output at given step can be retrieved",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = 2) b)
+
+        expect_equal(pip$get_out_at_step("A"), list())
+        expect_equal(pip$get_out_at_step("B"), list())
+
+        pip$keep_all_out()$execute()
+        expect_equal(pip$get_out_at_step("A"), 1)
+        expect_equal(pip$get_out_at_step("B"), 2)
     })
 })
 
