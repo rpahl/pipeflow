@@ -93,12 +93,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param params `list` list of parameters to set or overwrite
         #' parameters of the passed function.
         #' @param description `string` optional description of the step
-        #' @param group `string` grouping information (by default the same as
-        #' the name of the step. Any output collected later (see function
-        #' `collect_out` by default is put together by these group names. This,
-        #' for example, comes in handy when the pipeline is copy-appended
-        #' multiple times to keep the results of the same function/step at one
-        #' place.
+        #' @param group `string` output collected after pipeline execution
+        #' (see function `collect_out`) is grouped by the defined group
+        #' names. By default, this is the name of the step, which comes in
+        #' handy when the pipeline is copy-appended multiple times to keep
+        #' the results of the same function/step grouped at one place.
         #' @param keepOut `logical` if `FALSE` the output of the function will
         #' be cleaned at the end of the whole pipeline execution. This option
         #' is used to only keep the results that matter.
@@ -263,21 +262,53 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' output.
         #' @return `list` containing the output, named after the groups, which,
         #' by default, are the steps.
-        collect_out = function(groupBy = "group") {
-            subpipe = self$pipeline[self$pipeline[["keepOut"]], ]
-            if (nrow(subpipe) == 0)
-                return(list())
+        collect_out = function(groupBy = "group")
+        {
+            stopifnot(
+                is_string(groupBy),
+                groupBy %in% colnames(self$pipeline)
+            )
 
-            collect_by_group = function(subpipe) {
-                results = as.list(subpipe[["out"]])
-                names(results) = subpipe[["step"]]
+            keepOut <- self$pipeline[["keepOut"]]
+            if (!any(keepOut)) {
+                return(list())
+            }
+
+            collect_results <- function(pipeline) {
+                results = as.list(pipeline[["out"]])
+                names(results) = pipeline[["step"]]
                 results
             }
 
-            out = split(subpipe, subpipe[[groupBy]]) |>
-                lapply(collect_by_group)
+            pipeOut <- self$pipeline[keepOut, ]
+            result <- list()
 
-            out
+            groupLabels <- pipeOut[[groupBy]]
+
+            # Group output if at least two steps have the same group label
+            groupings <- table(groupLabels) |>
+                as.list() |>
+                Filter(f = function(x) x > 1) |>
+                unlist()
+
+            hasGroupings <- length(groupings) > 0
+            if (hasGroupings) {
+                indices <- groupLabels %in% names(groupings)
+
+                groupedRes <- pipeOut[indices, ] |>
+                    split(f = groupLabels[indices]) |>
+                    lapply(collect_results) |>
+                    # keep original order of groups as they were defined
+                    .subset(unique(groupLabels[indices]))
+
+                result <- append(result, groupedRes)
+            }
+
+            # Ungrouped result
+            ungroupedRes <- pipeOut[!(groupLabels %in% names(groupings)), ] |>
+                collect_results()
+
+            append(result, ungroupedRes)
         },
 
         #' @description Discard all steps that match the given `pattern`.
