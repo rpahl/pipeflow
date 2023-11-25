@@ -538,7 +538,7 @@ test_that("execute",
         pip$keep_all_out()
 
         out <- pip$execute(from = 3)$collect_out()
-        expect_equal(out[["B"]][[1]], list())
+        expect_equal(out[["B"]][[1]], NULL)
     })
 
     test_that("if function result is a list, all names are preserved",
@@ -590,7 +590,7 @@ test_that("execute",
             pipe_add("f2", function(b = 2) b, keepOut = TRUE)
 
         out <- pip$execute()$collect_out()
-        expect_equal(out, list(f1 = list(f1 = list()), f2 = list(f2 = 2)))
+        expect_equal(out, list(f1 = list(f1 = NULL), f2 = list(f2 = 2)))
     })
 
     test_that(
@@ -644,7 +644,7 @@ test_that("execute_step",
 
         pip$keep_all_out()$execute_step("B", upstream = FALSE)
         expect_false(pip$has_out_at_step("A"))
-        expect_equal(pip$get_out_at_step("B"), list(2))
+        expect_equal(pip$get_out_at_step("B"), 2)
         expect_false(pip$has_out_at_step("C"))
     })
 
@@ -663,8 +663,8 @@ test_that("execute_step",
             downstream = TRUE
         )
         expect_false(pip$has_out_at_step("A"))
-        expect_equal(pip$get_out_at_step("B"), list(2))
-        expect_equal(pip$get_out_at_step("C"), list(2, 3))
+        expect_equal(pip$get_out_at_step("B"), 2)
+        expect_equal(pip$get_out_at_step("C"), c(2, 3))
     })
 
     test_that("pipeline can be executed at given step including
@@ -840,8 +840,8 @@ test_that("get_out_at_step",
             pipe_add("A", function(a = 1) a) |>
             pipe_add("B", function(b = 2) b)
 
-        expect_equal(pip$get_out_at_step("A"), list())
-        expect_equal(pip$get_out_at_step("B"), list())
+        expect_equal(pip$get_out_at_step("A"), NULL)
+        expect_equal(pip$get_out_at_step("B"), NULL)
 
         pip$keep_all_out()$execute()
         expect_equal(pip$get_out_at_step("A"), 1)
@@ -1725,7 +1725,7 @@ test_that("set_data",
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(x = ~.data) x, keepOut = TRUE)
         out <- pip$execute()$collect_out()
-        expect_equal(out[[1]], list(f1 = list()))
+        expect_equal(out[[1]], list(f1 = NULL))
 
         pip$set_data(dat)
 
@@ -2368,7 +2368,7 @@ test_that("private methods work as expected",
 
             f <- get_private(pip)$.execute_step
 
-            expect_equal(f(step = "B"), list())
+            expect_equal(f(step = "B"), NULL)
 
             # Now set output for step 'A'
             i <- match("A", pip$get_step_names())

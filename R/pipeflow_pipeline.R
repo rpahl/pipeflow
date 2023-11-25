@@ -156,7 +156,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         params = list(params),
                         keepOut = keepOut,
                         deps = list(deps),
-                        out = list(list()),
+                        out = list(NULL),
                         group = group,
                         description = description
                     )
