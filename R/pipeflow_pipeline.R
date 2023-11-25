@@ -252,7 +252,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         clean_out_at_step = function(step)
         {
             index <- self$get_step_number(step)
-            self$pipeline[["out"]][[index]] <- list()
+            self$pipeline[["out"]][[index]] <- NULL
 
             invisible(self)
         },
