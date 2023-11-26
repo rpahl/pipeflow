@@ -2340,6 +2340,7 @@ test_that("private methods work as expected",
                 )
 
             f <- get_private(pip)$.execute_step
+            expect_no_error(f("A"))
         })
 
         test_that("if error, the failing step is given in the log",

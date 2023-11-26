@@ -67,7 +67,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 private$.lg <- logger
             }
 
-            self$name = name
+            self$name <- name
             self$pipeline <- data.table::data.table(
                 step = character(0),
                 fun = character(0),
@@ -550,7 +550,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 if (length(x) == 0) {
                     return(x)
                 }
-                params = Filter(x, f = isValue)
+                params <- Filter(x, f = isValue)
 
                 if (ignoreHidden) {
                     params = params[!areHidden(params)]
@@ -573,7 +573,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' error is given.
         get_step = function(step)
         {
-            pos = Position(
+            pos <- Position(
                 self$pipeline[["step"]],
                 f = function(x) x == step,
                 nomatch = stop("step '", step, "' not found")
@@ -610,7 +610,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return `list` of unique parameters
         get_unique_parameters = function(ignoreHidden = TRUE)
         {
-            params = self$get_parameters(ignoreHidden)
+            params <- self$get_parameters(ignoreHidden)
 
             if (length(params) == 0) {
                 return(params)
@@ -715,10 +715,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Remove last step from the pipeline.
         #' @return `string` the name of the step that was removed
         pop_step = function() {
-            len = self$length()
-            last_step_name = self$pipeline[["step"]][[len]]
+            len <- self$length()
+            last_step_name <- self$get_step_names()[len]
 
-            self$pipeline = self$pipeline[-len, ]
+            self$pipeline <- self$pipeline[-len, ]
             last_step_name
         },
 
@@ -727,23 +727,19 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return `character` vector of steps that were removed.
         pop_steps_after = function(step) {
 
-            existing_steps = self$pipeline[["step"]]
-            step_number = match(step, existing_steps)
+            step_number <- self$get_step_number(step)
 
-            if (is.na(step_number)) {
-                stop("step '", step, "' does not exist", call. = FALSE)
+            if (step_number == self$length()) {
+                return(character(0))    # nothing to remove
             }
 
-            if (step_number == self$length())
-                return(character(0))    # nothing to remove
+            next_step <- step_number + 1
+            numbers2remove <- seq(from = next_step, to = self$length())
+            removed_steps <- self$pipeline[["step"]][numbers2remove]
 
-            next_step = step_number + 1
-            removed_step_numbers = next_step:self$length()
-            removed_step_names = self$pipeline[["step"]][removed_step_numbers]
+            self$pipeline <- self$pipeline[-numbers2remove, ]
 
-            self$pipeline = self$pipeline[-removed_step_numbers, ]
-
-            removed_step_names
+            removed_steps
         },
 
         #' @description Remove all steps from and including the given step.
@@ -751,17 +747,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return `character` vector of steps that were removed.
         pop_steps_from = function(step) {
 
-            existing_steps = self$pipeline[["step"]]
-            step_number = match(step, existing_steps)
+            step_number <- self$get_step_number(step)
 
-            if (is.na(step_number)) {
-                stop("step '", step, "' does not exist", call. = FALSE)
-            }
+            numbers2remove <- seq(from = step_number, to = self$length())
+            removed_step_names <- self$pipeline[["step"]][numbers2remove]
 
-            removed_step_numbers = step_number:self$length()
-            removed_step_names = self$pipeline[["step"]][removed_step_numbers]
-
-            self$pipeline = self$pipeline[-removed_step_numbers, ]
+            self$pipeline <- self$pipeline[-numbers2remove, ]
 
             removed_step_names
         },
@@ -926,10 +917,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is.list(dataList),
                 to_step %in% self$get_step_names()
             )
-            to = match(to_step, self$get_step_names())
-            upper_steps = unlist(self$pipeline[1:to, ][["step"]])
+            to <- match(to_step, self$get_step_names())
+            upper_steps <- unlist(self$pipeline[1:to, ][["step"]])
 
-            dataNames = names(dataList)
+            dataNames <- names(dataList)
             if (is.null(dataNames))
                 dataNames = as.character(seq_along(dataList))
 
@@ -937,7 +928,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 self$clone(deep = TRUE)$set_data(data)
             }
 
-            pipes = lapply(dataList, init_new_pipeline_with_data)
+            pipes <- lapply(dataList, init_new_pipeline_with_data)
             for (i in seq_along(pipes)) {
                 name <- dataNames[[i]]
                 pipes[[i]]$name <- name
@@ -945,17 +936,17 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
                 new_groups <- name
                 if (!groupBySplit) {
-                    old_groups = pipes[[i]]$pipeline[["group"]]
-                    new_groups = paste0(name, ".", old_groups)
+                    old_groups <- pipes[[i]]$pipeline[["group"]]
+                    new_groups <- paste0(name, ".", old_groups)
                 }
                 pipes[[i]]$pipeline[["group"]] = new_groups
             }
 
             # Combine pipelines
-            pipe_names = sapply(pipes, function(x) x$name)
-            combinedName = paste(self$name, "split")
-            pip = Pipeline$new(combinedName)
-            combined = Reduce(c(pip, pipes), f = function(x, y) x$append(y))
+            pipe_names <- sapply(pipes, function(x) x$name)
+            combinedName <- paste(self$name, "split")
+            pip <- Pipeline$new(combinedName)
+            combined <- Reduce(c(pip, pipes), f = function(x, y) x$append(y))
             combined$remove_step(".data")
 
             # If subset was used for split, append the remaining steps and
@@ -978,11 +969,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         res
                     }
                 )
-                remaining_pipe[["deps"]] = updated_deps
-                combined$pipeline = rbind(combined$pipeline, remaining_pipe)
+                remaining_pipe[["deps"]] <- updated_deps
+                combined$pipeline <- rbind(combined$pipeline, remaining_pipe)
             }
 
-            self$pipeline = combined$pipeline
+            self$pipeline <- combined$pipeline
             invisible(self)
         },
 
@@ -1012,8 +1003,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return returns the `Pipeline` object invisibly
         set_parameters = function(params, warnUndefined = TRUE)
         {
-            defined_params = self$get_unique_parameters(ignoreHidden = FALSE)
-            extra = setdiff(names(params), names(defined_params))
+            defined_params <- self$get_unique_parameters(ignoreHidden = FALSE)
+            extra <- setdiff(names(params), names(defined_params))
 
             if (warnUndefined && length(extra) > 0) {
                 warning(
@@ -1027,7 +1018,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                     step,
                     ignoreHidden = FALSE
                 )
-                overlap = intersect(names(params), names(params_ith_step))
+                overlap <- intersect(names(params), names(params_ith_step))
 
                 if (length(overlap) > 0) {
                     params_ith_step[overlap] = params[overlap]
@@ -1051,7 +1042,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is_string(step),
                 is.list(params)
             )
-            current = self$get_parameters_at_step(step, ignoreHidden = FALSE)
+            current <- self$get_parameters_at_step(step, ignoreHidden = FALSE)
 
             extra <- setdiff(names(params), names(current))
             if (length(extra) > 0) {
@@ -1062,8 +1053,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 )
             }
 
-            toUpdate = intersect(names(params), names(current))
-            hasUpdate = length(toUpdate) > 0
+            toUpdate <- intersect(names(params), names(current))
+            hasUpdate <- length(toUpdate) > 0
             if (hasUpdate) {
                 row <- self$get_step_number(step)
                 old <- self$pipeline[["params"]][[row]]
@@ -1086,7 +1077,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         .clean_out_not_kept = function()
         {
-            areNotKept = !self$pipeline[["keepOut"]]
+            areNotKept <- !self$pipeline[["keepOut"]]
             data.table::set(
                 self$pipeline,
                 i = which(areNotKept),
@@ -1375,8 +1366,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is.list(params)
             )
 
-            fargs = formals(fun)
-            unknown_params = setdiff(names(params), names(fargs))
+            fargs <- formals(fun)
+            unknown_params <- setdiff(names(params), names(fargs))
             if (length(unknown_params) > 0) {
                 stop(
                     paste0("'", unknown_params, "'", collapse = ", "),
@@ -1386,9 +1377,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
 
-            defined_params = Filter(params, f = Negate(is.name))
-            argsWithNoDefault = names(Filter(fargs, f = \(x) is.name(x)))
-            undefinedArgs = setdiff(argsWithNoDefault, names(defined_params))
+            defined_params <- Filter(params, f = Negate(is.name))
+            argsWithNoDefault <- names(Filter(fargs, f = \(x) is.name(x)))
+            undefinedArgs <- setdiff(argsWithNoDefault, names(defined_params))
             if (length(undefinedArgs) > 0) {
                 stop(
                     paste0("'", undefinedArgs, "'", collapse = ", "),
