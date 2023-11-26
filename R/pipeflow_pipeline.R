@@ -601,30 +601,25 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
 
         #' @description Get all function parameters defined in the pipeline,
-        #' but only list each parameter once, that is, once a parameter is used
-        #' in a step, it is ignored in the listings of later steps.
+        #' but only list each parameter once. The values of the parameters,
+        #' will be the values of the first step where the parameter was defined.
+        #' This is particularly useful after the parameters where set using
+        #' the `set_parameters` function, which will set the same value
+        #' for all steps.
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
-        #' @return `list` of unique parameters, sorted and named by step. Steps
-        #' with no parameters are filtered out.
+        #' @return `list` of unique parameters
         get_unique_parameters = function(ignoreHidden = TRUE)
         {
             params = self$get_parameters(ignoreHidden)
 
-            if (length(params) == 0)
+            if (length(params) == 0) {
                 return(params)
-
-            used_param_names = NULL
-            res = NULL
-
-            for (name in names(params)) {
-                p = params[[name]]
-                new = setdiff(names(p), used_param_names)
-                res[[name]] = as.list(p[new])
-                used_param_names = c(used_param_names, new)
             }
 
-            Filter(res, f = function(x) length(x) > 0)
+            param_names <- sapply(params, FUN = names) |> unlist()
+            param_values <- unlist1(params) |> stats::setNames(param_names)
+            param_values[!duplicated(names(param_values))]
         },
 
         #' @description Get all unique function parameters in json format.

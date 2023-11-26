@@ -985,48 +985,28 @@ test_that("get_unique_parameters",
 {
     expect_true(is.function(Pipeline$new("pipe")$get_unique_parameters))
 
-    test_that("parameters can be retrieved uniquely",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add("f1", function(a = 1) a, keepOut = TRUE) |>
-            pipe_add("f2", function(a, b = ~f1) a + b,
-                params = list(a = 8), keepOut = TRUE
-            ) |>
-            pipe_add(
-                "f3", function(a = ~f2, b = 3, c = 4) a + b, keepOut = TRUE
-            )
-
-        p <- pip$get_unique_parameters()
-        expect_equivalent(p, list(
-            f1 = list(a = 1),
-            f3 = list(b = 3, c = 4)
-        ))
-    })
-
-    test_that(
-        "if parameter occurs multiple times, the 1st default value is used",
+    test_that("parameters can be retrieved uniquely and if occuring multiple
+        times, the 1st default value is used",
     {
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function(a = 2) a)
+            pipe_add("f2", function(a = 2, b = 3) a + b) |>
+            pipe_add("f3", function(a = 4, b = 5, c = 6) a + b)
 
         p <- pip$get_unique_parameters()
-        expect_equal(p, list(f1 = list(a = 1)))
-
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add("f1", function(a = 2) a) |>
-            pipe_add("f2", function(a = 1) a)
-
-        p <- pip$get_unique_parameters()
-        expect_equal(p, list(f1 = list(a = 2)))
+        expect_equivalent(p, list(a = 1, b = 3, c = 6))
     })
 
-    test_that("empty pipeline gives empty list of unique parameters",
+    test_that("empty pipeline gives empty list",
     {
-        pip <- Pipeline$new("pipe1")
+        pip <- Pipeline$new("pipe")
         expect_equivalent(pip$get_unique_parameters(), list())
+    })
 
-        pipe_add(pip, "f1", function() 1)
+    test_that("pipeline with no parameters gives empty list",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function() 1)
         expect_equivalent(pip$get_unique_parameters(), list())
     })
 })
