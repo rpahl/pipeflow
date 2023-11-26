@@ -168,13 +168,15 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' clashes and dependencies, which will be changed after the append.
         #' @param p `Pipeline` object to be appended.
         #' @param outAsIn `logical` if `TRUE`, output of first pipeline is used
-        #'  as data input of appended pipeline.
+        #' @param sep `string` separator used when updating step names to
+        #' prevent name clashes.
         #' @return returns new combined `Pipeline`.
-        append = function(p, outAsIn = FALSE)
+        append = function(p, outAsIn = FALSE, sep = ".")
         {
             stopifnot(
                 inherits(p, "Pipeline"),
-                is.logical(outAsIn)
+                is.logical(outAsIn),
+                is_string(sep)
             )
 
             p1 <- self$clone()
@@ -185,7 +187,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             # Adapt step names and their dependencies to prevent name clashes
-            p2$append_to_step_names(p2$name)
+            p2$append_to_step_names(p2$name, sep = sep)
 
             if (outAsIn) {
                 # Replace first step of p2, which usually holds the data, with
@@ -900,66 +902,79 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Split-copy pipeline by list of data sets
+        #' @description Split-copy pipeline by list of data sets. Each
+        #' sub-pipeline will have one of the data sets set as input data.
+        #' The step names of the sub-pipelines will be the original step names
+        #' plus the name of the data set.
         #' @param dataList `list` of data sets
         #' @param to_step `string` step name marking optional subset of
         #' the pipeline, at which the data split should be applied to.
         #' @param groupBySplit `logical` whether to set step groups according
         #' to data split.
+        #' @param sep `string` separator to be used between step name and
+        #' data set name when creating the new step names.
         #' @return new combined `Pipeline` with each sub-pipeline having set
         #' one of the data sets.
         set_data_split = function(
             dataList,
             to_step = utils::tail(self$get_step_names(), 1),
-            groupBySplit = TRUE
+            groupBySplit = TRUE,
+            sep = "."
         ) {
             stopifnot(
                 is.list(dataList),
-                to_step %in% self$get_step_names()
+                is_string(to_step),
+                is.logical(groupBySplit),
+                is_string(sep)
             )
-            to <- match(to_step, self$get_step_names())
-            upper_steps <- unlist(self$pipeline[1:to, ][["step"]])
+            private$.verify_step_exists(to_step)
+            to <- self$get_step_number(to_step)
+            upper_steps <- self$get_step_names()[seq_len(to)]
 
             dataNames <- names(dataList)
-            if (is.null(dataNames))
+            if (is.null(dataNames)) {
                 dataNames = as.character(seq_along(dataList))
+            }
 
             init_new_pipeline_with_data = function(data) {
                 self$clone(deep = TRUE)$set_data(data)
             }
 
+            # Create new pipeline for each data set
             pipes <- lapply(dataList, init_new_pipeline_with_data)
             for (i in seq_along(pipes)) {
                 name <- dataNames[[i]]
                 pipes[[i]]$name <- name
-                pipes[[i]]$pipeline <- pipes[[i]]$pipeline[1:to, ]
+                pipes[[i]]$pipeline <- pipes[[i]]$pipeline[seq_len(to), ]
 
                 new_groups <- name
                 if (!groupBySplit) {
                     old_groups <- pipes[[i]]$pipeline[["group"]]
-                    new_groups <- paste0(name, ".", old_groups)
+                    new_groups <- paste0(old_groups, sep, name)
                 }
-                pipes[[i]]$pipeline[["group"]] = new_groups
+                pipes[[i]]$pipeline[["group"]] <- new_groups
             }
 
             # Combine pipelines
             pipe_names <- sapply(pipes, function(x) x$name)
             combinedName <- paste(self$name, "split")
             pip <- Pipeline$new(combinedName)
-            combined <- Reduce(c(pip, pipes), f = function(x, y) x$append(y))
+            combined <- Reduce(
+                c(pip, pipes),
+                f = function(x, y) x$append(y, sep = sep)
+            )
             combined$remove_step(".data")
 
             # If subset was used for split, append the remaining steps and
             # update all of the (now changed) upper dependencies.
             if (to < self$length()) {
-                remaining_pipe = self$pipeline[(to + 1):self$length(), ]
-                remaining_deps = remaining_pipe[["deps"]]
-                update_if_needed = function(x) {
-                    needs_update = x %in% upper_steps
-                    if (needs_update) paste0(x, ".", pipe_names) else x
-                        #paste0(pipe_names, ".", x) else x
+                remaining_pipe <- self$pipeline[(to + 1):self$length(), ]
+                remaining_deps <- remaining_pipe[["deps"]]
+                update_if_needed <- function(x) {
+                    needs_update <- x %in% upper_steps
+                    if (needs_update) paste0(x, sep, pipe_names) else x
                 }
-                updated_deps = lapply(
+                updated_deps <- lapply(
                     remaining_deps,
                     function(deps) {
                         res = lapply(deps, update_if_needed)

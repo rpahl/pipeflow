@@ -175,6 +175,25 @@ test_that("append",
         expect_equivalent(out, c(out1, out2))
     })
 
+    test_that("the separator used for step names can be customized",
+    {
+        pip1 <- Pipeline$new("pipe1", data = 1) |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = 2) b)
+
+        pip2 <- Pipeline$new("pipe2") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = 2) b)
+
+        pp <- pip1$append(pip2, sep = "_")
+
+        expect_equal(
+            pp$get_step_names(),
+            c(".data", "f1", "f2", ".data_pipe2", "f1_pipe2", "f2_pipe2")
+        )
+    })
+
+
     test_that(
         "output of first pipeline can be set as input of appended pipeline",
     {
@@ -1660,13 +1679,41 @@ test_that("set_data_split",
 {
     expect_true(is.function(Pipeline$new("pipe")$set_data_split))
 
-    test_that("simple split pipeline works",
+    test_that("the new steps have the names of the list attached",
     {
-        dataList <- list(A = 1, B = 2, C = 3, D = 4)
+        dataList <- list(A = 1, B = 2)
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a = 1) a)
+
+        pip$set_data_split(dataList)
+
+        pip$get_step_names() |>
+            expect_equal(c(".data.A", "f1.A", ".data.B", "f1.B"))
+    })
+
+    test_that("the separator used in the creation of the new steps
+    can be customized",
+    {
+        dataList <- list(A = 1, B = 2)
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a = 1) a)
+
+        pip$set_data_split(dataList, sep = "_")
+
+        pip$get_step_names() |>
+            expect_equal(c(".data_A", "f1_A", ".data_B", "f1_B"))
+    })
+
+
+    test_that("simple split pipeline computes results as expected",
+    {
+        dataList <- list(A = 1, B = 2, C = 3)
         pip <- Pipeline$new("pipe") |>
             pipe_add("f1", function(a = 1) a) |>
             pipe_add("f2", function(a = ~f1, b = ~.data) {
-                a + b
+                b + a
             }, keepOut = TRUE)
 
         pip$set_data_split(dataList)
@@ -1682,36 +1729,56 @@ test_that("set_data_split",
     test_that(
         "split pipeline by default overrides output groups according to split",
     {
-        dataList <- list(A = 1, B = 2, C = 3)
+        dataList <- list(A = 1, B = 2)
+
         pip <- Pipeline$new("pipe") |>
-            pipe_add("f0", function(a = 1) a, keepOut = TRUE, group = "id") |>
-            pipe_add("f1", function(a = 1) a, keepOut = TRUE, group = "id") |>
-            pipe_add("f2", function(a = 2) a, keepOut = TRUE)
+            pipe_add("f0", function(a = 1) a, group = "id") |>
+            pipe_add("f1", function(a = 1) a, group = "id") |>
+            pipe_add("f2", function(a = 2) a)
 
         pip$set_data_split(dataList)
 
-        out <- pip$execute()$collect_out()
+        out <- pip$keep_all_out()$execute()$collect_out()
         expect_equal(names(out), names(dataList))
     })
 
     test_that("the grouping override can be omitted",
     {
-        skip("TODO: step and group names dont match")
-        dataList <- list(A = 1, B = 2, C = 3)
+        dataList <- list(A = 1, B = 2)
+
         pip <- Pipeline$new("pipe") |>
-            pipe_add("f0", function(a = 1) a, keepOut = TRUE, group = "id") |>
-            pipe_add("f1", function(a = 1) a, keepOut = TRUE, group = "id") |>
-            pipe_add("f2", function(a = 2) a, keepOut = TRUE)
+            pipe_add("f0", function(a = 1) a, group = "id") |>
+            pipe_add("f1", function(a = 1) a, group = "id") |>
+            pipe_add("f2", function(a = 2) a)
 
         pip$set_data_split(dataList, groupBySplit = FALSE)
 
-        out <- pip$execute()$collect_out()
+        out <- pip$keep_all_out()$execute()$collect_out()
+
         expect_equal(
             names(out),
-            paste0(rep(names(dataList), each = 2), ".", c("f2", "id"))
+            c("id.A", "id.B", ".data.A", "f2.A", ".data.B", "f2.B")
         )
+    })
 
-        expect_equal(names(out[["A.id"]]), c("f0.A", "f1.A"))
+    test_that("the separator used in the creation of the groups
+        can be customized",
+    {
+        dataList <- list(A = 1, B = 2)
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f0", function(a = 1) a, group = "id") |>
+            pipe_add("f1", function(a = 1) a, group = "id") |>
+            pipe_add("f2", function(a = 2) a)
+
+        pip$set_data_split(dataList, groupBySplit = FALSE, sep = "_")
+
+        out <- pip$keep_all_out()$execute()$collect_out()
+
+        expect_equal(
+            names(out),
+            c("id_A", "id_B", ".data_A", "f2_A", ".data_B", "f2_B")
+        )
     })
 
     test_that("split pipeline works for list of data frames",
