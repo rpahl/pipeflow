@@ -550,7 +550,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 if (length(x) == 0) {
                     return(x)
                 }
-
                 params = Filter(x, f = isValue)
 
                 if (ignoreHidden) {
@@ -630,27 +629,26 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #'  defined first.
         get_unique_parameters_json = function(ignoreHidden = TRUE)
         {
-            params = self$get_unique_parameters(ignoreHidden) |>
-                Reduce(f = c) # remove step information
+            params = self$get_unique_parameters(ignoreHidden)
 
-            isParam = sapply(params, function(p) methods::is(p, "Param"))
-
-            for (name in names(params)) {
-                p = params[[name]]
-
+            param_to_list <- function(p, name) {
                 if (methods::is(p, "Param")) {
                     p = as.list(attributes(eval(p)))
                     p[["name"]] = name
                 } else {
-                    p = list(name = name, value = p)
+                    p <- list(name = name, value = p)
                 }
-                params[[name]] = p
+                p
             }
 
-            # Clean names to have unnamed json elements
-            names(params) = NULL
-
-            jsonlite::toJSON(params, auto_unbox = TRUE, pretty = TRUE)
+            mapply(
+                params,
+                name = names(params),
+                FUN = param_to_list,
+                SIMPLIFY = FALSE
+            ) |>
+                stats::setNames(NULL) |>
+                jsonlite::toJSON(auto_unbox = TRUE, pretty = TRUE)
         },
 
         #' @description Get all upstream dependencies of given step, by
@@ -1014,11 +1012,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return returns the `Pipeline` object invisibly
         set_parameters = function(params, warnUndefined = TRUE)
         {
-            pipe_param_names = lapply(
-                self$get_unique_parameters(ignoreHidden = FALSE),
-                FUN = names
-            )
-            extra = setdiff(names(params), unlist(pipe_param_names))
+            defined_params = self$get_unique_parameters(ignoreHidden = FALSE)
+            extra = setdiff(names(params), names(defined_params))
 
             if (warnUndefined && length(extra) > 0) {
                 warning(
@@ -1027,13 +1022,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 )
             }
 
-            for (i in seq_len(nrow(self$pipeline))) {
-                params_ith_step = self$pipeline[["params"]][[i]]
+            for (step in self$get_step_names()) {
+                params_ith_step = self$get_parameters_at_step(
+                    step,
+                    ignoreHidden = FALSE
+                )
                 overlap = intersect(names(params), names(params_ith_step))
 
                 if (length(overlap) > 0) {
                     params_ith_step[overlap] = params[overlap]
-                    self$pipeline[["params"]][[i]] = params_ith_step
+                    self$set_parameters_at_step(step, params_ith_step)
                 }
             }
             invisible(self)
@@ -1067,7 +1065,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             toUpdate = intersect(names(params), names(current))
             hasUpdate = length(toUpdate) > 0
             if (hasUpdate) {
-                row <- which(self$pipeline[["step"]] == step)
+                row <- self$get_step_number(step)
                 old <- self$pipeline[["params"]][[row]]
                 new <- utils::modifyList(old, params[toUpdate])
                 self$pipeline[["params"]][[row]] <- new

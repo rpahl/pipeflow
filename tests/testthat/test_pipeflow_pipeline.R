@@ -1023,8 +1023,8 @@ test_that("get_unique_parameters_json",
             pipe_add("f1", function(a = 1) a, keepOut = TRUE)
 
         p <- pip$get_unique_parameters_json()
-        l <- jsonlite::fromJSON(p, simplifyVector = FALSE)
-        expect_equal(names(l), NULL)
+        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
+        expect_equal(names(pl), NULL)
 
 
         pip <- Pipeline$new("pipe1") |>
@@ -1036,38 +1036,28 @@ test_that("get_unique_parameters_json",
             )
 
         p <- pip$get_unique_parameters_json()
-        l <- jsonlite::fromJSON(p, simplifyVector = FALSE)
-        expect_equal(names(l), NULL)
+        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
+        expect_equal(names(pl), NULL)
     })
 
 
     test_that("standard parameters are returned as name-value pairs",
     {
         pip <- Pipeline$new("pipe1") |>
-            pipe_add("f1", function(a = 1) a, keepOut = TRUE) |>
-            pipe_add("f2", function(a, b = ~f1) a + b, params = list(a = 8)) |>
-            pipe_add("f3", function(a = ~f2, b = 3, c = 4) a + b)
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = 1, b = 2) a) |>
+            pipe_add("f3", function(a = 1, b = 2, c = 3) a)
 
         p <- pip$get_unique_parameters_json()
         expect_true(methods::is(p, "json"))
-        out <- utils::capture.output(cat(p))
 
+        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
         expect_equal(
-            out,
-            c(
-                "[",
-                "  {",
-                "    \"name\": \"a\",",
-                "    \"value\": 1",
-                "  },",
-                "  {",
-                "    \"name\": \"b\",",
-                "    \"value\": 3", "  },",
-                "  {",
-                "    \"name\": \"c\",",
-                "    \"value\": 4",
-                "  }",
-                "]"
+            pl,
+            list(
+                list(name = "a", value = 1),
+                list(name = "b", value = 2),
+                list(name = "c", value = 3)
             )
         )
     })
@@ -1083,30 +1073,29 @@ test_that("get_unique_parameters_json",
             )
 
         p <- pip$get_unique_parameters_json()
-        out <- utils::capture.output(cat(p))
+        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
+
         expect_equal(
-            out,
-            c(
-                "[",
-                "  {",
-                "    \"value\": \"some x\",",
-                "    \"name\": \"x\",",
-                "    \"advanced\": false,",
-                "    \"label\": \"my x\",",
-                "    \"description\": \"\",",
-                "    \"source\": \"internal\",",
-                "    \"class\": \"StringParam\"",
-                "  },",
-                "  {",
-                "    \"value\": \"some y\",",
-                "    \"name\": \"y\",",
-                "    \"advanced\": false,",
-                "    \"label\": \"my y\",",
-                "    \"description\": \"\",",
-                "    \"source\": \"internal\",",
-                "    \"class\": \"StringParam\"",
-                "  }",
-                "]"
+            pl,
+            list(
+                list(
+                    value = "some x",
+                    name = "x",
+                    advanced = FALSE,
+                    label = "my x",
+                    description = "",
+                    source = "internal",
+                    class = "StringParam"
+                ),
+                list(
+                    value = "some y",
+                    name = "y",
+                    advanced = FALSE,
+                    label = "my y",
+                    description = "",
+                    source = "internal",
+                    class = "StringParam"
+                )
             )
         )
     })
@@ -1122,15 +1111,39 @@ test_that("get_unique_parameters_json",
             )
 
         p <- pip$get_unique_parameters_json()
-        l <- jsonlite::fromJSON(p)
+        pl <- jsonlite::fromJSON(p)
 
-        expect_true(l[["label"]][[1]] == "my x")
-        expect_false(l[["name"]][[1]] == "my x")
-        hasArgName <- l[["name"]][[1]] == "x"
+        expect_true(pl[["label"]][[1]] == "my x")
+        expect_false(pl[["name"]][[1]] == "my x")
+        hasArgName <- pl[["name"]][[1]] == "x"
 
-        expect_true(l[["label"]][[2]] == "my y")
-        expect_false(l[["name"]][[2]] == "my y")
-        hasArgName <- l[["name"]][[2]] == "y"
+        expect_true(pl[["label"]][[2]] == "my y")
+        expect_false(pl[["name"]][[2]] == "my y")
+        hasArgName <- pl[["name"]][[2]] == "y"
+    })
+
+    test_that("works with mixed, that is, standard and Param objects",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(x = 1) x) |>
+            pipe_add("f2", function(s = new("StringParam", "my s", "some s")) s)
+
+        p <- pip$get_unique_parameters_json()
+        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
+
+        expect_equal(pl[[1]], list(name = "x", value = 1L))
+        expect_equal(
+            pl[[2]],
+            list(
+                value = "some s",
+                name = "s",
+                advanced = FALSE,
+                label = "my s",
+                description = "",
+                source = "internal",
+                class = "StringParam"
+            )
+        )
     })
 })
 
@@ -1788,7 +1801,6 @@ test_that("set_data_split",
 
     test_that("split data set can be created dynamically",
     {
-
         data = data.frame(a = 1:10, group = c("a", "b"))
 
         pip <- Pipeline$new("pipe", data = data) |>
@@ -1881,12 +1893,9 @@ test_that("set_parameters",
     test_that("parameters can be set commonly on existing pipeline",
     {
         pip <- Pipeline$new("pipe1") |>
-            pipe_add("f1", function(a = 1) a, keepOut = TRUE) |>
-            pipe_add("f2", function(a, b = ~f1) a + b,
-                params = list(a = 8),
-                keepOut = TRUE
-            ) |>
-            pipe_add("f3", function(a = ~f2, b = 3) a + b, keepOut = TRUE)
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = 2, b = 3) a) |>
+            pipe_add("f3", function(a = 4, b = 5) a)
 
         before <- pip$get_parameters()
 
@@ -1897,6 +1906,37 @@ test_that("set_parameters",
             f3 = list(a = 9, b = 99)
         ))
     })
+
+    test_that(
+        "parameters depending on other steps are protected
+        from being overwritten",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = 2, b = ~f1) a) |>
+            pipe_add("f3", function(a = ~f2, b = 5) a)
+
+        before <- pip$get_parameters()
+        expect_equal(
+            before,
+            list(
+                f1 = list(a = 1),
+                f2 = list(a = 2),
+                f3 = list(b = 5)
+            )
+        )
+
+        after <- pip$set_parameters(list(a = 9, b = 99))$get_parameters()
+        expect_equal(
+            after,
+            list(
+                f1 = list(a = 9),
+                f2 = list(a = 9),
+                f3 = list(b = 99)
+            )
+        )
+    })
+
 
     test_that("trying to set undefined parameters is signaled with a warning",
     {
@@ -1932,6 +1972,17 @@ test_that("set_parameters",
 
         pip$set_parameters(list(a = 9))
         expect_equal(pip$pipeline[["params"]][[2]], list(a = 9))
+    })
+
+    test_that(
+        "hidden parameters can be set as well",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1, .b = 2) a)
+
+        pip$set_parameters(list(a = 9, .b = 10))
+        pp <- pip$get_parameters(ignoreHidden = FALSE)
+        expect_equal(pp, list(f1 = list(a = 9, .b = 10)))
     })
 })
 
