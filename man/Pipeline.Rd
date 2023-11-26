@@ -133,12 +133,11 @@ parameters of the passed function.}
 
 \item{\code{description}}{\code{string} optional description of the step}
 
-\item{\code{group}}{\code{string} grouping information (by default the same as
-the name of the step. Any output collected later (see function
-\code{collect_out} by default is put together by these group names. This,
-for example, comes in handy when the pipeline is copy-appended
-multiple times to keep the results of the same function/step at one
-place.}
+\item{\code{group}}{\code{string} output collected after pipeline execution
+(see function \code{collect_out}) is grouped by the defined group
+names. By default, this is the name of the step, which comes in
+handy when the pipeline is copy-appended multiple times to keep
+the results of the same function/step grouped at one place.}
 
 \item{\code{keepOut}}{\code{logical} if \code{FALSE} the output of the function will
 be cleaned at the end of the whole pipeline execution. This option
@@ -157,7 +156,7 @@ returns the \code{Pipeline} object invisibly
 Append another pipeline. The append takes care of name
 clashes and dependencies, which will be changed after the append.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$append(p, outAsIn = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$append(p, outAsIn = FALSE, sep = ".")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -165,8 +164,10 @@ clashes and dependencies, which will be changed after the append.
 \describe{
 \item{\code{p}}{\code{Pipeline} object to be appended.}
 
-\item{\code{outAsIn}}{\code{logical} if \code{TRUE}, output of first pipeline is used
-as data input of appended pipeline.}
+\item{\code{outAsIn}}{\code{logical} if \code{TRUE}, output of first pipeline is used}
+
+\item{\code{sep}}{\code{string} separator used when updating step names to
+prevent name clashes.}
 }
 \if{html}{\out{</div>}}
 }
@@ -491,8 +492,11 @@ the step number in the pipeline
 \if{latex}{\out{\hypertarget{method-Pipeline-get_unique_parameters}{}}}
 \subsection{Method \code{get_unique_parameters()}}{
 Get all function parameters defined in the pipeline,
-but only list each parameter once, that is, once a parameter is used
-in a step, it is ignored in the listings of later steps.
+but only list each parameter once. The values of the parameters,
+will be the values of the first step where the parameter was defined.
+This is particularly useful after the parameters where set using
+the \code{set_parameters} function, which will set the same value
+for all steps.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_unique_parameters(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
 }
@@ -506,8 +510,7 @@ names starting with a dot) are ignored and thus not returned.}
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-\code{list} of unique parameters, sorted and named by step. Steps
-with no parameters are filtered out.
+\code{list} of unique parameters
 }
 }
 \if{html}{\out{<hr>}}
@@ -784,12 +787,16 @@ returns the \code{Pipeline} object invisibly
 \if{html}{\out{<a id="method-Pipeline-set_data_split"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-set_data_split}{}}}
 \subsection{Method \code{set_data_split()}}{
-Split-copy pipeline by list of data sets
+Split-copy pipeline by list of data sets. Each
+sub-pipeline will have one of the data sets set as input data.
+The step names of the sub-pipelines will be the original step names
+plus the name of the data set.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_data_split(
   dataList,
   to_step = utils::tail(self$get_step_names(), 1),
-  groupBySplit = TRUE
+  groupBySplit = TRUE,
+  sep = "."
 )}\if{html}{\out{</div>}}
 }
 
@@ -803,6 +810,9 @@ the pipeline, at which the data split should be applied to.}
 
 \item{\code{groupBySplit}}{\code{logical} whether to set step groups according
 to data split.}
+
+\item{\code{sep}}{\code{string} separator to be used between step name and
+data set name when creating the new step names.}
 }
 \if{html}{\out{</div>}}
 }
