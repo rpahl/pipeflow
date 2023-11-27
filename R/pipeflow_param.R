@@ -63,8 +63,9 @@ methods::setClass("BooleanParam",
 methods::setValidity("BooleanParam",
 function(object)
 {
-    stopifnot(length(object@value) == 1,
-              !is.na(object@value))
+    stopifnot(
+        length(object@value) <= 1
+    )
     TRUE
 })
 

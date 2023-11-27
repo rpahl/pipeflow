@@ -26,26 +26,52 @@ test_that("BooleanParam class",
 {
     expect_no_error(getClass("BooleanParam"))
 
-    test_that("value of Boolean must be of length 1",
+    test_that("Boolean value of TRUE and FALSE is initialized as expected",
+    {
+        p = new("BooleanParam", name = "my bool", value = TRUE)
+        expect_equal(p@value, TRUE)
+
+        p = new("BooleanParam", name = "my bool", value = FALSE)
+        expect_equal(p@value, FALSE)
+
+    })
+
+    test_that("boolean value can be initialized from string or number",
     {
         name = "my bool"
 
-        p = new("BooleanParam", name = name, value = TRUE)
-        expect_true(is.logical(p@value))
+        f = function(value) {
+            new(
+                "BooleanParam",
+                name = "my bool",
+                value = value
+            )
+        }
 
-        p = new("BooleanParam", name = name, value = FALSE)
-        expect_true(is.logical(p@value))
-
-        ee <- expect_equal
-        ee(new("BooleanParam", name = name, value = "TRUE")@value, TRUE)
-        ee(new("BooleanParam", name = name, value = "true")@value, TRUE)
-        ee(new("BooleanParam", name = name, value = "FALSE")@value, FALSE)
-        ee(new("BooleanParam", name = name, value = "false")@value, FALSE)
-        ee(new("BooleanParam", name = name, value = 1)@value, TRUE)
-        ee(new("BooleanParam", name = name, value = 0)@value, FALSE)
-
-        expect_error(new("BooleanParam", name = name, value = c(TRUE, FALSE)))
+        expect_equal(f("TRUE")@value, TRUE)
+        expect_equal(f("true")@value, TRUE)
+        expect_equal(f("FALSE")@value, FALSE)
+        expect_equal(f("false")@value, FALSE)
+        expect_equal(f(1)@value, TRUE)
+        expect_equal(f(0)@value, FALSE)
     })
+
+
+    test_that("length of Boolean value cannot be > 1",
+    {
+        expect_error(
+            new("BooleanParam", name = "my bool", value = c(TRUE, FALSE)),
+            "length(object@value) <= 1 is not TRUE",
+            fixed = TRUE
+        )
+    })
+
+    test_that("NULL it is transformed to a boolean",
+    {
+        p = new("BooleanParam", name = "my bool", value = NULL)
+        expect_equal(p@value, as.logical(NA))
+    })
+
 
     test_that("alternative constructor works",
     {
