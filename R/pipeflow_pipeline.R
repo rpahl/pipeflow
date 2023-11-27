@@ -111,39 +111,29 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             keepOut = FALSE
         ) {
             private$.verify_step_does_not_exist(step)
+            stopifnot(
+                is.function(fun) || is_string(fun),
+                is.list(params),
+                is_string(description),
+                is_string(group) && nzchar(group),
+                is.logical(keepOut)
+            )
 
-            # Function can be either a function or a character string
             if (is.function(fun)) {
-                funcName = as.character(substitute(fun))[[1]]
+                funcName <- as.character(substitute(fun))[[1]]
             }
             else {
-                funcName = fun
-                fun = get(fun, mode = "function")
+                funcName <- fun
+                fun <- get(fun, mode = "function")
             }
 
-            # Update default function params by custom params
-            if (length(params) == 0) {
-                params = formals(fun)
-            } else {
-                params = replace(formals(fun), names(params), params)
-            }
+            params <- private$.prepare_and_verify_params(fun, funcName, params)
 
-            # Make sure parameters defined as Param object or call are evaluated
-            isDefined = sapply(
-                params,
-                function(x) {
-                    methods::is(x, "Param") || methods::is(x, "call")
-                }
-            )
-            params[isDefined] = lapply(params[isDefined], eval)
-
-            private$.verify_fun_params(fun, funcName, as.list(params))
-
+            # Derive and verify dependencies
             deps <- private$.derive_dependencies(
                 params = params,
                 step = step
             )
-
             sapply(deps, FUN = private$.verify_dependency, step = step)
 
             self$pipeline <- self$pipeline |>
@@ -820,14 +810,20 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         replace_step = function(
             step,
             fun,
-            params = NULL,
+            params = list(),
             description = "",
             group = step,
             keepOut = FALSE
         ) {
             private$.verify_step_exists(step)
+            stopifnot(
+                is.function(fun) || is_string(fun),
+                is.list(params),
+                is_string(description),
+                is_string(group) && nzchar(group),
+                is.logical(keepOut)
+            )
 
-            # Function can be either a function or a character string
             if (is.function(fun)) {
                 funcName <- as.character(substitute(fun))[[1]]
             }
@@ -836,39 +832,23 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 fun <- get(fun, mode = "function")
             }
 
-            # Update default function params by custom params
-            if (is.null(params)) {
-                params <- formals(fun)
-            } else {
-                params <- replace(formals(fun), names(params), params)
-            }
-
-            # Make sure parameters defined as Param object or call are evaluated
-            isDefined <- sapply(
-                params,
-                function(x) {
-                    methods::is(x, "Param") ||
-                    methods::is(x, "call")
-                }
-            )
-            params[isDefined] <- lapply(params[isDefined], eval)
-
-            private$.verify_fun_params(fun, funcName, params)
+            params <- private$.prepare_and_verify_params(fun, funcName, params)
 
             # Derive and verify dependencies
             all_steps <- self$get_step_names()
-            step_index <- match(step, all_steps)
+            step_number <- self$get_step_number(step)
+            to_step = all_steps[step_number - 1]
 
             deps <- private$.derive_dependencies(
                 params = params,
                 step = step,
-                to_step = all_steps[step_index - 1]
+                to_step = to_step
             )
             sapply(
                 deps,
                 FUN = private$.verify_dependency,
                 step = step,
-                to_step = all_steps[step_index - 1]
+                to_step = to_step
             )
 
             new_step <- list(
@@ -878,12 +858,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 params = list(params),
                 keepOut = keepOut,
                 deps = list(deps),
-                out = list(list()),
+                out = list(NULL),
                 group = group,
                 description = description
             )
 
-            self$pipeline[step_index, ] <- new_step
+            self$pipeline[step_number, ] <- new_step
 
             invisible(self)
         },
@@ -1310,6 +1290,26 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             unique(unlist(result)) |> as.character()
         },
 
+        .prepare_and_verify_params = function(
+            fun,
+            funcName,
+            params = list()
+        ) {
+            stopifnot(
+                is.function(fun),
+                is_string(funcName),
+                is.list(params)
+            )
+
+            params <- replace(formals(fun), names(params), params)
+            params <- params[!names(params) %in% "..."] # ignore dots
+
+            private$.verify_fun_params(fun, funcName, as.list(params))
+            params <- lapply(params, eval)
+
+            params
+        },
+
         .relative_dependency_to_index = function(
             relative_dep,
             dependency_name,
@@ -1373,8 +1373,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         },
 
 
-        .verify_fun_params = function(fun, funcName, params = list())
-        {
+        .verify_fun_params = function(
+            fun,
+            funcName,
+            params = as.list(formals(fun))
+        ) {
             stopifnot(
                 is.function(fun),
                 is_string(funcName),
@@ -1382,22 +1385,31 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
 
             fargs <- formals(fun)
-            unknown_params <- setdiff(names(params), names(fargs))
-            if (length(unknown_params) > 0) {
-                stop(
-                    paste0("'", unknown_params, "'", collapse = ", "),
-                    " are no function parameters of '", funcName, "'",
-                    call. = FALSE
-                )
+            hasDots <- "..." %in% names(fargs)
+
+            # Unless there are dots, all parameters should appear in the
+            # function definition
+            if (hasDots) {
+                fargs <- fargs[!names(fargs) %in% "..."]
+            } else {
+                unknown_params <- setdiff(names(params), names(fargs))
+                if (length(unknown_params) > 0) {
+                    stop(
+                        paste0("'", unknown_params, "'", collapse = ", "),
+                        " are no function parameters of '", funcName, "'",
+                        call. = FALSE
+                    )
+                }
             }
 
-
-            defined_params <- Filter(params, f = Negate(is.name))
-            argsWithNoDefault <- names(Filter(fargs, f = \(x) is.name(x)))
-            undefinedArgs <- setdiff(argsWithNoDefault, names(defined_params))
-            if (length(undefinedArgs) > 0) {
+            # Signal undefined parameters, e.g. things like function(x, y = 1)
+            isUndefined <- function(x) {
+                is.name(x) && toString(x) == ""
+            }
+            undefinedParams <- Filter(params, f = isUndefined)
+            if (length(undefinedParams) > 0) {
                 stop(
-                    paste0("'", undefinedArgs, "'", collapse = ", "),
+                    paste0("'", names(undefinedParams), "'", collapse = ", "),
                     " parameter(s) must have default values",
                     call. = FALSE
                 )

@@ -26,7 +26,8 @@ test_that("initialize",
 test_that("add",
 {
     expect_true(is.function(Pipeline$new("pipe")$add))
-    test_that("name must be non-empty string",
+
+    test_that("step must be non-empty string",
     {
         pip <- Pipeline$new("pipe1")
 
@@ -36,7 +37,68 @@ test_that("add",
         expect_error(pip$add(c("a", "b"), foo))
     })
 
-    test_that("duplicated names are signaled",
+    test_that("fun must be passed as a function or string",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$add("step1", fun = 1),
+            "is.function(fun) || is_string(fun) is not TRUE",
+            fixed = TRUE
+        )
+    })
+
+    test_that("params must be a list",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$add("step1", fun = function() 1, params = 1),
+            "is.list(params)",
+            fixed = TRUE
+        )
+    })
+
+    test_that("description must be (possibly empty) string",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$add("step1", fun = function() 1, description = 1),
+            "is_string(description)",
+            fixed = TRUE
+        )
+        expect_no_error(pip$add("step1", fun = function() 1, description = ""))
+    })
+
+    test_that("group must be non-empty string",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$add("step1", fun = function() 1, group = 1),
+            "is_string(group) && nzchar(group) is not TRUE",
+            fixed = TRUE
+        )
+        expect_error(
+            pip$add("step1", fun = function() 1, group = ""),
+            "is_string(group) && nzchar(group) is not TRUE",
+            fixed = TRUE
+        )
+    })
+
+    test_that("keepOut must be logical",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$add("step1", fun = function() 1, keepOut = 1),
+            "is.logical(keepOut) is not TRUE",
+            fixed = TRUE
+        )
+    })
+
+    test_that("duplicated step names are signaled",
     {
         pip <- Pipeline$new("pipe1")
 
@@ -58,32 +120,6 @@ test_that("add",
             pip$add("f2", foo, params = list(a = ~undefined)),
             "dependency 'undefined' not found"
         )
-    })
-
-    test_that("non-existing function parameters are signaled",
-    {
-        pip <- Pipeline$new("pipe1")
-        foo <- function(a = 0) a
-
-        expect_error(
-            pip$add("f1", foo, params = list(b = 1, c = 2)),
-            "'b', 'c' are no function parameters of 'foo'"
-        )
-    })
-
-    test_that("undefined function parameters are signaled",
-    {
-        pip <- Pipeline$new("pipe1")
-
-        foo <- function(a, b = 1) a + b
-
-        expect_error(
-            pip$add("f1", foo),
-            "'a' parameter(s) must have default values",
-            fixed = TRUE
-        )
-
-        expect_error(pip$add("f1", foo))
     })
 
     test_that("step can refer to previous step by relative number",
@@ -131,6 +167,88 @@ test_that("add",
         out <- pip$execute()$collect_out()
         expect_equal(out[["f1"]][[1]], data)
         expect_equal(out[["f2"]][[1]], a + data)
+    })
+
+
+    test_that(
+        "supports functions with wildcard arguments",
+    {
+        my_mean <- function(x, na.rm = FALSE) {
+            mean(x, na.rm = na.rm)
+        }
+        foo <- function(x, ...) {
+            my_mean(x, ...)
+        }
+        v <- c(1, 2, NA, 3, 4)
+        pip <- Pipeline$new("pipe", data = v)
+
+        params <- list(x = ~.data, na.rm = TRUE)
+        pip$add("mean", fun = foo, params = params, keepOut = TRUE)
+
+        out <- pip$execute()$collect_out()
+        expect_equal(out[["mean"]], mean(v, na.rm = TRUE))
+
+        pip$set_parameters_at_step("mean", list(na.rm = FALSE))
+        out <- pip$execute()$collect_out()
+        expect_equal(out[["mean"]], as.numeric(NA))
+    })
+
+    test_that("can have a variable defined outside as parameter default",
+    {
+        x <- 1
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a) a, params = list(a = x))
+
+        expect_equal(pip$get_parameters_at_step("f1")$a, x)
+
+        out <- pip$keep_all_out()$execute()$collect_out()
+        expect_equal(out[["f1"]], x)
+    })
+
+    test_that("handles Param object args",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a = new("NumericParam", "a", value = 1)) a)
+
+        out <- pip$keep_all_out()$execute()$collect_out()
+        expect_equal(out[["f1"]], 1)
+    })
+
+    test_that(
+        "can have a Param object defined outside as parameter default",
+    {
+        x <- 1
+        p <- new("NumericParam", "a", value = x)
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a) a, params = list(a = p))
+
+        expect_equal(pip$get_parameters_at_step("f1")$a, p)
+
+        out <- pip$keep_all_out()$execute()$collect_out()
+        expect_equal(out[["f1"]], x)
+    })
+
+    test_that(
+        "function can be passed as a string",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", fun = "mean", params = list(x = 1:5))
+
+        out <- pip$keep_all_out()$execute()$collect_out()
+        expect_equal(out[["f1"]], mean(1:5))
+
+        expect_equal(pip$get_step("f1")[["funcName"]], "mean")
+    })
+
+    test_that(
+        "if passed as a function, name is derived from the function",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", fun = mean, params = list(x = 1:5))
+
+        expect_equal(pip$get_step("f1")[["funcName"]], "mean")
     })
 })
 
@@ -1569,6 +1687,74 @@ test_that("replace_step",
         expect_equal(out, 4)
     })
 
+    test_that("fun must be passed as a function or string",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("step1", function(a = 1) a)
+
+        expect_error(
+            pip$replace_step("step1", fun = 1),
+            "is.function(fun) || is_string(fun) is not TRUE",
+            fixed = TRUE
+        )
+    })
+
+    test_that("params must be a list",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("step1", function(a = 1) a)
+
+        expect_error(
+            pip$replace_step("step1", fun = function() 1, params = 1),
+            "is.list(params)",
+            fixed = TRUE
+        )
+    })
+
+    test_that("description must be (possibly empty) string",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("step1", function(a = 1) a)
+
+        expect_error(
+            pip$replace_step("step1", fun = function() 1, description = 1),
+            "is_string(description)",
+            fixed = TRUE
+        )
+        expect_no_error(
+            pip$replace_step("step1", fun = function() 1, description = "")
+        )
+    })
+
+    test_that("group must be non-empty string",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("step1", function(a = 1) a)
+
+        expect_error(
+            pip$replace_step("step1", fun = function() 1, group = 1),
+            "is_string(group) && nzchar(group) is not TRUE",
+            fixed = TRUE
+        )
+        expect_error(
+            pip$replace_step("step1", fun = function() 1, group = ""),
+            "is_string(group) && nzchar(group) is not TRUE",
+            fixed = TRUE
+        )
+    })
+
+    test_that("keepOut must be logical",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("step1", function(a = 1) a)
+
+        expect_error(
+            pip$replace_step("step1", fun = function() 1, keepOut = 1),
+            "is.logical(keepOut) is not TRUE",
+            fixed = TRUE
+        )
+    })
+
     test_that("the replacing function can be passed as a string",
     {
 
@@ -2427,26 +2613,6 @@ test_that("private methods work as expected",
             )
             expect_true(hasInfo)
         })
-
-        test_that("handles Param object args",
-        {
-            skip("for now: enable that the default can be an expression?")
-            x <- 1
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = x) a)
-
-            f <- get_private(pip)$.execute_step
-        })
-
-        test_that("handles Param object args",
-        {
-            skip("for now: enable that the default can be an expression?")
-            p <- new("NumericParam", "a", value = 1)
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = p) a)
-
-            f <- get_private(pip)$.execute_step
-        })
     })
 
 
@@ -2769,6 +2935,84 @@ test_that("private methods work as expected",
     })
 
 
+    # .init_function_and_params
+    test_that("private .init_function_and_params works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.prepare_and_verify_params
+
+        test_that("fun must be a function",
+        {
+            expect_error(
+                f(fun = 1),
+                "is.function(fun) is not TRUE",
+                fixed = TRUE
+            )
+        })
+
+        test_that("funcName must be a string",
+        {
+            expect_error(
+                f(fun = identity, funcName = 1),
+                "is_string(funcName) is not TRUE",
+                fixed = TRUE
+            )
+        })
+
+        test_that("params must be a list",
+        {
+            expect_error(
+                f(fun = identity, funcName = "identity", params = 1),
+                "is.list(params) is not TRUE",
+                fixed = TRUE
+            )
+        })
+
+        test_that("returns all function args in the parameter list",
+        {
+            foo <- function(a = 1, b = 2, c = 3) 1
+            res <- f(foo, "foo")
+            expect_equal(res, list(a = 1, b = 2, c = 3))
+        })
+
+        test_that("params given in the list override the function arg",
+        {
+            foo <- function(a = 1, b = 2, c = 3) 1
+            res <- f(foo, "foo", params = list(a = 9, b = 99))
+            expect_equal(res, list(a = 9, b = 99, c = 3))
+        })
+
+        test_that("signals undefined function args unless they are
+            defined in the parameter list",
+        {
+            foo <- function(a, b = 2, c = 3) 1
+            expect_error(
+                f(foo, "foo"),
+                "'a' parameter(s) must have default values",
+                fixed = TRUE
+            )
+
+            res <- f(foo, "foo", params = list(a = 9))
+            expect_equal(res, list(a = 9, b = 2, c = 3))
+        })
+
+        test_that("signals if parameter is not defined in function args,
+            unless function is defined with ...",
+        {
+            foo <- function(a) 1
+
+            expect_error(
+                f(foo, "foo", params = list(a = 1, b = 2, c = 3)),
+                "'b', 'c' are no function parameters of 'foo'",
+                fixed = TRUE
+            )
+
+            foo <- function(a, ...) 1
+            res <- f(foo, "foo", params = list(a = 1, b = 2, c = 3))
+            expect_equal(res, list(a = 1, b = 2, c = 3))
+        })
+    })
+
 
     # .relative_dependency_to_index
     test_that("private .relative_dependency_to_index works as expected",
@@ -2930,10 +3174,16 @@ test_that("private methods work as expected",
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.verify_fun_params
 
+        test_that("returns TRUE if function has no args",
+        {
+            fun <- function() 1
+            expect_true(f(fun, "funcName"))
+        })
+
         test_that("returns TRUE if args are defined with default values",
         {
             fun <- function(x = 1, y = 2) x + y
-            expect_true(f(fun, "funcName", params = list()))
+            expect_true(f(fun, "funcName"))
         })
 
         test_that("if not defined with default values, params can be
@@ -2946,6 +3196,7 @@ test_that("private methods work as expected",
         test_that("signals parameters with no default values",
         {
             fun <- function(x, y, z = 1) x + y
+
             expect_error(
                 f(fun, "funcName"),
                 "'x', 'y' parameter(s) must have default values",
@@ -2960,6 +3211,12 @@ test_that("private methods work as expected",
             )
         })
 
+        test_that("supports ...",
+        {
+            fun <- function(x, ...) x
+            expect_true(f(fun, "funcName", params = list(x = 1)))
+        })
+
         test_that("signals undefined parameters",
         {
             fun <- function(x = 1, y = 1) x + y
@@ -2970,6 +3227,15 @@ test_that("private methods work as expected",
                 fixed = TRUE
             )
         })
+
+        test_that(
+            "supports additional parameters if function is defined with ...",
+        {
+            fun <- function(x, ...) x
+            params <- list(x = 1, add1 = 1, add2 = 2)
+            expect_true(f(fun, "funcName", params = params))
+        })
+
 
         test_that("signals badly typed input",
         {
