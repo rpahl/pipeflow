@@ -115,7 +115,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is.function(fun) || is_string(fun),
                 is.list(params),
                 is_string(description),
-                is_string(group),
+                is_string(group) && nzchar(group),
                 is.logical(keepOut)
             )
 
@@ -816,12 +816,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             keepOut = FALSE
         ) {
             private$.verify_step_exists(step)
-
             stopifnot(
                 is.function(fun) || is_string(fun),
                 is.list(params),
                 is_string(description),
-                is_string(group),
+                is_string(group) && nzchar(group),
                 is.logical(keepOut)
             )
 

@@ -26,7 +26,8 @@ test_that("initialize",
 test_that("add",
 {
     expect_true(is.function(Pipeline$new("pipe")$add))
-    test_that("name must be non-empty string",
+
+    test_that("step must be non-empty string",
     {
         pip <- Pipeline$new("pipe1")
 
@@ -36,7 +37,68 @@ test_that("add",
         expect_error(pip$add(c("a", "b"), foo))
     })
 
-    test_that("duplicated names are signaled",
+    test_that("fun must be passed as a function or string",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$add("step1", fun = 1),
+            "is.function(fun) || is_string(fun) is not TRUE",
+            fixed = TRUE
+        )
+    })
+
+    test_that("params must be a list",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$add("step1", fun = function() 1, params = 1),
+            "is.list(params)",
+            fixed = TRUE
+        )
+    })
+
+    test_that("description must be (possibly empty) string",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$add("step1", fun = function() 1, description = 1),
+            "is_string(description)",
+            fixed = TRUE
+        )
+        expect_no_error(pip$add("step1", fun = function() 1, description = ""))
+    })
+
+    test_that("group must be non-empty string",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$add("step1", fun = function() 1, group = 1),
+            "is_string(group) && nzchar(group) is not TRUE",
+            fixed = TRUE
+        )
+        expect_error(
+            pip$add("step1", fun = function() 1, group = ""),
+            "is_string(group) && nzchar(group) is not TRUE",
+            fixed = TRUE
+        )
+    })
+
+    test_that("keepOut must be logical",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$add("step1", fun = function() 1, keepOut = 1),
+            "is.logical(keepOut) is not TRUE",
+            fixed = TRUE
+        )
+    })
+
+    test_that("duplicated step names are signaled",
     {
         pip <- Pipeline$new("pipe1")
 
@@ -58,32 +120,6 @@ test_that("add",
             pip$add("f2", foo, params = list(a = ~undefined)),
             "dependency 'undefined' not found"
         )
-    })
-
-    test_that("non-existing function parameters are signaled",
-    {
-        pip <- Pipeline$new("pipe1")
-        foo <- function(a = 0) a
-
-        expect_error(
-            pip$add("f1", foo, params = list(b = 1, c = 2)),
-            "'b', 'c' are no function parameters of 'foo'"
-        )
-    })
-
-    test_that("undefined function parameters are signaled",
-    {
-        pip <- Pipeline$new("pipe1")
-
-        foo <- function(a, b = 1) a + b
-
-        expect_error(
-            pip$add("f1", foo),
-            "'a' parameter(s) must have default values",
-            fixed = TRUE
-        )
-
-        expect_error(pip$add("f1", foo))
     })
 
     test_that("step can refer to previous step by relative number",
@@ -1629,6 +1665,75 @@ test_that("replace_step",
         out = unname(unlist(pip$execute()$collect_out()))
         expect_equal(out, 4)
     })
+
+    test_that("fun must be passed as a function or string",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("step1", function(a = 1) a)
+
+        expect_error(
+            pip$replace_step("step1", fun = 1),
+            "is.function(fun) || is_string(fun) is not TRUE",
+            fixed = TRUE
+        )
+    })
+
+    test_that("params must be a list",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("step1", function(a = 1) a)
+
+        expect_error(
+            pip$replace_step("step1", fun = function() 1, params = 1),
+            "is.list(params)",
+            fixed = TRUE
+        )
+    })
+
+    test_that("description must be (possibly empty) string",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("step1", function(a = 1) a)
+
+        expect_error(
+            pip$replace_step("step1", fun = function() 1, description = 1),
+            "is_string(description)",
+            fixed = TRUE
+        )
+        expect_no_error(
+            pip$replace_step("step1", fun = function() 1, description = "")
+        )
+    })
+
+    test_that("group must be non-empty string",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("step1", function(a = 1) a)
+
+        expect_error(
+            pip$replace_step("step1", fun = function() 1, group = 1),
+            "is_string(group) && nzchar(group) is not TRUE",
+            fixed = TRUE
+        )
+        expect_error(
+            pip$replace_step("step1", fun = function() 1, group = ""),
+            "is_string(group) && nzchar(group) is not TRUE",
+            fixed = TRUE
+        )
+    })
+
+    test_that("keepOut must be logical",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("step1", function(a = 1) a)
+
+        expect_error(
+            pip$replace_step("step1", fun = function() 1, keepOut = 1),
+            "is.logical(keepOut) is not TRUE",
+            fixed = TRUE
+        )
+    })
+
 
     test_that("the replacing function can be passed as a string",
     {
