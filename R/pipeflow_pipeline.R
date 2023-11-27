@@ -114,30 +114,19 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             # Function can be either a function or a character string
             if (is.function(fun)) {
-                funcName = as.character(substitute(fun))[[1]]
+                funcName <- as.character(substitute(fun))[[1]]
             }
             else {
-                funcName = fun
-                fun = get(fun, mode = "function")
+                funcName <- fun
+                fun <- get(fun, mode = "function")
             }
 
-            # Update default function params by custom params
-            if (length(params) == 0) {
-                params = formals(fun)
-            } else {
-                params = replace(formals(fun), names(params), params)
-            }
-
-            # Make sure parameters defined as Param object or call are evaluated
-            isDefined = sapply(
-                params,
-                function(x) {
-                    methods::is(x, "Param") || methods::is(x, "call")
-                }
-            )
-            params[isDefined] = lapply(params[isDefined], eval)
+            params <- replace(formals(fun), names(params), params)
+            params <- params[!names(params) %in% "..."] # ignore dots
 
             private$.verify_fun_params(fun, funcName, as.list(params))
+            params <- lapply(params, eval)
+
 
             deps <- private$.derive_dependencies(
                 params = params,
@@ -1373,8 +1362,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         },
 
 
-        .verify_fun_params = function(fun, funcName, params = list())
-        {
+        .verify_fun_params = function(
+            fun,
+            funcName,
+            params = as.list(formals(fun))
+        ) {
             stopifnot(
                 is.function(fun),
                 is_string(funcName),
@@ -1382,22 +1374,31 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
 
             fargs <- formals(fun)
-            unknown_params <- setdiff(names(params), names(fargs))
-            if (length(unknown_params) > 0) {
-                stop(
-                    paste0("'", unknown_params, "'", collapse = ", "),
-                    " are no function parameters of '", funcName, "'",
-                    call. = FALSE
-                )
+            hasDots <- "..." %in% names(fargs)
+
+            # Unless there are dots, all parameters should appear in the
+            # function definition
+            if (hasDots) {
+                fargs <- fargs[!names(fargs) %in% "..."]
+            } else {
+                unknown_params <- setdiff(names(params), names(fargs))
+                if (length(unknown_params) > 0) {
+                    stop(
+                        paste0("'", unknown_params, "'", collapse = ", "),
+                        " are no function parameters of '", funcName, "'",
+                        call. = FALSE
+                    )
+                }
             }
 
-
-            defined_params <- Filter(params, f = Negate(is.name))
-            argsWithNoDefault <- names(Filter(fargs, f = \(x) is.name(x)))
-            undefinedArgs <- setdiff(argsWithNoDefault, names(defined_params))
-            if (length(undefinedArgs) > 0) {
+            # Signal undefined parameters, e.g. things like function(x, y = 1)
+            isUndefined <- function(x) {
+                is.name(x) && toString(x) == ""
+            }
+            undefinedParams <- Filter(params, f = isUndefined)
+            if (length(undefinedParams) > 0) {
                 stop(
-                    paste0("'", undefinedArgs, "'", collapse = ", "),
+                    paste0("'", names(undefinedParams), "'", collapse = ", "),
                     " parameter(s) must have default values",
                     call. = FALSE
                 )

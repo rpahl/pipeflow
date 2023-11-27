@@ -132,6 +132,67 @@ test_that("add",
         expect_equal(out[["f1"]][[1]], data)
         expect_equal(out[["f2"]][[1]], a + data)
     })
+
+
+    test_that(
+        "supports functions with wildcard arguments",
+    {
+        my_mean <- function(x, na.rm = FALSE) {
+            mean(x, na.rm = na.rm)
+        }
+        foo <- function(x, ...) {
+            my_mean(x, ...)
+        }
+        v <- c(1, 2, NA, 3, 4)
+        pip <- Pipeline$new("pipe", data = v)
+
+        params <- list(x = ~.data, na.rm = TRUE)
+        pip$add("mean", fun = foo, params = params, keepOut = TRUE)
+
+        out <- pip$execute()$collect_out()
+        expect_equal(out[["mean"]], mean(v, na.rm = TRUE))
+
+        pip$set_parameters_at_step("mean", list(na.rm = FALSE))
+        out <- pip$execute()$collect_out()
+        expect_equal(out[["mean"]], as.numeric(NA))
+    })
+
+    test_that("can have a variable defined outside as parameter default",
+    {
+        x <- 1
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a) a, params = list(a = x))
+
+        expect_equal(pip$get_parameters_at_step("f1")$a, x)
+
+        out <- pip$keep_all_out()$execute()$collect_out()
+        expect_equal(out[["f1"]], x)
+    })
+
+    test_that("handles Param object args",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a = new("NumericParam", "a", value = 1)) a)
+
+        out <- pip$keep_all_out()$execute()$collect_out()
+        expect_equal(out[["f1"]], 1)
+    })
+
+    test_that(
+        "can have a Param object defined outside as parameter default",
+    {
+        x <- 1
+        p <- new("NumericParam", "a", value = x)
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a) a, params = list(a = p))
+
+        expect_equal(pip$get_parameters_at_step("f1")$a, p)
+
+        out <- pip$keep_all_out()$execute()$collect_out()
+        expect_equal(out[["f1"]], x)
+    })
 })
 
 
@@ -2427,26 +2488,6 @@ test_that("private methods work as expected",
             )
             expect_true(hasInfo)
         })
-
-        test_that("handles Param object args",
-        {
-            skip("for now: enable that the default can be an expression?")
-            x <- 1
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = x) a)
-
-            f <- get_private(pip)$.execute_step
-        })
-
-        test_that("handles Param object args",
-        {
-            skip("for now: enable that the default can be an expression?")
-            p <- new("NumericParam", "a", value = 1)
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = p) a)
-
-            f <- get_private(pip)$.execute_step
-        })
     })
 
 
@@ -2930,10 +2971,16 @@ test_that("private methods work as expected",
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.verify_fun_params
 
+        test_that("returns TRUE if function has no args",
+        {
+            fun <- function() 1
+            expect_true(f(fun, "funcName"))
+        })
+
         test_that("returns TRUE if args are defined with default values",
         {
             fun <- function(x = 1, y = 2) x + y
-            expect_true(f(fun, "funcName", params = list()))
+            expect_true(f(fun, "funcName"))
         })
 
         test_that("if not defined with default values, params can be
@@ -2946,6 +2993,7 @@ test_that("private methods work as expected",
         test_that("signals parameters with no default values",
         {
             fun <- function(x, y, z = 1) x + y
+
             expect_error(
                 f(fun, "funcName"),
                 "'x', 'y' parameter(s) must have default values",
@@ -2960,6 +3008,12 @@ test_that("private methods work as expected",
             )
         })
 
+        test_that("supports ...",
+        {
+            fun <- function(x, ...) x
+            expect_true(f(fun, "funcName", params = list(x = 1)))
+        })
+
         test_that("signals undefined parameters",
         {
             fun <- function(x = 1, y = 1) x + y
@@ -2970,6 +3024,15 @@ test_that("private methods work as expected",
                 fixed = TRUE
             )
         })
+
+        test_that(
+            "supports additional parameters if function is defined with ...",
+        {
+            fun <- function(x, ...) x
+            params <- list(x = 1, add1 = 1, add2 = 2)
+            expect_true(f(fun, "funcName", params = params))
+        })
+
 
         test_that("signals badly typed input",
         {
