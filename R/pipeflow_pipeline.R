@@ -127,11 +127,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 fun <- get(fun, mode = "function")
             }
 
-            init <- private$.init_function_and_params(fun, funcName, params)
+            params <- private$.prepare_and_verify_params(fun, funcName, params)
 
             # Derive and verify dependencies
             deps <- private$.derive_dependencies(
-                params = init[["params"]],
+                params = params,
                 step = step
             )
             sapply(deps, FUN = private$.verify_dependency, step = step)
@@ -140,9 +140,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 rbind(
                     list(
                         step = step,
-                        fun = list(init[["fun"]]),
-                        funcName = init[["funcName"]],
-                        params = list(init[["params"]]),
+                        fun = list(fun),
+                        funcName = funcName,
+                        params = list(params),
                         keepOut = keepOut,
                         deps = list(deps),
                         out = list(NULL),
@@ -833,7 +833,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 fun <- get(fun, mode = "function")
             }
 
-            init <- private$.init_function_and_params(fun, funcName, params)
+            params <- private$.prepare_and_verify_params(fun, funcName, params)
 
             # Derive and verify dependencies
             all_steps <- self$get_step_names()
@@ -841,7 +841,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             to_step = all_steps[step_number - 1]
 
             deps <- private$.derive_dependencies(
-                params = init[["params"]],
+                params = params,
                 step = step,
                 to_step = to_step
             )
@@ -854,9 +854,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             new_step <- list(
                 step = step,
-                fun = list(init[["fun"]]),
-                funcName = init[["funcName"]],
-                params = list(init[["params"]]),
+                fun = list(fun),
+                funcName = funcName,
+                params = list(params),
                 keepOut = keepOut,
                 deps = list(deps),
                 out = list(NULL),
@@ -1291,10 +1291,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             unique(unlist(result)) |> as.character()
         },
 
-        .init_function_and_params = function(
+        .prepare_and_verify_params = function(
             fun,
             funcName,
-            params
+            params = list()
         ) {
             stopifnot(
                 is.function(fun),
@@ -1308,11 +1308,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             private$.verify_fun_params(fun, funcName, as.list(params))
             params <- lapply(params, eval)
 
-            list(
-                fun = fun,
-                funcName = funcName,
-                params = params
-            )
+            params
         },
 
         .relative_dependency_to_index = function(

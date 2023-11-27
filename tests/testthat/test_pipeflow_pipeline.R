@@ -2810,6 +2810,84 @@ test_that("private methods work as expected",
     })
 
 
+    # .init_function_and_params
+    test_that("private .init_function_and_params works as expected",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.prepare_and_verify_params
+
+        test_that("fun must be a function",
+        {
+            expect_error(
+                f(fun = 1),
+                "is.function(fun) is not TRUE",
+                fixed = TRUE
+            )
+        })
+
+        test_that("funcName must be a string",
+        {
+            expect_error(
+                f(fun = identity, funcName = 1),
+                "is_string(funcName) is not TRUE",
+                fixed = TRUE
+            )
+        })
+
+        test_that("params must be a list",
+        {
+            expect_error(
+                f(fun = identity, funcName = "identity", params = 1),
+                "is.list(params) is not TRUE",
+                fixed = TRUE
+            )
+        })
+
+        test_that("returns all function args in the parameter list",
+        {
+            foo <- function(a = 1, b = 2, c = 3) 1
+            res <- f(foo, "foo")
+            expect_equal(res, list(a = 1, b = 2, c = 3))
+        })
+
+        test_that("params given in the list override the function arg",
+        {
+            foo <- function(a = 1, b = 2, c = 3) 1
+            res <- f(foo, "foo", params = list(a = 9, b = 99))
+            expect_equal(res, list(a = 9, b = 99, c = 3))
+        })
+
+        test_that("signals undefined function args unless they are
+            defined in the parameter list",
+        {
+            foo <- function(a, b = 2, c = 3) 1
+            expect_error(
+                f(foo, "foo"),
+                "'a' parameter(s) must have default values",
+                fixed = TRUE
+            )
+
+            res <- f(foo, "foo", params = list(a = 9))
+            expect_equal(res, list(a = 9, b = 2, c = 3))
+        })
+
+        test_that("signals if parameter is not defined in function args,
+            unless function is defined with ...",
+        {
+            foo <- function(a) 1
+
+            expect_error(
+                f(foo, "foo", params = list(a = 1, b = 2, c = 3)),
+                "'b', 'c' are no function parameters of 'foo'",
+                fixed = TRUE
+            )
+
+            foo <- function(a, ...) 1
+            res <- f(foo, "foo", params = list(a = 1, b = 2, c = 3))
+            expect_equal(res, list(a = 1, b = 2, c = 3))
+        })
+    })
+
 
     # .relative_dependency_to_index
     test_that("private .relative_dependency_to_index works as expected",
