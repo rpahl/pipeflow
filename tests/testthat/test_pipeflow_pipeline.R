@@ -388,41 +388,38 @@ test_that("append",
     test_that(
         "output of first pipeline can be set as input of appended pipeline",
     {
-        pip1 <- Pipeline$new("pipe1")
-        pip1$add("f1", function(a = ~.data) a + 1)
+        pip1 <- Pipeline$new("pipe1", data = 1)
+        pip1$add("f1", function(a = ~.data) a * 2)
 
-        pip2 <- Pipeline$new("pipe2")
-        pip2$add("f1", function(a = ~.data) a + 1)
-        pip2$add("f2", function(a = ~.data) a + 2)
+        pip2 <- Pipeline$new("pipe2", data = 99)
+        pip2$add("f1", function(a = ~.data) a * 3)
+        pip2$add("f2", function(a = ~f1) a * 4)
 
         pp <- pip1$append(pip2, outAsIn = TRUE)
 
         deps <- pp$get_dependencies()
-        expect_equal(deps[["f1.pipe2"]], c(a = "f1"))
-        expect_equal(deps[["f2.pipe2"]], c(a = "f1"))
+        expect_equal(deps[[".data.pipe2"]], c(data = "f1"))
 
-        pp$keep_all_out()
-        out <- pp$set_data(1)$execute()$collect_out()
-        expect_equal(out[["f2.pipe2"]], 1 + 1 + 2)
+        out <- pp$keep_all_out()$execute()$collect_out()
+        pipe1_out <- out[["f1"]][["f1"]]
+        expect_equal(pipe1_out, 1 * 2)
+        expect_equal(out[[".data.pipe2"]], pipe1_out)
+        expect_equal(out[["f1"]][["f1.pipe2"]], pipe1_out * 3)
+        expect_equal(out[["f2.pipe2"]], out[["f1"]][["f1.pipe2"]] * 4)
     })
 
     test_that("if duplicated step names would be created, an error is given",
     {
         pip1 <- Pipeline$new("pipe1")
-        pip2 <- Pipeline$new("pipe2")
-
-        mockery::stub(
-            where = pip1$append,
-            what = "duplicated",
-            how = mockery::mock(TRUE, cycle = TRUE)
-        )
-
         pip1$add("f1", function(a = ~.data) a + 1)
+        pip1$add("f1.pipe2", function(a = ~.data) a + 1)
+
+        pip2 <- Pipeline$new("pipe2")
         pip2$add("f1", function(a = ~.data) a + 1)
 
         expect_error(
             pip1$append(pip2),
-            "Combined pipeline has duplicated step names",
+            "Combined pipeline has duplicated step names: 'f1.pipe2'",
             fixed = TRUE
         )
     })

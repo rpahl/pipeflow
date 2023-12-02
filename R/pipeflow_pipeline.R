@@ -180,31 +180,29 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             # Adapt step names and their dependencies to avoid name clashes
             p2$append_to_step_names(p2$name, sep = sep)
 
-            if (outAsIn) {
-                # Replace first step of p2, which usually holds the data, with
-                # the output of last step of p1
-                lastStep1 = utils::tail(p1$get_step_names(), 1)
-                firstStep2 = utils::head(p2$get_step_names(), 1)
-                deps2_updated = lapply(
-                    p2$pipeline[["deps"]],
-                    FUN = pipeflow_replace_string,
-                    target = firstStep2,
-                    replacement = lastStep1
-                )
-                p2$pipeline[["deps"]] <- deps2_updated
-            }
-
             # Build combined pipeline
             combinedName <- paste0(p1$name, sep, p2$name)
             combinedPipe <- Pipeline$new(combinedName)
 
             combinedPipe$pipeline <- rbind(p1$pipeline, p2$pipeline)
-
             newStepNames <- combinedPipe$get_step_names()
+
+            if (outAsIn) {
+                # Replace first step of p2, with the output of last step of p1
+                lastStep1 = newStepNames[p1$length()]
+                firstStep2 = newStepNames[p1$length() + 1]
+                combinedPipe$replace_step(
+                    step = firstStep2,
+                    fun = function(data = ~-1) data,
+                    description = "output of last step of first pipeline",
+                    keepOut = p2$pipeline[["keepOut"]][[1]]
+                )
+            }
+
             if (any(duplicated(newStepNames))) {
                 duplicatedNames <- newStepNames[duplicated(newStepNames)]
                 stop(
-                    "Combined pipeline has duplicated step names:",
+                    "Combined pipeline has duplicated step names: ",
                     paste0("'", duplicatedNames, "'", sep = ", ")
                 )
             }
@@ -212,7 +210,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             combinedPipe
         },
 
-        #' @description Append string to all step names.
+        #' @description Append string to all step names. Also takes care
+        #' of updating dependencies accordingly.
         #' @param postfix `string` to be appended to each step name.
         #' @param sep `string` separator between step name and postfix.
         #' @return returns the `Pipeline` object invisibly
