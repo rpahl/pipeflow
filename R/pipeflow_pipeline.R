@@ -77,7 +77,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 deps = character(0),
                 out = list(),
                 group = character(0),
-                description = character(0)
+                description = character(0),
+                time = structure(numeric(0), class = c("POSIXct", "POSIXt"))
             )
 
             self$add(".data", function() data, keepOut = FALSE)
@@ -147,7 +148,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         deps = list(deps),
                         out = list(NULL),
                         group = group,
-                        description = description
+                        description = description,
+                        time = Sys.time()
                     )
                 )
 
@@ -860,7 +862,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 deps = list(deps),
                 out = list(NULL),
                 group = group,
-                description = description
+                description = description,
+                time = Sys.time()
             )
 
             self$pipeline[step_number, ] <- new_step
@@ -1154,6 +1157,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             step <- pip[["step"]][[step_number]]
             context <- gettextf("pipeline at step %i ('%s')", step_number, step)
 
+            on.exit(
+                self$pipeline[["time"]][[step_number]] <- Sys.time(),
+                add = TRUE
+            )
+
             res <- tryCatch(
                 do.call(fun, args = args),
 
@@ -1166,12 +1174,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                     msg <- paste0("Context: ", context, ", ", w$message)
                     private$.lg(level = "warn", msg = msg)
                     warning(msg, call. = FALSE)
+                    NULL
                 }
             )
 
-            if (length(res) > 0) {
-                self$pipeline[["out"]][[step_number]] <- res
-            }
+            self$pipeline[["out"]][step_number] <- list(res)
 
             invisible(res)
         },

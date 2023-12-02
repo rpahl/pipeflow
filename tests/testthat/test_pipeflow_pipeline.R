@@ -753,6 +753,37 @@ test_that("execute",
 
         expect_error(pip$execute(), "something went wrong")
     })
+
+
+    test_that(
+        "can handle 'NULL' results",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = ~.data) x, keepOut = TRUE)
+
+        out <- pip$execute()$collect_out()
+        expect_equal(out[["f1"]], 1)
+
+        pip$set_data(NULL)
+        out <- pip$execute()$collect_out()
+        expect_equal(out[["f1"]], NULL)
+    })
+
+    test_that(
+        "updates the timestamp of the executed steps",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = ~.data) x, keepOut = TRUE)
+
+        before <- pip$pipeline[["time"]]
+        Sys.sleep(1)
+
+        pip$execute_step("f1", upstream = FALSE)
+        after <- pip$pipeline[["time"]]
+
+        expect_equal(before[1], after[1])
+        expect_true(before[2] < after[2])
+    })
 })
 
 
