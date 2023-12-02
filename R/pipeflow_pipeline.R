@@ -78,7 +78,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 keepOut = logical(),
                 group = character(0),
                 description = character(0),
-                time = structure(numeric(0), class = c("POSIXct", "POSIXt"))
+                time = structure(numeric(0), class = c("POSIXct", "POSIXt")),
+                status = character(0)
             )
 
             self$add(".data", function() data, keepOut = FALSE)
@@ -149,7 +150,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         keepOut = keepOut,
                         group = group,
                         description = description,
-                        time = Sys.time()
+                        time = Sys.time(),
+                        status = "new"
                     )
                 )
 
@@ -174,11 +176,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             p1 <- self$clone()
             p2 <- p$clone()
 
-            if (p1$name == p2$name) {
-                stop("pipelines cannot have the same name ('", p2$name, "')")
-            }
 
-            # Adapt step names and their dependencies to prevent name clashes
+            # Adapt step names and their dependencies to avoid name clashes
             p2$append_to_step_names(p2$name, sep = sep)
 
             if (outAsIn) {
@@ -196,13 +195,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             # Build combined pipeline
-            combinedName <- paste0(p1$name, ".", p2$name)
+            combinedName <- paste0(p1$name, sep, p2$name)
             combinedPipe <- Pipeline$new(combinedName)
 
             combinedPipe$pipeline <- rbind(p1$pipeline, p2$pipeline)
 
             newStepNames <- combinedPipe$get_step_names()
-            if (any(duplicated(newStepNames))) {  # this should never happen
+            if (any(duplicated(newStepNames))) {
                 duplicatedNames <- newStepNames[duplicated(newStepNames)]
                 stop(
                     "Combined pipeline has duplicated step names:",
@@ -863,7 +862,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 keepOut = keepOut,
                 group = group,
                 description = description,
-                time = Sys.time()
+                time = Sys.time(),
+                status = "new"
             )
 
             self$pipeline[step_number, ] <- new_step

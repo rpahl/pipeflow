@@ -345,21 +345,6 @@ test_that("append",
 {
     expect_true(is.function(Pipeline$new("pipe")$append))
 
-    test_that("combined pipelines must not have the same names",
-    {
-        pip1 <- Pipeline$new("pipe1")
-        pip2 <- Pipeline$new("pipe2")
-
-        expect_no_error(pip1$append(pip2))
-
-        pip2$name = pip1$name
-        expect_error(
-            pip1$append(pip2),
-            "pipelines cannot have the same name ('pipe1')",
-            fixed = TRUE
-        )
-    })
-
     test_that("pipelines can be combined even if their steps share names",
     {
         pip1 <- Pipeline$new("pipe1", data = 1) |>
@@ -404,9 +389,9 @@ test_that("append",
         "output of first pipeline can be set as input of appended pipeline",
     {
         pip1 <- Pipeline$new("pipe1")
-        pip2 <- Pipeline$new("pipe2")
-
         pip1$add("f1", function(a = ~.data) a + 1)
+
+        pip2 <- Pipeline$new("pipe2")
         pip2$add("f1", function(a = ~.data) a + 1)
         pip2$add("f2", function(a = ~.data) a + 2)
 
