@@ -5,6 +5,11 @@ test_that("initialize",
 {
     expect_true(is.function(Pipeline$new("pipe")$initialize))
 
+    test_that("returns a pipeline object",
+    {
+        expect_true(methods::is(Pipeline$new("pipe"), "Pipeline"))
+    })
+
     test_that("pipeline name must be a non-empty string",
     {
         expect_no_error(Pipeline$new("foo"))
@@ -17,6 +22,89 @@ test_that("initialize",
         expect_error(
             Pipeline$new(name = ""),
             "name must not be empty"
+        )
+    })
+
+    test_that("data is added as first step to pipeline",
+    {
+        pip <- Pipeline$new("pipe1", data = 1)
+        expect_equal(pip$get_data(), 1)
+
+        expect_equal(pip$get_step_names(), ".data")
+
+        out <- pip$keep_all_out()$execute()$collect_out()
+        expect_equal(out[[".data"]], 1)
+    })
+
+    test_that("the logger can be customized",
+    {
+        my_logger <- function(level, msg, ...) {
+            message("My Logger: ", msg)
+        }
+
+        pip <- Pipeline$new("pipe", logger = my_logger)
+
+        out <- capture.output(
+            pip$execute(),
+            type = "message"
+        )
+        expect_equal(
+            out,
+            c(
+                "My Logger: Start execution of 'pipe' pipeline:",
+                "My Logger: Step 1/1 .data",
+                "My Logger: Finished execution of steps.",
+                "My Logger: Clean temporary results.",
+                "My Logger: Done."
+            )
+        )
+    })
+
+    test_that("bad definition of the custom logger is signalled",
+    {
+        expected_error_msg <- paste(
+            "logger function must have the following signature:",
+            "function(level, msg, ...)"
+        )
+
+
+        logger_with_missing_level_arg <- function(msg, ...) {
+            message("My Logger: ", msg)
+        }
+        expect_error(
+            Pipeline$new("pipe1", logger = logger_with_missing_level_arg),
+            expected_error_msg,
+            fixed = TRUE
+        )
+
+
+        logger_with_missing_msg_arg <- function(level, ...) {
+            message("My Logger: ", ...)
+        }
+        expect_error(
+            Pipeline$new("pipe1", logger = logger_with_missing_msg_arg),
+            expected_error_msg,
+            fixed = TRUE
+        )
+
+
+        logger_with_missing_dots <- function(msg, level) {
+            message("My Logger: ", msg)
+        }
+        expect_error(
+            Pipeline$new("pipe1", logger = logger_with_missing_dots),
+            expected_error_msg,
+            fixed = TRUE
+        )
+
+
+        logger_with_additional_arg <- function(level, msg, foo, ...) {
+            message("My Logger: ", msg)
+        }
+        expect_error(
+            Pipeline$new("pipe1", logger = logger_with_additional_arg),
+            expected_error_msg,
+            fixed = TRUE
         )
     })
 })
