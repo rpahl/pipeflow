@@ -725,7 +725,7 @@ Replace pipeline step
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$replace_step(
   step,
   fun,
-  params = NULL,
+  params = list(),
   description = "",
   group = step,
   keepOut = FALSE
