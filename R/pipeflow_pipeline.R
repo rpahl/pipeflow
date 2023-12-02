@@ -73,9 +73,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 fun = character(0),
                 funcName = character(0),
                 params = list(),
-                keepOut = logical(),
                 deps = character(0),
                 out = list(),
+                keepOut = logical(),
                 group = character(0),
                 description = character(0),
                 time = structure(numeric(0), class = c("POSIXct", "POSIXt"))
@@ -144,9 +144,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         fun = list(fun),
                         funcName = funcName,
                         params = list(params),
-                        keepOut = keepOut,
                         deps = list(deps),
                         out = list(NULL),
+                        keepOut = keepOut,
                         group = group,
                         description = description,
                         time = Sys.time()
@@ -858,9 +858,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 fun = list(fun),
                 funcName = funcName,
                 params = list(params),
-                keepOut = keepOut,
                 deps = list(deps),
                 out = list(NULL),
+                keepOut = keepOut,
                 group = group,
                 description = description,
                 time = Sys.time()
@@ -1120,8 +1120,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                     step = step
                 )
             ) |> as.integer()
-            deps[names(relative_deps)] = considered_steps[step_indices]
-
+            deps[names(relative_deps)] <- considered_steps[step_indices]
 
             deps
         },
