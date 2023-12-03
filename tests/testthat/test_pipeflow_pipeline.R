@@ -2196,11 +2196,11 @@ test_that("set_keep_out",
         pip$execute()
         expect_false(pip$has_out_at_step("f1"))
 
-        pip$set_keep_out("f1", state = TRUE)$execute()
+        pip$set_keep_out("f1", keepOut = TRUE)$execute()
         expect_true(pip$has_out_at_step("f1"))
 
         pip$clean_out_at_step("f1")
-        pip$set_keep_out("f1", state = FALSE)$execute()
+        pip$set_keep_out("f1", keepOut = FALSE)$execute()
         expect_false(pip$has_out_at_step("f1"))
     })
 
@@ -2229,8 +2229,8 @@ test_that("set_keep_out",
             pipe_add("f1", function(a = 1) a)
 
         expect_error(
-            pip$set_keep_out("f1", state = 1),
-            "is.logical(state)",
+            pip$set_keep_out("f1", keepOut = 1),
+            "is.logical(keepOut)",
             fixed = TRUE
         )
     })

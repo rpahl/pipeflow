@@ -690,7 +690,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         keep_all_out = function()
         {
             steps <- self$get_step_names()
-            sapply(steps, FUN = self$set_keep_out, state = TRUE)
+            sapply(steps, FUN = self$set_keep_out, keepOut = TRUE)
 
             invisible(self)
         },
@@ -974,18 +974,18 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Set pipeline to keep or omit output of given step.
         #' @param step `string` name of step
-        #' @param state `logical` whether to keep output of step
+        #' @param keepOut `logical` whether to keep output of step
         #' @return the `Pipeline` object invisibly
-        set_keep_out = function(step, state = TRUE)
+        set_keep_out = function(step, keepOut = TRUE)
         {
             stopifnot(
                 is_string(step),
-                is.logical(state)
+                is.logical(keepOut)
             )
             private$.verify_step_exists(step)
 
             index <- self$get_step_number(step)
-            self$pipeline[index, "keepOut"] <- state
+            self$pipeline[index, "keepOut"] <- keepOut
 
             invisible(self)
         },
