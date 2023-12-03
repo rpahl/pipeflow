@@ -558,6 +558,57 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 as.list()
         },
 
+        #' @description Get all function parameters defined in the pipeline,
+        #' but only list each parameter once. The values of the parameters,
+        #' will be the values of the first step where the parameter was defined.
+        #' This is particularly useful after the parameters where set using
+        #' the `set_parameters` function, which will set the same value
+        #' for all steps.
+        #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
+        #' names starting with a dot) are ignored and thus not returned.
+        #' @return `list` of unique parameters
+        get_parameters_unique = function(ignoreHidden = TRUE)
+        {
+            params <- self$get_parameters(ignoreHidden)
+
+            if (length(params) == 0) {
+                return(params)
+            }
+
+            param_names <- sapply(params, FUN = names) |> unlist()
+            param_values <- unlist1(params) |> stats::setNames(param_names)
+            param_values[!duplicated(names(param_values))]
+        },
+
+        #' @description Get all unique function parameters in json format.
+        #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
+        #' names starting with a dot) are ignored and thus not returned.
+        #' @return `list` flat unnamed json list of unique function parameters,
+        #'  at this point with no information of the steps were parameters are
+        #'  defined first.
+        get_parameters_unique_json = function(ignoreHidden = TRUE)
+        {
+            params = self$get_parameters_unique(ignoreHidden)
+
+            param_to_list <- function(p, name) {
+                if (methods::is(p, "Param")) {
+                    p = as.list(attributes(eval(p)))
+                    p[["name"]] = name
+                } else {
+                    p <- list(name = name, value = p)
+                }
+                p
+            }
+
+            mapply(
+                params,
+                name = names(params),
+                FUN = param_to_list,
+                SIMPLIFY = FALSE
+            ) |>
+                stats::setNames(NULL) |>
+                jsonlite::toJSON(auto_unbox = TRUE, pretty = TRUE)
+        },
 
         #' @description Get step of pipeline
         #' @param step `string` name of step
@@ -588,59 +639,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         {
             private$.verify_step_exists(step)
             match(step, self$get_step_names())
-        },
-
-
-        #' @description Get all function parameters defined in the pipeline,
-        #' but only list each parameter once. The values of the parameters,
-        #' will be the values of the first step where the parameter was defined.
-        #' This is particularly useful after the parameters where set using
-        #' the `set_parameters` function, which will set the same value
-        #' for all steps.
-        #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
-        #' names starting with a dot) are ignored and thus not returned.
-        #' @return `list` of unique parameters
-        get_unique_parameters = function(ignoreHidden = TRUE)
-        {
-            params <- self$get_parameters(ignoreHidden)
-
-            if (length(params) == 0) {
-                return(params)
-            }
-
-            param_names <- sapply(params, FUN = names) |> unlist()
-            param_values <- unlist1(params) |> stats::setNames(param_names)
-            param_values[!duplicated(names(param_values))]
-        },
-
-        #' @description Get all unique function parameters in json format.
-        #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
-        #' names starting with a dot) are ignored and thus not returned.
-        #' @return `list` flat unnamed json list of unique function parameters,
-        #'  at this point with no information of the steps were parameters are
-        #'  defined first.
-        get_unique_parameters_json = function(ignoreHidden = TRUE)
-        {
-            params = self$get_unique_parameters(ignoreHidden)
-
-            param_to_list <- function(p, name) {
-                if (methods::is(p, "Param")) {
-                    p = as.list(attributes(eval(p)))
-                    p[["name"]] = name
-                } else {
-                    p <- list(name = name, value = p)
-                }
-                p
-            }
-
-            mapply(
-                params,
-                name = names(params),
-                FUN = param_to_list,
-                SIMPLIFY = FALSE
-            ) |>
-                stats::setNames(NULL) |>
-                jsonlite::toJSON(auto_unbox = TRUE, pretty = TRUE)
         },
 
         #' @description Get all upstream dependencies of given step, by
@@ -1000,7 +998,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return returns the `Pipeline` object invisibly
         set_parameters = function(params, warnUndefined = TRUE)
         {
-            defined_params <- self$get_unique_parameters(ignoreHidden = FALSE)
+            defined_params <- self$get_parameters_unique(ignoreHidden = FALSE)
             extra <- setdiff(names(params), names(defined_params))
 
             if (warnUndefined && length(extra) > 0) {

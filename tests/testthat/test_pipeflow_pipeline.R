@@ -1219,9 +1219,9 @@ test_that("get_step_names",
 
 
 
-test_that("get_unique_parameters",
+test_that("get_parameters_unique",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_unique_parameters))
+    expect_true(is.function(Pipeline$new("pipe")$get_parameters_unique))
 
     test_that("parameters can be retrieved uniquely and if occuring multiple
         times, the 1st default value is used",
@@ -1231,36 +1231,36 @@ test_that("get_unique_parameters",
             pipe_add("f2", function(a = 2, b = 3) a + b) |>
             pipe_add("f3", function(a = 4, b = 5, c = 6) a + b)
 
-        p <- pip$get_unique_parameters()
+        p <- pip$get_parameters_unique()
         expect_equivalent(p, list(a = 1, b = 3, c = 6))
     })
 
     test_that("empty pipeline gives empty list",
     {
         pip <- Pipeline$new("pipe")
-        expect_equivalent(pip$get_unique_parameters(), list())
+        expect_equivalent(pip$get_parameters_unique(), list())
     })
 
     test_that("pipeline with no parameters gives empty list",
     {
         pip <- Pipeline$new("pipe") |>
             pipe_add("f1", function() 1)
-        expect_equivalent(pip$get_unique_parameters(), list())
+        expect_equivalent(pip$get_parameters_unique(), list())
     })
 })
 
 
 
-test_that("get_unique_parameters_json",
+test_that("get_parameters_unique_json",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_unique_parameters_json))
+    expect_true(is.function(Pipeline$new("pipe")$get_parameters_unique_json))
 
     test_that("the elements are not named",
     {
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(a = 1) a, keepOut = TRUE)
 
-        p <- pip$get_unique_parameters_json()
+        p <- pip$get_parameters_unique_json()
         pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
         expect_equal(names(pl), NULL)
 
@@ -1273,7 +1273,7 @@ test_that("get_unique_parameters_json",
                 "f2", function(y = new("StringParam", "my y", "some y")) y
             )
 
-        p <- pip$get_unique_parameters_json()
+        p <- pip$get_parameters_unique_json()
         pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
         expect_equal(names(pl), NULL)
     })
@@ -1286,7 +1286,7 @@ test_that("get_unique_parameters_json",
             pipe_add("f2", function(a = 1, b = 2) a) |>
             pipe_add("f3", function(a = 1, b = 2, c = 3) a)
 
-        p <- pip$get_unique_parameters_json()
+        p <- pip$get_parameters_unique_json()
         expect_true(methods::is(p, "json"))
 
         pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
@@ -1310,7 +1310,7 @@ test_that("get_unique_parameters_json",
                 "f2", function(y = new("StringParam", "my y", "some y")) y
             )
 
-        p <- pip$get_unique_parameters_json()
+        p <- pip$get_parameters_unique_json()
         pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
 
         expect_equal(
@@ -1348,7 +1348,7 @@ test_that("get_unique_parameters_json",
                 "f2", function(y = new("StringParam", "my y", "some y")) y
             )
 
-        p <- pip$get_unique_parameters_json()
+        p <- pip$get_parameters_unique_json()
         pl <- jsonlite::fromJSON(p)
 
         expect_true(pl[["label"]][[1]] == "my x")
@@ -1366,7 +1366,7 @@ test_that("get_unique_parameters_json",
             pipe_add("f1", function(x = 1) x) |>
             pipe_add("f2", function(s = new("StringParam", "my s", "some s")) s)
 
-        p <- pip$get_unique_parameters_json()
+        p <- pip$get_parameters_unique_json()
         pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
 
         expect_equal(pl[[1]], list(name = "x", value = 1L))

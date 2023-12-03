@@ -45,11 +45,11 @@ Roman Pahl
 \item \href{#method-Pipeline-get_out_at_step}{\code{Pipeline$get_out_at_step()}}
 \item \href{#method-Pipeline-get_parameters}{\code{Pipeline$get_parameters()}}
 \item \href{#method-Pipeline-get_parameters_at_step}{\code{Pipeline$get_parameters_at_step()}}
+\item \href{#method-Pipeline-get_parameters_unique}{\code{Pipeline$get_parameters_unique()}}
+\item \href{#method-Pipeline-get_parameters_unique_json}{\code{Pipeline$get_parameters_unique_json()}}
 \item \href{#method-Pipeline-get_step}{\code{Pipeline$get_step()}}
 \item \href{#method-Pipeline-get_step_names}{\code{Pipeline$get_step_names()}}
 \item \href{#method-Pipeline-get_step_number}{\code{Pipeline$get_step_number()}}
-\item \href{#method-Pipeline-get_unique_parameters}{\code{Pipeline$get_unique_parameters()}}
-\item \href{#method-Pipeline-get_unique_parameters_json}{\code{Pipeline$get_unique_parameters_json()}}
 \item \href{#method-Pipeline-get_upstream_dependencies}{\code{Pipeline$get_upstream_dependencies()}}
 \item \href{#method-Pipeline-has_out_at_step}{\code{Pipeline$has_out_at_step()}}
 \item \href{#method-Pipeline-has_step}{\code{Pipeline$has_step()}}
@@ -179,7 +179,8 @@ returns new combined \code{Pipeline}.
 \if{html}{\out{<a id="method-Pipeline-append_to_step_names"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-append_to_step_names}{}}}
 \subsection{Method \code{append_to_step_names()}}{
-Append string to all step names.
+Append string to all step names. Also takes care
+of updating dependencies accordingly.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$append_to_step_names(postfix, sep = ".")}\if{html}{\out{</div>}}
 }
@@ -434,6 +435,55 @@ names starting with a dot) are ignored and thus not returned.}
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-get_parameters_unique"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_parameters_unique}{}}}
+\subsection{Method \code{get_parameters_unique()}}{
+Get all function parameters defined in the pipeline,
+but only list each parameter once. The values of the parameters,
+will be the values of the first step where the parameter was defined.
+This is particularly useful after the parameters where set using
+the \code{set_parameters} function, which will set the same value
+for all steps.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_parameters_unique(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{ignoreHidden}}{\code{logical} if TRUE, hidden parameters (i.e. all
+names starting with a dot) are ignored and thus not returned.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+\code{list} of unique parameters
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-get_parameters_unique_json"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_parameters_unique_json}{}}}
+\subsection{Method \code{get_parameters_unique_json()}}{
+Get all unique function parameters in json format.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_parameters_unique_json(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{ignoreHidden}}{\code{logical} if TRUE, hidden parameters (i.e. all
+names starting with a dot) are ignored and thus not returned.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+\code{list} flat unnamed json list of unique function parameters,
+at this point with no information of the steps were parameters are
+defined first.
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-get_step}{}}}
 \subsection{Method \code{get_step()}}{
@@ -485,55 +535,6 @@ Get step number
 }
 \subsection{Returns}{
 the step number in the pipeline
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_unique_parameters"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_unique_parameters}{}}}
-\subsection{Method \code{get_unique_parameters()}}{
-Get all function parameters defined in the pipeline,
-but only list each parameter once. The values of the parameters,
-will be the values of the first step where the parameter was defined.
-This is particularly useful after the parameters where set using
-the \code{set_parameters} function, which will set the same value
-for all steps.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_unique_parameters(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{ignoreHidden}}{\code{logical} if TRUE, hidden parameters (i.e. all
-names starting with a dot) are ignored and thus not returned.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-\code{list} of unique parameters
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_unique_parameters_json"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_unique_parameters_json}{}}}
-\subsection{Method \code{get_unique_parameters_json()}}{
-Get all unique function parameters in json format.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_unique_parameters_json(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{ignoreHidden}}{\code{logical} if TRUE, hidden parameters (i.e. all
-names starting with a dot) are ignored and thus not returned.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-\code{list} flat unnamed json list of unique function parameters,
-at this point with no information of the steps were parameters are
-defined first.
 }
 }
 \if{html}{\out{<hr>}}
