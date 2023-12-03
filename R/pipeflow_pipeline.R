@@ -864,13 +864,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return returns the `Pipeline` object invisibly
         set_data = function(data)
         {
-            data.table::set(
-                self$pipeline,
-                i = 1L,
-                j = "fun",
-                value = {function() data}
+            step <- self$get_step_names()[1]
+            self$replace_step(
+                step = step,
+                fun = function() data,
+                keepOut = FALSE
             )
-            invisible(self)
         },
 
         #' @description Split-copy pipeline by list of data sets. Each

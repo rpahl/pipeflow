@@ -1966,6 +1966,23 @@ test_that("set_data",
         out <- pip$execute()$collect_out()
         expect_equal(out[["f1"]], dat)
     })
+
+    test_that("if data is set, all dependent steps are set to outdated",
+    {
+        dat <- data.frame(a = 1:2, b = 1:2)
+
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(x = ~.data) x, keepOut = TRUE) |>
+            pipe_add("f2", function(x = ~f1) x, keepOut = TRUE)
+
+        pip$execute()
+
+        expect_equal(pip$get_step("f1")$state, "latest")
+        expect_equal(pip$get_step("f2")$state, "latest")
+        pip$set_data(dat)
+        expect_equal(pip$get_step("f1")$state, "outdated")
+        expect_equal(pip$get_step("f2")$state, "outdated")
+    })
 })
 
 
