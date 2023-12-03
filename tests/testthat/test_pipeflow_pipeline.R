@@ -2729,13 +2729,15 @@ test_that("private methods work as expected",
             expect_true(all(pip$pipeline[["status"]] == "new"))
 
             f(step = "ok")
-            expect_equal(pip$pipeline[["status"]][2], "latest")
+            pip$get_step("ok")$status
+
+            expect_equal(pip$get_step("ok")$status, "latest")
 
             expect_error(f(step = "error"))
-            expect_equal(pip$pipeline[["status"]][3], "failed")
+            expect_equal(pip$get_step("error")$status, "failed")
 
             expect_warning(f(step = "warning"))
-            expect_equal(pip$pipeline[["status"]][4], "latest")
+            expect_equal(pip$get_step("warning")$status, "latest")
         })
     })
 
