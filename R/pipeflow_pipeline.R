@@ -1339,6 +1339,20 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             abs_index
         },
 
+
+        .update_states_downstream = function(step, state)
+        {
+            private$.verify_step_exists(step)
+            stopifnot(is_string(state))
+
+            deps <- self$get_deps_down(step, recursive = TRUE)
+            for (dep in deps) {
+                i <- self$get_step_number(dep)
+                self$pipeline[i, "state"] <- state
+            }
+        },
+
+
         .verify_dependency = function(
             dep,
             step,   # required for error message

@@ -759,7 +759,7 @@ test_that("execute_step",
         pip <- Pipeline$new("pipe") |>
             pipe_add("A", function(a = 1) a)
 
-        pip$keep_all_out()$execute_step("A")
+        expect_no_error(pip$keep_all_out()$execute_step("A"))
     })
 
 
@@ -2538,8 +2538,7 @@ test_that("private methods work as expected",
     expect_true(is.environment(get_private(pip)))
 
 
-    # .derive_dependencies
-    test_that("private .derive_dependencies works as expected",
+    test_that(".derive_dependencies",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.derive_dependencies
@@ -2613,8 +2612,8 @@ test_that("private methods work as expected",
         })
     })
 
-    # .execute_step
-    test_that("private .execute_step works as expected",
+
+    test_that(".execute_step",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.execute_step
@@ -2719,8 +2718,7 @@ test_that("private methods work as expected",
     })
 
 
-    # .extract_dependent_out
-    test_that("private .extract_dependent_out works as expected",
+    test_that(".extract_dependent_out",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.extract_dependent_out
@@ -2784,8 +2782,8 @@ test_that("private methods work as expected",
         })
     })
 
-    # .extract_deps_from_param_list
-    test_that("private .extract_deps_from_param_list works as expected",
+
+    test_that(".extract_deps_from_param_list",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.extract_deps_from_param_list
@@ -2826,8 +2824,8 @@ test_that("private methods work as expected",
         })
     })
 
-    # .get_downstream_deps
-    test_that("private .get_downstream_deps works as expected",
+
+    test_that(".get_downstream_deps",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.get_downstream_deps
@@ -2926,8 +2924,7 @@ test_that("private methods work as expected",
     })
 
 
-    # .get_last_step
-    test_that("private .get_last_step works as expected",
+    test_that(".get_last_step",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.get_last_step
@@ -2944,8 +2941,8 @@ test_that("private methods work as expected",
         expect_equal(f(), "f1")
     })
 
-    # .get_upstream_deps
-    test_that("private .get_upstream_deps works as expected",
+
+    test_that(".get_upstream_deps",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.get_upstream_deps
@@ -3038,8 +3035,7 @@ test_that("private methods work as expected",
     })
 
 
-    # .init_function_and_params
-    test_that("private .init_function_and_params works as expected",
+    test_that(".init_function_and_params",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.prepare_and_verify_params
@@ -3117,8 +3113,8 @@ test_that("private methods work as expected",
     })
 
 
-    # .relative_dependency_to_index
-    test_that("private .relative_dependency_to_index works as expected",
+
+    test_that(".relative_dependency_to_index",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.relative_dependency_to_index
@@ -3203,8 +3199,68 @@ test_that("private methods work as expected",
         })
     })
 
-    # .verify_dependency
-    test_that("private .verify_dependency works as expected",
+
+    test_that(".update_states_downstream",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.update_states_downstream
+
+        test_that("state must be a string",
+        {
+            pip <- expect_no_error(Pipeline$new("pipe"))
+            expect_error(
+                f(".data", state = 1),
+                "is_string(state) is not TRUE",
+                fixed = TRUE
+            )
+        })
+
+        test_that("states are updated according to dependencies",
+        {
+            pip <- expect_no_error(Pipeline$new("pipe"))
+            f <- get_private(pip)$.update_states_downstream
+
+            pip$add("f1", function(a = ~.data) a)
+            pip$add("f2", function(a = ~f1) a)
+            pip$add("f3", function(a = 1) a)
+            pip$add("f4", function(a = ~f2) a)
+
+            expect_true(all(pip$pipeline[["state"]] == "new"))
+            f("f1", state = "new-state")
+            states <- pip$pipeline[["state"]] |>
+                stats::setNames(pip$get_step_names())
+
+            expect_equal(
+                states,
+                c(
+                    .data = "new",
+                    f1 = "new",
+                    f2 = "new-state",
+                    f3 = "new",
+                    f4 = "new-state"
+                )
+            )
+
+            f(".data", state = "another-state")
+
+            states <- pip$pipeline[["state"]] |>
+                stats::setNames(pip$get_step_names())
+
+            expect_equal(
+                states,
+                c(
+                    .data = "new",
+                    f1 = "another-state",
+                    f2 = "another-state",
+                    f3 = "new",
+                    f4 = "another-state"
+                )
+            )
+        })
+    })
+
+
+    test_that(".verify_dependency",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.verify_dependency
@@ -3271,8 +3327,8 @@ test_that("private methods work as expected",
         })
     })
 
-    # .verify_fun_params
-    test_that(".verify_fun_params works as expected",
+
+    test_that(".verify_fun_params",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.verify_fun_params
