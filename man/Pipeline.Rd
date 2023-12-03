@@ -54,6 +54,7 @@ Roman Pahl
 \item \href{#method-Pipeline-has_step}{\code{Pipeline$has_step()}}
 \item \href{#method-Pipeline-keep_all_out}{\code{Pipeline$keep_all_out()}}
 \item \href{#method-Pipeline-length}{\code{Pipeline$length()}}
+\item \href{#method-Pipeline-lock_step}{\code{Pipeline$lock_step()}}
 \item \href{#method-Pipeline-print}{\code{Pipeline$print()}}
 \item \href{#method-Pipeline-pop_step}{\code{Pipeline$pop_step()}}
 \item \href{#method-Pipeline-pop_steps_after}{\code{Pipeline$pop_steps_after()}}
@@ -65,6 +66,7 @@ Roman Pahl
 \item \href{#method-Pipeline-set_keep_out}{\code{Pipeline$set_keep_out()}}
 \item \href{#method-Pipeline-set_parameters}{\code{Pipeline$set_parameters()}}
 \item \href{#method-Pipeline-set_parameters_at_step}{\code{Pipeline$set_parameters_at_step()}}
+\item \href{#method-Pipeline-unlock_step}{\code{Pipeline$unlock_step()}}
 \item \href{#method-Pipeline-clone}{\code{Pipeline$clone()}}
 }
 }
@@ -609,6 +611,31 @@ Length of the pipeline aka number of pipeline steps.
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-lock_step"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-lock_step}{}}}
+\subsection{Method \code{lock_step()}}{
+Locking a step means that both its parameters and its
+output (given it has output) are locked. If it does not have output,
+only the parameters are locked. Locking a step is useful if the
+step happens to share parameter names with other steps but should not
+be affected when parameters are set commonly for the entire pipeline
+(see function \code{set_parameters} below).
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$lock_step(step)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{\code{string} name of step}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the \code{Pipeline} object invisibly
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-print"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-print}{}}}
 \subsection{Method \code{print()}}{
@@ -862,14 +889,32 @@ Set unbound parameter values at given pipeline step.
 \item{\code{step}}{\code{string} the name of the step}
 
 \item{\code{params}}{\code{list} of parameters to be set}
-
-\item{\code{warnUndefined}}{\code{logical} whether to give a warning if a
-parameter is not defined in the pipeline.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 returns the \code{Pipeline} object invisibly
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-unlock_step"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-unlock_step}{}}}
+\subsection{Method \code{unlock_step()}}{
+Unlock previously locked step. If step was not locked,
+the command is ignored.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$unlock_step(step)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{\code{string} name of step}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}

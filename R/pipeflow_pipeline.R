@@ -689,6 +689,19 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return `numeric` length of pipeline.
         length = function() nrow(self$pipeline),
 
+        #' @description Locking a step means that both its parameters and its
+        #' output (given it has output) are locked. If it does not have output,
+        #' only the parameters are locked. Locking a step is useful if the
+        #' step happens to share parameter names with other steps but should not
+        #' be affected when parameters are set commonly for the entire pipeline
+        #' (see function `set_parameters` below).
+        #' @param step `string` name of step
+        #' @return the `Pipeline` object invisibly
+        lock_step = function(step) {
+            private$.set_at_step(step, "state", "locked")
+            invisible(self)
+        },
+
         #' @description Print the pipeline.
         print = function() print(self$pipeline),
 
@@ -1051,6 +1064,19 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                     self$pipeline[stepNumber, "state"] <- "outdated"
                     private$.update_states_downstream(step, "outdated")
                 }
+            }
+
+            invisible(self)
+        },
+
+        #' @description Unlock previously locked step. If step was not locked,
+        #' the command is ignored.
+        #' @param step `string` name of step
+        #' @return the `Pipeline` object invisibly
+        unlock_step = function(step) {
+            state <- self$get_step(step)[["state"]]
+            if (state == "locked") {
+                private$.set_at_step(step, "state", "unlocked")
             }
 
             invisible(self)

@@ -1510,6 +1510,40 @@ test_that("keep_all_out",
 })
 
 
+test_that("length",
+{
+    expect_true(is.function(Pipeline$new("pipe")$length))
+
+    test_that("returns the number of steps",
+    {
+        pip <- Pipeline$new("pipe")
+        expect_equal(pip$length(), 1)
+
+        pip$add("f1", function(a = 1) a)
+        expect_equal(pip$length(), 2)
+
+        pip$remove_step("f1")
+        expect_equal(pip$length(), 1)
+    })
+})
+
+
+test_that("lock_step",
+{
+    expect_true(is.function(Pipeline$new("pipe")$lock_step))
+
+    test_that("sets state to 'locked'",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a = 1) a)
+
+        pip$lock_step("f1")
+        expect_equal(pip$get_step("f1")[["state"]], "locked")
+
+        pip
+    })
+})
+
 
 test_that("print",
 {
@@ -2509,6 +2543,29 @@ test_that("set_parameters_at_step",
 
 
 
+test_that("unlock_step",
+{
+    expect_true(is.function(Pipeline$new("pipe")$lock_step))
+
+    test_that("sets state to 'unlocked' if it was locked before",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a = 1) a)
+
+        pip$lock_step("f1")
+        expect_equal(pip$get_step("f1")[["state"]], "locked")
+
+        pip$unlock_step(".data")
+        expect_equal(pip$get_step(".data")[["state"]], "new")
+
+        pip$unlock_step("f1")
+        expect_equal(pip$get_step("f1")[["state"]], "unlocked")
+
+        pip
+    })
+})
+
+
 
 # Pipeline logging
 
@@ -3330,9 +3387,27 @@ test_that("private methods work as expected",
             f("f2", field = "state", value = "new-state")
 
             after <- sapply(pip$pipeline, data.class)
-            pip$pipeline
 
             expect_equal(before, after)
+        })
+
+        test_that("signals class mismatch unless field is of class list",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("f1", function(a = 1) a)
+
+            f <- get_private(pip)$.set_at_step
+            ee <- expect_error
+
+            ee(f("f1", field = "step", value = 1))
+            ee(f("f2", field = "fun", value = "mean"))
+            ee(f("f2", field = "funcName", value = list("my fun")))
+            ee(f("f2", field = "params", value = c(a = 1, b = 2)))
+            ee(f("f2", field = "keepOut", value = 1))
+            ee(f("f2", field = "group", value = list("my group")))
+            ee(f("f2", field = "description", value = list("my description")))
+            ee(f("f2", field = "time", value = as.character(Sys.time())))
+            ee(f("f2", field = "state", value = list("new-state")))
         })
     })
 
