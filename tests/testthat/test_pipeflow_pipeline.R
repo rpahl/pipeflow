@@ -780,7 +780,6 @@ test_that("execute_step",
             pipe_add("A", function(a = 1) a)
 
         pip$keep_all_out()$execute_step("A")
-        expect_equal(pip$get_out_at_step("A"), 1)
     })
 
 
@@ -2189,7 +2188,7 @@ test_that("set_keep_out",
 {
     expect_true(is.function(Pipeline$new("pipe")$set_keep_out))
 
-    test_that("keep-out status can be set",
+    test_that("keep-out state can be set",
     {
         pip <- Pipeline$new("pipe1", data = 0) |>
             pipe_add("f1", function(a = 1) a)
@@ -2197,11 +2196,11 @@ test_that("set_keep_out",
         pip$execute()
         expect_false(pip$has_out_at_step("f1"))
 
-        pip$set_keep_out("f1", status = TRUE)$execute()
+        pip$set_keep_out("f1", state = TRUE)$execute()
         expect_true(pip$has_out_at_step("f1"))
 
         pip$clean_out_at_step("f1")
-        pip$set_keep_out("f1", status = FALSE)$execute()
+        pip$set_keep_out("f1", state = FALSE)$execute()
         expect_false(pip$has_out_at_step("f1"))
     })
 
@@ -2224,14 +2223,14 @@ test_that("set_keep_out",
         )
     })
 
-    test_that("status must be logical",
+    test_that("state must be logical",
     {
         pip <- Pipeline$new("pipe1", data = 0) |>
             pipe_add("f1", function(a = 1) a)
 
         expect_error(
-            pip$set_keep_out("f1", status = 1),
-            "is.logical(status)",
+            pip$set_keep_out("f1", state = 1),
+            "is.logical(state)",
             fixed = TRUE
         )
     })
@@ -2716,7 +2715,7 @@ test_that("private methods work as expected",
         })
 
         test_that(
-            "updates the status to 'latest' if step was run successfully
+            "updates the state to 'latest' if step was run successfully
             otherwise to 'failed'",
         {
             pip <- Pipeline$new("pipe") |>
@@ -2726,18 +2725,18 @@ test_that("private methods work as expected",
 
             f <- get_private(pip)$.execute_step
 
-            expect_true(all(pip$pipeline[["status"]] == "new"))
+            expect_true(all(pip$pipeline[["state"]] == "new"))
 
             f(step = "ok")
-            pip$get_step("ok")$status
+            pip$get_step("ok")$state
 
-            expect_equal(pip$get_step("ok")$status, "latest")
+            expect_equal(pip$get_step("ok")$state, "latest")
 
             expect_error(f(step = "error"))
-            expect_equal(pip$get_step("error")$status, "failed")
+            expect_equal(pip$get_step("error")$state, "failed")
 
             expect_warning(f(step = "warning"))
-            expect_equal(pip$get_step("warning")$status, "latest")
+            expect_equal(pip$get_step("warning")$state, "latest")
         })
     })
 

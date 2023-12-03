@@ -79,7 +79,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 group = character(0),
                 description = character(0),
                 time = structure(numeric(0), class = c("POSIXct", "POSIXt")),
-                status = character(0)
+                state = character(0)
             )
 
             self$add(".data", function() data, keepOut = FALSE)
@@ -151,7 +151,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         group = group,
                         description = description,
                         time = Sys.time(),
-                        status = "new"
+                        state = "new"
                     )
                 )
 
@@ -690,7 +690,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         keep_all_out = function()
         {
             steps <- self$get_step_names()
-            sapply(steps, FUN = self$set_keep_out, status = TRUE)
+            sapply(steps, FUN = self$set_keep_out, state = TRUE)
 
             invisible(self)
         },
@@ -860,7 +860,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 group = group,
                 description = description,
                 time = Sys.time(),
-                status = "new"
+                state = "new"
             )
 
             self$pipeline[step_number, ] <- new_step
@@ -946,7 +946,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             combined$remove_step(".data")
 
             # If subset was used for split, append the remaining steps and
-            # update all of the (now changed) upper dependencies.
+            # update all of the (now changed) upstream dependencies.
             if (to < self$length()) {
                 remaining_pipe <- self$pipeline[(to + 1):self$length(), ]
                 remaining_deps <- remaining_pipe[["deps"]]
@@ -974,18 +974,18 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Set pipeline to keep or omit output of given step.
         #' @param step `string` name of step
-        #' @param status `logical` whether to keep output of step
+        #' @param state `logical` whether to keep output of step
         #' @return the `Pipeline` object invisibly
-        set_keep_out = function(step, status = TRUE)
+        set_keep_out = function(step, state = TRUE)
         {
             stopifnot(
                 is_string(step),
-                is.logical(status)
+                is.logical(state)
             )
             private$.verify_step_exists(step)
 
             index <- self$get_step_number(step)
-            self$pipeline[index, "keepOut"] <- status
+            self$pipeline[index, "keepOut"] <- state
 
             invisible(self)
         },
@@ -1129,7 +1129,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             iStep <- self$get_step_number(step)
             done <- FALSE
             on.exit(
-                if (!done) self$pipeline[iStep, "status"] <- "failed",
+                if (!done) self$pipeline[iStep, "state"] <- "failed",
                 add = TRUE
             )
 
@@ -1180,7 +1180,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
 
             self$pipeline[["out"]][iStep] <- list(res)
-            self$pipeline[iStep, "status"] <- "latest"
+            self$pipeline[iStep, "state"] <- "latest"
             done <- TRUE
 
             invisible(res)

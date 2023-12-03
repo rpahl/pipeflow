@@ -828,7 +828,7 @@ one of the data sets.
 \subsection{Method \code{set_keep_out()}}{
 Set pipeline to keep or omit output of given step.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_keep_out(step, status = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_keep_out(step, state = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -836,7 +836,7 @@ Set pipeline to keep or omit output of given step.
 \describe{
 \item{\code{step}}{\code{string} name of step}
 
-\item{\code{status}}{\code{logical} whether to keep output of step}
+\item{\code{state}}{\code{logical} whether to keep output of step}
 }
 \if{html}{\out{</div>}}
 }
