@@ -1141,6 +1141,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         .execute_step = function(step)
         {
             private$.verify_step_exists(step)
+            isLocked <- self$get_step(step)[["state"]] == "locked"
+
+            if (isLocked && self$has_out_at_step(step)) {
+                return(invisible(self$get_out_at_step(step)))
+            }
+
             pip <- self$pipeline
             thisWasExecutedSuccessfully <- FALSE
             on.exit(

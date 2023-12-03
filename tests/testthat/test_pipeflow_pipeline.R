@@ -2860,6 +2860,67 @@ test_that("private methods work as expected",
             expect_warning(f(step = "warning"))
             expect_equal(pip$get_step("warning")$state, "latest")
         })
+
+        test_that("will not re-compute output of locked steps",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = 1) a) |>
+                pipe_add("B", function(b = ~A) b, keepOut = TRUE)
+
+            f <- get_private(pip)$.execute_step
+
+            expect_equal(f(step = "A"), 1)
+            expect_equal(f(step = "B"), 1)
+
+            pip$set_parameters_at_step("A", list(a = 2))
+            expect_equal(pip$get_step("B")$state, "outdated")
+            pip$lock_step("B")
+
+            expect_equal(f(step = "A"), 2)
+            expect_equal(f(step = "B"), 1)
+        })
+
+        test_that("will re-compute if locked step does not keep output",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = 1) a) |>
+                pipe_add("B", function(b = ~A) b, keepOut = FALSE)
+
+            f <- get_private(pip)$.execute_step
+
+            expect_equal(f(step = "A"), 1)
+            expect_equal(f(step = "B"), 1)
+
+            pip$set_parameters_at_step("A", list(a = 2))
+            pip$lock_step("B")
+            get_private(pip)$.clean_out_not_kept()
+            expect_false(pip$has_out_at_step("B"))
+
+            expect_equal(f(step = "A"), 2)
+            expect_equal(f(step = "B"), 2)
+        })
+
+        test_that("will re-compute if locked step is unlocked",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = 1) a) |>
+                pipe_add("B", function(b = ~A) b, keepOut = TRUE)
+
+            f <- get_private(pip)$.execute_step
+
+            expect_equal(f(step = "A"), 1)
+            expect_equal(f(step = "B"), 1)
+
+            pip$set_parameters_at_step("A", list(a = 2))
+            expect_equal(pip$get_step("B")$state, "outdated")
+            pip$lock_step("B")
+
+            expect_equal(f(step = "A"), 2)
+            expect_equal(f(step = "B"), 1)
+
+            pip$unlock_step("B")
+            expect_equal(f(step = "B"), 2)
+        })
     })
 
 
