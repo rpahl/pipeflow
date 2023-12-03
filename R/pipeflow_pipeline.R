@@ -854,6 +854,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
 
             self$pipeline[step_number, ] <- new_step
+            private$.update_states_downstream(step, state = "outdated")
 
             invisible(self)
         },
@@ -1117,9 +1118,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             private$.verify_step_exists(step)
             pip <- self$pipeline
             iStep <- self$get_step_number(step)
-            done <- FALSE
+            thisWasExecutedSuccessfully <- FALSE
             on.exit(
-                if (!done) self$pipeline[iStep, "state"] <- "failed",
+                if (!thisWasExecutedSuccessfully) {
+                    self$pipeline[iStep, "state"] <- "failed"
+                },
                 add = TRUE
             )
 
@@ -1149,7 +1152,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             context <- gettextf("pipeline at step %i ('%s')", iStep, step)
 
             on.exit(
-                self$pipeline[["time"]][[iStep]] <- Sys.time(),
+                self$pipeline[iStep, "time"] <- Sys.time(),
                 add = TRUE
             )
 
@@ -1169,9 +1172,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 }
             )
 
-            self$pipeline[["out"]][iStep] <- list(res)
-            self$pipeline[iStep, "state"] <- "latest"
-            done <- TRUE
+            if (self$has_step(step)) {
+                iStep <- self$get_step_number(step)
+                self$pipeline[["out"]][iStep] <- list(res)
+                self$pipeline[iStep, "state"] <- "latest"
+                private$.update_states_downstream(step, "outdated")
+            }
+            thisWasExecutedSuccessfully <- TRUE
 
             invisible(res)
         },

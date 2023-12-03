@@ -731,21 +731,6 @@ test_that("execute",
         expect_equal(out[["f1"]], NULL)
     })
 
-    test_that(
-        "updates the timestamp of the executed steps",
-    {
-        pip <- Pipeline$new("pipe", data = 1) |>
-            pipe_add("f1", function(x = ~.data) x, keepOut = TRUE)
-
-        before <- pip$pipeline[["time"]]
-        Sys.sleep(1)
-
-        pip$execute_step("f1", upstream = FALSE)
-        after <- pip$pipeline[["time"]]
-
-        expect_equal(before[1], after[1])
-        expect_true(before[2] < after[2])
-    })
 })
 
 
@@ -861,6 +846,36 @@ test_that("execute_step",
         expect_true(logOut[2] |> contains("Step 1/3 A (upstream)"))
         expect_true(logOut[3] |> contains("Step 2/3 B"))
         expect_true(logOut[4] |> contains("Step 3/3 C (downstream)"))
+    })
+
+    test_that(
+        "updates the timestamp of the executed steps",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = ~.data) x, keepOut = TRUE)
+
+        before <- pip$pipeline[["time"]]
+        Sys.sleep(1)
+
+        pip$execute_step("f1", upstream = FALSE)
+        after <- pip$pipeline[["time"]]
+
+        expect_equal(before[1], after[1])
+        expect_true(before[2] < after[2])
+    })
+
+    test_that(
+        "updates the state of the executed steps",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = ~.data) x, keepOut = TRUE)
+
+        before <- pip$pipeline[["state"]]
+        pip$execute_step("f1", upstream = FALSE)
+        after <- pip$pipeline[["state"]]
+
+        expect_equal(before, c("new", "new"))
+        expect_equal(after, c("new", "latest"))
     })
 })
 
@@ -1909,6 +1924,24 @@ test_that("replace_step",
             pip$replace_step("f2", function(z = ~f3) z),
             "dependency 'f3' not found up to step 'f1'"
         )
+    })
+
+    test_that(
+        "states are updated correctly",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = 2) a) |>
+            pipe_add("f3", function(a = ~f2) a, keepOut = TRUE) |>
+            pipe_add("f4", function(a = ~f3) a, keepOut = TRUE)
+
+        pip$execute()
+
+        pip$replace_step("f2", function(a = 2) 2* a)
+        expect_equal(pip$get_step("f1")$state, "latest")
+        expect_equal(pip$get_step("f2")$state, "new")
+        expect_equal(pip$get_step("f3")$state, "outdated")
+        expect_equal(pip$get_step("f4")$state, "outdated")
     })
 })
 
