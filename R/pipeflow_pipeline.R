@@ -56,11 +56,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 private$.lg <- lgr::get_logger(name = .this_package_name())$log
             }
             if (is.function(logger)) {
-                expected_formals <- c("level", "msg", "...")
-                if (!setequal(names(formals(logger)), expected_formals)) {
+                expectedFormals <- c("level", "msg", "...")
+                if (!setequal(names(formals(logger)), expectedFormals)) {
                     stop(
                         "logger function must have the following signature: ",
-                        "function(", paste(expected_formals, collapse = ", "),
+                        "function(", paste(expectedFormals, collapse = ", "),
                         ")"
                     )
                 }
@@ -178,7 +178,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
 
             # Adapt step names and their dependencies to avoid name clashes
-            p2$append_to_step_names(p2$name, sep = sep)
+            p2$append_toStep_names(p2$name, sep = sep)
 
             # Build combined pipeline
             combinedName <- paste0(p1$name, sep, p2$name)
@@ -215,7 +215,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param postfix `string` to be appended to each step name.
         #' @param sep `string` separator between step name and postfix.
         #' @return returns the `Pipeline` object invisibly
-        append_to_step_names = function(postfix, sep = ".") {
+        append_toStep_names = function(postfix, sep = ".") {
 
             stopifnot(is_string(postfix))
 
@@ -396,26 +396,26 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is.logical(downstream)
             )
 
-            upstream_steps <- character(0)
+            upstreamSteps <- character(0)
             steps <- step
-            downstream_steps <- character(0)
+            downstreamSteps <- character(0)
 
             if (upstream) {
-                upstream_steps <- private$.get_upstream_deps(
+                upstreamSteps <- private$.get_upstream_deps(
                     step = step,
                     deps = self$get_deps(),
                     recursive = TRUE
                 )
-                steps <- c(upstream_steps, step)
+                steps <- c(upstreamSteps, step)
             }
 
             if (downstream) {
-                downstream_steps <- private$.get_downstream_deps(
+                downstreamSteps <- private$.get_downstream_deps(
                     step = step,
                     deps = self$get_deps(),
                     recursive = TRUE
                 )
-                steps <- c(steps, downstream_steps)
+                steps <- c(steps, downstreamSteps)
             }
 
             nStep <- length(steps)
@@ -431,10 +431,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             for (i in seq_along(steps)) {
                 step <- steps[i]
                 stream <- ""
-                if (step %in% upstream_steps) {
+                if (step %in% upstreamSteps) {
                     stream <- " (upstream)"
                 }
-                if (step %in% downstream_steps) {
+                if (step %in% downstreamSteps) {
                     stream <- " (downstream)"
                 }
                 gettextf("Step %i/%i %s%s",  i, nStep, step, stream) |>
@@ -587,9 +587,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 return(params)
             }
 
-            param_names <- sapply(params, FUN = names) |> unlist()
-            param_values <- unlist1(params) |> stats::setNames(param_names)
-            param_values[!duplicated(names(param_values))]
+            paramNames <- sapply(params, FUN = names) |> unlist()
+            paramValues <- unlist1(params) |> stats::setNames(paramNames)
+            paramValues[!duplicated(names(paramValues))]
         },
 
         #' @description Get all unique function parameters in json format.
@@ -696,10 +696,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return `string` the name of the step that was removed
         pop_step = function() {
             len <- self$length()
-            last_step_name <- self$get_step_names()[len]
+            lastStepName <- self$get_step_names()[len]
 
             self$pipeline <- self$pipeline[-len, ]
-            last_step_name
+            lastStepName
         },
 
         #' @description Remove all steps after the given step.
@@ -707,19 +707,19 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return `character` vector of steps that were removed.
         pop_steps_after = function(step) {
 
-            step_number <- self$get_step_number(step)
+            stepNumber <- self$get_step_number(step)
 
-            if (step_number == self$length()) {
+            if (stepNumber == self$length()) {
                 return(character(0))    # nothing to remove
             }
 
-            next_step <- step_number + 1
-            numbers2remove <- seq(from = next_step, to = self$length())
-            removed_steps <- self$pipeline[["step"]][numbers2remove]
+            nextStep <- stepNumber + 1
+            numbers2remove <- seq(from = nextStep, to = self$length())
+            removedSteps <- self$pipeline[["step"]][numbers2remove]
 
             self$pipeline <- self$pipeline[-numbers2remove, ]
 
-            removed_steps
+            removedSteps
         },
 
         #' @description Remove all steps from and including the given step.
@@ -727,14 +727,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return `character` vector of steps that were removed.
         pop_steps_from = function(step) {
 
-            step_number <- self$get_step_number(step)
+            stepNumber <- self$get_step_number(step)
 
-            numbers2remove <- seq(from = step_number, to = self$length())
-            removed_step_names <- self$pipeline[["step"]][numbers2remove]
+            numbers2remove <- seq(from = stepNumber, to = self$length())
+            removedStepNames <- self$pipeline[["step"]][numbers2remove]
 
             self$pipeline <- self$pipeline[-numbers2remove, ]
 
-            removed_step_names
+            removedStepNames
         },
 
 
@@ -772,8 +772,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 sapply(rev(deps), FUN = self$remove_step)
             }
 
-            step_number <- self$get_step_number(step)
-            self$pipeline = self$pipeline[-step_number, ]
+            stepNumber <- self$get_step_number(step)
+            self$pipeline = self$pipeline[-stepNumber, ]
             invisible(self)
         },
 
@@ -823,23 +823,23 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             params <- private$.prepare_and_verify_params(fun, funcName, params)
 
             # Derive and verify dependencies
-            all_steps <- self$get_step_names()
-            step_number <- self$get_step_number(step)
-            to_step = all_steps[step_number - 1]
+            allSteps <- self$get_step_names()
+            stepNumber <- self$get_step_number(step)
+            toStep = allSteps[stepNumber - 1]
 
             deps <- private$.derive_dependencies(
                 params = params,
                 step = step,
-                to_step = to_step
+                toStep = toStep
             )
             sapply(
                 deps,
                 FUN = private$.verify_dependency,
                 step = step,
-                to_step = to_step
+                toStep = toStep
             )
 
-            new_step <- list(
+            newStep <- list(
                 step = step,
                 fun = list(fun),
                 funcName = funcName,
@@ -853,7 +853,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 state = "new"
             )
 
-            self$pipeline[step_number, ] <- new_step
+            self$pipeline[stepNumber, ] <- newStep
             private$.update_states_downstream(step, state = "outdated")
 
             invisible(self)
@@ -877,7 +877,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' The step names of the sub-pipelines will be the original step names
         #' plus the name of the data set.
         #' @param dataList `list` of data sets
-        #' @param to_step `string` step name marking optional subset of
+        #' @param toStep `string` step name marking optional subset of
         #' the pipeline, at which the data split should be applied to.
         #' @param groupBySplit `logical` whether to set step groups according
         #' to data split.
@@ -887,19 +887,19 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' one of the data sets.
         set_data_split = function(
             dataList,
-            to_step = utils::tail(self$get_step_names(), 1),
+            toStep = utils::tail(self$get_step_names(), 1),
             groupBySplit = TRUE,
             sep = "."
         ) {
             stopifnot(
                 is.list(dataList),
-                is_string(to_step),
+                is_string(toStep),
                 is.logical(groupBySplit),
                 is_string(sep)
             )
-            private$.verify_step_exists(to_step)
-            to <- self$get_step_number(to_step)
-            upper_steps <- self$get_step_names()[seq_len(to)]
+            private$.verify_step_exists(toStep)
+            to <- self$get_step_number(toStep)
+            upperSteps <- self$get_step_names()[seq_len(to)]
 
             dataNames <- names(dataList)
             if (is.null(dataNames)) {
@@ -917,16 +917,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 pipes[[i]]$name <- name
                 pipes[[i]]$pipeline <- pipes[[i]]$pipeline[seq_len(to), ]
 
-                new_groups <- name
+                newGroups <- name
                 if (!groupBySplit) {
-                    old_groups <- pipes[[i]]$pipeline[["group"]]
-                    new_groups <- paste0(old_groups, sep, name)
+                    oldGroups <- pipes[[i]]$pipeline[["group"]]
+                    newGroups <- paste0(oldGroups, sep, name)
                 }
-                pipes[[i]]$pipeline[["group"]] <- new_groups
+                pipes[[i]]$pipeline[["group"]] <- newGroups
             }
 
             # Combine pipelines
-            pipe_names <- sapply(pipes, function(x) x$name)
+            pipeNames <- sapply(pipes, function(x) x$name)
             combinedName <- paste(self$name, "split")
             pip <- Pipeline$new(combinedName)
             combined <- Reduce(
@@ -938,14 +938,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             # If subset was used for split, append the remaining steps and
             # update all of the (now changed) upstream dependencies.
             if (to < self$length()) {
-                remaining_pipe <- self$pipeline[(to + 1):self$length(), ]
-                remaining_deps <- remaining_pipe[["deps"]]
+                remainingPipe <- self$pipeline[(to + 1):self$length(), ]
+                remainingDeps <- remainingPipe[["deps"]]
                 update_if_needed <- function(x) {
-                    needs_update <- x %in% upper_steps
-                    if (needs_update) paste0(x, sep, pipe_names) else x
+                    needsUpdate <- x %in% upperSteps
+                    if (needsUpdate) paste0(x, sep, pipeNames) else x
                 }
-                updated_deps <- lapply(
-                    remaining_deps,
+                updatedDeps <- lapply(
+                    remainingDeps,
                     function(deps) {
                         res = lapply(deps, update_if_needed)
                         if (all(sapply(res, function(x) length(x) == 1))) {
@@ -954,8 +954,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         res
                     }
                 )
-                remaining_pipe[["deps"]] <- updated_deps
-                combined$pipeline <- rbind(combined$pipeline, remaining_pipe)
+                remainingPipe[["deps"]] <- updatedDeps
+                combined$pipeline <- rbind(combined$pipeline, remainingPipe)
             }
 
             self$pipeline <- combined$pipeline
@@ -988,8 +988,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return returns the `Pipeline` object invisibly
         set_parameters = function(params, warnUndefined = TRUE)
         {
-            defined_params <- self$get_params_unique(ignoreHidden = FALSE)
-            extra <- setdiff(names(params), names(defined_params))
+            definedParams <- self$get_params_unique(ignoreHidden = FALSE)
+            extra <- setdiff(names(params), names(definedParams))
 
             if (warnUndefined && length(extra) > 0) {
                 warning(
@@ -999,15 +999,15 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             for (step in self$get_step_names()) {
-                params_ith_step = self$get_params_at_step(
+                paramsAtStep = self$get_params_at_step(
                     step,
                     ignoreHidden = FALSE
                 )
-                overlap <- intersect(names(params), names(params_ith_step))
+                overlap <- intersect(names(params), names(paramsAtStep))
 
                 if (length(overlap) > 0) {
-                    params_ith_step[overlap] = params[overlap]
-                    self$set_parameters_at_step(step, params_ith_step)
+                    paramsAtStep[overlap] = params[overlap]
+                    self$set_parameters_at_step(step, paramsAtStep)
                 }
             }
             invisible(self)
@@ -1075,39 +1075,39 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         .derive_dependencies = function(
             params,
             step,
-            to_step = private$.get_last_step()
+            toStep = private$.get_last_step()
         ) {
-            if (length(to_step) == 0) {
+            if (length(toStep) == 0) {
                 return(character())
             }
 
             stopifnot(
                 is_string(step),
-                is_string(to_step)
+                is_string(toStep)
             )
 
-            private$.verify_step_exists(to_step)
+            private$.verify_step_exists(toStep)
 
             deps <- private$.extract_deps_from_param_list(params)
 
             # Handle any relative dependencies
-            all_steps <- self$get_step_names()
-            to_index <- self$get_step_number(to_step)
-            considered_steps = all_steps[seq_len(to_index)]
-            relative_deps <- deps |>
+            allSteps <- self$get_step_names()
+            toIndex <- self$get_step_number(toStep)
+            consideredSteps <- allSteps[seq_len(toIndex)]
+            relativeDeps <- deps |>
                 Filter(f = function(x) startsWith(x, "-")) |>
                 sapply(as.numeric)
 
-            step_indices <- mapply(
-                relative_dep = relative_deps,
-                dependency_name = names(relative_deps),
+            stepIndices <- mapply(
+                relative_dep = relativeDeps,
+                dependencyName = names(relativeDeps),
                 FUN = private$.relative_dependency_to_index,
                 MoreArgs = list(
-                    start_index = to_index + 1,
+                    startIndex = toIndex + 1,
                     step = step
                 )
             ) |> as.integer()
-            deps[names(relative_deps)] <- considered_steps[step_indices]
+            deps[names(relativeDeps)] <- consideredSteps[stepIndices]
 
             deps
         },
@@ -1135,8 +1135,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             hasDeps <- length(deps) > 0
             if (hasDeps) {
                 out <- pip[["out"]] |> stats::setNames(pip[["step"]])
-                dependent_out <- private$.extract_dependent_out(deps, out)
-                args[names(dependent_out)] <- dependent_out
+                depdendentOut <- private$.extract_dependent_out(deps, out)
+                args[names(depdendentOut)] <- depdendentOut
             }
 
             # If arg is encapsulated in a Param object, get the value
@@ -1318,31 +1318,30 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         .relative_dependency_to_index = function(
             relative_dep,
-            dependency_name,
-            start_index,
+            dependencyName,
+            startIndex,
             step   # required for error message
         ) {
             stopifnot(
                 is_number(relative_dep),
                 relative_dep < 0,
-                is_string(dependency_name),
-                is_number(start_index),
-                start_index > 0,
+                is_string(dependencyName),
+                is_number(startIndex),
+                startIndex > 0,
                 is_string(step)
             )
-            dep_name <- names(relative_dep)
 
-            abs_index <- relative_dep + start_index
+            absIndex <- relative_dep + startIndex
 
-            if (abs_index < 1) {
+            if (absIndex < 1) {
                 stop(
                     "step '", step, "': relative dependency ",
-                    paste0(dependency_name, "=", relative_dep),
+                    paste0(dependencyName, "=", relative_dep),
                     " points to outside the pipeline"
                 )
             }
 
-            abs_index
+            absIndex
         },
 
 
@@ -1362,28 +1361,28 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         .verify_dependency = function(
             dep,
             step,   # required for error message
-            to_step = private$.get_last_step()
+            toStep = private$.get_last_step()
         ) {
             stopifnot(
                 is_string(dep),
                 is_string(step),
-                is_string(to_step)
+                is_string(toStep)
             )
 
-            private$.verify_step_exists(to_step)
+            private$.verify_step_exists(toStep)
 
-            all_steps <- self$get_step_names()
-            to_index <- match(to_step, all_steps)
-            considered_steps <- all_steps[seq_len(to_index)]
+            allSteps <- self$get_step_names()
+            toIndex <- match(toStep, allSteps)
+            consideredSteps <- allSteps[seq_len(toIndex)]
 
-            if (!(dep %in% considered_steps)) {
+            if (!(dep %in% consideredSteps)) {
                 msg = paste0(
                     "step '", step, "': dependency '", dep, "' not found"
                 )
 
-                if (to_step != private$.get_last_step()) {
+                if (toStep != private$.get_last_step()) {
                     msg = paste0(
-                        msg, " up to step '", considered_steps[to_index], "'"
+                        msg, " up to step '", consideredSteps[toIndex], "'"
                     )
                 }
                 stop(msg, call. = FALSE)
@@ -1412,10 +1411,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             if (hasDots) {
                 fargs <- fargs[!names(fargs) %in% "..."]
             } else {
-                unknown_params <- setdiff(names(params), names(fargs))
-                if (length(unknown_params) > 0) {
+                unknownParams <- setdiff(names(params), names(fargs))
+                if (length(unknownParams) > 0) {
                     stop(
-                        paste0("'", unknown_params, "'", collapse = ", "),
+                        paste0("'", unknownParams, "'", collapse = ", "),
                         " are no function parameters of '", funcName, "'",
                         call. = FALSE
                     )

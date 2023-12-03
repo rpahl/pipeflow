@@ -33,7 +33,7 @@ Roman Pahl
 \item \href{#method-Pipeline-new}{\code{Pipeline$new()}}
 \item \href{#method-Pipeline-add}{\code{Pipeline$add()}}
 \item \href{#method-Pipeline-append}{\code{Pipeline$append()}}
-\item \href{#method-Pipeline-append_to_step_names}{\code{Pipeline$append_to_step_names()}}
+\item \href{#method-Pipeline-append_toStep_names}{\code{Pipeline$append_toStep_names()}}
 \item \href{#method-Pipeline-collect_out}{\code{Pipeline$collect_out()}}
 \item \href{#method-Pipeline-discard_steps}{\code{Pipeline$discard_steps()}}
 \item \href{#method-Pipeline-execute}{\code{Pipeline$execute()}}
@@ -42,11 +42,11 @@ Roman Pahl
 \item \href{#method-Pipeline-get_deps}{\code{Pipeline$get_deps()}}
 \item \href{#method-Pipeline-get_deps_down}{\code{Pipeline$get_deps_down()}}
 \item \href{#method-Pipeline-get_deps_up}{\code{Pipeline$get_deps_up()}}
-\item \href{#method-Pipeline-get_paramsp}{\code{Pipelineget_paramsep()}}
-\item \href{#method-Pipeline-get_params}{\code{Pipeline$get_paraget_params
-\item \href{#method-Pipeline-get_params_at_step}{\code{Pipelineget_paramss_at_step()}}
-\item \href{#method-Pipeline-get_params_unique}{\code{Pipeline$get_pget_paramsue()}}
-\item \href{#method-Pipeline-get_parameters_unique_json}{\code{Pipeline$get_parameters_unique_json()}}
+\item \href{#method-Pipeline-get_out_at_step}{\code{Pipeline$get_out_at_step()}}
+\item \href{#method-Pipeline-get_params}{\code{Pipeline$get_params()}}
+\item \href{#method-Pipeline-get_params_at_step}{\code{Pipeline$get_params_at_step()}}
+\item \href{#method-Pipeline-get_params_unique}{\code{Pipeline$get_params_unique()}}
+\item \href{#method-Pipeline-get_params_unique_json}{\code{Pipeline$get_params_unique_json()}}
 \item \href{#method-Pipeline-get_step}{\code{Pipeline$get_step()}}
 \item \href{#method-Pipeline-get_step_names}{\code{Pipeline$get_step_names()}}
 \item \href{#method-Pipeline-get_step_number}{\code{Pipeline$get_step_number()}}
@@ -175,13 +175,13 @@ returns new combined \code{Pipeline}.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-append_to_step_names"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-append_to_step_names}{}}}
-\subsection{Method \code{append_to_step_names()}}{
+\if{html}{\out{<a id="method-Pipeline-append_toStep_names"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-append_toStep_names}{}}}
+\subsection{Method \code{append_toStep_names()}}{
 Append string to all step names. Also takes care
 of updating dependencies accordingly.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$append_to_step_names(postfix, sep = ".")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$append_toStep_names(postfix, sep = ".")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -369,12 +369,12 @@ are also returned.}
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-\code{list} of upstream dependenciesget_params
-}get_params
-}get_params
+\code{list} of upstream dependencies
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_out_at_step"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_out_atget_params
+\if{latex}{\out{\hypertarget{method-Pipeline-get_out_at_step}{}}}
 \subsection{Method \code{get_out_at_step()}}{
 Get output of given step.
 \subsection{Usage}{
@@ -391,14 +391,14 @@ Get output of given step.
 \subsection{Returns}{
 returns the \code{Pipeline} object invisibly
 }
-}get_params
-\if{html}{\out{<hr>}}get_params
-\if{html}{\out{<a id="metget_paramset_parameters"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_parameters}{}}}
-\subsection{Method \code{get_parameters()}}{
-Get all function parameters defined in the pipeline.get_params
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-get_params"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_params}{}}}
+\subsection{Method \code{get_params()}}{
+Get all function parameters defined in the pipeline.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_parameters(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_params(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -414,17 +414,17 @@ names starting with a dot) are ignored and thus not returned.}
 no parameters are filtered out.
 }
 }
-\if{html}{\out{<hr>}}get_params
-\if{html}{\out{<a id="method-Pipeline-get_parget_paramsp"></a>}}
-\if{latex}{\out{\hypertarget_paramseline-get_parameters_at_step}{}}}
-\subsection{Method \code{get_parameters_at_step()}}{
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-get_params_at_step"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_params_at_step}{}}}
+\subsection{Method \code{get_params_at_step()}}{
 Get all function parameters at given step name.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_parameters_at_step(step, ignoreHidden = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_params_at_step(step, ignoreHidden = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}get_params
+\if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{step}}{\code{string} name of step}
 
@@ -438,17 +438,17 @@ names starting with a dot) are ignored and thus not returned.}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_parameters_unique"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_parameters_unique}{}}}
-\subsection{Method \code{get_parameterget_params
-Get all function parameters defined in the piget_params
-but only list each parameget_paramsvalues of the parameters,
+\if{html}{\out{<a id="method-Pipeline-get_params_unique"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_params_unique}{}}}
+\subsection{Method \code{get_params_unique()}}{
+Get all function parameters defined in the pipeline,
+but only list each parameter once. The values of the parameters,
 will be the values of the first step where the parameter was defined.
 This is particularly useful after the parameters where set using
-the \code{set_parameters} function, which will set the get_params
+the \code{set_parameters} function, which will set the same value
 for all steps.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_parameters_unique(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_params_unique(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -464,12 +464,12 @@ names starting with a dot) are ignored and thus not returned.}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_parameters_unique_json"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_parameters_unique_json}{}}}
-\subsection{Method \code{get_parameters_unique_json()}}{
+\if{html}{\out{<a id="method-Pipeline-get_params_unique_json"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_params_unique_json}{}}}
+\subsection{Method \code{get_params_unique_json()}}{
 Get all unique function parameters in json format.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_parameters_unique_json(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_params_unique_json(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -774,7 +774,7 @@ plus the name of the data set.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_data_split(
   dataList,
-  to_step = utils::tail(self$get_step_names(), 1),
+  toStep = utils::tail(self$get_step_names(), 1),
   groupBySplit = TRUE,
   sep = "."
 )}\if{html}{\out{</div>}}
@@ -785,7 +785,7 @@ plus the name of the data set.
 \describe{
 \item{\code{dataList}}{\code{list} of data sets}
 
-\item{\code{to_step}}{\code{string} step name marking optional subset of
+\item{\code{toStep}}{\code{string} step name marking optional subset of
 the pipeline, at which the data split should be applied to.}
 
 \item{\code{groupBySplit}}{\code{logical} whether to set step groups according

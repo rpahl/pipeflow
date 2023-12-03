@@ -427,9 +427,9 @@ test_that("append",
 
 
 
-test_that("append_to_step_names",
+test_that("append_toStep_names",
 {
-    expect_true(is.function(Pipeline$new("pipe")$append_to_step_names))
+    expect_true(is.function(Pipeline$new("pipe")$append_toStep_names))
 
     test_that("postfix can be appended to step names",
     {
@@ -437,7 +437,7 @@ test_that("append_to_step_names",
 
         pip$add("f1", function(a = ~.data) a + 1)
         pip$add("f2", function(a = ~.data, b = ~f1) a + b)
-        pip$append_to_step_names("foo")
+        pip$append_toStep_names("foo")
 
         expected_names <- c(".data.foo", "f1.foo", "f2.foo")
         expect_equal(pip$get_step_names(), expected_names)
@@ -969,7 +969,7 @@ test_that("get_deps_down",
             pipe_add("f2", function(a = ~f1, b = 2) b) |>
             pipe_add("f3", function(x = ~f1, y = ~f2) x + y)
 
-        pip$set_data_split(dataList, to_step = "f2")
+        pip$set_data_split(dataList, toStep = "f2")
 
         expect_equal(
             pip$get_deps_down("f1.1"),
@@ -1034,7 +1034,7 @@ test_that("get_deps_up",
             pipe_add("f2", function(a = ~f1, b = 2) b) |>
             pipe_add("f3", function(x = ~f1, y = ~f2) x + y)
 
-        pip$set_data_split(dataList, to_step = "f2")
+        pip$set_data_split(dataList, toStep = "f2")
 
         expect_equal(pip$get_deps_up("f2.1"), c("f1.1"))
         expect_equal(pip$get_deps_up("f2.2"), c("f1.2"))
@@ -2145,7 +2145,7 @@ test_that("set_data_split",
             ) |>
             pipe_add("f4", function(x = ~f3) x[[1]], keepOut = TRUE)
 
-        pip$set_data_split(dataList, to_step = "f2")
+        pip$set_data_split(dataList, toStep = "f2")
 
         ee = expect_equivalent
         pp = pip$pipeline
@@ -2607,8 +2607,8 @@ test_that("private methods work as expected",
                 fixed = TRUE
             )
             expect_error(
-                f(params = list(), step = "step", to_step = 2),
-                "is_string(to_step) is not TRUE",
+                f(params = list(), step = "step", toStep = 2),
+                "is_string(toStep) is not TRUE",
                 fixed = TRUE
             )
         })
@@ -3182,18 +3182,18 @@ test_that("private methods work as expected",
                 fixed = TRUE
             )
             expect_error(
-                f(-1, dependency_name = NULL),
-                "is_string(dependency_name) is not TRUE",
+                f(-1, dependencyName = NULL),
+                "is_string(dependencyName) is not TRUE",
                 fixed = TRUE
             )
             expect_error(
-                f(-1, "dep-name", start_index = "2"),
-                "is_number(start_index) is not TRUE",
+                f(-1, "dep-name", startIndex = "2"),
+                "is_number(startIndex) is not TRUE",
                 fixed = TRUE
             )
             expect_error(
-                f(-1, "dep-name", start_index = -2),
-                "start_index > 0 is not TRUE",
+                f(-1, "dep-name", startIndex = -2),
+                "startIndex > 0 is not TRUE",
                 fixed = TRUE
             )
             expect_error(
@@ -3211,8 +3211,8 @@ test_that("private methods work as expected",
             expect_error(
                 f(
                     relative_dep = -10,
-                    dependency_name = "dep-name",
-                    start_index = 1,
+                    dependencyName = "dep-name",
+                    startIndex = 1,
                     step = "step-name"
                 ),
                 paste(
@@ -3222,8 +3222,8 @@ test_that("private methods work as expected",
                 fixed = TRUE
             )
 
-            expect_error(f(-1, "dep-name", start_index = 1, "step-name"))
-            expect_error(f(-2, "dep-name", start_index = 2, "step-name"))
+            expect_error(f(-1, "dep-name", startIndex = 1, "step-name"))
+            expect_error(f(-2, "dep-name", startIndex = 2, "step-name"))
         })
 
         test_that("returns correct index for relative dependency",
@@ -3231,8 +3231,8 @@ test_that("private methods work as expected",
             expect_equal(
                 f(
                     relative_dep = -1,
-                    dependency_name = "dep-name",
-                    start_index = 3,
+                    dependencyName = "dep-name",
+                    startIndex = 3,
                     step = "step-name"
                 ),
                 2
@@ -3240,8 +3240,8 @@ test_that("private methods work as expected",
             expect_equal(
                 f(
                     relative_dep = -2,
-                    dependency_name = "dep-name",
-                    start_index = 3,
+                    dependencyName = "dep-name",
+                    startIndex = 3,
                     step = "step-name"
                 ),
                 1
@@ -3328,16 +3328,16 @@ test_that("private methods work as expected",
                 fixed = TRUE
             )
             expect_error(
-                f(dep = "dep", step = "step", to_step = 1),
-                "is_string(to_step) is not TRUE",
+                f(dep = "dep", step = "step", toStep = 1),
+                "is_string(toStep) is not TRUE",
                 fixed = TRUE
             )
         })
 
-        test_that("signals non existing to_step",
+        test_that("signals non existing toStep",
         {
             expect_error(
-                f("dep", "step", to_step = "non-existent"),
+                f("dep", "step", toStep = "non-existent"),
                 "step 'non-existent' does not exist",
                 fixed = TRUE
             )
@@ -3370,7 +3370,7 @@ test_that("private methods work as expected",
             )
 
             expect_error(
-                f(dep = "f2", "new-step", to_step = "f1"),
+                f(dep = "f2", "new-step", toStep = "f1"),
                 "dependency 'f2' not found up to step 'f1'",
                 fixed = TRUE
             )
