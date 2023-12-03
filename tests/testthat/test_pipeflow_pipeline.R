@@ -3288,6 +3288,55 @@ test_that("private methods work as expected",
     })
 
 
+    test_that(".set_at_step",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.set_at_step
+
+        test_that("field must be a string and exist",
+        {
+            pip <- Pipeline$new("pipe")
+
+            expect_error(
+                f(".data", field = 1),
+                "is_string(field) is not TRUE",
+                fixed = TRUE
+            )
+
+            expect_error(
+                f(".data", field = "foo"),
+                "field %in% names(self$pipeline) is not TRUE",
+                fixed = TRUE
+            )
+        })
+
+        test_that("sets the value without change data class of the fields",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("f1", function(a = 1) a)
+
+            f <- get_private(pip)$.set_at_step
+            before <- sapply(pip$pipeline, data.class)
+
+            f("f1", field = "step", value = "f2")
+            f("f2", field = "fun", value = mean)
+            f("f2", field = "funcName", value = "my fun")
+            f("f2", field = "params", value = list(a = 1, b = 2))
+            f("f2", field = "out", value = 1)
+            f("f2", field = "keepOut", value = TRUE)
+            f("f2", field = "group", value = "my group")
+            f("f2", field = "description", value = "my description")
+            f("f2", field = "time", value = Sys.time())
+            f("f2", field = "state", value = "new-state")
+
+            after <- sapply(pip$pipeline, data.class)
+            pip$pipeline
+
+            expect_equal(before, after)
+        })
+    })
+
+
     test_that(".update_states_downstream",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
@@ -3295,7 +3344,7 @@ test_that("private methods work as expected",
 
         test_that("state must be a string",
         {
-            pip <- expect_no_error(Pipeline$new("pipe"))
+            pip <- Pipeline$new("pipe")
             expect_error(
                 f(".data", state = 1),
                 "is_string(state) is not TRUE",
@@ -3305,7 +3354,7 @@ test_that("private methods work as expected",
 
         test_that("states are updated according to dependencies",
         {
-            pip <- expect_no_error(Pipeline$new("pipe"))
+            pip <- Pipeline$new("pipe")
             f <- get_private(pip)$.update_states_downstream
 
             pip$add("f1", function(a = ~.data) a)

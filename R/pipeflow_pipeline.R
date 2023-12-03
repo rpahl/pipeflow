@@ -70,10 +70,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             self$name <- name
             self$pipeline <- data.table::data.table(
                 step = character(0),
-                fun = character(0),
+                fun = list(),
                 funcName = character(0),
                 params = list(),
-                deps = character(0),
+                deps = list(),
                 out = list(),
                 keepOut = logical(),
                 group = character(0),
@@ -1178,9 +1178,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
 
             if (self$has_step(step)) {
-                iStep <- self$get_step_number(step)
-                self$pipeline[["out"]][iStep] <- list(res)
-                self$pipeline[iStep, "state"] <- "latest"
+                private$.set_at_step(step, "out", value = res)
+                private$.set_at_step(step, "state", value = "latest")
                 private$.update_states_downstream(step, "outdated")
             }
             thisWasExecutedSuccessfully <- TRUE
@@ -1350,6 +1349,26 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             absIndex
         },
 
+        .set_at_step = function(
+            step,
+            field,
+            value
+        ) {
+            i <- self$get_step_number(step)
+
+            stopifnot(
+                is_string(field),
+                field %in% names(self$pipeline)
+            )
+
+            class <- data.class(self$pipeline[[field]])
+            if (class == "list") {
+                self$pipeline[[field]][i] <- list(value)
+            } else {
+                stopifnot(data.class(value) == class)
+                self$pipeline[[field]][i] <- value
+            }
+        },
 
         .update_states_downstream = function(step, state)
         {
