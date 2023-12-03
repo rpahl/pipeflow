@@ -451,26 +451,6 @@ test_that("append_to_step_names",
         deps <- pip$get_dependencies()
         expect_equal(pip$get_dependencies(), expected_deps)
     })
-
-
-    test_that("clean_out_at_step",
-    {
-        expect_true(is.function(Pipeline$new("pipe")$clean_out_at_step))
-
-        test_that("output at given step can be cleaned",
-        {
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = 1) a)
-
-            expect_false(pip$has_out_at_step("A"))
-
-            pip$keep_all_out()$execute()
-            expect_true(pip$has_out_at_step("A"))
-
-            pip$clean_out_at_step("A")
-            expect_false(pip$has_out_at_step("A"))
-        })
-    })
 })
 
 
@@ -2199,7 +2179,9 @@ test_that("set_keep_out",
         pip$set_keep_out("f1", keepOut = TRUE)$execute()
         expect_true(pip$has_out_at_step("f1"))
 
-        pip$clean_out_at_step("f1")
+
+        pip <- Pipeline$new("pipe1", data = 0) |>
+            pipe_add("f1", function(a = 1) a, keepOut = TRUE)
         pip$set_keep_out("f1", keepOut = FALSE)$execute()
         expect_false(pip$has_out_at_step("f1"))
     })

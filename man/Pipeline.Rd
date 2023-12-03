@@ -34,7 +34,6 @@ Roman Pahl
 \item \href{#method-Pipeline-add}{\code{Pipeline$add()}}
 \item \href{#method-Pipeline-append}{\code{Pipeline$append()}}
 \item \href{#method-Pipeline-append_to_step_names}{\code{Pipeline$append_to_step_names()}}
-\item \href{#method-Pipeline-clean_out_at_step}{\code{Pipeline$clean_out_at_step()}}
 \item \href{#method-Pipeline-collect_out}{\code{Pipeline$collect_out()}}
 \item \href{#method-Pipeline-discard_steps}{\code{Pipeline$discard_steps()}}
 \item \href{#method-Pipeline-execute}{\code{Pipeline$execute()}}
@@ -191,26 +190,6 @@ of updating dependencies accordingly.
 \item{\code{postfix}}{\code{string} to be appended to each step name.}
 
 \item{\code{sep}}{\code{string} separator between step name and postfix.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-returns the \code{Pipeline} object invisibly
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-clean_out_at_step"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-clean_out_at_step}{}}}
-\subsection{Method \code{clean_out_at_step()}}{
-Clean output of given step.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$clean_out_at_step(step)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{step}}{\code{string} name of step}
 }
 \if{html}{\out{</div>}}
 }

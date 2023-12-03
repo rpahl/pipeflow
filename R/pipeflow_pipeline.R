@@ -237,16 +237,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Clean output of given step.
-        #' @param step `string` name of step
-        #' @return returns the `Pipeline` object invisibly
-        clean_out_at_step = function(step)
-        {
-            index <- self$get_step_number(step)
-            self$pipeline[["out"]][[index]] <- NULL
-
-            invisible(self)
-        },
 
         #' @description Collect all output that was stored and kept during the
         #' pipeline execution.
