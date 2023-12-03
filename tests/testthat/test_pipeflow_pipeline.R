@@ -288,7 +288,7 @@ test_that("add",
         pip <- Pipeline$new("pipe") |>
             pipe_add("f1", function(a) a, params = list(a = x))
 
-        expect_equal(pip$get_parameters_at_step("f1")$a, x)
+        expect_equal(pip$get_params_at_step("f1")$a, x)
 
         out <- pip$keep_all_out()$execute()$collect_out()
         expect_equal(out[["f1"]], x)
@@ -312,7 +312,7 @@ test_that("add",
         pip <- Pipeline$new("pipe") |>
             pipe_add("f1", function(a) a, params = list(a = p))
 
-        expect_equal(pip$get_parameters_at_step("f1")$a, p)
+        expect_equal(pip$get_params_at_step("f1")$a, p)
 
         out <- pip$keep_all_out()$execute()$collect_out()
         expect_equal(out[["f1"]], x)
@@ -397,7 +397,7 @@ test_that("append",
 
         pp <- pip1$append(pip2, outAsIn = TRUE)
 
-        deps <- pp$get_dependencies()
+        deps <- pp$get_deps()
         expect_equal(deps[[".data.pipe2"]], c(data = "f1"))
 
         out <- pp$keep_all_out()$execute()$collect_out()
@@ -448,8 +448,8 @@ test_that("append_to_step_names",
             f2.foo = c(a = ".data.foo", b = "f1.foo")
         )
 
-        deps <- pip$get_dependencies()
-        expect_equal(pip$get_dependencies(), expected_deps)
+        deps <- pip$get_deps()
+        expect_equal(pip$get_deps(), expected_deps)
     })
 })
 
@@ -880,9 +880,9 @@ test_that("get_data",
 
 
 
-test_that("get_dependencies",
+test_that("get_deps",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_dependencies))
+    expect_true(is.function(Pipeline$new("pipe")$get_deps))
 
     test_that(
         "dependencies can be retrieved and are named after the steps",
@@ -892,7 +892,7 @@ test_that("get_dependencies",
         pip$add("f1", function(a = ~.data) a + 1)
         pip$add("f2", function(b = ~f1) b + 1)
 
-        deps <- pip$get_dependencies()
+        deps <- pip$get_deps()
         expected_deps <- list(
             .data = character(0),
             f1 = c(a = ".data"),
@@ -906,9 +906,9 @@ test_that("get_dependencies",
 
 
 
-test_that("get_downstream_dependencies",
+test_that("get_deps_down",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_downstream_dependencies))
+    expect_true(is.function(Pipeline$new("pipe")$get_deps_down))
 
     test_that("dependencies can be determined recursively for given step",
     {
@@ -919,9 +919,9 @@ test_that("get_downstream_dependencies",
         pip$add("f3", function(a = ~f1, b = ~f2) a + b)
         pip$add("f4", function(a = ~f1, b = ~f2, c = ~f3) a + b + c)
 
-        expect_equal(pip$get_downstream_dependencies("f3"), c("f4"))
-        expect_equal(pip$get_downstream_dependencies("f2"), c("f3", "f4"))
-        expect_equal(pip$get_downstream_dependencies("f1"), c("f2", "f3", "f4"))
+        expect_equal(pip$get_deps_down("f3"), c("f4"))
+        expect_equal(pip$get_deps_down("f2"), c("f3", "f4"))
+        expect_equal(pip$get_deps_down("f1"), c("f2", "f3", "f4"))
     })
 
     test_that("if no dependencies an empty character vector is returned",
@@ -929,7 +929,7 @@ test_that("get_downstream_dependencies",
         pip <- Pipeline$new("pipe")
 
         pip$add("f1", function(a = 1) a)
-        expect_equal(pip$get_downstream_dependencies("f1"), character(0))
+        expect_equal(pip$get_deps_down("f1"), character(0))
     })
 
     test_that("step must exist",
@@ -937,7 +937,7 @@ test_that("get_downstream_dependencies",
         pip <- Pipeline$new("pipe")
 
         expect_error(
-            pip$get_downstream_dependencies("f1"),
+            pip$get_deps_down("f1"),
             "step 'f1' does not exist"
         )
     })
@@ -957,20 +957,79 @@ test_that("get_downstream_dependencies",
         pip$set_data_split(dataList, to_step = "f2")
 
         expect_equal(
-            pip$get_downstream_dependencies("f1.1"),
+            pip$get_deps_down("f1.1"),
             c("f2.1", "f3")
         )
 
         expect_equal(
-            pip$get_downstream_dependencies("f1.2"),
+            pip$get_deps_down("f1.2"),
             c("f2.2", "f3")
         )
 
-        expect_equal(pip$get_downstream_dependencies("f2.1"), "f3")
-        expect_equal(pip$get_downstream_dependencies("f2.2"), "f3")
+        expect_equal(pip$get_deps_down("f2.1"), "f3")
+        expect_equal(pip$get_deps_down("f2.2"), "f3")
     })
 })
 
+
+test_that("get_deps_up",
+{
+    expect_true(is.function(Pipeline$new("pipe")$get_deps_up))
+
+    test_that("dependencies can be determined recursively for given step",
+    {
+        pip <- Pipeline$new("pipe")
+
+        pip$add("f1", function(a = 1) a)
+        pip$add("f2", function(a = ~f1) a)
+        pip$add("f3", function(a = ~f1, b = ~f2) a + b)
+        pip$add("f4", function(a = ~f1, b = ~f2, c = ~f3) a + b + c)
+
+        expect_equal(pip$get_deps_up("f2"), c("f1"))
+        expect_equal(pip$get_deps_up("f3"), c("f1", "f2"))
+        expect_equal(pip$get_deps_up("f4"), c("f1", "f2", "f3"))
+    })
+
+    test_that("if no dependencies an empty character vector is returned",
+    {
+        pip <- Pipeline$new("pipe")
+
+        pip$add("f1", function(a = 1) a)
+        expect_equal(pip$get_deps_up("f1"), character(0))
+    })
+
+    test_that("step must exist",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$get_deps_up("f1"),
+            "step 'f1' does not exist"
+        )
+    })
+
+    test_that("works with complex dependencies as created by data splits",
+    {
+        dat1 <- data.frame(x = 1:2)
+        dat2 <- data.frame(y = 1:2)
+        dataList <- list(dat1, dat2)
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = ~f1, b = 2) b) |>
+            pipe_add("f3", function(x = ~f1, y = ~f2) x + y)
+
+        pip$set_data_split(dataList, to_step = "f2")
+
+        expect_equal(pip$get_deps_up("f2.1"), c("f1.1"))
+        expect_equal(pip$get_deps_up("f2.2"), c("f1.2"))
+
+        expect_equivalent(
+            pip$get_deps_up("f3"),
+            c("f1.1", "f2.1", "f1.2", "f2.2")
+        )
+    })
+})
 
 
 test_that("get_out_at_step",
@@ -994,9 +1053,9 @@ test_that("get_out_at_step",
 
 
 
-test_that("get_parameters",
+test_that("get_params",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_parameters))
+    expect_true(is.function(Pipeline$new("pipe")$get_params))
 
     test_that("parameters can be retrieved",
     {
@@ -1008,7 +1067,7 @@ test_that("get_parameters",
             ) |>
             pipe_add("f3", function(a = ~f2, b = 3) a + b, keepOut = TRUE)
 
-        p <- pip$get_parameters()
+        p <- pip$get_params()
         expect_equal(
             p, list(f1 = list(a = 1), f2 = list(a = 8), f3 = list(b = 3))
         )
@@ -1018,10 +1077,10 @@ test_that("get_parameters",
     test_that("empty pipeline gives empty list of parameters",
     {
         pip <- Pipeline$new("pipe1")
-        expect_equivalent(pip$get_parameters(), list())
+        expect_equivalent(pip$get_params(), list())
 
         pipe_add(pip, "f1", function() 1)
-        expect_equivalent(pip$get_parameters(), list())
+        expect_equivalent(pip$get_params(), list())
     })
 
     test_that("hidden parameters are filtered out by default",
@@ -1030,19 +1089,19 @@ test_that("get_parameters",
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(a = 1, .hidden = 2) a)
 
-        p <- pip$get_parameters()
+        p <- pip$get_params()
         expect_equal(p, list(f1 = list(a = 1)))
 
-        p <- pip$get_parameters(ignoreHidden = FALSE)
+        p <- pip$get_params(ignoreHidden = FALSE)
         expect_equal(p, list(f1 = list(a = 1, .hidden = 2)))
     })
 })
 
 
 
-test_that("get_parameters_at_step",
+test_that("get_params_at_step",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_parameters_at_step))
+    expect_true(is.function(Pipeline$new("pipe")$get_params_at_step))
 
     test_that("list of step parameters can be retrieved",
     {
@@ -1051,11 +1110,11 @@ test_that("get_parameters_at_step",
             pipe_add("f2", function(x = 1, y = 2) x + y)
 
         expect_equal(
-            pip$get_parameters_at_step("f1"), list(a = 1, b = 2)
+            pip$get_params_at_step("f1"), list(a = 1, b = 2)
         )
 
         expect_equal(
-            pip$get_parameters_at_step("f2"), list(x = 1, y = 2)
+            pip$get_params_at_step("f2"), list(x = 1, y = 2)
         )
     })
 
@@ -1065,7 +1124,7 @@ test_that("get_parameters_at_step",
             pipe_add("f1", function() 1)
 
         expect_equal(
-            pip$get_parameters_at_step("f1"), list()
+            pip$get_params_at_step("f1"), list()
         )
     })
 
@@ -1076,11 +1135,11 @@ test_that("get_parameters_at_step",
             pipe_add("f1", function(a = 1, .b = 2) a + .b)
 
         expect_equal(
-            pip$get_parameters_at_step("f1"), list(a = 1)
+            pip$get_params_at_step("f1"), list(a = 1)
         )
 
         expect_equal(
-            pip$get_parameters_at_step("f1", ignoreHidden = FALSE),
+            pip$get_params_at_step("f1", ignoreHidden = FALSE),
             list(a = 1, .b = 2)
         )
     })
@@ -1091,11 +1150,11 @@ test_that("get_parameters_at_step",
             pipe_add("f1", function(a = 1, b = ~.data) a + b)
 
         expect_equal(
-            pip$get_parameters_at_step("f1"), list(a = 1)
+            pip$get_params_at_step("f1"), list(a = 1)
         )
 
         expect_equal(
-            pip$get_parameters_at_step("f1", ignoreHidden = FALSE),
+            pip$get_params_at_step("f1", ignoreHidden = FALSE),
             list(a = 1)
         )
     })
@@ -1106,8 +1165,175 @@ test_that("get_parameters_at_step",
             pipe_add("f1", function(a = 1, b = ~.data) a + b)
 
         expect_error(
-            pip$get_parameters_at_step("foo"),
+            pip$get_params_at_step("foo"),
             "step 'foo' not found"
+        )
+    })
+})
+
+
+test_that("get_params_unique",
+{
+    expect_true(is.function(Pipeline$new("pipe")$get_params_unique))
+
+    test_that("parameters can be retrieved uniquely and if occuring multiple
+        times, the 1st default value is used",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = 2, b = 3) a + b) |>
+            pipe_add("f3", function(a = 4, b = 5, c = 6) a + b)
+
+        p <- pip$get_params_unique()
+        expect_equivalent(p, list(a = 1, b = 3, c = 6))
+    })
+
+    test_that("empty pipeline gives empty list",
+    {
+        pip <- Pipeline$new("pipe")
+        expect_equivalent(pip$get_params_unique(), list())
+    })
+
+    test_that("pipeline with no parameters gives empty list",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function() 1)
+        expect_equivalent(pip$get_params_unique(), list())
+    })
+})
+
+
+
+test_that("get_params_unique_json",
+{
+    expect_true(is.function(Pipeline$new("pipe")$get_params_unique_json))
+
+    test_that("the elements are not named",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a, keepOut = TRUE)
+
+        p <- pip$get_params_unique_json()
+        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
+        expect_equal(names(pl), NULL)
+
+
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add(
+                "f1", function(x = new("StringParam", "my x", "some x")) x
+            ) |>
+            pipe_add(
+                "f2", function(y = new("StringParam", "my y", "some y")) y
+            )
+
+        p <- pip$get_params_unique_json()
+        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
+        expect_equal(names(pl), NULL)
+    })
+
+
+    test_that("standard parameters are returned as name-value pairs",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = 1, b = 2) a) |>
+            pipe_add("f3", function(a = 1, b = 2, c = 3) a)
+
+        p <- pip$get_params_unique_json()
+        expect_true(methods::is(p, "json"))
+
+        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
+        expect_equal(
+            pl,
+            list(
+                list(name = "a", value = 1),
+                list(name = "b", value = 2),
+                list(name = "c", value = 3)
+            )
+        )
+    })
+
+    test_that("Param objects are returned with full information",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add(
+                "f1", function(x = new("StringParam", "my x", "some x")) x
+            ) |>
+            pipe_add(
+                "f2", function(y = new("StringParam", "my y", "some y")) y
+            )
+
+        p <- pip$get_params_unique_json()
+        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
+
+        expect_equal(
+            pl,
+            list(
+                list(
+                    value = "some x",
+                    name = "x",
+                    advanced = FALSE,
+                    label = "my x",
+                    description = "",
+                    source = "internal",
+                    class = "StringParam"
+                ),
+                list(
+                    value = "some y",
+                    name = "y",
+                    advanced = FALSE,
+                    label = "my y",
+                    description = "",
+                    source = "internal",
+                    class = "StringParam"
+                )
+            )
+        )
+    })
+
+    test_that("the name of the arg is set to the name of the Param object",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add(
+                "f1", function(x = new("StringParam", "my x", "some x")) x
+            ) |>
+            pipe_add(
+                "f2", function(y = new("StringParam", "my y", "some y")) y
+            )
+
+        p <- pip$get_params_unique_json()
+        pl <- jsonlite::fromJSON(p)
+
+        expect_true(pl[["label"]][[1]] == "my x")
+        expect_false(pl[["name"]][[1]] == "my x")
+        hasArgName <- pl[["name"]][[1]] == "x"
+
+        expect_true(pl[["label"]][[2]] == "my y")
+        expect_false(pl[["name"]][[2]] == "my y")
+        hasArgName <- pl[["name"]][[2]] == "y"
+    })
+
+    test_that("works with mixed, that is, standard and Param objects",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(x = 1) x) |>
+            pipe_add("f2", function(s = new("StringParam", "my s", "some s")) s)
+
+        p <- pip$get_params_unique_json()
+        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
+
+        expect_equal(pl[[1]], list(name = "x", value = 1L))
+        expect_equal(
+            pl[[2]],
+            list(
+                value = "some s",
+                name = "s",
+                advanced = FALSE,
+                label = "my s",
+                description = "",
+                source = "internal",
+                class = "StringParam"
+            )
         )
     })
 })
@@ -1148,6 +1374,21 @@ test_that("get_step",
 })
 
 
+test_that("get_step_names",
+{
+    expect_true(is.function(Pipeline$new("pipe")$get_step_names))
+
+    test_that("step names be retrieved",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function() {}) |>
+            pipe_add("f2", function(x = 1) x)
+
+        expect_equal(pip$get_step_names(), pip$pipeline[["step"]])
+    })
+})
+
+
 
 test_that("get_step_number",
 {
@@ -1177,251 +1418,6 @@ test_that("get_step_number",
                 "step 'non-existent' does not exist"
             )
         })
-    })
-})
-
-
-
-test_that("get_step_names",
-{
-    expect_true(is.function(Pipeline$new("pipe")$get_step_names))
-
-    test_that("step names be retrieved",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add("f1", function() {}) |>
-            pipe_add("f2", function(x = 1) x)
-
-        expect_equal(pip$get_step_names(), pip$pipeline[["step"]])
-    })
-})
-
-
-
-test_that("get_parameters_unique",
-{
-    expect_true(is.function(Pipeline$new("pipe")$get_parameters_unique))
-
-    test_that("parameters can be retrieved uniquely and if occuring multiple
-        times, the 1st default value is used",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function(a = 2, b = 3) a + b) |>
-            pipe_add("f3", function(a = 4, b = 5, c = 6) a + b)
-
-        p <- pip$get_parameters_unique()
-        expect_equivalent(p, list(a = 1, b = 3, c = 6))
-    })
-
-    test_that("empty pipeline gives empty list",
-    {
-        pip <- Pipeline$new("pipe")
-        expect_equivalent(pip$get_parameters_unique(), list())
-    })
-
-    test_that("pipeline with no parameters gives empty list",
-    {
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("f1", function() 1)
-        expect_equivalent(pip$get_parameters_unique(), list())
-    })
-})
-
-
-
-test_that("get_parameters_unique_json",
-{
-    expect_true(is.function(Pipeline$new("pipe")$get_parameters_unique_json))
-
-    test_that("the elements are not named",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add("f1", function(a = 1) a, keepOut = TRUE)
-
-        p <- pip$get_parameters_unique_json()
-        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
-        expect_equal(names(pl), NULL)
-
-
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add(
-                "f1", function(x = new("StringParam", "my x", "some x")) x
-            ) |>
-            pipe_add(
-                "f2", function(y = new("StringParam", "my y", "some y")) y
-            )
-
-        p <- pip$get_parameters_unique_json()
-        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
-        expect_equal(names(pl), NULL)
-    })
-
-
-    test_that("standard parameters are returned as name-value pairs",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function(a = 1, b = 2) a) |>
-            pipe_add("f3", function(a = 1, b = 2, c = 3) a)
-
-        p <- pip$get_parameters_unique_json()
-        expect_true(methods::is(p, "json"))
-
-        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
-        expect_equal(
-            pl,
-            list(
-                list(name = "a", value = 1),
-                list(name = "b", value = 2),
-                list(name = "c", value = 3)
-            )
-        )
-    })
-
-    test_that("Param objects are returned with full information",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add(
-                "f1", function(x = new("StringParam", "my x", "some x")) x
-            ) |>
-            pipe_add(
-                "f2", function(y = new("StringParam", "my y", "some y")) y
-            )
-
-        p <- pip$get_parameters_unique_json()
-        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
-
-        expect_equal(
-            pl,
-            list(
-                list(
-                    value = "some x",
-                    name = "x",
-                    advanced = FALSE,
-                    label = "my x",
-                    description = "",
-                    source = "internal",
-                    class = "StringParam"
-                ),
-                list(
-                    value = "some y",
-                    name = "y",
-                    advanced = FALSE,
-                    label = "my y",
-                    description = "",
-                    source = "internal",
-                    class = "StringParam"
-                )
-            )
-        )
-    })
-
-    test_that("the name of the arg is set to the name of the Param object",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add(
-                "f1", function(x = new("StringParam", "my x", "some x")) x
-            ) |>
-            pipe_add(
-                "f2", function(y = new("StringParam", "my y", "some y")) y
-            )
-
-        p <- pip$get_parameters_unique_json()
-        pl <- jsonlite::fromJSON(p)
-
-        expect_true(pl[["label"]][[1]] == "my x")
-        expect_false(pl[["name"]][[1]] == "my x")
-        hasArgName <- pl[["name"]][[1]] == "x"
-
-        expect_true(pl[["label"]][[2]] == "my y")
-        expect_false(pl[["name"]][[2]] == "my y")
-        hasArgName <- pl[["name"]][[2]] == "y"
-    })
-
-    test_that("works with mixed, that is, standard and Param objects",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add("f1", function(x = 1) x) |>
-            pipe_add("f2", function(s = new("StringParam", "my s", "some s")) s)
-
-        p <- pip$get_parameters_unique_json()
-        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
-
-        expect_equal(pl[[1]], list(name = "x", value = 1L))
-        expect_equal(
-            pl[[2]],
-            list(
-                value = "some s",
-                name = "s",
-                advanced = FALSE,
-                label = "my s",
-                description = "",
-                source = "internal",
-                class = "StringParam"
-            )
-        )
-    })
-})
-
-
-
-test_that("get_upstream_dependencies",
-{
-    expect_true(is.function(Pipeline$new("pipe")$get_upstream_dependencies))
-
-    test_that("dependencies can be determined recursively for given step",
-    {
-        pip <- Pipeline$new("pipe")
-
-        pip$add("f1", function(a = 1) a)
-        pip$add("f2", function(a = ~f1) a)
-        pip$add("f3", function(a = ~f1, b = ~f2) a + b)
-        pip$add("f4", function(a = ~f1, b = ~f2, c = ~f3) a + b + c)
-
-        expect_equal(pip$get_upstream_dependencies("f2"), c("f1"))
-        expect_equal(pip$get_upstream_dependencies("f3"), c("f1", "f2"))
-        expect_equal(pip$get_upstream_dependencies("f4"), c("f1", "f2", "f3"))
-    })
-
-    test_that("if no dependencies an empty character vector is returned",
-    {
-        pip <- Pipeline$new("pipe")
-
-        pip$add("f1", function(a = 1) a)
-        expect_equal(pip$get_upstream_dependencies("f1"), character(0))
-    })
-
-    test_that("step must exist",
-    {
-        pip <- Pipeline$new("pipe")
-
-        expect_error(
-            pip$get_upstream_dependencies("f1"),
-            "step 'f1' does not exist"
-        )
-    })
-
-    test_that("works with complex dependencies as created by data splits",
-    {
-        dat1 <- data.frame(x = 1:2)
-        dat2 <- data.frame(y = 1:2)
-        dataList <- list(dat1, dat2)
-
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function(a = ~f1, b = 2) b) |>
-            pipe_add("f3", function(x = ~f1, y = ~f2) x + y)
-
-        pip$set_data_split(dataList, to_step = "f2")
-
-        expect_equal(pip$get_upstream_dependencies("f2.1"), c("f1.1"))
-        expect_equal(pip$get_upstream_dependencies("f2.2"), c("f1.2"))
-
-        expect_equivalent(
-            pip$get_upstream_dependencies("f3"),
-            c("f1.1", "f2.1", "f1.2", "f2.2")
-        )
     })
 })
 
@@ -2104,7 +2100,7 @@ test_that("set_data_split",
         ee = expect_equivalent
         pp = pip$pipeline
 
-        deps <- pip$get_dependencies()
+        deps <- pip$get_deps()
 
         expect_equal(deps[["f2.1"]], c(a = "f1.1", b = ".data.1"))
         expect_equal(deps[["f2.2"]], c(a = "f1.2", b = ".data.2"))
@@ -2232,9 +2228,9 @@ test_that("set_parameters",
             pipe_add("f2", function(a = 2, b = 3) a) |>
             pipe_add("f3", function(a = 4, b = 5) a)
 
-        before <- pip$get_parameters()
+        before <- pip$get_params()
 
-        after <- pip$set_parameters(list(a = 9, b = 99))$get_parameters()
+        after <- pip$set_parameters(list(a = 9, b = 99))$get_params()
         expect_equal(after, list(
             f1 = list(a = 9),
             f2 = list(a = 9, b = 99),
@@ -2251,7 +2247,7 @@ test_that("set_parameters",
             pipe_add("f2", function(a = 2, b = ~f1) a) |>
             pipe_add("f3", function(a = ~f2, b = 5) a)
 
-        before <- pip$get_parameters()
+        before <- pip$get_params()
         expect_equal(
             before,
             list(
@@ -2261,7 +2257,7 @@ test_that("set_parameters",
             )
         )
 
-        after <- pip$set_parameters(list(a = 9, b = 99))$get_parameters()
+        after <- pip$set_parameters(list(a = 9, b = 99))$get_params()
         expect_equal(
             after,
             list(
@@ -2316,7 +2312,7 @@ test_that("set_parameters",
             pipe_add("f1", function(a = 1, .b = 2) a)
 
         pip$set_parameters(list(a = 9, .b = 10))
-        pp <- pip$get_parameters(ignoreHidden = FALSE)
+        pp <- pip$get_params(ignoreHidden = FALSE)
         expect_equal(pp, list(f1 = list(a = 9, .b = 10)))
     })
 })
@@ -2333,13 +2329,13 @@ test_that("set_parameters_at_step",
             pipe_add("f1", function(a = 1, b = 2) a + b) |>
             pipe_add("f2", function(x = 1) x)
 
-        expect_equal(pip$get_parameters_at_step("f1"), list(a = 1, b = 2))
+        expect_equal(pip$get_params_at_step("f1"), list(a = 1, b = 2))
 
         pip$set_parameters_at_step("f1", list(a = 9, b = 99))
-        expect_equal(pip$get_parameters_at_step("f1"), list(a = 9, b = 99))
+        expect_equal(pip$get_params_at_step("f1"), list(a = 9, b = 99))
 
         pip$set_parameters_at_step("f2", list(x = 9))
-        expect_equal(pip$get_parameters_at_step("f2"), list(x = 9))
+        expect_equal(pip$get_params_at_step("f2"), list(x = 9))
     })
 
     test_that("step must be passed as a string and params as a list",
@@ -2368,7 +2364,7 @@ test_that("set_parameters_at_step",
         pip$set_parameters_at_step("f1", list(a = 9, .b = 99))
 
         expect_equal(
-            pip$get_parameters_at_step("f1", ignoreHidden = FALSE),
+            pip$get_params_at_step("f1", ignoreHidden = FALSE),
             list(a = 9, .b = 99)
         )
     })
@@ -2414,7 +2410,7 @@ test_that("set_parameters_at_step",
             ) |>
             pipe_add("f3", function(a = ~f2, b = 3) paste(a, b), keepOut = TRUE)
 
-        p <- pip$get_parameters()
+        p <- pip$get_params()
         expect_equal(p[["f1"]][["xCol"]], new("StringParam", "xCol", "x"))
         expect_equal(p[["f2"]][["yCol"]], new("StringParam", "yCol", "y"))
 

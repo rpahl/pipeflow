@@ -229,7 +229,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             # Add postfix to step names and update dependencies accordingly
             steps <- self$get_step_names()
-            deps <- self$get_dependencies()
+            deps <- self$get_deps()
 
             self$pipeline[["step"]] <- add_postfix(steps)
             self$pipeline[["deps"]] <- lapply(deps, add_postfix)
@@ -403,7 +403,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             if (upstream) {
                 upstream_steps <- private$.get_upstream_deps(
                     step = step,
-                    deps = self$get_dependencies(),
+                    deps = self$get_deps(),
                     recursive = TRUE
                 )
                 steps <- c(upstream_steps, step)
@@ -412,7 +412,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             if (downstream) {
                 downstream_steps <- private$.get_downstream_deps(
                     step = step,
-                    deps = self$get_dependencies(),
+                    deps = self$get_deps(),
                     recursive = TRUE
                 )
                 steps <- c(steps, downstream_steps)
@@ -461,7 +461,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Get all dependencies defined in the pipeline
         #' @return named `list` of dependencies for each step
-        get_dependencies = function()
+        get_deps = function()
         {
             self$pipeline[["deps"]] |>
                 stats::setNames(self$get_step_names())
@@ -473,7 +473,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param recursive `logical` if `TRUE`, dependencies of dependencies
         #' are also returned.
         #' @return `list` of downstream dependencies
-        get_downstream_dependencies = function(
+        get_deps_down = function(
             step,
             recursive = TRUE
         ) {
@@ -481,7 +481,29 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             deps <- private$.get_downstream_deps(
                 step = step,
-                deps = self$get_dependencies(),
+                deps = self$get_deps(),
+                recursive = recursive
+            )
+
+            # Ensure order matches the step order of the pipeline
+            intersect(self$get_step_names(), deps)
+        },
+
+        #' @description Get all upstream dependencies of given step, by
+        #' default descending recursively.
+        #' @param step `string` name of step
+        #' @param recursive `logical` if `TRUE`, dependencies of dependencies
+        #' are also returned.
+        #' @return `list` of upstream dependencies
+        get_deps_up = function(
+            step,
+            recursive = TRUE
+        ) {
+            private$.verify_step_exists(step)
+
+            deps <- private$.get_upstream_deps(
+                step = step,
+                deps = self$get_deps(),
                 recursive = recursive
             )
 
@@ -503,11 +525,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' names starting with a dot) are ignored and thus not returned.
         #' @return `list` of parameters, sorted and named by step. Steps with
         #' no parameters are filtered out.
-        get_parameters = function(ignoreHidden = TRUE)
+        get_params = function(ignoreHidden = TRUE)
         {
             res <- lapply(
                 self$pipeline[["step"]],
-                FUN = self$get_parameters_at_step,
+                FUN = self$get_params_at_step,
                 ignoreHidden = ignoreHidden
             )
 
@@ -520,7 +542,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
         #' @return `list` of parameters defined at given step.
-        get_parameters_at_step = function(step, ignoreHidden = TRUE)
+        get_params_at_step = function(step, ignoreHidden = TRUE)
         {
             isValue = function(x) !is.name(x) && !is.call(x)
             areHidden = function(x) {
@@ -557,9 +579,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
         #' @return `list` of unique parameters
-        get_parameters_unique = function(ignoreHidden = TRUE)
+        get_params_unique = function(ignoreHidden = TRUE)
         {
-            params <- self$get_parameters(ignoreHidden)
+            params <- self$get_params(ignoreHidden)
 
             if (length(params) == 0) {
                 return(params)
@@ -576,9 +598,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return `list` flat unnamed json list of unique function parameters,
         #'  at this point with no information of the steps were parameters are
         #'  defined first.
-        get_parameters_unique_json = function(ignoreHidden = TRUE)
+        get_params_unique_json = function(ignoreHidden = TRUE)
         {
-            params = self$get_parameters_unique(ignoreHidden)
+            params = self$get_params_unique(ignoreHidden)
 
             param_to_list <- function(p, name) {
                 if (methods::is(p, "Param")) {
@@ -629,28 +651,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         {
             private$.verify_step_exists(step)
             match(step, self$get_step_names())
-        },
-
-        #' @description Get all upstream dependencies of given step, by
-        #' default descending recursively.
-        #' @param step `string` name of step
-        #' @param recursive `logical` if `TRUE`, dependencies of dependencies
-        #' are also returned.
-        #' @return `list` of upstream dependencies
-        get_upstream_dependencies = function(
-            step,
-            recursive = TRUE
-        ) {
-            private$.verify_step_exists(step)
-
-            deps <- private$.get_upstream_deps(
-                step = step,
-                deps = self$get_dependencies(),
-                recursive = recursive
-            )
-
-            # Ensure order matches the step order of the pipeline
-            intersect(self$get_step_names(), deps)
         },
 
         #' @description Checks whether step has output.
@@ -751,7 +751,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         ) {
             private$.verify_step_exists(step)
 
-            deps <- self$get_downstream_dependencies(step, recursive)
+            deps <- self$get_deps_down(step, recursive)
             hasDeps <- length(deps) > 0
 
             if (hasDeps) {
@@ -988,7 +988,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return returns the `Pipeline` object invisibly
         set_parameters = function(params, warnUndefined = TRUE)
         {
-            defined_params <- self$get_parameters_unique(ignoreHidden = FALSE)
+            defined_params <- self$get_params_unique(ignoreHidden = FALSE)
             extra <- setdiff(names(params), names(defined_params))
 
             if (warnUndefined && length(extra) > 0) {
@@ -999,7 +999,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             for (step in self$get_step_names()) {
-                params_ith_step = self$get_parameters_at_step(
+                params_ith_step = self$get_params_at_step(
                     step,
                     ignoreHidden = FALSE
                 )
@@ -1027,7 +1027,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is_string(step),
                 is.list(params)
             )
-            current <- self$get_parameters_at_step(step, ignoreHidden = FALSE)
+            current <- self$get_params_at_step(step, ignoreHidden = FALSE)
 
             extra <- setdiff(names(params), names(current))
             if (length(extra) > 0) {

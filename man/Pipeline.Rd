@@ -39,17 +39,17 @@ Roman Pahl
 \item \href{#method-Pipeline-execute}{\code{Pipeline$execute()}}
 \item \href{#method-Pipeline-execute_step}{\code{Pipeline$execute_step()}}
 \item \href{#method-Pipeline-get_data}{\code{Pipeline$get_data()}}
-\item \href{#method-Pipeline-get_dependencies}{\code{Pipeline$get_dependencies()}}
-\item \href{#method-Pipeline-get_downstream_dependencies}{\code{Pipeline$get_downstream_dependencies()}}
-\item \href{#method-Pipeline-get_out_at_step}{\code{Pipeline$get_out_at_step()}}
-\item \href{#method-Pipeline-get_parameters}{\code{Pipeline$get_parameters()}}
-\item \href{#method-Pipeline-get_parameters_at_step}{\code{Pipeline$get_parameters_at_step()}}
-\item \href{#method-Pipeline-get_parameters_unique}{\code{Pipeline$get_parameters_unique()}}
+\item \href{#method-Pipeline-get_deps}{\code{Pipeline$get_deps()}}
+\item \href{#method-Pipeline-get_deps_down}{\code{Pipeline$get_deps_down()}}
+\item \href{#method-Pipeline-get_deps_up}{\code{Pipeline$get_deps_up()}}
+\item \href{#method-Pipeline-get_paramsp}{\code{Pipelineget_paramsep()}}
+\item \href{#method-Pipeline-get_params}{\code{Pipeline$get_paraget_params
+\item \href{#method-Pipeline-get_params_at_step}{\code{Pipelineget_paramss_at_step()}}
+\item \href{#method-Pipeline-get_params_unique}{\code{Pipeline$get_pget_paramsue()}}
 \item \href{#method-Pipeline-get_parameters_unique_json}{\code{Pipeline$get_parameters_unique_json()}}
 \item \href{#method-Pipeline-get_step}{\code{Pipeline$get_step()}}
 \item \href{#method-Pipeline-get_step_names}{\code{Pipeline$get_step_names()}}
 \item \href{#method-Pipeline-get_step_number}{\code{Pipeline$get_step_number()}}
-\item \href{#method-Pipeline-get_upstream_dependencies}{\code{Pipeline$get_upstream_dependencies()}}
 \item \href{#method-Pipeline-has_out_at_step}{\code{Pipeline$has_out_at_step()}}
 \item \href{#method-Pipeline-has_step}{\code{Pipeline$has_step()}}
 \item \href{#method-Pipeline-keep_all_out}{\code{Pipeline$keep_all_out()}}
@@ -312,12 +312,12 @@ returns the data
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_dependencies"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_dependencies}{}}}
-\subsection{Method \code{get_dependencies()}}{
+\if{html}{\out{<a id="method-Pipeline-get_deps"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_deps}{}}}
+\subsection{Method \code{get_deps()}}{
 Get all dependencies defined in the pipeline
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_dependencies()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_deps()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
@@ -325,13 +325,13 @@ named \code{list} of dependencies for each step
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_downstream_dependencies"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_downstream_dependencies}{}}}
-\subsection{Method \code{get_downstream_dependencies()}}{
+\if{html}{\out{<a id="method-Pipeline-get_deps_down"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_deps_down}{}}}
+\subsection{Method \code{get_deps_down()}}{
 Get all downstream dependencies of given step, by
 default descending recursively.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_downstream_dependencies(step, recursive = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_deps_down(step, recursive = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -349,8 +349,32 @@ are also returned.}
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-get_deps_up"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_deps_up}{}}}
+\subsection{Method \code{get_deps_up()}}{
+Get all upstream dependencies of given step, by
+default descending recursively.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_deps_up(step, recursive = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{\code{string} name of step}
+
+\item{\code{recursive}}{\code{logical} if \code{TRUE}, dependencies of dependencies
+are also returned.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+\code{list} of upstream dependenciesget_params
+}get_params
+}get_params
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_out_at_step"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_out_at_step}{}}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_out_atget_params
 \subsection{Method \code{get_out_at_step()}}{
 Get output of given step.
 \subsection{Usage}{
@@ -367,12 +391,12 @@ Get output of given step.
 \subsection{Returns}{
 returns the \code{Pipeline} object invisibly
 }
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_parameters"></a>}}
+}get_params
+\if{html}{\out{<hr>}}get_params
+\if{html}{\out{<a id="metget_paramset_parameters"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-get_parameters}{}}}
 \subsection{Method \code{get_parameters()}}{
-Get all function parameters defined in the pipeline.
+Get all function parameters defined in the pipeline.get_params
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_parameters(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
 }
@@ -390,9 +414,9 @@ names starting with a dot) are ignored and thus not returned.}
 no parameters are filtered out.
 }
 }
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_parameters_at_step"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_parameters_at_step}{}}}
+\if{html}{\out{<hr>}}get_params
+\if{html}{\out{<a id="method-Pipeline-get_parget_paramsp"></a>}}
+\if{latex}{\out{\hypertarget_paramseline-get_parameters_at_step}{}}}
 \subsection{Method \code{get_parameters_at_step()}}{
 Get all function parameters at given step name.
 \subsection{Usage}{
@@ -400,7 +424,7 @@ Get all function parameters at given step name.
 }
 
 \subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
+\if{html}{\out{<div class="arguments">}}get_params
 \describe{
 \item{\code{step}}{\code{string} name of step}
 
@@ -416,12 +440,12 @@ names starting with a dot) are ignored and thus not returned.}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_parameters_unique"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-get_parameters_unique}{}}}
-\subsection{Method \code{get_parameters_unique()}}{
-Get all function parameters defined in the pipeline,
-but only list each parameter once. The values of the parameters,
+\subsection{Method \code{get_parameterget_params
+Get all function parameters defined in the piget_params
+but only list each parameget_paramsvalues of the parameters,
 will be the values of the first step where the parameter was defined.
 This is particularly useful after the parameters where set using
-the \code{set_parameters} function, which will set the same value
+the \code{set_parameters} function, which will set the get_params
 for all steps.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_parameters_unique(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
@@ -514,30 +538,6 @@ Get step number
 }
 \subsection{Returns}{
 the step number in the pipeline
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_upstream_dependencies"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_upstream_dependencies}{}}}
-\subsection{Method \code{get_upstream_dependencies()}}{
-Get all upstream dependencies of given step, by
-default descending recursively.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_upstream_dependencies(step, recursive = TRUE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{step}}{\code{string} name of step}
-
-\item{\code{recursive}}{\code{logical} if \code{TRUE}, dependencies of dependencies
-are also returned.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-\code{list} of upstream dependencies
 }
 }
 \if{html}{\out{<hr>}}
