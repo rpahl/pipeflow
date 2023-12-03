@@ -2399,6 +2399,27 @@ test_that("set_parameters",
         pp <- pip$get_params(ignoreHidden = FALSE)
         expect_equal(pp, list(f1 = list(a = 9, .b = 10)))
     })
+
+    test_that(
+        "trying to set locked parameters is ignored until they are unlocked",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1, b = 2) a + b) |>
+            pipe_add("f2", function(a = 1, b = 2) a + b)
+
+        pip$lock_step("f1")
+        expect_message(
+            pip$set_parameters(list(a = 9, b = 99)),
+            "skipping setting parameters a, b at locked step 'f1'"
+        )
+
+        pip$get_params_at_step("f1") |> expect_equal(list(a = 1, b = 2))
+        pip$get_params_at_step("f2") |> expect_equal(list(a = 9, b = 99))
+
+        pip$unlock_step("f1")
+        pip$set_parameters(list(a = 9, b = 99))
+        pip$get_params_at_step("f1") |> expect_equal(list(a = 9, b = 99))
+    })
 })
 
 
@@ -2466,7 +2487,28 @@ test_that("set_parameters_at_step",
         )
     })
 
-    test_that("setting bound parameters will not be allowed",
+    test_that("trying to set locked parameter is ignored until it is unlocked",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1, b = 2) a + b)
+
+        pip$lock_step("f1")
+        expect_message(
+            pip$set_parameters_at_step("f1", list(a = 9, b = 99)),
+            "skipping setting parameters a, b at locked step 'f1'"
+        )
+
+        pip$get_params_at_step("f1") |>
+            expect_equal(list(a = 1, b = 2))
+
+        pip$unlock_step("f1")
+        pip$set_parameters_at_step("f1", list(a = 9, b = 99))
+        pip$get_params_at_step("f1") |>
+            expect_equal(list(a = 9, b = 99))
+    })
+
+
+    test_that("setting values for bound parameters is not allowed",
     {
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(a = 1, b = 2) a + b) |>

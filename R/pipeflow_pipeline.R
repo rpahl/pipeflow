@@ -1034,6 +1034,17 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is_string(step),
                 is.list(params)
             )
+
+            isLocked <- self$get_step(step)[["state"]] == "locked"
+            if (isLocked) {
+                message(
+                    "skipping setting parameters ",
+                    paste0(names(params), collapse = ", "),
+                    " at locked step '", step, "'"
+                )
+                return(invisible(self))
+            }
+
             current <- self$get_params_at_step(step, ignoreHidden = FALSE)
 
             extra <- setdiff(names(params), names(current))
