@@ -488,8 +488,8 @@ test_that("collect_out",
         pip$add("f2", bar, params = list(a = ~.data, b = ~f1), keepOut = TRUE)
 
         pip$execute()
-        expect_equal(pip$pipeline[["out"]][[2]], list())
-        expect_equal(pip$pipeline[["out"]][[3]], a + data)
+        expect_equal(pip$get_out_at_step("f1"), NULL)
+        expect_equal(pip$get_out_at_step("f2"), a + data)
     })
 
     test_that("output is collected as expected",
@@ -1181,7 +1181,7 @@ test_that("get_params_at_step",
 
         expect_error(
             pip$get_params_at_step("foo"),
-            "step 'foo' not found"
+            "step 'foo' does not exist"
         )
     })
 })
@@ -1367,7 +1367,7 @@ test_that("get_step",
         expect_equal(pip$get_step(".data"), pip$pipeline[1, ])
         expect_equal(pip$get_step("f1"), pip$pipeline[2, ])
 
-        expect_error(pip$get_step("foo"), "step 'foo' not found")
+        expect_error(pip$get_step("foo"), "step 'foo' does not exist")
     })
 
     test_that("dependencies are recorded as expected",

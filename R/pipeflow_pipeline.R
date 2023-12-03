@@ -516,8 +516,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return returns the `Pipeline` object invisibly
         get_out_at_step = function(step)
         {
-            index <- self$get_step_number(step)
-            self$pipeline[["out"]][[index]]
+            self$get_step(step)[["out"]] |> unlist1()
         },
 
         #' @description Get all function parameters defined in the pipeline.
@@ -628,6 +627,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' error is given.
         get_step = function(step)
         {
+            private$.verify_step_exists(step)
             pos <- Position(
                 self$pipeline[["step"]],
                 f = function(x) x == step,
@@ -982,13 +982,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         set_keep_out = function(step, keepOut = TRUE)
         {
             stopifnot(
-                is_string(step),
                 is.logical(keepOut)
             )
-            private$.verify_step_exists(step)
-
-            index <- self$get_step_number(step)
-            self$pipeline[index, "keepOut"] <- keepOut
+            private$.set_at_step(step, "keepOut", value = keepOut)
 
             invisible(self)
         },
@@ -1053,15 +1049,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             hasUpdate <- length(toUpdate) > 0
             if (hasUpdate) {
                 # Update params
-                stepNumber <- self$get_step_number(step)
-                old <- self$pipeline[["params"]][[stepNumber]]
+                old <- self$get_step(step)[["params"]] |> unlist1()
                 new <- utils::modifyList(old, params[toUpdate])
-                self$pipeline[["params"]][[stepNumber]] <- new
+                private$.set_at_step(step, "params", value = new)
 
                 # Update state if applicable
                 state <- self$get_step(step)[["state"]]
                 if (state == "latest") {
-                    self$pipeline[stepNumber, "state"] <- "outdated"
+                    private$.set_at_step(step, "state", "outdated")
                     private$.update_states_downstream(step, "outdated")
                 }
             }
@@ -1099,9 +1094,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 self$pipeline,
                 i = which(areNotKept),
                 j = "out",
-                value = list(list())
+                value = list(list(NULL))
             )
-
         },
 
         .derive_dependencies = function(
@@ -1148,16 +1142,15 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         {
             private$.verify_step_exists(step)
             pip <- self$pipeline
-            iStep <- self$get_step_number(step)
             thisWasExecutedSuccessfully <- FALSE
             on.exit(
                 if (!thisWasExecutedSuccessfully) {
-                    self$pipeline[iStep, "state"] <- "failed"
+                    private$.set_at_step(step, "state", value = "failed")
                 },
                 add = TRUE
             )
 
-            row <- pip[iStep, ] |> unlist1()
+            row <- self$get_step(step) |> unlist1()
             fun <- row[["fun"]]
             args <- row[["params"]]
             deps <- row[["deps"]]
@@ -1179,13 +1172,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 }
             )
 
-            step <- pip[["step"]][[iStep]]
+            iStep <- self$get_step_number(step)
             context <- gettextf("pipeline at step %i ('%s')", iStep, step)
-
-            on.exit(
-                self$pipeline[iStep, "time"] <- Sys.time(),
-                add = TRUE
-            )
 
             res <- tryCatch(
                 do.call(fun, args = args),
@@ -1204,6 +1192,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
 
             if (self$has_step(step)) {
+                private$.set_at_step(step, "time", value = Sys.time())
                 private$.set_at_step(step, "out", value = res)
                 private$.set_at_step(step, "state", value = "latest")
                 private$.update_states_downstream(step, "outdated")
@@ -1403,10 +1392,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             deps <- self$get_deps_down(step, recursive = TRUE)
             for (dep in deps) {
-                i <- self$get_step_number(dep)
-                current <- self$pipeline[i, "state"]
+                current <- self$get_step(dep)[["state"]]
                 if (current != "locked") {
-                    self$pipeline[i, "state"] <- state
+                    private$.set_at_step(dep, "state", value = state)
                 }
             }
         },
