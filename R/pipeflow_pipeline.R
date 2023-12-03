@@ -1016,8 +1016,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Set unbound parameter values at given pipeline step.
         #' @param step `string` the name of the step
         #' @param params `list` of parameters to be set
-        #' @param warnUndefined `logical` whether to give a warning if a
-        #' parameter is not defined in the pipeline.
         #' @return returns the `Pipeline` object invisibly
         set_parameters_at_step = function(
             step,
@@ -1041,10 +1039,18 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             toUpdate <- intersect(names(params), names(current))
             hasUpdate <- length(toUpdate) > 0
             if (hasUpdate) {
-                row <- self$get_step_number(step)
-                old <- self$pipeline[["params"]][[row]]
+                # Update params
+                stepNumber <- self$get_step_number(step)
+                old <- self$pipeline[["params"]][[stepNumber]]
                 new <- utils::modifyList(old, params[toUpdate])
-                self$pipeline[["params"]][[row]] <- new
+                self$pipeline[["params"]][[stepNumber]] <- new
+
+                # Update state if applicable
+                state <- self$get_step(step)[["state"]]
+                if (state == "latest") {
+                    self$pipeline[stepNumber, "state"] <- "outdated"
+                    private$.update_states_downstream(step, "outdated")
+                }
             }
 
             invisible(self)
@@ -1353,7 +1359,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             deps <- self$get_deps_down(step, recursive = TRUE)
             for (dep in deps) {
                 i <- self$get_step_number(dep)
-                self$pipeline[i, "state"] <- state
+                current <- self$pipeline[i, "state"]
+                if (current != "locked") {
+                    self$pipeline[i, "state"] <- state
+                }
             }
         },
 

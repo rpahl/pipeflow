@@ -2445,6 +2445,44 @@ test_that("set_parameters_at_step",
         )
     })
 
+    test_that("re-binding parameter to other step is possible",
+    {
+        skip("TODO: implement")
+        pip <- Pipeline$new("pipe1", data = 9) |>
+            pipe_add("f1", function(a = 1, b = 2) a + b) |>
+            pipe_add("f2", function(x = 1, y = ~f1) x + y)
+
+        expect_error(
+            pip$set_parameters_at_step("f2", list(x = 9, y = ~.data)),
+            "Unable to set parameter(s) y at step f2 - candidates are x",
+            fixed = TRUE
+        )
+    })
+
+    test_that(
+        "states of affected steps are updated once the pipeline was run",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = ~f1) a) |>
+            pipe_add("f3", function(a = ~f2) a) |>
+            pipe_add("f4", function(a = ~.data) a)
+
+        pip$set_parameters_at_step("f1", params = list(a = 2))
+        expect_true(all(pip$pipeline[["state"]] == "new"))
+
+        pip$execute()
+        pip$set_parameters_at_step("f1", params = list(a = 3))
+        expect_equal(pip$get_step(".data")$state, "latest")
+        expect_equal(pip$get_step("f1")$state, "outdated")
+        expect_equal(pip$get_step("f2")$state, "outdated")
+        expect_equal(pip$get_step("f3")$state, "outdated")
+        expect_equal(pip$get_step("f4")$state, "latest")
+
+        pip$execute()
+        expect_true(all(pip$pipeline[["state"]] == "latest"))
+    })
+
 
     test_that(
         "pipeline can be defined and executed with Param class parameters",
