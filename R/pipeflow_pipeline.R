@@ -1128,9 +1128,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         {
             private$.verify_step_exists(step)
             pip <- self$pipeline
-            step_number <- self$get_step_number(step)
+            iStep <- self$get_step_number(step)
+            done <- FALSE
+            on.exit(
+                if (!done) self$pipeline[iStep, "status"] <- "failed",
+                add = TRUE
+            )
 
-            row <- pip[step_number, ] |> unlist1()
+            row <- pip[iStep, ] |> unlist1()
             fun <- row[["fun"]]
             args <- row[["params"]]
             deps <- row[["deps"]]
@@ -1152,11 +1157,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 }
             )
 
-            step <- pip[["step"]][[step_number]]
-            context <- gettextf("pipeline at step %i ('%s')", step_number, step)
+            step <- pip[["step"]][[iStep]]
+            context <- gettextf("pipeline at step %i ('%s')", iStep, step)
 
             on.exit(
-                self$pipeline[["time"]][[step_number]] <- Sys.time(),
+                self$pipeline[["time"]][[iStep]] <- Sys.time(),
                 add = TRUE
             )
 
@@ -1176,7 +1181,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 }
             )
 
-            self$pipeline[["out"]][step_number] <- list(res)
+            self$pipeline[["out"]][iStep] <- list(res)
+            self$pipeline[iStep, "status"] <- "latest"
+            done <- TRUE
 
             invisible(res)
         },

@@ -2714,6 +2714,29 @@ test_that("private methods work as expected",
             )
             expect_true(hasInfo)
         })
+
+        test_that(
+            "updates the status to 'latest' if step was run successfully
+            otherwise to 'failed'",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("ok", function(x = 1) x) |>
+                pipe_add("error", function(x = 2) stop("ups")) |>
+                pipe_add("warning", function(x = 3) warning("hm"))
+
+            f <- get_private(pip)$.execute_step
+
+            expect_true(all(pip$pipeline[["status"]] == "new"))
+
+            f(step = "ok")
+            expect_equal(pip$pipeline[["status"]][2], "latest")
+
+            expect_error(f(step = "error"))
+            expect_equal(pip$pipeline[["status"]][3], "failed")
+
+            expect_warning(f(step = "warning"))
+            expect_equal(pip$pipeline[["status"]][4], "latest")
+        })
     })
 
 
