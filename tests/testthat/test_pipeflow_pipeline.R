@@ -2724,6 +2724,54 @@ test_that("private methods work as expected",
     pip <- Pipeline$new("pipe")
     expect_true(is.environment(get_private(pip)))
 
+    test_that(".clean_out_not_kept",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.clean_out_not_kept
+
+        test_that("cleans all output if nothing is marked to be kept",
+        {
+            pip <- Pipeline$new("pipe1", data = 1) |>
+                pipe_add("A", function(a = 2) a)
+
+            fclean <- get_private(pip)$.clean_out_not_kept
+
+            fexe <- get_private(pip)$.execute_step
+            fexe(step = ".data")
+            fexe(step = "A")
+
+            expect_equal(pip$get_out_at_step(".data"), 1)
+            expect_equal(pip$get_out_at_step("A"), 2)
+            fclean()
+
+            hasCleanedData <- is.null(pip$get_out_at_step(".data"))
+            expect_true(hasCleanedData)
+            hasCleanedA <- is.null(pip$get_out_at_step("A"))
+            expect_true(hasCleanedA)
+        })
+
+        test_that("does not clean if marked to be kept",
+        {
+            pip <- Pipeline$new("pipe1", data = 1) |>
+                pipe_add("A", function(a = 2) a, keepOut = TRUE)
+
+            fclean <- get_private(pip)$.clean_out_not_kept
+
+            fexe <- get_private(pip)$.execute_step
+            fexe(step = ".data")
+            fexe(step = "A")
+
+            expect_equal(pip$get_out_at_step(".data"), 1)
+            expect_equal(pip$get_out_at_step("A"), 2)
+            fclean()
+
+            hasCleanedData <- is.null(pip$get_out_at_step(".data"))
+            expect_true(hasCleanedData)
+            hasCleanedA <- is.null(pip$get_out_at_step("A"))
+            expect_false(hasCleanedA)
+        })
+    })
+
 
     test_that(".derive_dependencies",
     {
