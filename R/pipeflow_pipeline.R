@@ -326,8 +326,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         },
 
         #' @description Execute all pipeline steps.
-        #' @param from `numeric` start from this step
-        #' @param to `numeric` execute until this step
+        #' @param from `numeric` step number to start execution from
+        #' @param to `numeric` step number to execute until
         #' @param recursive `logical` if `TRUE` and a step returns a new
         #' pipeline, the run of the current pipeline is aborted and the
         #' new pipeline is executed recursively.
@@ -337,16 +337,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             to = self$length(),
             recursive = TRUE
         ) {
+            private$.verify_from_to(from, to)
             stopifnot(
-                is_number(from),
-                is_number(to),
-                from <= to,
                 is.logical(recursive)
             )
-
-            if (to > self$length()) {
-                stop("to must not be larger than pipeline length")
-            }
 
             log_info <- function(msg, ...) {
                 private$.lg(level = "info", msg = msg, ...)
@@ -702,8 +696,29 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Print the pipeline.
+        #' @description Print the pipeline as a table.
         print = function() print(self$pipeline),
+
+        #' @description Visualize the pipeline as a graph.
+        #' @param groups `character` if not `NULL`, only steps belonging to the
+        #' given groups are visualized.
+        #' @param ... further arguments passed to [visNetwork()].
+        #' @return `visNetwork` object
+        print_graph = function(
+            groups = NULL,
+            ...
+        ) {
+            if (!requireNamespace("visNetwork", quietly = TRUE)) {
+                stop(
+                    "Package 'visNetwork' is required ",
+                    "to visualize the pipeline."
+                )
+            }
+            nodes <- private$.create_node_table(groups = groups)
+            edges <- private$.create_edge_table(groups = groups)
+
+            visNetwork::visNetwork(nodes, edges, ...)
+        },
 
         #' @description Remove last step from the pipeline.
         #' @return `string` the name of the step that was removed
@@ -1066,7 +1081,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
                 # Update state if applicable
                 state <- self$get_step(step)[["state"]]
-                if (state == "latest") {
+                if (state == "done") {
                     private$.set_at_step(step, "state", "outdated")
                     private$.update_states_downstream(step, "outdated")
                 }
@@ -1087,6 +1102,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             invisible(self)
         }
+
     ),
 
     private = list(
@@ -1107,6 +1123,84 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 j = "out",
                 value = list(list(NULL))
             )
+        },
+
+        .create_edge_table = function(
+            groups = NULL
+        ) {
+            deps <- self$get_deps()
+
+            if (!is.null(groups)) {
+                # Only use dependencies defined by the given groups
+                stopifnot(
+                    is.character(groups),
+                    all(groups %in% self$pipeline[["group"]])
+                )
+                deps <- deps[self$pipeline[["group"]] %in% groups]
+            }
+
+            deps <- Filter(deps, f = function(x) length(x) > 0)
+
+            if (length(deps) == 0) {
+                return(
+                    data.frame(
+                        from = numeric(0),
+                        to = numeric(0),
+                        arrows = character()
+                    )
+                )
+            }
+
+            create_edges_for_step <- function(step, depsAtStep) {
+                data.frame(
+                    from = sapply(depsAtStep, FUN = self$get_step_number),
+                    to = self$get_step_number(step)
+                )
+            }
+
+            edges <- mapply(
+                step = names(deps),
+                depsAtStep = deps,
+                FUN = create_edges_for_step,
+                SIMPLIFY = FALSE
+            ) |>
+                do.call(what = rbind, args = _) |>
+                replace("arrows", value = "to")
+
+            edges[order(edges[["from"]], edges[["to"]]), ]
+        },
+
+        .create_node_table = function(
+            groups = NULL
+        ) {
+            pip <- self$pipeline
+
+            nodes <- data.frame(
+                "id" = seq_len(self$length()),
+                "label" = self$get_step_names(),
+                "group" = pip[["group"]],
+                "shape" = "circle",
+                "color" = "grey",
+                "title" = paste0("<p>", pip[["description"]], "</p>")
+            )
+
+            nodes[["color"]][pip[["state"]] == "new"] <- "lightblue"
+            nodes[["color"]][pip[["state"]] == "done"] <- "lightgreen"
+            nodes[["color"]][pip[["state"]] == "outdated"] <- "orange"
+            nodes[["color"]][pip[["state"]] == "failed"] <- "red"
+            nodes[["color"]][pip[["state"]] == "locked"] <- "grey"
+            nodes[["shape"]][1] <- "database"
+            nodes[["shape"]][pip[["keepOut"]]] <- "box"
+
+            if (!is.null(groups)) {
+                stopifnot(
+                    is.character(groups),
+                    all(groups %in% self$pipeline[["group"]])
+                )
+                nodes <- nodes[self$pipeline[["group"]] %in% groups, ]
+            }
+
+            nodes
         },
 
         .derive_dependencies = function(
@@ -1211,7 +1305,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             if (self$has_step(step)) {
                 private$.set_at_step(step, "time", value = Sys.time())
                 private$.set_at_step(step, "out", value = res)
-                private$.set_at_step(step, "state", value = "latest")
+                private$.set_at_step(step, "state", value = "done")
                 private$.update_states_downstream(step, "outdated")
             }
             thisWasExecutedSuccessfully <- TRUE
@@ -1450,6 +1544,24 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(TRUE)
         },
 
+
+        .verify_from_to = function(from, to)
+        {
+            stopifnot(
+                is_number(from),
+                is_number(to),
+                from <= to
+            )
+
+            if (to > self$length()) {
+                stop(
+                    "'to' must not be larger than pipeline length",
+                    call. = FALSE
+                )
+            }
+
+            invisible(TRUE)
+        },
 
         .verify_fun_params = function(
             fun,

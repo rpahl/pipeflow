@@ -875,7 +875,7 @@ test_that("execute_step",
         after <- pip$pipeline[["state"]]
 
         expect_equal(before, c("new", "new"))
-        expect_equal(after, c("new", "latest"))
+        expect_equal(after, c("new", "done"))
     })
 })
 
@@ -1568,7 +1568,35 @@ test_that("print",
 })
 
 
+test_that("print_graph",
+{
+    expect_true(is.function(Pipeline$new("pipe")$print_graph))
 
+    test_that("returns a visNetwork object",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = ~f1, b = ~.data) a)
+
+        res <- pip$print_graph()
+        expect_true(is(res, "visNetwork"))
+    })
+
+    test_that("can be printed for certain groups",
+    {
+        pip <- Pipeline$new("pipe")
+        pip$add("step2", \(a = ~.data) a + 1, group = "add")
+        pip$add("step3", \(a = ~step2) 2 * a, group = "mult")
+        pip$add("step4", \(a = ~step2, b = ~step3) a + b, group = "add")
+        pip$add("step5", \(a = ~.data, b = ~step4) a * b, group = "mult")
+
+        res.add <- pip$print_graph(groups = "add")
+        expect_equal(res.add$x$nodes$id, c(2, 4))
+
+        res.mult <- pip$print_graph(groups = "mult")
+        expect_equal(res.mult$x$nodes$id, c(3, 5))
+    })
+})
 
 test_that("pop_step",
 {
@@ -1972,7 +2000,7 @@ test_that("replace_step",
         pip$execute()
 
         pip$replace_step("f2", function(a = 2) 2* a)
-        expect_equal(pip$get_step("f1")$state, "latest")
+        expect_equal(pip$get_step("f1")$state, "done")
         expect_equal(pip$get_step("f2")$state, "new")
         expect_equal(pip$get_step("f3")$state, "outdated")
         expect_equal(pip$get_step("f4")$state, "outdated")
@@ -2011,8 +2039,8 @@ test_that("set_data",
 
         pip$execute()
 
-        expect_equal(pip$get_step("f1")$state, "latest")
-        expect_equal(pip$get_step("f2")$state, "latest")
+        expect_equal(pip$get_step("f1")$state, "done")
+        expect_equal(pip$get_step("f2")$state, "done")
         pip$set_data(dat)
         expect_equal(pip$get_step("f1")$state, "outdated")
         expect_equal(pip$get_step("f2")$state, "outdated")
@@ -2549,14 +2577,14 @@ test_that("set_parameters_at_step",
 
         pip$execute()
         pip$set_parameters_at_step("f1", params = list(a = 3))
-        expect_equal(pip$get_step(".data")$state, "latest")
+        expect_equal(pip$get_step(".data")$state, "done")
         expect_equal(pip$get_step("f1")$state, "outdated")
         expect_equal(pip$get_step("f2")$state, "outdated")
         expect_equal(pip$get_step("f3")$state, "outdated")
-        expect_equal(pip$get_step("f4")$state, "latest")
+        expect_equal(pip$get_step("f4")$state, "done")
 
         pip$execute()
-        expect_true(all(pip$pipeline[["state"]] == "latest"))
+        expect_true(all(pip$pipeline[["state"]] == "done"))
     })
 
 
@@ -2773,6 +2801,254 @@ test_that("private methods work as expected",
     })
 
 
+    test_that(".create_edge_table",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.create_edge_table
+
+        test_that("returns a data frame with the expected columns",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.create_edge_table
+
+            res <- f()
+            expect_true(is.data.frame(res))
+            expected_columns <- c("from", "to", "arrows")
+            expect_equal(colnames(res), expected_columns)
+        })
+
+        test_that("if no dependencies are defined, edge table is empty",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.create_edge_table
+
+            res <- f()
+            hasEmptyEdgeTable <- nrow(res) == 0
+            expect_true(hasEmptyEdgeTable)
+
+            pip$add("f1", function(a = 1) a)
+            res <- f()
+            hasEmptyEdgeTable <- nrow(res) == 0
+            expect_true(hasEmptyEdgeTable)
+
+            pip$add("f2", function(a = ~f1) a)
+            res <- f()
+            hasEmptyEdgeTable <- nrow(res) == 0
+            expect_false(hasEmptyEdgeTable)
+        })
+
+        test_that("adds one edge for each dependency",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.create_edge_table
+
+            # step1 is data
+            pip$add("step2", function(a = 1) a)
+            pip$add("step3", function(a = ~step2) a)
+            pip$add("step4", function(a = ~step2, b = ~step3) a)
+            pip$add("step5", function(a = ~.data, b = ~step4) a)
+
+            res <- f()
+            expect_equal(nrow(res), 5)
+
+            expect_equivalent(
+                res["step3", c("from", "to")],      # from step2 to step3
+                data.frame(from = 2, to = 3)
+            )
+            expect_equivalent(
+                res["step4.a", c("from", "to")],    # from step2 to step4
+                data.frame(from = 2, to = 4)
+            )
+            expect_equivalent(
+                res["step4.b", c("from", "to")],   # from step3 to step4
+                data.frame(from = 3, to = 4)
+            )
+            expect_equivalent(
+                res["step5.a", c("from", "to")],   # from .data to step5
+                data.frame(from = 1, to = 5)
+            )
+            expect_equivalent(
+                res["step5.b", c("from", "to")],   # from .data to step5
+                data.frame(from = 4, to = 5)
+            )
+        })
+
+        test_that("adds one edge for each dependency",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.create_edge_table
+
+            # step1 is data
+            pip$add("step2", function(a = 1) a)
+            pip$add("step3", function(a = ~step2) a)
+            pip$add("step4", function(a = ~step2, b = ~step3) a)
+            pip$add("step5", function(a = ~.data, b = ~step4) a)
+
+            res <- f()
+            expect_equal(nrow(res), 5)
+
+            expect_equivalent(
+                res["step3", c("from", "to")],      # from step2 to step3
+                data.frame(from = 2, to = 3)
+            )
+            expect_equivalent(
+                res["step4.a", c("from", "to")],    # from step2 to step4
+                data.frame(from = 2, to = 4)
+            )
+            expect_equivalent(
+                res["step4.b", c("from", "to")],   # from step3 to step4
+                data.frame(from = 3, to = 4)
+            )
+            expect_equivalent(
+                res["step5.a", c("from", "to")],   # from .data to step5
+                data.frame(from = 1, to = 5)
+            )
+            expect_equivalent(
+                res["step5.b", c("from", "to")],   # from .data to step5
+                data.frame(from = 4, to = 5)
+            )
+        })
+
+        test_that("can be created for certain groups",
+        {
+            pip <- Pipeline$new("pipe")
+
+            # step1 is data
+            pip$add("step2", \(a = ~.data) a + 1, group = "add")
+            pip$add("step3", \(a = ~step2) 2 * a, group = "mult")
+            pip$add("step4", \(a = ~step2, b = ~step3) a + b, group = "add")
+            pip$add("step5", \(a = ~.data, b = ~step4) a * b, group = "mult")
+
+            f <- get_private(pip)$.create_edge_table
+            res.all <- f()
+
+            res.add <- f(groups = "add")
+            expect_equal(
+                res.add,
+                res.all[c("step2", "step4.a", "step4.b"), ]
+            )
+
+            res.mult <- f(groups = "mult")
+            expect_equal(
+                res.mult,
+                res.all[c("step5.a", "step3", "step5.b"), ]
+            )
+
+            expect_equal(
+                f(groups = c(".data", "add", "mult")),
+                f()
+            )
+        })
+
+        test_that("signals bad group specification",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.create_edge_table
+
+            expect_error(
+                f(groups = "foo"),
+                "all(groups %in% self$pipeline[[\"group\"]]) is not TRUE",
+                fixed = TRUE
+            )
+            expect_error(
+                f(groups = 1),
+                "is.character(groups) is not TRUE",
+                fixed = TRUE
+            )
+        })
+    })
+
+
+    test_that(".create_node_table",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.create_node_table
+
+        test_that("returns a data frame with the expected columns",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.create_node_table
+
+            res <- f()
+            expect_true(is.data.frame(res))
+            expected_columns <- c(
+                "id", "label", "group", "shape", "color", "title"
+            )
+            expect_equal(colnames(res), expected_columns)
+        })
+
+        test_that("adds one node for each step",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.create_node_table
+
+            res <- f()
+            expect_equal(nrow(res), pip$length())
+
+            pip$add("f2", function(a = 1) a)
+            res <- f()
+            expect_equal(nrow(res), pip$length())
+
+            pip$add("f3", function(a = ~f2) a)
+            res <- f()
+            expect_equal(nrow(res), pip$length())
+        })
+
+        test_that("description is shown in the title",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("step2", \(a = 1) a, description = "my 2nd step")
+
+            f <- get_private(pip)$.create_node_table
+            res <- f()
+            expect_equal(res[2, "title"], "<p>my 2nd step</p>")
+
+        })
+
+        test_that("can be created for certain groups",
+        {
+            pip <- Pipeline$new("pipe")
+
+            # step1 is data
+            pip$add("step2", \(a = ~.data) a + 1, group = "add")
+            pip$add("step3", \(a = ~step2) 2 * a, group = "mult")
+            pip$add("step4", \(a = ~step2, b = ~step3) a + b, group = "add")
+            pip$add("step5", \(a = ~.data, b = ~step4) a * b, group = "mult")
+
+            f <- get_private(pip)$.create_node_table
+            res.all <- f()
+
+            res.add <- f(groups = "add")
+            expect_equal(res.add, res.all[c(2, 4), ])
+
+            res.mult <- f(groups = "mult")
+            expect_equal(res.mult, res.all[c(3, 5), ])
+
+            expect_equal(
+                f(groups = c(".data", "add", "mult")),
+                f()
+            )
+        })
+
+        test_that("signals bad group specification",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.create_node_table
+
+            expect_error(
+                f(groups = "foo"),
+                "all(groups %in% self$pipeline[[\"group\"]]) is not TRUE",
+                fixed = TRUE
+            )
+            expect_error(
+                f(groups = 1),
+                "is.character(groups) is not TRUE",
+                fixed = TRUE
+            )
+        })
+    })
+
+
     test_that(".derive_dependencies",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
@@ -2927,7 +3203,7 @@ test_that("private methods work as expected",
         })
 
         test_that(
-            "updates the state to 'latest' if step was run successfully
+            "updates the state to 'done' if step was run successfully
             otherwise to 'failed'",
         {
             pip <- Pipeline$new("pipe") |>
@@ -2942,13 +3218,13 @@ test_that("private methods work as expected",
             f(step = "ok")
             pip$get_step("ok")$state
 
-            expect_equal(pip$get_step("ok")$state, "latest")
+            expect_equal(pip$get_step("ok")$state, "done")
 
             expect_error(f(step = "error"))
             expect_equal(pip$get_step("error")$state, "failed")
 
             expect_warning(f(step = "warning"))
-            expect_equal(pip$get_step("warning")$state, "latest")
+            expect_equal(pip$get_step("warning")$state, "done")
         })
 
         test_that("will not re-compute output of locked steps",
@@ -3686,6 +3962,50 @@ test_that("private methods work as expected",
                 f(dep = "f2", "new-step", toStep = "f1"),
                 "dependency 'f2' not found up to step 'f1'",
                 fixed = TRUE
+            )
+        })
+    })
+
+
+    test_that(".verify_from_to",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.verify_from_to
+        eefix <- function(...) expect_error(..., fixed = TRUE)
+
+        test_that("signals badly typed args",
+        {
+            pip <- expect_no_error(Pipeline$new("pipe"))
+            pip$add("f1", function(a = 1) a)
+            f <- get_private(pip)$.verify_from_to
+
+            eefix(
+                f(from = "f1", to = 2),
+                "is_number(from) is not TRUE"
+            )
+            eefix(
+                f(from = 1, to = "f1"),
+                "is_number(to) is not TRUE"
+            )
+        })
+
+        test_that("signals if from > to",
+        {
+            eefix(
+                f(from = 2, to = 1),
+                "from <= to is not TRUE"
+            )
+        })
+
+        test_that("signals if to > pipeline length",
+        {
+            pip <- expect_no_error(Pipeline$new("pipe"))
+            pip$add("f1", function(a = 1) a)
+            f <- get_private(pip)$.verify_from_to
+
+            eefix(
+                f(from = 1, to = pip$length() + 1),
+                "'to' must not be larger than pipeline length"
             )
         })
     })

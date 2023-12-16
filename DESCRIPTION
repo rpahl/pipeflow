@@ -15,9 +15,9 @@ Imports:
     methods,
     R6,
     stats,
-    utils
+    utils,
+    visNetwork
 Suggests:
-    mockery,
     testthat
 Config/testthat/edition: 3
 Config/testthat/parallel: true
