@@ -1596,6 +1596,23 @@ test_that("print_graph",
         res.mult <- pip$print_graph(groups = "mult")
         expect_equal(res.mult$x$nodes$id, c(3, 5))
     })
+
+    test_that("signals if visNetwork is not available",
+    {
+        pip <- Pipeline$new("pipe")
+
+        mockery::stub(
+            where = pip$print_graph,
+            what = "requireNamespace",
+            how = mockery::mock(FALSE)
+        )
+
+        expect_error(
+            pip$print_graph(),
+            "Package 'visNetwork' is required"
+        )
+
+    })
 })
 
 test_that("pop_step",
