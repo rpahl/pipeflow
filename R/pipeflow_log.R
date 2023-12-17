@@ -16,7 +16,6 @@
 
 
 #' @importFrom R6 R6Class
-#' @importFrom jsonlite toJSON
 LogLayoutJson <- R6::R6Class(
     "LogLayoutJson",
     inherit = lgr::LayoutJson,

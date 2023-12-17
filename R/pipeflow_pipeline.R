@@ -82,7 +82,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 state = character(0)
             )
 
-            self$add(".data", function() data, keepOut = FALSE)
+            self$add("data", function() data, keepOut = FALSE)
 
             invisible(self)
         },
@@ -961,7 +961,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 c(pip, pipes),
                 f = function(x, y) x$append(y, sep = sep)
             )
-            combined$remove_step(".data")
+            combined$remove_step("data")
 
             # If subset was used for split, append the remaining steps and
             # update all of the (now changed) upstream dependencies.
