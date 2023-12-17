@@ -15,7 +15,8 @@ Imports:
     methods,
     R6,
     stats,
-    utils
+    utils,
+    visNetwork
 Suggests:
     mockery,
     testthat

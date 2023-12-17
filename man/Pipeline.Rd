@@ -56,6 +56,7 @@ Roman Pahl
 \item \href{#method-Pipeline-length}{\code{Pipeline$length()}}
 \item \href{#method-Pipeline-lock_step}{\code{Pipeline$lock_step()}}
 \item \href{#method-Pipeline-print}{\code{Pipeline$print()}}
+\item \href{#method-Pipeline-print_graph}{\code{Pipeline$print_graph()}}
 \item \href{#method-Pipeline-pop_step}{\code{Pipeline$pop_step()}}
 \item \href{#method-Pipeline-pop_steps_after}{\code{Pipeline$pop_steps_after()}}
 \item \href{#method-Pipeline-pop_steps_from}{\code{Pipeline$pop_steps_from()}}
@@ -260,9 +261,9 @@ Execute all pipeline steps.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{from}}{\code{numeric} start from this step}
+\item{\code{from}}{\code{numeric} step number to start execution from}
 
-\item{\code{to}}{\code{numeric} execute until this step}
+\item{\code{to}}{\code{numeric} step number to execute until}
 
 \item{\code{recursive}}{\code{logical} if \code{TRUE} and a step returns a new
 pipeline, the run of the current pipeline is aborted and the
@@ -639,11 +640,34 @@ the \code{Pipeline} object invisibly
 \if{html}{\out{<a id="method-Pipeline-print"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-print}{}}}
 \subsection{Method \code{print()}}{
-Print the pipeline.
+Print the pipeline as a table.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$print()}\if{html}{\out{</div>}}
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-print_graph"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-print_graph}{}}}
+\subsection{Method \code{print_graph()}}{
+Visualize the pipeline as a graph.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$print_graph(groups = NULL, ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{groups}}{\code{character} if not \code{NULL}, only steps belonging to the
+given groups are visualized.}
+
+\item{\code{...}}{further arguments passed to \code{\link[=visNetwork]{visNetwork()}}.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+\code{visNetwork} object
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-pop_step"></a>}}
