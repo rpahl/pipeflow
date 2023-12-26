@@ -1108,6 +1108,23 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
+        #' @description Splits pipeline into its independent parts.
+        #' @return list of `Pipeline` objects
+        split = function() {
+            groups <- self$get_deps_grouped()
+            name <- self$name
+            newNames <- paste0(name, seq_along(groups))
+            pips <- lapply(newNames, \(name) Pipeline$new(name))
+
+            for (i in seq_along(groups)) {
+                pip <- pips[[i]]
+                stepNumbers <- which(self$pipeline[["step"]] %in% groups[[i]])
+                pip$pipeline <- self$pipeline[stepNumbers, ]
+            }
+
+            pips
+        },
+
         #' @description Unlock previously locked step. If step was not locked,
         #' the command is ignored.
         #' @param step `string` name of step
@@ -1120,7 +1137,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             invisible(self)
         }
-
     ),
 
     private = list(
@@ -1568,6 +1584,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             stopifnot(
                 is_number(from),
                 is_number(to),
+                from > 0,
                 from <= to
             )
 

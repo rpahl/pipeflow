@@ -627,35 +627,6 @@ test_that("execute",
         expect_equal(pip$name, "pipe1")
     })
 
-    test_that("end point of pipeline execution can be customized",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add("A", function(a = 1) a) |>
-            pipe_add("B", function(b = ~A) b)
-
-        pip$keep_all_out()
-
-        out <- pip$execute(to = 2)$collect_out()
-
-        hasExecutedStepA <- identical(out[["A"]][[1]], 1)
-        expect_true(hasExecutedStepA)
-
-        hasExecutedStepB <- identical(out[["B"]][[1]], 1)
-        expect_false(hasExecutedStepB)
-    })
-
-    test_that("start point of pipeline execution can be customized",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add("A", function(a = 1) a) |>
-            pipe_add("B", function(b = ~A) b)
-
-        pip$keep_all_out()
-
-        out <- pip$execute(from = 3)$collect_out()
-        expect_equal(out[["B"]][[1]], NULL)
-    })
-
     test_that("if function result is a list, all names are preserved",
     {
         # Result list length == 1 - the critical case
@@ -716,7 +687,6 @@ test_that("execute",
         expect_error(pip$execute(), "something went wrong")
     })
 
-
     test_that(
         "can handle 'NULL' results",
     {
@@ -731,6 +701,67 @@ test_that("execute",
         expect_equal(out[["f1"]], NULL)
     })
 
+    test_that(
+        "can be executed recursively to dynamically create and run pipelines",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add(
+                "f1",
+                fun = function(data = 10) {
+                    pip <- Pipeline$new("2nd pipe", data = data) |>
+                        pipe_add("step1", function(x = ~data) x) |>
+                        pipe_add("step2", function(x = ~step1) {
+                            print(x)
+                            2 * x
+                        }, keepOut = TRUE)
+                }
+            )
+
+        pip2 <- pip$execute(recursive = TRUE)
+        expect_equal(pip2$get_step_names(), c("data", "step1", "step2"))
+
+        out <- pip2$collect_out()
+        expect_equal(out[["step2"]], 20)
+    })
+
+    test_that(
+        "can execute parts of the pipeline",
+    {
+        pip <- Pipeline$new("pipe", data = 0) |>
+            pipe_add("f1", function(x = 1) x, keepOut = TRUE) |>
+            pipe_add("f2", function(x = 2) x, keepOut = TRUE)
+
+        out <- pip$execute(to = 2)$collect_out()
+        expect_equal(out, list(f1 = 1, f2 = NULL))
+
+        out <- pip$execute(to = 3)$collect_out()
+        expect_equal(out, list(f1 = 1, f2 = 2))
+    })
+
+    test_that("signals bad from/to values",
+    {
+        pip <- Pipeline$new("pipe", data = 0) |>
+            pipe_add("f1", function(x = 1) x, keepOut = TRUE) |>
+            pipe_add("f2", function(x = 2) x, keepOut = TRUE)
+
+        expect_error(
+            pip$execute(from = 0),
+            "from > 0 is not TRUE",
+            fixed = TRUE
+        )
+
+        expect_error(
+            pip$execute(from = 2, to = 1),
+            "from <= to is not TRUE",
+            fixed = TRUE
+        )
+
+        expect_error(
+            pip$execute(to = 5),
+            "'to' must not be larger than pipeline length",
+            fixed = TRUE
+        )
+    })
 })
 
 
@@ -1020,9 +1051,9 @@ test_that("get_deps_grouped",
         dataList <- list(dat1, dat2)
 
         pip <- Pipeline$new("pipe") |>
-            pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function(a = ~f1, b = 2) b) |>
-            pipe_add("f3", function(x = ~f1, y = ~f2) x + y)
+            pipe_add("f1", \(a = 1) a) |>
+            pipe_add("f2", \(a = ~f1, b = 2) b) |>
+            pipe_add("f3", \(x = ~f1, y = ~f2) x + y)
 
         pip$set_data_split(dataList, toStep = "f3")
 
@@ -1045,9 +1076,9 @@ test_that("get_deps_grouped",
         dataList <- list(dat1, dat2)
 
         pip <- Pipeline$new("pipe") |>
-            pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function(a = ~f1, b = 2) b) |>
-            pipe_add("f3", function(x = ~f1, y = ~f2) x + y)
+            pipe_add("f1", \(a = 1) a) |>
+            pipe_add("f2", \(a = ~f1, b = 2) b) |>
+            pipe_add("f3", \(x = ~f1, y = ~f2) x + y)
 
         pip$set_data_split(dataList, toStep = "f2")
 
@@ -1058,6 +1089,22 @@ test_that("get_deps_grouped",
                 "data.2",
                 c("f1.1", "f2.1", "f1.2", "f2.2", "f3")
             )
+        )
+    })
+
+    test_that(
+        "if all steps somehow are dependent on each other,
+            just one group is returned",
+    {
+        pip <- Pipeline$new("pipe")
+        pip$add("f1", \(a = ~data) a)
+        pip$add("f2", \(a = 1) a)
+        pip$add("f3", \(a = ~f2) a)
+        pip$add("f4", \(a = ~f1, b = ~f3) a)
+
+        expect_equal(
+            unlist(pip$get_deps_grouped()),
+            pip$get_step_names()
         )
     })
 })
@@ -2356,7 +2403,7 @@ test_that("set_data_split",
 
         pip$set_parameters(list(.self = pip))
 
-        out <- pip$execute()$collect_out()
+        out <- pip$execute(recursive = TRUE)$collect_out()
 
         expect_equivalent(out, split(data, data[, "group"]))
     })
@@ -2700,6 +2747,80 @@ test_that("set_parameters_at_step",
 
         out <- pip$execute()$collect_out()
         expect_equal(out, list(f1 = "x", f2 = "y x", f3 = "y x 3"))
+    })
+})
+
+
+test_that("split",
+{
+    expect_true(is.function(Pipeline$new("pipe")$split))
+
+    test_that("pipeline split of initial pipeline gives the expected result",
+    {
+        pip <- Pipeline$new("pipe")
+        res <- pip$split()
+
+        expect_true(is.list(res))
+        expect_equal(res[[1]]$name, "pipe1")
+        expect_equal(res[[1]]$pipeline, pip$pipeline)
+    })
+
+
+    test_that("pipeline with two indepdendent groups is split correctly",
+    {
+        pip <- Pipeline$new("pipe")
+
+        pip$add("f1", \(a = ~data) a)
+        pip$add("f2", \(a = 1) a)
+        pip$add("f3", \(a = ~f2) a)
+        pip$add("f4", \(a = ~f1) a)
+        pip$keep_all_out()$execute()
+
+        res <- pip$split()
+        pip1 <- res[[1]]
+        pip2 <- res[[2]]
+        expect_equal(pip1$name, "pipe1")
+        expect_equal(pip2$name, "pipe2")
+
+        expect_equal(pip1$get_step_names(), c("f2", "f3"))
+        expect_equal(pip2$get_step_names(), c("data", "f1", "f4"))
+
+        expect_equal(
+            pip1$collect_out(),
+            pip$collect_out()[c("f2", "f3")]
+        )
+        expect_equal(
+            pip2$collect_out(),
+            pip$collect_out()[c("data", "f1", "f4")]
+        )
+    })
+
+    test_that(
+        "split is done correctly for complete data split",
+    {
+        dat1 <- data.frame(x = 1:2)
+        dat2 <- data.frame(y = 1:2)
+        dataList <- list(dat1, dat2)
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", \(a = 1) a) |>
+            pipe_add("f2", \(a = ~f1, b = 2) b) |>
+            pipe_add("f3", \(x = ~f1, y = ~f2) x + y)
+
+        pip$set_data_split(dataList)
+
+        res <- pip$split()
+        steps <- lapply(res, function(x) x$get_step_names())
+
+        expect_equal(
+            steps,
+            list(
+                "data.1",
+                c("f1.1", "f2.1", "f3.1"),
+                "data.2",
+                c("f1.2", "f2.2", "f3.2")
+            )
+        )
     })
 })
 
