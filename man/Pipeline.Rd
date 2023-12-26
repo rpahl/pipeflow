@@ -10,7 +10,7 @@ of a sequence of analysis steps, which can be added one by one. Each added
 step may or may not depend on one or more previous steps. The pipeline
 keeps track of the dependencies among these steps and will ensure that
 all dependencies are met on creation of the pipeline, that is, before the
-the pipeline is executed. Once the pipeline is executed, the output is
+the pipeline is run. Once the pipeline is run, the output is
 stored in the pipeline along with each step and can be accessed later.
 Different pipelines can be bound together while preserving all dependencies
 within each pipeline.
@@ -36,8 +36,6 @@ Roman Pahl
 \item \href{#method-Pipeline-append_to_step_names}{\code{Pipeline$append_to_step_names()}}
 \item \href{#method-Pipeline-collect_out}{\code{Pipeline$collect_out()}}
 \item \href{#method-Pipeline-discard_steps}{\code{Pipeline$discard_steps()}}
-\item \href{#method-Pipeline-execute}{\code{Pipeline$execute()}}
-\item \href{#method-Pipeline-execute_step}{\code{Pipeline$execute_step()}}
 \item \href{#method-Pipeline-get_data}{\code{Pipeline$get_data()}}
 \item \href{#method-Pipeline-get_deps}{\code{Pipeline$get_deps()}}
 \item \href{#method-Pipeline-get_deps_down}{\code{Pipeline$get_deps_down()}}
@@ -62,6 +60,8 @@ Roman Pahl
 \item \href{#method-Pipeline-pop_steps_from}{\code{Pipeline$pop_steps_from()}}
 \item \href{#method-Pipeline-remove_step}{\code{Pipeline$remove_step()}}
 \item \href{#method-Pipeline-replace_step}{\code{Pipeline$replace_step()}}
+\item \href{#method-Pipeline-run}{\code{Pipeline$run()}}
+\item \href{#method-Pipeline-run_step}{\code{Pipeline$run_step()}}
 \item \href{#method-Pipeline-set_data}{\code{Pipeline$set_data()}}
 \item \href{#method-Pipeline-set_data_split}{\code{Pipeline$set_data_split()}}
 \item \href{#method-Pipeline-set_keep_out}{\code{Pipeline$set_keep_out()}}
@@ -249,58 +249,8 @@ be matched as is. Overrides all conflicting arguments.}
 }
 \if{html}{\out{</div>}}
 }
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-execute"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-execute}{}}}
-\subsection{Method \code{execute()}}{
-Execute all pipeline steps.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$execute(from = 1, to = self$length(), recursive = TRUE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{from}}{\code{numeric} step number to start execution from}
-
-\item{\code{to}}{\code{numeric} step number to execute until}
-
-\item{\code{recursive}}{\code{logical} if \code{TRUE} and a step returns a new
-pipeline, the run of the current pipeline is aborted and the
-new pipeline is executed recursively.}
-}
-\if{html}{\out{</div>}}
-}
 \subsection{Returns}{
-returns the \code{Pipeline} object invisibly
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-execute_step"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-execute_step}{}}}
-\subsection{Method \code{execute_step()}}{
-Execute given pipeline step possibly together with
-upstream and downstream dependencies.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$execute_step(step, upstream = TRUE, downstream = FALSE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{step}}{\code{string} name of step}
-
-\item{\code{upstream}}{\code{logical} if \code{TRUE}, execute all dependent upstream
-steps first.}
-
-\item{\code{downstream}}{\code{logical} if \code{TRUE}, execute all depdendent
-downstream afterwards.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-returns the \code{Pipeline} object invisibly
+the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
@@ -792,6 +742,59 @@ is used to only keep the results that matter.}
 }
 \subsection{Returns}{
 the \code{Pipeline} object invisibly
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-run"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-run}{}}}
+\subsection{Method \code{run()}}{
+Run all pipeline steps.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run(from = 1, to = self$length(), recursive = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{from}}{\code{numeric} step number to start execution from}
+
+\item{\code{to}}{\code{numeric} step number to run until}
+
+\item{\code{recursive}}{\code{logical} if \code{TRUE} and a step returns a new
+pipeline, the run of the current pipeline is aborted and the
+new pipeline is run recursively.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+returns the \code{Pipeline} object invisibly
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-run_step"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-run_step}{}}}
+\subsection{Method \code{run_step()}}{
+Run given pipeline step possibly together with
+upstream and downstream dependencies.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run_step(step, upstream = TRUE, downstream = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{\code{string} name of step}
+
+\item{\code{upstream}}{\code{logical} if \code{TRUE}, run all dependent upstream
+steps first.}
+
+\item{\code{downstream}}{\code{logical} if \code{TRUE}, run all depdendent
+downstream afterwards.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+returns the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}

@@ -6,7 +6,7 @@
 #' step may or may not depend on one or more previous steps. The pipeline
 #' keeps track of the dependencies among these steps and will ensure that
 #' all dependencies are met on creation of the pipeline, that is, before the
-#' the pipeline is executed. Once the pipeline is executed, the output is
+#' the pipeline is run. Once the pipeline is run, the output is
 #' stored in the pipeline along with each step and can be accessed later.
 #' Different pipelines can be bound together while preserving all dependencies
 #' within each pipeline.
@@ -302,7 +302,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param fixed `logical` If `TRUE`, `pattern` is a string to
         #' be matched as is. Overrides all conflicting arguments.
         #' @param ... further arguments passed to [grep()].
-        #:' @return the `Pipeline` object invisibly
+        #' @return the `Pipeline` object invisibly
         discard_steps = function(
             pattern,
             recursive = FALSE,
@@ -323,128 +323,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 message(gettextf("step '%s' was removed", step))
             }
 
-            invisible(self)
-        },
-
-        #' @description Execute all pipeline steps.
-        #' @param from `numeric` step number to start execution from
-        #' @param to `numeric` step number to execute until
-        #' @param recursive `logical` if `TRUE` and a step returns a new
-        #' pipeline, the run of the current pipeline is aborted and the
-        #' new pipeline is executed recursively.
-        #' @return returns the `Pipeline` object invisibly
-        execute = function(
-            from = 1,
-            to = self$length(),
-            recursive = TRUE
-        ) {
-            private$.verify_from_to(from, to)
-            stopifnot(
-                is.logical(recursive)
-            )
-
-            log_info <- function(msg, ...) {
-                private$.lg(level = "info", msg = msg, ...)
-            }
-
-            gettextf("Start execution of '%s' pipeline:", self$name) |>
-                log_info(type = "start_pipeline", pipeline_name = self$name)
-
-            for (i in seq(from = from, to = to)) {
-                step <- as.character(self$pipeline[i, "step"])
-                gettextf("Step %i/%i %s",  i, to, step) |> log_info()
-
-                res = private$.execute_step(step)
-
-                if (inherits(res, "Pipeline") && recursive) {
-                    log_info("Abort pipeline execution and restart on new.")
-                    self = res
-                    self$execute(recursive = TRUE)
-                    return(invisible(self))
-                }
-            }
-
-            log_info("Finished execution of steps.")
-
-            log_info("Clean temporary results.")
-            private$.clean_out_not_kept()
-
-            log_info("Done.")
-            invisible(self)
-        },
-
-        #' @description Execute given pipeline step possibly together with
-        #' upstream and downstream dependencies.
-        #' @param step `string` name of step
-        #' @param upstream `logical` if `TRUE`, execute all dependent upstream
-        #' steps first.
-        #' @param downstream `logical` if `TRUE`, execute all depdendent
-        #' downstream afterwards.
-        #' @return returns the `Pipeline` object invisibly
-        execute_step = function(
-            step,
-            upstream = TRUE,
-            downstream = FALSE
-        ) {
-            private$.verify_step_exists(step)
-            stopifnot(
-                is.logical(upstream),
-                is.logical(downstream)
-            )
-
-            upstreamSteps <- character(0)
-            steps <- step
-            downstreamSteps <- character(0)
-
-            if (upstream) {
-                upstreamSteps <- private$.get_upstream_deps(
-                    step = step,
-                    deps = self$get_deps(),
-                    recursive = TRUE
-                )
-                steps <- c(upstreamSteps, step)
-            }
-
-            if (downstream) {
-                downstreamSteps <- private$.get_downstream_deps(
-                    step = step,
-                    deps = self$get_deps(),
-                    recursive = TRUE
-                )
-                steps <- c(steps, downstreamSteps)
-            }
-
-            nStep <- length(steps)
-
-            log_info <- function(msg, ...) {
-                private$.lg(level = "info", msg = msg, ...)
-            }
-
-            gettextf("Start step execution of '%s' pipeline:", self$name) |>
-                log_info(type = "start_pipeline", pipeline_name = self$name)
-
-
-            for (i in seq_along(steps)) {
-                step <- steps[i]
-                stream <- ""
-                if (step %in% upstreamSteps) {
-                    stream <- " (upstream)"
-                }
-                if (step %in% downstreamSteps) {
-                    stream <- " (downstream)"
-                }
-                gettextf("Step %i/%i %s%s",  i, nStep, step, stream) |>
-                    log_info()
-
-                private$.execute_step(step)
-            }
-
-            log_info("Finished execution of steps.")
-
-            log_info("Clean temporary results.")
-            private$.clean_out_not_kept()
-
-            log_info("Done.")
             invisible(self)
         },
 
@@ -888,6 +766,128 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
+        #' @description Run all pipeline steps.
+        #' @param from `numeric` step number to start execution from
+        #' @param to `numeric` step number to run until
+        #' @param recursive `logical` if `TRUE` and a step returns a new
+        #' pipeline, the run of the current pipeline is aborted and the
+        #' new pipeline is run recursively.
+        #' @return returns the `Pipeline` object invisibly
+        run = function(
+            from = 1,
+            to = self$length(),
+            recursive = TRUE
+        ) {
+            private$.verify_from_to(from, to)
+            stopifnot(
+                is.logical(recursive)
+            )
+
+            log_info <- function(msg, ...) {
+                private$.lg(level = "info", msg = msg, ...)
+            }
+
+            gettextf("Start execution of '%s' pipeline:", self$name) |>
+                log_info(type = "start_pipeline", pipeline_name = self$name)
+
+            for (i in seq(from = from, to = to)) {
+                step <- as.character(self$pipeline[i, "step"])
+                gettextf("Step %i/%i %s",  i, to, step) |> log_info()
+
+                res = private$.run_step(step)
+
+                if (inherits(res, "Pipeline") && recursive) {
+                    log_info("Abort pipeline execution and restart on new.")
+                    self = res
+                    self$run(recursive = TRUE)
+                    return(invisible(self))
+                }
+            }
+
+            log_info("Finished execution of steps.")
+
+            log_info("Clean temporary results.")
+            private$.clean_out_not_kept()
+
+            log_info("Done.")
+            invisible(self)
+        },
+
+        #' @description Run given pipeline step possibly together with
+        #' upstream and downstream dependencies.
+        #' @param step `string` name of step
+        #' @param upstream `logical` if `TRUE`, run all dependent upstream
+        #' steps first.
+        #' @param downstream `logical` if `TRUE`, run all depdendent
+        #' downstream afterwards.
+        #' @return returns the `Pipeline` object invisibly
+        run_step = function(
+            step,
+            upstream = TRUE,
+            downstream = FALSE
+        ) {
+            private$.verify_step_exists(step)
+            stopifnot(
+                is.logical(upstream),
+                is.logical(downstream)
+            )
+
+            upstreamSteps <- character(0)
+            steps <- step
+            downstreamSteps <- character(0)
+
+            if (upstream) {
+                upstreamSteps <- private$.get_upstream_deps(
+                    step = step,
+                    deps = self$get_deps(),
+                    recursive = TRUE
+                )
+                steps <- c(upstreamSteps, step)
+            }
+
+            if (downstream) {
+                downstreamSteps <- private$.get_downstream_deps(
+                    step = step,
+                    deps = self$get_deps(),
+                    recursive = TRUE
+                )
+                steps <- c(steps, downstreamSteps)
+            }
+
+            nStep <- length(steps)
+
+            log_info <- function(msg, ...) {
+                private$.lg(level = "info", msg = msg, ...)
+            }
+
+            gettextf("Start step execution of '%s' pipeline:", self$name) |>
+                log_info(type = "start_pipeline", pipeline_name = self$name)
+
+
+            for (i in seq_along(steps)) {
+                step <- steps[i]
+                stream <- ""
+                if (step %in% upstreamSteps) {
+                    stream <- " (upstream)"
+                }
+                if (step %in% downstreamSteps) {
+                    stream <- " (downstream)"
+                }
+                gettextf("Step %i/%i %s%s",  i, nStep, step, stream) |>
+                    log_info()
+
+                private$.run_step(step)
+            }
+
+            log_info("Finished execution of steps.")
+
+            log_info("Clean temporary results.")
+            private$.clean_out_not_kept()
+
+            log_info("Done.")
+            invisible(self)
+        },
+
         #' @description Set data in first step of pipeline.
         #' @param data `data.frame` initial data set.
         #' @return returns the `Pipeline` object invisibly
@@ -1260,7 +1260,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             deps
         },
 
-        .execute_step = function(step)
+        .run_step = function(step)
         {
             private$.verify_step_exists(step)
             isLocked <- self$get_step(step)[["state"]] == "locked"
@@ -1270,9 +1270,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             pip <- self$pipeline
-            thisWasExecutedSuccessfully <- FALSE
+            thisWasRunSuccessfully <- FALSE
             on.exit(
-                if (!thisWasExecutedSuccessfully) {
+                if (!thisWasRunSuccessfully) {
                     private$.set_at_step(step, "state", value = "failed")
                 },
                 add = TRUE
@@ -1325,7 +1325,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 private$.set_at_step(step, "state", value = "done")
                 private$.update_states_downstream(step, "outdated")
             }
-            thisWasExecutedSuccessfully <- TRUE
+            thisWasRunSuccessfully <- TRUE
 
             invisible(res)
         },
@@ -1706,18 +1706,6 @@ pipe_discard_steps = function(pip, ...)
 
 #' @rdname pipelineHelpers
 #' @export
-pipe_execute = function(pip, ...)
-    pip$execute(...)
-
-
-#' @rdname pipelineHelpers
-#' @export
-pipe_execute_step = function(pip, ...)
-    pip$execute_step(...)
-
-
-#' @rdname pipelineHelpers
-#' @export
 pipe_get_data = function(pip, ...)
     pip$get_data(...)
 
@@ -1858,6 +1846,18 @@ pipe_remove_step = function(pip, ...)
 #' @export
 pipe_replace_step = function(pip, ...)
     pip$replace_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_run = function(pip, ...)
+    pip$run(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_run_step = function(pip, ...)
+    pip$run_step(...)
 
 
 #' @rdname pipelineHelpers

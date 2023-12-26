@@ -8,8 +8,6 @@
 \alias{pipe_clone}
 \alias{pipe_collect_out}
 \alias{pipe_discard_steps}
-\alias{pipe_execute}
-\alias{pipe_execute_step}
 \alias{pipe_get_data}
 \alias{pipe_get_deps}
 \alias{pipe_get_deps_down}
@@ -34,6 +32,8 @@
 \alias{pipe_pop_steps_from}
 \alias{pipe_remove_step}
 \alias{pipe_replace_step}
+\alias{pipe_run}
+\alias{pipe_run_step}
 \alias{pipe_set_data}
 \alias{pipe_set_data_split}
 \alias{pipe_set_keep_out}
@@ -54,10 +54,6 @@ pipe_clone(pip, ...)
 pipe_collect_out(pip, ...)
 
 pipe_discard_steps(pip, ...)
-
-pipe_execute(pip, ...)
-
-pipe_execute_step(pip, ...)
 
 pipe_get_data(pip, ...)
 
@@ -106,6 +102,10 @@ pipe_pop_steps_from(pip, ...)
 pipe_remove_step(pip, ...)
 
 pipe_replace_step(pip, ...)
+
+pipe_run(pip, ...)
+
+pipe_run_step(pip, ...)
 
 pipe_set_data(pip, ...)
 
