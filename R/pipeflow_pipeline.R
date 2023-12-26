@@ -800,8 +800,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 private$.lg(level = "info", msg = msg, ...)
             }
 
-            gettextf("Start execution of '%s' pipeline:", self$name) |>
-                log_info(type = "start_pipeline", pipeline_name = self$name)
+            gettextf("Start run of '%s' pipeline:", self$name) |> log_info()
 
             for (i in seq(from = from, to = to)) {
                 step <- as.character(self$pipeline[i, "step"])
@@ -873,9 +872,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 private$.lg(level = "info", msg = msg, ...)
             }
 
-            gettextf("Start step execution of '%s' pipeline:", self$name) |>
-                log_info(type = "start_pipeline", pipeline_name = self$name)
-
+            gettextf("Start step run of '%s' pipeline:", self$name) |>
+                log_info()
 
             for (i in seq_along(steps)) {
                 step <- steps[i]

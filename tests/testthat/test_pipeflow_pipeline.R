@@ -51,7 +51,7 @@ test_that("initialize",
         expect_equal(
             out,
             c(
-                "My Logger: Start execution of 'pipe' pipeline:",
+                "My Logger: Start run of 'pipe' pipeline:",
                 "My Logger: Step 1/1 data",
                 "My Logger: Finished execution of steps.",
                 "My Logger: Clean temporary results.",
@@ -2838,23 +2838,6 @@ test_that("pipeline logging works as expected",
 
         expect_equal(last[["message"]],
             "Context: pipeline at step 3 ('f2'), technical error message")
-    })
-
-    test_that("pipeline start is marked in the log and has the pipeline's name",
-    {
-        lgr::unsuspend_logging()
-        on.exit(lgr::suspend_logging())
-
-        dat <- data.frame(a = 1:2, b = 1:2)
-        pipeName = "pipe1"
-        pip <- Pipeline$new(pipeName, data = dat)
-
-        log <- utils::capture.output(pip$run())
-        logStart = log[[1]]
-        log_fields = jsonlite::fromJSON(logStart)
-
-        expect_equal(log_fields[["type"]], "start_pipeline")
-        expect_equal(log_fields[["pipeline_name"]], pipeName)
     })
 })
 
