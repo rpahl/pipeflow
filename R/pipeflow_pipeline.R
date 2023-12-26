@@ -1658,6 +1658,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 )
 
 
+# nocov start
+
 #' @title Pipeline functions
 #' @description Helper functions to enable pipeline construction via R's pipe
 #' @param pip A pipeline object
@@ -1665,7 +1667,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 #' @return The result of the respective pipeline method
 #' @name pipelineHelpers
 NULL
-
 
 #' @rdname pipelineHelpers
 #' @export
@@ -1899,3 +1900,5 @@ pipe_split = function(pip, ...)
 #' @export
 pipe_unlock_step = function(pip, ...)
     pip$unlock_step(...)
+
+# nocov end

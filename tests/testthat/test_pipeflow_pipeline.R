@@ -4328,8 +4328,8 @@ test_that("private methods work as expected",
 
 # pipeline helper functions
 
-# nocov start
-test_that("a helper function is defined for each member function",
+test_that("a helper function is defined for each member function
+    with the correct body",
 {
     skip_if(Sys.getenv("R_CODECOV_ENV") == "GITHUB_ACTION")
 
@@ -4351,4 +4351,3 @@ test_that("a helper function is defined for each member function",
         )
     }
 })
-# nocov end
