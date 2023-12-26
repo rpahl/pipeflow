@@ -82,7 +82,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 state = character(0)
             )
 
-            self$add(".data", function() data, keepOut = FALSE)
+            self$add("data", function() data, keepOut = FALSE)
 
             invisible(self)
         },
@@ -178,7 +178,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
 
             # Adapt step names and their dependencies to avoid name clashes
-            p2$append_toStep_names(p2$name, sep = sep)
+            p2$append_to_step_names(p2$name, sep = sep)
 
             # Build combined pipeline
             combinedName <- paste0(p1$name, sep, p2$name)
@@ -214,8 +214,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' of updating dependencies accordingly.
         #' @param postfix `string` to be appended to each step name.
         #' @param sep `string` separator between step name and postfix.
+        #' @importFrom stats setNames
         #' @return returns the `Pipeline` object invisibly
-        append_toStep_names = function(postfix, sep = ".") {
+        append_to_step_names = function(postfix, sep = ".") {
 
             stopifnot(is_string(postfix))
 
@@ -372,7 +373,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Execute given pipeline step
+        #' @description Execute given pipeline step possibly together with
+        #' upstream and downstream dependencies.
         #' @param step `string` name of step
         #' @param upstream `logical` if `TRUE`, execute all dependent upstream
         #' steps first.
@@ -508,7 +510,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Get output of given step.
         #' @param step `string` name of step
         #' @return returns the `Pipeline` object invisibly
-        get_out_at_step = function(step)
+        get_out = function(step)
         {
             self$get_step(step)[["out"]] |> unlist1()
         },
@@ -567,7 +569,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' but only list each parameter once. The values of the parameters,
         #' will be the values of the first step where the parameter was defined.
         #' This is particularly useful after the parameters where set using
-        #' the `set_parameters` function, which will set the same value
+        #' the `set_params` function, which will set the same value
         #' for all steps.
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
@@ -588,9 +590,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Get all unique function parameters in json format.
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
-        #' @return `list` flat unnamed json list of unique function parameters,
-        #'  at this point with no information of the steps were parameters are
-        #'  defined first.
+        #' @return `list` flat unnamed json list of unique function parameters
         get_params_unique_json = function(ignoreHidden = TRUE)
         {
             params = self$get_params_unique(ignoreHidden)
@@ -650,9 +650,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Checks whether step has output.
         #' @param step `string` name of step
         #' @return `logical` TRUE if step is defined to keep output
-        has_out_at_step = function(step)
+        has_out = function(step)
         {
-            length(self$get_out_at_step(step)) > 0
+            length(self$get_out(step)) > 0
         },
 
         #' @description Determine whether pipeline has given step.
@@ -688,7 +688,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' only the parameters are locked. Locking a step is useful if the
         #' step happens to share parameter names with other steps but should not
         #' be affected when parameters are set commonly for the entire pipeline
-        #' (see function `set_parameters` below).
+        #' (see function `set_params` below).
         #' @param step `string` name of step
         #' @return the `Pipeline` object invisibly
         lock_step = function(step) {
@@ -703,6 +703,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param groups `character` if not `NULL`, only steps belonging to the
         #' given groups are visualized.
         #' @param ... further arguments passed to [visNetwork()].
+        #' @importFrom visNetwork visNetwork
         #' @return `visNetwork` object
         print_graph = function(
             groups = NULL,
@@ -961,7 +962,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 c(pip, pipes),
                 f = function(x, y) x$append(y, sep = sep)
             )
-            combined$remove_step(".data")
+            combined$remove_step("data")
 
             # If subset was used for split, append the remaining steps and
             # update all of the (now changed) upstream dependencies.
@@ -1010,7 +1011,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param warnUndefined `logical` whether to give a warning if a
         #' parameter is not defined in the pipeline.
         #' @return returns the `Pipeline` object invisibly
-        set_parameters = function(params, warnUndefined = TRUE)
+        set_params = function(params, warnUndefined = TRUE)
         {
             definedParams <- self$get_params_unique(ignoreHidden = FALSE)
             extra <- setdiff(names(params), names(definedParams))
@@ -1031,7 +1032,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
                 if (length(overlap) > 0) {
                     paramsAtStep[overlap] = params[overlap]
-                    self$set_parameters_at_step(step, paramsAtStep)
+                    self$set_params_at_step(step, paramsAtStep)
                 }
             }
             invisible(self)
@@ -1041,7 +1042,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param step `string` the name of the step
         #' @param params `list` of parameters to be set
         #' @return returns the `Pipeline` object invisibly
-        set_parameters_at_step = function(
+        set_params_at_step = function(
             step,
             params
         ) {
@@ -1090,6 +1091,23 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
+        #' @description Splits pipeline into its independent parts.
+        #' @return list of `Pipeline` objects
+        split = function() {
+            groups <- private$.get_deps_grouped()
+            name <- self$name
+            newNames <- paste0(name, seq_along(groups))
+            pips <- lapply(newNames, \(name) Pipeline$new(name))
+
+            for (i in seq_along(groups)) {
+                pip <- pips[[i]]
+                stepNumbers <- which(self$pipeline[["step"]] %in% groups[[i]])
+                pip$pipeline <- self$pipeline[stepNumbers, ]
+            }
+
+            pips
+        },
+
         #' @description Unlock previously locked step. If step was not locked,
         #' the command is ignored.
         #' @param step `string` name of step
@@ -1102,7 +1120,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             invisible(self)
         }
-
     ),
 
     private = list(
@@ -1248,8 +1265,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             private$.verify_step_exists(step)
             isLocked <- self$get_step(step)[["state"]] == "locked"
 
-            if (isLocked && self$has_out_at_step(step)) {
-                return(invisible(self$get_out_at_step(step)))
+            if (isLocked && self$has_out(step)) {
+                return(invisible(self$get_out(step)))
             }
 
             pip <- self$pipeline
@@ -1359,6 +1376,21 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             deps
+        },
+
+        .get_deps_grouped = function()
+        {
+            res <- list()
+            steps <- self$get_step_names()
+
+            for (step in rev(steps)) {
+                if (!step %in% unlist(res)) {
+                    stepGroup <- self$get_step_names() |>
+                        intersect(c(step, self$get_deps_up(step)))
+                    res <- c(list(stepGroup), res)
+                }
+            }
+            res
         },
 
         .get_downstream_deps = function(
@@ -1550,6 +1582,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             stopifnot(
                 is_number(from),
                 is_number(to),
+                from > 0,
                 from <= to
             )
 
@@ -1624,11 +1657,248 @@ Pipeline = R6::R6Class("Pipeline", #nolint
     )
 )
 
-#' @title Add to pipeline
+
+# nocov start
+
+#' @title Pipeline functions
 #' @description Helper functions to enable pipeline construction via R's pipe
-#' @param x A pipeline object
-#' @param ... Arguments passed to the pipeline's add() method
-#' @return The pipeline object
+#' @param pip A pipeline object
+#' @param ... Arguments passed to the respective pipeline method
+#' @return The result of the respective pipeline method
+#' @name pipelineHelpers
+NULL
+
+#' @rdname pipelineHelpers
 #' @export
-pipe_add = function(x, ...)
-    x$add(...)
+pipe_add = function(pip, ...)
+    pip$add(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_append = function(pip, ...)
+    pip$append(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_append_to_step_names = function(pip, ...)
+    pip$append_to_step_names(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_clone = function(pip, ...)
+    pip$clone(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_collect_out = function(pip, ...)
+    pip$collect_out(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_discard_steps = function(pip, ...)
+    pip$discard_steps(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_execute = function(pip, ...)
+    pip$execute(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_execute_step = function(pip, ...)
+    pip$execute_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_data = function(pip, ...)
+    pip$get_data(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_deps = function(pip, ...)
+    pip$get_deps(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_deps_down = function(pip, ...)
+    pip$get_deps_down(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_deps_up = function(pip, ...)
+    pip$get_deps_up(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_out = function(pip, ...)
+    pip$get_out(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_params = function(pip, ...)
+    pip$get_params(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_params_at_step = function(pip, ...)
+    pip$get_params_at_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_params_unique = function(pip, ...)
+    pip$get_params_unique(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_params_unique_json = function(pip, ...)
+    pip$get_params_unique_json(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_step = function(pip, ...)
+    pip$get_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_step_names = function(pip, ...)
+    pip$get_step_names(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_step_number = function(pip, ...)
+    pip$get_step_number(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_has_out = function(pip, ...)
+    pip$has_out(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_has_step = function(pip, ...)
+    pip$has_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_keep_all_out = function(pip, ...)
+    pip$keep_all_out(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_length = function(pip, ...)
+    pip$length(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_lock_step = function(pip, ...)
+    pip$lock_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_print = function(pip, ...)
+    pip$print(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_print_graph = function(pip, ...)
+    pip$print_graph(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_pop_step = function(pip, ...)
+    pip$pop_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_pop_steps_after = function(pip, ...)
+    pip$pop_steps_after(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_pop_steps_from = function(pip, ...)
+    pip$pop_steps_from(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_remove_step = function(pip, ...)
+    pip$remove_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_replace_step = function(pip, ...)
+    pip$replace_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_set_data = function(pip, ...)
+    pip$set_data(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_set_data_split = function(pip, ...)
+    pip$set_data_split(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_set_keep_out = function(pip, ...)
+    pip$set_keep_out(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_set_params = function(pip, ...)
+    pip$set_params(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_set_params_at_step = function(pip, ...)
+    pip$set_params_at_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_split = function(pip, ...)
+    pip$split(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_unlock_step = function(pip, ...)
+    pip$unlock_step(...)
+
+# nocov end

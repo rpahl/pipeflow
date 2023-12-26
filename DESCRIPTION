@@ -1,12 +1,13 @@
 Package: pipeflow
 Title: Data Analysis Workflows with Pipelines
-Version: 0.0.4
+Version: 0.1.0
 Authors@R:
     person("Roman", "Pahl", , "roman.pahl@gmail.com", role = c("aut", "cre"))
-Description: Simple but flexible framework for composing, combining and
-    modifying custom data analysis pipelines. In nonlinear pipelines,
-    dependencies among analysis steps are tracked and can be used to
-    re-run only steps that are affected by changes.
+Description: Simple yet powerful framework for composing, combining and
+    modifying custom data analysis pipelines. Correctness of pipelines is
+    verified at definition time. In nonlinear pipelines, dependencies among
+    analysis steps are tracked and can be used to re-run only steps that
+    are affected by changes.
 License: GPL-3
 Imports:
     data.table,

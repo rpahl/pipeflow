@@ -33,7 +33,7 @@ Roman Pahl
 \item \href{#method-Pipeline-new}{\code{Pipeline$new()}}
 \item \href{#method-Pipeline-add}{\code{Pipeline$add()}}
 \item \href{#method-Pipeline-append}{\code{Pipeline$append()}}
-\item \href{#method-Pipeline-append_toStep_names}{\code{Pipeline$append_toStep_names()}}
+\item \href{#method-Pipeline-append_to_step_names}{\code{Pipeline$append_to_step_names()}}
 \item \href{#method-Pipeline-collect_out}{\code{Pipeline$collect_out()}}
 \item \href{#method-Pipeline-discard_steps}{\code{Pipeline$discard_steps()}}
 \item \href{#method-Pipeline-execute}{\code{Pipeline$execute()}}
@@ -42,7 +42,7 @@ Roman Pahl
 \item \href{#method-Pipeline-get_deps}{\code{Pipeline$get_deps()}}
 \item \href{#method-Pipeline-get_deps_down}{\code{Pipeline$get_deps_down()}}
 \item \href{#method-Pipeline-get_deps_up}{\code{Pipeline$get_deps_up()}}
-\item \href{#method-Pipeline-get_out_at_step}{\code{Pipeline$get_out_at_step()}}
+\item \href{#method-Pipeline-get_out}{\code{Pipeline$get_out()}}
 \item \href{#method-Pipeline-get_params}{\code{Pipeline$get_params()}}
 \item \href{#method-Pipeline-get_params_at_step}{\code{Pipeline$get_params_at_step()}}
 \item \href{#method-Pipeline-get_params_unique}{\code{Pipeline$get_params_unique()}}
@@ -50,7 +50,7 @@ Roman Pahl
 \item \href{#method-Pipeline-get_step}{\code{Pipeline$get_step()}}
 \item \href{#method-Pipeline-get_step_names}{\code{Pipeline$get_step_names()}}
 \item \href{#method-Pipeline-get_step_number}{\code{Pipeline$get_step_number()}}
-\item \href{#method-Pipeline-has_out_at_step}{\code{Pipeline$has_out_at_step()}}
+\item \href{#method-Pipeline-has_out}{\code{Pipeline$has_out()}}
 \item \href{#method-Pipeline-has_step}{\code{Pipeline$has_step()}}
 \item \href{#method-Pipeline-keep_all_out}{\code{Pipeline$keep_all_out()}}
 \item \href{#method-Pipeline-length}{\code{Pipeline$length()}}
@@ -65,8 +65,9 @@ Roman Pahl
 \item \href{#method-Pipeline-set_data}{\code{Pipeline$set_data()}}
 \item \href{#method-Pipeline-set_data_split}{\code{Pipeline$set_data_split()}}
 \item \href{#method-Pipeline-set_keep_out}{\code{Pipeline$set_keep_out()}}
-\item \href{#method-Pipeline-set_parameters}{\code{Pipeline$set_parameters()}}
-\item \href{#method-Pipeline-set_parameters_at_step}{\code{Pipeline$set_parameters_at_step()}}
+\item \href{#method-Pipeline-set_params}{\code{Pipeline$set_params()}}
+\item \href{#method-Pipeline-set_params_at_step}{\code{Pipeline$set_params_at_step()}}
+\item \href{#method-Pipeline-split}{\code{Pipeline$split()}}
 \item \href{#method-Pipeline-unlock_step}{\code{Pipeline$unlock_step()}}
 \item \href{#method-Pipeline-clone}{\code{Pipeline$clone()}}
 }
@@ -178,13 +179,13 @@ returns new combined \code{Pipeline}.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-append_toStep_names"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-append_toStep_names}{}}}
-\subsection{Method \code{append_toStep_names()}}{
+\if{html}{\out{<a id="method-Pipeline-append_to_step_names"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-append_to_step_names}{}}}
+\subsection{Method \code{append_to_step_names()}}{
 Append string to all step names. Also takes care
 of updating dependencies accordingly.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$append_toStep_names(postfix, sep = ".")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$append_to_step_names(postfix, sep = ".")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -279,7 +280,8 @@ returns the \code{Pipeline} object invisibly
 \if{html}{\out{<a id="method-Pipeline-execute_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-execute_step}{}}}
 \subsection{Method \code{execute_step()}}{
-Execute given pipeline step
+Execute given pipeline step possibly together with
+upstream and downstream dependencies.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$execute_step(step, upstream = TRUE, downstream = FALSE)}\if{html}{\out{</div>}}
 }
@@ -376,12 +378,12 @@ are also returned.}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_out_at_step"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_out_at_step}{}}}
-\subsection{Method \code{get_out_at_step()}}{
+\if{html}{\out{<a id="method-Pipeline-get_out"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_out}{}}}
+\subsection{Method \code{get_out()}}{
 Get output of given step.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_out_at_step(step)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_out(step)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -448,7 +450,7 @@ Get all function parameters defined in the pipeline,
 but only list each parameter once. The values of the parameters,
 will be the values of the first step where the parameter was defined.
 This is particularly useful after the parameters where set using
-the \code{set_parameters} function, which will set the same value
+the \code{set_params} function, which will set the same value
 for all steps.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_params_unique(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
@@ -484,9 +486,7 @@ names starting with a dot) are ignored and thus not returned.}
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-\code{list} flat unnamed json list of unique function parameters,
-at this point with no information of the steps were parameters are
-defined first.
+\code{list} flat unnamed json list of unique function parameters
 }
 }
 \if{html}{\out{<hr>}}
@@ -544,12 +544,12 @@ the step number in the pipeline
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-has_out_at_step"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-has_out_at_step}{}}}
-\subsection{Method \code{has_out_at_step()}}{
+\if{html}{\out{<a id="method-Pipeline-has_out"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-has_out}{}}}
+\subsection{Method \code{has_out()}}{
 Checks whether step has output.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$has_out_at_step(step)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$has_out(step)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -620,7 +620,7 @@ output (given it has output) are locked. If it does not have output,
 only the parameters are locked. Locking a step is useful if the
 step happens to share parameter names with other steps but should not
 be affected when parameters are set commonly for the entire pipeline
-(see function \code{set_parameters} below).
+(see function \code{set_params} below).
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$lock_step(step)}\if{html}{\out{</div>}}
 }
@@ -875,13 +875,13 @@ the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-set_parameters"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-set_parameters}{}}}
-\subsection{Method \code{set_parameters()}}{
+\if{html}{\out{<a id="method-Pipeline-set_params"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-set_params}{}}}
+\subsection{Method \code{set_params()}}{
 Set parameters in the pipeline. If a parameter occurs
 in several steps, the parameter is set commonly in all steps.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_parameters(params, warnUndefined = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_params(params, warnUndefined = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -899,12 +899,12 @@ returns the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-set_parameters_at_step"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-set_parameters_at_step}{}}}
-\subsection{Method \code{set_parameters_at_step()}}{
+\if{html}{\out{<a id="method-Pipeline-set_params_at_step"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-set_params_at_step}{}}}
+\subsection{Method \code{set_params_at_step()}}{
 Set unbound parameter values at given pipeline step.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_parameters_at_step(step, params)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_params_at_step(step, params)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -918,6 +918,19 @@ Set unbound parameter values at given pipeline step.
 }
 \subsection{Returns}{
 returns the \code{Pipeline} object invisibly
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-split"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-split}{}}}
+\subsection{Method \code{split()}}{
+Splits pipeline into its independent parts.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$split()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+list of \code{Pipeline} objects
 }
 }
 \if{html}{\out{<hr>}}
