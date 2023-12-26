@@ -67,6 +67,7 @@ Roman Pahl
 \item \href{#method-Pipeline-set_keep_out}{\code{Pipeline$set_keep_out()}}
 \item \href{#method-Pipeline-set_params}{\code{Pipeline$set_params()}}
 \item \href{#method-Pipeline-set_params_at_step}{\code{Pipeline$set_params_at_step()}}
+\item \href{#method-Pipeline-split}{\code{Pipeline$split()}}
 \item \href{#method-Pipeline-unlock_step}{\code{Pipeline$unlock_step()}}
 \item \href{#method-Pipeline-clone}{\code{Pipeline$clone()}}
 }
@@ -279,7 +280,8 @@ returns the \code{Pipeline} object invisibly
 \if{html}{\out{<a id="method-Pipeline-execute_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-execute_step}{}}}
 \subsection{Method \code{execute_step()}}{
-Execute given pipeline step
+Execute given pipeline step possibly together with
+upstream and downstream dependencies.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$execute_step(step, upstream = TRUE, downstream = FALSE)}\if{html}{\out{</div>}}
 }
@@ -918,6 +920,19 @@ Set unbound parameter values at given pipeline step.
 }
 \subsection{Returns}{
 returns the \code{Pipeline} object invisibly
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-split"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-split}{}}}
+\subsection{Method \code{split()}}{
+Splits pipeline into its independent parts.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$split()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+list of \code{Pipeline} objects
 }
 }
 \if{html}{\out{<hr>}}

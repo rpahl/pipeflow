@@ -372,7 +372,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Execute given pipeline step
+        #' @description Execute given pipeline step possibly together with
+        #' upstream and downstream dependencies.
         #' @param step `string` name of step
         #' @param upstream `logical` if `TRUE`, execute all dependent upstream
         #' steps first.
