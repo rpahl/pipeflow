@@ -4328,6 +4328,7 @@ test_that("private methods work as expected",
 
 # pipeline helper functions
 
+# nocov start
 test_that("a helper function is defined for each member function",
 {
     pip <- Pipeline$new("pipe")
@@ -4348,3 +4349,4 @@ test_that("a helper function is defined for each member function",
         )
     }
 })
+# nocov end
