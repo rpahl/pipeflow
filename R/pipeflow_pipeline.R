@@ -575,7 +575,20 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         },
 
         #' @description Print the pipeline as a table.
-        print = function() print(self$pipeline),
+        #' @param verbose `logical` if `TRUE`, print all columns of the
+        #' pipeline, otherwise only a subset of columns is printed.
+        #' @return the `Pipeline` object invisibly
+        print = function(verbose = FALSE) {
+            if (verbose) {
+                print(self$pipeline)
+            } else {
+                columns2print <- c(
+                    "step", "params", "deps", "out", "keepOut", "state"
+                )
+                print(self$pipeline[, columns2print, with = FALSE])
+            }
+            invisible(self)
+        },
 
         #' @description Visualize the pipeline as a graph.
         #' @param groups `character` if not `NULL`, only steps belonging to the

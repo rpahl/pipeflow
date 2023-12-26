@@ -592,9 +592,20 @@ the \code{Pipeline} object invisibly
 \subsection{Method \code{print()}}{
 Print the pipeline as a table.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$print()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$print(verbose = FALSE)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{verbose}}{\code{logical} if \code{TRUE}, print all columns of the
+pipeline, otherwise only a subset of columns is printed.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the \code{Pipeline} object invisibly
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-print_graph"></a>}}

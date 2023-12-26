@@ -1297,6 +1297,18 @@ test_that("print",
             "object 'non-existing-function' of mode 'function' was not found"
         )
     })
+
+    test_that("if verbose is TRUE, all columns are printed",
+    {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+        pip <- Pipeline$new("pipe1", data = 9)
+
+        out <- capture.output(pip$print(verbose = TRUE))
+        header <- out[1] |> trimws() |> strsplit("\\s+") |> unlist()
+        expected_header <- colnames(pip$pipeline)
+        expect_equal(header, expected_header)
+    })
 })
 
 
