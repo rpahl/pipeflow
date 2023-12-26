@@ -1284,7 +1284,7 @@ test_that("get_params_unique_json",
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(a = 1) a) |>
             pipe_add("f2", function(a = 1, b = 2) a) |>
-            pipe_add("f3", function(a = 1, b = 2, c = 3) a)
+            pipe_add("f3", function(a = 1, b = 2, c = list(a = 1, b = 2)) a)
 
         p <- pip$get_params_unique_json()
         expect_true(methods::is(p, "json"))
@@ -1295,7 +1295,7 @@ test_that("get_params_unique_json",
             list(
                 list(name = "a", value = 1),
                 list(name = "b", value = 2),
-                list(name = "c", value = 3)
+                list(name = "c", value = list(a = 1, b = 2))
             )
         )
     })
