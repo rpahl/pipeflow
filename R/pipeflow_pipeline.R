@@ -483,24 +483,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             intersect(self$get_step_names(), deps)
         },
 
-        #' @description Gets dependencies grouped such that steps of different
-        #' groups are independent of each other.
-        #' @return `list` of grouped dependencies
-        get_deps_grouped = function()
-        {
-            res <- list()
-            steps <- self$get_step_names()
-
-            for (step in rev(steps)) {
-                if (!step %in% unlist(res)) {
-                    stepGroup <- self$get_step_names() |>
-                        intersect(c(step, self$get_deps_up(step)))
-                    res <- c(list(stepGroup), res)
-                }
-            }
-            res
-        },
-
         #' @description Get all upstream dependencies of given step, by
         #' default descending recursively.
         #' @param step `string` name of step
@@ -1111,7 +1093,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Splits pipeline into its independent parts.
         #' @return list of `Pipeline` objects
         split = function() {
-            groups <- self$get_deps_grouped()
+            groups <- private$.get_deps_grouped()
             name <- self$name
             newNames <- paste0(name, seq_along(groups))
             pips <- lapply(newNames, \(name) Pipeline$new(name))
@@ -1393,6 +1375,21 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             deps
+        },
+
+        .get_deps_grouped = function()
+        {
+            res <- list()
+            steps <- self$get_step_names()
+
+            for (step in rev(steps)) {
+                if (!step %in% unlist(res)) {
+                    stepGroup <- self$get_step_names() |>
+                        intersect(c(step, self$get_deps_up(step)))
+                    res <- c(list(stepGroup), res)
+                }
+            }
+            res
         },
 
         .get_downstream_deps = function(

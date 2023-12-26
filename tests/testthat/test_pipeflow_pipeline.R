@@ -1018,97 +1018,6 @@ test_that("get_deps_down",
 })
 
 
-test_that("get_deps_grouped",
-{
-    expect_true(is.function(Pipeline$new("pipe")$get_deps_grouped))
-
-    test_that("grouped dependencies are obtained correctly",
-    {
-        pip <- Pipeline$new("pipe")
-        expect_equal(pip$get_deps_grouped(), list("data"))
-
-        pip$add("f1", \(a = ~data) a)
-        expect_equal(pip$get_deps_grouped(), list(c("data", "f1")))
-
-        pip$add("f2", \(a = 1) a)
-        pip$add("f3", \(a = ~f2) a)
-        pip$add("f4", \(a = ~f1) a)
-
-        expect_equal(
-            pip$get_deps_grouped(),
-            list(
-                c("f2", "f3"),
-                c("data", "f1", "f4")
-            )
-        )
-    })
-
-    test_that(
-        "grouped dependencies are obtained correctly for complete data split",
-    {
-        dat1 <- data.frame(x = 1:2)
-        dat2 <- data.frame(y = 1:2)
-        dataList <- list(dat1, dat2)
-
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("f1", \(a = 1) a) |>
-            pipe_add("f2", \(a = ~f1, b = 2) b) |>
-            pipe_add("f3", \(x = ~f1, y = ~f2) x + y)
-
-        pip$set_data_split(dataList, toStep = "f3")
-
-        expect_equal(
-            pip$get_deps_grouped(),
-            list(
-                "data.1",
-                c("f1.1", "f2.1", "f3.1"),
-                "data.2",
-                c("f1.2", "f2.2", "f3.2")
-            )
-        )
-    })
-
-    test_that(
-        "grouped dependencies are obtained correctly for partial data split",
-    {
-        dat1 <- data.frame(x = 1:2)
-        dat2 <- data.frame(y = 1:2)
-        dataList <- list(dat1, dat2)
-
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("f1", \(a = 1) a) |>
-            pipe_add("f2", \(a = ~f1, b = 2) b) |>
-            pipe_add("f3", \(x = ~f1, y = ~f2) x + y)
-
-        pip$set_data_split(dataList, toStep = "f2")
-
-        expect_equal(
-            pip$get_deps_grouped(),
-            list(
-                "data.1",
-                "data.2",
-                c("f1.1", "f2.1", "f1.2", "f2.2", "f3")
-            )
-        )
-    })
-
-    test_that(
-        "if all steps somehow are dependent on each other,
-            just one group is returned",
-    {
-        pip <- Pipeline$new("pipe")
-        pip$add("f1", \(a = ~data) a)
-        pip$add("f2", \(a = 1) a)
-        pip$add("f3", \(a = ~f2) a)
-        pip$add("f4", \(a = ~f1, b = ~f3) a)
-
-        expect_equal(
-            unlist(pip$get_deps_grouped()),
-            pip$get_step_names()
-        )
-    })
-})
-
 
 test_that("get_deps_up",
 {
@@ -3605,6 +3514,106 @@ test_that("private methods work as expected",
             expect_equal(
                 f(params = list(a = ~x, b = ~-1, c = 1)),
                 c(a = "x", b = "-1")
+            )
+        })
+    })
+
+
+    test_that(".get_deps_grouped",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.get_deps_grouped
+
+        test_that("grouped dependencies are obtained correctly",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.get_deps_grouped
+
+            expect_equal(f(), list("data"))
+
+            pip$add("f1", \(a = ~data) a)
+            expect_equal(f(), list(c("data", "f1")))
+
+            pip$add("f2", \(a = 1) a)
+            pip$add("f3", \(a = ~f2) a)
+            pip$add("f4", \(a = ~f1) a)
+
+            expect_equal(
+                f(),
+                list(
+                    c("f2", "f3"),
+                    c("data", "f1", "f4")
+                )
+            )
+        })
+
+        test_that("grouped dependencies are obtained correctly for
+            complete data split",
+        {
+            dat1 <- data.frame(x = 1:2)
+            dat2 <- data.frame(y = 1:2)
+            dataList <- list(dat1, dat2)
+
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("f1", \(a = 1) a) |>
+                pipe_add("f2", \(a = ~f1, b = 2) b) |>
+                pipe_add("f3", \(x = ~f1, y = ~f2) x + y)
+
+
+            f <- get_private(pip)$.get_deps_grouped
+            pip$set_data_split(dataList, toStep = "f3")
+
+            expect_equal(
+                f(),
+                list(
+                    "data.1",
+                    c("f1.1", "f2.1", "f3.1"),
+                    "data.2",
+                    c("f1.2", "f2.2", "f3.2")
+                )
+            )
+        })
+
+        test_that("grouped dependencies are obtained correctly for
+            partial data split",
+        {
+            dat1 <- data.frame(x = 1:2)
+            dat2 <- data.frame(y = 1:2)
+            dataList <- list(dat1, dat2)
+
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("f1", \(a = 1) a) |>
+                pipe_add("f2", \(a = ~f1, b = 2) b) |>
+                pipe_add("f3", \(x = ~f1, y = ~f2) x + y)
+
+            f <- get_private(pip)$.get_deps_grouped
+            pip$set_data_split(dataList, toStep = "f2")
+
+            expect_equal(
+                f(),
+                list(
+                    "data.1",
+                    "data.2",
+                    c("f1.1", "f2.1", "f1.2", "f2.2", "f3")
+                )
+            )
+        })
+
+        test_that(
+            "if all steps somehow are dependent on each other,
+                just one group is returned",
+        {
+            pip <- Pipeline$new("pipe")
+            f <- get_private(pip)$.get_deps_grouped
+
+            pip$add("f1", \(a = ~data) a)
+            pip$add("f2", \(a = 1) a)
+            pip$add("f3", \(a = ~f2) a)
+            pip$add("f4", \(a = ~f1, b = ~f3) a)
+
+            expect_equal(
+                unlist(f()),
+                pip$get_step_names()
             )
         })
     })
