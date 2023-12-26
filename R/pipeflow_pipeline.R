@@ -214,6 +214,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' of updating dependencies accordingly.
         #' @param postfix `string` to be appended to each step name.
         #' @param sep `string` separator between step name and postfix.
+        #' @importFrom stats setNames
         #' @return returns the `Pipeline` object invisibly
         append_to_step_names = function(postfix, sep = ".") {
 
@@ -702,6 +703,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param groups `character` if not `NULL`, only steps belonging to the
         #' given groups are visualized.
         #' @param ... further arguments passed to [visNetwork()].
+        #' @importFrom visNetwork visNetwork
         #' @return `visNetwork` object
         print_graph = function(
             groups = NULL,
