@@ -2608,19 +2608,6 @@ test_that("set_params_at_step",
         )
     })
 
-    test_that("re-binding parameter to other step is possible",
-    {
-        skip("TODO: implement")
-        pip <- Pipeline$new("pipe1", data = 9) |>
-            pipe_add("f1", function(a = 1, b = 2) a + b) |>
-            pipe_add("f2", function(x = 1, y = ~f1) x + y)
-
-        expect_error(
-            pip$set_params_at_step("f2", list(x = 9, y = ~data)),
-            "Unable to set parameter(s) y at step f2 - candidates are x",
-            fixed = TRUE
-        )
-    })
 
     test_that(
         "states of affected steps are updated once the pipeline was run",
