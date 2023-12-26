@@ -1,6 +1,6 @@
 Package: pipeflow
 Title: Data Analysis Workflows with Pipelines
-Version: 0.0.5
+Version: 0.1.0
 Authors@R:
     person("Roman", "Pahl", , "roman.pahl@gmail.com", role = c("aut", "cre"))
 Description: Simple yet flexible framework for composing, combining and
