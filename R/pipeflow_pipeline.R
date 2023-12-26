@@ -589,9 +589,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Get all unique function parameters in json format.
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
-        #' @return `list` flat unnamed json list of unique function parameters,
-        #'  at this point with no information of the steps were parameters are
-        #'  defined first.
+        #' @return `list` flat unnamed json list of unique function parameters
         get_params_unique_json = function(ignoreHidden = TRUE)
         {
             params = self$get_params_unique(ignoreHidden)
@@ -1657,11 +1655,245 @@ Pipeline = R6::R6Class("Pipeline", #nolint
     )
 )
 
-#' @title Add to pipeline
+
+#' @title Pipeline functions
 #' @description Helper functions to enable pipeline construction via R's pipe
-#' @param x A pipeline object
-#' @param ... Arguments passed to the pipeline's add() method
-#' @return The pipeline object
+#' @param pip A pipeline object
+#' @param ... Arguments passed to the respective pipeline method
+#' @return The result of the respective pipeline method
+#' @name pipelineHelpers
+NULL
+
+
+#' @rdname pipelineHelpers
 #' @export
-pipe_add = function(x, ...)
-    x$add(...)
+pipe_add = function(pip, ...)
+    pip$add(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_append = function(pip, ...)
+    pip$append(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_append_to_step_names = function(pip, ...)
+    pip$append_to_step_names(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_clone = function(pip, ...)
+    pip$clone(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_collect_out = function(pip, ...)
+    pip$collect_out(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_discard_steps = function(pip, ...)
+    pip$discard_steps(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_execute = function(pip, ...)
+    pip$execute(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_execute_step = function(pip, ...)
+    pip$execute_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_data = function(pip, ...)
+    pip$get_data(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_deps = function(pip, ...)
+    pip$get_deps(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_deps_down = function(pip, ...)
+    pip$get_deps_down(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_deps_up = function(pip, ...)
+    pip$get_deps_up(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_out = function(pip, ...)
+    pip$get_out(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_params = function(pip, ...)
+    pip$get_params(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_params_at_step = function(pip, ...)
+    pip$get_params_at_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_params_unique = function(pip, ...)
+    pip$get_params_unique(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_params_unique_json = function(pip, ...)
+    pip$get_params_unique_json(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_step = function(pip, ...)
+    pip$get_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_step_names = function(pip, ...)
+    pip$get_step_names(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_get_step_number = function(pip, ...)
+    pip$get_step_number(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_has_out = function(pip, ...)
+    pip$has_out(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_has_step = function(pip, ...)
+    pip$has_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_keep_all_out = function(pip, ...)
+    pip$keep_all_out(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_length = function(pip, ...)
+    pip$length(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_lock_step = function(pip, ...)
+    pip$lock_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_print = function(pip, ...)
+    pip$print(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_print_graph = function(pip, ...)
+    pip$print_graph(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_pop_step = function(pip, ...)
+    pip$pop_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_pop_steps_after = function(pip, ...)
+    pip$pop_steps_after(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_pop_steps_from = function(pip, ...)
+    pip$pop_steps_from(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_remove_step = function(pip, ...)
+    pip$remove_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_replace_step = function(pip, ...)
+    pip$replace_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_set_data = function(pip, ...)
+    pip$set_data(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_set_data_split = function(pip, ...)
+    pip$set_data_split(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_set_keep_out = function(pip, ...)
+    pip$set_keep_out(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_set_params = function(pip, ...)
+    pip$set_params(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_set_params_at_step = function(pip, ...)
+    pip$set_params_at_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_split = function(pip, ...)
+    pip$split(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_unlock_step = function(pip, ...)
+    pip$unlock_step(...)

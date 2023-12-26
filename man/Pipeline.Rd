@@ -486,9 +486,7 @@ names starting with a dot) are ignored and thus not returned.}
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-\code{list} flat unnamed json list of unique function parameters,
-at this point with no information of the steps were parameters are
-defined first.
+\code{list} flat unnamed json list of unique function parameters
 }
 }
 \if{html}{\out{<hr>}}

@@ -4326,22 +4326,25 @@ test_that("private methods work as expected",
 
 
 
-# pipe_add
+# pipeline helper functions
 
-test_that("pipe_add",
+test_that("a helper function is defined for each member function",
 {
-    expect_true(is.function(pipe_add))
+    pip <- Pipeline$new("pipe")
+    funs2check <- sapply(names(pip), \(x) is.function(pip[[x]])) |>
+        Filter(f = isTRUE) |>
+        names() |>
+        setdiff("initialize")
 
-    test_that("pipeline can be constructed with a pipe operator",
-    {
-        pip1 <- Pipeline$new("pipe1") |>
-            pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function(b = ~f1) b)
+    for (fun in funs2check) {
+        helper_fun <- paste0("pipe_", fun)
+        expect_true(exists(helper_fun), info = fun)
 
-        pip2 <- Pipeline$new("pipe1")$
-            add("f1", function(a = 1) a)$
-            add("f2", function(b = ~f1) b)
-
-        expect_equal(pip1, pip2)
-    })
+        f <- get(helper_fun, envir = asNamespace("pipeflow"))
+        expect_equal(
+            toString(body(f)),
+            gettextf("pip$%s, ...", fun),
+            info = fun
+        )
+    }
 })
