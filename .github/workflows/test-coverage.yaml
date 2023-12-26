@@ -28,7 +28,6 @@ jobs:
 
       - name: Test coverage
         run: |
-          Sys.setenv(R_CODECOV_ENV = "GITHUB_ACTION")
           covr::codecov(
             quiet = FALSE,
             clean = FALSE,

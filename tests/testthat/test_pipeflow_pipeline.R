@@ -4331,8 +4331,6 @@ test_that("private methods work as expected",
 test_that("a helper function is defined for each member function
     with the correct body",
 {
-    skip_if(Sys.getenv("R_CODECOV_ENV") == "GITHUB_ACTION")
-
     pip <- Pipeline$new("pipe")
     funs2check <- sapply(names(pip), \(x) is.function(pip[[x]])) |>
         Filter(f = isTRUE) |>
