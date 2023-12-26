@@ -178,7 +178,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
 
             # Adapt step names and their dependencies to avoid name clashes
-            p2$append_toStep_names(p2$name, sep = sep)
+            p2$append_to_step_names(p2$name, sep = sep)
 
             # Build combined pipeline
             combinedName <- paste0(p1$name, sep, p2$name)
@@ -215,7 +215,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param postfix `string` to be appended to each step name.
         #' @param sep `string` separator between step name and postfix.
         #' @return returns the `Pipeline` object invisibly
-        append_toStep_names = function(postfix, sep = ".") {
+        append_to_step_names = function(postfix, sep = ".") {
 
             stopifnot(is_string(postfix))
 

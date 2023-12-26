@@ -33,7 +33,7 @@ Roman Pahl
 \item \href{#method-Pipeline-new}{\code{Pipeline$new()}}
 \item \href{#method-Pipeline-add}{\code{Pipeline$add()}}
 \item \href{#method-Pipeline-append}{\code{Pipeline$append()}}
-\item \href{#method-Pipeline-append_toStep_names}{\code{Pipeline$append_toStep_names()}}
+\item \href{#method-Pipeline-append_to_step_names}{\code{Pipeline$append_to_step_names()}}
 \item \href{#method-Pipeline-collect_out}{\code{Pipeline$collect_out()}}
 \item \href{#method-Pipeline-discard_steps}{\code{Pipeline$discard_steps()}}
 \item \href{#method-Pipeline-execute}{\code{Pipeline$execute()}}
@@ -178,13 +178,13 @@ returns new combined \code{Pipeline}.
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-append_toStep_names"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-append_toStep_names}{}}}
-\subsection{Method \code{append_toStep_names()}}{
+\if{html}{\out{<a id="method-Pipeline-append_to_step_names"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-append_to_step_names}{}}}
+\subsection{Method \code{append_to_step_names()}}{
 Append string to all step names. Also takes care
 of updating dependencies accordingly.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$append_toStep_names(postfix, sep = ".")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$append_to_step_names(postfix, sep = ".")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

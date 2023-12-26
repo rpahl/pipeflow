@@ -427,9 +427,9 @@ test_that("append",
 
 
 
-test_that("append_toStep_names",
+test_that("append_to_step_names",
 {
-    expect_true(is.function(Pipeline$new("pipe")$append_toStep_names))
+    expect_true(is.function(Pipeline$new("pipe")$append_to_step_names))
 
     test_that("postfix can be appended to step names",
     {
@@ -437,7 +437,7 @@ test_that("append_toStep_names",
 
         pip$add("f1", function(a = ~data) a + 1)
         pip$add("f2", function(a = ~data, b = ~f1) a + b)
-        pip$append_toStep_names("foo")
+        pip$append_to_step_names("foo")
 
         expected_names <- c("data.foo", "f1.foo", "f2.foo")
         expect_equal(pip$get_step_names(), expected_names)
