@@ -3,7 +3,7 @@ Title: Data Analysis Workflows with Pipelines
 Version: 0.1.0
 Authors@R:
     person("Roman", "Pahl", , "roman.pahl@gmail.com", role = c("aut", "cre"))
-Description: Simple yet flexible framework for composing, combining and
+Description: Simple yet powerful framework for composing, combining and
     modifying custom data analysis pipelines. Correctness of pipelines is
     verified at definition time. In nonlinear pipelines, dependencies among
     analysis steps are tracked and can be used to re-run only steps that
