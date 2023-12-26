@@ -508,7 +508,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Get output of given step.
         #' @param step `string` name of step
         #' @return returns the `Pipeline` object invisibly
-        get_out_at_step = function(step)
+        get_out = function(step)
         {
             self$get_step(step)[["out"]] |> unlist1()
         },
@@ -567,7 +567,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' but only list each parameter once. The values of the parameters,
         #' will be the values of the first step where the parameter was defined.
         #' This is particularly useful after the parameters where set using
-        #' the `set_parameters` function, which will set the same value
+        #' the `set_params` function, which will set the same value
         #' for all steps.
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
@@ -650,9 +650,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Checks whether step has output.
         #' @param step `string` name of step
         #' @return `logical` TRUE if step is defined to keep output
-        has_out_at_step = function(step)
+        has_out = function(step)
         {
-            length(self$get_out_at_step(step)) > 0
+            length(self$get_out(step)) > 0
         },
 
         #' @description Determine whether pipeline has given step.
@@ -688,7 +688,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' only the parameters are locked. Locking a step is useful if the
         #' step happens to share parameter names with other steps but should not
         #' be affected when parameters are set commonly for the entire pipeline
-        #' (see function `set_parameters` below).
+        #' (see function `set_params` below).
         #' @param step `string` name of step
         #' @return the `Pipeline` object invisibly
         lock_step = function(step) {
@@ -1010,7 +1010,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param warnUndefined `logical` whether to give a warning if a
         #' parameter is not defined in the pipeline.
         #' @return returns the `Pipeline` object invisibly
-        set_parameters = function(params, warnUndefined = TRUE)
+        set_params = function(params, warnUndefined = TRUE)
         {
             definedParams <- self$get_params_unique(ignoreHidden = FALSE)
             extra <- setdiff(names(params), names(definedParams))
@@ -1031,7 +1031,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
                 if (length(overlap) > 0) {
                     paramsAtStep[overlap] = params[overlap]
-                    self$set_parameters_at_step(step, paramsAtStep)
+                    self$set_params_at_step(step, paramsAtStep)
                 }
             }
             invisible(self)
@@ -1041,7 +1041,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param step `string` the name of the step
         #' @param params `list` of parameters to be set
         #' @return returns the `Pipeline` object invisibly
-        set_parameters_at_step = function(
+        set_params_at_step = function(
             step,
             params
         ) {
@@ -1264,8 +1264,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             private$.verify_step_exists(step)
             isLocked <- self$get_step(step)[["state"]] == "locked"
 
-            if (isLocked && self$has_out_at_step(step)) {
-                return(invisible(self$get_out_at_step(step)))
+            if (isLocked && self$has_out(step)) {
+                return(invisible(self$get_out(step)))
             }
 
             pip <- self$pipeline
