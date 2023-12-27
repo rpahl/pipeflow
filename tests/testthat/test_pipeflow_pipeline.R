@@ -54,7 +54,6 @@ test_that("initialize",
                 "My Logger: Start run of 'pipe' pipeline:",
                 "My Logger: Step 1/1 data",
                 "My Logger: Finished execution of steps.",
-                "My Logger: Clean temporary results.",
                 "My Logger: Done."
             )
         )
@@ -475,7 +474,7 @@ test_that("collect_out",
         expect_equal(out[["f1"]], dat)
     })
 
-    test_that("at the end, pipeline will clean output that shall not be kept",
+    test_that("at the end, pipeline can clean output that shall not be kept",
     {
         data <- 9
         pip <- Pipeline$new("pipe1", data = data)
@@ -487,7 +486,7 @@ test_that("collect_out",
         pip$add("f1", foo, params = list(a = a))
         pip$add("f2", bar, params = list(a = ~data, b = ~f1), keepOut = TRUE)
 
-        pip$run()
+        pip$run(cleanUnkept = TRUE)
         expect_equal(pip$get_out("f1"), NULL)
         expect_equal(pip$get_out("f2"), a + data)
     })
@@ -1196,7 +1195,7 @@ test_that("has_out",
             pipe_add("f1", function(a = 1) a) |>
             pipe_add("f2", function(a = 1) a, keepOut = TRUE)
 
-        pip$run()
+        pip$run(cleanUnkept = TRUE)
 
         expect_false(pip$has_out("f1"))
         expect_true(pip$has_out("f2"))
@@ -1270,7 +1269,7 @@ test_that("lock_step",
             pipe_add("f1", function(a = 1) a)
 
         pip$lock_step("f1")
-        expect_equal(pip$get_step("f1")[["state"]], "locked")
+        expect_equal(pip$get_step("f1")[["state"]], "Locked")
 
         pip
     })
@@ -1761,10 +1760,10 @@ test_that("replace_step",
         pip$run()
 
         pip$replace_step("f2", function(a = 2) 2* a)
-        expect_equal(pip$get_step("f1")$state, "done")
-        expect_equal(pip$get_step("f2")$state, "new")
-        expect_equal(pip$get_step("f3")$state, "outdated")
-        expect_equal(pip$get_step("f4")$state, "outdated")
+        expect_equal(pip$get_step("f1")$state, "Done")
+        expect_equal(pip$get_step("f2")$state, "New")
+        expect_equal(pip$get_step("f3")$state, "Outdated")
+        expect_equal(pip$get_step("f4")$state, "Outdated")
     })
 })
 
@@ -1880,43 +1879,70 @@ test_that("run",
         expect_equal(out[["step2"]], 20)
     })
 
-    test_that(
-        "can run parts of the pipeline",
+    test_that("will not re-run steps that are already done unless forced",
     {
-        pip <- Pipeline$new("pipe", data = 0) |>
-            pipe_add("f1", function(x = 1) x, keepOut = TRUE) |>
-            pipe_add("f2", function(x = 2) x, keepOut = TRUE)
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(y = ~f1) y + 1)
 
-        out <- pip$run(to = 2)$collect_out()
-        expect_equal(out, list(f1 = 1, f2 = NULL))
+        pip$run()
+        expect_equal(pip$get_step("f1")$state, "Done")
+        expect_equal(pip$get_step("f2")$state, "Done")
+        expect_equal(pip$pipeline[["out"]][[2]], 2)
+        expect_equal(pip$pipeline[["out"]][[3]], 3)
 
-        out <- pip$run(to = 3)$collect_out()
-        expect_equal(out, list(f1 = 1, f2 = 2))
+        pip$pipeline[2, "out"] <- 0
+        pip$pipeline[3, "out"] <- 0
+        pip$run()
+        expect_equal(pip$pipeline[["out"]][[2]], 0)
+        expect_equal(pip$pipeline[["out"]][[3]], 0)
+
+        # Set parameter, which outdates step and run again
+        pip$run(force = TRUE)
+        expect_equal(pip$pipeline[["out"]][[2]], 2)
+        expect_equal(pip$pipeline[["out"]][[3]], 3)
     })
 
-    test_that("signals bad from/to values",
+    test_that("will never re-run locked steps",
     {
-        pip <- Pipeline$new("pipe", data = 0) |>
-            pipe_add("f1", function(x = 1) x, keepOut = TRUE) |>
-            pipe_add("f2", function(x = 2) x, keepOut = TRUE)
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(y = ~f1) y + 1)
 
-        expect_error(
-            pip$run(from = 0),
-            "from > 0 is not TRUE",
-            fixed = TRUE
-        )
+        pip$run()
+        expect_equal(pip$pipeline[["out"]][[2]], 2)
+        expect_equal(pip$pipeline[["out"]][[3]], 3)
 
-        expect_error(
-            pip$run(from = 2, to = 1),
-            "from <= to is not TRUE",
-            fixed = TRUE
-        )
+        pip$pipeline[2, "out"] <- 0
+        pip$pipeline[3, "out"] <- 0
+        pip$run()
+        expect_equal(pip$pipeline[["out"]][[2]], 0)
+        expect_equal(pip$pipeline[["out"]][[3]], 0)
+        pip$lock_step("f1")
+        pip$lock_step("f2")
 
-        expect_error(
-            pip$run(to = 5),
-            "'to' must not be larger than pipeline length",
-            fixed = TRUE
-        )
+        # Set parameter, which outdates step and run again
+        pip$run(force = TRUE)
+        expect_equal(pip$pipeline[["out"]][[2]], 0)
+        expect_equal(pip$pipeline[["out"]][[3]], 0)
+    })
+
+    test_that("can clean unkept steps",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(y = ~f1) y + 1)
+
+        pip$run()
+        expect_equal(pip$pipeline[["out"]][[2]], 2)
+        expect_equal(pip$pipeline[["out"]][[3]], 3)
+
+        pip$run(cleanUnkept = TRUE)
+        expect_true(all(sapply(pip$pipeline[["out"]], is.null)))
+
+        pip$set_keep_out("f1", TRUE)
+        pip$run(cleanUnkept = TRUE)
+        expect_equal(pip$pipeline[["out"]], list(NULL, 2, NULL))
     })
 })
 
@@ -1999,16 +2025,16 @@ test_that("run_step",
         expect_equal(pip$get_out("C"), c(1, 2, 3))
     })
 
-    test_that("if not marked as keepOut, output of run steps is discarded",
+    test_that("if not marked as keepOut, output of run steps can be cleaned",
     {
         pip <- Pipeline$new("pipe") |>
             pipe_add("A", function(a = 1) a)
 
 
-        pip$run_step("A")
+        pip$run_step("A", cleanUnkept = TRUE)
         expect_false(pip$has_out("A"))
 
-        pip$set_keep_out("A", TRUE)$run_step("A")
+        pip$set_keep_out("A", TRUE)$run_step("A", cleanUnkept = TRUE)
         expect_true(pip$has_out("A"))
     })
 
@@ -2061,8 +2087,41 @@ test_that("run_step",
         pip$run_step("f1", upstream = FALSE)
         after <- pip$pipeline[["state"]]
 
-        expect_equal(before, c("new", "new"))
-        expect_equal(after, c("new", "done"))
+        expect_equal(before, c("New", "New"))
+        expect_equal(after, c("New", "Done"))
+    })
+
+    test_that("will never re-run locked step",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(y = ~f1) y + 1)
+
+        pip$run()
+        expect_equal(pip$pipeline[["out"]][[2]], 2)
+        expect_equal(pip$pipeline[["out"]][[3]], 3)
+
+        pip$pipeline[2, "out"] <- 0
+        pip$pipeline[3, "out"] <- 0
+        pip$lock_step("f1")
+        pip$run_step("f1", downstream = TRUE)
+
+        expect_equal(pip$pipeline[["out"]][[2]], 0)
+        expect_equal(pip$pipeline[["out"]][[3]], 1)
+    })
+
+    test_that("can clean unkept steps",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(y = ~f1) y + 1)
+
+        pip$run_step("f1", downstream = TRUE, cleanUnkept = TRUE)
+        expect_true(all(sapply(pip$pipeline[["out"]], is.null)))
+
+        pip$set_keep_out("f1", TRUE)
+        pip$run_step("f1", downstream = TRUE, cleanUnkept = TRUE)
+        expect_equal(pip$pipeline[["out"]], list(NULL, 2, NULL))
     })
 })
 
@@ -2098,11 +2157,11 @@ test_that("set_data",
 
         pip$run()
 
-        expect_equal(pip$get_step("f1")$state, "done")
-        expect_equal(pip$get_step("f2")$state, "done")
+        expect_equal(pip$get_step("f1")$state, "Done")
+        expect_equal(pip$get_step("f2")$state, "Done")
         pip$set_data(dat)
-        expect_equal(pip$get_step("f1")$state, "outdated")
-        expect_equal(pip$get_step("f2")$state, "outdated")
+        expect_equal(pip$get_step("f1")$state, "Outdated")
+        expect_equal(pip$get_step("f2")$state, "Outdated")
     })
 })
 
@@ -2340,17 +2399,14 @@ test_that("set_keep_out",
         pip <- Pipeline$new("pipe1", data = 0) |>
             pipe_add("f1", function(a = 1) a)
 
-        pip$run()
-        expect_false(pip$has_out("f1"))
+        out <- pip$run()$collect_out()
+        expect_false("f1" %in% names(out))
 
-        pip$set_keep_out("f1", keepOut = TRUE)$run()
-        expect_true(pip$has_out("f1"))
+        out <- pip$set_keep_out("f1", keepOut = TRUE)$collect_out()
+        expect_true("f1" %in% names(out))
 
-
-        pip <- Pipeline$new("pipe1", data = 0) |>
-            pipe_add("f1", function(a = 1) a, keepOut = TRUE)
-        pip$set_keep_out("f1", keepOut = FALSE)$run()
-        expect_false(pip$has_out("f1"))
+        out <- pip$set_keep_out("f1", keepOut = FALSE)$collect_out()
+        expect_false("f1" %in% names(out))
     })
 
     test_that("step must be a string and exist",
@@ -2619,18 +2675,18 @@ test_that("set_params_at_step",
             pipe_add("f4", function(a = ~data) a)
 
         pip$set_params_at_step("f1", params = list(a = 2))
-        expect_true(all(pip$pipeline[["state"]] == "new"))
+        expect_true(all(pip$pipeline[["state"]] == "New"))
 
         pip$run()
         pip$set_params_at_step("f1", params = list(a = 3))
-        expect_equal(pip$get_step("data")$state, "done")
-        expect_equal(pip$get_step("f1")$state, "outdated")
-        expect_equal(pip$get_step("f2")$state, "outdated")
-        expect_equal(pip$get_step("f3")$state, "outdated")
-        expect_equal(pip$get_step("f4")$state, "done")
+        expect_equal(pip$get_step("data")$state, "Done")
+        expect_equal(pip$get_step("f1")$state, "Outdated")
+        expect_equal(pip$get_step("f2")$state, "Outdated")
+        expect_equal(pip$get_step("f3")$state, "Outdated")
+        expect_equal(pip$get_step("f4")$state, "Done")
 
         pip$run()
-        expect_true(all(pip$pipeline[["state"]] == "done"))
+        expect_true(all(pip$pipeline[["state"]] == "Done"))
     })
 
 
@@ -2743,13 +2799,13 @@ test_that("unlock_step",
             pipe_add("f1", function(a = 1) a)
 
         pip$lock_step("f1")
-        expect_equal(pip$get_step("f1")[["state"]], "locked")
+        expect_equal(pip$get_step("f1")[["state"]], "Locked")
 
         pip$unlock_step("data")
-        expect_equal(pip$get_step("data")[["state"]], "new")
+        expect_equal(pip$get_step("data")[["state"]], "New")
 
         pip$unlock_step("f1")
-        expect_equal(pip$get_step("f1")[["state"]], "unlocked")
+        expect_equal(pip$get_step("f1")[["state"]], "Unlocked")
 
         pip
     })
@@ -3897,37 +3953,18 @@ test_that("private methods work as expected",
 
             f <- get_private(pip)$.run_step
 
-            expect_true(all(pip$pipeline[["state"]] == "new"))
+            expect_true(all(pip$pipeline[["state"]] == "New"))
 
             f(step = "ok")
             pip$get_step("ok")$state
 
-            expect_equal(pip$get_step("ok")$state, "done")
+            expect_equal(pip$get_step("ok")$state, "Done")
 
             expect_error(f(step = "error"))
-            expect_equal(pip$get_step("error")$state, "failed")
+            expect_equal(pip$get_step("error")$state, "Failed")
 
             expect_warning(f(step = "warning"))
-            expect_equal(pip$get_step("warning")$state, "done")
-        })
-
-        test_that("will not re-compute output of locked steps",
-        {
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = 1) a) |>
-                pipe_add("B", function(b = ~A) b, keepOut = TRUE)
-
-            f <- get_private(pip)$.run_step
-
-            expect_equal(f(step = "A"), 1)
-            expect_equal(f(step = "B"), 1)
-
-            pip$set_params_at_step("A", list(a = 2))
-            expect_equal(pip$get_step("B")$state, "outdated")
-            pip$lock_step("B")
-
-            expect_equal(f(step = "A"), 2)
-            expect_equal(f(step = "B"), 1)
+            expect_equal(pip$get_step("warning")$state, "Done")
         })
 
         test_that("will re-compute if locked step does not keep output",
@@ -3947,28 +3984,6 @@ test_that("private methods work as expected",
             expect_false(pip$has_out("B"))
 
             expect_equal(f(step = "A"), 2)
-            expect_equal(f(step = "B"), 2)
-        })
-
-        test_that("will re-compute if locked step is unlocked",
-        {
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = 1) a) |>
-                pipe_add("B", function(b = ~A) b, keepOut = TRUE)
-
-            f <- get_private(pip)$.run_step
-
-            expect_equal(f(step = "A"), 1)
-            expect_equal(f(step = "B"), 1)
-
-            pip$set_params_at_step("A", list(a = 2))
-            expect_equal(pip$get_step("B")$state, "outdated")
-            pip$lock_step("B")
-
-            expect_equal(f(step = "A"), 2)
-            expect_equal(f(step = "B"), 1)
-
-            pip$unlock_step("B")
             expect_equal(f(step = "B"), 2)
         })
     })
@@ -4066,7 +4081,7 @@ test_that("private methods work as expected",
             pip$add("f3", function(a = 1) a)
             pip$add("f4", function(a = ~f2) a)
 
-            expect_true(all(pip$pipeline[["state"]] == "new"))
+            expect_true(all(pip$pipeline[["state"]] == "New"))
             f("f1", state = "new-state")
             states <- pip$pipeline[["state"]] |>
                 stats::setNames(pip$get_step_names())
@@ -4074,10 +4089,10 @@ test_that("private methods work as expected",
             expect_equal(
                 states,
                 c(
-                    data = "new",
-                    f1 = "new",
+                    data = "New",
+                    f1 = "New",
                     f2 = "new-state",
-                    f3 = "new",
+                    f3 = "New",
                     f4 = "new-state"
                 )
             )
@@ -4090,10 +4105,10 @@ test_that("private methods work as expected",
             expect_equal(
                 states,
                 c(
-                    data = "new",
+                    data = "New",
                     f1 = "another-state",
                     f2 = "another-state",
-                    f3 = "new",
+                    f3 = "New",
                     f4 = "another-state"
                 )
             )

@@ -101,8 +101,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' handy when the pipeline is copy-appended multiple times to keep
         #' the results of the same function/step grouped at one place.
         #' @param keepOut `logical` if `FALSE` the output of the function will
-        #' be cleaned at the end of the whole pipeline execution. This option
-        #' is used to only keep the results that matter.
+        #' be not be collected at the end of the whole pipeline run. This
+        #' option is used to only keep the results that matter. See also
+        #' function `collect_out` for more details.
         #' @return returns the `Pipeline` object invisibly
         add = function(
             step,
@@ -151,7 +152,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         group = group,
                         description = description,
                         time = Sys.time(),
-                        state = "new"
+                        state = "New"
                     )
                 )
 
@@ -239,8 +240,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         },
 
 
-        #' @description Collect all output that was stored and kept during the
-        #' pipeline execution.
+        #' @description Collect output from all steps except the ones that
+        #' were set to `keepOut = FALSE`. By default, the output is grouped
+        #' by the group names, which, by default, are the step names.
         #' @param groupBy `string` column of pipeline by which to group the
         #' output.
         #' @return `list` containing the output, named after the groups, which,
@@ -570,7 +572,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param step `string` name of step
         #' @return the `Pipeline` object invisibly
         lock_step = function(step) {
-            private$.set_at_step(step, "state", "locked")
+            private$.set_at_step(step, "state", "Locked")
             invisible(self)
         },
 
@@ -770,30 +772,34 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 group = group,
                 description = description,
                 time = Sys.time(),
-                state = "new"
+                state = "New"
             )
 
             self$pipeline[stepNumber, ] <- newStep
-            private$.update_states_downstream(step, state = "outdated")
+            private$.update_states_downstream(step, state = "Outdated")
 
             invisible(self)
         },
 
-        #' @description Run all pipeline steps.
-        #' @param from `numeric` step number to start execution from
-        #' @param to `numeric` step number to run until
+        #' @description Run all new and/or outdated pipeline steps.
+        #' @param force `logical` if `TRUE` all steps are run regardless of
+        #' whether they are outdated or not.
         #' @param recursive `logical` if `TRUE` and a step returns a new
         #' pipeline, the run of the current pipeline is aborted and the
         #' new pipeline is run recursively.
+        #' @param cleanUnkept `logical` if `TRUE` all output that was not
+        #' marked to be kept is removed after the pipeline run. This option
+        #' can be useful if temporary results require a lot of memory.
         #' @return returns the `Pipeline` object invisibly
         run = function(
-            from = 1,
-            to = self$length(),
-            recursive = TRUE
+            force = FALSE,
+            recursive = TRUE,
+            cleanUnkept = FALSE
         ) {
-            private$.verify_from_to(from, to)
             stopifnot(
-                is.logical(recursive)
+                is.logical(force),
+                is.logical(recursive),
+                is.logical(cleanUnkept)
             )
 
             log_info <- function(msg, ...) {
@@ -802,11 +808,20 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             gettextf("Start run of '%s' pipeline:", self$name) |> log_info()
 
-            for (i in seq(from = from, to = to)) {
+            to <- self$length()
+            for (i in seq(from = 1, to = to)) {
                 step <- as.character(self$pipeline[i, "step"])
-                gettextf("Step %i/%i %s",  i, to, step) |> log_info()
+                state <- self$get_step(step)[["state"]]
+                info <- gettextf("Step %i/%i %s", i, to, step)
 
-                res = private$.run_step(step)
+                if (state == "Locked" || (state == "Done" && !force)) {
+                    paste0(info, " - skip '", tolower(state), "' step") |>
+                        log_info()
+                    next()
+                }
+                log_info(info)
+
+                res <- private$.run_step(step)
 
                 if (inherits(res, "Pipeline") && recursive) {
                     log_info("Abort pipeline execution and restart on new.")
@@ -818,8 +833,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             log_info("Finished execution of steps.")
 
-            log_info("Clean temporary results.")
-            private$.clean_out_not_kept()
+            if (cleanUnkept) {
+                log_info("Clean temporary results.")
+                private$.clean_out_not_kept()
+            }
 
             log_info("Done.")
             invisible(self)
@@ -832,16 +849,21 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' steps first.
         #' @param downstream `logical` if `TRUE`, run all depdendent
         #' downstream afterwards.
+        #' @param cleanUnkept `logical` if `TRUE` all output that was not
+        #' marked to be kept is removed after the pipeline run. This option
+        #' can be useful if temporary results require a lot of memory.
         #' @return returns the `Pipeline` object invisibly
         run_step = function(
             step,
             upstream = TRUE,
-            downstream = FALSE
+            downstream = FALSE,
+            cleanUnkept = FALSE
         ) {
             private$.verify_step_exists(step)
             stopifnot(
                 is.logical(upstream),
-                is.logical(downstream)
+                is.logical(downstream),
+                is.logical(cleanUnkept)
             )
 
             upstreamSteps <- character(0)
@@ -877,6 +899,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             for (i in seq_along(steps)) {
                 step <- steps[i]
+                state <- self$get_step(step)[["state"]]
                 stream <- ""
                 if (step %in% upstreamSteps) {
                     stream <- " (upstream)"
@@ -884,16 +907,24 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 if (step %in% downstreamSteps) {
                     stream <- " (downstream)"
                 }
-                gettextf("Step %i/%i %s%s",  i, nStep, step, stream) |>
-                    log_info()
+                info <- gettextf("Step %i/%i %s%s",  i, nStep, step, stream)
+
+                if (state == "Locked") {
+                    paste0(info, " - skip '", tolower(state), "' step") |>
+                        log_info()
+                    next()
+                }
+                log_info(info)
 
                 private$.run_step(step)
             }
 
             log_info("Finished execution of steps.")
 
-            log_info("Clean temporary results.")
-            private$.clean_out_not_kept()
+            if (cleanUnkept) {
+                log_info("Clean temporary results.")
+                private$.clean_out_not_kept()
+            }
 
             log_info("Done.")
             invisible(self)
@@ -1062,7 +1093,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is.list(params)
             )
 
-            isLocked <- self$get_step(step)[["state"]] == "locked"
+            isLocked <- self$get_step(step)[["state"]] == "Locked"
             if (isLocked) {
                 message(
                     "skipping setting parameters ",
@@ -1093,9 +1124,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
                 # Update state if applicable
                 state <- self$get_step(step)[["state"]]
-                if (state == "done") {
-                    private$.set_at_step(step, "state", "outdated")
-                    private$.update_states_downstream(step, "outdated")
+                if (state == "Done") {
+                    private$.set_at_step(step, "state", "Outdated")
+                    private$.update_states_downstream(step, "Outdated")
                 }
             }
 
@@ -1125,8 +1156,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return the `Pipeline` object invisibly
         unlock_step = function(step) {
             state <- self$get_step(step)[["state"]]
-            if (state == "locked") {
-                private$.set_at_step(step, "state", "unlocked")
+            if (state == "Locked") {
+                private$.set_at_step(step, "state", "Unlocked")
             }
 
             invisible(self)
@@ -1150,6 +1181,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 i = which(areNotKept),
                 j = "out",
                 value = list(list(NULL))
+            )
+            data.table::set(
+                self$pipeline,
+                i = which(areNotKept),
+                j = "state",
+                value = "Outdated"
             )
         },
 
@@ -1212,11 +1249,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 "title" = paste0("<p>", pip[["description"]], "</p>")
             )
 
-            nodes[["color"]][pip[["state"]] == "new"] <- "lightblue"
-            nodes[["color"]][pip[["state"]] == "done"] <- "lightgreen"
-            nodes[["color"]][pip[["state"]] == "outdated"] <- "orange"
-            nodes[["color"]][pip[["state"]] == "failed"] <- "red"
-            nodes[["color"]][pip[["state"]] == "locked"] <- "grey"
+            nodes[["color"]][pip[["state"]] == "New"] <- "lightblue"
+            nodes[["color"]][pip[["state"]] == "Done"] <- "lightgreen"
+            nodes[["color"]][pip[["state"]] == "Outdated"] <- "orange"
+            nodes[["color"]][pip[["state"]] == "Failed"] <- "red"
+            nodes[["color"]][pip[["state"]] == "Locked"] <- "grey"
             nodes[["shape"]][1] <- "database"
             nodes[["shape"]][pip[["keepOut"]]] <- "box"
 
@@ -1269,76 +1306,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             deps[names(relativeDeps)] <- consideredSteps[stepIndices]
 
             deps
-        },
-
-        .run_step = function(step)
-        {
-            private$.verify_step_exists(step)
-            isLocked <- self$get_step(step)[["state"]] == "locked"
-
-            if (isLocked && self$has_out(step)) {
-                return(invisible(self$get_out(step)))
-            }
-
-            pip <- self$pipeline
-            thisWasRunSuccessfully <- FALSE
-            on.exit(
-                if (!thisWasRunSuccessfully) {
-                    private$.set_at_step(step, "state", value = "failed")
-                },
-                add = TRUE
-            )
-
-            row <- self$get_step(step) |> unlist1()
-            fun <- row[["fun"]]
-            args <- row[["params"]]
-            deps <- row[["deps"]]
-
-            # If calculation depends on results of earlier steps, get them from
-            # respective output slots of the pipeline.
-            hasDeps <- length(deps) > 0
-            if (hasDeps) {
-                out <- pip[["out"]] |> stats::setNames(pip[["step"]])
-                depdendentOut <- private$.extract_dependent_out(deps, out)
-                args[names(depdendentOut)] <- depdendentOut
-            }
-
-            # If arg is encapsulated in a Param object, get the value
-            args <- lapply(
-                args,
-                FUN = function(arg) {
-                    if (methods::is(arg, "Param")) arg@value else arg
-                }
-            )
-
-            iStep <- self$get_step_number(step)
-            context <- gettextf("pipeline at step %i ('%s')", iStep, step)
-
-            res <- tryCatch(
-                do.call(fun, args = args),
-
-                error = function(e) {
-                    msg <- paste0("Context: ", context, ", ", e$message)
-                    private$.lg(level = "error", msg = msg)
-                    stop(e$message, call. = FALSE)
-                },
-                warning = function(w) {
-                    msg <- paste0("Context: ", context, ", ", w$message)
-                    private$.lg(level = "warn", msg = msg)
-                    warning(msg, call. = FALSE)
-                    NULL
-                }
-            )
-
-            if (self$has_step(step)) {
-                private$.set_at_step(step, "time", value = Sys.time())
-                private$.set_at_step(step, "out", value = res)
-                private$.set_at_step(step, "state", value = "done")
-                private$.update_states_downstream(step, "outdated")
-            }
-            thisWasRunSuccessfully <- TRUE
-
-            invisible(res)
         },
 
         .extract_dependent_out = function(
@@ -1518,6 +1485,70 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             absIndex
         },
 
+        .run_step = function(step)
+        {
+            private$.verify_step_exists(step)
+            pip <- self$pipeline
+            thisWasRunSuccessfully <- FALSE
+            on.exit(
+                if (!thisWasRunSuccessfully) {
+                    private$.set_at_step(step, "state", value = "Failed")
+                },
+                add = TRUE
+            )
+
+            row <- self$get_step(step) |> unlist1()
+            fun <- row[["fun"]]
+            args <- row[["params"]]
+            deps <- row[["deps"]]
+
+            # If calculation depends on results of earlier steps, get them from
+            # respective output slots of the pipeline.
+            hasDeps <- length(deps) > 0
+            if (hasDeps) {
+                out <- pip[["out"]] |> stats::setNames(pip[["step"]])
+                depdendentOut <- private$.extract_dependent_out(deps, out)
+                args[names(depdendentOut)] <- depdendentOut
+            }
+
+            # If arg is encapsulated in a Param object, get the value
+            args <- lapply(
+                args,
+                FUN = function(arg) {
+                    if (methods::is(arg, "Param")) arg@value else arg
+                }
+            )
+
+            iStep <- self$get_step_number(step)
+            context <- gettextf("pipeline at step %i ('%s')", iStep, step)
+
+            res <- tryCatch(
+                do.call(fun, args = args),
+
+                error = function(e) {
+                    msg <- paste0("Context: ", context, ", ", e$message)
+                    private$.lg(level = "error", msg = msg)
+                    stop(e$message, call. = FALSE)
+                },
+                warning = function(w) {
+                    msg <- paste0("Context: ", context, ", ", w$message)
+                    private$.lg(level = "warn", msg = msg)
+                    warning(msg, call. = FALSE)
+                    NULL
+                }
+            )
+
+            if (self$has_step(step)) {
+                private$.set_at_step(step, "time", value = Sys.time())
+                private$.set_at_step(step, "out", value = res)
+                private$.set_at_step(step, "state", value = "Done")
+                private$.update_states_downstream(step, "Outdated")
+            }
+            thisWasRunSuccessfully <- TRUE
+
+            invisible(res)
+        },
+
         .set_at_step = function(
             step,
             field,
@@ -1547,7 +1578,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             deps <- self$get_deps_down(step, recursive = TRUE)
             for (dep in deps) {
                 current <- self$get_step(dep)[["state"]]
-                if (current != "locked") {
+                if (current != "Locked") {
                     private$.set_at_step(dep, "state", value = state)
                 }
             }
