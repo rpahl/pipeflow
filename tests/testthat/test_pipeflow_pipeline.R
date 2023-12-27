@@ -785,16 +785,28 @@ test_that("get_out",
 
     test_that("output at given step can be retrieved",
     {
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("A", function(a = 1) a) |>
-            pipe_add("B", function(b = 2) b)
+        data <- airquality
+        pip <- Pipeline$new("pipe", data = data) |>
+            pipe_add("model",
+                function(data = ~data) {
+                    lm(Ozone ~ Wind, data = data)
+                },
+            )
 
-        expect_equal(pip$get_out("A"), NULL)
-        expect_equal(pip$get_out("B"), NULL)
+        pip$run()
 
-        pip$keep_all_out()$run()
-        expect_equal(pip$get_out("A"), 1)
-        expect_equal(pip$get_out("B"), 2)
+        expect_equal(pip$get_out("data"), data)
+        expect_equivalent(
+            pip$get_out("model"),
+            lm(Ozone ~ Wind, data = data)
+        )
+    })
+
+    test_that("step of requested output must exist",
+    {
+        pip <- Pipeline$new("pipe")
+        pip$run()
+        expect_error(pip$get_out("foo"), "step 'foo' does not exist")
     })
 })
 

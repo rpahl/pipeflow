@@ -392,7 +392,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return returns the `Pipeline` object invisibly
         get_out = function(step)
         {
-            self$get_step(step)[["out"]] |> unlist1()
+            self$get_step(step)[["out"]][[1]]
         },
 
         #' @description Get all function parameters defined in the pipeline.
