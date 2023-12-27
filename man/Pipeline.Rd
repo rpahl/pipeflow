@@ -143,8 +143,9 @@ handy when the pipeline is copy-appended multiple times to keep
 the results of the same function/step grouped at one place.}
 
 \item{\code{keepOut}}{\code{logical} if \code{FALSE} the output of the function will
-be cleaned at the end of the whole pipeline execution. This option
-is used to only keep the results that matter.}
+be not be collected at the end of the whole pipeline run. This
+option is used to only keep the results that matter. See also
+function \code{collect_out} for more details.}
 }
 \if{html}{\out{</div>}}
 }
@@ -205,8 +206,9 @@ returns the \code{Pipeline} object invisibly
 \if{html}{\out{<a id="method-Pipeline-collect_out"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-collect_out}{}}}
 \subsection{Method \code{collect_out()}}{
-Collect all output that was stored and kept during the
-pipeline execution.
+Collect output from all steps except the ones that
+were set to \code{keepOut = FALSE}. By default, the output is grouped
+by the group names, which, by default, are the step names.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$collect_out(groupBy = "group")}\if{html}{\out{</div>}}
 }
@@ -759,21 +761,24 @@ the \code{Pipeline} object invisibly
 \if{html}{\out{<a id="method-Pipeline-run"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-run}{}}}
 \subsection{Method \code{run()}}{
-Run all pipeline steps.
+Run all new and/or outdated pipeline steps.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run(from = 1, to = self$length(), recursive = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run(force = FALSE, recursive = TRUE, cleanUnkept = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{from}}{\code{numeric} step number to start execution from}
-
-\item{\code{to}}{\code{numeric} step number to run until}
+\item{\code{force}}{\code{logical} if \code{TRUE} all steps are run regardless of
+whether they are outdated or not.}
 
 \item{\code{recursive}}{\code{logical} if \code{TRUE} and a step returns a new
 pipeline, the run of the current pipeline is aborted and the
 new pipeline is run recursively.}
+
+\item{\code{cleanUnkept}}{\code{logical} if \code{TRUE} all output that was not
+marked to be kept is removed after the pipeline run. This option
+can be useful if temporary results require a lot of memory.}
 }
 \if{html}{\out{</div>}}
 }
@@ -788,7 +793,12 @@ returns the \code{Pipeline} object invisibly
 Run given pipeline step possibly together with
 upstream and downstream dependencies.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run_step(step, upstream = TRUE, downstream = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run_step(
+  step,
+  upstream = TRUE,
+  downstream = FALSE,
+  cleanUnkept = FALSE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -801,6 +811,10 @@ steps first.}
 
 \item{\code{downstream}}{\code{logical} if \code{TRUE}, run all depdendent
 downstream afterwards.}
+
+\item{\code{cleanUnkept}}{\code{logical} if \code{TRUE} all output that was not
+marked to be kept is removed after the pipeline run. This option
+can be useful if temporary results require a lot of memory.}
 }
 \if{html}{\out{</div>}}
 }
