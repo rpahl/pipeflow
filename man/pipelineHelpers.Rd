@@ -9,9 +9,9 @@
 \alias{pipe_collect_out}
 \alias{pipe_discard_steps}
 \alias{pipe_get_data}
-\alias{pipe_get_deps}
-\alias{pipe_get_deps_down}
-\alias{pipe_get_deps_up}
+\alias{pipe_get_depends}
+\alias{pipe_get_depends_down}
+\alias{pipe_get_depends_up}
 \alias{pipe_get_out}
 \alias{pipe_get_params}
 \alias{pipe_get_params_at_step}
@@ -57,11 +57,11 @@ pipe_discard_steps(pip, ...)
 
 pipe_get_data(pip, ...)
 
-pipe_get_deps(pip, ...)
+pipe_get_depends(pip, ...)
 
-pipe_get_deps_down(pip, ...)
+pipe_get_depends_down(pip, ...)
 
-pipe_get_deps_up(pip, ...)
+pipe_get_depends_up(pip, ...)
 
 pipe_get_out(pip, ...)
 

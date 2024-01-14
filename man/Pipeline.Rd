@@ -37,9 +37,9 @@ Roman Pahl
 \item \href{#method-Pipeline-collect_out}{\code{Pipeline$collect_out()}}
 \item \href{#method-Pipeline-discard_steps}{\code{Pipeline$discard_steps()}}
 \item \href{#method-Pipeline-get_data}{\code{Pipeline$get_data()}}
-\item \href{#method-Pipeline-get_deps}{\code{Pipeline$get_deps()}}
-\item \href{#method-Pipeline-get_deps_down}{\code{Pipeline$get_deps_down()}}
-\item \href{#method-Pipeline-get_deps_up}{\code{Pipeline$get_deps_up()}}
+\item \href{#method-Pipeline-get_depends}{\code{Pipeline$get_depends()}}
+\item \href{#method-Pipeline-get_depends_down}{\code{Pipeline$get_depends_down()}}
+\item \href{#method-Pipeline-get_depends_up}{\code{Pipeline$get_depends_up()}}
 \item \href{#method-Pipeline-get_out}{\code{Pipeline$get_out()}}
 \item \href{#method-Pipeline-get_params}{\code{Pipeline$get_params()}}
 \item \href{#method-Pipeline-get_params_at_step}{\code{Pipeline$get_params_at_step()}}
@@ -269,12 +269,12 @@ returns the data
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_deps"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_deps}{}}}
-\subsection{Method \code{get_deps()}}{
+\if{html}{\out{<a id="method-Pipeline-get_depends"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_depends}{}}}
+\subsection{Method \code{get_depends()}}{
 Get all dependencies defined in the pipeline
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_deps()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_depends()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
@@ -282,13 +282,13 @@ named \code{list} of dependencies for each step
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_deps_down"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_deps_down}{}}}
-\subsection{Method \code{get_deps_down()}}{
+\if{html}{\out{<a id="method-Pipeline-get_depends_down"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_depends_down}{}}}
+\subsection{Method \code{get_depends_down()}}{
 Get all downstream dependencies of given step, by
 default descending recursively.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_deps_down(step, recursive = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_depends_down(step, recursive = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -306,13 +306,13 @@ are also returned.}
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_deps_up"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_deps_up}{}}}
-\subsection{Method \code{get_deps_up()}}{
+\if{html}{\out{<a id="method-Pipeline-get_depends_up"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_depends_up}{}}}
+\subsection{Method \code{get_depends_up()}}{
 Get all upstream dependencies of given step, by
 default descending recursively.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_deps_up(step, recursive = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_depends_up(step, recursive = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

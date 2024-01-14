@@ -73,7 +73,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 fun = list(),
                 funcName = character(0),
                 params = list(),
-                deps = list(),
+                depends = list(),
                 out = list(),
                 keepOut = logical(),
                 group = character(0),
@@ -146,7 +146,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         fun = list(fun),
                         funcName = funcName,
                         params = list(params),
-                        deps = list(deps),
+                        depends = list(deps),
                         out = list(NULL),
                         keepOut = keepOut,
                         group = group,
@@ -231,10 +231,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             # Add postfix to step names and update dependencies accordingly
             steps <- self$get_step_names()
-            deps <- self$get_deps()
+            deps <- self$get_depends()
 
             self$pipeline[["step"]] <- add_postfix(steps)
-            self$pipeline[["deps"]] <- lapply(deps, add_postfix)
+            self$pipeline[["depends"]] <- lapply(deps, add_postfix)
 
             invisible(self)
         },
@@ -337,9 +337,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Get all dependencies defined in the pipeline
         #' @return named `list` of dependencies for each step
-        get_deps = function()
+        get_depends = function()
         {
-            self$pipeline[["deps"]] |>
+            self$pipeline[["depends"]] |>
                 stats::setNames(self$get_step_names())
         },
 
@@ -349,15 +349,15 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param recursive `logical` if `TRUE`, dependencies of dependencies
         #' are also returned.
         #' @return `list` of downstream dependencies
-        get_deps_down = function(
+        get_depends_down = function(
             step,
             recursive = TRUE
         ) {
             private$.verify_step_exists(step)
 
-            deps <- private$.get_downstream_deps(
+            deps <- private$.get_downstream_depends(
                 step = step,
-                deps = self$get_deps(),
+                depends = self$get_depends(),
                 recursive = recursive
             )
 
@@ -371,15 +371,15 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param recursive `logical` if `TRUE`, dependencies of dependencies
         #' are also returned.
         #' @return `list` of upstream dependencies
-        get_deps_up = function(
+        get_depends_up = function(
             step,
             recursive = TRUE
         ) {
             private$.verify_step_exists(step)
 
-            deps <- private$.get_upstream_deps(
+            deps <- private$.get_upstream_depends(
                 step = step,
-                deps = self$get_deps(),
+                depends = self$get_depends(),
                 recursive = recursive
             )
 
@@ -585,7 +585,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 print(self$pipeline)
             } else {
                 columns2print <- c(
-                    "step", "params", "deps", "out", "keepOut", "state"
+                    "step", "params", "depends", "out", "keepOut", "state"
                 )
                 print(self$pipeline[, columns2print, with = FALSE])
             }
@@ -673,7 +673,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         ) {
             private$.verify_step_exists(step)
 
-            deps <- self$get_deps_down(step, recursive)
+            deps <- self$get_depends_down(step, recursive)
             hasDeps <- length(deps) > 0
 
             if (hasDeps) {
@@ -766,7 +766,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 fun = list(fun),
                 funcName = funcName,
                 params = list(params),
-                deps = list(deps),
+                depends = list(deps),
                 out = list(NULL),
                 keepOut = keepOut,
                 group = group,
@@ -871,18 +871,18 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             downstreamSteps <- character(0)
 
             if (upstream) {
-                upstreamSteps <- private$.get_upstream_deps(
+                upstreamSteps <- private$.get_upstream_depends(
                     step = step,
-                    deps = self$get_deps(),
+                    depends = self$get_depends(),
                     recursive = TRUE
                 )
                 steps <- c(upstreamSteps, step)
             }
 
             if (downstream) {
-                downstreamSteps <- private$.get_downstream_deps(
+                downstreamSteps <- private$.get_downstream_depends(
                     step = step,
-                    deps = self$get_deps(),
+                    depends = self$get_depends(),
                     recursive = TRUE
                 )
                 steps <- c(steps, downstreamSteps)
@@ -1010,7 +1010,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             # update all of the (now changed) upstream dependencies.
             if (to < self$length()) {
                 remainingPipe <- self$pipeline[(to + 1):self$length(), ]
-                remainingDeps <- remainingPipe[["deps"]]
+                remainingDeps <- remainingPipe[["depends"]]
                 update_if_needed <- function(x) {
                     needsUpdate <- x %in% upperSteps
                     if (needsUpdate) paste0(x, sep, pipeNames) else x
@@ -1025,7 +1025,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         res
                     }
                 )
-                remainingPipe[["deps"]] <- updatedDeps
+                remainingPipe[["depends"]] <- updatedDeps
                 combined$pipeline <- rbind(combined$pipeline, remainingPipe)
             }
 
@@ -1136,7 +1136,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Splits pipeline into its independent parts.
         #' @return list of `Pipeline` objects
         split = function() {
-            groups <- private$.get_deps_grouped()
+            groups <- private$.get_depends_grouped()
             name <- self$name
             newNames <- paste0(name, seq_along(groups))
             pips <- lapply(newNames, \(name) Pipeline$new(name))
@@ -1193,7 +1193,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         .create_edge_table = function(
             groups = NULL
         ) {
-            deps <- self$get_deps()
+            deps <- self$get_depends()
 
             if (!is.null(groups)) {
                 # Only use dependencies defined by the given groups
@@ -1284,7 +1284,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             private$.verify_step_exists(toStep)
 
-            deps <- private$.extract_deps_from_param_list(params)
+            deps <- private$.extract_depends_from_param_list(params)
 
             # Handle any relative dependencies
             allSteps <- self$get_step_names()
@@ -1309,16 +1309,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         },
 
         .extract_dependent_out = function(
-            deps,
+            depends,
             out
         ) {
             stopifnot(
-                is.character(deps) || is.list(deps),
+                is.character(depends) || is.list(depends),
                 is.list(out),
-                all(unlist(deps) %in% names(out))
+                all(unlist(depends) %in% names(out))
             )
 
-            if (length(deps) == 0) {
+            if (length(depends) == 0) {
                 return(NULL)
             }
 
@@ -1331,10 +1331,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 }
             }
 
-            lapply(deps, FUN = extract_out)
+            lapply(depends, FUN = extract_out)
         },
 
-        .extract_deps_from_param_list = function(
+        .extract_depends_from_param_list = function(
             params
         ) {
             if (length(params) == 0) {
@@ -1356,7 +1356,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             deps
         },
 
-        .get_deps_grouped = function()
+        .get_depends_grouped = function()
         {
             res <- list()
             steps <- self$get_step_names()
@@ -1364,25 +1364,25 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             for (step in rev(steps)) {
                 if (!step %in% unlist(res)) {
                     stepGroup <- self$get_step_names() |>
-                        intersect(c(step, self$get_deps_up(step)))
+                        intersect(c(step, self$get_depends_up(step)))
                     res <- c(list(stepGroup), res)
                 }
             }
             res
         },
 
-        .get_downstream_deps = function(
+        .get_downstream_depends = function(
             step,
-            deps,
+            depends,
             recursive = TRUE
         ) {
             stopifnot(
                 is_string(step),
-                is.character(deps) || is.list(deps),
+                is.character(depends) || is.list(depends),
                 is.logical(recursive)
             )
 
-            result <- deps |>
+            result <- depends |>
                 Filter(f = function(x) step %in% unlist(x)) |>
                 names()
 
@@ -1391,8 +1391,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                     result,
                     sapply(
                         result,
-                        FUN = private$.get_downstream_deps,
-                        deps = deps,
+                        FUN = private$.get_downstream_depends,
+                        depends = depends,
                         recursive = TRUE
                     )
                 )
@@ -1405,30 +1405,30 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             self$get_step_names() |> utils::tail(1)
         },
 
-        .get_upstream_deps = function(
+        .get_upstream_depends = function(
             step,
-            deps,
+            depends,
             recursive = TRUE
         ) {
             stopifnot(
                 is_string(step),
-                is.character(deps) || is.list(deps),
+                is.character(depends) || is.list(depends),
                 is.logical(recursive)
             )
 
-            if (length(deps) == 0) {
+            if (length(depends) == 0) {
                 return(character())
             }
 
-            result <- unlist(deps[[step]]) |> as.character()
+            result <- unlist(depends[[step]]) |> as.character()
 
             if (recursive) {
                 result <- c(
                     result,
                     sapply(
                         result,
-                        FUN = private$.get_upstream_deps,
-                        deps = deps,
+                        FUN = private$.get_upstream_depends,
+                        depends = depends,
                         recursive = TRUE
                     )
                 )
@@ -1500,7 +1500,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             row <- self$get_step(step) |> unlist1()
             fun <- row[["fun"]]
             args <- row[["params"]]
-            deps <- row[["deps"]]
+            deps <- row[["depends"]]
 
             # If calculation depends on results of earlier steps, get them from
             # respective output slots of the pipeline.
@@ -1575,7 +1575,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             private$.verify_step_exists(step)
             stopifnot(is_string(state))
 
-            deps <- self$get_deps_down(step, recursive = TRUE)
+            deps <- self$get_depends_down(step, recursive = TRUE)
             for (dep in deps) {
                 current <- self$get_step(dep)[["state"]]
                 if (current != "Locked") {
@@ -1754,20 +1754,20 @@ pipe_get_data = function(pip, ...)
 
 #' @rdname pipelineHelpers
 #' @export
-pipe_get_deps = function(pip, ...)
-    pip$get_deps(...)
+pipe_get_depends = function(pip, ...)
+    pip$get_depends(...)
 
 
 #' @rdname pipelineHelpers
 #' @export
-pipe_get_deps_down = function(pip, ...)
-    pip$get_deps_down(...)
+pipe_get_depends_down = function(pip, ...)
+    pip$get_depends_down(...)
 
 
 #' @rdname pipelineHelpers
 #' @export
-pipe_get_deps_up = function(pip, ...)
-    pip$get_deps_up(...)
+pipe_get_depends_up = function(pip, ...)
+    pip$get_depends_up(...)
 
 
 #' @rdname pipelineHelpers
