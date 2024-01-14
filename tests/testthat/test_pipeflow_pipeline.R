@@ -1956,6 +1956,50 @@ test_that("run",
         pip$run(cleanUnkept = TRUE)
         expect_equal(pip$pipeline[["out"]], list(NULL, 2, NULL))
     })
+
+    test_that("logs warning without interrupting the run",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(x = ~f1) {
+                warning("something might be wrong")
+                x
+            }) |>
+            pipe_add("f3", function(x = ~f2) x)
+
+        log <- utils::capture.output(
+            expect_warning(pip$run(), "something might be wrong")
+        )
+
+        Filter(log, f = function(x) x |> startsWith("WARN")) |>
+            grepl(pattern = "something might be wrong") |>
+            expect_true()
+
+        wasRunTillEnd <- pip$get_out("f3") == 2
+        expect_true(wasRunTillEnd)
+    })
+
+    test_that("logs error and stops at failed step",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(x = ~f1) {
+                stop("something went wrong")
+                x
+            }) |>
+            pipe_add("f3", function(x = ~f2) x)
+
+        log <- utils::capture.output(
+            expect_error(pip$run(), "something went wrong")
+        )
+
+        Filter(log, f = function(x) x |> startsWith("ERROR")) |>
+            grepl(pattern = "something went wrong") |>
+            expect_true()
+
+        wasRunTillEnd <- isTRUE(pip$get_out("f3") == 2)
+        expect_false(wasRunTillEnd)
+    })
 })
 
 
@@ -2879,10 +2923,8 @@ test_that("pipeline logging works as expected",
             f = function(x) x[["level"]] == "warn"
         )[[1]]
 
-        expect_equal(
-            warnings[["message"]],
-            "Context: pipeline at step 3 ('f2'), this is a warning"
-        )
+        expect_equal(warnings[["message"]], "this is a warning")
+        expect_equal(warnings[["context"]], "Step 3 ('f2')")
     })
 
 
@@ -2895,7 +2937,7 @@ test_that("pipeline logging works as expected",
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function() stop("technical error message"))
+            pipe_add("f2", function() stop("this is an error"))
 
         log <- utils::capture.output({
             tryCatch(pip$run(), error = identity)
@@ -2904,8 +2946,8 @@ test_that("pipeline logging works as expected",
         log_fields = lapply(head(log, -1), jsonlite::fromJSON)
         last = tail(log_fields, 1)[[1]]
 
-        expect_equal(last[["message"]],
-            "Context: pipeline at step 3 ('f2'), technical error message")
+        expect_equal(last[["message"]], "this is an error")
+        expect_equal(last[["context"]], "Step 3 ('f2')")
     })
 })
 
@@ -3948,7 +3990,7 @@ test_that("private methods work as expected",
             log <- capture.output(expect_error(f("A")))
             hasInfo <- grepl(
                 log[1],
-                pattern = "pipeline at step 2 ('A'), something went wrong",
+                pattern = "something went wrong {\"context\":\"Step 2 ('A')\"}",
                 fixed = TRUE
             )
             expect_true(hasInfo)

@@ -1520,21 +1520,19 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
 
             iStep <- self$get_step_number(step)
-            context <- gettextf("pipeline at step %i ('%s')", iStep, step)
+            context <- gettextf("Step %i ('%s')", iStep, step)
 
-            res <- tryCatch(
+            res <- withCallingHandlers(
                 do.call(fun, args = args),
 
                 error = function(e) {
-                    msg <- paste0("Context: ", context, ", ", e$message)
-                    private$.lg(level = "error", msg = msg)
+                    msg <- e$message
+                    private$.lg(level = "error", msg = msg, context = context)
                     stop(e$message, call. = FALSE)
                 },
                 warning = function(w) {
-                    msg <- paste0("Context: ", context, ", ", w$message)
-                    private$.lg(level = "warn", msg = msg)
-                    warning(msg, call. = FALSE)
-                    NULL
+                    msg <- w$message
+                    private$.lg(level = "warn", msg = msg, context = context)
                 }
             )
 
