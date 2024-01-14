@@ -20,9 +20,7 @@
 \alias{pipe_get_step}
 \alias{pipe_get_step_names}
 \alias{pipe_get_step_number}
-\alias{pipe_has_out}
 \alias{pipe_has_step}
-\alias{pipe_keep_all_out}
 \alias{pipe_length}
 \alias{pipe_lock_step}
 \alias{pipe_print}
@@ -79,11 +77,7 @@ pipe_get_step_names(pip, ...)
 
 pipe_get_step_number(pip, ...)
 
-pipe_has_out(pip, ...)
-
 pipe_has_step(pip, ...)
-
-pipe_keep_all_out(pip, ...)
 
 pipe_length(pip, ...)
 

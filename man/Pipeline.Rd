@@ -52,7 +52,7 @@ p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
 p$add("prep_x", \(data = ~data) data$x, group = "prep")
 p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
 p$add("sum", \(x = ~prep_x, y = ~prep_y) x + y)
-p$keep_all_out()$run()
+p$run()$collect_out(all = TRUE)
 
 ## ------------------------------------------------
 ## Method `Pipeline$append`
@@ -98,9 +98,7 @@ Roman Pahl
 \item \href{#method-Pipeline-get_step}{\code{Pipeline$get_step()}}
 \item \href{#method-Pipeline-get_step_names}{\code{Pipeline$get_step_names()}}
 \item \href{#method-Pipeline-get_step_number}{\code{Pipeline$get_step_number()}}
-\item \href{#method-Pipeline-has_out}{\code{Pipeline$has_out()}}
 \item \href{#method-Pipeline-has_step}{\code{Pipeline$has_step()}}
-\item \href{#method-Pipeline-keep_all_out}{\code{Pipeline$keep_all_out()}}
 \item \href{#method-Pipeline-length}{\code{Pipeline$length()}}
 \item \href{#method-Pipeline-lock_step}{\code{Pipeline$lock_step()}}
 \item \href{#method-Pipeline-print}{\code{Pipeline$print()}}
@@ -245,7 +243,7 @@ p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
 p$add("prep_x", \(data = ~data) data$x, group = "prep")
 p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
 p$add("sum", \(x = ~prep_x, y = ~prep_y) x + y)
-p$keep_all_out()$run()
+p$run()$collect_out(all = TRUE)
 }
 \if{html}{\out{</div>}}
 
@@ -318,11 +316,12 @@ returns the \code{Pipeline} object invisibly
 \if{html}{\out{<a id="method-Pipeline-collect_out"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-collect_out}{}}}
 \subsection{Method \code{collect_out()}}{
-Collect output from all steps except the ones that
-were set to \code{keepOut = FALSE}. By default, the output is grouped
-by the group names, which, by default, are the step names.
+Collect output afer pipeline run, by default, from all
+steps for which \code{keepOut} was set to \code{TRUE}. The output is grouped
+by the group names (see \code{group} parameter in function \code{add})
+which if not set explicitly corresponds to the step names.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$collect_out(groupBy = "group")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$collect_out(groupBy = "group", all = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -330,6 +329,9 @@ by the group names, which, by default, are the step names.
 \describe{
 \item{\code{groupBy}}{\code{string} column of pipeline by which to group the
 output.}
+
+\item{\code{all}}{\code{logical} if \code{TRUE} all output is collected
+regardless of the \code{keepOut} flag. This can be useful for debugging.}
 }
 \if{html}{\out{</div>}}
 }
@@ -608,26 +610,6 @@ the step number in the pipeline
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-has_out"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-has_out}{}}}
-\subsection{Method \code{has_out()}}{
-Checks whether step has output.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$has_out(step)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{step}}{\code{string} name of step}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-\code{logical} TRUE if step is defined to keep output
-}
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-has_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-has_step}{}}}
 \subsection{Method \code{has_step()}}{
@@ -645,21 +627,6 @@ Determine whether pipeline has given step.
 }
 \subsection{Returns}{
 \code{logical} whether step exists
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-keep_all_out"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-keep_all_out}{}}}
-\subsection{Method \code{keep_all_out()}}{
-Set pipeline to keep all output regardless of the flags
-that were set for the individual steps. This can be useful for
-debugging.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$keep_all_out()}\if{html}{\out{</div>}}
-}
-
-\subsection{Returns}{
-the \code{Pipeline} object invisibly
 }
 }
 \if{html}{\out{<hr>}}

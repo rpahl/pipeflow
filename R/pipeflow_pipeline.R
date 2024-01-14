@@ -143,7 +143,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$add("prep_x", \(data = ~data) data$x, group = "prep")
         #' p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
         #' p$add("sum", \(x = ~prep_x, y = ~prep_y) x + y)
-        #' p$keep_all_out()$run()
+        #' p$run()$collect_out(all = TRUE)
         add = function(
             step,
             fun,
@@ -286,21 +286,29 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         },
 
 
-        #' @description Collect output from all steps except the ones that
-        #' were set to `keepOut = FALSE`. By default, the output is grouped
-        #' by the group names, which, by default, are the step names.
+        #' @description Collect output afer pipeline run, by default, from all
+        #' steps for which `keepOut` was set to `TRUE`. The output is grouped
+        #' by the group names (see `group` parameter in function `add`)
+        #' which if not set explicitly corresponds to the step names.
         #' @param groupBy `string` column of pipeline by which to group the
         #' output.
+        #' @param all `logical` if `TRUE` all output is collected
+        #' regardless of the `keepOut` flag. This can be useful for debugging.
         #' @return `list` containing the output, named after the groups, which,
         #' by default, are the steps.
-        collect_out = function(groupBy = "group")
+        collect_out = function(groupBy = "group", all = FALSE)
         {
             stopifnot(
                 is_string(groupBy),
                 groupBy %in% colnames(self$pipeline)
             )
 
-            keepOut <- self$pipeline[["keepOut"]]
+            keepOut <- if (all) {
+                rep(TRUE, self$length())
+            } else {
+                self$pipeline[["keepOut"]]
+            }
+
             if (!any(keepOut)) {
                 return(list())
             }
@@ -573,14 +581,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             match(step, self$get_step_names())
         },
 
-        #' @description Checks whether step has output.
-        #' @param step `string` name of step
-        #' @return `logical` TRUE if step is defined to keep output
-        has_out = function(step)
-        {
-            length(self$get_out(step)) > 0
-        },
-
         #' @description Determine whether pipeline has given step.
         #' @param step `string` name of step
         #' @return `logical` whether step exists
@@ -591,18 +591,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 nzchar(step)
             )
             step %in% self$get_step_names()
-        },
-
-        #' @description Set pipeline to keep all output regardless of the flags
-        #' that were set for the individual steps. This can be useful for
-        #' debugging.
-        #' @return the `Pipeline` object invisibly
-        keep_all_out = function()
-        {
-            steps <- self$get_step_names()
-            sapply(steps, FUN = self$set_keep_out, keepOut = TRUE)
-
-            invisible(self)
         },
 
         #' @description Length of the pipeline aka number of pipeline steps.
@@ -1864,20 +1852,8 @@ pipe_get_step_number = function(pip, ...)
 
 #' @rdname pipelineHelpers
 #' @export
-pipe_has_out = function(pip, ...)
-    pip$has_out(...)
-
-
-#' @rdname pipelineHelpers
-#' @export
 pipe_has_step = function(pip, ...)
     pip$has_step(...)
-
-
-#' @rdname pipelineHelpers
-#' @export
-pipe_keep_all_out = function(pip, ...)
-    pip$keep_all_out(...)
 
 
 #' @rdname pipelineHelpers
