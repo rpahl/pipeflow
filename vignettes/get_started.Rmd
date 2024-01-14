@@ -27,12 +27,21 @@ old <- options(width = 100L)
 ```
 
 ## A simple example to get started
-We define a pipeline that starts with base R's airquality dataset, adds a new
-column (step "data_prep"), fits a linear model (step "model_fit") and finally
-plots the model against the data (step "model_plot"). We then show how to
-run the pipeline, how to inspect the output of a specific step, how to
-change the parameters of the pipeline and how to rerun the pipeline with the
-updated parameters.
+In this example, we'll use base R's airquality dataset.
+
+```{r show-airquality}
+head(airquality)
+```
+
+Our goal is to add a new column `Temp.Celsius` to the dataset, which contains
+the temperature in degrees Celsius instead of Fahrenheit. We then want to fit
+a linear model to the data and plot the data and the model fit. We'll use
+pipeflow to do this in a reproducible way.
+
+In the following, we'll show how to define and run the pipeline, how to inspect
+the output of specifics steps, and finally how to rerun the pipeline with
+different parameter settings, which is one of the selling points of using
+such a pipeline.
 
 ### Define the pipeline
 
@@ -74,7 +83,7 @@ pip
 ```
 
 A second step called `data_prep` was added and it depends on the `data`
-step as can be seen in column `deps`, which will list all dependencies of
+step as can be seen in column `depends`, which will list all dependencies of
 a step.
 
 Next, we add a step called `model_fit`, which fits a linear model to the
@@ -94,7 +103,7 @@ pip$add(
 Lastly, we add a step called `model_plot`, which plots the data and the
 linear model fit. The function uses the output from both the
 `model_fit` and the `data_prep` step. It also defines the `xVar`
-parameter as well as a parameter `title`, which is used as the title
+parameter and a parameter `title`, which is used as the title
 of the plot.
 
 ```{r}
@@ -120,8 +129,8 @@ This completes our pipeline, which now looks as follows:
 pip
 ```
 
-Note that in the last line for the `model_plot` step, we can see that the
-`model_fit` and `data_prep` steps are listed as dependencies.
+In the last line, we see that the `model_plot` step depends on both
+the `model_fit` and `data_prep` step.
 
 
 ### Run the pipeline and inspect the output
@@ -153,7 +162,8 @@ pip$get_out("model_plot")
 
 ### Change parameters of the pipeline
 
-Any parameter of the pipeline that is *not* bound to a specific step can be
+Any parameter of the pipeline that is *not* bound to a specific step
+(i.e. is not defined with the tilde (~) operator) can be
 changed by calling the `set_params()` method on the pipeline. Let's first
 list all unbound parameters:
 
