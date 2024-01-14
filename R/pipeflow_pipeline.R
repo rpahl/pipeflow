@@ -11,7 +11,7 @@
 #' Different pipelines can be bound together while preserving all dependencies
 #' within each pipeline.
 #' @field name `string` name of the pipeline
-#' @field pipeline `data.table` the pipeline where each row represents on step.
+#' @field pipeline `data.table` the pipeline where each row represents one step.
 #' @author Roman Pahl
 #' @docType class
 #' @importFrom R6 R6Class
@@ -25,19 +25,37 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description constructor
         #' @param name the name of the Pipeline
-        #' @param data optional data used in the pipeline (can be set later)
-        #' @param logger logger to be used for logging.
-        #' If you want to use your own custom log function, you need to
-        #' provide a function with the following signature:
-        #' `function(level, msg, ...)`. The `level` argument is a
-        #' string, which can be one of `info`, `warn`, or `error`. The `msg`
-        #' argument is a string containing the message to be logged. The
-        #' `...` argument is a list of named parameters, which can be used to
-        #' add additional information to the log message. If no logger is
-        #' provided, the default logger is used. Note that with the
-        #' default logger, the log layout can be altered any time via
-        #' [set_log_layout()].
+        #' @param data optional data used at the start of the pipeline. The
+        #' data also can be set later using the `set_data` function.
+        #' @param logger custom logger to be used for logging. If no logger
+        #' is provided, the default logger is used, which should be sufficient
+        #' for most use cases.
+        #' If you do want to use your own custom log function, you need to
+        #' provide a function that obeys the following form:
+        #'
+        #' `function(level, msg, ...) {
+        #'    your custom logging code here
+        #' }`
+        #'
+        #' The `level` argument is a string and will be one of `info`, `warn`,
+        #'  or `error`. The `msg` argument is a string containing the message
+        #' to be logged. The `...` argument is a list of named parameters,
+        #' which can be used to add additional information to the log message.
+        #' Currently, this is only used to add the context in case of a step
+        #' giving a warning or error.
+        #'
+        #' Note that with the default logger, the log layout can be altered
+        #' any time via [set_log_layout()].
         #' @return returns the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("myPipe", data = data.frame(x = 1:8))
+        #' p
+        #'
+        #' # Passing custom logger
+        #' my_logger <- function(level, msg, ...) {
+        #'    cat(level, msg, "\n")
+        #' }
+        #' p <- Pipeline$new("myPipe", logger = my_logger)
         initialize = function(
             name,
             data = NULL,
@@ -100,11 +118,32 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' names. By default, this is the name of the step, which comes in
         #' handy when the pipeline is copy-appended multiple times to keep
         #' the results of the same function/step grouped at one place.
-        #' @param keepOut `logical` if `FALSE` the output of the function will
-        #' be not be collected at the end of the whole pipeline run. This
-        #' option is used to only keep the results that matter. See also
+        #' @param keepOut `logical` if `FALSE` (default) the output of the
+        #' step is not collected when calling `collect_out` after the pipeline
+        #' run. This option is used to only keep the results that matter
+        #' and skip intermediate results that are not needed. See also
         #' function `collect_out` for more details.
         #' @return returns the `Pipeline` object invisibly
+        #' @examples
+        #' # Add steps with lambda functions
+        #' p <- Pipeline$new("myPipe", data = 1)
+        #' p$add("s1", function(x = ~data) 2*x)  # use input data
+        #' p$add("s2", function(x = ~data, y = ~s1) x * y)
+        #' try(p$add("s2", function(z = 3) 3)) # error: step 's2' exists already
+        #' try(p$add("s3", function(z = ~foo) 3)) # dependency 'foo' not found
+        #' p
+        #'
+        #' # Add step with existing function
+        #' p <- Pipeline$new("myPipe", data = c(1, 2, NA, 3, 4))
+        #' p$add("calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
+        #' p$run()$get_out("calc_mean")
+        #'
+        #' # Group output
+        #' p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
+        #' p$add("prep_x", \(data = ~data) data$x, group = "prep")
+        #' p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
+        #' p$add("sum", \(x = ~prep_x, y = ~prep_y) x + y)
+        #' p$keep_all_out()$run()
         add = function(
             step,
             fun,
@@ -166,6 +205,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param sep `string` separator used when updating step names to
         #' prevent name clashes.
         #' @return returns new combined `Pipeline`.
+        #' @examples
+        #' # Append pipeline
+        #' p1 <- Pipeline$new("pipe1")
+        #' p1$add("step1", function() 1:10)
+        #' p2 <- Pipeline$new("pipe2")
+        #' p2$add("step1", function() 1:10)
+        #' p1$append(p2)
         append = function(p, outAsIn = FALSE, sep = ".")
         {
             stopifnot(
