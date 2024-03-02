@@ -1153,7 +1153,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             if (hasUpdate) {
                 # Update params
                 old <- self$get_step(step)[["params"]] |> unlist1()
-                new <- utils::modifyList(old, params[toUpdate])
+                new <- utils::modifyList(
+                    x = old,
+                    val = params[toUpdate],
+                    keep.null = TRUE
+                )
                 private$.set_at_step(step, "params", value = new)
 
                 # Update state if applicable

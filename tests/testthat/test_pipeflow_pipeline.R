@@ -2711,6 +2711,19 @@ test_that("set_params_at_step",
         out <- pip$run()$collect_out()
         expect_equal(out, list(f1 = "x", f2 = "y x", f3 = "y x 3"))
     })
+
+    test_that("parameters can be set to NULL",
+    {
+        pip <- Pipeline$new("pipe1") |>
+        pipe_add("f1", function(a = NULL, b = 1) a)
+
+        pip$set_params_at_step("f1", list(a = 1, b = NULL))
+
+        expect_equal(
+            pip$get_params_at_step("f1", ignoreHidden = FALSE),
+            list(a = 1, b = NULL)
+        )
+    })
 })
 
 
