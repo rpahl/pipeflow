@@ -344,8 +344,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             # Ungrouped result
-            ungroupedRes <- pipeOut[!(groupLabels %in% names(groupings)), ] |>
-                collect_results()
+            isUngrouped <- !(groupLabels %in% names(groupings))
+            ungroupedRes <- pipeOut[isUngrouped, ] |>
+                collect_results() |>
+                stats::setNames(groupLabels[isUngrouped])
 
             append(result, ungroupedRes)
         },

@@ -404,7 +404,7 @@ test_that("append",
         expect_equal(pipe1_out, 1 * 2)
         expect_equal(out[["data.pipe2"]], pipe1_out)
         expect_equal(out[["f1"]][["f1.pipe2"]], pipe1_out * 3)
-        expect_equal(out[["f2.pipe2"]], out[["f1"]][["f1.pipe2"]] * 4)
+        expect_equal(out[["f2"]], out[["f1"]][["f1.pipe2"]] * 4)
     })
 
     test_that("if duplicated step names would be created, an error is given",
@@ -540,6 +540,20 @@ test_that("collect_out",
         out <- pip$run()$collect_out(all = TRUE)
 
         expect_equal(names(out), c("g2", "g1", "data"))
+    })
+
+    test_that(
+        "if just one group the output name still will take the group name",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = 1, b = 2) a + b, group = "plus") |>
+            pipe_add("f3", function(a = 1, b = 2) a / b, group = "my f3") |>
+            pipe_add("f4", function(a = 2, b = 2) a + b, group = "plus")
+
+        out <- pip$run()$collect_out(all = TRUE)
+
+        expect_equal(names(out), c("plus", "data", "f1", "my f3"))
     })
 })
 
@@ -2306,12 +2320,13 @@ test_that("set_data_split",
 
         out <- pip$run()$collect_out()
 
-        expect_equal(out[["f2.1"]], dat)
-        expect_equal(out[["f2.2"]], dat)
+        expect_equal(out[["1"]], dat)
+        expect_equal(out[["2"]], dat)
     })
 
 
-    test_that("depends are updated correctly, if data split on subset of pipeline",
+    test_that(
+        "depends are updated correctly, if data split on subset of pipeline",
     {
         dat1 <- data.frame(x = 1:2)
         dat2 <- data.frame(y = 1:2)
@@ -2348,8 +2363,8 @@ test_that("set_data_split",
 
         out <- pip$run()$collect_out()
 
-        expect_equal(out[["f2.1"]], dat1)
-        expect_equal(out[["f2.2"]], dat2)
+        expect_equal(out[["1"]], dat1)
+        expect_equal(out[["2"]], dat2)
         expected_f3_res = list(
             list("f1.1" = 1, "f1.2" = 1),
             list("f2.1" = dat1, "f2.2" = dat2)
