@@ -32,7 +32,7 @@ test_that("initialize",
 
         expect_equal(pip$get_step_names(), "data")
 
-        out <- pip$$run()$collect_out(all = TRUE)
+        out <- pip$run()$collect_out(all = TRUE)
         expect_equal(out[["data"]], 1)
     })
 
@@ -323,7 +323,7 @@ test_that("add",
         pip <- Pipeline$new("pipe") |>
             pipe_add("f1", fun = "mean", params = list(x = 1:5))
 
-        out <- pip$$run()$collect_out(all = TRUE)
+        out <- pip$run()$collect_out(all = TRUE)
         expect_equal(out[["f1"]], mean(1:5))
 
         expect_equal(pip$get_step("f1")[["funcName"]], "mean")
@@ -399,7 +399,7 @@ test_that("append",
         depends <- pp$get_depends()
         expect_equal(depends[["data.pipe2"]], c(data = "f1"))
 
-        out <- pp$$run()$collect_out(all = TRUE)
+        out <- pp$run()$collect_out(all = TRUE)
         pipe1_out <- out[["f1"]][["f1"]]
         expect_equal(pipe1_out, 1 * 2)
         expect_equal(out[["data.pipe2"]], pipe1_out)
@@ -2245,7 +2245,7 @@ test_that("set_data_split",
 
         pip$set_data_split(dataList, groupBySplit = FALSE)
 
-        out <- pip$$run()$collect_out(all = TRUE)
+        out <- pip$run()$collect_out(all = TRUE)
 
         expect_equal(
             names(out),
@@ -2265,7 +2265,7 @@ test_that("set_data_split",
 
         pip$set_data_split(dataList, groupBySplit = FALSE, sep = "_")
 
-        out <- pip$$run()$collect_out(all = TRUE)
+        out <- pip$run()$collect_out(all = TRUE)
 
         expect_equal(
             names(out),
