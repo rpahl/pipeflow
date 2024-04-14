@@ -138,6 +138,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$add("calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
         #' p$run()$get_out("calc_mean")
         #'
+        #' # Step description
+        #' p <- Pipeline$new("myPipe", data = 1:10)
+        #' p$add("s1", function(x = ~data) 2*x, description = "multiply by 2")
+        #' print(p)
+        #' print(p, verbose = TRUE) # print all columns
+        #'
         #' # Group output
         #' p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
         #' p$add("prep_x", \(data = ~data) data$x, group = "prep")
