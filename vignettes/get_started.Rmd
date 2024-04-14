@@ -62,14 +62,14 @@ pip
 
 So far, it just consists of one step called `data`, which is in state `New`.
 
-Next, we add a step called `data_prep`, which consists of a function that
+Next, we add a step called `data prep`, which consists of a function that
 takes the output of the `data` step as its first argument, adds a new column
 and returns the modified data as its output. To refer to the output of a
 specific pipeline step, we use the tilde (~) operator.
 
 ```{r define-data-prep-step}
 pip$add(
-    "data_prep",
+    "data prep",
     function(data = ~data) {
         replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5/9)
     }
@@ -82,36 +82,36 @@ Again, let's inspect the pipeline.
 pip
 ```
 
-A second step called `data_prep` was added and it depends on the `data`
+A second step called `data prep` was added and it depends on the `data`
 step as can be seen in column `depends`, which will list all dependencies of
 a step.
 
-Next, we add a step called `model_fit`, which fits a linear model to the
-data. The function takes the output of the `data_prep` and defines a
+Next, we add a step called `model fit`, which fits a linear model to the
+data. The function takes the output of the `data prep` and defines a
 parameter `xVar`, which is used to specify the variable that is used as
 predictor in the linear model.
 
 ```{r}
 pip$add(
-    "model_fit",
-    function(data = ~data_prep, xVar = "Temp.Celsius") {
+    "model fit",
+    function(data = ~`data prep`, xVar = "Temp.Celsius") {
         lm(paste("Ozone ~", xVar), data = data)
     }
 )
 ```
 
-Lastly, we add a step called `model_plot`, which plots the data and the
+Lastly, we add a step called `model plot`, which plots the data and the
 linear model fit. The function uses the output from both the
-`model_fit` and the `data_prep` step. It also defines the `xVar`
+`model fit` and the `data prep` step. It also defines the `xVar`
 parameter and a parameter `title`, which is used as the title
 of the plot.
 
 ```{r}
 pip$add(
-    "model_plot",
+    "model plot",
     function(
-        model = ~model_fit,
-        data = ~data_prep,
+        model = ~`model fit`,
+        data = ~`data prep`,
         xVar = "Temp.Celsius",
         title = "Linear model fit"
     ) {
@@ -129,8 +129,8 @@ This completes our pipeline, which now looks as follows:
 pip
 ```
 
-In the last line, we see that the `model_plot` step depends on both
-the `model_fit` and `data_prep` step.
+In the last line, we see that the `model plot` step depends on both
+the `model fit` and `data prep` step.
 
 
 ### Run the pipeline and inspect the output
@@ -147,16 +147,16 @@ Let's inspect the pipeline again.
 pip
 ```
 
-We can see that the state of all steps have been changed from `New` to `Done`.
+We can see that the `state` of all steps have been changed from `New` to `Done`.
 In addition, the output was added in the `out` column. We can inspect the
 output of a specific step by calling the `get_out()` method on the pipeline.
 
 ```{r inspect-lm, message = FALSE}
-pip$get_out("model_fit")
+pip$get_out("model fit")
 ```
 
 ```{r inspect-plot, message = FALSE, warning = FALSE}
-pip$get_out("model_plot")
+pip$get_out("model plot")
 ```
 
 
@@ -172,7 +172,7 @@ pip$get_params()
 ```
 
 Now let's assume we want to change the `xVar` simultaneously for the
-`model_fit` and `model_plot` steps. We can do this simply as follows:
+`model fit` and `model plot` steps. We can do this simply as follows:
 
 ```{r set-xVar}
 pip$set_params(list(xVar = "Solar.R"))
@@ -186,7 +186,7 @@ steps that depend on the changed parameter.
 pip
 ```
 
-We can see that the `model_fit` and `model_plot` steps are now in state
+We can see that the `model fit` and `model plot` steps are now in state
 `Outdated`, which means that they need to be rerun. We can do this by
 calling the `run()` method on the pipeline again.
 
@@ -198,10 +198,10 @@ The outdated steps were re-run as expected and the output was
 updated accordingly.
 
 ```{r inspect-plot-again, message = FALSE, warning = FALSE}
-pip$get_out("model_plot")
+pip$get_out("model plot")
 ```
 
-To just change the title of the plot, obviously only the `model_plot` step
+To just change the title of the plot, obviously only the `model plot` step
 needs to be rerun.
 
 ```{r set-title}
@@ -210,7 +210,7 @@ pip
 ```
 
 ```{r inspect-plot-after-title-change, message = FALSE, warning = FALSE}
-pip$run()$get_out("model_plot")
+pip$run()$get_out("model plot")
 ```
 
 If instead we were to change the input data, since all steps depend on it,
@@ -222,7 +222,7 @@ pip
 ```
 
 ```{r inspect-plot-after-data-change, message = FALSE, warning = FALSE}
-pip$run()$get_out("model_plot")
+pip$run()$get_out("model plot")
 ```
 
 
