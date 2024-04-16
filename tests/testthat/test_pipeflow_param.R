@@ -253,6 +253,13 @@ test_that("NumericParam class",
         expect_no_error(f(min = 0, max = 0))
         expect_error(f(min = 1, max = 0))
     })
+
+    test_that("default min and max are -Inf and Inf, respectively",
+    {
+        p = new("NumericParam", name = "foo", value = 0)
+        expect_equal(p@min, -Inf)
+        expect_equal(p@max, Inf)
+    })
 })
 
 

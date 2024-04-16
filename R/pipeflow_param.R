@@ -221,8 +221,8 @@ function(
     .Object,
     name,
     value = as.numeric(NA),
-    min = .Machine$double.xmin,
-    max = .Machine$double.xmax,
+    min = -Inf,
+    max = Inf,
     ...
 ) {
     value = if (is.null(value)) {
