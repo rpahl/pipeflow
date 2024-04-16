@@ -16,7 +16,6 @@
 #' @docType class
 #' @importFrom R6 R6Class
 #' @import data.table
-#' @import utils
 #' @export
 Pipeline = R6::R6Class("Pipeline", #nolint
     public = list(
@@ -216,8 +215,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p1 <- Pipeline$new("pipe1")
         #' p1$add("step1", function() 1:10)
         #' p2 <- Pipeline$new("pipe2")
-        #' p2$add("step1", function() 1:10)
+        #' p2$add("step2", function() 1:10)
         #' p1$append(p2)
+        #'
+        # Append pipeline with potential name clashes
+        #' p3 <- Pipeline$new("pipe3")
+        #' p3$add("step1", function() 1:10)
+        #' p1$append(p2)$append(p3)
         append = function(p, outAsIn = FALSE, sep = ".")
         {
             stopifnot(
@@ -269,6 +273,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param sep `string` separator between step name and postfix.
         #' @importFrom stats setNames
         #' @return returns the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe")
+        #' p$add("step1", function() 1:10)
+        #' p$add("step2", function() 1:10)
+        #' p$append_to_step_names("new")
+        #' p
+        #' p$append_to_step_names("new", sep = "_")
+        #' p
         append_to_step_names = function(postfix, sep = ".") {
 
             stopifnot(is_string(postfix))
@@ -302,6 +314,27 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' regardless of the `keepOut` flag. This can be useful for debugging.
         #' @return `list` containing the output, named after the groups, which,
         #' by default, are the steps.
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("step1", function(x = ~data) x + 2)
+        #' p$add("step2", function(x = ~step1) x + 2, keepOut = TRUE)
+        #' p$run()
+        #' p$collect_out()
+        #' p$collect_out(all = TRUE) |> str()
+        #'
+        # Grouped output
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("step1", function(x = ~data) x + 2, group = "add")
+        #' p$add("step2", function(x = ~step1, y = 2) x + y, group = "add")
+        #' p$add("step3", function(x = ~data) x * 3, group = "mult")
+        #' p$add("step4", function(x = ~data, y = 2) x * y, group = "mult")
+        #' p$run()
+        #' p$collect_out(all = TRUE) |> str()
+        #'
+        #' # Grouped by state
+        #' p$set_params(list(y = 5))
+        #' p
+        #' p$collect_out(groupBy = "state", all = TRUE) |> str()
         collect_out = function(groupBy = "group", all = FALSE)
         {
             stopifnot(
@@ -361,12 +394,32 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Discard all steps that match the given `pattern`.
         #' @param pattern `string` containing a regular expression (or
         #' character string for `fixed = TRUE`) to be matched.
-        #' @param recursive `logical` if `TRUE` the step is removed together
-        #' with all its downstream dependencies.
         #' @param fixed `logical` If `TRUE`, `pattern` is a string to
         #' be matched as is. Overrides all conflicting arguments.
+        #' @param recursive `logical` if `TRUE` the step is removed together
+        #' with all its downstream dependencies.
         #' @param ... further arguments passed to [grep()].
         #' @return the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", function(x = ~data) x + 1)
+        #' p$add("add2", function(x = ~add1) x + 2)
+        #' p$add("mult3", function(x = ~add1) x * 3)
+        #' p$add("mult4", function(x = ~add2) x * 4)
+        #' p$discard_steps("mult")
+        #' p
+        #'
+        #' # Re-add steps
+        #' p$add("mult3", function(x = ~add1) x * 3)
+        #' p$add("mult4", function(x = ~add2) x * 4)
+        #' p
+        #' # Discard step 'add1' does'nt work as 'add2' and 'mult3' depend on it
+        #' try(p$discard_steps("add1"))
+        #' p$discard_steps("add1", recursive = TRUE)   # this works
+        #' p
+        #'
+        #' # Trying to discard non-existent steps is just ignored
+        #' p$discard_steps("non-existent")
         discard_steps = function(
             pattern,
             recursive = FALSE,
@@ -390,15 +443,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Get data currently loaded into the pipeline at step 1.
-        #' @return returns the data
-        get_data = function()
-        {
-            self$pipeline[["fun"]][[1]]()
-        },
 
         #' @description Get all dependencies defined in the pipeline
         #' @return named `list` of dependencies for each step
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", function(x = ~data) x + 1)
+        #' p$add("add2", function(x = ~data, y = ~add1) x + y)
+        #' p$get_depends()
         get_depends = function()
         {
             self$pipeline[["depends"]] |>
@@ -411,6 +463,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param recursive `logical` if `TRUE`, dependencies of dependencies
         #' are also returned.
         #' @return `list` of downstream dependencies
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", function(x = ~data) x + 1)
+        #' p$add("add2", function(x = ~data, y = ~add1) x + y)
+        #' p$add("mult3", function(x = ~add1) x * 3)
+        #' p$add("mult4", function(x = ~add2) x * 4)
+        #' p$get_depends_down("add1")
+        #' p$get_depends_down("add1", recursive = FALSE)
         get_depends_down = function(
             step,
             recursive = TRUE
@@ -433,6 +493,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param recursive `logical` if `TRUE`, dependencies of dependencies
         #' are also returned.
         #' @return `list` of upstream dependencies
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", function(x = ~data) x + 1)
+        #' p$add("add2", function(x = ~data, y = ~add1) x + y)
+        #' p$add("mult3", function(x = ~add1) x * 3)
+        #' p$add("mult4", function(x = ~add2) x * 4)
+        #' p$get_depends_up("mult4")
+        #' p$get_depends_up("mult4", recursive = FALSE)
         get_depends_up = function(
             step,
             recursive = TRUE
@@ -449,19 +517,34 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             intersect(self$get_step_names(), deps)
         },
 
-        #' @description Get output of given step.
+        #' @description Get output of given step after pipeline run.
         #' @param step `string` name of step
-        #' @return returns the `Pipeline` object invisibly
+        #' @return the output at the given step.
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", function(x = ~data) x + 1)
+        #' p$add("add2", function(x = ~data, y = ~add1) x + y)
+        #' p$run()
+        #' p$get_out("add1")
+        #' p$get_out("add2")
         get_out = function(step)
         {
             self$get_step(step)[["out"]][[1]]
         },
 
-        #' @description Get all function parameters defined in the pipeline.
+        #' @description Get all unbound (i.e. not referring to other steps)
+        #' function parameters defined in the pipeline.
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
         #' @return `list` of parameters, sorted and named by step. Steps with
         #' no parameters are filtered out.
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", function(data = ~data, x = 1) x + data)
+        #' p$add("add2", function(x = 1, y = 2, .z = 3) x + y + .z)
+        #' p$add("add3", function() 1 + 2)
+        #' p$get_params() |> str()
+        #' p$get_params(ignoreHidden = FALSE) |> str()
         get_params = function(ignoreHidden = TRUE)
         {
             res <- lapply(
@@ -474,11 +557,20 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             Filter(res, f = function(x) length(x) > 0)
         },
 
-        #' @description Get all function parameters at given step name.
+        #' @description Get all unbound (i.e. not referring to other steps)
+        #' at given step name.
         #' @param step `string` name of step
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
         #' @return `list` of parameters defined at given step.
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", function(data = ~data, x = 1) x + data)
+        #' p$add("add2", function(x = 1, y = 2, .z = 3) x + y + .z)
+        #' p$add("add3", function() 1 + 2)
+        #' p$get_params_at_step("add2")
+        #' p$get_params_at_step("add2", ignoreHidden = FALSE)
+        #' p$get_params_at_step("add3")
         get_params_at_step = function(step, ignoreHidden = TRUE)
         {
             isValue = function(x) !is.name(x) && !is.call(x)
@@ -507,7 +599,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 as.list()
         },
 
-        #' @description Get all function parameters defined in the pipeline,
+        #' @description Get all unbound (i.e. not referring to other steps)
+        #' parameters defined in the pipeline,
         #' but only list each parameter once. The values of the parameters,
         #' will be the values of the first step where the parameter was defined.
         #' This is particularly useful after the parameters where set using
@@ -516,6 +609,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
         #' @return `list` of unique parameters
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", function(data = ~data, x = 1) x + data)
+        #' p$add("add2", function(x = 1, y = 2) x + y)
+        #' p$add("mult1", function(x = 1, z = 3, b = ~add2) x * z * b)
+        #' p$get_params_unique()
         get_params_unique = function(ignoreHidden = TRUE)
         {
             params <- self$get_params(ignoreHidden)
@@ -1789,11 +1888,6 @@ pipe_collect_out = function(pip, ...)
 pipe_discard_steps = function(pip, ...)
     pip$discard_steps(...)
 
-
-#' @rdname pipelineHelpers
-#' @export
-pipe_get_data = function(pip, ...)
-    pip$get_data(...)
 
 
 #' @rdname pipelineHelpers

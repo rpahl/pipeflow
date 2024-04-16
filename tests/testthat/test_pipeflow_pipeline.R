@@ -28,12 +28,11 @@ test_that("initialize",
     test_that("data is added as first step to pipeline",
     {
         pip <- Pipeline$new("pipe1", data = 1)
-        expect_equal(pip$get_data(), 1)
 
         expect_equal(pip$get_step_names(), "data")
 
         out <- pip$run()$collect_out(all = TRUE)
-        expect_equal(out[["data"]], 1)
+        expect_equal(pip$get_out("data"), 1)
     })
 
     test_that("the logger can be customized",
@@ -621,20 +620,6 @@ test_that("discard_steps",
                 "steps depend on it: 'f2', 'f3'"
             )
         )
-    })
-})
-
-
-
-test_that("get_data",
-{
-    expect_true(is.function(Pipeline$new("pipe")$get_data))
-
-    test_that("data can be retrieved",
-    {
-        pip <- Pipeline$new("pipe1", data = 9)
-
-        expect_equal(pip$get_data(), 9)
     })
 })
 
