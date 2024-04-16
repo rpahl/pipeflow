@@ -853,6 +853,38 @@ test_that("get_params",
         p <- pip$get_params(ignoreHidden = FALSE)
         expect_equal(p, list(f1 = list(a = 1, .hidden = 2)))
     })
+
+    test_that("works with Param objects",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add(
+                "f1",
+                function(
+                    x = NumericParam("x", value = 1),
+                    y = NumericParam("y", value = 2)
+                ) {
+                    x + y
+                }
+            ) |>
+            pipe_add(
+                "f2",
+                function(
+                    s1 = StringParam("s1", "Hello"),
+                    s2 = StringParam("s2", "World")
+                ) {
+                    paste(s1, s2)
+                }
+            )
+
+        par <- pip$get_params()
+        expect_true(all(par$f1 |> sapply(is, "NumericParam")))
+        expect_equal(par$f1$x@value, 1)
+        expect_equal(par$f1$y@value, 2)
+
+        expect_true(all(par$f2 |> sapply(is, "StringParam")))
+        expect_equal(par$f2$s1@value, "Hello")
+        expect_equal(par$f2$s2@value, "World")
+    })
 })
 
 
@@ -927,6 +959,39 @@ test_that("get_params_at_step",
             "step 'foo' does not exist"
         )
     })
+
+    test_that("works with Param objects",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add(
+                "f1",
+                function(
+                    x = NumericParam("x", value = 1),
+                    y = NumericParam("y", value = 2)
+                ) {
+                    x + y
+                }
+            ) |>
+            pipe_add(
+                "f2",
+                function(
+                    s1 = StringParam("s1", "Hello"),
+                    s2 = StringParam("s2", "World")
+                ) {
+                    paste(s1, s2)
+                }
+            )
+
+        par1 <- pip$get_params_at_step("f1")
+        expect_true(all(par1 |> sapply(is, "NumericParam")))
+        expect_equal(par1$x@value, 1)
+        expect_equal(par1$y@value, 2)
+
+        par2 <- pip$get_params_at_step("f2")
+        expect_true(all(par2 |> sapply(is, "StringParam")))
+        expect_equal(par2$s1@value, "Hello")
+        expect_equal(par2$s2@value, "World")
+    })
 })
 
 
@@ -957,6 +1022,39 @@ test_that("get_params_unique",
         pip <- Pipeline$new("pipe") |>
             pipe_add("f1", function() 1)
         expect_equivalent(pip$get_params_unique(), list())
+    })
+
+    test_that("works with Param objects",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add(
+                "f1",
+                function(
+                    a = 0,
+                    x = NumericParam("x", value = 1),
+                    y = NumericParam("y", value = 2)
+                ) {
+                    a * (x + y)
+                }
+            ) |>
+            pipe_add(
+                "f2",
+                function(
+                    a = NumericParam("a", value = 0),
+                    x = NumericParam("x", value = 1),
+                    y = 2,
+                    z = NumericParam("y", value = 3)
+                ) {
+                    a * (x + y + z)
+                }
+            )
+
+        par <- pip$get_params_unique()
+        expect_equal(names(par), c("a", "x", "y", "z"))
+        expect_equal(par$a, 0)
+        expect_equal(par$x@value, 1)
+        expect_equal(par$y@value, 2)
+        expect_equal(par$z@value, 3)
     })
 })
 
@@ -1942,6 +2040,33 @@ test_that("run",
 
         wasRunTillEnd <- isTRUE(pip$get_out("f3") == 2)
         expect_false(wasRunTillEnd)
+    })
+
+    test_that("works with Param objects",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add(
+                "f1",
+                function(
+                    x = NumericParam("x", value = 1),
+                    y = NumericParam("y", value = 2)
+                ) {
+                    x + y
+                }
+            ) |>
+            pipe_add(
+                "f2",
+                function(
+                    s1 = StringParam("s1", "Hello"),
+                    s2 = StringParam("s2", "World")
+                ) {
+                    paste(s1, s2)
+                }
+            )
+
+        pip$run()
+        pip$get_out("f1") |> expect_equal(3)
+        pip$get_out("f2") |> expect_equal("Hello World")
     })
 })
 
