@@ -860,8 +860,8 @@ test_that("get_params",
             pipe_add(
                 "f1",
                 function(
-                    x = NumericParam("x", value = 1),
-                    y = NumericParam("y", value = 2)
+                    x = new("NumericParam", "x", value = 1),
+                    y = new("NumericParam", "y", value = 2)
                 ) {
                     x + y
                 }
@@ -869,8 +869,8 @@ test_that("get_params",
             pipe_add(
                 "f2",
                 function(
-                    s1 = StringParam("s1", "Hello"),
-                    s2 = StringParam("s2", "World")
+                    s1 = new("StringParam", "s1", "Hello"),
+                    s2 = new("StringParam", "s2", "World")
                 ) {
                     paste(s1, s2)
                 }
@@ -966,8 +966,8 @@ test_that("get_params_at_step",
             pipe_add(
                 "f1",
                 function(
-                    x = NumericParam("x", value = 1),
-                    y = NumericParam("y", value = 2)
+                    x = new("NumericParam", "x", value = 1),
+                    y = new("NumericParam", "y", value = 2)
                 ) {
                     x + y
                 }
@@ -975,8 +975,8 @@ test_that("get_params_at_step",
             pipe_add(
                 "f2",
                 function(
-                    s1 = StringParam("s1", "Hello"),
-                    s2 = StringParam("s2", "World")
+                    s1 = new("StringParam", "s1", "Hello"),
+                    s2 = new("StringParam", "s2", "World")
                 ) {
                     paste(s1, s2)
                 }
@@ -1031,8 +1031,8 @@ test_that("get_params_unique",
                 "f1",
                 function(
                     a = 0,
-                    x = NumericParam("x", value = 1),
-                    y = NumericParam("y", value = 2)
+                    x = new("NumericParam", "x", value = 1),
+                    y = new("NumericParam", "y", value = 2)
                 ) {
                     a * (x + y)
                 }
@@ -1040,10 +1040,10 @@ test_that("get_params_unique",
             pipe_add(
                 "f2",
                 function(
-                    a = NumericParam("a", value = 0),
-                    x = NumericParam("x", value = 1),
+                    a = new("NumericParam", "a", value = 0),
+                    x = new("NumericParam", "x", value = 1),
                     y = 2,
-                    z = NumericParam("y", value = 3)
+                    z = new("NumericParam", "y", value = 3)
                 ) {
                     a * (x + y + z)
                 }
@@ -2048,8 +2048,8 @@ test_that("run",
             pipe_add(
                 "f1",
                 function(
-                    x = NumericParam("x", value = 1),
-                    y = NumericParam("y", value = 2)
+                    x = new("NumericParam", "x", value = 1),
+                    y = new("NumericParam", "y", value = 2)
                 ) {
                     x + y
                 }
@@ -2057,8 +2057,8 @@ test_that("run",
             pipe_add(
                 "f2",
                 function(
-                    s1 = StringParam("s1", "Hello"),
-                    s2 = StringParam("s2", "World")
+                    s1 = new("StringParam", "s1", "Hello"),
+                    s2 = new("StringParam", "s2", "World")
                 ) {
                     paste(s1, s2)
                 }
