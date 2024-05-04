@@ -11,6 +11,7 @@
 \alias{pipe_get_depends}
 \alias{pipe_get_depends_down}
 \alias{pipe_get_depends_up}
+\alias{pipe_get_graph}
 \alias{pipe_get_out}
 \alias{pipe_get_params}
 \alias{pipe_get_params_at_step}
@@ -23,7 +24,6 @@
 \alias{pipe_length}
 \alias{pipe_lock_step}
 \alias{pipe_print}
-\alias{pipe_print_graph}
 \alias{pipe_pop_step}
 \alias{pipe_pop_steps_after}
 \alias{pipe_pop_steps_from}
@@ -58,6 +58,8 @@ pipe_get_depends_down(pip, ...)
 
 pipe_get_depends_up(pip, ...)
 
+pipe_get_graph(pip, ...)
+
 pipe_get_out(pip, ...)
 
 pipe_get_params(pip, ...)
@@ -81,8 +83,6 @@ pipe_length(pip, ...)
 pipe_lock_step(pip, ...)
 
 pipe_print(pip, ...)
-
-pipe_print_graph(pip, ...)
 
 pipe_pop_step(pip, ...)
 

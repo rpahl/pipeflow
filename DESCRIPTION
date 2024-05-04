@@ -17,12 +17,10 @@ Imports:
     methods,
     R6,
     stats,
-    utils,
-    visNetwork
+    utils
 Suggests:
     ggplot2,
     knitr,
-    mockery,
     rmarkdown,
     testthat
 Config/testthat/edition: 3

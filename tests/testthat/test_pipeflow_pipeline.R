@@ -778,6 +778,57 @@ test_that("get_depends_up",
 })
 
 
+test_that("get_graph",
+{
+    expect_true(is.function(Pipeline$new("pipe")$get_graph))
+
+    pip <- Pipeline$new("pipe") |>
+        pipe_add("f1", function(a = 1) a) |>
+        pipe_add("f2", function(a = ~f1, b = ~data) a)
+
+    res <- pip$get_graph()
+
+    test_that("returns a node table with the expected columns",
+    {
+        tab <- res$nodes
+        expect_true(is.data.frame(tab))
+        expectedColumns <- c("id", "label", "group", "shape", "color", "title")
+
+        expect_equal(colnames(tab), expectedColumns)
+    })
+
+    test_that("the node table contains all steps",
+    {
+        tab <- res$nodes
+        expect_equal(tab$label, pip$get_step_names())
+    })
+
+    test_that("returns an edges table with the expected columns",
+    {
+        tab <- res$edges
+        expect_true(is.data.frame(tab))
+        expectedColumns <- c("from", "to", "arrows")
+
+        expect_equal(colnames(tab), expectedColumns)
+    })
+
+    test_that("can be printed created for certain groups",
+    {
+        pip <- Pipeline$new("pipe")
+        pip$add("step2", \(a = ~data) a + 1, group = "add")
+        pip$add("step3", \(a = ~step2) 2 * a, group = "mult")
+        pip$add("step4", \(a = ~step2, b = ~step3) a + b, group = "add")
+        pip$add("step5", \(a = ~data, b = ~step4) a * b, group = "mult")
+
+        res.add <- pip$get_graph(groups = "add")
+        expect_equal(res.add$nodes$label, c("step2", "step4"))
+
+        res.mult <- pip$get_graph(groups = "mult")
+        expect_equal(res.mult$nodes$label, c("step3", "step5"))
+    })
+})
+
+
 test_that("get_out",
 {
     expect_true(is.function(Pipeline$new("pipe")$get_out))
@@ -1363,53 +1414,6 @@ test_that("print",
     })
 })
 
-
-test_that("print_graph",
-{
-    expect_true(is.function(Pipeline$new("pipe")$print_graph))
-
-    test_that("returns a visNetwork object",
-    {
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function(a = ~f1, b = ~data) a)
-
-        res <- pip$print_graph()
-        expect_true(is(res, "visNetwork"))
-    })
-
-    test_that("can be printed for certain groups",
-    {
-        pip <- Pipeline$new("pipe")
-        pip$add("step2", \(a = ~data) a + 1, group = "add")
-        pip$add("step3", \(a = ~step2) 2 * a, group = "mult")
-        pip$add("step4", \(a = ~step2, b = ~step3) a + b, group = "add")
-        pip$add("step5", \(a = ~data, b = ~step4) a * b, group = "mult")
-
-        res.add <- pip$print_graph(groups = "add")
-        expect_equal(res.add$x$nodes$id, c(2, 4))
-
-        res.mult <- pip$print_graph(groups = "mult")
-        expect_equal(res.mult$x$nodes$id, c(3, 5))
-    })
-
-    test_that("signals if visNetwork is not available",
-    {
-        pip <- Pipeline$new("pipe")
-
-        mockery::stub(
-            where = pip$print_graph,
-            what = "requireNamespace",
-            how = mockery::mock(FALSE)
-        )
-
-        expect_error(
-            pip$print_graph(),
-            "Package 'visNetwork' is required"
-        )
-
-    })
-})
 
 test_that("pop_step",
 {

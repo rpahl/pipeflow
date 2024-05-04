@@ -126,10 +126,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @examples
         #' # Add steps with lambda functions
         #' p <- Pipeline$new("myPipe", data = 1)
-        #' p$add("s1", function(x = ~data) 2*x)  # use input data
-        #' p$add("s2", function(x = ~data, y = ~s1) x * y)
-        #' try(p$add("s2", function(z = 3) 3)) # error: step 's2' exists already
-        #' try(p$add("s3", function(z = ~foo) 3)) # dependency 'foo' not found
+        #' p$add("s1", \(x = ~data) 2*x)  # use input data
+        #' p$add("s2", \(x = ~data, y = ~s1) x * y)
+        #' try(p$add("s2", \(z = 3) 3)) # error: step 's2' exists already
+        #' try(p$add("s3", \(z = ~foo) 3)) # dependency 'foo' not found
         #' p
         #'
         #' # Add step with existing function
@@ -139,7 +139,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #'
         #' # Step description
         #' p <- Pipeline$new("myPipe", data = 1:10)
-        #' p$add("s1", function(x = ~data) 2*x, description = "multiply by 2")
+        #' p$add("s1", \(x = ~data) 2*x, description = "multiply by 2")
         #' print(p)
         #' print(p, verbose = TRUE) # print all columns
         #'
@@ -213,14 +213,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @examples
         #' # Append pipeline
         #' p1 <- Pipeline$new("pipe1")
-        #' p1$add("step1", function() 1:10)
+        #' p1$add("step1", \(x) x)
         #' p2 <- Pipeline$new("pipe2")
-        #' p2$add("step2", function() 1:10)
+        #' p2$add("step2", \(y) y)
         #' p1$append(p2)
         #'
         # Append pipeline with potential name clashes
         #' p3 <- Pipeline$new("pipe3")
-        #' p3$add("step1", function() 1:10)
+        #' p3$add("step1", \(z) z)
         #' p1$append(p2)$append(p3)
         append = function(p, outAsIn = FALSE, sep = ".")
         {
@@ -271,12 +271,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' of updating dependencies accordingly.
         #' @param postfix `string` to be appended to each step name.
         #' @param sep `string` separator between step name and postfix.
-        #' @importFrom stats setNames
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe")
-        #' p$add("step1", function() 1:10)
-        #' p$add("step2", function() 1:10)
+        #' p$add("step1", \(x) x)
+        #' p$add("step2", \(y) y)
         #' p$append_to_step_names("new")
         #' p
         #' p$append_to_step_names("new", sep = "_")
@@ -316,18 +315,19 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' by default, are the steps.
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("step1", function(x = ~data) x + 2)
-        #' p$add("step2", function(x = ~step1) x + 2, keepOut = TRUE)
+        #' p$add("step1", \(x = ~data) x + 2)
+        #' p$add("step2", \(x = ~step1) x + 2, keepOut = TRUE)
         #' p$run()
         #' p$collect_out()
         #' p$collect_out(all = TRUE) |> str()
         #'
         # Grouped output
         #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("step1", function(x = ~data) x + 2, group = "add")
-        #' p$add("step2", function(x = ~step1, y = 2) x + y, group = "add")
-        #' p$add("step3", function(x = ~data) x * 3, group = "mult")
-        #' p$add("step4", function(x = ~data, y = 2) x * y, group = "mult")
+        #' p$add("step1", \(x = ~data) x + 2, group = "add")
+        #' p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
+        #' p$add("step3", \(x = ~data) x * 3, group = "mult")
+        #' p$add("step4", \(x = ~data, y = 2) x * y, group = "mult")
+        #' p
         #' p$run()
         #' p$collect_out(all = TRUE) |> str()
         #'
@@ -402,16 +402,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("add1", function(x = ~data) x + 1)
-        #' p$add("add2", function(x = ~add1) x + 2)
-        #' p$add("mult3", function(x = ~add1) x * 3)
-        #' p$add("mult4", function(x = ~add2) x * 4)
+        #' p$add("add1", \(x = ~data) x + 1)
+        #' p$add("add2", \(x = ~add1) x + 2)
+        #' p$add("mult3", \(x = ~add1) x * 3)
+        #' p$add("mult4", \(x = ~add2) x * 4)
         #' p$discard_steps("mult")
         #' p
         #'
         #' # Re-add steps
-        #' p$add("mult3", function(x = ~add1) x * 3)
-        #' p$add("mult4", function(x = ~add2) x * 4)
+        #' p$add("mult3", \(x = ~add1) x * 3)
+        #' p$add("mult4", \(x = ~add2) x * 4)
         #' p
         #' # Discard step 'add1' does'nt work as 'add2' and 'mult3' depend on it
         #' try(p$discard_steps("add1"))
@@ -448,8 +448,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return named `list` of dependencies for each step
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("add1", function(x = ~data) x + 1)
-        #' p$add("add2", function(x = ~data, y = ~add1) x + y)
+        #' p$add("add1", \(x = ~data) x + 1)
+        #' p$add("add2", \(x = ~data, y = ~add1) x + y)
         #' p$get_depends()
         get_depends = function()
         {
@@ -465,10 +465,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return `list` of downstream dependencies
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("add1", function(x = ~data) x + 1)
-        #' p$add("add2", function(x = ~data, y = ~add1) x + y)
-        #' p$add("mult3", function(x = ~add1) x * 3)
-        #' p$add("mult4", function(x = ~add2) x * 4)
+        #' p$add("add1", \(x = ~data) x + 1)
+        #' p$add("add2", \(x = ~data, y = ~add1) x + y)
+        #' p$add("mult3", \(x = ~add1) x * 3)
+        #' p$add("mult4", \(x = ~add2) x * 4)
         #' p$get_depends_down("add1")
         #' p$get_depends_down("add1", recursive = FALSE)
         get_depends_down = function(
@@ -495,10 +495,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return `list` of upstream dependencies
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("add1", function(x = ~data) x + 1)
-        #' p$add("add2", function(x = ~data, y = ~add1) x + y)
-        #' p$add("mult3", function(x = ~add1) x * 3)
-        #' p$add("mult4", function(x = ~add2) x * 4)
+        #' p$add("add1", \(x = ~data) x + 1)
+        #' p$add("add2", \(x = ~data, y = ~add1) x + y)
+        #' p$add("mult3", \(x = ~add1) x * 3)
+        #' p$add("mult4", \(x = ~add2) x * 4)
         #' p$get_depends_up("mult4")
         #' p$get_depends_up("mult4", recursive = FALSE)
         get_depends_up = function(
@@ -517,13 +517,35 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             intersect(self$get_step_names(), deps)
         },
 
+        #' @description Visualize the pipeline as a graph.
+        #' @param groups `character` if not `NULL`, only steps belonging to the
+        #' given groups are considered.
+        #' @return two data frames, one for nodes and one for edges ready to be
+        #' used with the `visNetwork` package.
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", \(data = ~data, x = 1) x + data)
+        #' p$add("add2", \(x = 1, y = ~add1) x + y)
+        #' p$add("mult1", \(x = ~add1, y = ~add2) x * y)
+        #' if (requireNamespace("visNetwork", quietly = TRUE)) {
+        #'     do.call(visNetwork::visNetwork, args = p$get_graph())
+        #' }
+        get_graph = function(
+            groups = NULL
+        ) {
+            nodes <- private$.create_node_table(groups = groups)
+            edges <- private$.create_edge_table(groups = groups)
+
+            list(nodes = nodes, edges = edges)
+        },
+
         #' @description Get output of given step after pipeline run.
         #' @param step `string` name of step
         #' @return the output at the given step.
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("add1", function(x = ~data) x + 1)
-        #' p$add("add2", function(x = ~data, y = ~add1) x + y)
+        #' p$add("add1", \(x = ~data) x + 1)
+        #' p$add("add2", \(x = ~data, y = ~add1) x + y)
         #' p$run()
         #' p$get_out("add1")
         #' p$get_out("add2")
@@ -540,9 +562,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' no parameters are filtered out.
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("add1", function(data = ~data, x = 1) x + data)
-        #' p$add("add2", function(x = 1, y = 2, .z = 3) x + y + .z)
-        #' p$add("add3", function() 1 + 2)
+        #' p$add("add1", \(data = ~data, x = 1) x + data)
+        #' p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+        #' p$add("add3", \() 1 + 2)
         #' p$get_params() |> str()
         #' p$get_params(ignoreHidden = FALSE) |> str()
         get_params = function(ignoreHidden = TRUE)
@@ -565,9 +587,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return `list` of parameters defined at given step.
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("add1", function(data = ~data, x = 1) x + data)
-        #' p$add("add2", function(x = 1, y = 2, .z = 3) x + y + .z)
-        #' p$add("add3", function() 1 + 2)
+        #' p$add("add1", \(data = ~data, x = 1) x + data)
+        #' p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+        #' p$add("add3", \() 1 + 2)
         #' p$get_params_at_step("add2")
         #' p$get_params_at_step("add2", ignoreHidden = FALSE)
         #' p$get_params_at_step("add3")
@@ -611,10 +633,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return `list` of unique parameters
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("add1", function(data = ~data, x = 1) x + data)
-        #' p$add("add2", function(x = 1, y = 2) x + y)
-        #' p$add("mult1", function(x = 1, z = 3, b = ~add2) x * z * b)
+        #' p$add("add1", \(data = ~data, x = 1) x + data)
+        #' p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+        #' p$add("mult1", \(x = 1, y = 2, .z = 3, b = ~add2) x * y * b)
         #' p$get_params_unique()
+        #' p$get_params_unique(ignoreHidden = FALSE)
         get_params_unique = function(ignoreHidden = TRUE)
         {
             params <- self$get_params(ignoreHidden)
@@ -632,6 +655,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
         #' @return `list` flat unnamed json list of unique function parameters
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", \(data = ~data, x = 1) x + data)
+        #' p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+        #' p$add("mult1", \(x = 1, y = 2, .z = 3, b = ~add2) x * y * b)
+        #' p$get_params_unique_json()
+        #' p$get_params_unique_json(ignoreHidden = FALSE)
         get_params_unique_json = function(ignoreHidden = TRUE)
         {
             params = self$get_params_unique(ignoreHidden)
@@ -659,7 +689,18 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Get step of pipeline
         #' @param step `string` name of step
         #' @return `data.table` row containing the step. If step not found, an
+        #' @examples
         #' error is given.
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", \(data = ~data, x = 1) x + data)
+        #' p$add("add2", \(x = 1, y = 2, z = ~add1) x + y + z)
+        #' p$run()
+        #' add1 <- p$get_step("add1")
+        #' print(add1)
+        #' add1[["params"]]
+        #' add1[["out"]]
+        #' try()
+        #' try(p$get_step("foo")) # error: step 'foo' does not exist
         get_step = function(step)
         {
             private$.verify_step_exists(step)
@@ -674,6 +715,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Get step names of pipeline
         #' @return `character` vector of step names
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(y = 1) y)
+        #' p$get_step_names()
         get_step_names = function()
         {
             self$pipeline[["step"]]
@@ -682,6 +728,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Get step number
         #' @param step `string` name of step
         #' @return the step number in the pipeline
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(y = 1) y)
+        #' p$get_step_number("f2")
         get_step_number = function(step)
         {
             private$.verify_step_exists(step)
@@ -691,6 +742,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Determine whether pipeline has given step.
         #' @param step `string` name of step
         #' @return `logical` whether step exists
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(y = 1) y)
+        #' p$has_step("f2")
+        #' p$has_step("foo")
         has_step = function(step)
         {
             stopifnot(
@@ -702,6 +759,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Length of the pipeline aka number of pipeline steps.
         #' @return `numeric` length of pipeline.
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(y = 1) y)
+        #' p$length()
         length = function() nrow(self$pipeline),
 
         #' @description Locking a step means that both its parameters and its
@@ -712,6 +774,20 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' (see function `set_params` below).
         #' @param step `string` name of step
         #' @return the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("add1", \(x = 1, data = ~data) x + data)
+        #' p$add("add2", \(x = 1, data = ~data) x + data)
+        #' p$run()
+        #' p$get_out("add1")
+        #' p$get_out("add2")
+        #' p$lock_step("add1")
+        #'
+        #' p$set_data(3)
+        #' p$set_params(list(x = 3))
+        #' p$run()
+        #' p$get_out("add1")
+        #' p$get_out("add2")
         lock_step = function(step) {
             private$.set_at_step(step, "state", "Locked")
             invisible(self)
@@ -721,42 +797,32 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param verbose `logical` if `TRUE`, print all columns of the
         #' pipeline, otherwise only a subset of columns is printed.
         #' @return the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(y = 1) y)
+        #' p$print()
         print = function(verbose = FALSE) {
             if (verbose) {
                 print(self$pipeline)
             } else {
                 columns2print <- c(
-                    "step", "params", "depends", "out", "keepOut", "state"
+                    "step", "depends", "out", "keepOut", "group", "state"
                 )
                 print(self$pipeline[, columns2print, with = FALSE])
             }
             invisible(self)
         },
 
-        #' @description Visualize the pipeline as a graph.
-        #' @param groups `character` if not `NULL`, only steps belonging to the
-        #' given groups are visualized.
-        #' @param ... further arguments passed to [visNetwork()].
-        #' @importFrom visNetwork visNetwork
-        #' @return `visNetwork` object
-        print_graph = function(
-            groups = NULL,
-            ...
-        ) {
-            if (!requireNamespace("visNetwork", quietly = TRUE)) {
-                stop(
-                    "Package 'visNetwork' is required ",
-                    "to visualize the pipeline."
-                )
-            }
-            nodes <- private$.create_node_table(groups = groups)
-            edges <- private$.create_edge_table(groups = groups)
-
-            visNetwork::visNetwork(nodes, edges, ...)
-        },
-
         #' @description Remove last step from the pipeline.
         #' @return `string` the name of the step that was removed
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(y = 1) y)
+        #' p
+        #' p$pop_step() # "f2"
+        #' p
         pop_step = function() {
             len <- self$length()
             lastStepName <- self$get_step_names()[len]
@@ -768,6 +834,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Remove all steps after the given step.
         #' @param step `string` name of step
         #' @return `character` vector of steps that were removed.
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(y = 1) y)
+        #' p$add("f3", \(z = 1) z)
+        #' p$pop_steps_after("f1")  # "f2", "f3"
+        #' p
         pop_steps_after = function(step) {
 
             stepNumber <- self$get_step_number(step)
@@ -788,6 +861,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Remove all steps from and including the given step.
         #' @param step `string` name of step
         #' @return `character` vector of steps that were removed.
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(y = 1) y)
+        #' p$add("f3", \(z = 1) z)
+        #' p$pop_steps_from("f2")  # "f2", "f3"
+        #' p
         pop_steps_from = function(step) {
 
             stepNumber <- self$get_step_number(step)
@@ -808,6 +888,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param recursive `logical` if `TRUE` the step is removed together
         #' with all its downstream dependencies.
         #' @return the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", \(data = ~data, x = 1) x + data)
+        #' p$add("add2", \(x = 1, y = ~add1) x + y)
+        #' p$add("mult1", \(x = 1, y = ~add2) x * y)
+        #' p$remove_step("mult1")
+        #' p
+        #' try(p$remove_step("add1"))  # fails because "add2" depends on "add1"
+        #' p$remove_step("add1", recursive = TRUE)  # removes "add1" and "add2"
+        #' p
         remove_step = function(
             step,
             recursive = FALSE
@@ -840,7 +930,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Replace pipeline step
+        #' @description Replace pipeline step.
         #' @param step `string` the name of the step to be replaced. Step must
         #' exist.
         #' @param fun `string` or `function` operation to be applied at the
@@ -858,6 +948,15 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' be cleaned at the end of the whole pipeline execution. This option
         #' is used to only keep the results that matter.
         #' @return the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("add1", \(x = ~data, y = 1) x + y)
+        #' p$add("add2", \(x = ~data, y = 2) x + y)
+        #' p$add("mult", \(x = 1, y = 2) x * y, keepOut = TRUE)
+        #' p$run()$collect_out()
+        #' p$replace_step("mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+        #' p$run()$collect_out()
+        #' try(p$replace_step("foo", \(x = 1) x))   # step 'foo' does not exist
         replace_step = function(
             step,
             fun,
@@ -932,6 +1031,29 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' marked to be kept is removed after the pipeline run. This option
         #' can be useful if temporary results require a lot of memory.
         #' @return returns the `Pipeline` object invisibly
+        #' @examples
+        #' # Simple pipeline
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("add1", \(x = ~data, y = 1) x + y)
+        #' p$add("add2", \(x = ~add1, z = 2) x + z)
+        #' p$add("final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+        #' p$run()$collect_out()
+        #' p$set_params(list(z = 4))  # outdates steps add2 and final
+        #' p
+        #' p$run()$collect_out()
+        #' p$run(cleanUnkept = TRUE)  # clean up temporary results
+        #' p
+        #'
+        #' # Recursive pipeline
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("add1", \(x = ~data, y = 1) x + y)
+        #' p$add("new_pipe", \(x = ~add1) {
+        #'     pp <- Pipeline$new("new_pipe", data = x)
+        #'     pp$add("add1", \(x = ~data) x + 1)
+        #'     pp$add("add2", \(x = ~add1) x + 2, keepOut = TRUE)
+        #'     }
+        #' )
+        #' p$run()$collect_out()
         run = function(
             force = FALSE,
             recursive = TRUE,
@@ -994,6 +1116,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' marked to be kept is removed after the pipeline run. This option
         #' can be useful if temporary results require a lot of memory.
         #' @return returns the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("add1", \(x = ~data, y = 1) x + y)
+        #' p$add("add2", \(x = ~add1, z = 2) x + z)
+        #' p$add("mult", \(x = ~add1, y = ~add2) x * y)
+        #' p$run_step("add2")
+        #' p$run_step("add2", downstream = TRUE)
+        #' p$run_step("mult", upstream = TRUE)
         run_step = function(
             step,
             upstream = TRUE,
@@ -1074,6 +1204,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Set data in first step of pipeline.
         #' @param data `data.frame` initial data set.
         #' @return returns the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+        #' p$run()$collect_out()
+        #' p$set_data(3)
+        #' p$run()$collect_out()
         set_data = function(data)
         {
             step <- self$get_step_names()[1]
@@ -1097,6 +1233,23 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' data set name when creating the new step names.
         #' @return new combined `Pipeline` with each sub-pipeline having set
         #' one of the data sets.
+        #' @examples
+        #' # Split by three data sets
+        #' dataList <- list(a = 1, b = 2, c = 3)
+        #' p <- Pipeline$new("pipe")
+        #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
+        #' p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+        #' p3 <- p$set_data_split(dataList)
+        #' p3
+        #' p3$run()$collect_out() |> str()
+        #'
+        #' # Don't group output by split
+        #' p <- Pipeline$new("pipe")
+        #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
+        #' p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+        #' p3 <- p$set_data_split(dataList, groupBySplit = FALSE)
+        #' p3
+        #' p3$run()$collect_out() |> str()
         set_data_split = function(
             dataList,
             toStep = utils::tail(self$get_step_names(), 1),
@@ -1178,6 +1331,15 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param step `string` name of step
         #' @param keepOut `logical` whether to keep output of step
         #' @return the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+        #' p$add("add2", \(x = ~data, y = 2) x + y)
+        #' p$add("mult", \(x = ~add1, y = ~add2) x * y)
+        #' p$run()$collect_out()
+        #' p$set_keep_out("add1", keepOut = FALSE)
+        #' p$set_keep_out("mult", keepOut = TRUE)
+        #' p$run()$collect_out()
         set_keep_out = function(step, keepOut = TRUE)
         {
             stopifnot(
@@ -1194,6 +1356,19 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param warnUndefined `logical` whether to give a warning if a
         #' parameter is not defined in the pipeline.
         #' @return returns the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("add1", \(x = ~data, y = 1) x + y)
+        #' p$add("add2", \(x = ~data, y = 1) x + y)
+        #' p$add("mult", \(x = 1, z = 1) x * z)
+        #' p$get_params()
+        #' p$set_params(list(x = 3, y = 3))
+        #' p$get_params()
+        #' p$set_params(list(x = 5, z = 3))
+        #' p$get_params()
+        #' suppressWarnings(
+        #'     p$set_params(list(foo = 3))  # warning: trying to set undefined
+        #' )
         set_params = function(params, warnUndefined = TRUE)
         {
             definedParams <- self$get_params_unique(ignoreHidden = FALSE)
@@ -1225,6 +1400,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param step `string` the name of the step
         #' @param params `list` of parameters to be set
         #' @return returns the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("add1", \(x = ~data, y = 1, z = 2) x + y)
+        #' p$add("add2", \(x = ~data, y = 1, z = 2) x + y)
+        #' p$set_params_at_step("add1", list(y = 3, z = 3))
+        #' p$get_params()
+        #' try(p$set_params_at_step("add1", list(foo = 3))) # foo not defined
         set_params_at_step = function(
             step,
             params
@@ -1280,7 +1462,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Splits pipeline into its independent parts.
         #' @return list of `Pipeline` objects
-        split = function() {
+        #' @examples
+        #' dataList <- list(a = 1, b = 2, c = 3)
+        #' p <- Pipeline$new("pipe")
+        #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
+        #' p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+        #' pips <- p$set_data_split(dataList)$split()
+        split = function()
+        {
             groups <- private$.get_depends_grouped()
             name <- self$name
             newNames <- paste0(name, seq_along(groups))
@@ -1299,6 +1488,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' the command is ignored.
         #' @param step `string` name of step
         #' @return the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("add1", \(x = 1, data = ~data) x + data)
+        #' p$add("add2", \(x = 1, data = ~data) x + data)
+        #' p$lock_step("add1")
+        #' p$set_params(list(x = 3))
+        #' p$get_params()
+        #' p$unlock_step("add1")
+        #' p$set_params(list(x = 3))
+        #' p$get_params()
         unlock_step = function(step) {
             state <- self$get_step(step)[["state"]]
             if (state == "Locked") {
@@ -1910,6 +2109,12 @@ pipe_get_depends_up = function(pip, ...)
 
 #' @rdname pipelineHelpers
 #' @export
+pipe_get_graph = function(pip, ...)
+    pip$get_graph(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
 pipe_get_out = function(pip, ...)
     pip$get_out(...)
 
@@ -1978,12 +2183,6 @@ pipe_lock_step = function(pip, ...)
 #' @export
 pipe_print = function(pip, ...)
     pip$print(...)
-
-
-#' @rdname pipelineHelpers
-#' @export
-pipe_print_graph = function(pip, ...)
-    pip$print_graph(...)
 
 
 #' @rdname pipelineHelpers
