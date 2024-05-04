@@ -17,10 +17,10 @@ require(pipeflow)
 
 knitr::opts_chunk$set(
   comment = "#",
-  prompt = F,
+  prompt = FALSE,
   tidy = FALSE,
   cache = FALSE,
-  collapse = T
+  collapse = TRUE
 )
 
 old <- options(width = 100L)

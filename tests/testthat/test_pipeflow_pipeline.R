@@ -2168,7 +2168,8 @@ test_that("run",
             expect_warning(pip$run(), "something might be wrong")
         )
 
-        Filter(log, f = function(x) x |> startsWith("WARN")) |>
+        Filter(log, f = function(x) x |>
+            startsWith("WARN")) |>
             grepl(pattern = "something might be wrong") |>
             expect_true()
 
@@ -2190,7 +2191,8 @@ test_that("run",
             expect_error(pip$run(), "something went wrong")
         )
 
-        Filter(log, f = function(x) x |> startsWith("ERROR")) |>
+        Filter(log, f = function(x) x |>
+            startsWith("ERROR")) |>
             grepl(pattern = "something went wrong") |>
             expect_true()
 
