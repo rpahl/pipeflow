@@ -774,6 +774,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             ...
         ) {
             private$.verify_step_does_not_exist(step)
+
             if (!self$has_step(afterStep)) {
                 stop("step '", afterStep, "' does not exist")
             }
@@ -789,6 +790,47 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                     self$pipeline[-seq_len(pos), ]
                 )
             }
+
+            self$pipeline <- pip$pipeline
+            invisible(self)
+        },
+
+        #' @description Insert step before a certain step
+        #' @param beforeStep `string` name of step before which to insert
+        #' @param step `string` name of step to insert
+        #' @param ... further arguments passed to `add` method of the pipeline
+        #' @return returns the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(x = ~f1) x)
+        #' p$insert_before("f2", "f3", \(x = ~f1) x)
+        #' p
+        insert_before = function(
+            beforeStep,
+            step,
+            ...
+        ) {
+            private$.verify_step_does_not_exist(step)
+
+            if (!self$has_step(beforeStep)) {
+                stop("step '", beforeStep, "' does not exist")
+            }
+
+            pos <- match(beforeStep, self$get_step_names()) - 1
+            if (pos == 0) {
+                stop("cannot insert before first step")
+            }
+
+            pip <- Pipeline$new(name = self$name)
+
+            pip$pipeline <- self$pipeline[seq_len(pos), ]
+            pip$add(step = step, ...)
+
+            pip$pipeline <- rbind(
+                pip$pipeline,
+                self$pipeline[-seq_len(pos), ]
+            )
 
             self$pipeline <- pip$pipeline
             invisible(self)
@@ -2208,6 +2250,12 @@ pipe_has_step = function(pip, ...)
 #' @export
 pipe_insert_after = function(pip, ...)
     pip$insert_after(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_insert_before = function(pip, ...)
+    pip$insert_before(...)
 
 
 #' @rdname pipelineHelpers

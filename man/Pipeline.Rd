@@ -292,6 +292,16 @@ p$insert_after("f1", "f3", \(x = ~f1) x)
 p
 
 ## ------------------------------------------------
+## Method `Pipeline$insert_before`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(x = ~f1) x)
+p$insert_before("f2", "f3", \(x = ~f1) x)
+p
+
+## ------------------------------------------------
 ## Method `Pipeline$length`
 ## ------------------------------------------------
 
@@ -557,6 +567,7 @@ Roman Pahl
 \item \href{#method-Pipeline-get_step_number}{\code{Pipeline$get_step_number()}}
 \item \href{#method-Pipeline-has_step}{\code{Pipeline$has_step()}}
 \item \href{#method-Pipeline-insert_after}{\code{Pipeline$insert_after()}}
+\item \href{#method-Pipeline-insert_before}{\code{Pipeline$insert_before()}}
 \item \href{#method-Pipeline-length}{\code{Pipeline$length()}}
 \item \href{#method-Pipeline-lock_step}{\code{Pipeline$lock_step()}}
 \item \href{#method-Pipeline-print}{\code{Pipeline$print()}}
@@ -1374,6 +1385,42 @@ returns the \code{Pipeline} object invisibly
 p$add("f1", \(x = 1) x)
 p$add("f2", \(x = ~f1) x)
 p$insert_after("f1", "f3", \(x = ~f1) x)
+p
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-insert_before"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-insert_before}{}}}
+\subsection{Method \code{insert_before()}}{
+Insert step before a certain step
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$insert_before(beforeStep, step, ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{beforeStep}}{\code{string} name of step before which to insert}
+
+\item{\code{step}}{\code{string} name of step to insert}
+
+\item{\code{...}}{further arguments passed to \code{add} method of the pipeline}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+returns the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(x = ~f1) x)
+p$insert_before("f2", "f3", \(x = ~f1) x)
 p
 }
 \if{html}{\out{</div>}}

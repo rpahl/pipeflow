@@ -1378,7 +1378,8 @@ test_that("insert_after",
         )
     })
 
-    test_that("will not insert a step if the reference step does not exist",
+    test_that(
+        "will not insert a step if the reference step does not exist",
     {
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(a = 1) a + 1) |>
@@ -1387,6 +1388,19 @@ test_that("insert_after",
         expect_error(
             pip$insert_after("non-existent", step = "f3"),
             "step 'non-existent' does not exist"
+        )
+    })
+
+    test_that(
+        "will not insert a step with bad parameter dependencies",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
+
+        expect_error(
+            pip$insert_after("f1", step = "f3", \(x = ~f2) x),
+            "step 'f3': dependency 'f2' not found"
         )
     })
 
@@ -1405,6 +1419,79 @@ test_that("insert_after",
         expect_equal(
             pip$get_step_names(),
             c("data", "f1", "f2", "f3")
+        )
+    })
+})
+
+
+test_that("insert_before",
+{
+    expect_true(is.function(Pipeline$new("pipe")$insert_before))
+
+    test_that("can insert a step after another step",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
+
+        pip$insert_before(
+            "f2",
+            step = "f3",
+            fun = function(a = ~f1) a + 1
+        )
+
+        expect_equal(
+            pip$get_step_names(),
+            c("data", "f1", "f3", "f2")
+        )
+    })
+
+    test_that("will not insert a step if the step already exists",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
+
+        expect_error(
+            pip$insert_before("f1", step = "f2"),
+            "step 'f2' already exists"
+        )
+    })
+
+    test_that(
+        "will not allow step to be inserted at first position",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1)
+
+        expect_error(
+            pip$insert_before("data", step = "f2"),
+            "cannot insert before first step"
+        )
+    })
+
+    test_that("will not insert a step if the reference step does not exist",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
+
+        expect_error(
+            pip$insert_before("non-existent", step = "f3"),
+            "step 'non-existent' does not exist"
+        )
+    })
+
+    test_that(
+        "will not insert a step with bad parameter dependencies",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
+
+        expect_error(
+            pip$insert_before("f2", step = "f3", \(x = ~f2) x),
+            "step 'f3': dependency 'f2' not found"
         )
     })
 })
