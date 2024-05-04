@@ -1542,6 +1542,15 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Splits pipeline into its independent parts.
         #' @return list of `Pipeline` objects
         #' @examples
+        #' # Example for two independent calculation paths
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("f1", \(x = ~data) x)
+        #' p$add("f2", \(x = 1) x)
+        #' p$add("f3", \(x = ~f1) x)
+        #' p$add("f4", \(x = ~f2) x)
+        #' p$split()
+        #'
+        #' # Example of split by three data sets
         #' dataList <- list(a = 1, b = 2, c = 3)
         #' p <- Pipeline$new("pipe")
         #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)

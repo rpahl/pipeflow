@@ -512,6 +512,15 @@ try(p$set_params_at_step("add1", list(foo = 3))) # foo not defined
 ## Method `Pipeline$split`
 ## ------------------------------------------------
 
+# Example for two independent calculation paths
+p <- Pipeline$new("pipe", data = 1)
+p$add("f1", \(x = ~data) x)
+p$add("f2", \(x = 1) x)
+p$add("f3", \(x = ~f1) x)
+p$add("f4", \(x = ~f2) x)
+p$split()
+
+# Example of split by three data sets
 dataList <- list(a = 1, b = 2, c = 3)
 p <- Pipeline$new("pipe")
 p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
@@ -2054,7 +2063,16 @@ list of \code{Pipeline} objects
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{dataList <- list(a = 1, b = 2, c = 3)
+\preformatted{# Example for two independent calculation paths
+p <- Pipeline$new("pipe", data = 1)
+p$add("f1", \(x = ~data) x)
+p$add("f2", \(x = 1) x)
+p$add("f3", \(x = ~f1) x)
+p$add("f4", \(x = ~f2) x)
+p$split()
+
+# Example of split by three data sets
+dataList <- list(a = 1, b = 2, c = 3)
 p <- Pipeline$new("pipe")
 p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
 p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
