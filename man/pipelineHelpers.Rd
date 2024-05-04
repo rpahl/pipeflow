@@ -21,6 +21,7 @@
 \alias{pipe_get_step_names}
 \alias{pipe_get_step_number}
 \alias{pipe_has_step}
+\alias{pipe_insert_after}
 \alias{pipe_length}
 \alias{pipe_lock_step}
 \alias{pipe_print}
@@ -77,6 +78,8 @@ pipe_get_step_names(pip, ...)
 pipe_get_step_number(pip, ...)
 
 pipe_has_step(pip, ...)
+
+pipe_insert_after(pip, ...)
 
 pipe_length(pip, ...)
 

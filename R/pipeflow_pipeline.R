@@ -757,6 +757,43 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             step %in% self$get_step_names()
         },
 
+        #' @description Insert step after a certain step
+        #' @param afterStep `string` name of step after which to insert
+        #' @param step `string` name of step to insert
+        #' @param ... further arguments passed to `add` method of the pipeline
+        #' @return returns the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(x = ~f1) x)
+        #' p$insert_after("f1", "f3", \(x = ~f1) x)
+        #' p
+        insert_after = function(
+            afterStep,
+            step,
+            ...
+        ) {
+            private$.verify_step_does_not_exist(step)
+            if (!self$has_step(afterStep)) {
+                stop("step '", afterStep, "' does not exist")
+            }
+
+            pos <- match(afterStep, self$get_step_names())
+            pip <- Pipeline$new(name = self$name)
+            pip$pipeline <- self$pipeline[seq_len(pos), ]
+            pip$add(step = step, ...)
+
+            if (pos < self$length()) {
+                pip$pipeline <- rbind(
+                    pip$pipeline,
+                    self$pipeline[-seq_len(pos), ]
+                )
+            }
+
+            self$pipeline <- pip$pipeline
+            invisible(self)
+        },
+
         #' @description Length of the pipeline aka number of pipeline steps.
         #' @return `numeric` length of pipeline.
         #' @examples
@@ -2165,6 +2202,12 @@ pipe_get_step_number = function(pip, ...)
 #' @export
 pipe_has_step = function(pip, ...)
     pip$has_step(...)
+
+
+#' @rdname pipelineHelpers
+#' @export
+pipe_insert_after = function(pip, ...)
+    pip$insert_after(...)
 
 
 #' @rdname pipelineHelpers
