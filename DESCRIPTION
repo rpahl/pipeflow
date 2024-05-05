@@ -22,7 +22,10 @@ Suggests:
     ggplot2,
     knitr,
     rmarkdown,
-    testthat
+    testthat,
+    visNetwork
+VignetteBuilder:
+    knitr
 Config/testthat/edition: 3
 Config/testthat/parallel: true
 Encoding: UTF-8

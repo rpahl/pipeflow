@@ -15,6 +15,8 @@
 #' @author Roman Pahl
 #' @docType class
 #' @importFrom R6 R6Class
+#' @importFrom stats setNames
+#' @importFrom utils tail
 #' @import data.table
 #' @export
 Pipeline = R6::R6Class("Pipeline", #nolint
@@ -132,18 +134,18 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' try(p$add("s3", \(z = ~foo) 3)) # dependency 'foo' not found
         #' p
         #'
-        #' # Add step with existing function
+        # Add step with existing function
         #' p <- Pipeline$new("myPipe", data = c(1, 2, NA, 3, 4))
         #' p$add("calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
         #' p$run()$get_out("calc_mean")
         #'
-        #' # Step description
+        # Step description
         #' p <- Pipeline$new("myPipe", data = 1:10)
         #' p$add("s1", \(x = ~data) 2*x, description = "multiply by 2")
         #' print(p)
         #' print(p, verbose = TRUE) # print all columns
         #'
-        #' # Group output
+        # Group output
         #' p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
         #' p$add("prep_x", \(data = ~data) data$x, group = "prep")
         #' p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
@@ -527,8 +529,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$add("add1", \(data = ~data, x = 1) x + data)
         #' p$add("add2", \(x = 1, y = ~add1) x + y)
         #' p$add("mult1", \(x = ~add1, y = ~add2) x * y)
-        #' if (requireNamespace("visNetwork", quietly = TRUE)) {
-        #'     do.call(visNetwork::visNetwork, args = p$get_graph())
+        #' if (require("visNetwork", quietly = TRUE)) {
+        #'     do.call(visNetwork, args = p$get_graph())
         #' }
         get_graph = function(
             groups = NULL
@@ -689,8 +691,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Get step of pipeline
         #' @param step `string` name of step
         #' @return `data.table` row containing the step. If step not found, an
-        #' @examples
         #' error is given.
+        #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
         #' p$add("add1", \(data = ~data, x = 1) x + data)
         #' p$add("add2", \(x = 1, y = 2, z = ~add1) x + y + z)

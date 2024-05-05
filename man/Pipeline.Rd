@@ -42,18 +42,15 @@ try(p$add("s2", \(z = 3) 3)) # error: step 's2' exists already
 try(p$add("s3", \(z = ~foo) 3)) # dependency 'foo' not found
 p
 
-# Add step with existing function
 p <- Pipeline$new("myPipe", data = c(1, 2, NA, 3, 4))
 p$add("calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
 p$run()$get_out("calc_mean")
 
-# Step description
 p <- Pipeline$new("myPipe", data = 1:10)
 p$add("s1", \(x = ~data) 2*x, description = "multiply by 2")
 print(p)
 print(p, verbose = TRUE) # print all columns
 
-# Group output
 p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
 p$add("prep_x", \(data = ~data) data$x, group = "prep")
 p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
@@ -177,8 +174,8 @@ p <- Pipeline$new("pipe", data = 1:2)
 p$add("add1", \(data = ~data, x = 1) x + data)
 p$add("add2", \(x = 1, y = ~add1) x + y)
 p$add("mult1", \(x = ~add1, y = ~add2) x * y)
-if (requireNamespace("visNetwork", quietly = TRUE)) {
-    do.call(visNetwork::visNetwork, args = p$get_graph())
+if (require("visNetwork", quietly = TRUE)) {
+    do.call(visNetwork, args = p$get_graph())
 }
 
 ## ------------------------------------------------
@@ -241,7 +238,6 @@ p$get_params_unique_json(ignoreHidden = FALSE)
 ## Method `Pipeline$get_step`
 ## ------------------------------------------------
 
-error is given.
 p <- Pipeline$new("pipe", data = 1:2)
 p$add("add1", \(data = ~data, x = 1) x + data)
 p$add("add2", \(x = 1, y = 2, z = ~add1) x + y + z)
@@ -710,18 +706,15 @@ try(p$add("s2", \(z = 3) 3)) # error: step 's2' exists already
 try(p$add("s3", \(z = ~foo) 3)) # dependency 'foo' not found
 p
 
-# Add step with existing function
 p <- Pipeline$new("myPipe", data = c(1, 2, NA, 3, 4))
 p$add("calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
 p$run()$get_out("calc_mean")
 
-# Step description
 p <- Pipeline$new("myPipe", data = 1:10)
 p$add("s1", \(x = ~data) 2*x, description = "multiply by 2")
 print(p)
 print(p, verbose = TRUE) # print all columns
 
-# Group output
 p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
 p$add("prep_x", \(data = ~data) data$x, group = "prep")
 p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
@@ -1050,8 +1043,8 @@ used with the \code{visNetwork} package.
 p$add("add1", \(data = ~data, x = 1) x + data)
 p$add("add2", \(x = 1, y = ~add1) x + y)
 p$add("mult1", \(x = ~add1, y = ~add2) x * y)
-if (requireNamespace("visNetwork", quietly = TRUE)) {
-    do.call(visNetwork::visNetwork, args = p$get_graph())
+if (require("visNetwork", quietly = TRUE)) {
+    do.call(visNetwork, args = p$get_graph())
 }
 }
 \if{html}{\out{</div>}}
@@ -1258,11 +1251,11 @@ Get step of pipeline
 }
 \subsection{Returns}{
 \code{data.table} row containing the step. If step not found, an
+error is given.
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
-\preformatted{error is given.
-p <- Pipeline$new("pipe", data = 1:2)
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
 p$add("add1", \(data = ~data, x = 1) x + data)
 p$add("add2", \(x = 1, y = 2, z = ~add1) x + y + z)
 p$run()
