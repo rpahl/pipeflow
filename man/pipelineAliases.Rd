@@ -127,5 +127,6 @@ pipe_unlock_step(pip, ...)
 The result of the respective pipeline method
 }
 \description{
-Alias functions to enable pipeline construction via R's pipe
+Alias functions, one for each member function of a Pipeline
+object.
 }

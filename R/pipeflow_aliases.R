@@ -1,7 +1,8 @@
 
 # nocov start
 #' @title Pipeline alias functions
-#' @description Alias functions to enable pipeline construction via R's pipe
+#' @description Alias functions, one for each member function of a Pipeline
+#'  object.
 #' @param pip A pipeline object
 #' @param ... Arguments passed to the respective pipeline method
 #' @return The result of the respective pipeline method

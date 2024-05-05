@@ -63,13 +63,13 @@ p$run()$collect_out(all = TRUE)
 
 # Append pipeline
 p1 <- Pipeline$new("pipe1")
-p1$add("step1", \(x) x)
+p1$add("step1", \(x = 1) x)
 p2 <- Pipeline$new("pipe2")
-p2$add("step2", \(y) y)
+p2$add("step2", \(y = 1) y)
 p1$append(p2)
 
 p3 <- Pipeline$new("pipe3")
-p3$add("step1", \(z) z)
+p3$add("step1", \(z = 1) z)
 p1$append(p2)$append(p3)
 
 ## ------------------------------------------------
@@ -77,8 +77,8 @@ p1$append(p2)$append(p3)
 ## ------------------------------------------------
 
 p <- Pipeline$new("pipe")
-p$add("step1", \(x) x)
-p$add("step2", \(y) y)
+p$add("step1", \(x = 1) x)
+p$add("step2", \(y = 1) y)
 p$append_to_step_names("new")
 p
 p$append_to_step_names("new", sep = "_")
@@ -755,13 +755,13 @@ returns new combined \code{Pipeline}.
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{# Append pipeline
 p1 <- Pipeline$new("pipe1")
-p1$add("step1", \(x) x)
+p1$add("step1", \(x = 1) x)
 p2 <- Pipeline$new("pipe2")
-p2$add("step2", \(y) y)
+p2$add("step2", \(y = 1) y)
 p1$append(p2)
 
 p3 <- Pipeline$new("pipe3")
-p3$add("step1", \(z) z)
+p3$add("step1", \(z = 1) z)
 p1$append(p2)$append(p3)
 }
 \if{html}{\out{</div>}}
@@ -794,8 +794,8 @@ returns the \code{Pipeline} object invisibly
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{p <- Pipeline$new("pipe")
-p$add("step1", \(x) x)
-p$add("step2", \(y) y)
+p$add("step1", \(x = 1) x)
+p$add("step2", \(y = 1) y)
 p$append_to_step_names("new")
 p
 p$append_to_step_names("new", sep = "_")

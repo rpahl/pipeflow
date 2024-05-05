@@ -215,14 +215,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @examples
         #' # Append pipeline
         #' p1 <- Pipeline$new("pipe1")
-        #' p1$add("step1", \(x) x)
+        #' p1$add("step1", \(x = 1) x)
         #' p2 <- Pipeline$new("pipe2")
-        #' p2$add("step2", \(y) y)
+        #' p2$add("step2", \(y = 1) y)
         #' p1$append(p2)
         #'
         # Append pipeline with potential name clashes
         #' p3 <- Pipeline$new("pipe3")
-        #' p3$add("step1", \(z) z)
+        #' p3$add("step1", \(z = 1) z)
         #' p1$append(p2)$append(p3)
         append = function(p, outAsIn = FALSE, sep = ".")
         {
@@ -276,8 +276,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe")
-        #' p$add("step1", \(x) x)
-        #' p$add("step2", \(y) y)
+        #' p$add("step1", \(x = 1) x)
+        #' p$add("step2", \(y = 1) y)
         #' p$append_to_step_names("new")
         #' p
         #' p$append_to_step_names("new", sep = "_")
