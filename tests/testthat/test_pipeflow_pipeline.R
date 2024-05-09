@@ -624,6 +624,33 @@ test_that("discard_steps",
 })
 
 
+test_that("get_data",
+{
+    expect_true(is.function(Pipeline$new("pipe")$get_data))
+
+    test_that(
+        "data can be retrieved",
+    {
+        p <- Pipeline$new("pipe", data = 1:2)
+        expect_equal(p$get_data(), 1:2)
+
+        p$set_data(3:4)
+        expect_equal(p$get_data(), 3:4)
+    })
+
+    test_that(
+        "signals missing data",
+    {
+        p <- Pipeline$new("pipe", data = 1:2)
+        p$pop_step()    # remove data step
+
+        expect_error(
+            p$get_data(),
+            "no data step defined"
+        )
+    })
+})
+
 
 test_that("get_depends",
 {

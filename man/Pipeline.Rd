@@ -134,6 +134,15 @@ p
 p$discard_steps("non-existent")
 
 ## ------------------------------------------------
+## Method `Pipeline$get_data`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$get_data()
+p$set_data(3:4)
+p$get_data()
+
+## ------------------------------------------------
 ## Method `Pipeline$get_depends`
 ## ------------------------------------------------
 
@@ -558,6 +567,7 @@ Roman Pahl
 \item \href{#method-Pipeline-append_to_step_names}{\code{Pipeline$append_to_step_names()}}
 \item \href{#method-Pipeline-collect_out}{\code{Pipeline$collect_out()}}
 \item \href{#method-Pipeline-discard_steps}{\code{Pipeline$discard_steps()}}
+\item \href{#method-Pipeline-get_data}{\code{Pipeline$get_data()}}
 \item \href{#method-Pipeline-get_depends}{\code{Pipeline$get_depends()}}
 \item \href{#method-Pipeline-get_depends_down}{\code{Pipeline$get_depends_down()}}
 \item \href{#method-Pipeline-get_depends_up}{\code{Pipeline$get_depends_up()}}
@@ -910,6 +920,31 @@ p
 
 # Trying to discard non-existent steps is just ignored
 p$discard_steps("non-existent")
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-get_data"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_data}{}}}
+\subsection{Method \code{get_data()}}{
+Get data
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_data()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+the output defined in the \code{data} step, which by default is
+the first step of the pipeline
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$get_data()
+p$set_data(3:4)
+p$get_data()
 }
 \if{html}{\out{</div>}}
 

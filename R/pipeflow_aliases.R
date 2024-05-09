@@ -45,6 +45,11 @@ pipe_discard_steps = function(pip, ...)
     pip$discard_steps(...)
 
 
+#' @rdname pipelineAliases
+#' @export
+pipe_get_data = function(pip, ...)
+    pip$get_data(...)
+
 
 #' @rdname pipelineAliases
 #' @export

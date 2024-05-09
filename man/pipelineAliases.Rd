@@ -8,6 +8,7 @@
 \alias{pipe_clone}
 \alias{pipe_collect_out}
 \alias{pipe_discard_steps}
+\alias{pipe_get_data}
 \alias{pipe_get_depends}
 \alias{pipe_get_depends_down}
 \alias{pipe_get_depends_up}
@@ -53,6 +54,8 @@ pipe_clone(pip, ...)
 pipe_collect_out(pip, ...)
 
 pipe_discard_steps(pip, ...)
+
+pipe_get_data(pip, ...)
 
 pipe_get_depends(pip, ...)
 

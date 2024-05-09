@@ -445,6 +445,25 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
+        #' @description Get data
+        #' @return the output defined in the `data` step, which by default is
+        #' the first step of the pipeline
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$get_data()
+        #' p$set_data(3:4)
+        #' p$get_data()
+        get_data = function()
+        {
+            steps <- self$get_step_names()
+
+            if (!"data" %in% steps) {
+                stop("no data step defined")
+            }
+
+            pos <- match("data", steps)
+            self$pipeline[["fun"]][[pos]]()
+        },
 
         #' @description Get all dependencies defined in the pipeline
         #' @return named `list` of dependencies for each step
