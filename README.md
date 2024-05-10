@@ -14,18 +14,38 @@ Dependencies among analysis steps are tracked automatically and are used
 to re-run only steps that are affected by input or parameter changes,
 similar to the `make` utility.
 
-The package provides similar functionality to the
+The package provides functionality similar to the
 [targets](https://CRAN.R-project.org/package=targets) package, but aims
 to be more *lightweight* and *easier* to use and understand. It can be
 used in a wide range of data analysis projects, from small exploratory
 analyses to large production pipelines while still providing a high
 level of control over the analysis process.
 
-### When to use `pipeflow`
+### Why to use `pipeflow`
 
-- first reason
-- second reason
-- third reason
+- promotes standardized analysis workflows
+- eases handling of complex analysis pipelines
+- improves reproducibility and reusability of code
+- improves error handling and debugging
+
+### Features
+
+- easy to learn
+- automatic tracking of dependencies between analysis steps
+- automatic skip of steps that are already up to date (similar to
+  `make`)
+- easy track-keeping and management of pipeline parameters
+- dependencies verified at definition time
+- logging
+- re-using, modyfing, extending and combining of existing pipelines
+
+### Advanced features
+
+- apply one pipeline to multiple datasets and collect and combine
+  results
+- build pipelines that modify themselves or create new pipelines at
+  runtime
+- lock analysis steps manually to freeze results
 
 ### Installation
 
