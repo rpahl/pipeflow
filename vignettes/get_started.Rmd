@@ -33,13 +33,15 @@ In this example, we'll use base R's airquality dataset.
 head(airquality)
 ```
 
-Our goal is to add a new column `Temp.Celsius` to the dataset, which contains
-the temperature in degrees Celsius instead of Fahrenheit. We then want to fit
-a linear model to the data and plot the data and the model fit. We'll use
-pipeflow to do this in a reproducible way.
+Our goal is to create an analysis pipeline that performs the following steps:
+
+* add new data column `Temp.Celsius` containing the temperature in degrees
+  Celsius
+* fit a linear model to the data
+* plot the data and the model fit.
 
 In the following, we'll show how to define and run the pipeline, how to inspect
-the output of specifics steps, and finally how to rerun the pipeline with
+the output of specifics steps, and finally how to re-run the pipeline with
 different parameter settings, which is one of the selling points of using
 such a pipeline.
 
