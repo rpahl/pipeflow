@@ -1,5 +1,24 @@
+---
+output: github_document
+---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+require(pipeflow)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#",
+  prompt = F,
+  fig.path = "images/README-",
+  tidy = FALSE,
+  cache = FALSE,
+  out.width = "100%"
+)
+
+old <- options(width = 100L)
+```
+
 <!-- badges: start -->
 
 [![test-coverage](https://github.com/rpahl/pipeflow/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/rpahl/pipeflow/actions/workflows/test-coverage.yaml)
@@ -10,26 +29,28 @@
 
 The goal of `pipeflow` is to provide a *lightweight* yet *powerful*
 framework for composing and managing custom data analysis pipelines.
-Dependencies among analysis steps are tracked automatically and are used
-to re-run only steps that are affected by input or parameter changes,
-similar to the `make` utility.
+Dependencies among analysis steps are tracked automatically and are
+used to re-run only steps that are affected by input or parameter
+changes, similar to the `make` utility.
 
 The package provides similar functionality to the
-[targets](https://CRAN.R-project.org/package=targets) package, but aims
-to be more *lightweight* and *easier* to use and understand. It can be
-used in a wide range of data analysis projects, from small exploratory
-analyses to large production pipelines while still providing a high
-level of control over the analysis process.
+[targets](https://CRAN.R-project.org/package=targets) package, but
+aims to be more *lightweight* and *easier* to use and understand.
+It can be used in a wide range of
+data analysis projects, from small exploratory analyses to large
+production pipelines while still providing a high level of control
+over the analysis process.
 
 ### When to use `pipeflow`
 
-- first reason
-- second reason
-- third reason
+* first reason
+* second reason
+* third reason
+
 
 ### Installation
 
-``` r
+```{r, eval = FALSE}
 # Install release version from CRAN
 install.packages("pipeflow")
 
@@ -37,10 +58,16 @@ install.packages("pipeflow")
 devtools::install_github("rpahl/pipeflow")
 ```
 
+
 ### Usage
 
-``` r
+```{r}
 library(pipeflow)
 ```
 
 ### Getting Started
+
+
+```{r, include = FALSE}
+options(old)
+```
