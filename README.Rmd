@@ -51,6 +51,7 @@ over the analysis process.
 ### Features
 
 * easy to learn
+* can be used interactively
 * automatic tracking of dependencies between analysis steps
 * automatic skip of steps that are already up to date (similar to `make`)
 * easy track-keeping and management of pipeline parameters
