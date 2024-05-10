@@ -1121,6 +1121,24 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
+        #' @description Resets the pipeline to the state before it was run.
+        #' This means that all output is removed and the state of all steps
+        #' is reset to 'New'.
+        #' @return returns the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(y = 1) y)
+        #' p$run()
+        #' p
+        #' p$reset()
+        #' p
+        reset = function() {
+            self$pipeline[["out"]] <- list(NULL)
+            self$pipeline[["state"]] <- "New"
+            invisible(self)
+        },
+
         #' @description Run all new and/or outdated pipeline steps.
         #' @param force `logical` if `TRUE` all steps are run regardless of
         #' whether they are outdated or not.

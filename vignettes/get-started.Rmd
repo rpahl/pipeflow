@@ -227,6 +227,7 @@ pip
 pip$run()$get_out("model plot")
 ```
 
+Next, let's see how to [modify the pipeline](modify-pipeline.html).
 
 ```{r, include = FALSE}
 options(old)

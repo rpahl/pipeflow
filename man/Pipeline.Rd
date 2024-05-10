@@ -403,6 +403,18 @@ p$run()$collect_out()
 try(p$replace_step("foo", \(x = 1) x))   # step 'foo' does not exist
 
 ## ------------------------------------------------
+## Method `Pipeline$reset`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$run()
+p
+p$reset()
+p
+
+## ------------------------------------------------
 ## Method `Pipeline$run`
 ## ------------------------------------------------
 
@@ -591,6 +603,7 @@ Roman Pahl
 \item \href{#method-Pipeline-pop_steps_from}{\code{Pipeline$pop_steps_from()}}
 \item \href{#method-Pipeline-remove_step}{\code{Pipeline$remove_step()}}
 \item \href{#method-Pipeline-replace_step}{\code{Pipeline$replace_step()}}
+\item \href{#method-Pipeline-reset}{\code{Pipeline$reset()}}
 \item \href{#method-Pipeline-run}{\code{Pipeline$run()}}
 \item \href{#method-Pipeline-run_step}{\code{Pipeline$run_step()}}
 \item \href{#method-Pipeline-set_data}{\code{Pipeline$set_data()}}
@@ -1755,6 +1768,35 @@ p$run()$collect_out()
 p$replace_step("mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
 p$run()$collect_out()
 try(p$replace_step("foo", \(x = 1) x))   # step 'foo' does not exist
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-reset"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-reset}{}}}
+\subsection{Method \code{reset()}}{
+Resets the pipeline to the state before it was run.
+This means that all output is removed and the state of all steps
+is reset to 'New'.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$reset()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+returns the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$run()
+p
+p$reset()
+p
 }
 \if{html}{\out{</div>}}
 

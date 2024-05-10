@@ -2004,6 +2004,33 @@ test_that("replace_step",
 })
 
 
+test_that("reset",
+{
+    expect_true(is.function(Pipeline$new("pipe")$reset))
+    test_that(
+        "after reset pipeline is the same as before the run",
+    {
+        p <- Pipeline$new("pipe", data = 1:2)
+        p$add("f1", \(x = 1) x)
+        p$add("f2", \(y = 1) y)
+
+        p$run()
+        expect_equal(
+            p$collect_out(all = TRUE),
+            list(data = 1:2, f1 = 1, f2 = 1)
+        )
+        expect_true(all(p$pipeline[["state"]] == "Done"))
+
+
+        p$reset()
+        expect_equal(
+            p$collect_out(all = TRUE),
+            list(data = NULL, f1 = NULL, f2 = NULL)
+        )
+        expect_true(all(p$pipeline[["state"]] == "New"))
+    })
+})
+
 test_that("run",
 {
     expect_true(is.function(Pipeline$new("pipe")$run))

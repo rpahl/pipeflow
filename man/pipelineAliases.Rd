@@ -32,6 +32,7 @@
 \alias{pipe_pop_steps_from}
 \alias{pipe_remove_step}
 \alias{pipe_replace_step}
+\alias{pipe_reset}
 \alias{pipe_run}
 \alias{pipe_run_step}
 \alias{pipe_set_data}
@@ -102,6 +103,8 @@ pipe_pop_steps_from(pip, ...)
 pipe_remove_step(pip, ...)
 
 pipe_replace_step(pip, ...)
+
+pipe_reset(pip, ...)
 
 pipe_run(pip, ...)
 

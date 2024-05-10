@@ -191,6 +191,12 @@ pipe_replace_step = function(pip, ...)
 
 #' @rdname pipelineAliases
 #' @export
+pipe_reset = function(pip, ...)
+    pip$reset(...)
+
+
+#' @rdname pipelineAliases
+#' @export
 pipe_run = function(pip, ...)
     pip$run(...)
 
