@@ -152,6 +152,11 @@ pipe_length = function(pip, ...)
 pipe_lock_step = function(pip, ...)
     pip$lock_step(...)
 
+#' @rdname pipelineAliases
+#' @export
+pipe_new = function(...)
+    Pipeline$new(...)
+
 
 #' @rdname pipelineAliases
 #' @export

@@ -209,6 +209,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' clashes and dependencies, which will be changed after the append.
         #' @param p `Pipeline` object to be appended.
         #' @param outAsIn `logical` if `TRUE`, output of first pipeline is used
+        #' as input for the second pipeline.
         #' @param sep `string` separator used when updating step names to
         #' prevent name clashes.
         #' @return returns new combined `Pipeline`.

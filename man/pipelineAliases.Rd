@@ -26,6 +26,7 @@
 \alias{pipe_insert_before}
 \alias{pipe_length}
 \alias{pipe_lock_step}
+\alias{pipe_new}
 \alias{pipe_print}
 \alias{pipe_pop_step}
 \alias{pipe_pop_steps_after}
@@ -91,6 +92,8 @@ pipe_insert_before(pip, ...)
 pipe_length(pip, ...)
 
 pipe_lock_step(pip, ...)
+
+pipe_new(...)
 
 pipe_print(pip, ...)
 

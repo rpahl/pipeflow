@@ -764,7 +764,8 @@ clashes and dependencies, which will be changed after the append.
 \describe{
 \item{\code{p}}{\code{Pipeline} object to be appended.}
 
-\item{\code{outAsIn}}{\code{logical} if \code{TRUE}, output of first pipeline is used}
+\item{\code{outAsIn}}{\code{logical} if \code{TRUE}, output of first pipeline is used
+as input for the second pipeline.}
 
 \item{\code{sep}}{\code{string} separator used when updating step names to
 prevent name clashes.}
