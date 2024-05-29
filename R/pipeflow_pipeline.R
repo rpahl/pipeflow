@@ -378,9 +378,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
                 groupedRes <- pipeOut[indices, ] |>
                     split(f = groupLabels[indices]) |>
-                    lapply(collect_results) |>
-                    # keep original order of groups as they were defined
-                    .subset(unique(groupLabels[indices]))
+                    lapply(collect_results)
 
                 result <- append(result, groupedRes)
             }
@@ -391,7 +389,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 collect_results() |>
                 stats::setNames(groupLabels[isUngrouped])
 
-            append(result, ungroupedRes)
+            result <- append(result, ungroupedRes)
+
+            # Keep original order of groups as they were defined
+            orderedGroupLabels <- intersect(groupLabels, names(result))
+            result |> .subset(orderedGroupLabels)
         },
 
         #' @description Discard all steps that match the given `pattern`.

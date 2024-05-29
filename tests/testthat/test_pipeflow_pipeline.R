@@ -538,7 +538,7 @@ test_that("collect_out",
 
         out <- pip$run()$collect_out(all = TRUE)
 
-        expect_equal(names(out), c("g2", "g1", "data"))
+        expect_equal(names(out), c("data", "g2", "g1"))
     })
 
     test_that(
@@ -552,7 +552,7 @@ test_that("collect_out",
 
         out <- pip$run()$collect_out(all = TRUE)
 
-        expect_equal(names(out), c("plus", "data", "f1", "my f3"))
+        expect_equal(names(out), c("data", "f1", "plus", "my f3"))
     })
 })
 
@@ -2585,7 +2585,7 @@ test_that("set_data_split",
 
         expect_equal(
             names(out),
-            c("id.A", "id.B", "data.A", "f2.A", "data.B", "f2.B")
+            c("data.A", "id.A", "f2.A", "data.B", "id.B", "f2.B")
         )
     })
 
@@ -2605,7 +2605,7 @@ test_that("set_data_split",
 
         expect_equal(
             names(out),
-            c("id_A", "id_B", "data_A", "f2_A", "data_B", "f2_B")
+            c("data_A", "id_A", "f2_A", "data_B", "id_B", "f2_B")
         )
     })
 
