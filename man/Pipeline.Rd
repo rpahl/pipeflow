@@ -495,7 +495,7 @@ p$add("mult", \(x = ~add1, y = ~add2) x * y)
 p$run()$collect_out()
 p$set_keep_out("add1", keepOut = FALSE)
 p$set_keep_out("mult", keepOut = TRUE)
-p$run()$collect_out()
+p$collect_out()
 
 ## ------------------------------------------------
 ## Method `Pipeline$set_params`
@@ -2009,7 +2009,9 @@ p3$run()$collect_out() |> str()
 \if{html}{\out{<a id="method-Pipeline-set_keep_out"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-set_keep_out}{}}}
 \subsection{Method \code{set_keep_out()}}{
-Set pipeline to keep or omit output of given step.
+Change the \code{keepOut} flag at a given pipeline step,
+which determines whether the output of that step is collected
+when calling \code{collect_out()} after the pipeline was run.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_keep_out(step, keepOut = TRUE)}\if{html}{\out{</div>}}
 }
@@ -2035,7 +2037,7 @@ p$add("mult", \(x = ~add1, y = ~add2) x * y)
 p$run()$collect_out()
 p$set_keep_out("add1", keepOut = FALSE)
 p$set_keep_out("mult", keepOut = TRUE)
-p$run()$collect_out()
+p$collect_out()
 }
 \if{html}{\out{</div>}}
 

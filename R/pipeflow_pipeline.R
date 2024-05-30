@@ -1448,7 +1448,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Set pipeline to keep or omit output of given step.
+        #' @description Change the `keepOut` flag at a given pipeline step,
+        #' which determines whether the output of that step is collected
+        #' when calling `collect_out()` after the pipeline was run.
         #' @param step `string` name of step
         #' @param keepOut `logical` whether to keep output of step
         #' @return the `Pipeline` object invisibly
@@ -1460,7 +1462,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$run()$collect_out()
         #' p$set_keep_out("add1", keepOut = FALSE)
         #' p$set_keep_out("mult", keepOut = TRUE)
-        #' p$run()$collect_out()
+        #' p$collect_out()
         set_keep_out = function(step, keepOut = TRUE)
         {
             stopifnot(
