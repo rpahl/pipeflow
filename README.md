@@ -8,6 +8,8 @@
 
 <!-- badges: end -->
 
+# pipeflow <img src="man/figures/logo.png" align="right" width="163" height="121"/>
+
 The goal of `pipeflow` is to provide a *lightweight* yet *powerful*
 framework for composing and managing custom data analysis pipelines.
 Dependencies among analysis steps are tracked automatically and are used
@@ -31,6 +33,7 @@ level of control over the analysis process.
 ### Features
 
 - easy to learn
+- can be used interactively
 - automatic tracking of dependencies between analysis steps
 - automatic skip of steps that are already up to date (similar to
   `make`)

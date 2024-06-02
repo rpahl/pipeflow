@@ -5,7 +5,7 @@ output:
     toc: true
     toc_depth: 4
 description: >
-  Shows how to collect and group relevant output.
+  Shows how to collect and group pipeline output.
 vignette: >
   %\VignetteIndexEntry{Collecting output}
   %\VignetteEngine{knitr::rmarkdown}

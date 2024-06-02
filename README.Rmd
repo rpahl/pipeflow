@@ -27,11 +27,13 @@ old <- options(width = 100L)
 
 <!-- badges: end -->
 
+# pipeflow <img src="man/figures/logo.png" align="right" width="163" height="121"/>
+
 The goal of `pipeflow` is to provide a *lightweight* yet *powerful*
 framework for composing and managing custom data analysis pipelines.
-Dependencies among analysis steps are tracked automatically and are
-used to re-run only steps that are affected by input or parameter
-changes, similar to the `make` utility.
+Dependencies among analysis steps can be defined naturally within
+the R framework and are used to re-run only steps that are affected
+by input or parameter changes, similar to the `make` utility.
 
 The package provides functionality similar to the
 [targets](https://CRAN.R-project.org/package=targets) package, but
@@ -52,10 +54,10 @@ over the analysis process.
 
 * easy to learn
 * can be used interactively
-* automatic tracking of dependencies between analysis steps
-* automatic skip of steps that are already up to date (similar to `make`)
 * easy track-keeping and management of pipeline parameters
+* definition of dependencies between analysis steps
 * dependencies verified at definition time
+* automatic skip of steps that are already up to date (similar to `make`)
 * logging
 * re-using, modyfing, extending and combining of existing pipelines
 
@@ -63,7 +65,7 @@ over the analysis process.
 
 * apply one pipeline to multiple datasets and collect and combine results
 * build pipelines that modify themselves or create new pipelines at runtime
-* lock analysis steps manually to freeze results
+* lock analysis steps to freeze results
 
 
 ### Installation
@@ -84,6 +86,15 @@ library(pipeflow)
 ```
 
 ### Getting Started
+
+
+* [Get started with pipeflow](https://rpahl.github.io/pipeflow/articles/get-started.html)
+* [Modifying existing pipelines](https://rpahl.github.io/pipeflow/articles/modify-pipeline.html)
+* [Combining pipelines](https://rpahl.github.io/pipeflow/articles/combine-pipelines.html)
+* [Collecting output](https://rpahl.github.io/pipeflow/articles/collect-output.html)
+
+
+
 
 
 ```{r, include = FALSE}

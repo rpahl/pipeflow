@@ -1,0 +1,81 @@
+url: https://github.com/rpahl/pipeflow
+
+
+template:
+  params:
+    bootswatch: united
+
+authors:
+  Roman Pahl:
+    href: https://rpahl.github.io/r-some-blog/about.html
+
+reference:
+  - title: "Pipeline"
+    desc: "A pipeline consists of a sequence of analysis steps."
+    contents:
+    - Pipeline
+    - pipelineAliases
+  - subtitle: "Logging"
+    contents:
+    - set_log_layout
+
+articles:
+  - title: "Overview"
+    contents:
+    - get-started
+    - modify-pipeline
+    - combine-pipelines
+    - collect-output
+
+
+home:
+  links:
+  - text: Visit my R blog
+    href: https://rpahl.github.io/r-some-blog/
+
+
+navbar:
+  title: "pipeflow"
+  left:
+    - icon: fa-home fa-lg
+      href: index.html
+    - text: "Get started"
+      href: articles/get-started.html
+    - text: "Reference"
+      href: reference/index.html
+    - text: "Articles"
+      menu:
+        - title: "Overview"
+        - text: "Overview"
+          href: articles/index.html
+
+        - text: "---"
+        - text: "Get started"
+        - text: "Introduction to pipeflow"
+          href: articles/get-started.html
+        - text: "Modifying existing pipelines"
+          href: articles/modify-pipeline.html
+        - text: "Combining pipelines"
+          href: articles/combine-pipelines.html
+        - text: "Collecting pipeline output"
+          href: articles/collect-output.html
+
+        - text: "---"
+        - text: "Advanced"
+        - text: "How to use pipelines with split data sets"
+        - text: "How to self-modify pipelines at runtime"
+    - text: "My packages"
+      menu:
+        - text: "pipeflow"
+          href: https://rpahl.github.io/pipeflow/
+        - text: "GroupSeq"
+          href: https://rpahl.github.io/GroupSeq/
+  right:
+    - icon: fab fa-github
+      href: https://github.com/rpahl/pipeflow/
+    - icon: fab fa-stack-overflow
+      href: https://stackoverflow.com/users/8120617/rpahl
+    - icon: fab fa-twitter
+      href: https://twitter.com/romanpahl
+    - icon: fas fa-blog
+      href: https://rpahl.github.io/r-some-blog/
