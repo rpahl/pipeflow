@@ -1693,6 +1693,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             create_edges_for_step <- function(step, depsAtStep) {
+                if (is.list(depsAtStep)) {
+                    # Handle nested dependencies, for example, when combining
+                    # after data split
+                    depsAtStep <- unlist(depsAtStep)
+                }
                 data.frame(
                     from = sapply(depsAtStep, FUN = self$get_step_number),
                     to = self$get_step_number(step)

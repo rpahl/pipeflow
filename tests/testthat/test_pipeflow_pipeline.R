@@ -3380,42 +3380,6 @@ test_that("private methods work as expected",
             )
         })
 
-        test_that("adds one edge for each dependency",
-        {
-            pip <- Pipeline$new("pipe")
-            f <- get_private(pip)$.create_edge_table
-
-            # step1 is data
-            pip$add("step2", function(a = 1) a)
-            pip$add("step3", function(a = ~step2) a)
-            pip$add("step4", function(a = ~step2, b = ~step3) a)
-            pip$add("step5", function(a = ~data, b = ~step4) a)
-
-            res <- f()
-            expect_equal(nrow(res), 5)
-
-            expect_equivalent(
-                res["step3", c("from", "to")],      # from step2 to step3
-                data.frame(from = 2, to = 3)
-            )
-            expect_equivalent(
-                res["step4.a", c("from", "to")],    # from step2 to step4
-                data.frame(from = 2, to = 4)
-            )
-            expect_equivalent(
-                res["step4.b", c("from", "to")],   # from step3 to step4
-                data.frame(from = 3, to = 4)
-            )
-            expect_equivalent(
-                res["step5.a", c("from", "to")],   # from data to step5
-                data.frame(from = 1, to = 5)
-            )
-            expect_equivalent(
-                res["step5.b", c("from", "to")],   # from data to step5
-                data.frame(from = 4, to = 5)
-            )
-        })
-
         test_that("can be created for certain groups",
         {
             pip <- Pipeline$new("pipe")
@@ -3461,6 +3425,41 @@ test_that("private methods work as expected",
                 f(groups = 1),
                 "is.character(groups) is not TRUE",
                 fixed = TRUE
+            )
+        })
+
+        test_that("can be created for parameters with multiple dependencies",
+        {
+            pip <- Pipeline$new("pipe")
+
+            # step1 is data
+            pip$add("step2", \(x = ~data) x + 1)
+            pip$add("step3", \(y = ~step2) sum(unlist(y)))
+
+            pip$set_data_split(
+                list(data.frame(x = 1:2), data.frame(x = 3:4)),
+                toStep = "step2"
+            )
+
+            # Step 3 depends on both step2.1 and step2.2
+            expect_equal(
+                pip$get_depends()$step3$y,
+                c("step2.1", "step2.2")
+            )
+
+            f <- get_private(pip)$.create_edge_table
+            res <- f()
+
+            expectedRes <- data.frame(
+                from = 1:4,
+                to = c(2, 5, 4, 5),
+                arrows = "to"
+            )
+            expect_equivalent(res, expectedRes)
+
+            expect_equal(
+                rownames(res),
+                c("step2.1", "step3.y1", "step2.2", "step3.y2")
             )
         })
     })
