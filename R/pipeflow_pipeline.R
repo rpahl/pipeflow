@@ -1263,18 +1263,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             downstreamSteps <- character(0)
 
             if (upstream) {
-                upstreamSteps <- private$.get_upstream_depends(
+                upstreamSteps <- self$get_depends_up(
                     step = step,
-                    depends = self$get_depends(),
                     recursive = TRUE
                 )
                 steps <- c(upstreamSteps, step)
             }
 
             if (downstream) {
-                downstreamSteps <- private$.get_downstream_depends(
+                downstreamSteps <- self$get_depends_down(
                     step = step,
-                    depends = self$get_depends(),
                     recursive = TRUE
                 )
                 steps <- c(steps, downstreamSteps)

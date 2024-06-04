@@ -2311,6 +2311,28 @@ test_that("run_step",
         expect_true(is.null(pip$get_out("C")))
     })
 
+    test_that("runs upstream steps in correct order",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+        pip$run_step("C")
+        expect_equal(pip$get_out("C"), 1:3)
+    })
+
+    test_that("runs downstream steps in correct order",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+        pip$run_step("A", downstream = TRUE)
+        expect_equal(pip$get_out("C"), 1:3)
+    })
+
     test_that("pipeline can be run at given step excluding
         all upstream dependencies",
     {
