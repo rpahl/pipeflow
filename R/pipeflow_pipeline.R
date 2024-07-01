@@ -1733,7 +1733,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             nodes[["color"]][pip[["state"]] == "Outdated"] <- "orange"
             nodes[["color"]][pip[["state"]] == "Failed"] <- "red"
             nodes[["color"]][pip[["state"]] == "Locked"] <- "grey"
-            nodes[["shape"]][1] <- "database"
+            areDataNodes <- nodes[, "label"] |> startsWith("data")
+            if (any(areDataNodes)) {
+                nodes[areDataNodes, "shape"] <- "database"
+            }
             nodes[["shape"]][pip[["keepOut"]]] <- "box"
 
             if (!is.null(groups)) {
