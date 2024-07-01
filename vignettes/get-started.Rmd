@@ -57,21 +57,28 @@ library(ggplot2)
 pip <- Pipeline$new("my-pipeline", data = airquality)
 ```
 
-Let's view the pipeline after initialization.
+Let's view the pipeline in it's table form after initialization.
 ```{r show-initial-pipeline}
 pip
 ```
 
-So far, it just consists of one step called `data`, which is in state `New`.
+Here, each step is represented by one row in the table where the
+`step` column lists the name of the step and the `state` column shows the
+current state of the step. For now, don't worry about the other columns -
+they are explained later.
 
-Next, we add a step called `data prep`, which consists of a function that
+As you can see, the data is always the first step in the pipeline and
+initially it is in state `New`, which means the pipeline has not been run
+yet.
+
+Next, we add a step called `data_prep`, which consists of a function that
 takes the output of the `data` step as its first argument, adds a new column
-and returns the modified data as its output. To refer to the output of a
-specific pipeline step, we use the tilde (~) operator.
+and returns the modified data as its output. To refer to the output of an
+earlier pipeline step, we always use the tilde (~) operator.
 
 ```{r define-data-prep-step}
 pip$add(
-    "data prep",
+    "data_prep",
     function(data = ~data) {
         replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5/9)
     }
@@ -84,36 +91,39 @@ Again, let's inspect the pipeline.
 pip
 ```
 
-A second step called `data prep` was added and it depends on the `data`
+A second step called `data_prep` was added and it depends on the `data`
 step as can be seen in column `depends`, which will list all dependencies of
 a step.
 
-Next, we add a step called `model fit`, which fits a linear model to the
-data. The function takes the output of the `data prep` and defines a
+Next, we add a step called `model_fit`, which fits a linear model to the
+data. The function takes the output of the `data_prep` and defines a
 parameter `xVar`, which is used to specify the variable that is used as
 predictor in the linear model.
 
 ```{r}
 pip$add(
-    "model fit",
-    function(data = ~`data prep`, xVar = "Temp.Celsius") {
+    "model_fit",
+    function(
+        data = ~data_prep,
+        xVar = "Temp.Celsius"
+    ) {
         lm(paste("Ozone ~", xVar), data = data)
     }
 )
 ```
 
-Lastly, we add a step called `model plot`, which plots the data and the
+Lastly, we add a step called `model_plot`, which plots the data and the
 linear model fit. The function uses the output from both the
-`model fit` and the `data prep` step. It also defines the `xVar`
+`model_fit` and the `data_prep` step. It also defines the `xVar`
 parameter and a parameter `title`, which is used as the title
 of the plot.
 
 ```{r}
 pip$add(
-    "model plot",
+    "model_plot",
     function(
-        model = ~`model fit`,
-        data = ~`data prep`,
+        model = ~model_fit,
+        data = ~data_prep,
         xVar = "Temp.Celsius",
         title = "Linear model fit"
     ) {
@@ -131,9 +141,23 @@ This completes our pipeline, which now looks as follows:
 pip
 ```
 
-In the last line, we see that the `model plot` step depends on both
-the `model fit` and `data prep` step.
+In the last line, we see that the `model_plot` step depends on both
+the `model_fit` and `data_prep` step.
+To visualize a pipeline, we can use the `get_graph()` method, which returns
+a list of arguments that can be passed to the `visNetwork` function from the
+`visNetwork` package.
 
+```{r, eval = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = pip$get_graph()) |>
+    visHierarchicalLayout(direction = "LR")
+```
+
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
+    visHierarchicalLayout(direction = "LR")
+```
 
 ### Run the pipeline and inspect the output
 
@@ -145,20 +169,29 @@ pip$run()
 ```
 
 Let's inspect the pipeline again.
+
 ```{r pipeline-after-run}
 pip
 ```
 
-We can see that the `state` of all steps have been changed from `New` to `Done`.
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
+    visHierarchicalLayout(direction = "LR")
+```
+
+We can see that the `state` of all steps have been changed from `New` to `Done`,
+which graphically is represented by the color change from blue to green.
+
 In addition, the output was added in the `out` column. We can inspect the
 output of a specific step by calling the `get_out()` method on the pipeline.
 
 ```{r inspect-lm, message = FALSE}
-pip$get_out("model fit")
+pip$get_out("model_fit")
 ```
 
 ```{r inspect-plot, message = FALSE, warning = FALSE}
-pip$get_out("model plot")
+pip$get_out("model_plot")
 ```
 
 
@@ -173,8 +206,8 @@ list all unbound parameters:
 pip$get_params()
 ```
 
-Now let's assume we want to change the `xVar` simultaneously for the
-`model fit` and `model plot` steps. We can do this simply as follows:
+Now let's assume we want to change the `xVar` in the entire pipeline to
+`"Solar.R"`. We can do this simply as follows:
 
 ```{r set-xVar}
 pip$set_params(list(xVar = "Solar.R"))
@@ -188,22 +221,30 @@ steps that depend on the changed parameter.
 pip
 ```
 
-We can see that the `model fit` and `model plot` steps are now in state
-`Outdated`, which means that they need to be rerun. We can do this by
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
+    visHierarchicalLayout(direction = "LR")
+```
+
+We can see that the `model_fit` and `model_plot` steps are now in state
+`Outdated` (graphically indicated by the orange color), which means that they
+need to be rerun. We can do this by
 calling the `run()` method on the pipeline again.
 
 ```{r run-pipeline-again}
 pip$run()
 ```
 
+
 The outdated steps were re-run as expected and the output was
 updated accordingly.
 
 ```{r inspect-plot-again, message = FALSE, warning = FALSE}
-pip$get_out("model plot")
+pip$get_out("model_plot")
 ```
 
-To just change the title of the plot, obviously only the `model plot` step
+To just change the title of the plot, obviously only the `model_plot` step
 needs to be rerun.
 
 ```{r set-title}
@@ -212,7 +253,7 @@ pip
 ```
 
 ```{r inspect-plot-after-title-change, message = FALSE, warning = FALSE}
-pip$run()$get_out("model plot")
+pip$run()$get_out("model_plot")
 ```
 
 If instead we were to change the input data, since all steps depend on it,
@@ -224,7 +265,7 @@ pip
 ```
 
 ```{r inspect-plot-after-data-change, message = FALSE, warning = FALSE}
-pip$run()$get_out("model plot")
+pip$run()$get_out("model_plot")
 ```
 
 Next, let's see how to [modify the pipeline](modify-pipeline.html).

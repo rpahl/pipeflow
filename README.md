@@ -10,45 +10,43 @@
 
 # pipeflow <img src="man/figures/logo.png" align="right" width="163" height="121"/>
 
-The goal of `pipeflow` is to provide a *lightweight* yet *powerful*
-framework for composing and managing custom data analysis pipelines.
-Dependencies among analysis steps are tracked automatically and are used
-to re-run only steps that are affected by input or parameter changes,
-similar to the `make` utility.
+`pipeflow` provides an *easy* and yet *powerful* framework for composing
+and running data analysis pipelines. It can be used in a wide range of
+data analysis projects, from small exploratory analyses to large and
+complex production pipelines.
 
-The package provides functionality similar to the
-[targets](https://CRAN.R-project.org/package=targets) package, but aims
-to be more *lightweight* and *easier* to use and understand. It can be
-used in a wide range of data analysis projects, from small exploratory
-analyses to large production pipelines while still providing a high
-level of control over the analysis process.
+Since a `pipeflow` pipeline basically conists of a sequence of R
+functions and can be used interactively, it is very easy to learn for
+typical R users. At the same time, it provides a lot of features that
+are useful for more advanced users, such as the ability to dynamically
+create branches or to let pipelines modify themselves at runtime.
 
 ### Why to use `pipeflow`
 
+- easy to learn
 - promotes standardized analysis workflows
 - eases handling of complex analysis pipelines
 - improves reproducibility and reusability of code
-- improves error handling and debugging
+- eases error handling and debugging
 
 ### Features
 
-- easy to learn
-- can be used interactively
-- automatic tracking of dependencies between analysis steps
-- automatic skip of steps that are already up to date (similar to
+- use interactively
+- intuitive definition of dependencies
+- validity of dependencies verified at definition time
+- view and manage all pipeline parameters in one place
+- automatically skip steps that are already up to date (similar to
   `make`)
-- easy track-keeping and management of pipeline parameters
-- dependencies verified at definition time
 - logging
-- re-using, modyfing, extending and combining of existing pipelines
+- re-use, modify, extend and/or combine existing pipelines
+- can be integrated with R packages, shiny applications or any other R
+  code
 
 ### Advanced features
 
-- apply one pipeline to multiple datasets and collect and combine
-  results
-- build pipelines that modify themselves or create new pipelines at
-  runtime
-- lock analysis steps manually to freeze results
+- dynamically create branches by applying same pipeline to multiple
+  datasets
+- let pipelines modify themselves at runtime
 
 ### Installation
 
@@ -67,3 +65,20 @@ library(pipeflow)
 ```
 
 ### Getting Started
+
+It is recommended to read the vignettes in the order they are listed
+below:
+
+- [Get started with
+  pipeflow](https://rpahl.github.io/pipeflow/articles/get-started.html)
+- [Modifying existing
+  pipelines](https://rpahl.github.io/pipeflow/articles/modify-pipeline.html)
+- [Combining
+  pipelines](https://rpahl.github.io/pipeflow/articles/combine-pipelines.html)
+- [Collecting
+  output](https://rpahl.github.io/pipeflow/articles/collect-output.html)
+
+### Advanced topics
+
+- [split data and combine
+  output](https://rpahl.github.io/pipeflow/articles/split-and-combine.html)

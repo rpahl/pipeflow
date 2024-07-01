@@ -26,6 +26,7 @@ articles:
     - modify-pipeline
     - combine-pipelines
     - collect-output
+    - split-and-combine
 
 
 home:
@@ -51,7 +52,7 @@ navbar:
 
         - text: "---"
         - text: "Get started"
-        - text: "Introduction to pipeflow"
+        - text: "Get started with pipeflow"
           href: articles/get-started.html
         - text: "Modifying existing pipelines"
           href: articles/modify-pipeline.html
@@ -63,13 +64,16 @@ navbar:
         - text: "---"
         - text: "Advanced"
         - text: "How to use pipelines with split data sets"
+          href: articles/split-and-combine.html
         - text: "How to self-modify pipelines at runtime"
     - text: "My packages"
       menu:
-        - text: "pipeflow"
-          href: https://rpahl.github.io/pipeflow/
+        - text: "container"
+          href: https://rpahl.github.io/container/
         - text: "GroupSeq"
           href: https://rpahl.github.io/GroupSeq/
+        - text: "pipeflow"
+          href: https://rpahl.github.io/pipeflow/
   right:
     - icon: fab fa-github
       href: https://github.com/rpahl/pipeflow/

@@ -27,9 +27,11 @@ old <- options(width = 100L)
 library(ggplot2)
 ```
 
-Generally, one should keep pipeline steps as simple as possible, basicaly followint the principle of "one step, one task". This means that usually a lot of pipeline steps are
+Generally, one should keep pipeline steps as simple as possible, basically following the
+principle *"one step, one task"*. This means that usually a lot of pipeline steps are
 used to calculate intermediate results and only a few steps contain the final results
-that we are interested in. This vignette shows how to conveniently collect and possibly group the output of those final steps.
+that we are interested in. This vignette shows how to conveniently collect and possibly
+group the output of those final steps.
 
 ### Flag output steps
 
@@ -37,7 +39,13 @@ Output steps are flagged by settting the `keepOut` argument to `TRUE` when addin
 `data_summary`, `model_summary`, and `model_plot`.
 
 ```{r pipeline-with-output}
-pip <- Pipeline$new("my-pipeline", data = airquality) |>
+library(pipeflow)
+library(ggplot2)
+
+pip <- pipe_new(
+        "my-pipeline",
+        data = airquality
+    ) |>
 
     pipe_add(
         "data_prep",
@@ -105,8 +113,17 @@ Looking at the pipeline, we see that the steps `data_summary`, `model-summary`, 
 pip
 ```
 
-Now let's run and collect the output of the flagged steps using the `collect_out` method,
-which returns a list with the output of the flagged steps.
+Graphically, steps flagged with `keepOut = TRUE` are displayed with a circle
+shape while "normal" steps are shown as rectangle boxes.
+
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 300))) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
+
+Now let's run and collect the output of the flagged steps using the `collect_out` method, which returns a list with the output of the flagged steps.
 
 ```{r}
 pip$run()

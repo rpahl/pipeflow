@@ -32,22 +32,25 @@ library(ggplot2)
 ```{r define-pipeline, include = FALSE, echo = FALSE}
 pip <- Pipeline$new("my-pipeline", data = airquality)
 pip$add(
-    "data prep",
+    "data_prep",
     function(data = ~data) {
         replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5/9)
     }
 )
 pip$add(
-    "model fit",
-    function(data = ~`data prep`, xVar = "Temp.Celsius") {
+    "model_fit",
+    function(
+        data = ~`data_prep`,
+        xVar = "Temp.Celsius"
+    ) {
         lm(paste("Ozone ~", xVar), data = data)
     }
 )
 pip$add(
-    "model plot",
+    "model_plot",
     function(
-        model = ~`model fit`,
-        data = ~`data prep`,
+        model = ~`model_fit`,
+        data = ~`data_prep`,
         xVar = "Temp.Celsius",
         title = "Linear model fit"
     ) {
@@ -81,49 +84,60 @@ pip$get_data() |> head(3)
 
 ### Insert new step
 
-Let's say we want to insert a new step after the `data prep` step
+Let's say we want to insert a new step after the `data_prep` step
 that standardizes the y-variable.
 
 ```{r insert-step}
 pip$insert_after(
-    afterStep = "data prep",
+    afterStep = "data_prep",
     step = "standardize",
-    function(data = ~`data prep`, yVar = "Ozone") {
+    function(
+        data = ~`data_prep`,
+        yVar = "Ozone"
+    ) {
         data[, yVar] <- scale(data[, yVar])
         data
     }
 )
 ```
 
-The `standardize` step is now part of the pipeline
 
 ```{r}
 pip
 ```
 
+```{r, eval = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = pip$get_graph()) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 300))) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
+As we can see, the `standardize` step is now part of the pipeline, but
+so far it is not used by any other step.
+
 ### Replace existing steps
 
-Let's revisit both the output of the `model fit` step
+Let's revisit function definition of the `model_fit` step
 
 ```{r}
-pip$get_out("model fit") |> coefficients()
+pip$get_step("model_fit")[["fun"]]
 ```
 
-and its function definition
-
-```{r}
-pip$get_step("model fit")[["fun"]]
-```
-
-To use the standardized data, we need to update the data source
+To use the standardized data, we need to change the data dependency
 such that it refers to the `standardize` step. Also instead of
 a fixed y-variable in the model, we want to pass it as a paramter.
 
 ```{r replace-model-fit-step}
 pip$replace_step(
-    "model fit",
+    "model_fit",
     function(
-        data = ~`standardize`,      # <- updated data source
+        data = ~`standardize`,      # <- changed data reference
         xVar = "Temp.Celsius",
         yVar = "Ozone"              # <- new y-variable
     ) {
@@ -133,14 +147,14 @@ pip$replace_step(
 ```
 
 
-The `model plot` step needs to be updated in a similar way.
+The `model_plot` step needs to be updated in a similar way.
 
 ```{r replace-model-plot-step}
 pip$replace_step(
-    "model plot",
+    "model_plot",
     function(
-        model = ~`model fit`,
-        data = ~`standardize`,      # <- updated data source
+        model = ~`model_fit`,
+        data = ~`standardize`,      # <- changed data reference
         xVar = "Temp.Celsius",
         yVar = "Ozone",              # <- new y-variable
         title = "Linear model fit"
@@ -154,6 +168,19 @@ pip$replace_step(
 )
 ```
 
+The updated pipeline now looks as follows.
+
+```{r}
+pip
+```
+
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
+    visHierarchicalLayout(direction = "LR")
+```
+
+We see that the `model_fit` and `model_plot` steps now use the standardized data.
 Let's re-run the pipeline and inspect the output.
 
 ```{r}
@@ -162,11 +189,11 @@ pip$run()
 ```
 
 ```{r}
-pip$get_out("model fit") |> coefficients()
+pip$get_out("model_fit") |> coefficients()
 ```
 
 ```{r}
-pip$get_out("model plot")
+pip$get_out("model_plot")
 ```
 
 

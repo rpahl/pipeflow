@@ -1723,7 +1723,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 "id" = seq_len(self$length()),
                 "label" = self$get_step_names(),
                 "group" = pip[["group"]],
-                "shape" = "circle",
+                "shape" = "box",
                 "color" = "grey",
                 "title" = paste0("<p>", pip[["description"]], "</p>")
             )
@@ -1737,7 +1737,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             if (any(areDataNodes)) {
                 nodes[areDataNodes, "shape"] <- "database"
             }
-            nodes[["shape"]][pip[["keepOut"]]] <- "box"
+            nodes[["shape"]][pip[["keepOut"]]] <- "circle"
 
             if (!is.null(groups)) {
                 stopifnot(
