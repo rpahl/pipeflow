@@ -1033,6 +1033,42 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
+        #' @description Safely rename a step in the pipeline. If new step
+        #' name would result in a name clash, an error is given.
+        #' @param from `string` the name of the step to be renamed.
+        #' @param from `string` the new name of the step.
+        #' @return the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", \(data = ~data, x = 1) x + data)
+        #' p$add("add2", \(x = 1, y = ~add1) x + y)
+        #' p
+        #' try(p$rename_step("add1", "add2"))  # fails because "add2" exists
+        #' p$rename_step("add1", "first_add")  # Ok
+        #' p
+        rename_step = function(
+            from,
+            to
+        ) {
+            private$.verify_step_exists(from)
+            private$.verify_step_does_not_exist(to)
+
+            self$pipeline[["step"]] <- pipeflow_replace_string(
+                self$pipeline[["step"]],
+                target = from,
+                replacement = to
+            )
+
+            self$pipeline[["depends"]] <- lapply(
+                self$pipeline[["depends"]],
+                FUN = pipeflow_replace_string,
+                target = from,
+                replacement = to
+            )
+
+            invisible(self)
+        },
+
         #' @description Replace pipeline step.
         #' @param step `string` the name of the step to be replaced. Step must
         #' exist.

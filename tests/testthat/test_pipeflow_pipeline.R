@@ -1816,6 +1816,55 @@ test_that("remove_step",
 })
 
 
+test_that("remove_step",
+{
+    f <- Pipeline$new("pipe")$remove_step
+    expect_true(is.function(f))
+
+    test_that("pipeline step can be renamed",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = 2) b)
+
+        pip$rename_step(from = "f1", to = "first")
+
+        pip$get_step_names() |> expect_equal(c("data", "first", "f2"))
+    })
+
+    test_that("signals name clash",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = 2) b)
+
+        expect_error(
+            pip$rename_step(from = "f1", to = "f2"),
+            "step 'f2' already exists"
+        )
+    })
+
+    test_that("renames dependencies as well",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = ~f1) b) |>
+            pipe_add("f3", function(a = ~f1, b = ~f2) a + b)
+
+        pip$rename_step(from = "f1", to = "first")
+
+        expect_equal(
+            pip$get_depends(),
+            list(
+                data = character(0),
+                first = character(0),
+                f2 = c(b = "first"),
+                f3 = c(a = "first", b = "f2")
+            )
+        )
+    })
+})
+
 
 test_that("replace_step",
 {
