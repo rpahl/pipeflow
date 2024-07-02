@@ -25,6 +25,6 @@ pipeflow_replace_string = function(x, target, replacement) {
         is_string(target),
         is_string(replacement)
     )
-    x[x %in% target] = replacement
+    x[x %in% target] <- replacement
     x
 }

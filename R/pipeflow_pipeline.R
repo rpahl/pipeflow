@@ -210,8 +210,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param p `Pipeline` object to be appended.
         #' @param outAsIn `logical` if `TRUE`, output of first pipeline is used
         #' as input for the second pipeline.
-        #' @param sep `string` separator used when updating step names to
-        #' prevent name clashes.
+        #' @param tryAutofixNames `logical` if `TRUE`, name clashes are tried
+        #' to be automatically resolved by appending the 2nd pipeline's name.
+        #' @param sep `string` separator used when auto-resolving step names
         #' @return returns new combined `Pipeline`.
         #' @examples
         #' # Append pipeline
@@ -225,45 +226,62 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p3 <- Pipeline$new("pipe3")
         #' p3$add("step1", \(z = 1) z)
         #' p1$append(p2)$append(p3)
-        append = function(p, outAsIn = FALSE, sep = ".")
-        {
+        append = function(
+            p,
+            outAsIn = FALSE,
+            tryAutofixNames = TRUE,
+            sep = "."
+        ) {
             stopifnot(
                 inherits(p, "Pipeline"),
                 is.logical(outAsIn),
                 is_string(sep)
             )
 
+            # Clone both pipelines and then append the 2nd to the 1st
             p1 <- self$clone()
             p2 <- p$clone()
+            stepNames <- c(p1$get_step_names(), p2$get_step_names())
 
+            # Handle name clashes
+            if (any(duplicated(stepNames))) {
+                duplicatedNames <- stepNames[duplicated(stepNames)]
+                if (!tryAutofixNames) {
+                    stop(
+                        "combined pipeline would have duplicated step names: ",
+                        paste0("'", duplicatedNames, "'", sep = ", ")
+                    )
+                }
+                for (name in duplicatedNames) {
+                    newName <- paste(name, p2$name, sep = sep)
+                    if (self$has_step(newName)) {
+                        stop(
+                            "Cannot auto-fix name clash for step '",
+                            name, "' in pipeline '",
+                            p2$name, "'. Step '", newName,
+                            "' already exists in pipeline '", self$name, "'."
+                        )
+                    }
+                    p2$rename_step(from = name, to = newName)
+                }
+            }
 
-            # Adapt step names and their dependencies to avoid name clashes
-            p2$append_to_step_names(p2$name, sep = sep)
 
             # Build combined pipeline
             combinedName <- paste0(p1$name, sep, p2$name)
             combinedPipe <- Pipeline$new(combinedName)
-
             combinedPipe$pipeline <- rbind(p1$pipeline, p2$pipeline)
-            newStepNames <- combinedPipe$get_step_names()
 
             if (outAsIn) {
                 # Replace first step of p2, with the output of last step of p1
-                lastStep1 = newStepNames[p1$length()]
-                firstStep2 = newStepNames[p1$length() + 1]
+                stepNames <- combinedPipe$get_step_names()
+                lastStep1 = stepNames[p1$length()]
+                firstStep2 = stepNames[p1$length() + 1]
                 combinedPipe$replace_step(
                     step = firstStep2,
                     fun = function(data = ~-1) data,
                     description = "output of last step of first pipeline",
                     keepOut = p2$pipeline[["keepOut"]][[1]]
-                )
-            }
-
-            if (any(duplicated(newStepNames))) {
-                duplicatedNames <- newStepNames[duplicated(newStepNames)]
-                stop(
-                    "Combined pipeline has duplicated step names: ",
-                    paste0("'", duplicatedNames, "'", sep = ", ")
                 )
             }
 
@@ -1436,6 +1454,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 name <- dataNames[[i]]
                 pipes[[i]]$name <- name
                 pipes[[i]]$pipeline <- pipes[[i]]$pipeline[seq_len(to), ]
+                pipes[[i]]$append_to_step_names(pipes[[i]]$name, sep = sep)
 
                 newGroups <- name
                 if (!groupBySplit) {

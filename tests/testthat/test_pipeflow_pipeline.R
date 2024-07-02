@@ -343,7 +343,8 @@ test_that("append",
 {
     expect_true(is.function(Pipeline$new("pipe")$append))
 
-    test_that("pipelines can be combined even if their steps share names",
+    test_that("pipelines can be combined even if their steps share names,
+        unless tryAutofixNames is FALSE",
     {
         pip1 <- Pipeline$new("pipe1", data = 1) |>
             pipe_add("f1", function(a = 1) a, keepOut = TRUE) |>
@@ -353,8 +354,40 @@ test_that("append",
             pipe_add("f1", function(a = 10) a) |>
             pipe_add("f2", function(b = ~f1) b, keepOut = TRUE)
 
+        expect_error(
+            pip1$append(pip2, tryAutofixNames = FALSE),
+            paste(
+                "combined pipeline would have duplicated step names:",
+                "'data', 'f1', 'f2',"
+            )
+        )
+
         pp <- pip1$append(pip2)
         expect_equal(pp$length(), pip1$length() + pip2$length())
+
+        out1 <- pip1$run()$collect_out()
+        out2 <- pip2$run()$collect_out()
+
+        out <- pp$run()$collect_out()
+
+        expect_equivalent(out, c(out1, out2))
+    })
+
+    test_that("auto-fixes only the names that need auto-fix",
+    {
+        pip1 <- Pipeline$new("pipe1", data = 1) |>
+            pipe_add("f1", function(a = 1) a, keepOut = TRUE) |>
+            pipe_add("f2", function(b = ~f1) b)
+
+        pip2 <- Pipeline$new("pipe2") |>
+            pipe_add("f3", function(a = 10) a) |>
+            pipe_add("f4", function(b = ~f3) b, keepOut = TRUE)
+
+        pp <- pip1$append(pip2)
+        expect_equal(
+            pp$get_step_names(),
+            c("data", "f1", "f2", "data.pipe2", "f3", "f4")
+        )
 
         out1 <- pip1$run()$collect_out()
         out2 <- pip2$run()$collect_out()
@@ -417,7 +450,7 @@ test_that("append",
 
         expect_error(
             pip1$append(pip2),
-            "Combined pipeline has duplicated step names: 'f1.pipe2'",
+            "Cannot auto-fix name clash for step 'f1' in pipeline 'pipe2'",
             fixed = TRUE
         )
     })

@@ -187,6 +187,10 @@ pipe_pop_steps_from = function(pip, ...)
 pipe_remove_step = function(pip, ...)
     pip$remove_step(...)
 
+#' @rdname pipelineAliases
+#' @export
+pipe_rename_step = function(pip, ...)
+    pip$rename_step(...)
 
 #' @rdname pipelineAliases
 #' @export
