@@ -1615,15 +1615,26 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             toUpdate <- intersect(names(params), names(current))
             hasUpdate <- length(toUpdate) > 0
+
+            replace_param <- function(old, new) {
+                is <- methods::is
+                if (old |> is("Param") && !(new |> is("Param"))) {
+                    old@value <- new
+                    return(old)
+                }
+                new
+            }
+
             if (hasUpdate) {
                 # Update params
-                old <- self$get_step(step)[["params"]] |> unlist1()
-                new <- utils::modifyList(
-                    x = old,
-                    val = params[toUpdate],
-                    keep.null = TRUE
+                current <- self$get_step(step)[["params"]] |> unlist1()
+                current[toUpdate] <- mapply(
+                    FUN = replace_param,
+                    old = current[toUpdate],
+                    new = params[toUpdate],
+                    SIMPLIFY = FALSE
                 )
-                private$.set_at_step(step, "params", value = new)
+                private$.set_at_step(step, "params", value = current)
 
                 # Update state if applicable
                 state <- self$get_step(step)[["state"]]

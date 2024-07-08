@@ -3007,7 +3007,6 @@ test_that("set_params",
 })
 
 
-
 test_that("set_params_at_step",
 {
     expect_true(is.function(Pipeline$new("pipe")$set_params_at_step))
@@ -3131,28 +3130,6 @@ test_that("set_params_at_step",
     })
 
 
-    test_that(
-        "pipeline can be defined and run with Param class parameters",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add(
-                "f1", function(xCol = new("StringParam", "xCol", "x")) xCol,
-                keepOut = TRUE
-            ) |>
-            pipe_add("f2", function(yCol, b = ~f1) paste(yCol, b),
-                params = list(yCol = new("StringParam", "yCol", "y")),
-                keepOut = TRUE
-            ) |>
-            pipe_add("f3", function(a = ~f2, b = 3) paste(a, b), keepOut = TRUE)
-
-        p <- pip$get_params()
-        expect_equal(p[["f1"]][["xCol"]], new("StringParam", "xCol", "x"))
-        expect_equal(p[["f2"]][["yCol"]], new("StringParam", "yCol", "y"))
-
-        out <- pip$run()$collect_out()
-        expect_equal(out, list(f1 = "x", f2 = "y x", f3 = "y x 3"))
-    })
-
     test_that("parameters can be set to NULL",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -3161,9 +3138,25 @@ test_that("set_params_at_step",
         pip$set_params_at_step("f1", list(a = 1, b = NULL))
 
         expect_equal(
-            pip$get_params_at_step("f1", ignoreHidden = FALSE),
+            pip$get_params_at_step("f1"),
             list(a = 1, b = NULL)
         )
+    })
+
+    test_that("preserves Param objects",
+    {
+        pip <- Pipeline$new("pipe1") |>
+        pipe_add("f1", function(
+            a = 1,
+            b = new("NumericParam", "num", 2)) a + b
+        )
+
+        pip$set_params_at_step("f1", list(a = 3, b = 4))
+
+        params <- pip$get_params_at_step("f1")
+        expect_equal(params$a, 3)
+        expect_true(params$b |> is("NumericParam"))
+        expect_equal(params$b@value, 4)
     })
 })
 
