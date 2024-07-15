@@ -15,6 +15,7 @@
 ^_pkgdown\.yml$
 ^docs$
 ^doc$
+^inst/doc$
 ^README\.Rmd$
 ^Meta$
 

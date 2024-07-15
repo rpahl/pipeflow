@@ -8,7 +8,7 @@
 
 <!-- badges: end -->
 
-# pipeflow <img src="man/figures/logo.png" align="right" width="163" height="121"/>
+# pipeflow <img src="logo/logo.png" align="right" width="163" height="121"/>
 
 `pipeflow` provides an *easy* and yet *powerful* framework for composing
 and running data processing pipelines. Whether you’re working with
