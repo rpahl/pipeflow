@@ -30,39 +30,43 @@ old <- options(width = 100L)
 # pipeflow <img src="man/figures/logo.png" align="right" width="163" height="121"/>
 
 `pipeflow` provides an *easy* and yet *powerful* framework for composing and
-running data analysis pipelines.
-It can be used in a wide range of data analysis projects, from small exploratory
-analyses to large and complex production pipelines.
+running data processing pipelines.
+Whether you're working with scientific computations, machine learning (AI), or
+statistical reporting, pipeflow can be used in any of these scenarios
+ranging from small exploratory analyses up to large and complex production
+pipelines.
 
 Since a `pipeflow` pipeline basically conists of a sequence of R functions and
 can be used interactively, it is very easy to learn for typical R users.
 At the same time, it provides a lot of features that are useful for more
-advanced users, such as the ability to dynamically create branches or to let
-pipelines modify themselves at runtime.
+advanced users, such as the ability to dynamically create analysis branches
+or to let pipelines modify themselves at runtime.
 
 ### Why to use `pipeflow`
 
 * easy to learn
+* manages function (inter-)dependencies
 * promotes standardized analysis workflows
 * eases handling of complex analysis pipelines
 * improves reproducibility and reusability of code
 * eases error handling and debugging
 
-### Features
+### Key features
 
-* use interactively
-* intuitive definition of dependencies
-* validity of dependencies verified at definition time
-* view and manage all pipeline parameters in one place
-* automatically skip steps that are already up to date (similar to `make`)
-* logging
-* re-use, modify, extend and/or combine existing pipelines
-* can be integrated with R packages, shiny applications or any other R code
+* interactive usage
+* Function dependencies: are defined in an intuitive way and verified right
+  at definition time
+* Logging: logs all pipeline steps
+* Parameter management: view and modify all function parameters in one place
+* Pipeline composition: modify, extend and combine existing pipelines
+* Pipeline execution: skip steps that are already up to date (similar to `make`)
+* Pipeline visualization: supports both tabular and graphical visualization of
+  the pipeline
 
 ### Advanced features
 
-* dynamically create branches by applying same pipeline to multiple datasets
-* let pipelines modify themselves at runtime
+* Dynamic branching: create branches by applying the same pipeline to multiple datasets
+* Dynamic programming: let pipelines modify themselves at runtime
 
 
 ### Installation
