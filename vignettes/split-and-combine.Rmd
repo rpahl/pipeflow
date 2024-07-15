@@ -6,7 +6,7 @@ output:
     toc_depth: 4
 description: >
   Shows how you easily apply pipelines at multiple data sets and then
-  even combine the output at the end of the pipeline.
+  combine the output at the end of the pipeline.
 vignette: >
   %\VignetteIndexEntry{Advanced: How to use pipeflow with split data sets}
   %\VignetteEngine{knitr::rmarkdown}
@@ -25,7 +25,6 @@ knitr::opts_chunk$set(
 )
 
 old <- options(width = 100L)
-library(ggplot2)
 ```
 
 ### Motivation
@@ -44,7 +43,6 @@ fits a linear model and outputs the model coefficients.
 
 ```{r}
 library(pipeflow)
-library(ggplot2)
 
 pip <- pipe_new(
         "my-pipeline"
