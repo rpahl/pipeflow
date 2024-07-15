@@ -17,8 +17,11 @@
 ^doc$
 ^inst/doc$
 ^README\.Rmd$
+^README\.md$
 ^Meta$
 
 ^images$
 
 TODO
+^logo$
+^tags$
