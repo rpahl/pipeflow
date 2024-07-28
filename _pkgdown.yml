@@ -27,6 +27,7 @@ articles:
     - combine-pipelines
     - collect-output
     - split-and-combine
+    - self-modify-pipeline
 
 
 home:
@@ -65,7 +66,8 @@ navbar:
         - text: "Advanced"
         - text: "How to use pipelines with split data sets"
           href: articles/split-and-combine.html
-        - text: "How to self-modify pipelines at runtime"
+        - text: "How pipelines can modify themselves at runtime"
+          href: articles/self-modify-pipeline.html
     - text: "My packages"
       menu:
         - text: "container"

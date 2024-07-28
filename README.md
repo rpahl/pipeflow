@@ -8,7 +8,7 @@
 
 <!-- badges: end -->
 
-# pipeflow <img src="logo/logo.png" align="right" width="163" height="121"/>
+# pipeflow <img src="man/figures/logo.png" align="right" width="163" height="121"/>
 
 `pipeflow` provides an *easy* and yet *powerful* framework for composing
 and running data processing pipelines. Whether you’re working with
@@ -34,23 +34,22 @@ runtime.
 
 ### Key features
 
-- interactive usage
-- Function dependencies: are defined in an intuitive way and verified
-  right at definition time
-- Logging: logs all pipeline steps
-- Parameter management: view and modify all function parameters in one
+- *Application:* interactive in R console or programmatically
+- *Function dependencies:* checked at definition time
+- *Logging:* logs each pipeline step; logger can be customized
+- *Parameter management:* view and modify all function parameters in one
   place
-- Pipeline composition: modify, extend and combine existing pipelines
-- Pipeline execution: skip steps that are already up to date (similar to
-  `make`)
-- Pipeline visualization: supports both tabular and graphical
-  visualization of the pipeline
+- *Pipeline composition:* modify, extend and combine existing pipelines
+- *Pipeline execution:* skip steps that are already up to date (similar
+  to `make`)
+- *Pipeline visualization:* both tabular and graphical visualization of
+  the pipeline
 
 ### Advanced features
 
-- Dynamic branching: create branches by applying the same pipeline to
+- *Dynamic branching:* create branches by applying the same pipeline to
   multiple datasets
-- Dynamic programming: let pipelines modify themselves at runtime
+- *Dynamic programming:* let pipelines modify themselves at runtime
 
 ### Installation
 
@@ -84,5 +83,7 @@ below:
 
 ### Advanced topics
 
-- [split data and combine
-  output](https://rpahl.github.io/pipeflow/articles/split-and-combine.html)
+- [How to use pipeflow with split data
+  sets](https://rpahl.github.io/pipeflow/articles/split-and-combine.html)
+- [How pipelines can modify themselves at
+  runtime](https://rpahl.github.io/pipeflow/articles/self-modify-pipeline.html)
