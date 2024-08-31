@@ -1205,6 +1205,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param cleanUnkept `logical` if `TRUE` all output that was not
         #' marked to be kept is removed after the pipeline run. This option
         #' can be useful if temporary results require a lot of memory.
+        #' @param progress `function` this parameter can be used to provide a
+        #' custom progress function of the form `function(value, detail)`,
+        #' which will show the progress of the pipeline run for each step,
+        #' where `value` is the current step number and `detail` is the name
+        #' of the step.
+        #' @param showLog `logical` should the steps be logged during the
+        #' pipeline run?
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' # Simple pipeline
@@ -1229,19 +1236,35 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #'     }
         #' )
         #' p$run()$collect_out()
+        #'
+        #' # Run pipeline with progress bar
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("first step", \() Sys.sleep(1))
+        #' p$add("second step", \() Sys.sleep(1))
+        #' p$add("last step", \() Sys.sleep(1))
+        #' pb <- txtProgressBar(min = 1, max = p$length(), style = 3)
+        #' fprogress <- function(value, detail) {
+        #'    setTxtProgressBar(pb, value)
+        #' }
+        #' p$run(progress = fprogress, showLog = FALSE)
         run = function(
             force = FALSE,
             recursive = TRUE,
-            cleanUnkept = FALSE
+            cleanUnkept = FALSE,
+            progress = NULL,
+            showLog = TRUE
         ) {
             stopifnot(
                 is.logical(force),
                 is.logical(recursive),
-                is.logical(cleanUnkept)
+                is.logical(cleanUnkept),
+                is.logical(showLog)
             )
 
             log_info <- function(msg, ...) {
-                private$.lg(level = "info", msg = msg, ...)
+                if (showLog) {
+                    private$.lg(level = "info", msg = msg, ...)
+                }
             }
 
             gettextf("Start run of '%s' pipeline:", self$name) |> log_info()
@@ -1249,6 +1272,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             to <- self$length()
             for (i in seq(from = 1, to = to)) {
                 step <- as.character(self$pipeline[i, "step"])
+                if (is.function(progress)) {
+                    progress(value = i, detail = step)
+                }
                 state <- self$get_step(step)[["state"]]
                 info <- gettextf("Step %i/%i %s", i, to, step)
 

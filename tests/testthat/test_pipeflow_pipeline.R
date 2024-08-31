@@ -2336,6 +2336,26 @@ test_that("run",
         expect_false(wasRunTillEnd)
     })
 
+    test_that("can show progress",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(x = ~f1) x)
+
+        m <- mockery::mock()
+        pip$run(progress = m)
+
+        args <- mockery::mock_args(m)
+
+        expect_equal(length(m), pip$length())
+        expect_equal(args[[1]][[1]], 1)
+        expect_equal(args[[1]][["detail"]], "data")
+        expect_equal(args[[2]][[1]], 2)
+        expect_equal(args[[2]][["detail"]], "f1")
+        expect_equal(args[[3]][[1]], 3)
+        expect_equal(args[[3]][["detail"]], "f2")
+    })
+
     test_that("works with Param objects",
     {
         pip <- Pipeline$new("pipe1") |>
