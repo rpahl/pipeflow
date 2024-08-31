@@ -1054,7 +1054,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @description Safely rename a step in the pipeline. If new step
         #' name would result in a name clash, an error is given.
         #' @param from `string` the name of the step to be renamed.
-        #' @param from `string` the new name of the step.
+        #' @param to `string` the new name of the step.
         #' @return the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)

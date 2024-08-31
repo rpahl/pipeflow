@@ -390,6 +390,18 @@ p$remove_step("add1", recursive = TRUE)  # removes "add1" and "add2"
 p
 
 ## ------------------------------------------------
+## Method `Pipeline$rename_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = ~add1) x + y)
+p
+try(p$rename_step("add1", "add2"))  # fails because "add2" exists
+p$rename_step("add1", "first_add")  # Ok
+p
+
+## ------------------------------------------------
 ## Method `Pipeline$replace_step`
 ## ------------------------------------------------
 
@@ -440,6 +452,17 @@ p$add("new_pipe", \(x = ~add1) {
     }
 )
 p$run()$collect_out()
+
+# Run pipeline with progress bar
+p <- Pipeline$new("pipe", data = 1)
+p$add("first step", \() Sys.sleep(1))
+p$add("second step", \() Sys.sleep(1))
+p$add("last step", \() Sys.sleep(1))
+pb <- txtProgressBar(min = 1, max = p$length(), style = 3)
+fprogress <- function(value, detail) {
+   setTxtProgressBar(pb, value)
+}
+p$run(progress = fprogress, showLog = FALSE)
 
 ## ------------------------------------------------
 ## Method `Pipeline$run_step`
@@ -602,6 +625,7 @@ Roman Pahl
 \item \href{#method-Pipeline-pop_steps_after}{\code{Pipeline$pop_steps_after()}}
 \item \href{#method-Pipeline-pop_steps_from}{\code{Pipeline$pop_steps_from()}}
 \item \href{#method-Pipeline-remove_step}{\code{Pipeline$remove_step()}}
+\item \href{#method-Pipeline-rename_step}{\code{Pipeline$rename_step()}}
 \item \href{#method-Pipeline-replace_step}{\code{Pipeline$replace_step()}}
 \item \href{#method-Pipeline-reset}{\code{Pipeline$reset()}}
 \item \href{#method-Pipeline-run}{\code{Pipeline$run()}}
@@ -756,7 +780,7 @@ p$run()$collect_out(all = TRUE)
 Append another pipeline. The append takes care of name
 clashes and dependencies, which will be changed after the append.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$append(p, outAsIn = FALSE, sep = ".")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$append(p, outAsIn = FALSE, tryAutofixNames = TRUE, sep = ".")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -767,8 +791,10 @@ clashes and dependencies, which will be changed after the append.
 \item{\code{outAsIn}}{\code{logical} if \code{TRUE}, output of first pipeline is used
 as input for the second pipeline.}
 
-\item{\code{sep}}{\code{string} separator used when updating step names to
-prevent name clashes.}
+\item{\code{tryAutofixNames}}{\code{logical} if \code{TRUE}, name clashes are tried
+to be automatically resolved by appending the 2nd pipeline's name.}
+
+\item{\code{sep}}{\code{string} separator used when auto-resolving step names}
 }
 \if{html}{\out{</div>}}
 }
@@ -1714,6 +1740,43 @@ p
 
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-rename_step"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-rename_step}{}}}
+\subsection{Method \code{rename_step()}}{
+Safely rename a step in the pipeline. If new step
+name would result in a name clash, an error is given.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$rename_step(from, to)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{from}}{\code{string} the name of the step to be renamed.}
+
+\item{\code{to}}{\code{string} the new name of the step.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = ~add1) x + y)
+p
+try(p$rename_step("add1", "add2"))  # fails because "add2" exists
+p$rename_step("add1", "first_add")  # Ok
+p
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-replace_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-replace_step}{}}}
 \subsection{Method \code{replace_step()}}{
@@ -1810,7 +1873,13 @@ p
 \subsection{Method \code{run()}}{
 Run all new and/or outdated pipeline steps.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run(force = FALSE, recursive = TRUE, cleanUnkept = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run(
+  force = FALSE,
+  recursive = TRUE,
+  cleanUnkept = FALSE,
+  progress = NULL,
+  showLog = TRUE
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -1826,6 +1895,15 @@ new pipeline is run recursively.}
 \item{\code{cleanUnkept}}{\code{logical} if \code{TRUE} all output that was not
 marked to be kept is removed after the pipeline run. This option
 can be useful if temporary results require a lot of memory.}
+
+\item{\code{progress}}{\code{function} this parameter can be used to provide a
+custom progress function of the form \verb{function(value, detail)},
+which will show the progress of the pipeline run for each step,
+where \code{value} is the current step number and \code{detail} is the name
+of the step.}
+
+\item{\code{showLog}}{\code{logical} should the steps be logged during the
+pipeline run?}
 }
 \if{html}{\out{</div>}}
 }
@@ -1856,6 +1934,17 @@ p$add("new_pipe", \(x = ~add1) {
     }
 )
 p$run()$collect_out()
+
+# Run pipeline with progress bar
+p <- Pipeline$new("pipe", data = 1)
+p$add("first step", \() Sys.sleep(1))
+p$add("second step", \() Sys.sleep(1))
+p$add("last step", \() Sys.sleep(1))
+pb <- txtProgressBar(min = 1, max = p$length(), style = 3)
+fprogress <- function(value, detail) {
+   setTxtProgressBar(pb, value)
+}
+p$run(progress = fprogress, showLog = FALSE)
 }
 \if{html}{\out{</div>}}
 
