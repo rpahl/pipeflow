@@ -1243,6 +1243,7 @@ test_that("get_params_unique_json",
                     label = "my x",
                     description = "",
                     source = "internal",
+                    domain = "",
                     class = "StringParam"
                 ),
                 list(
@@ -1252,6 +1253,7 @@ test_that("get_params_unique_json",
                     label = "my y",
                     description = "",
                     source = "internal",
+                    domain = "",
                     class = "StringParam"
                 )
             )
@@ -1299,6 +1301,7 @@ test_that("get_params_unique_json",
                 label = "my s",
                 description = "",
                 source = "internal",
+                domain = "",
                 class = "StringParam"
             )
         )

@@ -81,6 +81,29 @@ test_that("BooleanParam class",
         p2 = BooleanParam(name = name, value = TRUE)
         expect_equal(p1, p2)
     })
+
+    test_that("source by default is 'internal' must be given as a string",
+    {
+        name = "my bool"
+        p <- BooleanParam(name)
+        expect_equal(p@source, "internal")
+
+        expect_no_error(BooleanParam(name, source = "user"))
+        expect_error(BooleanParam(name, source = c("s1", "s2")))
+        expect_error(BooleanParam(name, source = 1))
+    })
+
+    test_that("domain by default is empty and must be given as a string",
+    {
+        name = "my bool"
+
+        p <- BooleanParam(name)
+        expect_equal(p@domain, "")
+
+        expect_no_error(BooleanParam(name, domain = "my domain"))
+        expect_error(BooleanParam(name, domain = c("d1", "d2")))
+        expect_error(BooleanParam(name, domain = 1))
+    })
 })
 
 
@@ -257,6 +280,75 @@ test_that("NumericParam class",
     test_that("default min and max are -Inf and Inf, respectively",
     {
         p = new("NumericParam", name = "foo", value = 0)
+        expect_equal(p@min, -Inf)
+        expect_equal(p@max, Inf)
+    })
+})
+
+
+
+test_that("NumericRangeParam class",
+{
+    expect_no_error(getClass("NumericRangeParam"))
+
+    test_that("value of NumericRangeParam is converted to number",
+    {
+        name = "my num"
+        f = function(value)
+            new("NumericRangeParam", name = name, value = value)
+
+        p = f(c(0.1, 0.2))
+        expect_true(all(sapply(p@value, is_number)))
+        expect_equal(p@value, c(0.1, 0.2))
+
+        p = f(c(NULL, NULL))
+        expect_equal(p@value, as.numeric(c(NA, NA)))
+
+        p = f(as.numeric(c(NA, NA)))
+        expect_equal(p@value, as.numeric(c(NA, NA)))
+
+        expect_equal(f(c("1", "1"))@value, c(1, 1))
+        expect_equal(f(as.factor(c(1, 1)))@value, c(1, 1))
+    })
+
+    test_that("alternative constructor works",
+    {
+        p1 = new("NumericRangeParam", name = "foo", value = c(1.1, 2.1))
+        p2 = NumericRangeParam(name = "foo", value = c(1.1, 2.1))
+        expect_equal(p1, p2)
+    })
+
+    test_that("value of NumericRangeParam must be of length 2",
+    {
+        expect_error(new("NumericRangeParam", name = name, value = 1:3))
+    })
+
+
+    test_that("value must be within min/max",
+    {
+        f = function(...) new("NumericRangeParam", name = "foo", ...)
+
+        expect_no_error(f(value = c(0, 1), min = 0, max = 1))
+        expect_error(f(value = c(0, 1), min = 1))
+        expect_error(f(value = c(0, 1), max = 0))
+    })
+
+    test_that("min must be >= max",
+    {
+        f = function(...) new(
+            "NumericRangeParam",
+            name = "foo",
+            value = c(0, 1),
+            ...
+        )
+
+        expect_no_error(f(min = 0, max = 1))
+        expect_error(f(min = 1, max = 0))
+    })
+
+    test_that("default min and max are -Inf and Inf, respectively",
+    {
+        p = new("NumericRangeParam", name = "foo", value = c(0, 1))
         expect_equal(p@min, -Inf)
         expect_equal(p@max, Inf)
     })

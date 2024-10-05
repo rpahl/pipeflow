@@ -10,7 +10,8 @@ methods::setClass("Param",
         advanced = "logical",
         label = "character",
         description = "character",
-        source = "character"
+        source = "character",
+        domain = "character"
     )
 )
 
@@ -23,7 +24,9 @@ function(object)
         nchar(object@name) > 0,
         length(object@advanced) == 1,
         is_string(object@label),
-        is_string(object@description)
+        is_string(object@description),
+        is_string(object@source),
+        is_string(object@domain)
     )
     TRUE
 })
@@ -37,6 +40,7 @@ function(
     label = name,
     description = "",
     source = "internal",
+    domain = "",
     ...
 ) {
     .Object@name <- name
@@ -45,6 +49,7 @@ function(
     .Object@label <- label
     .Object@description <- description
     .Object@source <- source
+    .Object@domain <- domain
 
     methods::validObject(.Object)
     .Object
@@ -238,6 +243,72 @@ function(
 })
 
 NumericParam <- function(...) methods::new("NumericParam", ...)
+
+
+
+# ------------
+# NumericRangeParam
+# ------------
+methods::setClass("NumericRangeParam",
+    slots = c(
+        value = "numeric",
+        min = "numeric",
+        max = "numeric",
+        step = "numeric",
+        reversed = "logical"
+    ),
+    contains = "Param"
+)
+
+methods::setValidity("NumericRangeParam",
+function(object)
+{
+
+    stopifnot(
+        all(sapply(object@value, is_number)),
+        is_number(object@min),
+        is_number(object@max),
+        is_number(object@step),
+        is.logical(object@reversed),
+        object@min <= object@max
+    )
+
+    if (!all(is.na(object@value))) {
+        stopifnot(
+            all(object@value >= object@min),
+            all(object@value <= object@max)
+        )
+    }
+
+    TRUE
+})
+
+methods::setMethod("initialize", "NumericRangeParam",
+function(
+    .Object,
+    name,
+    value = as.numeric(c(NA, NA)),
+    min = -Inf,
+    max = Inf,
+    step = Inf,
+    reversed = FALSE,
+    ...
+) {
+    value = if (any(is.null(value))) {
+        as.numeric(c(NA, NA))
+    } else {
+        as.numeric(value)
+    }
+
+    .Object@min <- min
+    .Object@max <- max
+    .Object@step <- step
+    .Object@reversed <- reversed
+    .Object = methods::callNextMethod(.Object, name = name, value = value, ...)
+    .Object
+})
+
+NumericRangeParam <- function(...) methods::new("NumericRangeParam", ...)
 
 
 
