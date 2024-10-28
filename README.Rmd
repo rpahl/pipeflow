@@ -29,42 +29,32 @@ old <- options(width = 100L)
 
 # pipeflow <img src="man/figures/logo.png" align="right" width="163" height="121"/>
 
-`pipeflow` provides an *easy* and yet *powerful* framework for composing and
-running data processing pipelines.
-Whether you're working with scientific computations, machine learning (AI), or
-statistical reporting, pipeflow can be used in any of these scenarios
-ranging from small exploratory analyses up to large and complex production
-pipelines.
+`pipeflow` is an intuitive yet powerful framework for building and running data processing pipelines. Whether you're working in scientific computing, machine learning (AI), or statistical reporting, `pipeflow` adapts seamlessly to any scenario—from small exploratory analyses to complex production workflows.
 
-Since a `pipeflow` pipeline basically conists of a sequence of R functions and
-can be used interactively, it is very easy to learn for typical R users.
-At the same time, it provides a lot of features that are useful for more
-advanced users, such as the ability to dynamically create analysis branches
-or to let pipelines modify themselves at runtime.
+Since `pipeflow` pipelines are essentially sequences of R functions, they’re easy to learn and can be used interactively by typical R users. Advanced features like dynamic branching and self-modifying pipelines provide additional flexibility for more complex workflows.
 
-### Why to use `pipeflow`
+### Why use `pipeflow`
 
-* easy to learn
-* manages function (inter-)dependencies
-* promotes standardized analysis workflows
-* eases handling of complex analysis pipelines
-* improves reproducibility and reusability of code
-* eases error handling and debugging
+* Easy to learn yet powerful for complex workflows
+* Automatically manages function dependencies
+* Promotes standardized, reproducible analysis
+* Simplifies error handling, debugging, and reusability
+
 
 ### Key features
 
-* *Application:* interactive in R console or programmatically
-* *Function dependencies:* checked at definition time
-* *Logging:* logs each pipeline step; logger can be customized
-* *Parameter management:* view and modify all function parameters in one place
-* *Pipeline composition:* modify, extend and combine existing pipelines
-* *Pipeline execution:* skip steps that are already up to date (similar to `make`)
-* *Pipeline visualization:* both tabular and graphical visualization of the pipeline
+* *Flexible Application:* Use interactively or programmatically in R
+* *Dependency Management:* Dependencies checked at definition, ensuring reliable workflows
+* *Comprehensive Logging:* Logs each step, with customizable logger options
+* *Parameter Control:* Easily view and adjust all function parameters in one place
+* *Modular Composition:* Modify, extend, and combine pipelines effortlessly
+* *Intelligent Execution:* Skip steps already up-to-date, similar to `make`
+* *Visualization:* View pipelines in both tabular and graphical formats
 
 ### Advanced features
 
-* *Dynamic branching:* create branches by applying the same pipeline to multiple datasets
-* *Dynamic programming:* let pipelines modify themselves at runtime
+* *Dynamic Branching:* Apply the same pipeline to multiple datasets seamlessly
+* *Self-Modifying:* Pipelines can adapt and modify themselves at runtime
 
 
 ### Installation
