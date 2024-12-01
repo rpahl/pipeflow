@@ -25,7 +25,7 @@ Suggests:
     rmarkdown,
     testthat,
     visNetwork
-URL: https://rpahl.github.io/pipeflow/
+URL: https://rpahl.github.io/pipeflow, https://github.com/rpahl/pipeflow
 BugReports: https://github.com/rpahl/pipeflow/issues
 VignetteBuilder: knitr
 Config/testthat/edition: 3
