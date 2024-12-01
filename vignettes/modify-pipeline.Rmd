@@ -106,13 +106,13 @@ pip$insert_after(
 pip
 ```
 
-```{r, eval = FALSE}
+```{r, eval = getOption("pipeflow.visNetwork", default = FALSE)}
 library(visNetwork)
 do.call(visNetwork, args = pip$get_graph()) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, eval = getOption("pipeflow.visNetwork", default = FALSE)}
 library(visNetwork)
 do.call(visNetwork, args = c(pip$get_graph(), list(height = 300))) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
@@ -137,7 +137,7 @@ a fixed y-variable in the model, we want to pass it as a paramter.
 pip$replace_step(
     "model_fit",
     function(
-        data = ~`standardize`,      # <- changed data reference
+        data = ~standardize,        # <- changed data reference
         xVar = "Temp.Celsius",
         yVar = "Ozone"              # <- new y-variable
     ) {
@@ -153,8 +153,8 @@ The `model_plot` step needs to be updated in a similar way.
 pip$replace_step(
     "model_plot",
     function(
-        model = ~`model_fit`,
-        data = ~`standardize`,      # <- changed data reference
+        model = ~model_fit,
+        data = ~standardize,         # <- changed data reference
         xVar = "Temp.Celsius",
         yVar = "Ozone",              # <- new y-variable
         title = "Linear model fit"
@@ -174,7 +174,7 @@ The updated pipeline now looks as follows.
 pip
 ```
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, eval = getOption("pipeflow.visNetwork", default = FALSE)}
 library(visNetwork)
 do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
     visHierarchicalLayout(direction = "LR")
