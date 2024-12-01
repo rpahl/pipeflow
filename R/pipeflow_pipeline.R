@@ -1290,7 +1290,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 if (inherits(res, "Pipeline") && recursive) {
                     log_info("Abort pipeline execution and restart on new.")
                     self <- res
-                    self$run(recursive = TRUE)
+                    self$run(
+                        force = force,
+                        recursive = TRUE,
+                        progress = progress,
+                        showLog = showLog
+                    )
                     return(invisible(self))
                 }
             }
