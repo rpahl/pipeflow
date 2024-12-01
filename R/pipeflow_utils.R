@@ -36,7 +36,7 @@ pipe_filter_params <- function(pipe, ...)
 
     params <- pipe$get_params_unique() |>
         Filter(f = \(x) x |>
-        is("Param"))
+        methods::is("Param"))
 
 
     for (name in names(filters)) {
