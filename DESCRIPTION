@@ -25,6 +25,8 @@ Suggests:
     rmarkdown,
     testthat,
     visNetwork
+URL: https://rpahl.github.io/pipeflow/
+BugReports: https://github.com/rpahl/pipeflow/issues
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/testthat/parallel: true
