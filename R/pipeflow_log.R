@@ -51,9 +51,17 @@ LogLayoutJson <- R6::R6Class(
 #' @importFrom lgr get_logger
 #' @export
 #' @examples
+#' p <- Pipeline$new("pipe", data = 1:2)
+#' p$add("add1", \(data = ~data, x = 1) x + data)
+#' p$run()
+#'
 #' lg <- set_log_layout("json")
 #' print(lg)
+#'
+#' p$run()
+#'
 #' set_log_layout("text")
+#' p$run()
 set_log_layout <- function(layout)
 {
     selected_layout <- switch(

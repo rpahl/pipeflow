@@ -10,10 +10,576 @@ of a sequence of analysis steps, which can be added one by one. Each added
 step may or may not depend on one or more previous steps. The pipeline
 keeps track of the dependencies among these steps and will ensure that
 all dependencies are met on creation of the pipeline, that is, before the
-the pipeline is executed. Once the pipeline is executed, the output is
+the pipeline is run. Once the pipeline is run, the output is
 stored in the pipeline along with each step and can be accessed later.
 Different pipelines can be bound together while preserving all dependencies
 within each pipeline.
+}
+\examples{
+
+## ------------------------------------------------
+## Method `Pipeline$new`
+## ------------------------------------------------
+
+p <- Pipeline$new("myPipe", data = data.frame(x = 1:8))
+p
+
+# Passing custom logger
+my_logger <- function(level, msg, ...) {
+   cat(level, msg, "\n")
+}
+p <- Pipeline$new("myPipe", logger = my_logger)
+
+## ------------------------------------------------
+## Method `Pipeline$add`
+## ------------------------------------------------
+
+# Add steps with lambda functions
+p <- Pipeline$new("myPipe", data = 1)
+p$add("s1", \(x = ~data) 2*x)  # use input data
+p$add("s2", \(x = ~data, y = ~s1) x * y)
+try(p$add("s2", \(z = 3) 3)) # error: step 's2' exists already
+try(p$add("s3", \(z = ~foo) 3)) # dependency 'foo' not found
+p
+
+p <- Pipeline$new("myPipe", data = c(1, 2, NA, 3, 4))
+p$add("calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
+p$run()$get_out("calc_mean")
+
+p <- Pipeline$new("myPipe", data = 1:10)
+p$add("s1", \(x = ~data) 2*x, description = "multiply by 2")
+print(p)
+print(p, verbose = TRUE) # print all columns
+
+p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
+p$add("prep_x", \(data = ~data) data$x, group = "prep")
+p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
+p$add("sum", \(x = ~prep_x, y = ~prep_y) x + y)
+p$run()$collect_out(all = TRUE)
+
+## ------------------------------------------------
+## Method `Pipeline$append`
+## ------------------------------------------------
+
+# Append pipeline
+p1 <- Pipeline$new("pipe1")
+p1$add("step1", \(x = 1) x)
+p2 <- Pipeline$new("pipe2")
+p2$add("step2", \(y = 1) y)
+p1$append(p2)
+
+p3 <- Pipeline$new("pipe3")
+p3$add("step1", \(z = 1) z)
+p1$append(p2)$append(p3)
+
+## ------------------------------------------------
+## Method `Pipeline$append_to_step_names`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe")
+p$add("step1", \(x = 1) x)
+p$add("step2", \(y = 1) y)
+p$append_to_step_names("new")
+p
+p$append_to_step_names("new", sep = "_")
+p
+
+## ------------------------------------------------
+## Method `Pipeline$collect_out`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("step1", \(x = ~data) x + 2)
+p$add("step2", \(x = ~step1) x + 2, keepOut = TRUE)
+p$run()
+p$collect_out()
+p$collect_out(all = TRUE) |> str()
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("step1", \(x = ~data) x + 2, group = "add")
+p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
+p$add("step3", \(x = ~data) x * 3, group = "mult")
+p$add("step4", \(x = ~data, y = 2) x * y, group = "mult")
+p
+p$run()
+p$collect_out(all = TRUE) |> str()
+
+# Grouped by state
+p$set_params(list(y = 5))
+p
+p$collect_out(groupBy = "state", all = TRUE) |> str()
+
+## ------------------------------------------------
+## Method `Pipeline$discard_steps`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(x = ~data) x + 1)
+p$add("add2", \(x = ~add1) x + 2)
+p$add("mult3", \(x = ~add1) x * 3)
+p$add("mult4", \(x = ~add2) x * 4)
+p$discard_steps("mult")
+p
+
+# Re-add steps
+p$add("mult3", \(x = ~add1) x * 3)
+p$add("mult4", \(x = ~add2) x * 4)
+p
+# Discard step 'add1' does'nt work as 'add2' and 'mult3' depend on it
+try(p$discard_steps("add1"))
+p$discard_steps("add1", recursive = TRUE)   # this works
+p
+
+# Trying to discard non-existent steps is just ignored
+p$discard_steps("non-existent")
+
+## ------------------------------------------------
+## Method `Pipeline$get_data`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$get_data()
+p$set_data(3:4)
+p$get_data()
+
+## ------------------------------------------------
+## Method `Pipeline$get_depends`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(x = ~data) x + 1)
+p$add("add2", \(x = ~data, y = ~add1) x + y)
+p$get_depends()
+
+## ------------------------------------------------
+## Method `Pipeline$get_depends_down`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(x = ~data) x + 1)
+p$add("add2", \(x = ~data, y = ~add1) x + y)
+p$add("mult3", \(x = ~add1) x * 3)
+p$add("mult4", \(x = ~add2) x * 4)
+p$get_depends_down("add1")
+p$get_depends_down("add1", recursive = FALSE)
+
+## ------------------------------------------------
+## Method `Pipeline$get_depends_up`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(x = ~data) x + 1)
+p$add("add2", \(x = ~data, y = ~add1) x + y)
+p$add("mult3", \(x = ~add1) x * 3)
+p$add("mult4", \(x = ~add2) x * 4)
+p$get_depends_up("mult4")
+p$get_depends_up("mult4", recursive = FALSE)
+
+## ------------------------------------------------
+## Method `Pipeline$get_graph`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = ~add1) x + y)
+p$add("mult1", \(x = ~add1, y = ~add2) x * y)
+if (require("visNetwork", quietly = TRUE)) {
+    do.call(visNetwork, args = p$get_graph())
+}
+
+## ------------------------------------------------
+## Method `Pipeline$get_out`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(x = ~data) x + 1)
+p$add("add2", \(x = ~data, y = ~add1) x + y)
+p$run()
+p$get_out("add1")
+p$get_out("add2")
+
+## ------------------------------------------------
+## Method `Pipeline$get_params`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+p$add("add3", \() 1 + 2)
+p$get_params() |> str()
+p$get_params(ignoreHidden = FALSE) |> str()
+
+## ------------------------------------------------
+## Method `Pipeline$get_params_at_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+p$add("add3", \() 1 + 2)
+p$get_params_at_step("add2")
+p$get_params_at_step("add2", ignoreHidden = FALSE)
+p$get_params_at_step("add3")
+
+## ------------------------------------------------
+## Method `Pipeline$get_params_unique`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+p$add("mult1", \(x = 1, y = 2, .z = 3, b = ~add2) x * y * b)
+p$get_params_unique()
+p$get_params_unique(ignoreHidden = FALSE)
+
+## ------------------------------------------------
+## Method `Pipeline$get_params_unique_json`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+p$add("mult1", \(x = 1, y = 2, .z = 3, b = ~add2) x * y * b)
+p$get_params_unique_json()
+p$get_params_unique_json(ignoreHidden = FALSE)
+
+## ------------------------------------------------
+## Method `Pipeline$get_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = 2, z = ~add1) x + y + z)
+p$run()
+add1 <- p$get_step("add1")
+print(add1)
+add1[["params"]]
+add1[["out"]]
+try()
+try(p$get_step("foo")) # error: step 'foo' does not exist
+
+## ------------------------------------------------
+## Method `Pipeline$get_step_names`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$get_step_names()
+
+## ------------------------------------------------
+## Method `Pipeline$get_step_number`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$get_step_number("f2")
+
+## ------------------------------------------------
+## Method `Pipeline$has_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$has_step("f2")
+p$has_step("foo")
+
+## ------------------------------------------------
+## Method `Pipeline$insert_after`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(x = ~f1) x)
+p$insert_after("f1", "f3", \(x = ~f1) x)
+p
+
+## ------------------------------------------------
+## Method `Pipeline$insert_before`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(x = ~f1) x)
+p$insert_before("f2", "f3", \(x = ~f1) x)
+p
+
+## ------------------------------------------------
+## Method `Pipeline$length`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$length()
+
+## ------------------------------------------------
+## Method `Pipeline$lock_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = 1, data = ~data) x + data)
+p$add("add2", \(x = 1, data = ~data) x + data)
+p$run()
+p$get_out("add1")
+p$get_out("add2")
+p$lock_step("add1")
+
+p$set_data(3)
+p$set_params(list(x = 3))
+p$run()
+p$get_out("add1")
+p$get_out("add2")
+
+## ------------------------------------------------
+## Method `Pipeline$print`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$print()
+
+## ------------------------------------------------
+## Method `Pipeline$pop_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p
+p$pop_step() # "f2"
+p
+
+## ------------------------------------------------
+## Method `Pipeline$pop_steps_after`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$add("f3", \(z = 1) z)
+p$pop_steps_after("f1")  # "f2", "f3"
+p
+
+## ------------------------------------------------
+## Method `Pipeline$pop_steps_from`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$add("f3", \(z = 1) z)
+p$pop_steps_from("f2")  # "f2", "f3"
+p
+
+## ------------------------------------------------
+## Method `Pipeline$remove_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = ~add1) x + y)
+p$add("mult1", \(x = 1, y = ~add2) x * y)
+p$remove_step("mult1")
+p
+try(p$remove_step("add1"))  # fails because "add2" depends on "add1"
+p$remove_step("add1", recursive = TRUE)  # removes "add1" and "add2"
+p
+
+## ------------------------------------------------
+## Method `Pipeline$rename_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = ~add1) x + y)
+p
+try(p$rename_step("add1", "add2"))  # fails because "add2" exists
+p$rename_step("add1", "first_add")  # Ok
+p
+
+## ------------------------------------------------
+## Method `Pipeline$replace_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y)
+p$add("add2", \(x = ~data, y = 2) x + y)
+p$add("mult", \(x = 1, y = 2) x * y, keepOut = TRUE)
+p$run()$collect_out()
+p$replace_step("mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+p$run()$collect_out()
+try(p$replace_step("foo", \(x = 1) x))   # step 'foo' does not exist
+
+## ------------------------------------------------
+## Method `Pipeline$reset`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$run()
+p
+p$reset()
+p
+
+## ------------------------------------------------
+## Method `Pipeline$run`
+## ------------------------------------------------
+
+# Simple pipeline
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y)
+p$add("add2", \(x = ~add1, z = 2) x + z)
+p$add("final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+p$run()$collect_out()
+p$set_params(list(z = 4))  # outdates steps add2 and final
+p
+p$run()$collect_out()
+p$run(cleanUnkept = TRUE)  # clean up temporary results
+p
+
+# Recursive pipeline
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y)
+p$add("new_pipe", \(x = ~add1) {
+    pp <- Pipeline$new("new_pipe", data = x)
+    pp$add("add1", \(x = ~data) x + 1)
+    pp$add("add2", \(x = ~add1) x + 2, keepOut = TRUE)
+    }
+)
+p$run()$collect_out()
+
+# Run pipeline with progress bar
+p <- Pipeline$new("pipe", data = 1)
+p$add("first step", \() Sys.sleep(1))
+p$add("second step", \() Sys.sleep(1))
+p$add("last step", \() Sys.sleep(1))
+pb <- txtProgressBar(min = 1, max = p$length(), style = 3)
+fprogress <- function(value, detail) {
+   setTxtProgressBar(pb, value)
+}
+p$run(progress = fprogress, showLog = FALSE)
+
+## ------------------------------------------------
+## Method `Pipeline$run_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y)
+p$add("add2", \(x = ~add1, z = 2) x + z)
+p$add("mult", \(x = ~add1, y = ~add2) x * y)
+p$run_step("add2")
+p$run_step("add2", downstream = TRUE)
+p$run_step("mult", upstream = TRUE)
+
+## ------------------------------------------------
+## Method `Pipeline$set_data`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+p$run()$collect_out()
+p$set_data(3)
+p$run()$collect_out()
+
+## ------------------------------------------------
+## Method `Pipeline$set_data_split`
+## ------------------------------------------------
+
+# Split by three data sets
+dataList <- list(a = 1, b = 2, c = 3)
+p <- Pipeline$new("pipe")
+p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
+p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+p3 <- p$set_data_split(dataList)
+p3
+p3$run()$collect_out() |> str()
+
+# Don't group output by split
+p <- Pipeline$new("pipe")
+p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
+p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+p3 <- p$set_data_split(dataList, groupBySplit = FALSE)
+p3
+p3$run()$collect_out() |> str()
+
+## ------------------------------------------------
+## Method `Pipeline$set_keep_out`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+p$add("add2", \(x = ~data, y = 2) x + y)
+p$add("mult", \(x = ~add1, y = ~add2) x * y)
+p$run()$collect_out()
+p$set_keep_out("add1", keepOut = FALSE)
+p$set_keep_out("mult", keepOut = TRUE)
+p$collect_out()
+
+## ------------------------------------------------
+## Method `Pipeline$set_params`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y)
+p$add("add2", \(x = ~data, y = 1) x + y)
+p$add("mult", \(x = 1, z = 1) x * z)
+p$get_params()
+p$set_params(list(x = 3, y = 3))
+p$get_params()
+p$set_params(list(x = 5, z = 3))
+p$get_params()
+suppressWarnings(
+    p$set_params(list(foo = 3))  # warning: trying to set undefined
+)
+
+## ------------------------------------------------
+## Method `Pipeline$set_params_at_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1, z = 2) x + y)
+p$add("add2", \(x = ~data, y = 1, z = 2) x + y)
+p$set_params_at_step("add1", list(y = 3, z = 3))
+p$get_params()
+try(p$set_params_at_step("add1", list(foo = 3))) # foo not defined
+
+## ------------------------------------------------
+## Method `Pipeline$split`
+## ------------------------------------------------
+
+# Example for two independent calculation paths
+p <- Pipeline$new("pipe", data = 1)
+p$add("f1", \(x = ~data) x)
+p$add("f2", \(x = 1) x)
+p$add("f3", \(x = ~f1) x)
+p$add("f4", \(x = ~f2) x)
+p$split()
+
+# Example of split by three data sets
+dataList <- list(a = 1, b = 2, c = 3)
+p <- Pipeline$new("pipe")
+p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
+p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+pips <- p$set_data_split(dataList)$split()
+
+## ------------------------------------------------
+## Method `Pipeline$unlock_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = 1, data = ~data) x + data)
+p$add("add2", \(x = 1, data = ~data) x + data)
+p$lock_step("add1")
+p$set_params(list(x = 3))
+p$get_params()
+p$unlock_step("add1")
+p$set_params(list(x = 3))
+p$get_params()
 }
 \author{
 Roman Pahl
@@ -23,7 +589,7 @@ Roman Pahl
 \describe{
 \item{\code{name}}{\code{string} name of the pipeline}
 
-\item{\code{pipeline}}{\code{data.table} the pipeline where each row represents on step.}
+\item{\code{pipeline}}{\code{data.table} the pipeline where each row represents one step.}
 }
 \if{html}{\out{</div>}}
 }
@@ -36,12 +602,11 @@ Roman Pahl
 \item \href{#method-Pipeline-append_to_step_names}{\code{Pipeline$append_to_step_names()}}
 \item \href{#method-Pipeline-collect_out}{\code{Pipeline$collect_out()}}
 \item \href{#method-Pipeline-discard_steps}{\code{Pipeline$discard_steps()}}
-\item \href{#method-Pipeline-execute}{\code{Pipeline$execute()}}
-\item \href{#method-Pipeline-execute_step}{\code{Pipeline$execute_step()}}
 \item \href{#method-Pipeline-get_data}{\code{Pipeline$get_data()}}
-\item \href{#method-Pipeline-get_deps}{\code{Pipeline$get_deps()}}
-\item \href{#method-Pipeline-get_deps_down}{\code{Pipeline$get_deps_down()}}
-\item \href{#method-Pipeline-get_deps_up}{\code{Pipeline$get_deps_up()}}
+\item \href{#method-Pipeline-get_depends}{\code{Pipeline$get_depends()}}
+\item \href{#method-Pipeline-get_depends_down}{\code{Pipeline$get_depends_down()}}
+\item \href{#method-Pipeline-get_depends_up}{\code{Pipeline$get_depends_up()}}
+\item \href{#method-Pipeline-get_graph}{\code{Pipeline$get_graph()}}
 \item \href{#method-Pipeline-get_out}{\code{Pipeline$get_out()}}
 \item \href{#method-Pipeline-get_params}{\code{Pipeline$get_params()}}
 \item \href{#method-Pipeline-get_params_at_step}{\code{Pipeline$get_params_at_step()}}
@@ -50,18 +615,21 @@ Roman Pahl
 \item \href{#method-Pipeline-get_step}{\code{Pipeline$get_step()}}
 \item \href{#method-Pipeline-get_step_names}{\code{Pipeline$get_step_names()}}
 \item \href{#method-Pipeline-get_step_number}{\code{Pipeline$get_step_number()}}
-\item \href{#method-Pipeline-has_out}{\code{Pipeline$has_out()}}
 \item \href{#method-Pipeline-has_step}{\code{Pipeline$has_step()}}
-\item \href{#method-Pipeline-keep_all_out}{\code{Pipeline$keep_all_out()}}
+\item \href{#method-Pipeline-insert_after}{\code{Pipeline$insert_after()}}
+\item \href{#method-Pipeline-insert_before}{\code{Pipeline$insert_before()}}
 \item \href{#method-Pipeline-length}{\code{Pipeline$length()}}
 \item \href{#method-Pipeline-lock_step}{\code{Pipeline$lock_step()}}
 \item \href{#method-Pipeline-print}{\code{Pipeline$print()}}
-\item \href{#method-Pipeline-print_graph}{\code{Pipeline$print_graph()}}
 \item \href{#method-Pipeline-pop_step}{\code{Pipeline$pop_step()}}
 \item \href{#method-Pipeline-pop_steps_after}{\code{Pipeline$pop_steps_after()}}
 \item \href{#method-Pipeline-pop_steps_from}{\code{Pipeline$pop_steps_from()}}
 \item \href{#method-Pipeline-remove_step}{\code{Pipeline$remove_step()}}
+\item \href{#method-Pipeline-rename_step}{\code{Pipeline$rename_step()}}
 \item \href{#method-Pipeline-replace_step}{\code{Pipeline$replace_step()}}
+\item \href{#method-Pipeline-reset}{\code{Pipeline$reset()}}
+\item \href{#method-Pipeline-run}{\code{Pipeline$run()}}
+\item \href{#method-Pipeline-run_step}{\code{Pipeline$run_step()}}
 \item \href{#method-Pipeline-set_data}{\code{Pipeline$set_data()}}
 \item \href{#method-Pipeline-set_data_split}{\code{Pipeline$set_data_split()}}
 \item \href{#method-Pipeline-set_keep_out}{\code{Pipeline$set_keep_out()}}
@@ -86,25 +654,47 @@ constructor
 \describe{
 \item{\code{name}}{the name of the Pipeline}
 
-\item{\code{data}}{optional data used in the pipeline (can be set later)}
+\item{\code{data}}{optional data used at the start of the pipeline. The
+data also can be set later using the \code{set_data} function.}
 
-\item{\code{logger}}{logger to be used for logging.
-If you want to use your own custom log function, you need to
-provide a function with the following signature:
-\verb{function(level, msg, ...)}. The \code{level} argument is a
-string, which can be one of \code{info}, \code{warn}, or \code{error}. The \code{msg}
-argument is a string containing the message to be logged. The
-\code{...} argument is a list of named parameters, which can be used to
-add additional information to the log message. If no logger is
-provided, the default logger is used. Note that with the
-default logger, the log layout can be altered any time via
-\code{\link[=set_log_layout]{set_log_layout()}}.}
+\item{\code{logger}}{custom logger to be used for logging. If no logger
+is provided, the default logger is used, which should be sufficient
+for most use cases.
+If you do want to use your own custom log function, you need to
+provide a function that obeys the following form:
+
+\verb{function(level, msg, ...) \{ your custom logging code here \}}
+
+The \code{level} argument is a string and will be one of \code{info}, \code{warn},
+or \code{error}. The \code{msg} argument is a string containing the message
+to be logged. The \code{...} argument is a list of named parameters,
+which can be used to add additional information to the log message.
+Currently, this is only used to add the context in case of a step
+giving a warning or error.
+
+Note that with the default logger, the log layout can be altered
+any time via \code{\link[=set_log_layout]{set_log_layout()}}.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 returns the \code{Pipeline} object invisibly
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("myPipe", data = data.frame(x = 1:8))
+p
+
+# Passing custom logger
+my_logger <- function(level, msg, ...) {
+   cat(level, msg, "\n")
+}
+p <- Pipeline$new("myPipe", logger = my_logger)
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-add"></a>}}
@@ -142,15 +732,46 @@ names. By default, this is the name of the step, which comes in
 handy when the pipeline is copy-appended multiple times to keep
 the results of the same function/step grouped at one place.}
 
-\item{\code{keepOut}}{\code{logical} if \code{FALSE} the output of the function will
-be cleaned at the end of the whole pipeline execution. This option
-is used to only keep the results that matter.}
+\item{\code{keepOut}}{\code{logical} if \code{FALSE} (default) the output of the
+step is not collected when calling \code{collect_out} after the pipeline
+run. This option is used to only keep the results that matter
+and skip intermediate results that are not needed. See also
+function \code{collect_out} for more details.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 returns the \code{Pipeline} object invisibly
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{# Add steps with lambda functions
+p <- Pipeline$new("myPipe", data = 1)
+p$add("s1", \(x = ~data) 2*x)  # use input data
+p$add("s2", \(x = ~data, y = ~s1) x * y)
+try(p$add("s2", \(z = 3) 3)) # error: step 's2' exists already
+try(p$add("s3", \(z = ~foo) 3)) # dependency 'foo' not found
+p
+
+p <- Pipeline$new("myPipe", data = c(1, 2, NA, 3, 4))
+p$add("calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
+p$run()$get_out("calc_mean")
+
+p <- Pipeline$new("myPipe", data = 1:10)
+p$add("s1", \(x = ~data) 2*x, description = "multiply by 2")
+print(p)
+print(p, verbose = TRUE) # print all columns
+
+p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
+p$add("prep_x", \(data = ~data) data$x, group = "prep")
+p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
+p$add("sum", \(x = ~prep_x, y = ~prep_y) x + y)
+p$run()$collect_out(all = TRUE)
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-append"></a>}}
@@ -159,7 +780,7 @@ returns the \code{Pipeline} object invisibly
 Append another pipeline. The append takes care of name
 clashes and dependencies, which will be changed after the append.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$append(p, outAsIn = FALSE, sep = ".")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$append(p, outAsIn = FALSE, tryAutofixNames = TRUE, sep = ".")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -167,16 +788,36 @@ clashes and dependencies, which will be changed after the append.
 \describe{
 \item{\code{p}}{\code{Pipeline} object to be appended.}
 
-\item{\code{outAsIn}}{\code{logical} if \code{TRUE}, output of first pipeline is used}
+\item{\code{outAsIn}}{\code{logical} if \code{TRUE}, output of first pipeline is used
+as input for the second pipeline.}
 
-\item{\code{sep}}{\code{string} separator used when updating step names to
-prevent name clashes.}
+\item{\code{tryAutofixNames}}{\code{logical} if \code{TRUE}, name clashes are tried
+to be automatically resolved by appending the 2nd pipeline's name.}
+
+\item{\code{sep}}{\code{string} separator used when auto-resolving step names}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
 returns new combined \code{Pipeline}.
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{# Append pipeline
+p1 <- Pipeline$new("pipe1")
+p1$add("step1", \(x = 1) x)
+p2 <- Pipeline$new("pipe2")
+p2$add("step2", \(y = 1) y)
+p1$append(p2)
+
+p3 <- Pipeline$new("pipe3")
+p3$add("step1", \(z = 1) z)
+p1$append(p2)$append(p3)
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-append_to_step_names"></a>}}
@@ -200,15 +841,31 @@ of updating dependencies accordingly.
 \subsection{Returns}{
 returns the \code{Pipeline} object invisibly
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe")
+p$add("step1", \(x = 1) x)
+p$add("step2", \(y = 1) y)
+p$append_to_step_names("new")
+p
+p$append_to_step_names("new", sep = "_")
+p
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-collect_out"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-collect_out}{}}}
 \subsection{Method \code{collect_out()}}{
-Collect all output that was stored and kept during the
-pipeline execution.
+Collect output afer pipeline run, by default, from all
+steps for which \code{keepOut} was set to \code{TRUE}. The output is grouped
+by the group names (see \code{group} parameter in function \code{add})
+which if not set explicitly corresponds to the step names.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$collect_out(groupBy = "group")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$collect_out(groupBy = "group", all = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -216,6 +873,9 @@ pipeline execution.
 \describe{
 \item{\code{groupBy}}{\code{string} column of pipeline by which to group the
 output.}
+
+\item{\code{all}}{\code{logical} if \code{TRUE} all output is collected
+regardless of the \code{keepOut} flag. This can be useful for debugging.}
 }
 \if{html}{\out{</div>}}
 }
@@ -223,6 +883,33 @@ output.}
 \code{list} containing the output, named after the groups, which,
 by default, are the steps.
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("step1", \(x = ~data) x + 2)
+p$add("step2", \(x = ~step1) x + 2, keepOut = TRUE)
+p$run()
+p$collect_out()
+p$collect_out(all = TRUE) |> str()
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("step1", \(x = ~data) x + 2, group = "add")
+p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
+p$add("step3", \(x = ~data) x * 3, group = "mult")
+p$add("step4", \(x = ~data, y = 2) x * y, group = "mult")
+p
+p$run()
+p$collect_out(all = TRUE) |> str()
+
+# Grouped by state
+p$set_params(list(y = 5))
+p
+p$collect_out(groupBy = "state", all = TRUE) |> str()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-discard_steps"></a>}}
@@ -249,94 +936,93 @@ be matched as is. Overrides all conflicting arguments.}
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Returns}{
+the \code{Pipeline} object invisibly
 }
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-execute"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-execute}{}}}
-\subsection{Method \code{execute()}}{
-Execute all pipeline steps.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$execute(from = 1, to = self$length(), recursive = TRUE)}\if{html}{\out{</div>}}
-}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(x = ~data) x + 1)
+p$add("add2", \(x = ~add1) x + 2)
+p$add("mult3", \(x = ~add1) x * 3)
+p$add("mult4", \(x = ~add2) x * 4)
+p$discard_steps("mult")
+p
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{from}}{\code{numeric} step number to start execution from}
+# Re-add steps
+p$add("mult3", \(x = ~add1) x * 3)
+p$add("mult4", \(x = ~add2) x * 4)
+p
+# Discard step 'add1' does'nt work as 'add2' and 'mult3' depend on it
+try(p$discard_steps("add1"))
+p$discard_steps("add1", recursive = TRUE)   # this works
+p
 
-\item{\code{to}}{\code{numeric} step number to execute until}
-
-\item{\code{recursive}}{\code{logical} if \code{TRUE} and a step returns a new
-pipeline, the run of the current pipeline is aborted and the
-new pipeline is executed recursively.}
+# Trying to discard non-existent steps is just ignored
+p$discard_steps("non-existent")
 }
 \if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-returns the \code{Pipeline} object invisibly
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-execute_step"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-execute_step}{}}}
-\subsection{Method \code{execute_step()}}{
-Execute given pipeline step possibly together with
-upstream and downstream dependencies.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$execute_step(step, upstream = TRUE, downstream = FALSE)}\if{html}{\out{</div>}}
+
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{step}}{\code{string} name of step}
-
-\item{\code{upstream}}{\code{logical} if \code{TRUE}, execute all dependent upstream
-steps first.}
-
-\item{\code{downstream}}{\code{logical} if \code{TRUE}, execute all depdendent
-downstream afterwards.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-returns the \code{Pipeline} object invisibly
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_data"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-get_data}{}}}
 \subsection{Method \code{get_data()}}{
-Get data currently loaded into the pipeline at step 1.
+Get data
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_data()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
-returns the data
+the output defined in the \code{data} step, which by default is
+the first step of the pipeline
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$get_data()
+p$set_data(3:4)
+p$get_data()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_deps"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_deps}{}}}
-\subsection{Method \code{get_deps()}}{
+\if{html}{\out{<a id="method-Pipeline-get_depends"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_depends}{}}}
+\subsection{Method \code{get_depends()}}{
 Get all dependencies defined in the pipeline
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_deps()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_depends()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
 named \code{list} of dependencies for each step
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(x = ~data) x + 1)
+p$add("add2", \(x = ~data, y = ~add1) x + y)
+p$get_depends()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_deps_down"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_deps_down}{}}}
-\subsection{Method \code{get_deps_down()}}{
+\if{html}{\out{<a id="method-Pipeline-get_depends_down"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_depends_down}{}}}
+\subsection{Method \code{get_depends_down()}}{
 Get all downstream dependencies of given step, by
 default descending recursively.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_deps_down(step, recursive = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_depends_down(step, recursive = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -352,15 +1038,29 @@ are also returned.}
 \subsection{Returns}{
 \code{list} of downstream dependencies
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(x = ~data) x + 1)
+p$add("add2", \(x = ~data, y = ~add1) x + y)
+p$add("mult3", \(x = ~add1) x * 3)
+p$add("mult4", \(x = ~add2) x * 4)
+p$get_depends_down("add1")
+p$get_depends_down("add1", recursive = FALSE)
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_deps_up"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_deps_up}{}}}
-\subsection{Method \code{get_deps_up()}}{
+\if{html}{\out{<a id="method-Pipeline-get_depends_up"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_depends_up}{}}}
+\subsection{Method \code{get_depends_up()}}{
 Get all upstream dependencies of given step, by
 default descending recursively.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_deps_up(step, recursive = TRUE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_depends_up(step, recursive = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -376,12 +1076,62 @@ are also returned.}
 \subsection{Returns}{
 \code{list} of upstream dependencies
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(x = ~data) x + 1)
+p$add("add2", \(x = ~data, y = ~add1) x + y)
+p$add("mult3", \(x = ~add1) x * 3)
+p$add("mult4", \(x = ~add2) x * 4)
+p$get_depends_up("mult4")
+p$get_depends_up("mult4", recursive = FALSE)
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-get_graph"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_graph}{}}}
+\subsection{Method \code{get_graph()}}{
+Visualize the pipeline as a graph.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_graph(groups = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{groups}}{\code{character} if not \code{NULL}, only steps belonging to the
+given groups are considered.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+two data frames, one for nodes and one for edges ready to be
+used with the \code{visNetwork} package.
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = ~add1) x + y)
+p$add("mult1", \(x = ~add1, y = ~add2) x * y)
+if (require("visNetwork", quietly = TRUE)) {
+    do.call(visNetwork, args = p$get_graph())
+}
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_out"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-get_out}{}}}
 \subsection{Method \code{get_out()}}{
-Get output of given step.
+Get output of given step after pipeline run.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_out(step)}\if{html}{\out{</div>}}
 }
@@ -394,14 +1144,28 @@ Get output of given step.
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-returns the \code{Pipeline} object invisibly
+the output at the given step.
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(x = ~data) x + 1)
+p$add("add2", \(x = ~data, y = ~add1) x + y)
+p$run()
+p$get_out("add1")
+p$get_out("add2")
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_params"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-get_params}{}}}
 \subsection{Method \code{get_params()}}{
-Get all function parameters defined in the pipeline.
+Get all unbound (i.e. not referring to other steps)
+function parameters defined in the pipeline.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_params(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
 }
@@ -418,12 +1182,26 @@ names starting with a dot) are ignored and thus not returned.}
 \code{list} of parameters, sorted and named by step. Steps with
 no parameters are filtered out.
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+p$add("add3", \() 1 + 2)
+p$get_params() |> str()
+p$get_params(ignoreHidden = FALSE) |> str()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_params_at_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-get_params_at_step}{}}}
 \subsection{Method \code{get_params_at_step()}}{
-Get all function parameters at given step name.
+Get all unbound (i.e. not referring to other steps)
+at given step name.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_params_at_step(step, ignoreHidden = TRUE)}\if{html}{\out{</div>}}
 }
@@ -441,12 +1219,27 @@ names starting with a dot) are ignored and thus not returned.}
 \subsection{Returns}{
 \code{list} of parameters defined at given step.
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+p$add("add3", \() 1 + 2)
+p$get_params_at_step("add2")
+p$get_params_at_step("add2", ignoreHidden = FALSE)
+p$get_params_at_step("add3")
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_params_unique"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-get_params_unique}{}}}
 \subsection{Method \code{get_params_unique()}}{
-Get all function parameters defined in the pipeline,
+Get all unbound (i.e. not referring to other steps)
+parameters defined in the pipeline,
 but only list each parameter once. The values of the parameters,
 will be the values of the first step where the parameter was defined.
 This is particularly useful after the parameters where set using
@@ -467,6 +1260,19 @@ names starting with a dot) are ignored and thus not returned.}
 \subsection{Returns}{
 \code{list} of unique parameters
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+p$add("mult1", \(x = 1, y = 2, .z = 3, b = ~add2) x * y * b)
+p$get_params_unique()
+p$get_params_unique(ignoreHidden = FALSE)
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_params_unique_json"></a>}}
@@ -488,6 +1294,19 @@ names starting with a dot) are ignored and thus not returned.}
 \subsection{Returns}{
 \code{list} flat unnamed json list of unique function parameters
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+p$add("mult1", \(x = 1, y = 2, .z = 3, b = ~add2) x * y * b)
+p$get_params_unique_json()
+p$get_params_unique_json(ignoreHidden = FALSE)
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_step"></a>}}
@@ -509,6 +1328,23 @@ Get step of pipeline
 \code{data.table} row containing the step. If step not found, an
 error is given.
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = 2, z = ~add1) x + y + z)
+p$run()
+add1 <- p$get_step("add1")
+print(add1)
+add1[["params"]]
+add1[["out"]]
+try()
+try(p$get_step("foo")) # error: step 'foo' does not exist
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_step_names"></a>}}
@@ -522,6 +1358,17 @@ Get step names of pipeline
 \subsection{Returns}{
 \code{character} vector of step names
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$get_step_names()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_step_number"></a>}}
@@ -542,26 +1389,17 @@ Get step number
 \subsection{Returns}{
 the step number in the pipeline
 }
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-has_out"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-has_out}{}}}
-\subsection{Method \code{has_out()}}{
-Checks whether step has output.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$has_out(step)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{step}}{\code{string} name of step}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$get_step_number("f2")
 }
 \if{html}{\out{</div>}}
+
 }
-\subsection{Returns}{
-\code{logical} TRUE if step is defined to keep output
-}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-has_step"></a>}}
@@ -582,21 +1420,90 @@ Determine whether pipeline has given step.
 \subsection{Returns}{
 \code{logical} whether step exists
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$has_step("f2")
+p$has_step("foo")
 }
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-keep_all_out"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-keep_all_out}{}}}
-\subsection{Method \code{keep_all_out()}}{
-Set pipeline to keep all output regardless of the flags
-that were set for the individual steps. This can be useful for
-debugging.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$keep_all_out()}\if{html}{\out{</div>}}
+\if{html}{\out{</div>}}
+
 }
 
-\subsection{Returns}{
-the \code{Pipeline} object invisibly
 }
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-insert_after"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-insert_after}{}}}
+\subsection{Method \code{insert_after()}}{
+Insert step after a certain step
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$insert_after(afterStep, step, ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{afterStep}}{\code{string} name of step after which to insert}
+
+\item{\code{step}}{\code{string} name of step to insert}
+
+\item{\code{...}}{further arguments passed to \code{add} method of the pipeline}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+returns the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(x = ~f1) x)
+p$insert_after("f1", "f3", \(x = ~f1) x)
+p
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-insert_before"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-insert_before}{}}}
+\subsection{Method \code{insert_before()}}{
+Insert step before a certain step
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$insert_before(beforeStep, step, ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{beforeStep}}{\code{string} name of step before which to insert}
+
+\item{\code{step}}{\code{string} name of step to insert}
+
+\item{\code{...}}{further arguments passed to \code{add} method of the pipeline}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+returns the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(x = ~f1) x)
+p$insert_before("f2", "f3", \(x = ~f1) x)
+p
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-length"></a>}}
@@ -610,6 +1517,17 @@ Length of the pipeline aka number of pipeline steps.
 \subsection{Returns}{
 \code{numeric} length of pipeline.
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$length()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-lock_step"></a>}}
@@ -635,6 +1553,26 @@ be affected when parameters are set commonly for the entire pipeline
 \subsection{Returns}{
 the \code{Pipeline} object invisibly
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = 1, data = ~data) x + data)
+p$add("add2", \(x = 1, data = ~data) x + data)
+p$run()
+p$get_out("add1")
+p$get_out("add2")
+p$lock_step("add1")
+
+p$set_data(3)
+p$set_params(list(x = 3))
+p$run()
+p$get_out("add1")
+p$get_out("add2")
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-print"></a>}}
@@ -642,32 +1580,31 @@ the \code{Pipeline} object invisibly
 \subsection{Method \code{print()}}{
 Print the pipeline as a table.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$print()}\if{html}{\out{</div>}}
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-print_graph"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-print_graph}{}}}
-\subsection{Method \code{print_graph()}}{
-Visualize the pipeline as a graph.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$print_graph(groups = NULL, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$print(verbose = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{groups}}{\code{character} if not \code{NULL}, only steps belonging to the
-given groups are visualized.}
-
-\item{\code{...}}{further arguments passed to \code{\link[=visNetwork]{visNetwork()}}.}
+\item{\code{verbose}}{\code{logical} if \code{TRUE}, print all columns of the
+pipeline, otherwise only a subset of columns is printed.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-\code{visNetwork} object
+the \code{Pipeline} object invisibly
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$print()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-pop_step"></a>}}
@@ -681,6 +1618,19 @@ Remove last step from the pipeline.
 \subsection{Returns}{
 \code{string} the name of the step that was removed
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p
+p$pop_step() # "f2"
+p
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-pop_steps_after"></a>}}
@@ -701,6 +1651,19 @@ Remove all steps after the given step.
 \subsection{Returns}{
 \code{character} vector of steps that were removed.
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$add("f3", \(z = 1) z)
+p$pop_steps_after("f1")  # "f2", "f3"
+p
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-pop_steps_from"></a>}}
@@ -721,6 +1684,19 @@ Remove all steps from and including the given step.
 \subsection{Returns}{
 \code{character} vector of steps that were removed.
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$add("f3", \(z = 1) z)
+p$pop_steps_from("f2")  # "f2", "f3"
+p
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-remove_step"></a>}}
@@ -746,12 +1722,65 @@ with all its downstream dependencies.}
 \subsection{Returns}{
 the \code{Pipeline} object invisibly
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = ~add1) x + y)
+p$add("mult1", \(x = 1, y = ~add2) x * y)
+p$remove_step("mult1")
+p
+try(p$remove_step("add1"))  # fails because "add2" depends on "add1"
+p$remove_step("add1", recursive = TRUE)  # removes "add1" and "add2"
+p
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-rename_step"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-rename_step}{}}}
+\subsection{Method \code{rename_step()}}{
+Safely rename a step in the pipeline. If new step
+name would result in a name clash, an error is given.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$rename_step(from, to)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{from}}{\code{string} the name of the step to be renamed.}
+
+\item{\code{to}}{\code{string} the new name of the step.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$add("add2", \(x = 1, y = ~add1) x + y)
+p
+try(p$rename_step("add1", "add2"))  # fails because "add2" exists
+p$rename_step("add1", "first_add")  # Ok
+p
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-replace_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-replace_step}{}}}
 \subsection{Method \code{replace_step()}}{
-Replace pipeline step
+Replace pipeline step.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$replace_step(
   step,
@@ -793,6 +1822,184 @@ is used to only keep the results that matter.}
 \subsection{Returns}{
 the \code{Pipeline} object invisibly
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y)
+p$add("add2", \(x = ~data, y = 2) x + y)
+p$add("mult", \(x = 1, y = 2) x * y, keepOut = TRUE)
+p$run()$collect_out()
+p$replace_step("mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+p$run()$collect_out()
+try(p$replace_step("foo", \(x = 1) x))   # step 'foo' does not exist
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-reset"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-reset}{}}}
+\subsection{Method \code{reset()}}{
+Resets the pipeline to the state before it was run.
+This means that all output is removed and the state of all steps
+is reset to 'New'.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$reset()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+returns the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$run()
+p
+p$reset()
+p
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-run"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-run}{}}}
+\subsection{Method \code{run()}}{
+Run all new and/or outdated pipeline steps.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run(
+  force = FALSE,
+  recursive = TRUE,
+  cleanUnkept = FALSE,
+  progress = NULL,
+  showLog = TRUE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{force}}{\code{logical} if \code{TRUE} all steps are run regardless of
+whether they are outdated or not.}
+
+\item{\code{recursive}}{\code{logical} if \code{TRUE} and a step returns a new
+pipeline, the run of the current pipeline is aborted and the
+new pipeline is run recursively.}
+
+\item{\code{cleanUnkept}}{\code{logical} if \code{TRUE} all output that was not
+marked to be kept is removed after the pipeline run. This option
+can be useful if temporary results require a lot of memory.}
+
+\item{\code{progress}}{\code{function} this parameter can be used to provide a
+custom progress function of the form \verb{function(value, detail)},
+which will show the progress of the pipeline run for each step,
+where \code{value} is the current step number and \code{detail} is the name
+of the step.}
+
+\item{\code{showLog}}{\code{logical} should the steps be logged during the
+pipeline run?}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+returns the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{# Simple pipeline
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y)
+p$add("add2", \(x = ~add1, z = 2) x + z)
+p$add("final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+p$run()$collect_out()
+p$set_params(list(z = 4))  # outdates steps add2 and final
+p
+p$run()$collect_out()
+p$run(cleanUnkept = TRUE)  # clean up temporary results
+p
+
+# Recursive pipeline
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y)
+p$add("new_pipe", \(x = ~add1) {
+    pp <- Pipeline$new("new_pipe", data = x)
+    pp$add("add1", \(x = ~data) x + 1)
+    pp$add("add2", \(x = ~add1) x + 2, keepOut = TRUE)
+    }
+)
+p$run()$collect_out()
+
+# Run pipeline with progress bar
+p <- Pipeline$new("pipe", data = 1)
+p$add("first step", \() Sys.sleep(1))
+p$add("second step", \() Sys.sleep(1))
+p$add("last step", \() Sys.sleep(1))
+pb <- txtProgressBar(min = 1, max = p$length(), style = 3)
+fprogress <- function(value, detail) {
+   setTxtProgressBar(pb, value)
+}
+p$run(progress = fprogress, showLog = FALSE)
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-run_step"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-run_step}{}}}
+\subsection{Method \code{run_step()}}{
+Run given pipeline step possibly together with
+upstream and downstream dependencies.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run_step(
+  step,
+  upstream = TRUE,
+  downstream = FALSE,
+  cleanUnkept = FALSE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{\code{string} name of step}
+
+\item{\code{upstream}}{\code{logical} if \code{TRUE}, run all dependent upstream
+steps first.}
+
+\item{\code{downstream}}{\code{logical} if \code{TRUE}, run all depdendent
+downstream afterwards.}
+
+\item{\code{cleanUnkept}}{\code{logical} if \code{TRUE} all output that was not
+marked to be kept is removed after the pipeline run. This option
+can be useful if temporary results require a lot of memory.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+returns the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y)
+p$add("add2", \(x = ~add1, z = 2) x + z)
+p$add("mult", \(x = ~add1, y = ~add2) x * y)
+p$run_step("add2")
+p$run_step("add2", downstream = TRUE)
+p$run_step("mult", upstream = TRUE)
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-set_data"></a>}}
@@ -813,6 +2020,18 @@ Set data in first step of pipeline.
 \subsection{Returns}{
 returns the \code{Pipeline} object invisibly
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+p$run()$collect_out()
+p$set_data(3)
+p$run()$collect_out()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-set_data_split"></a>}}
@@ -851,12 +2070,37 @@ data set name when creating the new step names.}
 new combined \code{Pipeline} with each sub-pipeline having set
 one of the data sets.
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{# Split by three data sets
+dataList <- list(a = 1, b = 2, c = 3)
+p <- Pipeline$new("pipe")
+p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
+p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+p3 <- p$set_data_split(dataList)
+p3
+p3$run()$collect_out() |> str()
+
+# Don't group output by split
+p <- Pipeline$new("pipe")
+p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
+p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+p3 <- p$set_data_split(dataList, groupBySplit = FALSE)
+p3
+p3$run()$collect_out() |> str()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-set_keep_out"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-set_keep_out}{}}}
 \subsection{Method \code{set_keep_out()}}{
-Set pipeline to keep or omit output of given step.
+Change the \code{keepOut} flag at a given pipeline step,
+which determines whether the output of that step is collected
+when calling \code{collect_out()} after the pipeline was run.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_keep_out(step, keepOut = TRUE)}\if{html}{\out{</div>}}
 }
@@ -873,6 +2117,21 @@ Set pipeline to keep or omit output of given step.
 \subsection{Returns}{
 the \code{Pipeline} object invisibly
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+p$add("add2", \(x = ~data, y = 2) x + y)
+p$add("mult", \(x = ~add1, y = ~add2) x * y)
+p$run()$collect_out()
+p$set_keep_out("add1", keepOut = FALSE)
+p$set_keep_out("mult", keepOut = TRUE)
+p$collect_out()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-set_params"></a>}}
@@ -897,6 +2156,25 @@ parameter is not defined in the pipeline.}
 \subsection{Returns}{
 returns the \code{Pipeline} object invisibly
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1) x + y)
+p$add("add2", \(x = ~data, y = 1) x + y)
+p$add("mult", \(x = 1, z = 1) x * z)
+p$get_params()
+p$set_params(list(x = 3, y = 3))
+p$get_params()
+p$set_params(list(x = 5, z = 3))
+p$get_params()
+suppressWarnings(
+    p$set_params(list(foo = 3))  # warning: trying to set undefined
+)
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-set_params_at_step"></a>}}
@@ -919,6 +2197,19 @@ Set unbound parameter values at given pipeline step.
 \subsection{Returns}{
 returns the \code{Pipeline} object invisibly
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = ~data, y = 1, z = 2) x + y)
+p$add("add2", \(x = ~data, y = 1, z = 2) x + y)
+p$set_params_at_step("add1", list(y = 3, z = 3))
+p$get_params()
+try(p$set_params_at_step("add1", list(foo = 3))) # foo not defined
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-split"></a>}}
@@ -932,6 +2223,27 @@ Splits pipeline into its independent parts.
 \subsection{Returns}{
 list of \code{Pipeline} objects
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{# Example for two independent calculation paths
+p <- Pipeline$new("pipe", data = 1)
+p$add("f1", \(x = ~data) x)
+p$add("f2", \(x = 1) x)
+p$add("f3", \(x = ~f1) x)
+p$add("f4", \(x = ~f2) x)
+p$split()
+
+# Example of split by three data sets
+dataList <- list(a = 1, b = 2, c = 3)
+p <- Pipeline$new("pipe")
+p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
+p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+pips <- p$set_data_split(dataList)$split()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-unlock_step"></a>}}
@@ -953,6 +2265,22 @@ the command is ignored.
 \subsection{Returns}{
 the \code{Pipeline} object invisibly
 }
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = 1, data = ~data) x + data)
+p$add("add2", \(x = 1, data = ~data) x + data)
+p$lock_step("add1")
+p$set_params(list(x = 3))
+p$get_params()
+p$unlock_step("add1")
+p$set_params(list(x = 3))
+p$get_params()
+}
+\if{html}{\out{</div>}}
+
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-clone"></a>}}

@@ -16,7 +16,15 @@ invisibly returns logger object
 Set pipeflow log layout
 }
 \examples{
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("add1", \(data = ~data, x = 1) x + data)
+p$run()
+
 lg <- set_log_layout("json")
 print(lg)
+
+p$run()
+
 set_log_layout("text")
+p$run()
 }

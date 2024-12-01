@@ -25,6 +25,27 @@ pipeflow_replace_string = function(x, target, replacement) {
         is_string(target),
         is_string(replacement)
     )
-    x[x %in% target] = replacement
+    x[x %in% target] <- replacement
     x
+}
+
+
+pipe_filter_params <- function(pipe, ...)
+{
+    filters <- list(...)
+
+    params <- pipe$get_params_unique() |>
+        Filter(f = \(x) x |>
+        methods::is("Param"))
+
+
+    for (name in names(filters)) {
+        value <- filters[[name]]
+        params <- Filter(
+            params,
+            f = \(param) methods::slot(param, name) |> identical(value)
+        )
+    }
+
+    params
 }

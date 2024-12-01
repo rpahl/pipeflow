@@ -1,0 +1,272 @@
+---
+title: "Combining pipelines"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+description: >
+  Shows how to combine different pipelines to a single pipeline.
+vignette: >
+  %\VignetteIndexEntry{Combining pipelines}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r knitr-setup, include = FALSE}
+require(pipeflow)
+
+knitr::opts_chunk$set(
+  comment = "#",
+  prompt = FALSE,
+  tidy = FALSE,
+  cache = FALSE,
+  collapse = TRUE
+)
+
+old <- options(width = 100L)
+library(ggplot2)
+```
+
+The possibility to combine pipelines basically allows to modularize the pipeline
+creation process. This is especially useful when you have a set of pipelines that are
+used in different contexts and you want to avoid code duplication.
+
+In this vignette we will also introduce the pipeflow alias functions, that is,
+for each member function of a pipeline, there is an alias function, which allows to
+create chain pipeline steps using R's native pipe operator `|>`.
+For example, the `add` function has an alias `pipe_add` (see below).
+
+
+### Define two pipelines
+
+Let's define one pipeline that is used for data_preprocessing and one that does the
+modeling.
+
+Data preprocessing pipeline:
+```{r define-prepocessing-pipeline}
+library(pipeflow)
+library(ggplot2)
+
+pip1 <- pipe_new(
+        "preprocessing",
+        data = airquality
+    ) |>
+
+    pipe_add(
+        "data_prep",
+        function(data = ~data) {
+            replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5/9)
+        }
+    ) |>
+
+    pipe_add(
+        "standardize",
+        function(
+            data = ~data_prep,
+            yVar = "Ozone"
+        ) {
+            data[, yVar] <- scale(data[, yVar])
+            data
+        }
+    )
+```
+
+```{r}
+pip1
+```
+
+Modeling pipeline:
+```{r define-modeling-pipeline}
+pip2 <- pipe_new(
+        "modeling",
+        data = airquality
+    ) |>
+
+    pipe_add(
+        "fit",
+        function(
+            data = ~data,
+            xVar = "Temp",
+            yVar = "Ozone"
+        ) {
+            lm(paste(yVar, "~", xVar), data = data)
+        }
+    ) |>
+
+    pipe_add(
+        "plot",
+        function(
+            model = ~fit,
+            data = ~data,
+            xVar = "Temp",
+            yVar = "Ozone",
+            title = "Linear model fit"
+        ) {
+            coeffs <- coefficients(model)
+            ggplot(data) +
+                geom_point(aes(.data[[xVar]], .data[[yVar]])) +
+                geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
+                labs(title = title)
+        }
+    )
+```
+
+
+```{r}
+pip2
+```
+
+Graphically, the two pipelines look as follows:
+
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip1$get_graph(), list(height = 100))) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip2$get_graph(), list(height = 100))) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
+### Combine pipelines
+
+Next we combine the two pipelines. We can do this by using the `append` function.
+
+```{r}
+pip <- pip1$append(pip2)
+
+pip
+```
+
+First of all, note that the `data` step of the second pipeline
+has been appended with the name of the second pipeline. In particular, the first
+step of the second pipeline has been renamed from `data` to `data.modeling`
+(line 4 in the `step` column) and likewise the dependencies of the second pipeline
+have been updated (see lines 5-6 in the `depends` column).
+
+That is, when appending two pipelines, `pipeflow` ensures that the
+step names remain unique in the resulting combined pipeline and therefore
+automatically renames duplicated step names if necessary.
+
+Now, as can be also seen from the graphical representation of the pipeline,
+
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 250))) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
+the two pipelines are not yet connected. To make actual use of the combined
+pipeline, we therefore want to use the output of the first pipeline as input of
+the second pipeline, that is, we want to use the output of the
+`standardize` step as the data parameter input in the `data.modeling` step.
+One way to achieve this would be to use the `replace` function as described earlier
+in the vignette [modify the pipeline](modify-pipeline.html), for example:
+
+```{r}
+pip$replace_step("data.modeling", function(data = ~standardize) data)
+
+pip
+```
+
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
+#### Relative indexing
+
+Since the name of the last step might not always be known^[A typical example would
+be appending several pipelines in a programmatic context.], the `pipeflow` package
+also provides a relative position indexing mechanism, which allows to rewrite the
+above command as follows:
+
+```{r}
+pip$replace_step("data.modeling", function(data = ~-1) data)
+
+pip
+```
+
+Generally speaking, the relative indexing mechanism allows to refer to steps positioned
+above the current step. The index `~-1` can be interpreted as "go one step back", `~-2`
+as "go two steps back", and so on.
+
+Since the scenario of connecting two pipelines is so common and to avoid having to do
+the above replacement steps manually, the `append` function actually provides an
+argument `outAsIn` that allows for appending and "connecting" both pipelines in one go:
+
+```{r}
+pip <- pip1$append(pip2, outAsIn = TRUE)
+
+pip
+```
+
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
+If we inspect the `data.modeling` step, we see that "under the hood" the original
+step indeed has been replaced by the output of the last step of the first pipeline using
+the same relative indexing mechanism we did manually before.
+
+```{r}
+pip$get_step("data.modeling")[["fun"]]
+```
+
+### Run combined pipeline
+
+Let's now run the combined pipeline and inspect the plot.
+
+```{r}
+pip$run()
+```
+
+```{r}
+pip$get_out("plot")
+```
+
+As we can see, the plot shows the linear model fit using the standardized data.
+We can now go ahead and for example change the x-variable of the model and rerun the
+pipeline.
+
+```{r}
+pip$set_params(list(xVar = "Temp.Celsius"))
+```
+
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
+```{r}
+pip$run()
+```
+
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
+```{r}
+pip$get_out("plot")
+```
+
+When creating these pipelines, usually there will be a lot of steps calculating
+intermediate results and only a few steps contain the final results that we are
+interested in. In the above example, we were interested in the final plot
+output.
+In a real-world scenario, the pipeline would contain many more steps that are not
+of interest to us.
+To see how to conveniently tag, collect and possibly group the output of those
+final steps, see the next vignette [Collecting output](collect-output.html).
+
+```{r, include = FALSE}
+options(old)
+```

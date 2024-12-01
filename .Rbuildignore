@@ -2,19 +2,26 @@
 ^renv\.lock$
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^app\.R$
-
 
 .lintr
 .vscode
 
-azure-templates
-azure-pipeline.yml
-README.md
+^\.git$
+^\.github$
+^\.gitignore$
+^.*\.Rproj$
+^\.Rproj\.user$
+^dev$
+^pkgdown$
+^_pkgdown\.yml$
+^docs$
+^doc$
+^README\.Rmd$
+^README\.md$
+^Meta$
 
-.github
-.gitignore
-.git
+^images$
 
-tags
-tags.lock
+TODO
+^logo$
+^tags$

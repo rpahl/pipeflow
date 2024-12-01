@@ -1,0 +1,244 @@
+---
+title: "Modifying existing pipelines"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+description: >
+  Shows how to insert, replace, and remove steps in a pipeline.
+vignette: >
+  %\VignetteIndexEntry{Modifying existing pipelines}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r knitr-setup, include = FALSE}
+require(pipeflow)
+
+knitr::opts_chunk$set(
+  comment = "#",
+  prompt = FALSE,
+  tidy = FALSE,
+  cache = FALSE,
+  collapse = TRUE
+)
+
+old <- options(width = 100L)
+library(ggplot2)
+```
+
+### Existing pipeline
+
+```{r define-pipeline, include = FALSE, echo = FALSE}
+pip <- Pipeline$new("my-pipeline", data = airquality)
+pip$add(
+    "data_prep",
+    function(data = ~data) {
+        replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5/9)
+    }
+)
+pip$add(
+    "model_fit",
+    function(
+        data = ~`data_prep`,
+        xVar = "Temp.Celsius"
+    ) {
+        lm(paste("Ozone ~", xVar), data = data)
+    }
+)
+pip$add(
+    "model_plot",
+    function(
+        model = ~`model_fit`,
+        data = ~`data_prep`,
+        xVar = "Temp.Celsius",
+        title = "Linear model fit"
+    ) {
+        coeffs <- coefficients(model)
+        ggplot(data) +
+            geom_point(aes(.data[[xVar]], .data[["Ozone"]])) +
+            geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
+            labs(title = title)
+    }
+)
+pip$set_params(list(xVar = "Solar.R"))
+pip$set_params(list(title = "Some new title"))
+pip$set_data(airquality[1:10, ])
+pip$run()
+```
+
+Let's start where we left off in the
+[Get started with pipeflow](get-started.html) vignette, that is, we have
+the following pipeline
+
+```{r show-pipeline}
+pip
+```
+
+with the following set data
+
+```{r show-data}
+pip$get_data() |> head(3)
+```
+
+
+### Insert new step
+
+Let's say we want to insert a new step after the `data_prep` step
+that standardizes the y-variable.
+
+```{r insert-step}
+pip$insert_after(
+    afterStep = "data_prep",
+    step = "standardize",
+    function(
+        data = ~`data_prep`,
+        yVar = "Ozone"
+    ) {
+        data[, yVar] <- scale(data[, yVar])
+        data
+    }
+)
+```
+
+
+```{r}
+pip
+```
+
+```{r, eval = getOption("pipeflow.visNetwork", default = FALSE)}
+library(visNetwork)
+do.call(visNetwork, args = pip$get_graph()) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
+```{r, echo = FALSE, eval = getOption("pipeflow.visNetwork", default = FALSE)}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 300))) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
+As we can see, the `standardize` step is now part of the pipeline, but
+so far it is not used by any other step.
+
+### Replace existing steps
+
+Let's revisit function definition of the `model_fit` step
+
+```{r}
+pip$get_step("model_fit")[["fun"]]
+```
+
+To use the standardized data, we need to change the data dependency
+such that it refers to the `standardize` step. Also instead of
+a fixed y-variable in the model, we want to pass it as a paramter.
+
+```{r replace-model-fit-step}
+pip$replace_step(
+    "model_fit",
+    function(
+        data = ~standardize,        # <- changed data reference
+        xVar = "Temp.Celsius",
+        yVar = "Ozone"              # <- new y-variable
+    ) {
+        lm(paste(yVar, "~", xVar), data = data)
+    }
+)
+```
+
+
+The `model_plot` step needs to be updated in a similar way.
+
+```{r replace-model-plot-step}
+pip$replace_step(
+    "model_plot",
+    function(
+        model = ~model_fit,
+        data = ~standardize,         # <- changed data reference
+        xVar = "Temp.Celsius",
+        yVar = "Ozone",              # <- new y-variable
+        title = "Linear model fit"
+    ) {
+        coeffs <- coefficients(model)
+        ggplot(data) +
+            geom_point(aes(.data[[xVar]], .data[[yVar]])) +
+            geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
+            labs(title = title)
+    }
+)
+```
+
+The updated pipeline now looks as follows.
+
+```{r}
+pip
+```
+
+```{r, echo = FALSE, eval = getOption("pipeflow.visNetwork", default = FALSE)}
+library(visNetwork)
+do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
+    visHierarchicalLayout(direction = "LR")
+```
+
+We see that the `model_fit` and `model_plot` steps now use the standardized data.
+Let's re-run the pipeline and inspect the output.
+
+```{r}
+pip$set_params(list(xVar = "Solar.R", yVar = "Wind"))
+pip$run()
+```
+
+```{r}
+pip$get_out("model_fit") |> coefficients()
+```
+
+```{r}
+pip$get_out("model_plot")
+```
+
+
+### Removing steps
+
+Let's see the pipeline again.
+```{r}
+pip
+```
+
+When you are trying to remove a step, pipeflow by default checks if
+the step is used by any other step. If it is, it will raise an error.
+
+```{r try-remove-step}
+try(pip$remove_step("standardize"))
+```
+
+To enforce removing a step together with all its downstream
+dependencies, you can use the `recursive` argument.
+
+```{r remove-steps-recursively}
+pip$remove_step("standardize", recursive = TRUE)
+```
+
+```{r}
+pip
+```
+
+Naturally, the last step never has any downstream dependencies, so it
+can be removed without any issues. There is another way to just remove
+the last step.
+
+```{r}
+pip$pop_step()
+```
+
+```{r}
+pip
+```
+
+Replacing steps in a pipeline as shown in this vignette will allow to re-use existing
+pipelines and adapt them programmatically to new requirements.
+Another way of re-using pipelines is to combine them, which is shown in the
+[Combining pipelines](combine-pipelines.html) vignette.
+
+```{r, include = FALSE}
+options(old)
+```

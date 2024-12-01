@@ -28,12 +28,11 @@ test_that("initialize",
     test_that("data is added as first step to pipeline",
     {
         pip <- Pipeline$new("pipe1", data = 1)
-        expect_equal(pip$get_data(), 1)
 
         expect_equal(pip$get_step_names(), "data")
 
-        out <- pip$keep_all_out()$execute()$collect_out()
-        expect_equal(out[["data"]], 1)
+        out <- pip$run()$collect_out(all = TRUE)
+        expect_equal(pip$get_out("data"), 1)
     })
 
     test_that("the logger can be customized",
@@ -45,16 +44,15 @@ test_that("initialize",
         pip <- Pipeline$new("pipe", logger = my_logger)
 
         out <- capture.output(
-            pip$execute(),
+            pip$run(),
             type = "message"
         )
         expect_equal(
             out,
             c(
-                "My Logger: Start execution of 'pipe' pipeline:",
+                "My Logger: Start run of 'pipe' pipeline:",
                 "My Logger: Step 1/1 data",
                 "My Logger: Finished execution of steps.",
-                "My Logger: Clean temporary results.",
                 "My Logger: Done."
             )
         )
@@ -216,11 +214,11 @@ test_that("add",
         pip$add("f1", function(a = 5) a)
         pip$add("f2", function(x = ~-1) 2*x, keepOut = TRUE)
 
-        out = pip$execute()$collect_out()
+        out = pip$run()$collect_out()
         expect_equal(out[["f2"]][[1]], 10)
 
         pip$add("f3", function(x = ~-1, a = ~-2) x + a, keepOut = TRUE)
-        out = pip$execute()$collect_out()
+        out = pip$run()$collect_out()
         expect_equal(out[["f3"]][[1]], 10 + 5)
     })
 
@@ -249,10 +247,10 @@ test_that("add",
             keepOut = TRUE
         )
 
-        expect_equal(unlist(pip$get_step("f1")[["deps"]]), c(data = "data"))
-        expect_equal(unlist(pip$get_step("f2")[["deps"]]), c(b = "f1"))
+        expect_equal(unlist(pip$get_step("f1")[["depends"]]), c(data = "data"))
+        expect_equal(unlist(pip$get_step("f2")[["depends"]]), c(b = "f1"))
 
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
         expect_equal(out[["f1"]][[1]], data)
         expect_equal(out[["f2"]][[1]], a + data)
     })
@@ -273,11 +271,11 @@ test_that("add",
         params <- list(x = ~data, na.rm = TRUE)
         pip$add("mean", fun = foo, params = params, keepOut = TRUE)
 
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
         expect_equal(out[["mean"]], mean(v, na.rm = TRUE))
 
         pip$set_params_at_step("mean", list(na.rm = FALSE))
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
         expect_equal(out[["mean"]], as.numeric(NA))
     })
 
@@ -290,7 +288,7 @@ test_that("add",
 
         expect_equal(pip$get_params_at_step("f1")$a, x)
 
-        out <- pip$keep_all_out()$execute()$collect_out()
+        out <- pip$run()$collect_out(all = TRUE)
         expect_equal(out[["f1"]], x)
     })
 
@@ -299,7 +297,7 @@ test_that("add",
         pip <- Pipeline$new("pipe") |>
             pipe_add("f1", function(a = new("NumericParam", "a", value = 1)) a)
 
-        out <- pip$keep_all_out()$execute()$collect_out()
+        out <- pip$run()$collect_out(all = TRUE)
         expect_equal(out[["f1"]], 1)
     })
 
@@ -314,7 +312,7 @@ test_that("add",
 
         expect_equal(pip$get_params_at_step("f1")$a, p)
 
-        out <- pip$keep_all_out()$execute()$collect_out()
+        out <- pip$run()$collect_out(all = TRUE)
         expect_equal(out[["f1"]], x)
     })
 
@@ -324,7 +322,7 @@ test_that("add",
         pip <- Pipeline$new("pipe") |>
             pipe_add("f1", fun = "mean", params = list(x = 1:5))
 
-        out <- pip$keep_all_out()$execute()$collect_out()
+        out <- pip$run()$collect_out(all = TRUE)
         expect_equal(out[["f1"]], mean(1:5))
 
         expect_equal(pip$get_step("f1")[["funcName"]], "mean")
@@ -345,7 +343,8 @@ test_that("append",
 {
     expect_true(is.function(Pipeline$new("pipe")$append))
 
-    test_that("pipelines can be combined even if their steps share names",
+    test_that("pipelines can be combined even if their steps share names,
+        unless tryAutofixNames is FALSE",
     {
         pip1 <- Pipeline$new("pipe1", data = 1) |>
             pipe_add("f1", function(a = 1) a, keepOut = TRUE) |>
@@ -355,13 +354,45 @@ test_that("append",
             pipe_add("f1", function(a = 10) a) |>
             pipe_add("f2", function(b = ~f1) b, keepOut = TRUE)
 
+        expect_error(
+            pip1$append(pip2, tryAutofixNames = FALSE),
+            paste(
+                "combined pipeline would have duplicated step names:",
+                "'data', 'f1', 'f2',"
+            )
+        )
+
         pp <- pip1$append(pip2)
         expect_equal(pp$length(), pip1$length() + pip2$length())
 
-        out1 <- pip1$execute()$collect_out()
-        out2 <- pip2$execute()$collect_out()
+        out1 <- pip1$run()$collect_out()
+        out2 <- pip2$run()$collect_out()
 
-        out <- pp$execute()$collect_out()
+        out <- pp$run()$collect_out()
+
+        expect_equivalent(out, c(out1, out2))
+    })
+
+    test_that("auto-fixes only the names that need auto-fix",
+    {
+        pip1 <- Pipeline$new("pipe1", data = 1) |>
+            pipe_add("f1", function(a = 1) a, keepOut = TRUE) |>
+            pipe_add("f2", function(b = ~f1) b)
+
+        pip2 <- Pipeline$new("pipe2") |>
+            pipe_add("f3", function(a = 10) a) |>
+            pipe_add("f4", function(b = ~f3) b, keepOut = TRUE)
+
+        pp <- pip1$append(pip2)
+        expect_equal(
+            pp$get_step_names(),
+            c("data", "f1", "f2", "data.pipe2", "f3", "f4")
+        )
+
+        out1 <- pip1$run()$collect_out()
+        out2 <- pip2$run()$collect_out()
+
+        out <- pp$run()$collect_out()
 
         expect_equivalent(out, c(out1, out2))
     })
@@ -397,15 +428,15 @@ test_that("append",
 
         pp <- pip1$append(pip2, outAsIn = TRUE)
 
-        deps <- pp$get_deps()
-        expect_equal(deps[["data.pipe2"]], c(data = "f1"))
+        depends <- pp$get_depends()
+        expect_equal(depends[["data.pipe2"]], c(data = "f1"))
 
-        out <- pp$keep_all_out()$execute()$collect_out()
+        out <- pp$run()$collect_out(all = TRUE)
         pipe1_out <- out[["f1"]][["f1"]]
         expect_equal(pipe1_out, 1 * 2)
         expect_equal(out[["data.pipe2"]], pipe1_out)
         expect_equal(out[["f1"]][["f1.pipe2"]], pipe1_out * 3)
-        expect_equal(out[["f2.pipe2"]], out[["f1"]][["f1.pipe2"]] * 4)
+        expect_equal(out[["f2"]], out[["f1"]][["f1.pipe2"]] * 4)
     })
 
     test_that("if duplicated step names would be created, an error is given",
@@ -419,7 +450,7 @@ test_that("append",
 
         expect_error(
             pip1$append(pip2),
-            "Combined pipeline has duplicated step names: 'f1.pipe2'",
+            "Cannot auto-fix name clash for step 'f1' in pipeline 'pipe2'",
             fixed = TRUE
         )
     })
@@ -442,14 +473,14 @@ test_that("append_to_step_names",
         expected_names <- c("data.foo", "f1.foo", "f2.foo")
         expect_equal(pip$get_step_names(), expected_names)
 
-        expected_deps <- list(
+        expected_depends <- list(
             data.foo = character(0),
             f1.foo = c(a = "data.foo"),
             f2.foo = c(a = "data.foo", b = "f1.foo")
         )
 
-        deps <- pip$get_deps()
-        expect_equal(pip$get_deps(), expected_deps)
+        depends <- pip$get_depends()
+        expect_equal(pip$get_depends(), expected_depends)
     })
 })
 
@@ -465,17 +496,17 @@ test_that("collect_out",
         pip <- Pipeline$new("pipe1", data = dat)
         expect_equal(pip$pipeline[["step"]], "data")
 
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
         expect_equal(out, list())
 
         pip <- Pipeline$new("pipe1", data = dat) |>
             pipe_add("f1", function(x = ~data) x, keepOut = TRUE)
 
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
         expect_equal(out[["f1"]], dat)
     })
 
-    test_that("at the end, pipeline will clean output that shall not be kept",
+    test_that("at the end, pipeline can clean output that shall not be kept",
     {
         data <- 9
         pip <- Pipeline$new("pipe1", data = data)
@@ -487,7 +518,7 @@ test_that("collect_out",
         pip$add("f1", foo, params = list(a = a))
         pip$add("f2", bar, params = list(a = ~data, b = ~f1), keepOut = TRUE)
 
-        pip$execute()
+        pip$run(cleanUnkept = TRUE)
         expect_equal(pip$get_out("f1"), NULL)
         expect_equal(pip$get_out("f2"), a + data)
     })
@@ -499,7 +530,7 @@ test_that("collect_out",
             pipe_add("f2", function(a = 2, b = ~f1) a + b) |>
             pipe_add("f3", function(a = 3, b = ~f2) a + b, keepOut = TRUE)
 
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
         expect_equal(length(out), 2)
         expect_equal(names(out), c("f1", "f3"))
     })
@@ -512,7 +543,7 @@ test_that("collect_out",
             pipe_add("f3", function(a = 1, b = 2) a / b) |>
             pipe_add("f4", function(a = 2, b = 2) a + b, group = "plus")
 
-        out <- pip$keep_all_out()$execute()$collect_out()
+        out <- pip$run()$collect_out(all = TRUE)
 
         expect_equal(out[["plus"]], list(f2 = 3, f4 = 4))
         expect_equal(out[["f1"]], 1)
@@ -525,7 +556,7 @@ test_that("collect_out",
             pipe_add("f2", function(a = 1) a, keepOut = TRUE) |>
             pipe_add("f1", function(b = 2) b, keepOut = TRUE)
 
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
         expect_equal(names(out), c("f2", "f1"))
     })
 
@@ -538,9 +569,23 @@ test_that("collect_out",
             pipe_add("f3", function(x = 3) x, group = "g2") |>
             pipe_add("f4", function(x = 4) x, group = "g1")
 
-        out <- pip$keep_all_out()$execute()$collect_out()
+        out <- pip$run()$collect_out(all = TRUE)
 
-        expect_equal(names(out), c("g2", "g1", "data"))
+        expect_equal(names(out), c("data", "g2", "g1"))
+    })
+
+    test_that(
+        "if just one group the output name still will take the group name",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = 1, b = 2) a + b, group = "plus") |>
+            pipe_add("f3", function(a = 1, b = 2) a / b, group = "my f3") |>
+            pipe_add("f4", function(a = 2, b = 2) a + b, group = "plus")
+
+        out <- pip$run()$collect_out(all = TRUE)
+
+        expect_equal(names(out), c("data", "f1", "plus", "my f3"))
     })
 })
 
@@ -612,323 +657,37 @@ test_that("discard_steps",
 })
 
 
-
-test_that("execute",
-{
-    expect_true(is.function(Pipeline$new("pipe")$execute))
-    test_that("empty pipeline can be executed",
-    {
-        expect_no_error(Pipeline$new("pipe1")$execute())
-    })
-
-    test_that("returns the pipeline object",
-    {
-        pip <- Pipeline$new("pipe1")$execute()
-        expect_equal(pip$name, "pipe1")
-    })
-
-    test_that("if function result is a list, all names are preserved",
-    {
-        # Result list length == 1 - the critical case
-        resultList = list(foo = 1)
-
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("f1", function() resultList, keepOut = TRUE)
-
-        out = pip$execute()$collect_out()
-        expect_equal(out[["f1"]], resultList)
-
-        # Result list length > 1
-        resultList = list(foo = 1, bar = 2)
-
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("f1", function() resultList, keepOut = TRUE)
-
-        out = pip$execute()$collect_out()
-        expect_equal(out[["f1"]], resultList)
-    })
-
-    test_that("pipeline execution is correct",
-    {
-        data <- 9
-        pip <- Pipeline$new("pipe1", data = data)
-
-        foo <- function(a = 1) a
-        bar <- function(a, b) a + b
-
-        a <- 5
-        pip$add("f1", foo, params = list(a = a), keepOut = TRUE)
-        pip$add("f2", bar, params = list(a = ~data, b = ~f1), keepOut = TRUE)
-
-        pip$execute()
-
-        expect_equal(pip$pipeline[["out"]][[2]], a)
-        expect_equal(pip$pipeline[["out"]][[3]], a + data)
-    })
-
-
-    test_that("pipeline execution can cope with void functions",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add("f1", function(a = 1) {}, keepOut = TRUE) |>
-            pipe_add("f2", function(b = 2) b, keepOut = TRUE)
-
-        out <- pip$execute()$collect_out()
-        expect_equal(out, list(f1 = NULL, f2 = 2))
-    })
-
-    test_that(
-        "if pipeline execution fails, the error message is returned as error",
-    {
-        pip <- Pipeline$new("pipe1") |>
-            pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function(b = ~f1) stop("something went wrong"))
-
-        expect_error(pip$execute(), "something went wrong")
-    })
-
-    test_that(
-        "can handle 'NULL' results",
-    {
-        pip <- Pipeline$new("pipe", data = 1) |>
-            pipe_add("f1", function(x = ~data) x, keepOut = TRUE)
-
-        out <- pip$execute()$collect_out()
-        expect_equal(out[["f1"]], 1)
-
-        pip$set_data(NULL)
-        out <- pip$execute()$collect_out()
-        expect_equal(out[["f1"]], NULL)
-    })
-
-    test_that(
-        "can be executed recursively to dynamically create and run pipelines",
-    {
-        pip <- Pipeline$new("pipe", data = 1) |>
-            pipe_add(
-                "f1",
-                fun = function(data = 10) {
-                    pip <- Pipeline$new("2nd pipe", data = data) |>
-                        pipe_add("step1", function(x = ~data) x) |>
-                        pipe_add("step2", function(x = ~step1) {
-                            print(x)
-                            2 * x
-                        }, keepOut = TRUE)
-                }
-            )
-
-        pip2 <- pip$execute(recursive = TRUE)
-        expect_equal(pip2$get_step_names(), c("data", "step1", "step2"))
-
-        out <- pip2$collect_out()
-        expect_equal(out[["step2"]], 20)
-    })
-
-    test_that(
-        "can execute parts of the pipeline",
-    {
-        pip <- Pipeline$new("pipe", data = 0) |>
-            pipe_add("f1", function(x = 1) x, keepOut = TRUE) |>
-            pipe_add("f2", function(x = 2) x, keepOut = TRUE)
-
-        out <- pip$execute(to = 2)$collect_out()
-        expect_equal(out, list(f1 = 1, f2 = NULL))
-
-        out <- pip$execute(to = 3)$collect_out()
-        expect_equal(out, list(f1 = 1, f2 = 2))
-    })
-
-    test_that("signals bad from/to values",
-    {
-        pip <- Pipeline$new("pipe", data = 0) |>
-            pipe_add("f1", function(x = 1) x, keepOut = TRUE) |>
-            pipe_add("f2", function(x = 2) x, keepOut = TRUE)
-
-        expect_error(
-            pip$execute(from = 0),
-            "from > 0 is not TRUE",
-            fixed = TRUE
-        )
-
-        expect_error(
-            pip$execute(from = 2, to = 1),
-            "from <= to is not TRUE",
-            fixed = TRUE
-        )
-
-        expect_error(
-            pip$execute(to = 5),
-            "'to' must not be larger than pipeline length",
-            fixed = TRUE
-        )
-    })
-})
-
-
-
-test_that("execute_step",
-{
-    expect_true(is.function(Pipeline$new("pipe")$execute_step))
-
-    test_that("pipeline can be executed at given step",
-    {
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("A", function(a = 1) a)
-
-        expect_no_error(pip$keep_all_out()$execute_step("A"))
-    })
-
-
-    test_that("upstream steps are by default executed with given step",
-    {
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("A", function(a = 1) a) |>
-            pipe_add("B", function(b = ~A) c(b, 2)) |>
-            pipe_add("C", function(c = ~B) c(c, 3))
-
-        pip$keep_all_out()$execute_step("B")
-
-        expect_equal(pip$get_out("A"), 1)
-        expect_equal(pip$get_out("B"), c(1, 2))
-        expect_false(pip$has_out("C"))
-    })
-
-    test_that("pipeline can be executed at given step excluding
-        all upstream dependencies",
-    {
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("A", function(a = 1) a) |>
-            pipe_add("B", function(b = ~A) c(b, 2)) |>
-            pipe_add("C", function(c = ~B) c(c, 3))
-
-        pip$keep_all_out()$execute_step("B", upstream = FALSE)
-        expect_false(pip$has_out("A"))
-        expect_equal(pip$get_out("B"), 2)
-        expect_false(pip$has_out("C"))
-    })
-
-    test_that("pipeline can be executed at given step excluding upstream
-        but including downstream dependencies",
-    {
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("A", function(a = 1) a) |>
-            pipe_add("B", function(b = ~A) c(b, 2)) |>
-            pipe_add("C", function(c = ~B) c(c, 3))
-
-
-        pip$keep_all_out()$execute_step(
-            "B",
-            upstream = FALSE,
-            downstream = TRUE
-        )
-        expect_false(pip$has_out("A"))
-        expect_equal(pip$get_out("B"), 2)
-        expect_equal(pip$get_out("C"), c(2, 3))
-    })
-
-    test_that("pipeline can be executed at given step including
-        up- and downstream dependencies",
-    {
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("A", function(a = 1) a) |>
-            pipe_add("B", function(b = ~A) c(b, 2)) |>
-            pipe_add("C", function(c = ~B) c(c, 3))
-
-
-        pip$keep_all_out()$execute_step(
-            "B", upstream = TRUE, downstream = TRUE
-        )
-        expect_equal(pip$get_out("A"), 1)
-        expect_equal(pip$get_out("B"), c(1, 2))
-        expect_equal(pip$get_out("C"), c(1, 2, 3))
-    })
-
-    test_that("if not marked as keepOut, output of executed steps is discarded",
-    {
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("A", function(a = 1) a)
-
-
-        pip$execute_step("A")
-        expect_false(pip$has_out("A"))
-
-        pip$set_keep_out("A", TRUE)$execute_step("A")
-        expect_true(pip$has_out("A"))
-    })
-
-    test_that("up- and downstream steps are marked in log",
-    {
-        lgr::unsuspend_logging()
-        on.exit(lgr::suspend_logging())
-
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("A", function(a = 1) a) |>
-            pipe_add("B", function(b = ~A) c(b, 2)) |>
-            pipe_add("C", function(c = ~B) c(c, 3))
-
-        logOut <- utils::capture.output(
-            pip$execute_step("B", upstream = TRUE, downstream = TRUE)
-        )
-
-        contains <- function(x, pattern) {
-            grepl(pattern = pattern, x = x, fixed = TRUE)
-        }
-
-        expect_true(logOut[2] |> contains("Step 1/3 A (upstream)"))
-        expect_true(logOut[3] |> contains("Step 2/3 B"))
-        expect_true(logOut[4] |> contains("Step 3/3 C (downstream)"))
-    })
-
-    test_that(
-        "updates the timestamp of the executed steps",
-    {
-        pip <- Pipeline$new("pipe", data = 1) |>
-            pipe_add("f1", function(x = ~data) x, keepOut = TRUE)
-
-        before <- pip$pipeline[["time"]]
-        Sys.sleep(1)
-
-        pip$execute_step("f1", upstream = FALSE)
-        after <- pip$pipeline[["time"]]
-
-        expect_equal(before[1], after[1])
-        expect_true(before[2] < after[2])
-    })
-
-    test_that(
-        "updates the state of the executed steps",
-    {
-        pip <- Pipeline$new("pipe", data = 1) |>
-            pipe_add("f1", function(x = ~data) x, keepOut = TRUE)
-
-        before <- pip$pipeline[["state"]]
-        pip$execute_step("f1", upstream = FALSE)
-        after <- pip$pipeline[["state"]]
-
-        expect_equal(before, c("new", "new"))
-        expect_equal(after, c("new", "done"))
-    })
-})
-
-
-
 test_that("get_data",
 {
     expect_true(is.function(Pipeline$new("pipe")$get_data))
 
-    test_that("data can be retrieved",
+    test_that(
+        "data can be retrieved",
     {
-        pip <- Pipeline$new("pipe1", data = 9)
+        p <- Pipeline$new("pipe", data = 1:2)
+        expect_equal(p$get_data(), 1:2)
 
-        expect_equal(pip$get_data(), 9)
+        p$set_data(3:4)
+        expect_equal(p$get_data(), 3:4)
+    })
+
+    test_that(
+        "signals missing data",
+    {
+        p <- Pipeline$new("pipe", data = 1:2)
+        p$pop_step()    # remove data step
+
+        expect_error(
+            p$get_data(),
+            "no data step defined"
+        )
     })
 })
 
 
-
-test_that("get_deps",
+test_that("get_depends",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_deps))
+    expect_true(is.function(Pipeline$new("pipe")$get_depends))
 
     test_that(
         "dependencies can be retrieved and are named after the steps",
@@ -938,23 +697,23 @@ test_that("get_deps",
         pip$add("f1", function(a = ~data) a + 1)
         pip$add("f2", function(b = ~f1) b + 1)
 
-        deps <- pip$get_deps()
-        expected_deps <- list(
+        depends <- pip$get_depends()
+        expected_depends <- list(
             data = character(0),
             f1 = c(a = "data"),
             f2 = c(b = "f1")
         )
 
-        expect_equal(deps, expected_deps)
-        expect_equal(names(deps), pip$get_step_names())
+        expect_equal(depends, expected_depends)
+        expect_equal(names(depends), pip$get_step_names())
     })
 })
 
 
 
-test_that("get_deps_down",
+test_that("get_depends_down",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_deps_down))
+    expect_true(is.function(Pipeline$new("pipe")$get_depends_down))
 
     test_that("dependencies can be determined recursively for given step",
     {
@@ -965,9 +724,9 @@ test_that("get_deps_down",
         pip$add("f3", function(a = ~f1, b = ~f2) a + b)
         pip$add("f4", function(a = ~f1, b = ~f2, c = ~f3) a + b + c)
 
-        expect_equal(pip$get_deps_down("f3"), c("f4"))
-        expect_equal(pip$get_deps_down("f2"), c("f3", "f4"))
-        expect_equal(pip$get_deps_down("f1"), c("f2", "f3", "f4"))
+        expect_equal(pip$get_depends_down("f3"), c("f4"))
+        expect_equal(pip$get_depends_down("f2"), c("f3", "f4"))
+        expect_equal(pip$get_depends_down("f1"), c("f2", "f3", "f4"))
     })
 
     test_that("if no dependencies an empty character vector is returned",
@@ -975,7 +734,7 @@ test_that("get_deps_down",
         pip <- Pipeline$new("pipe")
 
         pip$add("f1", function(a = 1) a)
-        expect_equal(pip$get_deps_down("f1"), character(0))
+        expect_equal(pip$get_depends_down("f1"), character(0))
     })
 
     test_that("step must exist",
@@ -983,7 +742,7 @@ test_that("get_deps_down",
         pip <- Pipeline$new("pipe")
 
         expect_error(
-            pip$get_deps_down("f1"),
+            pip$get_depends_down("f1"),
             "step 'f1' does not exist"
         )
     })
@@ -1003,25 +762,25 @@ test_that("get_deps_down",
         pip$set_data_split(dataList, toStep = "f2")
 
         expect_equal(
-            pip$get_deps_down("f1.1"),
+            pip$get_depends_down("f1.1"),
             c("f2.1", "f3")
         )
 
         expect_equal(
-            pip$get_deps_down("f1.2"),
+            pip$get_depends_down("f1.2"),
             c("f2.2", "f3")
         )
 
-        expect_equal(pip$get_deps_down("f2.1"), "f3")
-        expect_equal(pip$get_deps_down("f2.2"), "f3")
+        expect_equal(pip$get_depends_down("f2.1"), "f3")
+        expect_equal(pip$get_depends_down("f2.2"), "f3")
     })
 })
 
 
 
-test_that("get_deps_up",
+test_that("get_depends_up",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_deps_up))
+    expect_true(is.function(Pipeline$new("pipe")$get_depends_up))
 
     test_that("dependencies can be determined recursively for given step",
     {
@@ -1032,9 +791,9 @@ test_that("get_deps_up",
         pip$add("f3", function(a = ~f1, b = ~f2) a + b)
         pip$add("f4", function(a = ~f1, b = ~f2, c = ~f3) a + b + c)
 
-        expect_equal(pip$get_deps_up("f2"), c("f1"))
-        expect_equal(pip$get_deps_up("f3"), c("f1", "f2"))
-        expect_equal(pip$get_deps_up("f4"), c("f1", "f2", "f3"))
+        expect_equal(pip$get_depends_up("f2"), c("f1"))
+        expect_equal(pip$get_depends_up("f3"), c("f1", "f2"))
+        expect_equal(pip$get_depends_up("f4"), c("f1", "f2", "f3"))
     })
 
     test_that("if no dependencies an empty character vector is returned",
@@ -1042,7 +801,7 @@ test_that("get_deps_up",
         pip <- Pipeline$new("pipe")
 
         pip$add("f1", function(a = 1) a)
-        expect_equal(pip$get_deps_up("f1"), character(0))
+        expect_equal(pip$get_depends_up("f1"), character(0))
     })
 
     test_that("step must exist",
@@ -1050,7 +809,7 @@ test_that("get_deps_up",
         pip <- Pipeline$new("pipe")
 
         expect_error(
-            pip$get_deps_up("f1"),
+            pip$get_depends_up("f1"),
             "step 'f1' does not exist"
         )
     })
@@ -1068,13 +827,64 @@ test_that("get_deps_up",
 
         pip$set_data_split(dataList, toStep = "f2")
 
-        expect_equal(pip$get_deps_up("f2.1"), c("f1.1"))
-        expect_equal(pip$get_deps_up("f2.2"), c("f1.2"))
+        expect_equal(pip$get_depends_up("f2.1"), c("f1.1"))
+        expect_equal(pip$get_depends_up("f2.2"), c("f1.2"))
 
         expect_equivalent(
-            pip$get_deps_up("f3"),
+            pip$get_depends_up("f3"),
             c("f1.1", "f2.1", "f1.2", "f2.2")
         )
+    })
+})
+
+
+test_that("get_graph",
+{
+    expect_true(is.function(Pipeline$new("pipe")$get_graph))
+
+    pip <- Pipeline$new("pipe") |>
+        pipe_add("f1", function(a = 1) a) |>
+        pipe_add("f2", function(a = ~f1, b = ~data) a)
+
+    res <- pip$get_graph()
+
+    test_that("returns a node table with the expected columns",
+    {
+        tab <- res$nodes
+        expect_true(is.data.frame(tab))
+        expectedColumns <- c("id", "label", "group", "shape", "color", "title")
+
+        expect_equal(colnames(tab), expectedColumns)
+    })
+
+    test_that("the node table contains all steps",
+    {
+        tab <- res$nodes
+        expect_equal(tab$label, pip$get_step_names())
+    })
+
+    test_that("returns an edges table with the expected columns",
+    {
+        tab <- res$edges
+        expect_true(is.data.frame(tab))
+        expectedColumns <- c("from", "to", "arrows")
+
+        expect_equal(colnames(tab), expectedColumns)
+    })
+
+    test_that("can be printed created for certain groups",
+    {
+        pip <- Pipeline$new("pipe")
+        pip$add("step2", \(a = ~data) a + 1, group = "add")
+        pip$add("step3", \(a = ~step2) 2 * a, group = "mult")
+        pip$add("step4", \(a = ~step2, b = ~step3) a + b, group = "add")
+        pip$add("step5", \(a = ~data, b = ~step4) a * b, group = "mult")
+
+        res.add <- pip$get_graph(groups = "add")
+        expect_equal(res.add$nodes$label, c("step2", "step4"))
+
+        res.mult <- pip$get_graph(groups = "mult")
+        expect_equal(res.mult$nodes$label, c("step3", "step5"))
     })
 })
 
@@ -1085,16 +895,28 @@ test_that("get_out",
 
     test_that("output at given step can be retrieved",
     {
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("A", function(a = 1) a) |>
-            pipe_add("B", function(b = 2) b)
+        data <- airquality
+        pip <- Pipeline$new("pipe", data = data) |>
+            pipe_add("model",
+                function(data = ~data) {
+                    lm(Ozone ~ Wind, data = data)
+                },
+            )
 
-        expect_equal(pip$get_out("A"), NULL)
-        expect_equal(pip$get_out("B"), NULL)
+        pip$run()
 
-        pip$keep_all_out()$execute()
-        expect_equal(pip$get_out("A"), 1)
-        expect_equal(pip$get_out("B"), 2)
+        expect_equal(pip$get_out("data"), data)
+        expect_equivalent(
+            pip$get_out("model"),
+            lm(Ozone ~ Wind, data = data)
+        )
+    })
+
+    test_that("step of requested output must exist",
+    {
+        pip <- Pipeline$new("pipe")
+        pip$run()
+        expect_error(pip$get_out("foo"), "step 'foo' does not exist")
     })
 })
 
@@ -1141,6 +963,38 @@ test_that("get_params",
 
         p <- pip$get_params(ignoreHidden = FALSE)
         expect_equal(p, list(f1 = list(a = 1, .hidden = 2)))
+    })
+
+    test_that("works with Param objects",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add(
+                "f1",
+                function(
+                    x = new("NumericParam", "x", value = 1),
+                    y = new("NumericParam", "y", value = 2)
+                ) {
+                    x + y
+                }
+            ) |>
+            pipe_add(
+                "f2",
+                function(
+                    s1 = new("StringParam", "s1", "Hello"),
+                    s2 = new("StringParam", "s2", "World")
+                ) {
+                    paste(s1, s2)
+                }
+            )
+
+        par <- pip$get_params()
+        expect_true(all(par$f1 |> sapply(is, "NumericParam")))
+        expect_equal(par$f1$x@value, 1)
+        expect_equal(par$f1$y@value, 2)
+
+        expect_true(all(par$f2 |> sapply(is, "StringParam")))
+        expect_equal(par$f2$s1@value, "Hello")
+        expect_equal(par$f2$s2@value, "World")
     })
 })
 
@@ -1216,6 +1070,39 @@ test_that("get_params_at_step",
             "step 'foo' does not exist"
         )
     })
+
+    test_that("works with Param objects",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add(
+                "f1",
+                function(
+                    x = new("NumericParam", "x", value = 1),
+                    y = new("NumericParam", "y", value = 2)
+                ) {
+                    x + y
+                }
+            ) |>
+            pipe_add(
+                "f2",
+                function(
+                    s1 = new("StringParam", "s1", "Hello"),
+                    s2 = new("StringParam", "s2", "World")
+                ) {
+                    paste(s1, s2)
+                }
+            )
+
+        par1 <- pip$get_params_at_step("f1")
+        expect_true(all(par1 |> sapply(is, "NumericParam")))
+        expect_equal(par1$x@value, 1)
+        expect_equal(par1$y@value, 2)
+
+        par2 <- pip$get_params_at_step("f2")
+        expect_true(all(par2 |> sapply(is, "StringParam")))
+        expect_equal(par2$s1@value, "Hello")
+        expect_equal(par2$s2@value, "World")
+    })
 })
 
 
@@ -1246,6 +1133,39 @@ test_that("get_params_unique",
         pip <- Pipeline$new("pipe") |>
             pipe_add("f1", function() 1)
         expect_equivalent(pip$get_params_unique(), list())
+    })
+
+    test_that("works with Param objects",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add(
+                "f1",
+                function(
+                    a = 0,
+                    x = new("NumericParam", "x", value = 1),
+                    y = new("NumericParam", "y", value = 2)
+                ) {
+                    a * (x + y)
+                }
+            ) |>
+            pipe_add(
+                "f2",
+                function(
+                    a = new("NumericParam", "a", value = 0),
+                    x = new("NumericParam", "x", value = 1),
+                    y = 2,
+                    z = new("NumericParam", "y", value = 3)
+                ) {
+                    a * (x + y + z)
+                }
+            )
+
+        par <- pip$get_params_unique()
+        expect_equal(names(par), c("a", "x", "y", "z"))
+        expect_equal(par$a, 0)
+        expect_equal(par$x@value, 1)
+        expect_equal(par$y@value, 2)
+        expect_equal(par$z@value, 3)
     })
 })
 
@@ -1323,6 +1243,7 @@ test_that("get_params_unique_json",
                     label = "my x",
                     description = "",
                     source = "internal",
+                    domain = "",
                     class = "StringParam"
                 ),
                 list(
@@ -1332,6 +1253,7 @@ test_that("get_params_unique_json",
                     label = "my y",
                     description = "",
                     source = "internal",
+                    domain = "",
                     class = "StringParam"
                 )
             )
@@ -1379,6 +1301,7 @@ test_that("get_params_unique_json",
                 label = "my s",
                 description = "",
                 source = "internal",
+                domain = "",
                 class = "StringParam"
             )
         )
@@ -1412,9 +1335,9 @@ test_that("get_step",
         pip$add("f1", foo)
         pip$add("f2", bar, params = list(a = ~data, b = ~f1))
 
-        expect_true(length(unlist(pip$get_step("f1")[["deps"]])) == 0)
+        expect_true(length(unlist(pip$get_step("f1")[["depends"]])) == 0)
         expect_equal(
-            unlist(pip$get_step("f2")[["deps"]]),
+            unlist(pip$get_step("f2")[["depends"]]),
             c("a" = "data", b = "f1")
         )
     })
@@ -1484,59 +1407,155 @@ test_that("has_step",
 })
 
 
-
-test_that("has_out",
+test_that("insert_after",
 {
-    expect_true(is.function(Pipeline$new("pipe")$set_keep_out))
+    expect_true(is.function(Pipeline$new("pipe")$insert_after))
 
-    test_that("it can be checked if pipeline has output at a step",
+    test_that("can insert a step after another step",
     {
-        pip <- Pipeline$new("pipe1", data = 0) |>
-            pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function(a = 1) a, keepOut = TRUE)
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
 
-        pip$execute()
-
-        expect_false(pip$has_out("f1"))
-        expect_true(pip$has_out("f2"))
-    })
-
-    test_that("step must be a string and exist",
-    {
-        pip <- Pipeline$new("pipe1")
-        pip <- Pipeline$new("pipe1", data = 0) |>
-            pipe_add("f1", function(a = 1) a)
-
-        expect_error(
-            pip$has_out(1),
-            "is_string(step)",
-            fixed = TRUE
+        pip$insert_after(
+            "f1",
+            step = "f3",
+            fun = function(a = ~f1) a + 1
         )
 
+        expect_equal(
+            pip$get_step_names(),
+            c("data", "f1", "f3", "f2")
+        )
+    })
+
+    test_that("will not insert a step if the step already exists",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
+
         expect_error(
-            pip$has_out("f2"),
-            "step 'f2' does not exist",
-            fixed = TRUE
+            pip$insert_after("f1", step = "f2"),
+            "step 'f2' already exists"
+        )
+    })
+
+    test_that(
+        "will not insert a step if the reference step does not exist",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
+
+        expect_error(
+            pip$insert_after("non-existent", step = "f3"),
+            "step 'non-existent' does not exist"
+        )
+    })
+
+    test_that(
+        "will not insert a step with bad parameter dependencies",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
+
+        expect_error(
+            pip$insert_after("f1", step = "f3", \(x = ~f2) x),
+            "step 'f3': dependency 'f2' not found"
+        )
+    })
+
+    test_that("will work if insert happens at last position",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
+
+        pip$insert_after(
+            "f2",
+            step = "f3",
+            fun = function(a = ~f1) a + 1
+        )
+
+        expect_equal(
+            pip$get_step_names(),
+            c("data", "f1", "f2", "f3")
         )
     })
 })
 
 
-test_that("keep_all_out",
+test_that("insert_before",
 {
-    expect_true(is.function(Pipeline$new("pipe")$keep_all_out))
+    expect_true(is.function(Pipeline$new("pipe")$insert_before))
 
-    test_that("pipeline can be set to keep all output",
+    test_that("can insert a step after another step",
     {
-        pip <- Pipeline$new("pipe1", data = 0) |>
-            pipe_add("f1", function(a = 1) a)
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
 
-        expect_false(pip$has_out("data"))
-        expect_false(pip$has_out("f1"))
+        pip$insert_before(
+            "f2",
+            step = "f3",
+            fun = function(a = ~f1) a + 1
+        )
 
-        pip$keep_all_out()$execute()
-        expect_true(pip$has_out("data"))
-        expect_true(pip$has_out("f1"))
+        expect_equal(
+            pip$get_step_names(),
+            c("data", "f1", "f3", "f2")
+        )
+    })
+
+    test_that("will not insert a step if the step already exists",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
+
+        expect_error(
+            pip$insert_before("f1", step = "f2"),
+            "step 'f2' already exists"
+        )
+    })
+
+    test_that(
+        "will not allow step to be inserted at first position",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1)
+
+        expect_error(
+            pip$insert_before("data", step = "f2"),
+            "cannot insert before first step"
+        )
+    })
+
+    test_that("will not insert a step if the reference step does not exist",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
+
+        expect_error(
+            pip$insert_before("non-existent", step = "f3"),
+            "step 'non-existent' does not exist"
+        )
+    })
+
+    test_that(
+        "will not insert a step with bad parameter dependencies",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a + 1) |>
+            pipe_add("f2", function(a = ~f1) a + 1)
+
+        expect_error(
+            pip$insert_before("f2", step = "f3", \(x = ~f2) x),
+            "step 'f3': dependency 'f2' not found"
+        )
     })
 })
 
@@ -1569,7 +1588,7 @@ test_that("lock_step",
             pipe_add("f1", function(a = 1) a)
 
         pip$lock_step("f1")
-        expect_equal(pip$get_step("f1")[["state"]], "locked")
+        expect_equal(pip$get_step("f1")[["state"]], "Locked")
 
         pip
     })
@@ -1596,55 +1615,20 @@ test_that("print",
             "object 'non-existing-function' of mode 'function' was not found"
         )
     })
-})
 
-
-test_that("print_graph",
-{
-    expect_true(is.function(Pipeline$new("pipe")$print_graph))
-
-    test_that("returns a visNetwork object",
+    test_that("if verbose is TRUE, all columns are printed",
     {
-        pip <- Pipeline$new("pipe") |>
-            pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function(a = ~f1, b = ~data) a)
+        op <- options(width = 1000L)
+        on.exit(options(op))
+        pip <- Pipeline$new("pipe1", data = 9)
 
-        res <- pip$print_graph()
-        expect_true(is(res, "visNetwork"))
-    })
-
-    test_that("can be printed for certain groups",
-    {
-        pip <- Pipeline$new("pipe")
-        pip$add("step2", \(a = ~data) a + 1, group = "add")
-        pip$add("step3", \(a = ~step2) 2 * a, group = "mult")
-        pip$add("step4", \(a = ~step2, b = ~step3) a + b, group = "add")
-        pip$add("step5", \(a = ~data, b = ~step4) a * b, group = "mult")
-
-        res.add <- pip$print_graph(groups = "add")
-        expect_equal(res.add$x$nodes$id, c(2, 4))
-
-        res.mult <- pip$print_graph(groups = "mult")
-        expect_equal(res.mult$x$nodes$id, c(3, 5))
-    })
-
-    test_that("signals if visNetwork is not available",
-    {
-        pip <- Pipeline$new("pipe")
-
-        mockery::stub(
-            where = pip$print_graph,
-            what = "requireNamespace",
-            how = mockery::mock(FALSE)
-        )
-
-        expect_error(
-            pip$print_graph(),
-            "Package 'visNetwork' is required"
-        )
-
+        out <- capture.output(pip$print(verbose = TRUE))
+        header <- out[1] |> trimws() |> strsplit("\\s+") |> unlist()
+        expected_header <- colnames(pip$pipeline)
+        expect_equal(header, expected_header)
     })
 })
+
 
 test_that("pop_step",
 {
@@ -1868,6 +1852,55 @@ test_that("remove_step",
 })
 
 
+test_that("remove_step",
+{
+    f <- Pipeline$new("pipe")$remove_step
+    expect_true(is.function(f))
+
+    test_that("pipeline step can be renamed",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = 2) b)
+
+        pip$rename_step(from = "f1", to = "first")
+
+        pip$get_step_names() |> expect_equal(c("data", "first", "f2"))
+    })
+
+    test_that("signals name clash",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = 2) b)
+
+        expect_error(
+            pip$rename_step(from = "f1", to = "f2"),
+            "step 'f2' already exists"
+        )
+    })
+
+    test_that("renames dependencies as well",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = ~f1) b) |>
+            pipe_add("f3", function(a = ~f1, b = ~f2) a + b)
+
+        pip$rename_step(from = "f1", to = "first")
+
+        expect_equal(
+            pip$get_depends(),
+            list(
+                data = character(0),
+                first = character(0),
+                f2 = c(b = "first"),
+                f3 = c(a = "first", b = "f2")
+            )
+        )
+    })
+})
+
 
 test_that("replace_step",
 {
@@ -1880,11 +1913,11 @@ test_that("replace_step",
             pipe_add("f2", function(b = 2) b) |>
             pipe_add("f3", function(c = ~f2) c, keepOut = TRUE)
 
-        out = unname(unlist(pip$execute()$collect_out()))
+        out = unname(unlist(pip$run()$collect_out()))
         expect_equal(out, 2)
 
         pip$replace_step("f2", function(z = 4) z)
-        out = unname(unlist(pip$execute()$collect_out()))
+        out = unname(unlist(pip$run()$collect_out()))
         expect_equal(out, 4)
     })
 
@@ -1962,7 +1995,7 @@ test_that("replace_step",
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(x = 3) x, keepOut = TRUE)
 
-        out = unname(unlist(pip$execute()$collect_out()))
+        out = unname(unlist(pip$run()$collect_out()))
         expect_equal(out, 3)
 
         .my_func <- function(x = 3) {
@@ -1973,7 +2006,7 @@ test_that("replace_step",
 
         pip$replace_step("f1", fun = ".my_func", keepOut = TRUE)
 
-        out = unname(unlist(pip$execute()$collect_out()))
+        out = unname(unlist(pip$run()$collect_out()))
         expect_equal(out, 6)
     })
 
@@ -1997,7 +2030,7 @@ test_that("replace_step",
             keepOut = TRUE
         )
 
-        out = unname(unlist(pip$execute()$collect_out()))
+        out = unname(unlist(pip$run()$collect_out()))
         expect_equal(out, 20)
     })
 
@@ -2045,13 +2078,513 @@ test_that("replace_step",
             pipe_add("f3", function(a = ~f2) a, keepOut = TRUE) |>
             pipe_add("f4", function(a = ~f3) a, keepOut = TRUE)
 
-        pip$execute()
+        pip$run()
 
         pip$replace_step("f2", function(a = 2) 2* a)
-        expect_equal(pip$get_step("f1")$state, "done")
-        expect_equal(pip$get_step("f2")$state, "new")
-        expect_equal(pip$get_step("f3")$state, "outdated")
-        expect_equal(pip$get_step("f4")$state, "outdated")
+        expect_equal(pip$get_step("f1")$state, "Done")
+        expect_equal(pip$get_step("f2")$state, "New")
+        expect_equal(pip$get_step("f3")$state, "Outdated")
+        expect_equal(pip$get_step("f4")$state, "Outdated")
+    })
+})
+
+
+test_that("reset",
+{
+    expect_true(is.function(Pipeline$new("pipe")$reset))
+    test_that(
+        "after reset pipeline is the same as before the run",
+    {
+        p <- Pipeline$new("pipe", data = 1:2)
+        p$add("f1", \(x = 1) x)
+        p$add("f2", \(y = 1) y)
+
+        p$run()
+        expect_equal(
+            p$collect_out(all = TRUE),
+            list(data = 1:2, f1 = 1, f2 = 1)
+        )
+        expect_true(all(p$pipeline[["state"]] == "Done"))
+
+
+        p$reset()
+        expect_equal(
+            p$collect_out(all = TRUE),
+            list(data = NULL, f1 = NULL, f2 = NULL)
+        )
+        expect_true(all(p$pipeline[["state"]] == "New"))
+    })
+})
+
+test_that("run",
+{
+    expect_true(is.function(Pipeline$new("pipe")$run))
+    test_that("empty pipeline can be run",
+    {
+        expect_no_error(Pipeline$new("pipe1")$run())
+    })
+
+    test_that("returns the pipeline object",
+    {
+        pip <- Pipeline$new("pipe1")$run()
+        expect_equal(pip$name, "pipe1")
+    })
+
+    test_that("if function result is a list, all names are preserved",
+    {
+        # Result list length == 1 - the critical case
+        resultList = list(foo = 1)
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function() resultList, keepOut = TRUE)
+
+        out = pip$run()$collect_out()
+        expect_equal(out[["f1"]], resultList)
+
+        # Result list length > 1
+        resultList = list(foo = 1, bar = 2)
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function() resultList, keepOut = TRUE)
+
+        out = pip$run()$collect_out()
+        expect_equal(out[["f1"]], resultList)
+    })
+
+    test_that("pipeline execution is correct",
+    {
+        data <- 9
+        pip <- Pipeline$new("pipe1", data = data)
+
+        foo <- function(a = 1) a
+        bar <- function(a, b) a + b
+
+        a <- 5
+        pip$add("f1", foo, params = list(a = a), keepOut = TRUE)
+        pip$add("f2", bar, params = list(a = ~data, b = ~f1), keepOut = TRUE)
+
+        pip$run()
+
+        expect_equal(pip$pipeline[["out"]][[2]], a)
+        expect_equal(pip$pipeline[["out"]][[3]], a + data)
+    })
+
+
+    test_that("pipeline execution can cope with void functions",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) {}, keepOut = TRUE) |>
+            pipe_add("f2", function(b = 2) b, keepOut = TRUE)
+
+        out <- pip$run()$collect_out()
+        expect_equal(out, list(f1 = NULL, f2 = 2))
+    })
+
+    test_that(
+        "if pipeline execution fails, the error message is returned as error",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(b = ~f1) stop("something went wrong"))
+
+        expect_error(pip$run(), "something went wrong")
+    })
+
+    test_that(
+        "can handle 'NULL' results",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = ~data) x, keepOut = TRUE)
+
+        out <- pip$run()$collect_out()
+        expect_equal(out[["f1"]], 1)
+
+        pip$set_data(NULL)
+        out <- pip$run()$collect_out()
+        expect_equal(out[["f1"]], NULL)
+    })
+
+    test_that(
+        "can be run recursively to dynamically create and run pipelines",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add(
+                "f1",
+                fun = function(data = 10) {
+                    pip <- Pipeline$new("2nd pipe", data = data) |>
+                        pipe_add("step1", function(x = ~data) x) |>
+                        pipe_add("step2", function(x = ~step1) {
+                            print(x)
+                            2 * x
+                        }, keepOut = TRUE)
+                }
+            )
+
+        pip2 <- pip$run(recursive = TRUE)
+        expect_equal(pip2$get_step_names(), c("data", "step1", "step2"))
+
+        out <- pip2$collect_out()
+        expect_equal(out[["step2"]], 20)
+    })
+
+    test_that("will not re-run steps that are already done unless forced",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(y = ~f1) y + 1)
+
+        pip$run()
+        expect_equal(pip$get_step("f1")$state, "Done")
+        expect_equal(pip$get_step("f2")$state, "Done")
+        expect_equal(pip$pipeline[["out"]][[2]], 2)
+        expect_equal(pip$pipeline[["out"]][[3]], 3)
+
+        pip$pipeline[2, "out"] <- 0
+        pip$pipeline[3, "out"] <- 0
+        pip$run()
+        expect_equal(pip$pipeline[["out"]][[2]], 0)
+        expect_equal(pip$pipeline[["out"]][[3]], 0)
+
+        # Set parameter, which outdates step and run again
+        pip$run(force = TRUE)
+        expect_equal(pip$pipeline[["out"]][[2]], 2)
+        expect_equal(pip$pipeline[["out"]][[3]], 3)
+    })
+
+    test_that("will never re-run locked steps",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(y = ~f1) y + 1)
+
+        pip$run()
+        expect_equal(pip$pipeline[["out"]][[2]], 2)
+        expect_equal(pip$pipeline[["out"]][[3]], 3)
+
+        pip$pipeline[2, "out"] <- 0
+        pip$pipeline[3, "out"] <- 0
+        pip$run()
+        expect_equal(pip$pipeline[["out"]][[2]], 0)
+        expect_equal(pip$pipeline[["out"]][[3]], 0)
+        pip$lock_step("f1")
+        pip$lock_step("f2")
+
+        # Set parameter, which outdates step and run again
+        pip$run(force = TRUE)
+        expect_equal(pip$pipeline[["out"]][[2]], 0)
+        expect_equal(pip$pipeline[["out"]][[3]], 0)
+    })
+
+    test_that("can clean unkept steps",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(y = ~f1) y + 1)
+
+        pip$run()
+        expect_equal(pip$pipeline[["out"]][[2]], 2)
+        expect_equal(pip$pipeline[["out"]][[3]], 3)
+
+        pip$run(cleanUnkept = TRUE)
+        expect_true(all(sapply(pip$pipeline[["out"]], is.null)))
+
+        pip$set_keep_out("f1", TRUE)
+        pip$run(cleanUnkept = TRUE)
+        expect_equal(pip$pipeline[["out"]], list(NULL, 2, NULL))
+    })
+
+    test_that("logs warning without interrupting the run",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(x = ~f1) {
+                warning("something might be wrong")
+                x
+            }) |>
+            pipe_add("f3", function(x = ~f2) x)
+
+        log <- utils::capture.output(
+            expect_warning(pip$run(), "something might be wrong")
+        )
+
+        Filter(log, f = function(x) x |>
+            startsWith("WARN")) |>
+            grepl(pattern = "something might be wrong") |>
+            expect_true()
+
+        wasRunTillEnd <- pip$get_out("f3") == 2
+        expect_true(wasRunTillEnd)
+    })
+
+    test_that("logs error and stops at failed step",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(x = ~f1) {
+                stop("something went wrong")
+                x
+            }) |>
+            pipe_add("f3", function(x = ~f2) x)
+
+        log <- utils::capture.output(
+            expect_error(pip$run(), "something went wrong")
+        )
+
+        Filter(log, f = function(x) x |>
+            startsWith("ERROR")) |>
+            grepl(pattern = "something went wrong") |>
+            expect_true()
+
+        wasRunTillEnd <- isTRUE(pip$get_out("f3") == 2)
+        expect_false(wasRunTillEnd)
+    })
+
+    test_that("can show progress",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(x = ~f1) x)
+
+        m <- mockery::mock()
+        pip$run(progress = m)
+
+        args <- mockery::mock_args(m)
+
+        expect_equal(length(m), pip$length())
+        expect_equal(args[[1]][[1]], 1)
+        expect_equal(args[[1]][["detail"]], "data")
+        expect_equal(args[[2]][[1]], 2)
+        expect_equal(args[[2]][["detail"]], "f1")
+        expect_equal(args[[3]][[1]], 3)
+        expect_equal(args[[3]][["detail"]], "f2")
+    })
+
+    test_that("works with Param objects",
+    {
+        pip <- Pipeline$new("pipe1") |>
+            pipe_add(
+                "f1",
+                function(
+                    x = new("NumericParam", "x", value = 1),
+                    y = new("NumericParam", "y", value = 2)
+                ) {
+                    x + y
+                }
+            ) |>
+            pipe_add(
+                "f2",
+                function(
+                    s1 = new("StringParam", "s1", "Hello"),
+                    s2 = new("StringParam", "s2", "World")
+                ) {
+                    paste(s1, s2)
+                }
+            )
+
+        pip$run()
+        pip$get_out("f1") |> expect_equal(3)
+        pip$get_out("f2") |> expect_equal("Hello World")
+    })
+})
+
+
+
+test_that("run_step",
+{
+    expect_true(is.function(Pipeline$new("pipe")$run_step))
+
+    test_that("pipeline can be run at given step",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a)
+
+        expect_no_error(pip$run_step("A"))
+    })
+
+
+    test_that("upstream steps are by default run with given step",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+        pip$run_step("B")
+
+        expect_equal(pip$get_out("A"), 1)
+        expect_equal(pip$get_out("B"), c(1, 2))
+        expect_true(is.null(pip$get_out("C")))
+    })
+
+    test_that("runs upstream steps in correct order",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+        pip$run_step("C")
+        expect_equal(pip$get_out("C"), 1:3)
+    })
+
+    test_that("runs downstream steps in correct order",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+        pip$run_step("A", downstream = TRUE)
+        expect_equal(pip$get_out("C"), 1:3)
+    })
+
+    test_that("pipeline can be run at given step excluding
+        all upstream dependencies",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+        pip$run_step("B", upstream = FALSE)
+        expect_true(is.null(pip$get_out("A")))
+        expect_equal(pip$get_out("B"), 2)
+        expect_true(is.null(pip$get_out("C")))
+    })
+
+    test_that("pipeline can be run at given step excluding upstream
+        but including downstream dependencies",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+
+        pip$run_step(
+            "B",
+            upstream = FALSE,
+            downstream = TRUE
+        )
+        expect_true(is.null(pip$get_out("A")))
+        expect_equal(pip$get_out("B"), 2)
+        expect_equal(pip$get_out("C"), c(2, 3))
+    })
+
+    test_that("pipeline can be run at given step including
+        up- and downstream dependencies",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+
+        pip$run_step(
+            "B", upstream = TRUE, downstream = TRUE
+        )
+        expect_equal(pip$get_out("A"), 1)
+        expect_equal(pip$get_out("B"), c(1, 2))
+        expect_equal(pip$get_out("C"), c(1, 2, 3))
+    })
+
+    test_that("if not marked as keepOut, output of run steps can be cleaned",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a)
+
+
+        pip$run_step("A", cleanUnkept = TRUE)
+        expect_true(is.null(pip$get_out("A")))
+
+        pip$set_keep_out("A", TRUE)$run_step("A", cleanUnkept = TRUE)
+        expect_false(is.null(pip$get_out("A")))
+    })
+
+    test_that("up- and downstream steps are marked in log",
+    {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
+
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("A", function(a = 1) a) |>
+            pipe_add("B", function(b = ~A) c(b, 2)) |>
+            pipe_add("C", function(c = ~B) c(c, 3))
+
+        logOut <- utils::capture.output(
+            pip$run_step("B", upstream = TRUE, downstream = TRUE)
+        )
+
+        contains <- function(x, pattern) {
+            grepl(pattern = pattern, x = x, fixed = TRUE)
+        }
+
+        expect_true(logOut[2] |> contains("Step 1/3 A (upstream)"))
+        expect_true(logOut[3] |> contains("Step 2/3 B"))
+        expect_true(logOut[4] |> contains("Step 3/3 C (downstream)"))
+    })
+
+    test_that(
+        "updates the timestamp of the run steps",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = ~data) x, keepOut = TRUE)
+
+        before <- pip$pipeline[["time"]]
+        Sys.sleep(1)
+
+        pip$run_step("f1", upstream = FALSE)
+        after <- pip$pipeline[["time"]]
+
+        expect_equal(before[1], after[1])
+        expect_true(before[2] < after[2])
+    })
+
+    test_that(
+        "updates the state of the run steps",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = ~data) x, keepOut = TRUE)
+
+        before <- pip$pipeline[["state"]]
+        pip$run_step("f1", upstream = FALSE)
+        after <- pip$pipeline[["state"]]
+
+        expect_equal(before, c("New", "New"))
+        expect_equal(after, c("New", "Done"))
+    })
+
+    test_that("will never re-run locked step",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(y = ~f1) y + 1)
+
+        pip$run()
+        expect_equal(pip$pipeline[["out"]][[2]], 2)
+        expect_equal(pip$pipeline[["out"]][[3]], 3)
+
+        pip$pipeline[2, "out"] <- 0
+        pip$pipeline[3, "out"] <- 0
+        pip$lock_step("f1")
+        pip$run_step("f1", downstream = TRUE)
+
+        expect_equal(pip$pipeline[["out"]][[2]], 0)
+        expect_equal(pip$pipeline[["out"]][[3]], 1)
+    })
+
+    test_that("can clean unkept steps",
+    {
+        pip <- Pipeline$new("pipe", data = 1) |>
+            pipe_add("f1", function(x = 2) x) |>
+            pipe_add("f2", function(y = ~f1) y + 1)
+
+        pip$run_step("f1", downstream = TRUE, cleanUnkept = TRUE)
+        expect_true(all(sapply(pip$pipeline[["out"]], is.null)))
+
+        pip$set_keep_out("f1", TRUE)
+        pip$run_step("f1", downstream = TRUE, cleanUnkept = TRUE)
+        expect_equal(pip$pipeline[["out"]], list(NULL, 2, NULL))
     })
 })
 
@@ -2068,12 +2601,12 @@ test_that("set_data",
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(x = ~data) x, keepOut = TRUE)
 
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
         expect_equal(out[["f1"]], NULL)
 
         pip$set_data(dat)
 
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
         expect_equal(out[["f1"]], dat)
     })
 
@@ -2085,13 +2618,13 @@ test_that("set_data",
             pipe_add("f1", function(x = ~data) x, keepOut = TRUE) |>
             pipe_add("f2", function(x = ~f1) x, keepOut = TRUE)
 
-        pip$execute()
+        pip$run()
 
-        expect_equal(pip$get_step("f1")$state, "done")
-        expect_equal(pip$get_step("f2")$state, "done")
+        expect_equal(pip$get_step("f1")$state, "Done")
+        expect_equal(pip$get_step("f2")$state, "Done")
         pip$set_data(dat)
-        expect_equal(pip$get_step("f1")$state, "outdated")
-        expect_equal(pip$get_step("f2")$state, "outdated")
+        expect_equal(pip$get_step("f1")$state, "Outdated")
+        expect_equal(pip$get_step("f2")$state, "Outdated")
     })
 })
 
@@ -2140,7 +2673,7 @@ test_that("set_data_split",
 
         pip$set_data_split(dataList)
 
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
         expect_equivalent(
             unlist(out),
             unlist(lapply(dataList, function(x) x + 1))
@@ -2160,7 +2693,7 @@ test_that("set_data_split",
 
         pip$set_data_split(dataList)
 
-        out <- pip$keep_all_out()$execute()$collect_out()
+        out <- pip$run()$collect_out(all = TRUE)
         expect_equal(names(out), names(dataList))
     })
 
@@ -2175,11 +2708,11 @@ test_that("set_data_split",
 
         pip$set_data_split(dataList, groupBySplit = FALSE)
 
-        out <- pip$keep_all_out()$execute()$collect_out()
+        out <- pip$run()$collect_out(all = TRUE)
 
         expect_equal(
             names(out),
-            c("id.A", "id.B", "data.A", "f2.A", "data.B", "f2.B")
+            c("data.A", "id.A", "f2.A", "data.B", "id.B", "f2.B")
         )
     })
 
@@ -2195,11 +2728,11 @@ test_that("set_data_split",
 
         pip$set_data_split(dataList, groupBySplit = FALSE, sep = "_")
 
-        out <- pip$keep_all_out()$execute()$collect_out()
+        out <- pip$run()$collect_out(all = TRUE)
 
         expect_equal(
             names(out),
-            c("id_A", "id_B", "data_A", "f2_A", "data_B", "f2_B")
+            c("data_A", "id_A", "f2_A", "data_B", "id_B", "f2_B")
         )
     })
 
@@ -2216,7 +2749,7 @@ test_that("set_data_split",
 
         pip$set_data_split(dataList)
 
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
 
         expect_equal(out[["A"]], c(f2.A = list(dat), f3.A = list(dat[, 2:3])))
         expect_equal(out[["B"]], c(f2.B = list(dat), f3.B = list(dat[, 2:3])))
@@ -2234,14 +2767,15 @@ test_that("set_data_split",
 
         pip$set_data_split(dataList)
 
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
 
-        expect_equal(out[["f2.1"]], dat)
-        expect_equal(out[["f2.2"]], dat)
+        expect_equal(out[["1"]], dat)
+        expect_equal(out[["2"]], dat)
     })
 
 
-    test_that("deps are updated correctly, if data split on subset of pipeline",
+    test_that(
+        "depends are updated correctly, if data split on subset of pipeline",
     {
         dat1 <- data.frame(x = 1:2)
         dat2 <- data.frame(y = 1:2)
@@ -2260,26 +2794,26 @@ test_that("set_data_split",
         ee = expect_equivalent
         pp = pip$pipeline
 
-        deps <- pip$get_deps()
+        depends <- pip$get_depends()
 
-        expect_equal(deps[["f2.1"]], c(a = "f1.1", b = "data.1"))
-        expect_equal(deps[["f2.2"]], c(a = "f1.2", b = "data.2"))
+        expect_equal(depends[["f2.1"]], c(a = "f1.1", b = "data.1"))
+        expect_equal(depends[["f2.2"]], c(a = "f1.2", b = "data.2"))
 
         # Pipeline was not split for f3, which therefore has parameters that
         # each depend on two steps
         expect_equal(
-            deps[["f3"]],
+            depends[["f3"]],
             list(x = c("f1.1", "f1.2"), y = c("f2.1", "f2.2"))
         )
 
         # Pipeline was not split for f4, so just depdends on f3
-        ee(deps[["f4"]], c(x = "f3"))
+        ee(depends[["f4"]], c(x = "f3"))
 
 
-        out <- pip$execute()$collect_out()
+        out <- pip$run()$collect_out()
 
-        expect_equal(out[["f2.1"]], dat1)
-        expect_equal(out[["f2.2"]], dat2)
+        expect_equal(out[["1"]], dat1)
+        expect_equal(out[["2"]], dat2)
         expected_f3_res = list(
             list("f1.1" = 1, "f1.2" = 1),
             list("f2.1" = dat1, "f2.2" = dat2)
@@ -2312,7 +2846,7 @@ test_that("set_data_split",
 
         pip$set_params(list(.self = pip))
 
-        out <- pip$execute(recursive = TRUE)$collect_out()
+        out <- pip$run(recursive = TRUE)$collect_out()
 
         expect_equivalent(out, split(data, data[, "group"]))
     })
@@ -2329,17 +2863,14 @@ test_that("set_keep_out",
         pip <- Pipeline$new("pipe1", data = 0) |>
             pipe_add("f1", function(a = 1) a)
 
-        pip$execute()
-        expect_false(pip$has_out("f1"))
+        out <- pip$run()$collect_out()
+        expect_false("f1" %in% names(out))
 
-        pip$set_keep_out("f1", keepOut = TRUE)$execute()
-        expect_true(pip$has_out("f1"))
+        out <- pip$set_keep_out("f1", keepOut = TRUE)$collect_out()
+        expect_true("f1" %in% names(out))
 
-
-        pip <- Pipeline$new("pipe1", data = 0) |>
-            pipe_add("f1", function(a = 1) a, keepOut = TRUE)
-        pip$set_keep_out("f1", keepOut = FALSE)$execute()
-        expect_false(pip$has_out("f1"))
+        out <- pip$set_keep_out("f1", keepOut = FALSE)$collect_out()
+        expect_false("f1" %in% names(out))
     })
 
     test_that("step must be a string and exist",
@@ -2499,7 +3030,6 @@ test_that("set_params",
 })
 
 
-
 test_that("set_params_at_step",
 {
     expect_true(is.function(Pipeline$new("pipe")$set_params_at_step))
@@ -2597,19 +3127,6 @@ test_that("set_params_at_step",
         )
     })
 
-    test_that("re-binding parameter to other step is possible",
-    {
-        skip("TODO: implement")
-        pip <- Pipeline$new("pipe1", data = 9) |>
-            pipe_add("f1", function(a = 1, b = 2) a + b) |>
-            pipe_add("f2", function(x = 1, y = ~f1) x + y)
-
-        expect_error(
-            pip$set_params_at_step("f2", list(x = 9, y = ~data)),
-            "Unable to set parameter(s) y at step f2 - candidates are x",
-            fixed = TRUE
-        )
-    })
 
     test_that(
         "states of affected steps are updated once the pipeline was run",
@@ -2621,41 +3138,48 @@ test_that("set_params_at_step",
             pipe_add("f4", function(a = ~data) a)
 
         pip$set_params_at_step("f1", params = list(a = 2))
-        expect_true(all(pip$pipeline[["state"]] == "new"))
+        expect_true(all(pip$pipeline[["state"]] == "New"))
 
-        pip$execute()
+        pip$run()
         pip$set_params_at_step("f1", params = list(a = 3))
-        expect_equal(pip$get_step("data")$state, "done")
-        expect_equal(pip$get_step("f1")$state, "outdated")
-        expect_equal(pip$get_step("f2")$state, "outdated")
-        expect_equal(pip$get_step("f3")$state, "outdated")
-        expect_equal(pip$get_step("f4")$state, "done")
+        expect_equal(pip$get_step("data")$state, "Done")
+        expect_equal(pip$get_step("f1")$state, "Outdated")
+        expect_equal(pip$get_step("f2")$state, "Outdated")
+        expect_equal(pip$get_step("f3")$state, "Outdated")
+        expect_equal(pip$get_step("f4")$state, "Done")
 
-        pip$execute()
-        expect_true(all(pip$pipeline[["state"]] == "done"))
+        pip$run()
+        expect_true(all(pip$pipeline[["state"]] == "Done"))
     })
 
 
-    test_that(
-        "pipeline can be defined and executed with Param class parameters",
+    test_that("parameters can be set to NULL",
     {
         pip <- Pipeline$new("pipe1") |>
-            pipe_add(
-                "f1", function(xCol = new("StringParam", "xCol", "x")) xCol,
-                keepOut = TRUE
-            ) |>
-            pipe_add("f2", function(yCol, b = ~f1) paste(yCol, b),
-                params = list(yCol = new("StringParam", "yCol", "y")),
-                keepOut = TRUE
-            ) |>
-            pipe_add("f3", function(a = ~f2, b = 3) paste(a, b), keepOut = TRUE)
+        pipe_add("f1", function(a = NULL, b = 1) a)
 
-        p <- pip$get_params()
-        expect_equal(p[["f1"]][["xCol"]], new("StringParam", "xCol", "x"))
-        expect_equal(p[["f2"]][["yCol"]], new("StringParam", "yCol", "y"))
+        pip$set_params_at_step("f1", list(a = 1, b = NULL))
 
-        out <- pip$execute()$collect_out()
-        expect_equal(out, list(f1 = "x", f2 = "y x", f3 = "y x 3"))
+        expect_equal(
+            pip$get_params_at_step("f1"),
+            list(a = 1, b = NULL)
+        )
+    })
+
+    test_that("preserves Param objects",
+    {
+        pip <- Pipeline$new("pipe1") |>
+        pipe_add("f1", function(
+            a = 1,
+            b = new("NumericParam", "num", 2)) a + b
+        )
+
+        pip$set_params_at_step("f1", list(a = 3, b = 4))
+
+        params <- pip$get_params_at_step("f1")
+        expect_equal(params$a, 3)
+        expect_true(params$b |> is("NumericParam"))
+        expect_equal(params$b@value, 4)
     })
 })
 
@@ -2683,7 +3207,7 @@ test_that("split",
         pip$add("f2", \(a = 1) a)
         pip$add("f3", \(a = ~f2) a)
         pip$add("f4", \(a = ~f1) a)
-        pip$keep_all_out()$execute()
+        pip$run()
 
         res <- pip$split()
         pip1 <- res[[1]]
@@ -2695,12 +3219,12 @@ test_that("split",
         expect_equal(pip2$get_step_names(), c("data", "f1", "f4"))
 
         expect_equal(
-            pip1$collect_out(),
-            pip$collect_out()[c("f2", "f3")]
+            pip1$collect_out(all = TRUE),
+            pip$collect_out(all = TRUE)[c("f2", "f3")]
         )
         expect_equal(
-            pip2$collect_out(),
-            pip$collect_out()[c("data", "f1", "f4")]
+            pip2$collect_out(all = TRUE),
+            pip$collect_out(all = TRUE)[c("data", "f1", "f4")]
         )
     })
 
@@ -2745,13 +3269,13 @@ test_that("unlock_step",
             pipe_add("f1", function(a = 1) a)
 
         pip$lock_step("f1")
-        expect_equal(pip$get_step("f1")[["state"]], "locked")
+        expect_equal(pip$get_step("f1")[["state"]], "Locked")
 
         pip$unlock_step("data")
-        expect_equal(pip$get_step("data")[["state"]], "new")
+        expect_equal(pip$get_step("data")[["state"]], "New")
 
         pip$unlock_step("f1")
-        expect_equal(pip$get_step("f1")[["state"]], "unlocked")
+        expect_equal(pip$get_step("f1")[["state"]], "Unlocked")
 
         pip
     })
@@ -2771,7 +3295,7 @@ test_that("pipeline logging works as expected",
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1", data = dat)
 
-        log <- utils::capture.output(pip$execute())
+        log <- utils::capture.output(pip$run())
         isValidJSON <- sapply(log, jsonlite::validate)
         expect_true(all(isValidJSON))
     })
@@ -2785,7 +3309,7 @@ test_that("pipeline logging works as expected",
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(x = ~data) x)
 
-        log <- utils::capture.output(pip$execute())
+        log <- utils::capture.output(pip$run())
 
         step1 = jsonlite::fromJSON(log[2])
         step2 = jsonlite::fromJSON(log[3])
@@ -2795,7 +3319,7 @@ test_that("pipeline logging works as expected",
     })
 
     test_that(
-        "upon warning during execute, both context and warn msg are logged",
+        "upon warning during run, both context and warn msg are logged",
     {
         lgr::unsuspend_logging()
         on.exit(lgr::suspend_logging())
@@ -2805,7 +3329,7 @@ test_that("pipeline logging works as expected",
             pipe_add("f1", function(a = 1) a) |>
             pipe_add("f2", function() warning("this is a warning"))
 
-        expect_warning(log <- utils::capture.output(pip$execute()))
+        expect_warning(log <- utils::capture.output(pip$run()))
 
         log_fields = lapply(head(log, -1), jsonlite::fromJSON)
         warnings = Filter(
@@ -2813,15 +3337,13 @@ test_that("pipeline logging works as expected",
             f = function(x) x[["level"]] == "warn"
         )[[1]]
 
-        expect_equal(
-            warnings[["message"]],
-            "Context: pipeline at step 3 ('f2'), this is a warning"
-        )
+        expect_equal(warnings[["message"]], "this is a warning")
+        expect_equal(warnings[["context"]], "Step 3 ('f2')")
     })
 
 
     test_that(
-        "upon error during execute, both context and error msg are logged",
+        "upon error during run, both context and error msg are logged",
     {
         lgr::unsuspend_logging()
         on.exit(lgr::suspend_logging())
@@ -2829,34 +3351,17 @@ test_that("pipeline logging works as expected",
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(a = 1) a) |>
-            pipe_add("f2", function() stop("technical error message"))
+            pipe_add("f2", function() stop("this is an error"))
 
         log <- utils::capture.output({
-            tryCatch(pip$execute(), error = identity)
+            tryCatch(pip$run(), error = identity)
         })
 
         log_fields = lapply(head(log, -1), jsonlite::fromJSON)
         last = tail(log_fields, 1)[[1]]
 
-        expect_equal(last[["message"]],
-            "Context: pipeline at step 3 ('f2'), technical error message")
-    })
-
-    test_that("pipeline start is marked in the log and has the pipeline's name",
-    {
-        lgr::unsuspend_logging()
-        on.exit(lgr::suspend_logging())
-
-        dat <- data.frame(a = 1:2, b = 1:2)
-        pipeName = "pipe1"
-        pip <- Pipeline$new(pipeName, data = dat)
-
-        log <- utils::capture.output(pip$execute())
-        logStart = log[[1]]
-        log_fields = jsonlite::fromJSON(logStart)
-
-        expect_equal(log_fields[["type"]], "start_pipeline")
-        expect_equal(log_fields[["pipeline_name"]], pipeName)
+        expect_equal(last[["message"]], "this is an error")
+        expect_equal(last[["context"]], "Step 3 ('f2')")
     })
 })
 
@@ -2886,7 +3391,7 @@ test_that("private methods work as expected",
 
             fclean <- get_private(pip)$.clean_out_not_kept
 
-            fexe <- get_private(pip)$.execute_step
+            fexe <- get_private(pip)$.run_step
             fexe(step = "data")
             fexe(step = "A")
 
@@ -2907,7 +3412,7 @@ test_that("private methods work as expected",
 
             fclean <- get_private(pip)$.clean_out_not_kept
 
-            fexe <- get_private(pip)$.execute_step
+            fexe <- get_private(pip)$.run_step
             fexe(step = "data")
             fexe(step = "A")
 
@@ -2995,42 +3500,6 @@ test_that("private methods work as expected",
             )
         })
 
-        test_that("adds one edge for each dependency",
-        {
-            pip <- Pipeline$new("pipe")
-            f <- get_private(pip)$.create_edge_table
-
-            # step1 is data
-            pip$add("step2", function(a = 1) a)
-            pip$add("step3", function(a = ~step2) a)
-            pip$add("step4", function(a = ~step2, b = ~step3) a)
-            pip$add("step5", function(a = ~data, b = ~step4) a)
-
-            res <- f()
-            expect_equal(nrow(res), 5)
-
-            expect_equivalent(
-                res["step3", c("from", "to")],      # from step2 to step3
-                data.frame(from = 2, to = 3)
-            )
-            expect_equivalent(
-                res["step4.a", c("from", "to")],    # from step2 to step4
-                data.frame(from = 2, to = 4)
-            )
-            expect_equivalent(
-                res["step4.b", c("from", "to")],   # from step3 to step4
-                data.frame(from = 3, to = 4)
-            )
-            expect_equivalent(
-                res["step5.a", c("from", "to")],   # from data to step5
-                data.frame(from = 1, to = 5)
-            )
-            expect_equivalent(
-                res["step5.b", c("from", "to")],   # from data to step5
-                data.frame(from = 4, to = 5)
-            )
-        })
-
         test_that("can be created for certain groups",
         {
             pip <- Pipeline$new("pipe")
@@ -3076,6 +3545,41 @@ test_that("private methods work as expected",
                 f(groups = 1),
                 "is.character(groups) is not TRUE",
                 fixed = TRUE
+            )
+        })
+
+        test_that("can be created for parameters with multiple dependencies",
+        {
+            pip <- Pipeline$new("pipe")
+
+            # step1 is data
+            pip$add("step2", \(x = ~data) x + 1)
+            pip$add("step3", \(y = ~step2) sum(unlist(y)))
+
+            pip$set_data_split(
+                list(data.frame(x = 1:2), data.frame(x = 3:4)),
+                toStep = "step2"
+            )
+
+            # Step 3 depends on both step2.1 and step2.2
+            expect_equal(
+                pip$get_depends()$step3$y,
+                c("step2.1", "step2.2")
+            )
+
+            f <- get_private(pip)$.create_edge_table
+            res <- f()
+
+            expectedRes <- data.frame(
+                from = 1:4,
+                to = c(2, 5, 4, 5),
+                arrows = "to"
+            )
+            expect_equivalent(res, expectedRes)
+
+            expect_equal(
+                rownames(res),
+                c("step2.1", "step3.y1", "step2.2", "step3.y2")
             )
         })
     })
@@ -3246,187 +3750,21 @@ test_that("private methods work as expected",
     })
 
 
-    test_that(".execute_step",
-    {
-        pip <- expect_no_error(Pipeline$new("pipe"))
-        f <- get_private(pip)$.execute_step
-
-        test_that("returns the result of the function at the given step",
-        {
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = 1) a) |>
-                pipe_add("B", function(b = 2) b)
-
-            f <- get_private(pip)$.execute_step
-
-            expect_equal(f(step = "A"), 1)
-            expect_equal(f(step = "B"), 2)
-        })
-
-        test_that("stores the result at the given step",
-        {
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = 1) a) |>
-                pipe_add("B", function(b = 2) b)
-
-            f <- get_private(pip)$.execute_step
-
-            expect_equal(f(step = "A"), 1)
-            expect_equal(pip$get_out("A"), 1)
-            expect_equal(f(step = "B"), 2)
-            expect_equal(pip$get_out("B"), 2)
-        })
-
-        test_that("uses output of dependent steps",
-        {
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = 1) a) |>
-                pipe_add("B", function(b = ~A) b)
-
-            f <- get_private(pip)$.execute_step
-
-            expect_equal(f(step = "B"), NULL)
-
-            # Now set output for step 'A'
-            i <- match("A", pip$get_step_names())
-            pip$pipeline[i, "out"] <- 2
-
-            expect_equal(f(step = "B"), 2)
-        })
-
-        test_that("accepts Param object args",
-        {
-            pip <- Pipeline$new("pipe") |>
-                pipe_add(
-                    "A",
-                    function(a = new("NumericParam", "a", value = 1)) a
-                )
-
-            f <- get_private(pip)$.execute_step
-            expect_no_error(f("A"))
-        })
-
-        test_that("if error, the failing step is given in the log",
-        {
-            lgr::unsuspend_logging()
-            on.exit(lgr::suspend_logging())
-
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = 1) stop("something went wrong"))
-
-            f <- get_private(pip)$.execute_step
-            log <- capture.output(expect_error(f("A")))
-            hasInfo <- grepl(
-                log[1],
-                pattern = "pipeline at step 2 ('A'), something went wrong",
-                fixed = TRUE
-            )
-            expect_true(hasInfo)
-        })
-
-        test_that(
-            "updates the state to 'done' if step was run successfully
-            otherwise to 'failed'",
-        {
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("ok", function(x = 1) x) |>
-                pipe_add("error", function(x = 2) stop("ups")) |>
-                pipe_add("warning", function(x = 3) warning("hm"))
-
-            f <- get_private(pip)$.execute_step
-
-            expect_true(all(pip$pipeline[["state"]] == "new"))
-
-            f(step = "ok")
-            pip$get_step("ok")$state
-
-            expect_equal(pip$get_step("ok")$state, "done")
-
-            expect_error(f(step = "error"))
-            expect_equal(pip$get_step("error")$state, "failed")
-
-            expect_warning(f(step = "warning"))
-            expect_equal(pip$get_step("warning")$state, "done")
-        })
-
-        test_that("will not re-compute output of locked steps",
-        {
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = 1) a) |>
-                pipe_add("B", function(b = ~A) b, keepOut = TRUE)
-
-            f <- get_private(pip)$.execute_step
-
-            expect_equal(f(step = "A"), 1)
-            expect_equal(f(step = "B"), 1)
-
-            pip$set_params_at_step("A", list(a = 2))
-            expect_equal(pip$get_step("B")$state, "outdated")
-            pip$lock_step("B")
-
-            expect_equal(f(step = "A"), 2)
-            expect_equal(f(step = "B"), 1)
-        })
-
-        test_that("will re-compute if locked step does not keep output",
-        {
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = 1) a) |>
-                pipe_add("B", function(b = ~A) b, keepOut = FALSE)
-
-            f <- get_private(pip)$.execute_step
-
-            expect_equal(f(step = "A"), 1)
-            expect_equal(f(step = "B"), 1)
-
-            pip$set_params_at_step("A", list(a = 2))
-            pip$lock_step("B")
-            get_private(pip)$.clean_out_not_kept()
-            expect_false(pip$has_out("B"))
-
-            expect_equal(f(step = "A"), 2)
-            expect_equal(f(step = "B"), 2)
-        })
-
-        test_that("will re-compute if locked step is unlocked",
-        {
-            pip <- Pipeline$new("pipe") |>
-                pipe_add("A", function(a = 1) a) |>
-                pipe_add("B", function(b = ~A) b, keepOut = TRUE)
-
-            f <- get_private(pip)$.execute_step
-
-            expect_equal(f(step = "A"), 1)
-            expect_equal(f(step = "B"), 1)
-
-            pip$set_params_at_step("A", list(a = 2))
-            expect_equal(pip$get_step("B")$state, "outdated")
-            pip$lock_step("B")
-
-            expect_equal(f(step = "A"), 2)
-            expect_equal(f(step = "B"), 1)
-
-            pip$unlock_step("B")
-            expect_equal(f(step = "B"), 2)
-        })
-    })
-
-
     test_that(".extract_dependent_out",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
         f <- get_private(pip)$.extract_dependent_out
 
-        test_that("if no deps, NULL is returned",
+        test_that("if no depends, NULL is returned",
         {
-            expect_true(is.null(f(deps = list(), out = list())))
+            expect_true(is.null(f(depends = list(), out = list())))
         })
 
         test_that("signals badly typed input",
         {
             expect_error(
                 f(1:2, list()),
-                "is.character(deps) || is.list(deps) is not TRUE",
+                "is.character(depends) || is.list(depends) is not TRUE",
                 fixed = TRUE
             )
             expect_error(
@@ -3439,18 +3777,18 @@ test_that("private methods work as expected",
         test_that("signals if dependency is not found in out",
         {
             expect_no_error(
-                f(deps = "foo", out = list("foo" = 1))
+                f(depends = "foo", out = list("foo" = 1))
             )
             expect_error(
-                f(deps = "foo", out = list()),
-                "all(unlist(deps) %in% names(out)) is not TRUE",
+                f(depends = "foo", out = list()),
+                "all(unlist(depends) %in% names(out)) is not TRUE",
                 fixed = TRUE
             )
 
             # Dependencies can be lists of dependencies
-            deps <- list(x = c("a", "b"))
+            depends <- list(x = c("a", "b"))
             out <- list(a = 1)
-            expect_error(f(deps, out))
+            expect_error(f(depends, out))
         })
 
         test_that("output is extracted as expected",
@@ -3477,10 +3815,10 @@ test_that("private methods work as expected",
     })
 
 
-    test_that(".extract_deps_from_param_list",
+    test_that(".extract_depends_from_param_list",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
-        f <- get_private(pip)$.extract_deps_from_param_list
+        f <- get_private(pip)$.extract_depends_from_param_list
 
         test_that("if no params are defined, dependencies are empty",
         {
@@ -3519,15 +3857,15 @@ test_that("private methods work as expected",
     })
 
 
-    test_that(".get_deps_grouped",
+    test_that(".get_depends_grouped",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
-        f <- get_private(pip)$.get_deps_grouped
+        f <- get_private(pip)$.get_depends_grouped
 
         test_that("grouped dependencies are obtained correctly",
         {
             pip <- Pipeline$new("pipe")
-            f <- get_private(pip)$.get_deps_grouped
+            f <- get_private(pip)$.get_depends_grouped
 
             expect_equal(f(), list("data"))
 
@@ -3560,7 +3898,7 @@ test_that("private methods work as expected",
                 pipe_add("f3", \(x = ~f1, y = ~f2) x + y)
 
 
-            f <- get_private(pip)$.get_deps_grouped
+            f <- get_private(pip)$.get_depends_grouped
             pip$set_data_split(dataList, toStep = "f3")
 
             expect_equal(
@@ -3586,7 +3924,7 @@ test_that("private methods work as expected",
                 pipe_add("f2", \(a = ~f1, b = 2) b) |>
                 pipe_add("f3", \(x = ~f1, y = ~f2) x + y)
 
-            f <- get_private(pip)$.get_deps_grouped
+            f <- get_private(pip)$.get_depends_grouped
             pip$set_data_split(dataList, toStep = "f2")
 
             expect_equal(
@@ -3604,7 +3942,7 @@ test_that("private methods work as expected",
                 just one group is returned",
         {
             pip <- Pipeline$new("pipe")
-            f <- get_private(pip)$.get_deps_grouped
+            f <- get_private(pip)$.get_depends_grouped
 
             pip$add("f1", \(a = ~data) a)
             pip$add("f2", \(a = 1) a)
@@ -3619,10 +3957,10 @@ test_that("private methods work as expected",
     })
 
 
-    test_that(".get_downstream_deps",
+    test_that(".get_downstream_depends",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
-        f <- get_private(pip)$.get_downstream_deps
+        f <- get_private(pip)$.get_downstream_depends
 
         test_that("badly typed inputs are signalled",
         {
@@ -3633,13 +3971,13 @@ test_that("private methods work as expected",
             )
 
             expect_error(
-                f(step = "foo", deps = c(a = 1)),
-                "is.character(deps) || is.list(deps) is not TRUE",
+                f(step = "foo", depends = c(a = 1)),
+                "is.character(depends) || is.list(depends) is not TRUE",
                 fixed = TRUE
             )
 
             expect_error(
-                f(step = "foo", deps = list(), recursive = 1),
+                f(step = "foo", depends = list(), recursive = 1),
                 "is.logical(recursive)",
                 fixed = TRUE
             )
@@ -3647,65 +3985,65 @@ test_that("private methods work as expected",
 
         test_that("if no dependencies, empty character vector is returned",
         {
-            expect_equal(f(step = "foo", deps = character()), character(0))
-            expect_equal(f(step = "foo", deps = list()), character(0))
+            expect_equal(f(step = "foo", depends = character()), character(0))
+            expect_equal(f(step = "foo", depends = list()), character(0))
         })
 
         test_that(
-            "if no deps, recursive should give same as non-recursiv call",
+            "if no depends, recursive should give same as non-recursiv call",
         {
             expect_equal(
-                f(step = "foo", deps = list()),
-                f(step = "foo", deps = list(), recursive = FALSE)
+                f(step = "foo", depends = list()),
+                f(step = "foo", depends = list(), recursive = FALSE)
             )
         })
 
 
         test_that("dependencies by default are determined recursively",
         {
-            deps <- list(
+            depends <- list(
                 f1 = c(a = "f0"),
                 f2 = c(a = "f1"),
                 f3 = c(a = "f2")
             )
 
-            expect_equal(f("f3", deps), character(0))
-            expect_equal(f("f2", deps), c("f3"))
-            expect_equal(f("f1", deps), c("f2", "f3"))
-            expect_equal(f("f0", deps), c("f1", "f2", "f3"))
+            expect_equal(f("f3", depends), character(0))
+            expect_equal(f("f2", depends), c("f3"))
+            expect_equal(f("f1", depends), c("f2", "f3"))
+            expect_equal(f("f0", depends), c("f1", "f2", "f3"))
         })
 
         test_that("returned dependencies are unique",
         {
-            deps <- list(
+            depends <- list(
                 f1 = c(a = "f0"),
                 f2 = c(a = "f0", b = "f1"),
                 f3 = c(a = "f0", b = "f1", c = "f2")
             )
 
-            expect_equal(f("f3", deps), character(0))
-            expect_equal(f("f2", deps), c("f3"))
-            expect_equal(f("f1", deps), c("f2", "f3"))
-            expect_equal(f("f0", deps), c("f1", "f2", "f3"))
+            expect_equal(f("f3", depends), character(0))
+            expect_equal(f("f2", depends), c("f3"))
+            expect_equal(f("f1", depends), c("f2", "f3"))
+            expect_equal(f("f0", depends), c("f1", "f2", "f3"))
         })
 
         test_that("dependencies can be determined non-recursively",
         {
-            deps <- list(
+            depends <- list(
                 f1 = c(a = "f0"),
                 f2 = c(a = "f1"),
                 f3 = c(a = "f2")
             )
 
-            expect_equal(f("f3", deps, recursive = FALSE), character(0))
-            expect_equal(f("f2", deps, recursive = FALSE), c("f3"))
-            expect_equal(f("f1", deps, recursive = FALSE), c("f2"))
-            expect_equal(f("f0", deps, recursive = FALSE), c("f1"))
+            expect_equal(f("f3", depends, recursive = FALSE), character(0))
+            expect_equal(f("f2", depends, recursive = FALSE), c("f3"))
+            expect_equal(f("f1", depends, recursive = FALSE), c("f2"))
+            expect_equal(f("f0", depends, recursive = FALSE), c("f1"))
         })
 
         test_that("works with multiple dependencies given in sublist",
         {
-            deps <- list(
+            depends <- list(
                 f2 = c(a = "f1", b = "data"),
                 f3 = list(
                     x = c("f0", "f1"),
@@ -3713,7 +4051,7 @@ test_that("private methods work as expected",
                 )
             )
 
-            expect_equal(f("f1", deps), c("f2", "f3"))
+            expect_equal(f("f1", depends), c("f2", "f3"))
         })
     })
 
@@ -3736,10 +4074,10 @@ test_that("private methods work as expected",
     })
 
 
-    test_that(".get_upstream_deps",
+    test_that(".get_upstream_depends",
     {
         pip <- expect_no_error(Pipeline$new("pipe"))
-        f <- get_private(pip)$.get_upstream_deps
+        f <- get_private(pip)$.get_upstream_depends
 
         test_that("badly typed inputs are signalled",
         {
@@ -3750,13 +4088,13 @@ test_that("private methods work as expected",
             )
 
             expect_error(
-                f(step = "foo", deps = c(a = 1)),
-                "is.character(deps) || is.list(deps) is not TRUE",
+                f(step = "foo", depends = c(a = 1)),
+                "is.character(depends) || is.list(depends) is not TRUE",
                 fixed = TRUE
             )
 
             expect_error(
-                f(step = "foo", deps = list(), recursive = 1),
+                f(step = "foo", depends = list(), recursive = 1),
                 "is.logical(recursive)",
                 fixed = TRUE
             )
@@ -3764,55 +4102,55 @@ test_that("private methods work as expected",
 
         test_that("if no dependencies, empty character vector is returned",
         {
-            expect_equal(f(step = "foo", deps = character()), character(0))
-            expect_equal(f(step = "foo", deps = list()), character(0))
+            expect_equal(f(step = "foo", depends = character()), character(0))
+            expect_equal(f(step = "foo", depends = list()), character(0))
         })
 
         test_that("dependencies by default are determined recursively",
         {
-            deps <- list(
+            depends <- list(
                 f1 = c(a = "f0"),
                 f2 = c(a = "f1"),
                 f3 = c(a = "f2")
             )
 
-            expect_equal(f("f0", deps), character(0))
-            expect_equal(f("f1", deps), c("f0"))
-            expect_equal(f("f2", deps), c("f1", "f0"))
-            expect_equal(f("f3", deps), c("f2", "f1", "f0"))
+            expect_equal(f("f0", depends), character(0))
+            expect_equal(f("f1", depends), c("f0"))
+            expect_equal(f("f2", depends), c("f1", "f0"))
+            expect_equal(f("f3", depends), c("f2", "f1", "f0"))
         })
 
         test_that("returned dependencies are unique",
         {
-            deps <- list(
+            depends <- list(
                 f1 = c(a = "f0"),
                 f2 = c(a = "f0", b = "f1"),
                 f3 = c(a = "f0", b = "f1", c = "f2")
             )
 
-            expect_equal(f("f0", deps), character(0))
-            expect_equal(f("f1", deps), c("f0"))
-            expect_equal(f("f2", deps), c("f0", "f1"))
-            expect_equal(f("f3", deps), c("f0", "f1", "f2"))
+            expect_equal(f("f0", depends), character(0))
+            expect_equal(f("f1", depends), c("f0"))
+            expect_equal(f("f2", depends), c("f0", "f1"))
+            expect_equal(f("f3", depends), c("f0", "f1", "f2"))
         })
 
         test_that("dependencies can be determined non-recursively",
         {
-            deps <- list(
+            depends <- list(
                 f1 = c(a = "f0"),
                 f2 = c(a = "f1"),
                 f3 = c(a = "f2")
             )
 
-            expect_equal(f("f0", deps, recursive = FALSE), character(0))
-            expect_equal(f("f1", deps, recursive = FALSE), c("f0"))
-            expect_equal(f("f2", deps, recursive = FALSE), c("f1"))
-            expect_equal(f("f3", deps, recursive = FALSE), c("f2"))
+            expect_equal(f("f0", depends, recursive = FALSE), character(0))
+            expect_equal(f("f1", depends, recursive = FALSE), c("f0"))
+            expect_equal(f("f2", depends, recursive = FALSE), c("f1"))
+            expect_equal(f("f3", depends, recursive = FALSE), c("f2"))
         })
 
         test_that("works with multiple dependencies given in sublist",
         {
-            deps <- list(
+            depends <- list(
                 f1 = c(a = "f0"),
                 f2 = c(a = "f1", b = "data"),
                 f3 = list(
@@ -3822,9 +4160,9 @@ test_that("private methods work as expected",
                 f4 = list(x = c("f3", "data"))
             )
 
-            expect_equal(f("f2", deps), c("f1", "data", "f0"))
-            expect_equal(f("f3", deps), c("f1", "f2", "f0", "data"))
-            expect_equal(f("f4", deps), c("f3", "data", "f1", "f2", "f0"))
+            expect_equal(f("f2", depends), c("f1", "data", "f0"))
+            expect_equal(f("f3", depends), c("f1", "f2", "f0", "data"))
+            expect_equal(f("f4", depends), c("f3", "data", "f1", "f2", "f0"))
         })
     })
 
@@ -3993,6 +4331,130 @@ test_that("private methods work as expected",
         })
     })
 
+    test_that(".run_step",
+    {
+        pip <- expect_no_error(Pipeline$new("pipe"))
+        f <- get_private(pip)$.run_step
+
+        test_that("returns the result of the function at the given step",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = 1) a) |>
+                pipe_add("B", function(b = 2) b)
+
+            f <- get_private(pip)$.run_step
+
+            expect_equal(f(step = "A"), 1)
+            expect_equal(f(step = "B"), 2)
+        })
+
+        test_that("stores the result at the given step",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = 1) a) |>
+                pipe_add("B", function(b = 2) b)
+
+            f <- get_private(pip)$.run_step
+
+            expect_equal(f(step = "A"), 1)
+            expect_equal(pip$get_out("A"), 1)
+            expect_equal(f(step = "B"), 2)
+            expect_equal(pip$get_out("B"), 2)
+        })
+
+        test_that("uses output of dependent steps",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = 1) a) |>
+                pipe_add("B", function(b = ~A) b)
+
+            f <- get_private(pip)$.run_step
+
+            expect_equal(f(step = "B"), NULL)
+
+            # Now set output for step 'A'
+            i <- match("A", pip$get_step_names())
+            pip$pipeline[i, "out"] <- 2
+
+            expect_equal(f(step = "B"), 2)
+        })
+
+        test_that("accepts Param object args",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add(
+                    "A",
+                    function(a = new("NumericParam", "a", value = 1)) a
+                )
+
+            f <- get_private(pip)$.run_step
+            expect_no_error(f("A"))
+        })
+
+        test_that("if error, the failing step is given in the log",
+        {
+            lgr::unsuspend_logging()
+            on.exit(lgr::suspend_logging())
+
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = 1) stop("something went wrong"))
+
+            f <- get_private(pip)$.run_step
+            log <- capture.output(expect_error(f("A")))
+            hasInfo <- grepl(
+                log[1],
+                pattern = "something went wrong {\"context\":\"Step 2 ('A')\"}",
+                fixed = TRUE
+            )
+            expect_true(hasInfo)
+        })
+
+        test_that(
+            "updates the state to 'done' if step was run successfully
+            otherwise to 'failed'",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("ok", function(x = 1) x) |>
+                pipe_add("error", function(x = 2) stop("ups")) |>
+                pipe_add("warning", function(x = 3) warning("hm"))
+
+            f <- get_private(pip)$.run_step
+
+            expect_true(all(pip$pipeline[["state"]] == "New"))
+
+            f(step = "ok")
+            pip$get_step("ok")$state
+
+            expect_equal(pip$get_step("ok")$state, "Done")
+
+            expect_error(f(step = "error"))
+            expect_equal(pip$get_step("error")$state, "Failed")
+
+            expect_warning(f(step = "warning"))
+            expect_equal(pip$get_step("warning")$state, "Done")
+        })
+
+        test_that("will re-compute if locked step does not keep output",
+        {
+            pip <- Pipeline$new("pipe") |>
+                pipe_add("A", function(a = 1) a) |>
+                pipe_add("B", function(b = ~A) b, keepOut = FALSE)
+
+            f <- get_private(pip)$.run_step
+
+            expect_equal(f(step = "A"), 1)
+            expect_equal(f(step = "B"), 1)
+
+            pip$set_params_at_step("A", list(a = 2))
+            pip$lock_step("B")
+            get_private(pip)$.clean_out_not_kept()
+            expect_true(is.null(pip$get_out("B")))
+
+            expect_equal(f(step = "A"), 2)
+            expect_equal(f(step = "B"), 2)
+        })
+    })
+
 
     test_that(".set_at_step",
     {
@@ -4086,7 +4548,7 @@ test_that("private methods work as expected",
             pip$add("f3", function(a = 1) a)
             pip$add("f4", function(a = ~f2) a)
 
-            expect_true(all(pip$pipeline[["state"]] == "new"))
+            expect_true(all(pip$pipeline[["state"]] == "New"))
             f("f1", state = "new-state")
             states <- pip$pipeline[["state"]] |>
                 stats::setNames(pip$get_step_names())
@@ -4094,10 +4556,10 @@ test_that("private methods work as expected",
             expect_equal(
                 states,
                 c(
-                    data = "new",
-                    f1 = "new",
+                    data = "New",
+                    f1 = "New",
                     f2 = "new-state",
-                    f3 = "new",
+                    f3 = "New",
                     f4 = "new-state"
                 )
             )
@@ -4110,10 +4572,10 @@ test_that("private methods work as expected",
             expect_equal(
                 states,
                 c(
-                    data = "new",
+                    data = "New",
                     f1 = "another-state",
                     f2 = "another-state",
-                    f3 = "new",
+                    f3 = "New",
                     f4 = "another-state"
                 )
             )
@@ -4322,32 +4784,4 @@ test_that("private methods work as expected",
             )
         })
     })
-})
-
-
-
-# pipeline helper functions
-
-test_that("a helper function is defined for each member function
-    with the correct body",
-{
-    skip_if(Sys.getenv("R_CODECOV_ENV") == "GITHUB_ACTION")
-
-    pip <- Pipeline$new("pipe")
-    funs2check <- sapply(names(pip), \(x) is.function(pip[[x]])) |>
-        Filter(f = isTRUE) |>
-        names() |>
-        setdiff("initialize")
-
-    for (fun in funs2check) {
-        helper_fun <- paste0("pipe_", fun)
-        expect_true(exists(helper_fun), info = fun)
-
-        f <- get(helper_fun, envir = asNamespace("pipeflow"))
-        expect_equal(
-            toString(body(f)),
-            gettextf("pip$%s, ...", fun),
-            info = fun
-        )
-    }
 })
