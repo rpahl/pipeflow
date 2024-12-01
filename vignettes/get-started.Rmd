@@ -190,7 +190,7 @@ output of a specific step by calling the `get_out()` method on the pipeline.
 pip$get_out("model_fit")
 ```
 
-```{r inspect-plot, message = FALSE, warning = FALSE}
+```{r inspect-plot, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
 pip$get_out("model_plot")
 ```
 
@@ -240,7 +240,7 @@ pip$run()
 The outdated steps were re-run as expected and the output was
 updated accordingly.
 
-```{r inspect-plot-again, message = FALSE, warning = FALSE}
+```{r inspect-plot-again, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
 pip$get_out("model_plot")
 ```
 
@@ -252,7 +252,7 @@ pip$set_params(list(title = "Some new title"))
 pip
 ```
 
-```{r inspect-plot-after-title-change, message = FALSE, warning = FALSE}
+```{r inspect-plot-after-title-change, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
 pip$run()$get_out("model_plot")
 ```
 
@@ -264,7 +264,7 @@ pip$set_data(airquality[1:10, ])
 pip
 ```
 
-```{r inspect-plot-after-data-change, message = FALSE, warning = FALSE}
+```{r inspect-plot-after-data-change, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
 pip$run()$get_out("model_plot")
 ```
 

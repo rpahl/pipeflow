@@ -93,7 +93,7 @@ pip
 
 and we can run it like this
 
-```{r}
+```{r, fig.alt = "residual-plot"}
 pip$set_data(airquality)
 pip$set_params(list(xVar = "Ozone", yVar = "Temp"))
 pip$run()$collect_out()
@@ -106,7 +106,7 @@ by passing the test result to the `plot` step function and change the color ther
 However, here we are interested in another way that would keep the `plot` function
 unchanged. For example, we could run the pipeline a second time as follows:
 
-```{r}
+```{r, fig.alt = "residual-plot"}
 if (pip$get_out("residual_shapiro_p_value") < 0.05) {
     pip$set_params(list(pointColor = "red"))
     pip$run()$collect_out()
@@ -142,7 +142,7 @@ pip$replace_step(
 
 Now we just have to make sure to set the `.self` parameter.
 
-```{r}
+```{r, fig.alt = "residual-plot"}
 pip$set_data(airquality)
 pip$set_params(list(xVar = "Ozone", yVar = "Temp", .self = pip))
 pip$run()$collect_out()

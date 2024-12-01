@@ -192,7 +192,7 @@ pip$run()
 pip$get_out("model_fit") |> coefficients()
 ```
 
-```{r}
+```{r, fig.alt = "model-plot"}
 pip$get_out("model_plot")
 ```
 

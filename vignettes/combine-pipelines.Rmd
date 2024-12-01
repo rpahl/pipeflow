@@ -226,7 +226,7 @@ Let's now run the combined pipeline and inspect the plot.
 pip$run()
 ```
 
-```{r}
+```{r, fig.alt = "model-plot"}
 pip$get_out("plot")
 ```
 
@@ -254,7 +254,7 @@ do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
-```{r}
+```{r, fig.alt = "model-plot"}
 pip$get_out("plot")
 ```
 
