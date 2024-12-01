@@ -3,7 +3,7 @@ url: https://github.com/rpahl/pipeflow
 
 template:
   params:
-    bootstrap: 5
+    bootstrap: 3
     bootswatch: united
 
 authors:
@@ -42,6 +42,7 @@ navbar:
   left:
     - icon: fa-home fa-lg
       href: index.html
+      aria-label: home
     - text: "Get started"
       href: articles/get-started.html
     - text: "Reference"
@@ -80,9 +81,13 @@ navbar:
   right:
     - icon: fab fa-github
       href: https://github.com/rpahl/pipeflow/
+      aria-label: github
     - icon: fab fa-stack-overflow
       href: https://stackoverflow.com/users/8120617/rpahl
+      aria-label: stackoverflow
     - icon: fab fa-bluesky
       href: https://bsky.app/profile/rpahl.bsky.social
+      aria-label: bluesky
     - icon: fas fa-blog
       href: https://rpahl.github.io/r-some-blog/
+      aria-label: blog
