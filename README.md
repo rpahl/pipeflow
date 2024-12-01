@@ -9,7 +9,7 @@
 
 <!-- badges: end -->
 
-# pipeflow <img src="man/figures/logo.png" align="right" width="163" height="121"/>
+# pipeflow <img src="man/figures/logo.png" alt="logo" align="right" width="163" height="121"/>
 
 `pipeflow` is an intuitive yet powerful framework for building and
 running data processing pipelines. Whether you’re working in scientific
