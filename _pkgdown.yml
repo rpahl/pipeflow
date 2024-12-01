@@ -3,6 +3,7 @@ url: https://github.com/rpahl/pipeflow
 
 template:
   params:
+    bootstrap: 5
     bootswatch: united
 
 authors:
