@@ -68,9 +68,6 @@
 </li>
       </ul>
 <ul class="navbar-nav">
-<li class="nav-item"><form class="form-inline" role="search">
- <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
-</form></li>
 <li class="nav-item"><a class="nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://bsky.app/profile/rpahl.bsky.social" aria-label="bluesky"><span class="fa fab fa-bluesky"></span></a></li>
@@ -198,15 +195,15 @@ rectangle boxes.</p>
 the flagged steps.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:31.888] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:31.916] Step 1/6 data</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:31.925] Step 2/6 data_prep</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:31.948] Step 3/6 data_summary</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:31.950] Step 4/6 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:31.954] Step 5/6 model_summary</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:31.956] Step 6/6 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:31.968] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:31.968] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.511] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.539] Step 1/6 data</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.548] Step 2/6 data_prep</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.572] Step 3/6 data_summary</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.573] Step 4/6 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.577] Step 5/6 model_summary</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.580] Step 6/6 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.591] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.591] Done.</span></span>
 <span></span>
 <span><span class="va">out</span> <span class="op">&lt;-</span> <span class="va">pip</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -310,15 +307,15 @@ is, each step represents the trivial case of a one-sized group. Again,
 we run the pipeline and collect the output.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:32.198] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:32.199] Step 1/6 data</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:32.202] Step 2/6 data_prep</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:32.205] Step 3/6 used_data</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:32.206] Step 4/6 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:32.229] Step 5/6 model_summary</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:32.231] Step 6/6 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:32.236] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-01 21:41:32.237] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.822] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.823] Step 1/6 data</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.826] Step 2/6 data_prep</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.829] Step 3/6 used_data</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.830] Step 4/6 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.853] Step 5/6 model_summary</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.855] Step 6/6 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.860] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-01 21:46:27.861] Done.</span></span>
 <span></span>
 <span><span class="va">out</span> <span class="op">&lt;-</span> <span class="va">pip</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>

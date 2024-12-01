@@ -35,7 +35,7 @@ reference:
 navbar:
   structure:
     left: [home, reference, articles, myPackages]
-    right: [search, github, stackoverflow, bluesky, blog]
+    right: [github, stackoverflow, bluesky, blog]
   components:
     home:
       icon: fa-home fa-lg
