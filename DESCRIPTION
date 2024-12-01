@@ -1,15 +1,14 @@
 Package: pipeflow
-Title: Data Analysis Workflows with Pipelines
+Title: Implement Data Analysis Workflows with Pipelines
 Version: 0.1.1
 Authors@R:
     person("Roman", "Pahl", , "roman.pahl@gmail.com", role = c("aut", "cre"))
-Description: A lightweight yet powerful framework for composing, combining
-    and modifying custom data analysis pipelines. The correctness of a
-    pipeline is verified at definition time. Parameters at all pipeline
-    steps or the steps themselves can be modified, removed or inserted at
-    any time.  Dependencies among steps are tracked and verified
-    automatically and used to re-run only steps that are affected by
-    parameter changes, similar to the `make` utility.
+Description: A lightweight yet powerful framework for creating data
+    analysis pipelines. You build your pipelines simply by defining a
+    sequence of R functions and 'pipeflow' takes care of tracking
+    dependencies among steps and managing all the analysis parameters.
+    The framework is easy to get started with for the typical R user, but
+    also provides advanced features to enable complex workflows.
 License: GPL-3
 Imports:
     data.table,
@@ -26,8 +25,7 @@ Suggests:
     rmarkdown,
     testthat,
     visNetwork
-VignetteBuilder:
-    knitr
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/testthat/parallel: true
 Encoding: UTF-8
@@ -35,3 +33,5 @@ Language: en-US
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+NeedsCompilation: no
+Maintainer: Roman Pahl <roman.pahl@gmail.com>
