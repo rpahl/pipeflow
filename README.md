@@ -6,7 +6,8 @@
 [![test-coverage](https://github.com/rpahl/pipeflow/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/rpahl/pipeflow/actions/workflows/test-coverage.yaml)
 [![R-CMD-check](https://github.com/rpahl/pipeflow/actions/workflows/check-standard.yaml/badge.svg)](https://github.com/rpahl/pipeflow/actions/workflows/check-standard.yaml)
 [![lint](https://github.com/rpahl/pipeflow/actions/workflows/lint.yaml/badge.svg)](https://github.com/rpahl/pipeflow/actions/workflows/lint.yaml)
-
+[![codecov.io](https://codecov.io/github/rpahl/pipeflow/coverage.svg?branch=main)](https://codecov.io/github/rpahl/pipeflow?branch=main)
+[![Lifecycle_Badge](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://cran.r-project.org/package=pipeflow)
 <!-- badges: end -->
 
 # pipeflow <img src="man/figures/logo.png" alt="logo" align="right" width="163" height="121"/>

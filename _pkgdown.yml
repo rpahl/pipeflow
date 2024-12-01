@@ -82,7 +82,7 @@ navbar:
       href: https://github.com/rpahl/pipeflow/
     - icon: fab fa-stack-overflow
       href: https://stackoverflow.com/users/8120617/rpahl
-    - icon: fab fa-twitter
-      href: https://twitter.com/romanpahl
+    - icon: fab fa-bluesky
+      href: https://bsky.app/profile/rpahl.bsky.social
     - icon: fas fa-blog
       href: https://rpahl.github.io/r-some-blog/
