@@ -297,7 +297,7 @@ Last but not least let's see what happens if we are trying to set parameters tha
 in the pipeline, which mostly happens due to accidental misspells.
 
 ```{r set-unknown-parameters, warning = TRUE}
-pip$set_params(list(titel = "my title but misspelled variable name", foo = "my foo"))
+pip$set_params(list(titel = "misspelled variable name", foo = "my foo"))
 ```
 
 As you see, a warning is given to the user hinting at the respective parameter names,
