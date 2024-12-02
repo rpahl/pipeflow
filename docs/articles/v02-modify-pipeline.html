@@ -41,7 +41,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../index.html" aria-label="home"><span class="fa fa-home fa-lg"></span></a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/01-get-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/v01-get-started.html">Get Started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
@@ -49,14 +49,14 @@
 <li><a class="dropdown-item" href="../articles/index.html">Overview</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Get started</h6></li>
-    <li><a class="dropdown-item" href="../articles/01-get-started.html">Get started with pipeflow</a></li>
-    <li><a class="dropdown-item" href="../articles/02-modify-pipeline.html">Modifying existing pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/03-combine-pipelines.html">Combining pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/04-collect-output.html">Collecting pipeline output</a></li>
+    <li><a class="dropdown-item" href="../articles/v01-get-started.html">Get started with pipeflow</a></li>
+    <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modifying existing pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combining pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collecting pipeline output</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
-    <li><a class="dropdown-item" href="../articles/05-split-and-combine.html">How to use pipelines with split data sets</a></li>
-    <li><a class="dropdown-item" href="../articles/06-self-modify-pipeline.html">How pipelines can modify themselves at runtime</a></li>
+    <li><a class="dropdown-item" href="../articles/v05-split-and-combine.html">How to use pipelines with split data sets</a></li>
+    <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">How pipelines can modify themselves at runtime</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
@@ -88,8 +88,8 @@
       <img src="../logo.png" class="logo" alt=""><h1>Modifying existing pipelines</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/02-modify-pipeline.Rmd"><code>vignettes/02-modify-pipeline.Rmd</code></a></small>
-      <div class="d-none name"><code>02-modify-pipeline.Rmd</code></div>
+      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/v02-modify-pipeline.Rmd"><code>vignettes/v02-modify-pipeline.Rmd</code></a></small>
+      <div class="d-none name"><code>v02-modify-pipeline.Rmd</code></div>
     </div>
 
     
@@ -211,14 +211,14 @@ inspect the output.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span>, yVar <span class="op">=</span> <span class="st">"Wind"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:19.183] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:19.185] Step 1/5 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:19.185] Step 2/5 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:19.186] Step 3/5 standardize</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:19.189] Step 4/5 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:19.192] Step 5/5 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:19.197] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:19.197] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 17:27:50.555] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:50.556] Step 1/5 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:50.557] Step 2/5 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:50.558] Step 3/5 standardize</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:50.561] Step 4/5 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:50.564] Step 5/5 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:50.570] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:50.570] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_fit"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#  (Intercept)      Solar.R </span></span>
@@ -227,7 +227,7 @@ inspect the output.</p>
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_plot"</span><span class="op">)</span></span>
 <span><span class="co"># Warning: Removed 2 rows containing missing values or values outside the scale range</span></span>
 <span><span class="co"># (`geom_point()`).</span></span></code></pre></div>
-<p><img src="02-modify-pipeline_files/figure-html/unnamed-chunk-9-1.png" alt="model-plot" width="700"></p>
+<p><img src="v02-modify-pipeline_files/figure-html/unnamed-chunk-9-1.png" alt="model-plot" width="700"></p>
 </div>
 <div class="section level3">
 <h3 id="removing-steps">Removing steps<a class="anchor" aria-label="anchor" href="#removing-steps"></a>

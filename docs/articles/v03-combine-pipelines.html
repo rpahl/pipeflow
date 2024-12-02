@@ -41,7 +41,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../index.html" aria-label="home"><span class="fa fa-home fa-lg"></span></a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/01-get-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/v01-get-started.html">Get Started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
@@ -49,14 +49,14 @@
 <li><a class="dropdown-item" href="../articles/index.html">Overview</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Get started</h6></li>
-    <li><a class="dropdown-item" href="../articles/01-get-started.html">Get started with pipeflow</a></li>
-    <li><a class="dropdown-item" href="../articles/02-modify-pipeline.html">Modifying existing pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/03-combine-pipelines.html">Combining pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/04-collect-output.html">Collecting pipeline output</a></li>
+    <li><a class="dropdown-item" href="../articles/v01-get-started.html">Get started with pipeflow</a></li>
+    <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modifying existing pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combining pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collecting pipeline output</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
-    <li><a class="dropdown-item" href="../articles/05-split-and-combine.html">How to use pipelines with split data sets</a></li>
-    <li><a class="dropdown-item" href="../articles/06-self-modify-pipeline.html">How pipelines can modify themselves at runtime</a></li>
+    <li><a class="dropdown-item" href="../articles/v05-split-and-combine.html">How to use pipelines with split data sets</a></li>
+    <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">How pipelines can modify themselves at runtime</a></li>
   </ul>
 </li>
 <li class="nav-item dropdown">
@@ -82,14 +82,14 @@
 
 
 
-<script src="03-combine-pipelines_files/htmlwidgets-1.6.4/htmlwidgets.js"></script><link href="03-combine-pipelines_files/vis-9.1.0/vis-network.min.css" rel="stylesheet">
-<script src="03-combine-pipelines_files/vis-9.1.0/vis-network.min.js"></script><script src="03-combine-pipelines_files/visNetwork-binding-2.1.2/visNetwork.js"></script><div class="row">
+<script src="v03-combine-pipelines_files/htmlwidgets-1.6.4/htmlwidgets.js"></script><link href="v03-combine-pipelines_files/vis-9.1.0/vis-network.min.css" rel="stylesheet">
+<script src="v03-combine-pipelines_files/vis-9.1.0/vis-network.min.js"></script><script src="v03-combine-pipelines_files/visNetwork-binding-2.1.2/visNetwork.js"></script><div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Combining pipelines</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/03-combine-pipelines.Rmd"><code>vignettes/03-combine-pipelines.Rmd</code></a></small>
-      <div class="d-none name"><code>03-combine-pipelines.Rmd</code></div>
+      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/v03-combine-pipelines.Rmd"><code>vignettes/v03-combine-pipelines.Rmd</code></a></small>
+      <div class="d-none name"><code>v03-combine-pipelines.Rmd</code></div>
     </div>
 
     
@@ -289,8 +289,8 @@ mechanism we did manually before.</p>
 <span><span class="co"># [[1]]</span></span>
 <span><span class="co"># function (data = ~-1) </span></span>
 <span><span class="co"># data</span></span>
-<span><span class="co"># &lt;bytecode: 0x00000190cff4e698&gt;</span></span>
-<span><span class="co"># &lt;environment: 0x00000190cbaa9ca0&gt;</span></span></code></pre></div>
+<span><span class="co"># &lt;bytecode: 0x000001b21f353860&gt;</span></span>
+<span><span class="co"># &lt;environment: 0x000001b21af17c30&gt;</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level3">
@@ -299,20 +299,20 @@ mechanism we did manually before.</p>
 <p>Let’s now run the combined pipeline and inspect the plot.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:23.937] Start run of 'preprocessing.modeling' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.009] Step 1/6 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.021] Step 2/6 data_prep</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.041] Step 3/6 standardize</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.045] Step 4/6 data.modeling</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.047] Step 5/6 fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.052] Step 6/6 plot</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.067] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.068] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 17:27:55.351] Start run of 'preprocessing.modeling' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:55.425] Step 1/6 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:55.433] Step 2/6 data_prep</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:55.450] Step 3/6 standardize</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:55.453] Step 4/6 data.modeling</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:55.455] Step 5/6 fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:55.459] Step 6/6 plot</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:55.473] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:55.474] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"plot"</span><span class="op">)</span></span>
 <span><span class="co"># Warning: Removed 37 rows containing missing values or values outside the scale range</span></span>
 <span><span class="co"># (`geom_point()`).</span></span></code></pre></div>
-<p><img src="03-combine-pipelines_files/figure-html/unnamed-chunk-14-1.png" alt="model-plot" width="700"></p>
+<p><img src="v03-combine-pipelines_files/figure-html/unnamed-chunk-14-1.png" alt="model-plot" width="700"></p>
 <p>As we can see, the plot shows the linear model fit using the
 standardized data. We can now go ahead and for example change the
 x-variable of the model and rerun the pipeline.</p>
@@ -321,21 +321,21 @@ x-variable of the model and rerun the pipeline.</p>
 <div id="htmlwidget-10b3b7155e8045a1b2ad" style="width:700px;height:100px;" class="visNetwork html-widget"></div>
 <script type="application/json" data-for="htmlwidget-10b3b7155e8045a1b2ad">{"x":{"nodes":{"id":[1,2,3,4,5,6],"label":["data","data_prep","standardize","data.modeling","fit","plot"],"group":["data","data_prep","standardize","data.modeling","fit","plot"],"shape":["database","database","box","database","box","box"],"color":["lightgreen","lightgreen","lightgreen","lightgreen","orange","orange"],"title":["<p><\/p>","<p><\/p>","<p><\/p>","<p>output of last step of first pipeline<\/p>","<p><\/p>","<p><\/p>"]},"edges":{"from":[1,2,3,4,4,5],"to":[2,3,4,5,6,6],"arrows":["to","to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":["data","data_prep","standardize","data.modeling","fit","plot"],"width":null,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.624] Start run of 'preprocessing.modeling' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.625] Step 1/6 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.626] Step 2/6 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.627] Step 3/6 standardize - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.628] Step 4/6 data.modeling - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.629] Step 5/6 fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.633] Step 6/6 plot</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.650] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:15:24.650] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 17:27:56.033] Start run of 'preprocessing.modeling' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:56.034] Step 1/6 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:56.035] Step 2/6 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:56.036] Step 3/6 standardize - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:56.037] Step 4/6 data.modeling - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:56.038] Step 5/6 fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:56.042] Step 6/6 plot</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:56.060] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 17:27:56.060] Done.</span></span></code></pre></div>
 <div id="htmlwidget-4018eef1a407a0df6b52" style="width:700px;height:100px;" class="visNetwork html-widget"></div>
 <script type="application/json" data-for="htmlwidget-4018eef1a407a0df6b52">{"x":{"nodes":{"id":[1,2,3,4,5,6],"label":["data","data_prep","standardize","data.modeling","fit","plot"],"group":["data","data_prep","standardize","data.modeling","fit","plot"],"shape":["database","database","box","database","box","box"],"color":["lightgreen","lightgreen","lightgreen","lightgreen","lightgreen","lightgreen"],"title":["<p><\/p>","<p><\/p>","<p><\/p>","<p>output of last step of first pipeline<\/p>","<p><\/p>","<p><\/p>"]},"edges":{"from":[1,2,3,4,4,5],"to":[2,3,4,5,6,6],"arrows":["to","to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":["data","data_prep","standardize","data.modeling","fit","plot"],"width":null,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"plot"</span><span class="op">)</span></span>
 <span><span class="co"># Warning: Removed 37 rows containing missing values or values outside the scale range</span></span>
 <span><span class="co"># (`geom_point()`).</span></span></code></pre></div>
-<p><img src="03-combine-pipelines_files/figure-html/unnamed-chunk-19-1.png" alt="model-plot" width="700"></p>
+<p><img src="v03-combine-pipelines_files/figure-html/unnamed-chunk-19-1.png" alt="model-plot" width="700"></p>
 <p>When creating these pipelines, usually there will be a lot of steps
 calculating intermediate results and only a few steps contain the final
 results that we are interested in. In the above example, we were

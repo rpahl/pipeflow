@@ -43,7 +43,7 @@ navbar:
       aria-label: home
     getStarted:
       text: "Get Started"
-      href: articles/01-get-started.html
+      href: articles/v01-get-started.html
     articles:
       text: "Articles"
       menu:
@@ -52,19 +52,19 @@ navbar:
       - text: "---"
       - text: "Get started"
       - text: "Get started with pipeflow"
-        href: articles/01-get-started.html
+        href: articles/v01-get-started.html
       - text: "Modifying existing pipelines"
-        href: articles/02-modify-pipeline.html
+        href: articles/v02-modify-pipeline.html
       - text: "Combining pipelines"
-        href: articles/03-combine-pipelines.html
+        href: articles/v03-combine-pipelines.html
       - text: "Collecting pipeline output"
-        href: articles/04-collect-output.html
+        href: articles/v04-collect-output.html
       - text: ----
       - text: "Advanced"
       - text: "How to use pipelines with split data sets"
-        href: articles/05-split-and-combine.html
+        href: articles/v05-split-and-combine.html
       - text: "How pipelines can modify themselves at runtime"
-        href: articles/06-self-modify-pipeline.html
+        href: articles/v06-self-modify-pipeline.html
 
     myPackages:
       text: "My Packages"
