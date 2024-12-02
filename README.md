@@ -32,11 +32,11 @@ ensures the integrity and correctness of your pipeline.
 Designed to help you focus on the *what* rather than the *how*, this
 package simplifies the implementation of complex workflows, making even
 large-scale data analysis projects manageable, adaptable, and reusable
-over time.
+with ease.
 
 ### Why use `pipeflow`
 
-- Easy to learn yet powerful for complex workflows
+- Easy to learn yet suited for complex workflows
 - Automatically manages function dependencies
 - Promotes standardized, reproducible analysis
 - Simplifies error handling, debugging, and reusability
@@ -48,8 +48,8 @@ over time.
   reliable workflows
 - *Comprehensive Logging:* Logs each step, with customizable logger
   options
-- *Parameter Control:* Easily view and adjust all function parameters in
-  one place
+- *Parameter Control:* View and manage all analysis parameters in one
+  place
 - *Modular Composition:* Modify, extend, and combine pipelines
   effortlessly
 - *Intelligent Execution:* Skip steps already up-to-date, similar to
