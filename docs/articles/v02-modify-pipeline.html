@@ -97,9 +97,8 @@
 <div class="section level3">
 <h3 id="existing-pipeline">Existing pipeline<a class="anchor" aria-label="anchor" href="#existing-pipeline"></a>
 </h3>
-<p>Let’s start where we left off in the <a href="get-started.html">Get
-started with pipeflow</a> vignette, that is, we have the following
-pipeline</p>
+<p>Let’s start where we left off in the <a href="v01-get-started.html">Get started with pipeflow</a> vignette, that
+is, we have the following pipeline</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
 <span><span class="co">#          step             depends                out keepOut      group  state</span></span>
@@ -211,14 +210,14 @@ inspect the output.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span>, yVar <span class="op">=</span> <span class="st">"Wind"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:27:50.555] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:27:50.556] Step 1/5 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:27:50.557] Step 2/5 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:27:50.558] Step 3/5 standardize</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:27:50.561] Step 4/5 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:27:50.564] Step 5/5 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:27:50.570] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 17:27:50.570] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 20:51:14.274] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 20:51:14.275] Step 1/5 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 20:51:14.276] Step 2/5 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 20:51:14.277] Step 3/5 standardize</span></span>
+<span><span class="co"># INFO  [2024-12-02 20:51:14.279] Step 4/5 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 20:51:14.282] Step 5/5 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-02 20:51:14.287] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 20:51:14.288] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_fit"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#  (Intercept)      Solar.R </span></span>
@@ -275,7 +274,7 @@ the last step.</p>
 <p>Replacing steps in a pipeline as shown in this vignette will allow to
 re-use existing pipelines and adapt them programmatically to new
 requirements. Another way of re-using pipelines is to combine them,
-which is shown in the <a href="combine-pipelines.html">Combining
+which is shown in the <a href="v03-combine-pipelines.html">Combining
 pipelines</a> vignette.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

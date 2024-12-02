@@ -303,7 +303,7 @@ pip$set_params(list(titel = "misspelled variable name", foo = "my foo"))
 As you see, a warning is given to the user hinting at the respective parameter names,
 which makes fixing any misspells straight-forward.
 
-Next, let's see how to [modify the pipeline](modify-pipeline.html).
+Next, let's see how to [modify the pipeline](v02-modify-pipeline.html).
 
 ```{r, include = FALSE}
 options(old)

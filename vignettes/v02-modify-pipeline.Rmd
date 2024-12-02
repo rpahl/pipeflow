@@ -68,7 +68,7 @@ pip$run()
 ```
 
 Let's start where we left off in the
-[Get started with pipeflow](get-started.html) vignette, that is, we have
+[Get started with pipeflow](v01-get-started.html) vignette, that is, we have
 the following pipeline
 
 ```{r show-pipeline}
@@ -238,7 +238,7 @@ pip
 Replacing steps in a pipeline as shown in this vignette will allow to re-use existing
 pipelines and adapt them programmatically to new requirements.
 Another way of re-using pipelines is to combine them, which is shown in the
-[Combining pipelines](combine-pipelines.html) vignette.
+[Combining pipelines](v03-combine-pipelines.html) vignette.
 
 ```{r, include = FALSE}
 options(old)
