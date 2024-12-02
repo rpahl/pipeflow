@@ -123,7 +123,7 @@ so far it is not used by any other step.
 
 ### Replace existing steps
 
-Let's revisit function definition of the `model_fit` step
+Let's revisit the function definition of the `model_fit` step
 
 ```{r}
 pip$get_step("model_fit")[["fun"]]
@@ -204,8 +204,9 @@ Let's see the pipeline again.
 pip
 ```
 
-When you are trying to remove a step, pipeflow by default checks if
-the step is used by any other step. If it is, it will raise an error.
+When you are trying to remove a step, `pipeflow` by default checks if
+the step is used by any other step, and raises an error if removing the
+step would violate the integrity of the pipeline.
 
 ```{r try-remove-step}
 try(pip$remove_step("standardize"))

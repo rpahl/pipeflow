@@ -152,7 +152,7 @@ pipeline, but so far it is not used by any other step.</p>
 <div class="section level3">
 <h3 id="replace-existing-steps">Replace existing steps<a class="anchor" aria-label="anchor" href="#replace-existing-steps"></a>
 </h3>
-<p>Let’s revisit function definition of the <code>model_fit</code>
+<p>Let’s revisit the function definition of the <code>model_fit</code>
 step</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_step</span><span class="op">(</span><span class="st">"model_fit"</span><span class="op">)</span><span class="op">[[</span><span class="st">"fun"</span><span class="op">]</span><span class="op">]</span></span>
@@ -211,14 +211,14 @@ inspect the output.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span>, yVar <span class="op">=</span> <span class="st">"Wind"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:11:39.870] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:11:39.871] Step 1/5 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:11:39.872] Step 2/5 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:11:39.873] Step 3/5 standardize</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:11:39.875] Step 4/5 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:11:39.878] Step 5/5 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:11:39.884] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:11:39.885] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 10:36:32.542] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:36:32.543] Step 1/5 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:36:32.544] Step 2/5 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:36:32.545] Step 3/5 standardize</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:36:32.547] Step 4/5 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:36:32.550] Step 5/5 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:36:32.555] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:36:32.556] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_fit"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#  (Intercept)      Solar.R </span></span>
@@ -242,9 +242,10 @@ inspect the output.</p>
 <span><span class="co"># 3: standardize             data_prep &lt;data.frame[10x7]&gt;   FALSE standardize   Done</span></span>
 <span><span class="co"># 4:   model_fit           standardize           &lt;lm[13]&gt;   FALSE   model_fit   Done</span></span>
 <span><span class="co"># 5:  model_plot model_fit,standardize           &lt;gg[11]&gt;   FALSE  model_plot   Done</span></span></code></pre></div>
-<p>When you are trying to remove a step, pipeflow by default checks if
-the step is used by any other step. If it is, it will raise an
-error.</p>
+<p>When you are trying to remove a step, <code>pipeflow</code> by
+default checks if the step is used by any other step, and raises an
+error if removing the step would violate the integrity of the
+pipeline.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/try.html" class="external-link">try</a></span><span class="op">(</span><span class="va">pip</span><span class="op">$</span><span class="fu">remove_step</span><span class="op">(</span><span class="st">"standardize"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co"># Error in pip$remove_step("standardize") : </span></span>

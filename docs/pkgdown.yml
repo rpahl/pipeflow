@@ -8,7 +8,7 @@ articles:
   modify-pipeline: modify-pipeline.html
   self-modify-pipeline: self-modify-pipeline.html
   split-and-combine: split-and-combine.html
-last_built: 2024-12-02T09:11Z
+last_built: 2024-12-02T09:36Z
 urls:
   reference: https://github.com/rpahl/pipeflow/reference
   article: https://github.com/rpahl/pipeflow/articles
