@@ -106,7 +106,7 @@ simple examples in order to give you an idea of what is possible.</p>
 residuals for normality using the Shapiro-Wilk test, and plots the
 residuals.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">pipeflow</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpahl.github.io/pipeflow/" class="external-link">pipeflow</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipelineAliases.html">pipe_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -160,13 +160,13 @@ residuals.</p>
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="va">airquality</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Ozone"</span>, yVar <span class="op">=</span> <span class="st">"Temp"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.419] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.447] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.461] Step 2/4 fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.479] Step 3/4 residual_shapiro_p_value</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.481] Step 4/4 plot</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.497] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.498] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.067] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.095] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.109] Step 2/4 fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.126] Step 3/4 residual_shapiro_p_value</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.129] Step 4/4 plot</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.146] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.146] Done.</span></span>
 <span><span class="co"># $residual_shapiro_p_value</span></span>
 <span><span class="co"># [1] 0.00022598</span></span>
 <span><span class="co"># </span></span>
@@ -185,13 +185,13 @@ pipeline a second time as follows:</p>
 <span>    <span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>pointColor <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span><span class="op">)</span></span>
 <span>    <span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.891] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.892] Step 1/4 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.893] Step 2/4 fit - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.894] Step 3/4 residual_shapiro_p_value - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.895] Step 4/4 plot</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.908] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:36.909] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.543] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.544] Step 1/4 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.545] Step 2/4 fit - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.546] Step 3/4 residual_shapiro_p_value - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.547] Step 4/4 plot</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.560] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.560] Done.</span></span>
 <span><span class="co"># $residual_shapiro_p_value</span></span>
 <span><span class="co"># [1] 0.00022598</span></span>
 <span><span class="co"># </span></span>
@@ -229,13 +229,13 @@ parameter.</p>
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="va">airquality</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Ozone"</span>, yVar <span class="op">=</span> <span class="st">"Temp"</span>, .self <span class="op">=</span> <span class="va">pip</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.206] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.207] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.210] Step 2/4 fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.214] Step 3/4 residual_shapiro_p_value</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.218] Step 4/4 plot</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.224] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.225] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.857] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.858] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.860] Step 2/4 fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.864] Step 3/4 residual_shapiro_p_value</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.869] Step 4/4 plot</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.875] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:25.876] Done.</span></span>
 <span><span class="co"># $residual_shapiro_p_value</span></span>
 <span><span class="co"># [1] 0.00022598</span></span>
 <span><span class="co"># </span></span>
@@ -279,13 +279,13 @@ pipeline structure and how it can be modified at runtime.</p>
 respectively.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.469] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.470] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.472] Step 2/4 f1</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.474] Step 3/4 f2</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.476] Step 4/4 f3</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.477] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.477] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.127] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.128] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.130] Step 2/4 f1</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.132] Step 3/4 f2</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.134] Step 4/4 f3</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.135] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.136] Done.</span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co">#      step depends    out keepOut  group  state</span></span>
 <span><span class="co">#    &lt;char&gt;  &lt;list&gt; &lt;list&gt;  &lt;lgcl&gt; &lt;char&gt; &lt;char&gt;</span></span>
@@ -338,13 +338,13 @@ and subtracts 3 from the input.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>.self <span class="op">=</span> <span class="va">pip</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.597] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.598] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.601] Step 2/4 f1</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.603] Step 3/4 f2</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.605] Step 4/4 f3</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.606] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.606] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.252] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.253] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.256] Step 2/4 f1</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.258] Step 3/4 f2</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.260] Step 4/4 f3</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.261] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.262] Done.</span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co">#      step depends    out keepOut  group  state</span></span>
 <span><span class="co">#    &lt;char&gt;  &lt;list&gt; &lt;list&gt;  &lt;lgcl&gt; &lt;char&gt; &lt;char&gt;</span></span>
@@ -355,13 +355,13 @@ and subtracts 3 from the input.</p>
 <p>Now let’s try it with an input of 10.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="fl">10</span><span class="op">)</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.665] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.666] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.669] Step 2/4 f1</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.672] Step 3/4 f2</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.677] Step 4/4 f3</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.678] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.679] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.321] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.322] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.325] Step 2/4 f1</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.328] Step 3/4 f2</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.333] Step 4/4 f3</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.334] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.335] Done.</span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co">#      step depends    out keepOut  group  state</span></span>
 <span><span class="co">#    &lt;char&gt;  &lt;list&gt; &lt;list&gt;  &lt;lgcl&gt; &lt;char&gt; &lt;char&gt;</span></span>
@@ -450,19 +450,19 @@ re-run.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>.self <span class="op">=</span> <span class="va">pip</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="fl">10</span><span class="op">)</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.850] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.851] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.854] Step 2/4 f1</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.856] Step 3/4 f2</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.869] Abort pipeline execution and restart on new.</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.870] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.871] Step 1/5 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.872] Step 2/5 f1 - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.873] Step 3/5 f2a</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.878] Step 4/5 f2b</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.880] Step 5/5 f3</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.881] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 10:36:37.881] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.507] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.508] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.510] Step 2/4 f1</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.512] Step 3/4 f2</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.525] Abort pipeline execution and restart on new.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.526] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.527] Step 1/5 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.527] Step 2/5 f1 - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.528] Step 3/5 f2a</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.533] Step 4/5 f2b</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.536] Step 5/5 f3</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.537] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 16:44:26.537] Done.</span></span></code></pre></div>
 <p>The log output shows the abort and re-run of the pipeline. Let’s see
 the final structure and step outputs.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
