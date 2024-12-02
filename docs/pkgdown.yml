@@ -2,13 +2,13 @@ pandoc: '3.5'
 pkgdown: 2.1.1
 pkgdown_sha: ~
 articles:
-  collect-output: collect-output.html
-  combine-pipelines: combine-pipelines.html
-  get-started: get-started.html
-  modify-pipeline: modify-pipeline.html
-  self-modify-pipeline: self-modify-pipeline.html
-  split-and-combine: split-and-combine.html
-last_built: 2024-12-02T16:02Z
+  01-get-started: 01-get-started.html
+  02-modify-pipeline: 02-modify-pipeline.html
+  03-combine-pipelines: 03-combine-pipelines.html
+  04-collect-output: 04-collect-output.html
+  05-split-and-combine: 05-split-and-combine.html
+  06-self-modify-pipeline: 06-self-modify-pipeline.html
+last_built: 2024-12-02T16:14Z
 urls:
   reference: https://github.com/rpahl/pipeflow/reference
   article: https://github.com/rpahl/pipeflow/articles

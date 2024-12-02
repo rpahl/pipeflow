@@ -16,21 +16,21 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../index.html" aria-label="home"><span class="fa fa-home fa-lg"></span></a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/get-started.html">Get Started</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/01-get-started.html">Get Started</a></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/index.html">Overview</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Get started</h6></li>
-    <li><a class="dropdown-item" href="../articles/get-started.html">Get started with pipeflow</a></li>
-    <li><a class="dropdown-item" href="../articles/modify-pipeline.html">Modifying existing pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/combine-pipelines.html">Combining pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/collect-output.html">Collecting pipeline output</a></li>
+    <li><a class="dropdown-item" href="../articles/01-get-started.html">Get started with pipeflow</a></li>
+    <li><a class="dropdown-item" href="../articles/02-modify-pipeline.html">Modifying existing pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/03-combine-pipelines.html">Combining pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/04-collect-output.html">Collecting pipeline output</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
-    <li><a class="dropdown-item" href="../articles/split-and-combine.html">How to use pipelines with split data sets</a></li>
-    <li><a class="dropdown-item" href="../articles/self-modify-pipeline.html">How pipelines can modify themselves at runtime</a></li>
+    <li><a class="dropdown-item" href="../articles/05-split-and-combine.html">How to use pipelines with split data sets</a></li>
+    <li><a class="dropdown-item" href="../articles/06-self-modify-pipeline.html">How pipelines can modify themselves at runtime</a></li>
   </ul></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-my-packages" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">My Packages</button>
@@ -81,11 +81,11 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="va"><a href="Pipeline.html">Pipeline</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="st">"pipe"</span>, data <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add1"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">x</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">data</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:02:57.063] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:02:57.064] Step 1/2 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:02:57.066] Step 2/2 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:02:57.086] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:02:57.087] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:15:09.413] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:15:09.414] Step 1/2 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:15:09.416] Step 2/2 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:15:09.417] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:15:09.418] Done.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">lg</span> <span class="op">&lt;-</span> <span class="fu">set_log_layout</span><span class="op">(</span><span class="st">"json"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">lg</span><span class="op">)</span></span></span>
@@ -95,19 +95,19 @@
 <span class="r-out co"><span class="r-pr">#&gt;</span>   [[1]]: &lt;AppenderConsole&gt; [all] -&gt; console</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2024-12-02T17:02:57+1:00","message":"Start run of 'pipe' pipeline:"}</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2024-12-02T17:02:57+1:00","message":"Step 1/2 data - skip 'done' step"}</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2024-12-02T17:02:57+1:00","message":"Step 2/2 add1 - skip 'done' step"}</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2024-12-02T17:02:57+1:00","message":"Finished execution of steps."}</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2024-12-02T17:02:57+1:00","message":"Done."}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2024-12-02T17:15:09+1:00","message":"Start run of 'pipe' pipeline:"}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2024-12-02T17:15:09+1:00","message":"Step 1/2 data - skip 'done' step"}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2024-12-02T17:15:09+1:00","message":"Step 2/2 add1 - skip 'done' step"}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2024-12-02T17:15:09+1:00","message":"Finished execution of steps."}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2024-12-02T17:15:09+1:00","message":"Done."}</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu">set_log_layout</span><span class="op">(</span><span class="st">"text"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:02:57.118] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:02:57.119] Step 1/2 data - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:02:57.120] Step 2/2 add1 - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:02:57.121] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:02:57.121] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:15:09.457] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:15:09.458] Step 1/2 data - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:15:09.459] Step 2/2 add1 - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:15:09.459] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-02 17:15:09.460] Done.</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

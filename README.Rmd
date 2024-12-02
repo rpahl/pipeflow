@@ -92,16 +92,16 @@ library(pipeflow)
 
 It is recommended to read the vignettes in the order they are listed below:
 
-* [Get started with pipeflow](https://rpahl.github.io/pipeflow/articles/get-started.html)
-* [Modifying existing pipelines](https://rpahl.github.io/pipeflow/articles/modify-pipeline.html)
-* [Combining pipelines](https://rpahl.github.io/pipeflow/articles/combine-pipelines.html)
-* [Collecting output](https://rpahl.github.io/pipeflow/articles/collect-output.html)
+* [Get started with pipeflow](https://rpahl.github.io/pipeflow/articles/01-get-started.html)
+* [Modifying existing pipelines](https://rpahl.github.io/pipeflow/articles/02-modify-pipeline.html)
+* [Combining pipelines](https://rpahl.github.io/pipeflow/articles/03-combine-pipelines.html)
+* [Collecting output](https://rpahl.github.io/pipeflow/articles/04-collect-output.html)
 
 
 ### Advanced topics
 
-* [How to use pipeflow with split data sets](https://rpahl.github.io/pipeflow/articles/split-and-combine.html)
-* [How pipelines can modify themselves at runtime](https://rpahl.github.io/pipeflow/articles/self-modify-pipeline.html)
+* [How to use pipeflow with split data sets](https://rpahl.github.io/pipeflow/articles/05-split-and-combine.html)
+* [How pipelines can modify themselves at runtime](https://rpahl.github.io/pipeflow/articles/06-self-modify-pipeline.html)
 
 
 ```{r, include = FALSE}

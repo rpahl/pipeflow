@@ -1,12 +1,12 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://github.com/rpahl/pipeflow/404.html</loc></url>
-<url><loc>https://github.com/rpahl/pipeflow/articles/collect-output.html</loc></url>
-<url><loc>https://github.com/rpahl/pipeflow/articles/combine-pipelines.html</loc></url>
-<url><loc>https://github.com/rpahl/pipeflow/articles/get-started.html</loc></url>
+<url><loc>https://github.com/rpahl/pipeflow/articles/01-get-started.html</loc></url>
+<url><loc>https://github.com/rpahl/pipeflow/articles/02-modify-pipeline.html</loc></url>
+<url><loc>https://github.com/rpahl/pipeflow/articles/03-combine-pipelines.html</loc></url>
+<url><loc>https://github.com/rpahl/pipeflow/articles/04-collect-output.html</loc></url>
+<url><loc>https://github.com/rpahl/pipeflow/articles/05-split-and-combine.html</loc></url>
+<url><loc>https://github.com/rpahl/pipeflow/articles/06-self-modify-pipeline.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/articles/index.html</loc></url>
-<url><loc>https://github.com/rpahl/pipeflow/articles/modify-pipeline.html</loc></url>
-<url><loc>https://github.com/rpahl/pipeflow/articles/self-modify-pipeline.html</loc></url>
-<url><loc>https://github.com/rpahl/pipeflow/articles/split-and-combine.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/authors.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/index.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/index.html</loc></url>
