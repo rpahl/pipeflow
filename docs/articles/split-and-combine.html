@@ -111,7 +111,7 @@ function to handle this scenario.</p>
 <p>Let’s first define our pipeline, which, to keep matters simple, just
 fits a linear model and outputs the model coefficients.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpahl.github.io/pipeflow" class="external-link">pipeflow</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">pipeflow</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipelineAliases.html">pipe_new</a></span><span class="op">(</span></span>
 <span>        <span class="st">"my-pipeline"</span></span>
@@ -166,12 +166,12 @@ fits a linear model and outputs the model coefficients.</p>
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="va">iris</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Sepal.Length"</span>, yVar <span class="op">=</span> <span class="st">"Sepal.Width"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.357] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.383] Step 1/3 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.394] Step 2/3 fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.413] Step 3/3 coefs</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.414] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.415] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.710] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.736] Step 1/3 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.748] Step 2/3 fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.767] Step 3/3 coefs</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.769] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.769] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co"># $coefs</span></span>
@@ -193,24 +193,24 @@ for each subset. For example:</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">iris</span>, <span class="va">iris</span><span class="op">$</span><span class="va">Species</span><span class="op">)</span>, FUN <span class="op">=</span> <span class="va">run_pipeline</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.553] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.554] Step 1/3 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.556] Step 2/3 fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.560] Step 3/3 coefs</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.564] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.564] Done.</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.582] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.583] Step 1/3 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.585] Step 2/3 fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.592] Step 3/3 coefs</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.595] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.596] Done.</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.601] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.602] Step 1/3 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.607] Step 2/3 fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.611] Step 3/3 coefs</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.614] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:58.614] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.906] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.907] Step 1/3 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.909] Step 2/3 fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.913] Step 3/3 coefs</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.918] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.918] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.936] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.937] Step 1/3 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.939] Step 2/3 fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.942] Step 3/3 coefs</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.943] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.944] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.946] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.947] Step 1/3 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.949] Step 2/3 fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.951] Step 3/3 coefs</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.953] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:48.953] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span></span>
 <span><span class="co"># $setosa</span></span>
@@ -270,18 +270,18 @@ frames, not just the output of <code>split</code>. Now let’s run this
 pipeline.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.089] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.090] Step 1/9 data.setosa</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.092] Step 2/9 fit.setosa</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.094] Step 3/9 coefs.setosa</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.096] Step 4/9 data.versicolor</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.098] Step 5/9 fit.versicolor</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.100] Step 6/9 coefs.versicolor</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.102] Step 7/9 data.virginica</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.104] Step 8/9 fit.virginica</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.107] Step 9/9 coefs.virginica</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.108] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.109] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.425] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.426] Step 1/9 data.setosa</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.428] Step 2/9 fit.setosa</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.431] Step 3/9 coefs.setosa</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.432] Step 4/9 data.versicolor</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.434] Step 5/9 fit.versicolor</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.437] Step 6/9 coefs.versicolor</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.439] Step 7/9 data.virginica</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.441] Step 8/9 fit.virginica</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.443] Step 9/9 coefs.virginica</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.444] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.445] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co"># $setosa</span></span>
@@ -413,19 +413,19 @@ it now contains a list of dependencies, namely:</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Sepal.Length"</span>, yVar <span class="op">=</span> <span class="st">"Sepal.Width"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.613] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.614] Step 1/10 data.setosa</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.616] Step 2/10 fit.setosa</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.619] Step 3/10 coefs.setosa</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.621] Step 4/10 data.versicolor</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.623] Step 5/10 fit.versicolor</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.626] Step 6/10 coefs.versicolor</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.628] Step 7/10 data.virginica</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.630] Step 8/10 fit.virginica</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.633] Step 9/10 coefs.virginica</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.635] Step 10/10 combine_coefs</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.637] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:59.637] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.944] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.945] Step 1/10 data.setosa</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.947] Step 2/10 fit.setosa</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.950] Step 3/10 coefs.setosa</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.952] Step 4/10 data.versicolor</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.954] Step 5/10 fit.versicolor</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.957] Step 6/10 coefs.versicolor</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.959] Step 7/10 data.virginica</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.961] Step 8/10 fit.virginica</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.964] Step 9/10 coefs.virginica</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.966] Step 10/10 combine_coefs</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.968] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:49.968] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co"># $combine_coefs</span></span>

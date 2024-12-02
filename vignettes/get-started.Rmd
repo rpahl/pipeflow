@@ -74,7 +74,8 @@ yet.
 Next, we add a step called `data_prep`, which consists of a function that
 takes the output of the `data` step as its first argument, adds a new column
 and returns the modified data as its output. To refer to the output of an
-earlier pipeline step, we always use the tilde (~) operator.
+earlier pipeline step, we just write the name of the step preceded with the
+tilde (~) operator.
 
 ```{r define-data-prep-step}
 pip$add(
@@ -158,6 +159,28 @@ library(visNetwork)
 do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
     visHierarchicalLayout(direction = "LR")
 ```
+
+### Pipeline integrity
+
+A key feature of `pipeflow` is that the integrity of a pipeline is verified at
+definition time. To see this, let's try to add another step that is referring
+to a step that does not exist:
+
+```{r try-add-bad-step, error = TRUE}
+pip$add(
+    "another_step",
+    function(data = ~foo) {
+        data
+    }
+)
+```
+
+`pipeflow` immediately signals an error and the pipeline remains unchanged:
+
+```{r}
+pip
+```
+
 
 ### Run the pipeline and inspect the output
 
@@ -267,6 +290,18 @@ pip
 ```{r inspect-plot-after-data-change, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
 pip$run()$get_out("model_plot")
 ```
+
+### Try setting non-existing parameters
+
+Last but not least let's see what happens if we are trying to set parameters that don't exist
+in the pipeline, which mostly happens due to accidental misspells.
+
+```{r set-unknown-parameters, warning = TRUE}
+pip$set_params(list(titel = "my title but misspelled variable name", foo = "my foo"))
+```
+
+As you see, a warning is given to the user hinting at the respective parameter names,
+which makes fixing any misspells straight-forward.
 
 Next, let's see how to [modify the pipeline](modify-pipeline.html).
 

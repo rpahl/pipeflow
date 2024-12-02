@@ -126,7 +126,7 @@ points of using such a pipeline.</p>
 pipeline with the name “my-pipeline” and the airquality dataset as input
 data.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpahl.github.io/pipeflow" class="external-link">pipeflow</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">pipeflow</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/Pipeline.html">Pipeline</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="st">"my-pipeline"</span>, data <span class="op">=</span> <span class="va">airquality</span><span class="op">)</span></span></code></pre></div>
@@ -146,8 +146,8 @@ not been run yet.</p>
 <p>Next, we add a step called <code>data_prep</code>, which consists of
 a function that takes the output of the <code>data</code> step as its
 first argument, adds a new column and returns the modified data as its
-output. To refer to the output of an earlier pipeline step, we always
-use the tilde (~) operator.</p>
+output. To refer to the output of an earlier pipeline step, we just
+write the name of the step preceded with the tilde (~) operator.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span></span>
 <span>    <span class="st">"data_prep"</span>,</span>
@@ -224,21 +224,46 @@ package.</p>
 <script type="application/json" data-for="htmlwidget-ac96cb3ee4656e2e9ec3">{"x":{"nodes":{"id":[1,2,3,4],"label":["data","data_prep","model_fit","model_plot"],"group":["data","data_prep","model_fit","model_plot"],"shape":["database","database","box","box"],"color":["lightblue","lightblue","lightblue","lightblue"],"title":["<p><\/p>","<p><\/p>","<p><\/p>","<p><\/p>"]},"edges":{"from":[1,2,2,3],"to":[2,3,4,4],"arrows":["to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR"}}},"groups":["data","data_prep","model_fit","model_plot"],"width":null,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script>
 </div>
 <div class="section level3">
+<h3 id="pipeline-integrity">Pipeline integrity<a class="anchor" aria-label="anchor" href="#pipeline-integrity"></a>
+</h3>
+<p>A key feature of <code>pipeflow</code> is that the integrity of a
+pipeline is verified at definition time. To see this, let’s try to add
+another step that is referring to a step that does not exist:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span></span>
+<span>    <span class="st">"another_step"</span>,</span>
+<span>    <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">foo</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="va">data</span></span>
+<span>    <span class="op">}</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># Error: step 'another_step': dependency 'foo' not found</span></span></code></pre></div>
+<p><code>pipeflow</code> immediately signals an error and the pipeline
+remains unchanged:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span></span>
+<span><span class="co">#          step             depends    out keepOut      group  state</span></span>
+<span><span class="co">#        &lt;char&gt;              &lt;list&gt; &lt;list&gt;  &lt;lgcl&gt;     &lt;char&gt; &lt;char&gt;</span></span>
+<span><span class="co"># 1:       data                     [NULL]   FALSE       data    New</span></span>
+<span><span class="co"># 2:  data_prep                data [NULL]   FALSE  data_prep    New</span></span>
+<span><span class="co"># 3:  model_fit           data_prep [NULL]   FALSE  model_fit    New</span></span>
+<span><span class="co"># 4: model_plot model_fit,data_prep [NULL]   FALSE model_plot    New</span></span></code></pre></div>
+</div>
+<div class="section level3">
 <h3 id="run-the-pipeline-and-inspect-the-output">Run the pipeline and inspect the output<a class="anchor" aria-label="anchor" href="#run-the-pipeline-and-inspect-the-output"></a>
 </h3>
 <p>To run the pipeline, we simply call the <code>run()</code> method on
 the pipeline, which will produce the following output:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:43.419] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:43.445] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:43.456] Step 2/4 data_prep</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:43.478] Step 3/4 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:43.482] Step 4/4 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:43.493] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:43.494] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 10:11:33.606] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:33.635] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:33.644] Step 2/4 data_prep</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:33.667] Step 3/4 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:33.671] Step 4/4 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:33.682] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:33.683] Done.</span></span></code></pre></div>
 <p>Let’s inspect the pipeline again.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
 <span><span class="co">#          step             depends                 out keepOut      group  state</span></span>
 <span><span class="co">#        &lt;char&gt;              &lt;list&gt;              &lt;list&gt;  &lt;lgcl&gt;     &lt;char&gt; &lt;char&gt;</span></span>
@@ -253,7 +278,7 @@ represented by the color change from blue to green.</p>
 <p>In addition, the output was added in the <code>out</code> column. We
 can inspect the output of a specific step by calling the
 <code>get_out()</code> method on the pipeline.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_fit"</span><span class="op">)</span></span>
 <span><span class="co"># </span></span>
 <span><span class="co"># Call:</span></span>
@@ -262,7 +287,7 @@ can inspect the output of a specific step by calling the
 <span><span class="co"># Coefficients:</span></span>
 <span><span class="co">#  (Intercept)  Temp.Celsius  </span></span>
 <span><span class="co">#      -69.277         4.372</span></span></code></pre></div>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_plot"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="get-started_files/figure-html/inspect-plot-1.png" alt="model-plot" width="700"></p>
 </div>
@@ -273,7 +298,7 @@ can inspect the output of a specific step by calling the
 specific step (i.e. is not defined with the tilde (~) operator) can be
 changed by calling the <code>set_params()</code> method on the pipeline.
 Let’s first list all unbound parameters:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_params</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co"># $model_fit</span></span>
 <span><span class="co"># $model_fit$xVar</span></span>
@@ -289,7 +314,7 @@ Let’s first list all unbound parameters:</p>
 <p>Now let’s assume we want to change the <code>xVar</code> in the
 entire pipeline to <code>"Solar.R"</code>. We can do this simply as
 follows:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">get_params</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co"># $model_fit</span></span>
@@ -305,7 +330,7 @@ follows:</p>
 <span><span class="co"># [1] "Linear model fit"</span></span></code></pre></div>
 <p>Changing the parameters of the pipeline at least has an effect on all
 steps that depend on the changed parameter.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
 <span><span class="co">#          step             depends                 out keepOut      group    state</span></span>
 <span><span class="co">#        &lt;char&gt;              &lt;list&gt;              &lt;list&gt;  &lt;lgcl&gt;     &lt;char&gt;   &lt;char&gt;</span></span>
@@ -319,23 +344,23 @@ steps that depend on the changed parameter.</p>
 (graphically indicated by the orange color), which means that they need
 to be rerun. We can do this by calling the <code>run()</code> method on
 the pipeline again.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.418] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.419] Step 1/4 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.420] Step 2/4 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.421] Step 3/4 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.425] Step 4/4 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.434] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.435] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 10:11:34.630] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:34.631] Step 1/4 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:34.632] Step 2/4 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:34.633] Step 3/4 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:34.637] Step 4/4 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:34.646] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:34.646] Done.</span></span></code></pre></div>
 <p>The outdated steps were re-run as expected and the output was updated
 accordingly.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_plot"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="get-started_files/figure-html/inspect-plot-again-1.png" alt="model-plot" width="700"></p>
 <p>To just change the title of the plot, obviously only the
 <code>model_plot</code> step needs to be rerun.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Some new title"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co">#          step             depends                 out keepOut      group    state</span></span>
@@ -344,19 +369,19 @@ accordingly.</p>
 <span><span class="co"># 2:  data_prep                data &lt;data.frame[153x7]&gt;   FALSE  data_prep     Done</span></span>
 <span><span class="co"># 3:  model_fit           data_prep            &lt;lm[13]&gt;   FALSE  model_fit     Done</span></span>
 <span><span class="co"># 4: model_plot model_fit,data_prep            &lt;gg[11]&gt;   FALSE model_plot Outdated</span></span></code></pre></div>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_plot"</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.792] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.793] Step 1/4 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.794] Step 2/4 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.795] Step 3/4 model_fit - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.796] Step 4/4 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.805] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:44.806] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.026] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.029] Step 1/4 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.030] Step 2/4 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.031] Step 3/4 model_fit - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.032] Step 4/4 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.037] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.038] Done.</span></span></code></pre></div>
 <p><img src="get-started_files/figure-html/inspect-plot-after-title-change-1.png" alt="model-plot" width="700"></p>
 <p>If instead we were to change the input data, since all steps depend
 on it, we expect all steps to be rerun.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="va">airquality</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">10</span>, <span class="op">]</span><span class="op">)</span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co">#          step             depends                 out keepOut      group    state</span></span>
@@ -365,16 +390,29 @@ on it, we expect all steps to be rerun.</p>
 <span><span class="co"># 2:  data_prep                data &lt;data.frame[153x7]&gt;   FALSE  data_prep Outdated</span></span>
 <span><span class="co"># 3:  model_fit           data_prep            &lt;lm[13]&gt;   FALSE  model_fit Outdated</span></span>
 <span><span class="co"># 4: model_plot model_fit,data_prep            &lt;gg[11]&gt;   FALSE model_plot Outdated</span></span></code></pre></div>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_plot"</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:45.080] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:45.081] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:45.083] Step 2/4 data_prep</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:45.088] Step 3/4 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:45.091] Step 4/4 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:45.096] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-02 09:13:45.097] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.326] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.327] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.330] Step 2/4 data_prep</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.334] Step 3/4 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.337] Step 4/4 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.345] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-02 10:11:35.346] Done.</span></span></code></pre></div>
 <p><img src="get-started_files/figure-html/inspect-plot-after-data-change-1.png" alt="model-plot" width="700"></p>
+</div>
+<div class="section level3">
+<h3 id="try-setting-non-existing-parameters">Try setting non-existing parameters<a class="anchor" aria-label="anchor" href="#try-setting-non-existing-parameters"></a>
+</h3>
+<p>Last but not least let’s see what happens if we are trying to set
+parameters that don’t exist in the pipeline, which mostly happens due to
+accidental misspells.</p>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>titel <span class="op">=</span> <span class="st">"my title but misspelled variable name"</span>, foo <span class="op">=</span> <span class="st">"my foo"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># Warning in pip$set_params(list(titel = "my title but misspelled variable name", : Trying to set</span></span>
+<span><span class="co"># parameters not defined in the pipeline: titel, foo</span></span></code></pre></div>
+<p>As you see, a warning is given to the user hinting at the respective
+parameter names, which makes fixing any misspells straight-forward.</p>
 <p>Next, let’s see how to <a href="modify-pipeline.html">modify the
 pipeline</a>.</p>
 </div>
