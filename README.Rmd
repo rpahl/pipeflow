@@ -30,9 +30,14 @@ old <- options(width = 100L)
 
 # pipeflow <img src="man/figures/logo.png" alt="logo" align="right" width="163" height="121"/>
 
-`pipeflow` is an intuitive yet powerful framework for building and running data processing pipelines. Whether you're working in scientific computing, machine learning (AI), or statistical reporting, `pipeflow` adapts seamlessly to any scenario—from small exploratory analyses to complex production workflows.
+A lightweight yet powerful framework for building robust data analysis pipelines.
+With `pipeflow`, you initialize a pipeline with your dataset and construct your workflow
+step by step by seamlessly adding R functions. Modify, remove, or insert steps at
+any stage while `pipeflow` ensures the integrity and correctness of your pipeline.
 
-Since `pipeflow` pipelines are essentially sequences of R functions, they’re easy to learn and can be used interactively by typical R users. Advanced features like dynamic branching and self-modifying pipelines provide additional flexibility for more complex workflows.
+Designed to help you focus on the *what* rather than the *how*, this package simplifies
+the implementation of complex workflows, making even large-scale data analysis projects
+manageable, adaptable, and reusable over time.
 
 ### Why use `pipeflow`
 

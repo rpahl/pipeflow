@@ -34,13 +34,16 @@ reference:
 
 navbar:
   structure:
-    left: [home, reference, articles, myPackages]
+    left: [home, getStarted, reference, articles, myPackages]
     right: [github, stackoverflow, bluesky, blog]
   components:
     home:
       icon: fa-home fa-lg
       href: index.html
       aria-label: home
+    getStarted:
+      text: "Get Started"
+      href: articles/get-started.html
     articles:
       text: "Articles"
       menu:
