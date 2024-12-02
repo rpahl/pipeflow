@@ -1,5 +1,5 @@
 Package: pipeflow
-Title: Implement Data Analysis Workflows with Pipelines
+Title: Lightweight, General-Purpose Data Analysis Pipelines
 Version: 0.1.2
 Authors@R:
     person("Roman", "Pahl", , "roman.pahl@gmail.com", role = c("aut", "cre"))
