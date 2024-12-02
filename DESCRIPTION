@@ -1,14 +1,17 @@
 Package: pipeflow
 Title: Implement Data Analysis Workflows with Pipelines
-Version: 0.1.1
+Version: 0.1.2
 Authors@R:
     person("Roman", "Pahl", , "roman.pahl@gmail.com", role = c("aut", "cre"))
-Description: A lightweight yet powerful framework for creating data
-    analysis pipelines. You build your pipelines simply by defining a
-    sequence of R functions and 'pipeflow' takes care of tracking
-    dependencies among steps and managing all the analysis parameters.
-    The framework is easy to get started with for the typical R user, but
-    also provides advanced features to enable complex workflows.
+Description: A lightweight yet powerful framework for building robust
+    data analysis pipelines. With 'pipeflow', you initialize a pipeline
+    with your dataset and construct your workflow step by step by seamlessly
+    adding R functions. Modify, remove, or insert steps at any stage while
+    'pipeflow' ensures the integrity and correctness of your pipeline.
+    Designed to help you focus on the 'what' rather than the 'how', this
+    package simplifies the implementation of complex workflows, making
+    even large-scale data analysis projects manageable, adaptable, and
+    reusable over time.
 License: GPL-3
 Imports:
     data.table,
