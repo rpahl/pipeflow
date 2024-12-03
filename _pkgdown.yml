@@ -2,33 +2,12 @@ url: https://github.com/rpahl/pipeflow
 
 
 template:
-  params:
-    bootswatch: united
+  bootstrap: 5
+  bootswatch: united
 
 authors:
   Roman Pahl:
     href: https://rpahl.github.io/r-some-blog/about.html
-
-reference:
-  - title: "Pipeline"
-    desc: "A pipeline consists of a sequence of analysis steps."
-    contents:
-    - Pipeline
-    - pipelineAliases
-  - subtitle: "Logging"
-    contents:
-    - set_log_layout
-
-articles:
-  - title: "Overview"
-    contents:
-    - get-started
-    - modify-pipeline
-    - combine-pipelines
-    - collect-output
-    - split-and-combine
-    - self-modify-pipeline
-
 
 home:
   links:
@@ -36,52 +15,81 @@ home:
     href: https://rpahl.github.io/r-some-blog/
 
 
+reference:
+- subtitle: "Pipeline"
+  desc: A pipeline is created by instantiating an object of the Pipeline
+    class. Follow the Pipeline link below for a detailed documenation of
+    all member functions provided by a Pipeline object.
+  contents:
+  - Pipeline
+- subtitle: "Alias functions"
+  desc: There is one alias function for each member function of a
+    Pipeline object. For the function documentation see the respective
+    member function under the Pipeline class link above.
+  contents:
+  - pipelineAliases
+- subtitle: "Logging"
+  contents:
+  - set_log_layout
+
 navbar:
-  title: "pipeflow"
-  left:
-    - icon: fa-home fa-lg
+  structure:
+    left: [home, getStarted, reference, articles, myPackages]
+    right: [github, stackoverflow, bluesky, blog]
+  components:
+    home:
+      icon: fa-home fa-lg
       href: index.html
-    - text: "Get started"
-      href: articles/get-started.html
-    - text: "Reference"
-      href: reference/index.html
-    - text: "Articles"
+      aria-label: home
+    getStarted:
+      text: "Get Started"
+      href: articles/v01-get-started.html
+    articles:
+      text: "Articles"
       menu:
-        - title: "Overview"
-        - text: "Overview"
-          href: articles/index.html
+      - text: "Overview"
+        href: articles/index.html
+      - text: "---"
+      - text: "Get started"
+      - text: "Get started with pipeflow"
+        href: articles/v01-get-started.html
+      - text: "Modifying existing pipelines"
+        href: articles/v02-modify-pipeline.html
+      - text: "Combining pipelines"
+        href: articles/v03-combine-pipelines.html
+      - text: "Collecting pipeline output"
+        href: articles/v04-collect-output.html
+      - text: ----
+      - text: "Advanced"
+      - text: "How to use pipelines with split data sets"
+        href: articles/v05-split-and-combine.html
+      - text: "How pipelines can modify themselves at runtime"
+        href: articles/v06-self-modify-pipeline.html
 
-        - text: "---"
-        - text: "Get started"
-        - text: "Get started with pipeflow"
-          href: articles/get-started.html
-        - text: "Modifying existing pipelines"
-          href: articles/modify-pipeline.html
-        - text: "Combining pipelines"
-          href: articles/combine-pipelines.html
-        - text: "Collecting pipeline output"
-          href: articles/collect-output.html
-
-        - text: "---"
-        - text: "Advanced"
-        - text: "How to use pipelines with split data sets"
-          href: articles/split-and-combine.html
-        - text: "How pipelines can modify themselves at runtime"
-          href: articles/self-modify-pipeline.html
-    - text: "My packages"
+    myPackages:
+      text: "My Packages"
       menu:
-        - text: "container"
-          href: https://rpahl.github.io/container/
-        - text: "GroupSeq"
-          href: https://rpahl.github.io/GroupSeq/
-        - text: "pipeflow"
-          href: https://rpahl.github.io/pipeflow/
-  right:
-    - icon: fab fa-github
+      - text: "container"
+        href: https://rpahl.github.io/container/
+      - text: "GroupSeq"
+        href: https://rpahl.github.io/GroupSeq/
+      - text: "pipeflow"
+        href: https://rpahl.github.io/pipeflow/
+
+
+    github:
+      icon: fab fa-github
       href: https://github.com/rpahl/pipeflow/
-    - icon: fab fa-stack-overflow
+      aria-label: github
+    stackoverflow:
+      icon: fab fa-stack-overflow
       href: https://stackoverflow.com/users/8120617/rpahl
-    - icon: fab fa-twitter
-      href: https://twitter.com/romanpahl
-    - icon: fas fa-blog
+      aria-label: stackoverflow
+    bluesky:
+      icon: fab fa-bluesky
+      href: https://bsky.app/profile/rpahl.bsky.social
+      aria-label: bluesky
+    blog:
+      icon: fas fa-blog
       href: https://rpahl.github.io/r-some-blog/
+      aria-label: blog
