@@ -163,7 +163,7 @@ pipeline, we therefore want to use the output of the first pipeline as input of
 the second pipeline, that is, we want to use the output of the
 `standardize` step as the data parameter input in the `data.modeling` step.
 One way to achieve this would be to use the `replace` function as described earlier
-in the vignette [modify the pipeline](v03-modify-pipeline.html), for example:
+in the vignette [modify the pipeline](v02-modify-pipeline.html), for example:
 
 ```{r}
 pip$replace_step("data.modeling", function(data = ~standardize) data)
