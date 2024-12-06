@@ -23,7 +23,7 @@ within each pipeline."><meta property="og:image" content="https://github.com/rpa
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -1801,11 +1801,11 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="va">Pipeline</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="st">"myPipe"</span>, data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="cn">NA</span>, <span class="fl">3</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"calc_mean"</span>, <span class="va">mean</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"calc_mean"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:36.788] Start run of 'myPipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:36.817] Step 1/2 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:36.826] Step 2/2 calc_mean</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:36.847] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:36.848] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:41.733] Start run of 'myPipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:41.764] Step 1/2 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:41.772] Step 2/2 calc_mean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:41.791] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:41.792] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2.5</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="va">Pipeline</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="st">"myPipe"</span>, data <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">10</span><span class="op">)</span></span></span>
@@ -1822,21 +1822,21 @@ the command is ignored.</p><div class="section">
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:     s1 &lt;function[1]&gt; function &lt;list[1]&gt;    data [NULL]   FALSE     s1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      description                time  state</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           &lt;char&gt;              &lt;POSc&gt; &lt;char&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:               2024-12-04 17:57:36    New</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: multiply by 2 2024-12-04 17:57:36    New</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:               2024-12-06 08:26:41    New</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: multiply by 2 2024-12-06 08:26:41    New</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="va">Pipeline</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="st">"myPipe"</span>, data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, y <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"prep_x"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="va">data</span><span class="op">$</span><span class="va">x</span>, group <span class="op">=</span> <span class="st">"prep"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"prep_y"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">y</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span>, group <span class="op">=</span> <span class="st">"prep"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"sum"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">prep_x</span>, <span class="va">y</span> <span class="op">=</span> <span class="op">~</span><span class="va">prep_y</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span>all <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:36.864] Start run of 'myPipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:36.865] Step 1/4 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:36.868] Step 2/4 prep_x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:36.870] Step 3/4 prep_y</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:36.873] Step 4/4 sum</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:36.874] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:36.875] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:41.843] Start run of 'myPipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:41.844] Step 1/4 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:41.846] Step 2/4 prep_x</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:41.848] Step 3/4 prep_y</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:41.850] Step 4/4 sum</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:41.851] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:41.851] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $data</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   x y</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 1 1</span>
@@ -1916,12 +1916,12 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"step1"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"step2"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">step1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">2</span>, keepOut <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.049] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.050] Step 1/3 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.052] Step 2/3 step1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.054] Step 3/3 step2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.055] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.056] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.070] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.071] Step 1/3 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.073] Step 2/3 step1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.075] Step 3/3 step2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.076] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.076] Done.</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $step2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 5 6</span>
@@ -1946,14 +1946,14 @@ the command is ignored.</p><div class="section">
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4:  step3    data [NULL]   FALSE   mult    New</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5:  step4    data [NULL]   FALSE   mult    New</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.092] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.093] Step 1/5 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.096] Step 2/5 step1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.098] Step 3/5 step2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.100] Step 4/5 step3</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.102] Step 5/5 step4</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.103] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.104] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.118] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.119] Step 1/5 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.122] Step 2/5 step1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.124] Step 3/5 step2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.125] Step 4/5 step3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.127] Step 5/5 step4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.128] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.129] Done.</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span>all <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> List of 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  $ data: int [1:2] 1 2</span>
@@ -2109,12 +2109,12 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add1"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add2"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">y</span> <span class="op">=</span> <span class="op">~</span><span class="va">add1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.263] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.264] Step 1/3 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.266] Step 2/3 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.268] Step 3/3 add2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.273] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.274] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.346] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.347] Step 1/3 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.349] Step 2/3 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.350] Step 3/3 add2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.352] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.352] Done.</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"add1"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2 3</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"add2"</span><span class="op">)</span></span></span>
@@ -2241,12 +2241,12 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add1"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">x</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">data</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add2"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span>, <span class="va">y</span> <span class="op">=</span> <span class="fl">2</span>, <span class="va">z</span> <span class="op">=</span> <span class="op">~</span><span class="va">add1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">y</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.319] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.320] Step 1/3 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.323] Step 2/3 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.325] Step 3/3 add2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.326] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.327] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.475] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.479] Step 1/3 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.481] Step 2/3 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.483] Step 3/3 add2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.484] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.484] Done.</span>
 <span class="r-in"><span><span class="va">add1</span> <span class="op">&lt;-</span> <span class="va">p</span><span class="op">$</span><span class="fu">get_step</span><span class="op">(</span><span class="st">"add1"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">add1</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      step           fun funcName    params depends    out keepOut  group</span>
@@ -2254,12 +2254,12 @@ the command is ignored.</p><div class="section">
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:   add1 &lt;function[1]&gt; function &lt;list[2]&gt;    data    2,3   FALSE   add1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    description                time  state</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         &lt;char&gt;              &lt;POSc&gt; &lt;char&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:             2024-12-04 17:57:37   Done</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:             2024-12-06 08:26:42   Done</span>
 <span class="r-in"><span><span class="va">add1</span><span class="op">[[</span><span class="st">"params"</span><span class="op">]</span><span class="op">]</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]$data</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ~data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x0000028b33236ea0&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x00000288adf90fb8&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]$x</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
@@ -2356,12 +2356,12 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add1"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span>, <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">data</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add2"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span>, <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">data</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.380] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.381] Step 1/3 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.383] Step 2/3 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.385] Step 3/3 add2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.386] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.387] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.678] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.679] Step 1/3 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.681] Step 2/3 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.683] Step 3/3 add2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.684] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.685] Done.</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"add1"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"add2"</span><span class="op">)</span></span></span>
@@ -2372,12 +2372,12 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> skipping setting parameters x at locked step 'add1'</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.411] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.413] Step 1/3 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.415] Step 2/3 add1 - skip 'locked' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.416] Step 3/3 add2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.417] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.418] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.705] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.706] Step 1/3 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.708] Step 2/3 add1 - skip 'locked' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.709] Step 3/3 add2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.710] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.711] Done.</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"add1"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"add2"</span><span class="op">)</span></span></span>
@@ -2507,25 +2507,25 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add2"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">y</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"mult"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span>, <span class="va">y</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="va">y</span>, keepOut <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.488] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.489] Step 1/4 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.492] Step 2/4 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.494] Step 3/4 add2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.496] Step 4/4 mult</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.497] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.498] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.884] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.885] Step 1/4 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.887] Step 2/4 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.889] Step 3/4 add2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.890] Step 4/4 mult</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.891] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.892] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $mult</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">replace_step</span><span class="op">(</span><span class="st">"mult"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">add1</span>, <span class="va">y</span> <span class="op">=</span> <span class="op">~</span><span class="va">add2</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="va">y</span>, keepOut <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.501] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.502] Step 1/4 data - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.503] Step 2/4 add1 - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.504] Step 3/4 add2 - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.505] Step 4/4 mult</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.507] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.507] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.895] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.896] Step 1/4 data - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.896] Step 2/4 add1 - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.897] Step 3/4 add2 - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.898] Step 4/4 mult</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.899] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.900] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $mult</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 6</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -2540,12 +2540,12 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"f1"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">x</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"f2"</span>, \<span class="op">(</span><span class="va">y</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.526] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.527] Step 1/3 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.529] Step 2/3 f1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.530] Step 3/3 f2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.532] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.532] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.932] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.933] Step 1/3 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.934] Step 2/3 f1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.936] Step 3/3 f2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.937] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.937] Done.</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      step depends    out keepOut  group  state</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;  &lt;list&gt; &lt;list&gt;  &lt;lgcl&gt; &lt;char&gt; &lt;char&gt;</span>
@@ -2570,13 +2570,13 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add2"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">add1</span>, <span class="va">z</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"final"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">add1</span>, <span class="va">y</span> <span class="op">=</span> <span class="op">~</span><span class="va">add2</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="va">y</span>, keepOut <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.545] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.546] Step 1/4 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.549] Step 2/4 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.551] Step 3/4 add2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.554] Step 4/4 final</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.555] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.556] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.964] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.965] Step 1/4 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.967] Step 2/4 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.970] Step 3/4 add2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.971] Step 4/4 final</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.973] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.973] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $final</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 8</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -2589,25 +2589,25 @@ the command is ignored.</p><div class="section">
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:   add2      add1      4   FALSE   add2 Outdated</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4:  final add1,add2      8    TRUE  final Outdated</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.567] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.569] Step 1/4 data - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.571] Step 2/4 add1 - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.573] Step 3/4 add2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.577] Step 4/4 final</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.579] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.580] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.981] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.982] Step 1/4 data - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.982] Step 2/4 add1 - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.983] Step 3/4 add2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.985] Step 4/4 final</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.986] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.987] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $final</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 12</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span>cleanUnkept <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>  <span class="co"># clean up temporary results</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.582] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.583] Step 1/4 data - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.584] Step 2/4 add1 - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.585] Step 3/4 add2 - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.586] Step 4/4 final - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.586] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.587] Clean temporary results.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.587] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.989] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.989] Step 1/4 data - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.990] Step 2/4 add1 - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.991] Step 3/4 add2 - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.992] Step 4/4 final - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.993] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.993] Clean temporary results.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:42.994] Done.</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      step   depends    out keepOut  group    state</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;    &lt;list&gt; &lt;list&gt;  &lt;lgcl&gt; &lt;char&gt;   &lt;char&gt;</span>
@@ -2626,17 +2626,17 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span>    <span class="op">}</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.596] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.597] Step 1/3 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.599] Step 2/3 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.602] Step 3/3 new_pipe</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.605] Abort pipeline execution and restart on new.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.606] Start run of 'new_pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.608] Step 1/3 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.610] Step 2/3 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.612] Step 3/3 add2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.614] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:37.615] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:43.018] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:43.019] Step 1/3 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:43.035] Step 2/3 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:43.037] Step 3/3 new_pipe</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:43.056] Abort pipeline execution and restart on new.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:43.057] Start run of 'new_pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:43.058] Step 1/3 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:43.060] Step 2/3 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:43.062] Step 3/3 add2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:43.063] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:43.064] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $add2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -2662,28 +2662,28 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add2"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">add1</span>, <span class="va">z</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"mult"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">add1</span>, <span class="va">y</span> <span class="op">=</span> <span class="op">~</span><span class="va">add2</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run_step</span><span class="op">(</span><span class="st">"add2"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.699] Start step run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.700] Step 1/3 data (upstream)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.703] Step 2/3 add1 (upstream)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.705] Step 3/3 add2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.708] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.709] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.166] Start step run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.166] Step 1/3 data (upstream)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.169] Step 2/3 add1 (upstream)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.171] Step 3/3 add2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.172] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.173] Done.</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run_step</span><span class="op">(</span><span class="st">"add2"</span>, downstream <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.742] Start step run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.743] Step 1/4 data (upstream)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.748] Step 2/4 add1 (upstream)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.752] Step 3/4 add2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.755] Step 4/4 mult (downstream)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.756] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.757] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.188] Start step run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.189] Step 1/4 data (upstream)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.192] Step 2/4 add1 (upstream)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.194] Step 3/4 add2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.196] Step 4/4 mult (downstream)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.197] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.197] Done.</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run_step</span><span class="op">(</span><span class="st">"mult"</span>, upstream <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.758] Start step run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.759] Step 1/4 data (upstream)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.762] Step 2/4 add1 (upstream)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.764] Step 3/4 add2 (upstream)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.766] Step 4/4 mult</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.768] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.768] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.199] Start step run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.200] Step 1/4 data (upstream)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.202] Step 2/4 add1 (upstream)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.204] Step 3/4 add2 (upstream)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.206] Step 4/4 mult</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.207] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.207] Done.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## ------------------------------------------------</span></span></span>
 <span class="r-in"><span><span class="co">## Method `Pipeline$set_data`</span></span></span>
@@ -2692,21 +2692,21 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="va">Pipeline</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="st">"pipe"</span>, data <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add1"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">y</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">y</span>, keepOut <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.773] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.774] Step 1/2 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.776] Step 2/2 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.777] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.778] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.231] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.232] Step 1/2 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.234] Step 2/2 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.235] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.236] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $add1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.782] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.783] Step 1/2 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.785] Step 2/2 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.786] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.787] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.238] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.239] Step 1/2 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.241] Step 2/2 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.242] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.243] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $add1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -2734,18 +2734,18 @@ the command is ignored.</p><div class="section">
 <span class="r-out co"><span class="r-pr">#&gt;</span> 8: add1.c        data.c [NULL]    TRUE      c Outdated</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 9: mult.c data.c,add1.c [NULL]    TRUE      c Outdated</span>
 <span class="r-in"><span><span class="va">p3</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.813] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.814] Step 1/9 data.a</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.817] Step 2/9 add1.a</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.819] Step 3/9 mult.a</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.821] Step 4/9 data.b</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.823] Step 5/9 add1.b</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.826] Step 6/9 mult.b</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.828] Step 7/9 data.c</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.830] Step 8/9 add1.c</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.833] Step 9/9 mult.c</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.834] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.835] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.282] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.283] Step 1/9 data.a</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.285] Step 2/9 add1.a</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.287] Step 3/9 mult.a</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.288] Step 4/9 data.b</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.290] Step 5/9 add1.b</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.292] Step 6/9 mult.b</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.293] Step 7/9 data.c</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.296] Step 8/9 add1.c</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.297] Step 9/9 mult.c</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.299] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.299] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> List of 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  $ a:List of 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   ..$ add1.a: num 2</span>
@@ -2775,18 +2775,18 @@ the command is ignored.</p><div class="section">
 <span class="r-out co"><span class="r-pr">#&gt;</span> 8: add1.c        data.c [NULL]    TRUE add1.c Outdated</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 9: mult.c data.c,add1.c [NULL]    TRUE mult.c Outdated</span>
 <span class="r-in"><span><span class="va">p3</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.864] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.865] Step 1/9 data.a</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.868] Step 2/9 add1.a</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.870] Step 3/9 mult.a</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.872] Step 4/9 data.b</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.874] Step 5/9 add1.b</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.877] Step 6/9 mult.b</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.878] Step 7/9 data.c</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.881] Step 8/9 add1.c</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.883] Step 9/9 mult.c</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.885] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.885] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.341] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.342] Step 1/9 data.a</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.344] Step 2/9 add1.a</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.346] Step 3/9 mult.a</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.348] Step 4/9 data.b</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.350] Step 5/9 add1.b</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.351] Step 6/9 mult.b</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.353] Step 7/9 data.c</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.355] Step 8/9 add1.c</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.357] Step 9/9 mult.c</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.358] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.359] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> List of 6</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  $ add1.a: num 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  $ mult.a: num 2</span>
@@ -2804,13 +2804,13 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add2"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">y</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"mult"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">add1</span>, <span class="va">y</span> <span class="op">=</span> <span class="op">~</span><span class="va">add2</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.895] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.897] Step 1/4 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.899] Step 2/4 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.902] Step 3/4 add2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.904] Step 4/4 mult</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.905] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-04 17:57:40.906] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.387] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.388] Step 1/4 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.390] Step 2/4 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.392] Step 3/4 add2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.394] Step 4/4 mult</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.395] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-06 08:26:46.396] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $add1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
