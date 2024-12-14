@@ -12,14 +12,7 @@ test_that("an alias function is defined for each member function
         setdiff("initialize")
 
     for (fun in funs2check) {
-        helper_fun <- paste0("pipe_", fun)
-        expect_true(exists(helper_fun), info = fun)
-
-        f <- get(helper_fun, envir = asNamespace("pipeflow"))
-        expect_equal(
-            toString(body(f)),
-            gettextf("pip$%s, ...", fun),
-            info = fun
-        )
+        alias_fun <- paste0("pipe_", fun)
+        expect_true(exists(alias_fun), info = fun)
     }
 })

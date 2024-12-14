@@ -331,10 +331,23 @@ test_that("add",
     test_that(
         "if passed as a function, name is derived from the function",
     {
+        pip <- Pipeline$new("pipe")
+        pip$add("f1", fun = mean, params = list(x = 1:5))
+        expect_equal(pip$get_step("f1")[["funcName"]], "mean")
+
         pip <- Pipeline$new("pipe") |>
             pipe_add("f1", fun = mean, params = list(x = 1:5))
-
         expect_equal(pip$get_step("f1")[["funcName"]], "mean")
+    })
+
+    test_that(
+        "lampda functions, are named 'function'",
+    {
+        pip <- Pipeline$new("pipe")$add("f1", fun = \(x = 1) x)
+        expect_equal(pip$get_step("f1")[["funcName"]], "function")
+
+        pip <- Pipeline$new("pipe") |> pipe_add("f1", fun = \(x = 1) x)
+        expect_equal(pip$get_step("f1")[["funcName"]], "function")
     })
 })
 

@@ -86,6 +86,13 @@ pipe_add <- function(
         group = group,
         keepOut = keepOut
     )
+
+    if (is.function(fun)) {
+        funcName <- as.character(substitute(fun))[[1]]
+        pip$pipeline[pip$length(), "funcName"] <- funcName
+    }
+
+    invisible(pip)
 }
 
 
@@ -187,7 +194,39 @@ pipe_clone = function(pip, deep = FALSE)
 }
 
 
-#' @rdname pipelineAliases
+#' @title Collect output
+#' @description Collects output afer pipeline run, by default, from all
+#' steps for which `keepOut` was set to `TRUE`. The output is grouped
+#' by the group names (see also `group` parameter in [pipe_add()]),
+#' which by default are set identical to the step names.
+#' @param groupBy `string` column of pipeline by which to group the
+#' output. To see all available columns,
+#' @param all `logical` if `TRUE` all output is collected
+#' regardless of the `keepOut` flag. This can be useful for debugging.
+#' @return `list` containing the output, named after the groups, which,
+#' by default, are the steps.
+#' @examples
+#' p <- Pipeline$new("pipe", data = 1:2)
+#' p$add("step1", \(x = ~data) x + 2)
+#' p$add("step2", \(x = ~step1) x + 2, keepOut = TRUE)
+#' p$run()
+#' p$collect_out()
+#' p$collect_out(all = TRUE) |> str()
+#'
+#' # Grouped output
+#' p <- Pipeline$new("pipe", data = 1:2)
+#' p$add("step1", \(x = ~data) x + 2, group = "add")
+#' p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
+#' p$add("step3", \(x = ~data) x * 3, group = "mult")
+#' p$add("step4", \(x = ~data, y = 2) x * y, group = "mult")
+#' p
+#' p$run()
+#' p$collect_out(all = TRUE) |> str()
+#'
+#' # Grouped by state
+#' p$set_params(list(y = 5))
+#' p
+#' p$collect_out(groupBy = "state", all = TRUE) |> str()
 #' @export
 pipe_collect_out = function(pip, ...)
     pip$collect_out(...)
