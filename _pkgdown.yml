@@ -30,22 +30,26 @@ reference:
   contents:
   - pipelineAliases
 
-- subtitle: "Creation"
-  desc: Functions to initialize and build up pipelines
+- subtitle: "Create"
   contents:
   - pipe_new
-  - pipe_add
-  - pipe_append
   - pipe_clone
 
-- subtitle: "Modification"
-  desc: Functions to modify pipelines
+- subtitle: "Add, append, and insert"
+  contents:
+  - pipe_add
+  - pipe_append
+
+- subtitle: "Modify"
   contents:
   - pipe_append_to_step_names
   - pipe_replace_step
 
+- subtitle: "Remove"
+  contents:
+  - pipe_discard_steps
+
 - subtitle: "Output"
-  desc: Functions to retrieve output of processed pipelines
   contents:
   - pipe_collect_out
 

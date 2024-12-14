@@ -2,7 +2,6 @@
 % Please edit documentation in R/pipeflow_aliases.R
 \name{pipelineAliases}
 \alias{pipelineAliases}
-\alias{pipe_discard_steps}
 \alias{pipe_get_data}
 \alias{pipe_get_depends}
 \alias{pipe_get_depends_down}
@@ -39,8 +38,6 @@
 \alias{pipe_unlock_step}
 \title{Pipeline alias functions}
 \usage{
-pipe_discard_steps(pip, ...)
-
 pipe_get_data(pip, ...)
 
 pipe_get_depends(pip, ...)

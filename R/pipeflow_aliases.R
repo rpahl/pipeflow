@@ -233,10 +233,56 @@ pipe_collect_out = function(pip, ...)
     pip$collect_out(...)
 
 
-#' @rdname pipelineAliases
+#' @title Discard steps from the pipeline
+#' @description Discard all steps that match a given `pattern`.
+#' @param pattern `string` containing a regular expression (or
+#' character string for `fixed = TRUE`) to be matched.
+#' @param fixed `logical` If `TRUE`, `pattern` is a string to
+#' be matched as is. Overrides all conflicting arguments.
+#' @param recursive `logical` if `TRUE` the step is removed together
+#' with all its downstream dependencies.
+#' @param ... further arguments passed to [grep()].
+#' @return the `Pipeline` object invisibly
+#' @examples
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "add1", \(x = ~data) x + 1)
+#' pipe_add(p, "add2", \(x = ~add1) x + 2)
+#' pipe_add(p, "mult3", \(x = ~add1) x * 3)
+#' pipe_add(p, "mult4", \(x = ~add2) x * 4)
+#' p
+#'
+#' pipe_discard_steps(p, "mult")
+#' p
+#'
+#' # Re-add steps
+#' pipe_add(p, "mult3", \(x = ~add1) x * 3)
+#' pipe_add(p, "mult4", \(x = ~add2) x * 4)
+#' p
+#'
+#' # Discarding 'add1' does not work ...
+#' try(pipe_discard_steps(p, "add1"))
+#'
+#' # ... unless we enforce to remove its downstream dependencies as well
+#' pipe_discard_steps(p, "add1", recursive = TRUE)
+#' p
+#'
+#' # Trying to discard non-existent steps is just ignored
+#' pipe_discard_steps(p, "non-existent")
 #' @export
-pipe_discard_steps = function(pip, ...)
-    pip$discard_steps(...)
+pipe_discard_steps = function(
+    pip,
+    pattern,
+    recursive = FALSE,
+    fixed = TRUE,
+    ...
+) {
+    pip$discard_steps(
+        pattern = pattern,
+        recursive = recursive,
+        fixed = fixed,
+        ...
+    )
+}
 
 
 #' @rdname pipelineAliases

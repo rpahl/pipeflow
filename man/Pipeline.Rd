@@ -136,6 +136,8 @@ p$add("add1", \(x = ~data) x + 1)
 p$add("add2", \(x = ~add1) x + 2)
 p$add("mult3", \(x = ~add1) x * 3)
 p$add("mult4", \(x = ~add2) x * 4)
+p
+
 p$discard_steps("mult")
 p
 
@@ -143,8 +145,10 @@ p
 p$add("mult3", \(x = ~add1) x * 3)
 p$add("mult4", \(x = ~add2) x * 4)
 p
-# Discard step 'add1' does'nt work as 'add2' and 'mult3' depend on it
+# Discarding 'add1' does not work ...
 try(p$discard_steps("add1"))
+
+# ... unless we enforce to remove its downstream dependencies as well
 p$discard_steps("add1", recursive = TRUE)   # this works
 p
 
@@ -959,7 +963,7 @@ p$collect_out(groupBy = "state", all = TRUE) |> str()
 \if{html}{\out{<a id="method-Pipeline-discard_steps"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-discard_steps}{}}}
 \subsection{Method \code{discard_steps()}}{
-Discard all steps that match the given \code{pattern}.
+Discard all steps that match a given \code{pattern}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$discard_steps(pattern, recursive = FALSE, fixed = TRUE, ...)}\if{html}{\out{</div>}}
 }
@@ -990,6 +994,8 @@ p$add("add1", \(x = ~data) x + 1)
 p$add("add2", \(x = ~add1) x + 2)
 p$add("mult3", \(x = ~add1) x * 3)
 p$add("mult4", \(x = ~add2) x * 4)
+p
+
 p$discard_steps("mult")
 p
 
@@ -997,8 +1003,10 @@ p
 p$add("mult3", \(x = ~add1) x * 3)
 p$add("mult4", \(x = ~add2) x * 4)
 p
-# Discard step 'add1' does'nt work as 'add2' and 'mult3' depend on it
+# Discarding 'add1' does not work ...
 try(p$discard_steps("add1"))
+
+# ... unless we enforce to remove its downstream dependencies as well
 p$discard_steps("add1", recursive = TRUE)   # this works
 p
 
