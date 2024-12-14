@@ -9,10 +9,84 @@
 #' @name pipelineAliases
 NULL
 
-#' @rdname pipelineAliases
+
+#' @title Add pipeline step
+#' @description A pipeline consists of a series of steps, which usually
+#' are added one by one. Each step is made up of a function computing
+#' something once the pipeline is run. This function can be an existing
+#' R function (e.g. [mean()]) or an anonymous/lambda function specifically
+#' defined for the pipeline. One useful feature is that function
+#' parameters can refer to results of earlier pipeline steps using the
+#' syntax `x = ~earlier_step_name` - see the Examples for more details.
+#' @param pip `Pipeline` object
+#' @param step `string` the name of the step. Each step name must
+#' be unique.
+#' @param fun `function` or name of the function to be applied at
+#' the step. Both existing and anonymous/lambda functions can be used.
+#' All function parameters must have default values. If a parameter
+#' is missing a default value in the function signature, alternatively,
+#' it can be set via the `params` argument (see Examples section with
+#' [mean()] function).
+#' @param params `list` list of parameters to set or overwrite
+#' parameters of the passed function.
+#' @param description `string` optional description of the step
+#' @param group `string` output collected after pipeline execution
+#' (see function `collect_out`) is grouped by the defined group
+#' names. By default, this is the name of the step, which comes in
+#' handy when the pipeline is copy-appended multiple times to keep
+#' the results of the same function/step grouped at one place.
+#' @param keepOut `logical` if `FALSE` (default) the output of the
+#' step is not collected when calling `collect_out` after the pipeline
+#' run. This option is used to only keep the results that matter
+#' and skip intermediate results that are not needed. See also
+#' function `collect_out` for more details.
+#' @return returns the `Pipeline` object invisibly
+#' @examples
+#' # Add steps with lambda functions
+#' p <- pipe_new("myPipe", data = 1)
+#' pipe_add(p, "s1", \(x = ~data) 2*x)  # use input data
+#' pipe_add(p, "s2", \(x = ~data, y = ~s1) x * y)
+#' try(pipe_add(p, "s2", \(z = 3) 3)) # error: step 's2' exists already
+#' try(pipe_add(p, "s3", \(z = ~foo) 3)) # dependency 'foo' not found
+#' p
+#'
+#' # Add step with existing function
+#' p <- pipe_new("myPipe", data = c(1, 2, NA, 3, 4))
+#' try(pipe_add(p, "calc_mean", mean))  # default value for x is missing
+#' pipe_add(p, "calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
+#' p |> pipe_run() |> pipe_get_out("calc_mean")
+#'
+#' # Step description
+#' p <- pipe_new("myPipe", data = 1:10)
+#' pipe_add(p, "s1", \(x = ~data) 2*x, description = "multiply by 2")
+#' print(p, verbose = TRUE) # print all columns including description
+#'
+#'
+#' # Group output
+#' p <- pipe_new("myPipe", data = data.frame(x = 1:2, y = 3:4))
+#' pipe_add(p, "prep_x", \(data = ~data) data$x, group = "prep")
+#' pipe_add(p, "prep_y", \(data = ~data) (data$y)^2, group = "prep")
+#' pipe_add(p, "sum", \(x = ~prep_x, y = ~prep_y) x + y)
+#' p |> pipe_run() |> pipe_collect_out(all = TRUE)
 #' @export
-pipe_add = function(pip, ...)
-    pip$add(...)
+pipe_add = function(
+    pip,
+    step,
+    fun,
+    params = list(),
+    description = "",
+    group = step,
+    keepOut = FALSE
+) {
+    pip$add(
+        step = step,
+        fun = fun,
+        params = params,
+        description = description,
+        group = group,
+        keepOut = keepOut
+    )
+}
 
 
 #' @rdname pipelineAliases
@@ -152,10 +226,59 @@ pipe_length = function(pip, ...)
 pipe_lock_step = function(pip, ...)
     pip$lock_step(...)
 
-#' @rdname pipelineAliases
+#' @title Create new pipeline
+#' @description A new pipeline is always initialized with one 'data' step,
+#' which basically is a function returning the data.
+#' @param name the name of the Pipeline
+#' @param data optional data used at the start of the pipeline. The
+#' data also can be set later using the [pipe_set_data()] function.
+#' @param logger custom logger to be used for logging. If no logger
+#' is provided, the default logger is used, which should be sufficient
+#' for most use cases.
+#' If you do want to use your own custom log function, you need to
+#' provide a function that obeys the following form:
+#'
+#' `function(level, msg, ...) {
+#'    your custom logging code here
+#' }`
+#'
+#' The `level` argument is a string and will be one of `info`, `warn`,
+#'  or `error`. The `msg` argument is a string containing the message
+#' to be logged. The `...` argument is a list of named parameters,
+#' which can be used to add additional information to the log message.
+#' Currently, this is only used to add the context in case of a step
+#' giving a warning or error.
+#'
+#' Note that with the default logger, the log layout can be altered
+#' any time via [set_log_layout()].
+#' @return returns the `Pipeline` object invisibly
+#' @examples
+#' data <- data.frame(x = 1:2, y = 3:4)
+#' p <- pipe_new("myPipe", data = data)
+#' p |> pipe_run() |> pipe_get_out("data")
+#'
+#' # Setting data later
+#' p <- pipe_new("myPipe")
+#' pipe_get_data(p)
+#'
+#' p <- pipe_set_data(p, data)
+#' pipe_get_data(p)
+#' p |> pipe_run() |> pipe_get_out("data")
+#'
+#' # Initialize with custom logger
+#' my_logger <- function(level, msg, ...) {
+#'    cat(level, msg, "\n")
+#' }
+#' p <- pipe_new("myPipe", data = data, logger = my_logger)
+#' p |> pipe_run() |> pipe_get_out("data")
 #' @export
-pipe_new = function(...)
-    Pipeline$new(...)
+pipe_new = function(
+    name,
+    data = NULL,
+    logger = NULL
+) {
+    Pipeline$new(name, data = data, logger = logger)
+}
 
 
 #' @rdname pipelineAliases

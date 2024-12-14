@@ -42,15 +42,18 @@ try(p$add("s2", \(z = 3) 3)) # error: step 's2' exists already
 try(p$add("s3", \(z = ~foo) 3)) # dependency 'foo' not found
 p
 
+# Add step with existing function
 p <- Pipeline$new("myPipe", data = c(1, 2, NA, 3, 4))
 p$add("calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
 p$run()$get_out("calc_mean")
 
+# Step description
 p <- Pipeline$new("myPipe", data = 1:10)
 p$add("s1", \(x = ~data) 2*x, description = "multiply by 2")
 print(p)
 print(p, verbose = TRUE) # print all columns
 
+# Group output
 p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
 p$add("prep_x", \(data = ~data) data$x, group = "prep")
 p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
@@ -719,7 +722,11 @@ Add pipeline step
 be unique.}
 
 \item{\code{fun}}{\code{function} or name of the function to be applied at
-the step. Both existing and lambda/anonymous functions can be used.}
+the step. Both existing and anonymous/lambda functions can be used.
+All function parameters must have default values. If a parameter
+is missing a default value in the function signature, alternatively,
+it can be set via the \code{params} argument (see Examples section with
+\code{\link[=mean]{mean()}} function).}
 
 \item{\code{params}}{\code{list} list of parameters to set or overwrite
 parameters of the passed function.}
@@ -753,15 +760,18 @@ try(p$add("s2", \(z = 3) 3)) # error: step 's2' exists already
 try(p$add("s3", \(z = ~foo) 3)) # dependency 'foo' not found
 p
 
+# Add step with existing function
 p <- Pipeline$new("myPipe", data = c(1, 2, NA, 3, 4))
 p$add("calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
 p$run()$get_out("calc_mean")
 
+# Step description
 p <- Pipeline$new("myPipe", data = 1:10)
 p$add("s1", \(x = ~data) 2*x, description = "multiply by 2")
 print(p)
 print(p, verbose = TRUE) # print all columns
 
+# Group output
 p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
 p$add("prep_x", \(data = ~data) data$x, group = "prep")
 p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
