@@ -22,17 +22,17 @@ old <- options(width = 100L)
 
 <!-- badges: start -->
 
-`r badge_cran_release()`
-[![dependencies](https://tinyverse.netlify.app/badge/pipeflow)](https://CRAN.R-project.org/package=pipeflow)
-`r badge_codecov(branch = "main")`
-`r badge_github_actions(action = "R-CMD-check")`
-`r badge_github_actions(action = "test-coverage")`
-`r badge_github_actions(action = "lint")`
-`r badge_cran_checks()`
-`r badge_cran_download("pipeflow", "last-month")`
-`r badge_cran_download("pipeflow", "grand-total")`
-`r badge_last_commit()`
-`r badge_lifecycle("experimental", color = "orange")`
+[![CRAN release](https://www.r-pkg.org/badges/version/pipeflow)](https://cran.r-project.org/package=pipeflow)
+[![Dependencies](https://tinyverse.netlify.app/badge/pipeflow)](https://CRAN.R-project.org/package=pipeflow)
+[![Code coverage](https://codecov.io/gh/rpahl/pipeflow/branch/main/graph/badge.svg)](https://app.codecov.io/gh/rpahl/pipeflow)
+[![R-CMD-check status](https://github.com/rpahl/pipeflow/workflows/R-CMD-check/badge.svg)](https://github.com/rpahl/pipeflow/actions)
+[![Test coverage](https://github.com/rpahl/pipeflow/workflows/test-coverage/badge.svg)](https://github.com/rpahl/pipeflow/actions)
+[![Linter status](https://github.com/rpahl/pipeflow/workflows/lint/badge.svg)](https://github.com/rpahl/pipeflow/actions)
+[![CRAN checks](https://badges.cranchecks.info/summary/pipeflow.svg)](https://cran.r-project.org/web/checks/check_results_pipeflow.html)
+[![Downloads per month](http://cranlogs.r-pkg.org/badges/last-month/pipeflow)](https://cran.r-project.org/package=pipeflow)
+[![Downloads total](http://cranlogs.r-pkg.org/badges/grand-total/pipeflow)](https://cran.r-project.org/package=pipeflow)
+[![Last commit](https://img.shields.io/github/last-commit/rpahl/pipeflow.svg)](https://github.com/rpahl/pipeflow/commits/main)
+[![Lifecycle status](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
 <!-- badges: end -->
 
