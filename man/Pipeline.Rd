@@ -71,9 +71,23 @@ p2 <- Pipeline$new("pipe2")
 p2$add("step2", \(y = 1) y)
 p1$append(p2)
 
+# Append pipeline with potential name clashes
 p3 <- Pipeline$new("pipe3")
 p3$add("step1", \(z = 1) z)
 p1$append(p2)$append(p3)
+
+# Use output of first pipeline as input for second pipeline
+p1 <- Pipeline$new("pipe1", data = 8)
+p2 <- Pipeline$new("pipe2")
+p1$add("square", \(x = ~data) x^2)
+p2$add("log2", \(x = ~data) log2(x))
+
+p12 <- p1$append(p2, outAsIn = TRUE)
+p12$run()$get_out("log2")
+p12
+
+# Custom name separator
+p1$append(p2, sep = "___")
 
 ## ------------------------------------------------
 ## Method `Pipeline$append_to_step_names`
@@ -787,8 +801,11 @@ p$run()$collect_out(all = TRUE)
 \if{html}{\out{<a id="method-Pipeline-append"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-append}{}}}
 \subsection{Method \code{append()}}{
-Append another pipeline. The append takes care of name
-clashes and dependencies, which will be changed after the append.
+Append another pipeline
+When appending, \code{pipeflow} takes care of potential name clashes with
+respect to step names and dependencies, that is, if needed, it will
+automatically adapt step names and dependencies to make sure they
+are unique in the merged pipeline.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$append(p, outAsIn = FALSE, tryAutofixNames = TRUE, sep = ".")}\if{html}{\out{</div>}}
 }
@@ -802,7 +819,8 @@ clashes and dependencies, which will be changed after the append.
 as input for the second pipeline.}
 
 \item{\code{tryAutofixNames}}{\code{logical} if \code{TRUE}, name clashes are tried
-to be automatically resolved by appending the 2nd pipeline's name.}
+to be automatically resolved by appending the 2nd pipeline's name.
+Only set to \code{FALSE}, if you know what you are doing.}
 
 \item{\code{sep}}{\code{string} separator used when auto-resolving step names}
 }
@@ -820,9 +838,23 @@ p2 <- Pipeline$new("pipe2")
 p2$add("step2", \(y = 1) y)
 p1$append(p2)
 
+# Append pipeline with potential name clashes
 p3 <- Pipeline$new("pipe3")
 p3$add("step1", \(z = 1) z)
 p1$append(p2)$append(p3)
+
+# Use output of first pipeline as input for second pipeline
+p1 <- Pipeline$new("pipe1", data = 8)
+p2 <- Pipeline$new("pipe2")
+p1$add("square", \(x = ~data) x^2)
+p2$add("log2", \(x = ~data) log2(x))
+
+p12 <- p1$append(p2, outAsIn = TRUE)
+p12$run()$get_out("log2")
+p12
+
+# Custom name separator
+p1$append(p2, sep = "___")
 }
 \if{html}{\out{</div>}}
 

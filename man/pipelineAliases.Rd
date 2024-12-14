@@ -2,7 +2,6 @@
 % Please edit documentation in R/pipeflow_aliases.R
 \name{pipelineAliases}
 \alias{pipelineAliases}
-\alias{pipe_append}
 \alias{pipe_append_to_step_names}
 \alias{pipe_clone}
 \alias{pipe_collect_out}
@@ -44,8 +43,6 @@
 \alias{pipe_unlock_step}
 \title{Pipeline alias functions}
 \usage{
-pipe_append(pip, ...)
-
 pipe_append_to_step_names(pip, ...)
 
 pipe_clone(pip, ...)

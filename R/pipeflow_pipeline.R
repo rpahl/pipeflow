@@ -210,13 +210,17 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Append another pipeline. The append takes care of name
-        #' clashes and dependencies, which will be changed after the append.
+        #' @description  Append another pipeline
+        #' When appending, `pipeflow` takes care of potential name clashes with
+        #' respect to step names and dependencies, that is, if needed, it will
+        #' automatically adapt step names and dependencies to make sure they
+        #' are unique in the merged pipeline.
         #' @param p `Pipeline` object to be appended.
         #' @param outAsIn `logical` if `TRUE`, output of first pipeline is used
         #' as input for the second pipeline.
         #' @param tryAutofixNames `logical` if `TRUE`, name clashes are tried
         #' to be automatically resolved by appending the 2nd pipeline's name.
+        #' Only set to `FALSE`, if you know what you are doing.
         #' @param sep `string` separator used when auto-resolving step names
         #' @return returns new combined `Pipeline`.
         #' @examples
@@ -227,10 +231,23 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p2$add("step2", \(y = 1) y)
         #' p1$append(p2)
         #'
-        # Append pipeline with potential name clashes
+        #' # Append pipeline with potential name clashes
         #' p3 <- Pipeline$new("pipe3")
         #' p3$add("step1", \(z = 1) z)
         #' p1$append(p2)$append(p3)
+        #'
+        #' # Use output of first pipeline as input for second pipeline
+        #' p1 <- Pipeline$new("pipe1", data = 8)
+        #' p2 <- Pipeline$new("pipe2")
+        #' p1$add("square", \(x = ~data) x^2)
+        #' p2$add("log2", \(x = ~data) log2(x))
+        #'
+        #' p12 <- p1$append(p2, outAsIn = TRUE)
+        #' p12$run()$get_out("log2")
+        #' p12
+        #'
+        #' # Custom name separator
+        #' p1$append(p2, sep = "___")
         append = function(
             p,
             outAsIn = FALSE,

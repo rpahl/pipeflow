@@ -69,7 +69,7 @@ NULL
 #' pipe_add(p, "sum", \(x = ~prep_x, y = ~prep_y) x + y)
 #' p |> pipe_run() |> pipe_collect_out(all = TRUE)
 #' @export
-pipe_add = function(
+pipe_add <- function(
     pip,
     step,
     fun,
@@ -89,10 +89,60 @@ pipe_add = function(
 }
 
 
-#' @rdname pipelineAliases
+#' @title Append another pipeline
+#' @description When appending, `pipeflow` takes care of potential name
+#' clashes with respect to step names and dependencies, that is, if
+#' needed, it will automatically adapt step names and dependencies to
+#' make sure they are unique in the merged pipeline.
+#' @param pip `Pipeline` object to be appended to.
+#' @param p `Pipeline` object to be appended.
+#' @param outAsIn `logical` if `TRUE`, output of first pipeline is used
+#' as input for the second pipeline.
+#' @param tryAutofixNames `logical` if `TRUE`, name clashes are tried
+#' to be automatically resolved by appending the 2nd pipeline's name.
+#' Only set to `FALSE`, if you know what you are doing.
+#' @param sep `string` separator used when auto-resolving step names
+#' @return returns new combined `Pipeline` object.
+#' @examples
+#' # Append pipeline
+#' p1 <- pipe_new("pipe1")
+#' pipe_add(p1, "step1", \(x = 1) x)
+#' p2 <- pipe_new("pipe2")
+#' pipe_add(p2, "step2", \(y = 1) y)
+#' p1 |> pipe_append(p2)
+#'
+#' # Append pipeline with potential name clashes
+#' p3 <- pipe_new("pipe3")
+#' pipe_add(p3, "step1", \(z = 1) z)
+#' p1 |> pipe_append(p2) |> pipe_append(p3)
+#'
+#' # Use output of first pipeline as input for second pipeline
+#' p1 <- pipe_new("pipe1", data = 8)
+#' p2 <- pipe_new("pipe2")
+#' pipe_add(p1, "square", \(x = ~data) x^2)
+#' pipe_add(p2, "log2", \(x = ~data) log2(x))
+#'
+#' p12 <- p1 |> pipe_append(p2, outAsIn = TRUE)
+#' p12 |> pipe_run() |> pipe_get_out("log2")
+#' p12
+#'
+#' # Custom name separator for adapted step names
+#' p1 |> pipe_append(p2, sep = "___")
 #' @export
-pipe_append = function(pip, ...)
-    pip$append(...)
+pipe_append <- function(
+    pip,
+    p,
+    outAsIn = FALSE,
+    tryAutofixNames = TRUE,
+    sep = "."
+) {
+    pip$append(
+        p = p,
+        outAsIn = outAsIn,
+        tryAutofixNames = tryAutofixNames,
+        sep = sep
+    )
+}
 
 
 #' @rdname pipelineAliases

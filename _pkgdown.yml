@@ -35,6 +35,7 @@ reference:
   contents:
   - pipe_new
   - pipe_add
+  - pipe_append
 
 - subtitle: "Logging"
   contents:
