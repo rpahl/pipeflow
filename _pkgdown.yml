@@ -16,18 +16,26 @@ home:
 
 
 reference:
-- subtitle: "Pipeline"
+- title: "Pipeline"
   desc: A pipeline is created by instantiating an object of the Pipeline
     class. Follow the Pipeline link below for a detailed documenation of
     all member functions provided by a Pipeline object.
   contents:
   - Pipeline
-- subtitle: "Alias functions"
+
+- title: "Alias functions"
   desc: There is one alias function for each member function of a
     Pipeline object. For the function documentation see the respective
     member function under the Pipeline class link above.
   contents:
   - pipelineAliases
+
+- subtitle: "Pipeline creation"
+  desc: Functions to initialize and build up pipelines.
+  contents:
+  - pipe_new
+  - pipe_add
+
 - subtitle: "Logging"
   contents:
   - set_log_layout

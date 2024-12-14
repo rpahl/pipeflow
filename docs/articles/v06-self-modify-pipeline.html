@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -109,9 +109,9 @@ residuals.</p>
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpahl.github.io/pipeflow/" class="external-link">pipeflow</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipelineAliases.html">pipe_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipe_new.html">pipe_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span></span>
-<span>    <span class="fu"><a href="../reference/pipelineAliases.html">pipe_add</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pipe_add.html">pipe_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"fit"</span>,</span>
 <span>        <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">xVar</span> <span class="op">=</span> <span class="st">"x"</span>, <span class="va">yVar</span> <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span></span>
 <span>        <span class="op">{</span></span>
@@ -119,7 +119,7 @@ residuals.</p>
 <span>        <span class="op">}</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span></span>
-<span>    <span class="fu"><a href="../reference/pipelineAliases.html">pipe_add</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pipe_add.html">pipe_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"residual_shapiro_p_value"</span>,</span>
 <span>        <span class="kw">function</span><span class="op">(</span><span class="va">fit</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span><span class="op">)</span></span>
 <span>        <span class="op">{</span></span>
@@ -130,7 +130,7 @@ residuals.</p>
 <span>        keepOut <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span></span>
-<span>    <span class="fu"><a href="../reference/pipelineAliases.html">pipe_add</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pipe_add.html">pipe_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"plot"</span>,</span>
 <span>        <span class="kw">function</span><span class="op">(</span><span class="va">fit</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span>, <span class="va">pointColor</span> <span class="op">=</span> <span class="st">"black"</span><span class="op">)</span></span>
 <span>        <span class="op">{</span></span>
@@ -160,13 +160,13 @@ residuals.</p>
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="va">airquality</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Ozone"</span>, yVar <span class="op">=</span> <span class="st">"Temp"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.091] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.119] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.133] Step 2/4 fit</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.151] Step 3/4 residual_shapiro_p_value</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.153] Step 4/4 plot</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.172] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.173] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.068] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.099] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.114] Step 2/4 fit</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.132] Step 3/4 residual_shapiro_p_value</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.134] Step 4/4 plot</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.150] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.150] Done.</span></span>
 <span><span class="co"># $residual_shapiro_p_value</span></span>
 <span><span class="co"># [1] 0.00022598</span></span>
 <span><span class="co"># </span></span>
@@ -185,13 +185,13 @@ pipeline a second time as follows:</p>
 <span>    <span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>pointColor <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span><span class="op">)</span></span>
 <span>    <span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.570] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.572] Step 1/4 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.573] Step 2/4 fit - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.574] Step 3/4 residual_shapiro_p_value - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.575] Step 4/4 plot</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.587] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.588] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.549] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.550] Step 1/4 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.551] Step 2/4 fit - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.552] Step 3/4 residual_shapiro_p_value - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.553] Step 4/4 plot</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.566] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.566] Done.</span></span>
 <span><span class="co"># $residual_shapiro_p_value</span></span>
 <span><span class="co"># [1] 0.00022598</span></span>
 <span><span class="co"># </span></span>
@@ -229,13 +229,13 @@ parameter.</p>
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="va">airquality</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Ozone"</span>, yVar <span class="op">=</span> <span class="st">"Temp"</span>, .self <span class="op">=</span> <span class="va">pip</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.888] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.889] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.891] Step 2/4 fit</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.895] Step 3/4 residual_shapiro_p_value</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.900] Step 4/4 plot</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.906] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:21.907] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.865] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.866] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.869] Step 2/4 fit</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.873] Step 3/4 residual_shapiro_p_value</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.879] Step 4/4 plot</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.886] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:28.886] Done.</span></span>
 <span><span class="co"># $residual_shapiro_p_value</span></span>
 <span><span class="co"># [1] 0.00022598</span></span>
 <span><span class="co"># </span></span>
@@ -253,23 +253,23 @@ modify the pipeline structure itself.</p>
 functions in order to keep the examples simple. The focus here is on the
 pipeline structure and how it can be modified at runtime.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipelineAliases.html">pipe_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipe_new.html">pipe_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span></span>
-<span>    <span class="fu"><a href="../reference/pipelineAliases.html">pipe_add</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pipe_add.html">pipe_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"f1"</span>,</span>
 <span>        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span></span>
 <span>        <span class="op">}</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span></span>
-<span>    <span class="fu"><a href="../reference/pipelineAliases.html">pipe_add</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pipe_add.html">pipe_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"f2"</span>,</span>
 <span>        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="va">x</span> <span class="op">+</span> <span class="fl">2</span></span>
 <span>        <span class="op">}</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span></span>
-<span>    <span class="fu"><a href="../reference/pipelineAliases.html">pipe_add</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pipe_add.html">pipe_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"f3"</span>,</span>
 <span>        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="va">x</span> <span class="op">+</span> <span class="fl">3</span></span>
@@ -279,13 +279,13 @@ pipeline structure and how it can be modified at runtime.</p>
 respectively.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.156] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.157] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.159] Step 2/4 f1</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.162] Step 3/4 f2</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.163] Step 4/4 f3</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.165] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.165] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.164] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.165] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.167] Step 2/4 f1</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.169] Step 3/4 f2</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.171] Step 4/4 f3</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.172] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.173] Done.</span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co">#      step depends    out keepOut  group  state</span></span>
 <span><span class="co">#    &lt;char&gt;  &lt;list&gt; &lt;list&gt;  &lt;lgcl&gt; &lt;char&gt; &lt;char&gt;</span></span>
@@ -302,16 +302,16 @@ and subtracts 3 from the input.</p>
 <h4 id="modify-a-step">Modify a step<a class="anchor" aria-label="anchor" href="#modify-a-step"></a>
 </h4>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipelineAliases.html">pipe_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipe_new.html">pipe_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span></span>
-<span>    <span class="fu"><a href="../reference/pipelineAliases.html">pipe_add</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pipe_add.html">pipe_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"f1"</span>,</span>
 <span>        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span></span>
 <span>        <span class="op">}</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span></span>
-<span>    <span class="fu"><a href="../reference/pipelineAliases.html">pipe_add</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pipe_add.html">pipe_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"f2"</span>,</span>
 <span>        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span>, <span class="va">.self</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span>        <span class="op">{</span></span>
@@ -328,7 +328,7 @@ and subtracts 3 from the input.</p>
 <span>        <span class="op">}</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span></span>
-<span>    <span class="fu"><a href="../reference/pipelineAliases.html">pipe_add</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pipe_add.html">pipe_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"f3"</span>,</span>
 <span>        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="va">x</span> <span class="op">+</span> <span class="fl">3</span></span>
@@ -338,13 +338,13 @@ and subtracts 3 from the input.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>.self <span class="op">=</span> <span class="va">pip</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.282] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.283] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.285] Step 2/4 f1</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.288] Step 3/4 f2</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.289] Step 4/4 f3</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.291] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.291] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.306] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.307] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.310] Step 2/4 f1</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.312] Step 3/4 f2</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.314] Step 4/4 f3</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.315] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.316] Done.</span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co">#      step depends    out keepOut  group  state</span></span>
 <span><span class="co">#    &lt;char&gt;  &lt;list&gt; &lt;list&gt;  &lt;lgcl&gt; &lt;char&gt; &lt;char&gt;</span></span>
@@ -355,13 +355,13 @@ and subtracts 3 from the input.</p>
 <p>Now let’s try it with an input of 10.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="fl">10</span><span class="op">)</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.350] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.351] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.354] Step 2/4 f1</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.356] Step 3/4 f2</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.362] Step 4/4 f3</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.363] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.364] Done.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.377] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.378] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.380] Step 2/4 f1</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.383] Step 3/4 f2</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.389] Step 4/4 f3</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.390] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.391] Done.</span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co">#      step depends    out keepOut  group  state</span></span>
 <span><span class="co">#    &lt;char&gt;  &lt;list&gt; &lt;list&gt;  &lt;lgcl&gt; &lt;char&gt; &lt;char&gt;</span></span>
@@ -379,18 +379,18 @@ the last step have changed.</p>
 further to insert and remove steps. The pipeline definition is as
 follows:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipelineAliases.html">pipe_new</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pipe_new.html">pipe_new</a></span><span class="op">(</span></span>
 <span>        <span class="st">"my-pipeline"</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span></span>
-<span>    <span class="fu"><a href="../reference/pipelineAliases.html">pipe_add</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pipe_add.html">pipe_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"f1"</span>,</span>
 <span>        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span></span>
 <span>        <span class="op">}</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span></span>
-<span>    <span class="fu"><a href="../reference/pipelineAliases.html">pipe_add</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pipe_add.html">pipe_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"f2"</span>,</span>
 <span>        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span>, <span class="va">.self</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span>        <span class="op">{</span></span>
@@ -422,7 +422,7 @@ follows:</p>
 <span>        <span class="op">}</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span></span>
-<span>    <span class="fu"><a href="../reference/pipelineAliases.html">pipe_add</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pipe_add.html">pipe_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"f3"</span>,</span>
 <span>        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="va">x</span> <span class="op">+</span> <span class="fl">3</span></span>
@@ -450,19 +450,19 @@ re-run.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>.self <span class="op">=</span> <span class="va">pip</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">set_data</span><span class="op">(</span><span class="fl">10</span><span class="op">)</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.537] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.538] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.540] Step 2/4 f1</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.542] Step 3/4 f2</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.555] Abort pipeline execution and restart on new.</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.556] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.556] Step 1/5 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.557] Step 2/5 f1 - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.558] Step 3/5 f2a</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.563] Step 4/5 f2b</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.565] Step 5/5 f3</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.566] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-06 08:27:22.567] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.584] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.585] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.587] Step 2/4 f1</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.589] Step 3/4 f2</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.632] Abort pipeline execution and restart on new.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.633] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.634] Step 1/5 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.635] Step 2/5 f1 - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.636] Step 3/5 f2a</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.638] Step 4/5 f2b</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.639] Step 5/5 f3</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.641] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-14 17:23:29.641] Done.</span></span></code></pre></div>
 <p>The log output shows the abort and re-run of the pipeline. Let’s see
 the final structure and step outputs.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
