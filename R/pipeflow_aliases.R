@@ -169,10 +169,22 @@ pipe_append_to_step_names <- function(
 }
 
 
-#' @rdname pipelineAliases
+#' @title Clone pipeline
+#' @description Creates a copy of a pipeline object.
+#' @param deep `logical` whether to perform a deep copy
+#' @return returns the copied `Pipeline` object
+#' @examples
+#' p1 <- pipe_new("pipe")
+#' pipe_add(p1, "step1", \(x = 1) x)
+#' p2 <- pipe_clone(p1)
+#' pipe_add(p2, "step2", \(y = 1) y)
+#' p1
+#' p2
 #' @export
-pipe_clone = function(pip, ...)
-    pip$clone(...)
+pipe_clone = function(pip, deep = FALSE)
+{
+    pip$clone(deep = deep)
+}
 
 
 #' @rdname pipelineAliases

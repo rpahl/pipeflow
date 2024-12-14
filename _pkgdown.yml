@@ -36,6 +36,7 @@ reference:
   - pipe_new
   - pipe_add
   - pipe_append
+  - pipe_clone
 - subtitle: "Cosmetics"
   desc: Functions to slightly adapt or shape parts of the pipeline
   contents:
