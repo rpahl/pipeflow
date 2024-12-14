@@ -98,7 +98,7 @@ p$add("step1", \(x = 1) x)
 p$add("step2", \(y = 1) y)
 p$append_to_step_names("new")
 p
-p$append_to_step_names("new", sep = "_")
+p$append_to_step_names("foo", sep = "__")
 p
 
 ## ------------------------------------------------
@@ -865,8 +865,8 @@ p1$append(p2, sep = "___")
 \if{html}{\out{<a id="method-Pipeline-append_to_step_names"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-append_to_step_names}{}}}
 \subsection{Method \code{append_to_step_names()}}{
-Append string to all step names. Also takes care
-of updating dependencies accordingly.
+Appends string to all step names and takes care
+of updating step dependencies accordingly.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$append_to_step_names(postfix, sep = ".")}\if{html}{\out{</div>}}
 }
@@ -890,7 +890,7 @@ p$add("step1", \(x = 1) x)
 p$add("step2", \(y = 1) y)
 p$append_to_step_names("new")
 p
-p$append_to_step_names("new", sep = "_")
+p$append_to_step_names("foo", sep = "__")
 p
 }
 \if{html}{\out{</div>}}

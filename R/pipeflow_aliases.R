@@ -145,10 +145,28 @@ pipe_append <- function(
 }
 
 
-#' @rdname pipelineAliases
+#' @title Append string to all step names
+#' @description Appends string to all step names and takes care
+#' of updating step dependencies accordingly.
+#' @param postfix `string` to be appended to each step name.
+#' @param sep `string` separator between step name and postfix.
+#' @return returns the `Pipeline` object invisibly
+#' @examples
+#' p <- pipe_new("pipe")
+#' pipe_add(p, "step1", \(x = 1) x)
+#' pipe_add(p, "step2", \(y = 1) y)
+#' pipe_append_to_step_names(p, "new")
+#' p
+#' pipe_append_to_step_names(p, "foo", sep = "__")
+#' p
 #' @export
-pipe_append_to_step_names = function(pip, ...)
-    pip$append_to_step_names(...)
+pipe_append_to_step_names <- function(
+    pip,
+    postfix,
+    sep = "."
+) {
+    pip$append_to_step_names(postfix = postfix, sep = sep)
+}
 
 
 #' @rdname pipelineAliases

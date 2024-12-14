@@ -31,11 +31,15 @@ reference:
   - pipelineAliases
 
 - subtitle: "Pipeline creation"
-  desc: Functions to initialize and build up pipelines.
+  desc: Functions to initialize and build up pipelines
   contents:
   - pipe_new
   - pipe_add
   - pipe_append
+- subtitle: "Cosmetics"
+  desc: Functions to slightly adapt or shape parts of the pipeline
+  contents:
+  - pipe_append_to_step_names
 
 - subtitle: "Logging"
   contents:

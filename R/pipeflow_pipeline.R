@@ -310,8 +310,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             combinedPipe
         },
 
-        #' @description Append string to all step names. Also takes care
-        #' of updating dependencies accordingly.
+        #' @description Appends string to all step names and takes care
+        #' of updating step dependencies accordingly.
         #' @param postfix `string` to be appended to each step name.
         #' @param sep `string` separator between step name and postfix.
         #' @return returns the `Pipeline` object invisibly
@@ -321,7 +321,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$add("step2", \(y = 1) y)
         #' p$append_to_step_names("new")
         #' p
-        #' p$append_to_step_names("new", sep = "_")
+        #' p$append_to_step_names("foo", sep = "__")
         #' p
         append_to_step_names = function(postfix, sep = ".") {
 
