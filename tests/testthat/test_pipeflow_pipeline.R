@@ -587,6 +587,47 @@ test_that("collect_out",
 
         expect_equal(names(out), c("data", "f1", "plus", "my f3"))
     })
+
+    describe("groupBy option",
+    {
+        pip <- Pipeline$new("pipe") |>
+            pipe_add("f1", function(a = 1) a) |>
+            pipe_add("f2", function(a = 1, b = 2) a + b, group = "plus") |>
+            pipe_add("f3", function(a = 1, b = 2) a / b)
+
+        test_that("column to groupBy can be customized",
+        {
+            pip$run_step("f1")
+            pip$run_step("f3")
+            out <- pip$collect_out(groupBy = "state", all = TRUE)
+
+            expect_equal(
+                out,
+                list(
+                    New = list(data = NULL, f2 = NULL),
+                    Done = list(f1 = 1, f3 = 0.5)
+                )
+            )
+        })
+
+        test_that("signals bad  groupBy input",
+        {
+            expect_error(
+                pip$collect_out(groupBy = c("not", "a", "string")),
+                "groupBy must be a single string"
+            )
+
+            expect_error(
+                pip$collect_out(groupBy = "foo"),
+                "groupBy column does not exist"
+            )
+
+            expect_error(
+                pip$collect_out(groupBy = "time"),
+                "groupBy column must be character"
+            )
+        })
+    })
 })
 
 

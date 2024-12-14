@@ -348,8 +348,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Collect output afer pipeline run, by default, from all
         #' steps for which `keepOut` was set to `TRUE`. The output is grouped
-        #' by the group names (see `group` parameter in function `add`)
-        #' which if not set explicitly corresponds to the step names.
+        #' by the group names (see `group` parameter in function `add`),
+        #' which by default are set identical to the step names.
         #' @param groupBy `string` column of pipeline by which to group the
         #' output.
         #' @param all `logical` if `TRUE` all output is collected
@@ -364,7 +364,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$collect_out()
         #' p$collect_out(all = TRUE) |> str()
         #'
-        # Grouped output
+        #' # Grouped output
         #' p <- Pipeline$new("pipe", data = 1:2)
         #' p$add("step1", \(x = ~data) x + 2, group = "add")
         #' p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
@@ -380,10 +380,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$collect_out(groupBy = "state", all = TRUE) |> str()
         collect_out = function(groupBy = "group", all = FALSE)
         {
+            # nolint start
             stopifnot(
-                is_string(groupBy),
-                groupBy %in% colnames(self$pipeline)
+                "groupBy must be a single string" = is_string(groupBy),
+                "groupBy column does not exist" = groupBy %in% colnames(self$pipeline),
+                "groupBy column must be character" = is.character(self$pipeline[[groupBy]])
             )
+            # nolint end
 
             keepOut <- if (all) {
                 rep(TRUE, self$length())
