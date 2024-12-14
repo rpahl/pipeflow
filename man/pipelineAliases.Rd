@@ -2,7 +2,6 @@
 % Please edit documentation in R/pipeflow_aliases.R
 \name{pipelineAliases}
 \alias{pipelineAliases}
-\alias{pipe_collect_out}
 \alias{pipe_discard_steps}
 \alias{pipe_get_data}
 \alias{pipe_get_depends}
@@ -28,7 +27,6 @@
 \alias{pipe_pop_steps_from}
 \alias{pipe_remove_step}
 \alias{pipe_rename_step}
-\alias{pipe_replace_step}
 \alias{pipe_reset}
 \alias{pipe_run}
 \alias{pipe_run_step}
@@ -41,8 +39,6 @@
 \alias{pipe_unlock_step}
 \title{Pipeline alias functions}
 \usage{
-pipe_collect_out(pip, ...)
-
 pipe_discard_steps(pip, ...)
 
 pipe_get_data(pip, ...)
@@ -92,8 +88,6 @@ pipe_pop_steps_from(pip, ...)
 pipe_remove_step(pip, ...)
 
 pipe_rename_step(pip, ...)
-
-pipe_replace_step(pip, ...)
 
 pipe_reset(pip, ...)
 

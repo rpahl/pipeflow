@@ -2100,7 +2100,7 @@ test_that("replace_step",
 
 
     test_that(
-        "if replacing a pipeline step, dependencies are verifed correctly",
+        "if replacing a pipeline step, dependencies are verified correctly",
     {
         pip <- Pipeline$new("pipe1") |>
             pipe_add("f1", function(a = 1) a) |>

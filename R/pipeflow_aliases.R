@@ -89,14 +89,15 @@ pipe_add <- function(
 
     if (is.function(fun)) {
         funcName <- as.character(substitute(fun))[[1]]
-        pip$pipeline[pip$length(), "funcName"] <- funcName
+        index <- match(step, pip$get_step_names())
+        pip$pipeline[index, "funcName"] <- funcName
     }
 
     invisible(pip)
 }
 
 
-#' @title Append another pipeline
+#' @title Append two pipelines
 #' @description When appending, `pipeflow` takes care of potential name
 #' clashes with respect to step names and dependencies, that is, if
 #' needed, it will automatically adapt step names and dependencies to
@@ -194,7 +195,7 @@ pipe_clone = function(pip, deep = FALSE)
 }
 
 
-#' @title Collect output
+#' @title Collect output from entire pipeline
 #' @description Collects output afer pipeline run, by default, from all
 #' steps for which `keepOut` was set to `TRUE`. The output is grouped
 #' by the group names (see also `group` parameter in [pipe_add()]),
@@ -434,10 +435,70 @@ pipe_remove_step = function(pip, ...)
 pipe_rename_step = function(pip, ...)
     pip$rename_step(...)
 
-#' @rdname pipelineAliases
+
+#' @title Replace pipeline step
+#' @description Replaces an existing pipeline step.
+#' @param pip `Pipeline` object
+#' @param step `string` the name of the step. Each step name must
+#' be unique.
+#' @param fun `function` or name of the function to be applied at
+#' the step. Both existing and anonymous/lambda functions can be used.
+#' All function parameters must have default values. If a parameter
+#' is missing a default value in the function signature, alternatively,
+#' it can be set via the `params` argument (see Examples section with
+#' [mean()] function).
+#' @param params `list` list of parameters to set or overwrite
+#' parameters of the passed function.
+#' @param description `string` optional description of the step
+#' @param group `string` output collected after pipeline execution
+#' (see function `collect_out`) is grouped by the defined group
+#' names. By default, this is the name of the step, which comes in
+#' handy when the pipeline is copy-appended multiple times to keep
+#' the results of the same function/step grouped at one place.
+#' @param keepOut `logical` if `FALSE` (default) the output of the
+#' step is not collected when calling `collect_out` after the pipeline
+#' run. This option is used to only keep the results that matter
+#' and skip intermediate results that are not needed. See also
+#' function `collect_out` for more details.
+#' @return returns the `Pipeline` object invisibly
+#' @seealso [pipe_add()]
+#' @examples
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
+#' pipe_add(p, "add2", \(x = ~data, y = 2) x + y)
+#' pipe_add(p, "mult", \(x = 1, y = 2) x * y, keepOut = TRUE)
+#' pipe_run(p) |> pipe_collect_out()
+#' pipe_replace_step(p, "mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+#' pipe_run(p) |> pipe_collect_out()
+#' try(pipe_replace_step(p, "foo", \(x = 1) x))   # step 'foo' does not exist
 #' @export
-pipe_replace_step = function(pip, ...)
-    pip$replace_step(...)
+pipe_replace_step = function(
+    pip,
+    step,
+    fun,
+    params = list(),
+    description = "",
+    group = step,
+    keepOut = FALSE
+) {
+    pip$replace_step(
+        step = step,
+        fun = fun,
+        params = params,
+        description = description,
+        group = group,
+        keepOut = keepOut
+    )
+
+    if (is.function(fun)) {
+        funcName <- as.character(substitute(fun))[[1]]
+        index <- match(step, pip$get_step_names())
+        pip$pipeline[index, "funcName"] <- funcName
+    }
+
+
+    invisible(pip)
+}
 
 
 #' @rdname pipelineAliases

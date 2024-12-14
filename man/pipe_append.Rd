@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeflow_aliases.R
 \name{pipe_append}
 \alias{pipe_append}
-\title{Append another pipeline}
+\title{Append two pipelines}
 \usage{
 pipe_append(pip, p, outAsIn = FALSE, tryAutofixNames = TRUE, sep = ".")
 }

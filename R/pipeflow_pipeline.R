@@ -1112,7 +1112,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Replace pipeline step.
+        #' @description Replaces an existing pipeline step.
         #' @param step `string` the name of the step to be replaced. Step must
         #' exist.
         #' @param fun `string` or `function` operation to be applied at the

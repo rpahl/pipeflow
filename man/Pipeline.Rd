@@ -112,6 +112,7 @@ p$run()
 p$collect_out()
 p$collect_out(all = TRUE) |> str()
 
+# Grouped output
 p <- Pipeline$new("pipe", data = 1:2)
 p$add("step1", \(x = ~data) x + 2, group = "add")
 p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
@@ -904,8 +905,8 @@ p
 \subsection{Method \code{collect_out()}}{
 Collect output afer pipeline run, by default, from all
 steps for which \code{keepOut} was set to \code{TRUE}. The output is grouped
-by the group names (see \code{group} parameter in function \code{add})
-which if not set explicitly corresponds to the step names.
+by the group names (see \code{group} parameter in function \code{add}),
+which by default are set identical to the step names.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$collect_out(groupBy = "group", all = FALSE)}\if{html}{\out{</div>}}
 }
@@ -934,6 +935,7 @@ p$run()
 p$collect_out()
 p$collect_out(all = TRUE) |> str()
 
+# Grouped output
 p <- Pipeline$new("pipe", data = 1:2)
 p$add("step1", \(x = ~data) x + 2, group = "add")
 p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
@@ -1822,7 +1824,7 @@ p
 \if{html}{\out{<a id="method-Pipeline-replace_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-replace_step}{}}}
 \subsection{Method \code{replace_step()}}{
-Replace pipeline step.
+Replaces an existing pipeline step.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$replace_step(
   step,
