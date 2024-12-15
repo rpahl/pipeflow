@@ -39,6 +39,7 @@ reference:
   contents:
   - pipe_add
   - pipe_append
+  - starts_with("pipe_insert")
 
 - subtitle: "Getters"
   contents:
@@ -49,6 +50,14 @@ reference:
   - starts_with("pipe_get_params")
   - matches("pipe_get_step|pipe_has_step")
 
+- subtitle: "Final output"
+  contents:
+  - pipe_collect_out
+
+- subtitle: "Information"
+  contents:
+  - pipe_length
+
 - subtitle: "Modify"
   contents:
   - pipe_append_to_step_names
@@ -58,9 +67,6 @@ reference:
   contents:
   - pipe_discard_steps
 
-- subtitle: "Final output"
-  contents:
-  - pipe_collect_out
 
 - subtitle: "Logging"
   contents:

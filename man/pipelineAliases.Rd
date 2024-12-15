@@ -2,9 +2,6 @@
 % Please edit documentation in R/pipeflow_aliases.R
 \name{pipelineAliases}
 \alias{pipelineAliases}
-\alias{pipe_insert_after}
-\alias{pipe_insert_before}
-\alias{pipe_length}
 \alias{pipe_lock_step}
 \alias{pipe_print}
 \alias{pipe_pop_step}
@@ -24,12 +21,6 @@
 \alias{pipe_unlock_step}
 \title{Pipeline alias functions}
 \usage{
-pipe_insert_after(pip, ...)
-
-pipe_insert_before(pip, ...)
-
-pipe_length(pip, ...)
-
 pipe_lock_step(pip, ...)
 
 pipe_print(pip, ...)

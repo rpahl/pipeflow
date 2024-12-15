@@ -9,9 +9,9 @@
 \usage{
 pipe_get_step(pip, step)
 
-pipe_get_step_names(pip, ...)
+pipe_get_step_names(pip)
 
-pipe_get_step_number(pip, ...)
+pipe_get_step_number(pip, step)
 
 pipe_has_step(pip, step)
 }

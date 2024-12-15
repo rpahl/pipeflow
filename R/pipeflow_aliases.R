@@ -542,14 +542,18 @@ pipe_get_step <- function(pip, step)
 
 #' @rdname step_info
 #' @export
-pipe_get_step_names <- function(pip, ...)
-    pip$get_step_names(...)
+pipe_get_step_names <- function(pip)
+{
+    pip$get_step_names()
+}
 
 
 #' @rdname step_info
 #' @export
-pipe_get_step_number <- function(pip, ...)
-    pip$get_step_number(...)
+pipe_get_step_number <- function(pip, step)
+{
+    pip$get_step_number(step)
+}
 
 
 #' @rdname step_info
@@ -560,22 +564,59 @@ pipe_has_step <- function(pip, step)
 }
 
 
-#' @rdname pipelineAliases
+#' @title Insert step
+#' @param pip `Pipeline` object
+#' @param afterStep `string` name of step after which to insert
+#' @param step `string` name of step to insert
+#' @param ... further arguments passed to [pipe_add()]
+#'
+#' @section Methods:
+#' * `pipe_insert_after`: insert step after a certain step of the pipeline
+#' * `pipe_insert_before`: insert step before a certain step of the pipeline
+#'
+#' @return returns the `Pipeline` object invisibly
+#' @examples
+#' # pipe_insert_after
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "f1", \(x = 1) x)
+#' pipe_add(p, "f2", \(x = ~f1) x)
+#' pipe_insert_after(p, "f1", step = "after_f1", \(x = ~f1) x)
+#' p
+#'
+#' # insert_before
+#' pipe_insert_before(p, "f2", step = "before_f2", \(x = ~f1) 2 * x)
+#' p
+#' @rdname pipe_insert
 #' @export
-pipe_insert_after <- function(pip, ...)
-    pip$insert_after(...)
+pipe_insert_after <- function(pip, afterStep, step, ...)
+{
+    pip$insert_after(afterStep = afterStep, step = step, ...)
+}
 
 
-#' @rdname pipelineAliases
+#' @param beforeStep `string` name of step before which to insert
+#' @rdname pipe_insert
 #' @export
-pipe_insert_before <- function(pip, ...)
-    pip$insert_before(...)
+pipe_insert_before <- function(pip, beforeStep, step, ...)
+{
+    pip$insert_before(beforeStep = beforeStep, step = step, ...)
+}
 
 
-#' @rdname pipelineAliases
+#' @title Length of the pipeline
+#' @param pip `Pipeline` object
+#' @return `numeric` length of pipeline, that is, the total number of steps
+#' @examples
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "f1", \(x = 1) x)
+#' pipe_add(p, "f2", \(y = 1) y)
+#' p
+#' pipe_length(p)
 #' @export
-pipe_length <- function(pip, ...)
-    pip$length(...)
+pipe_length <- function(pip)
+{
+    pip$length()
+}
 
 
 #' @rdname pipelineAliases
