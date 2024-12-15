@@ -613,7 +613,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             list(nodes = nodes, edges = edges)
         },
 
-        #' @description Get output of given step after pipeline run.
+        #' @description Get output of given step
         #' @param step `string` name of step
         #' @return the output at the given step.
         #' @examples

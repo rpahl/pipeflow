@@ -380,6 +380,7 @@ pipe_get_depends_up = function(pip, step, recursive = TRUE)
 
 #' @title Pipeline graph
 #' @description Get the pipeline as a graph with nodes and edges.
+#' @param pip `Pipeline` object
 #' @param groups `character` if not `NULL`, only steps belonging to the
 #' given groups are considered.
 #' @return list with two data frames, one for nodes and one for edges
@@ -403,10 +404,23 @@ pipe_get_graph = function(pip, groups = NULL)
 }
 
 
-#' @rdname pipelineAliases
+#' @title Get output of given step
+#' @param pip `Pipeline` object
+#' @param step `string` name of step
+#' @return the output at the given step.
+#' @seealso [pipe_collect_out()] to collect output of multiple steps.
+#' @examples
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "add1", \(x = ~data) x + 1)
+#' pipe_add(p, "add2", \(x = ~data, y = ~add1) x + y)
+#' pipe_run(p)
+#' pipe_get_out(p, "add1")
+#' pipe_get_out(p, "add2")
 #' @export
-pipe_get_out = function(pip, ...)
-    pip$get_out(...)
+pipe_get_out = function(pip, step)
+{
+    pip$get_out(step)
+}
 
 
 #' @rdname pipelineAliases

@@ -2,7 +2,6 @@
 % Please edit documentation in R/pipeflow_aliases.R
 \name{pipelineAliases}
 \alias{pipelineAliases}
-\alias{pipe_get_out}
 \alias{pipe_get_params}
 \alias{pipe_get_params_at_step}
 \alias{pipe_get_params_unique}
@@ -33,8 +32,6 @@
 \alias{pipe_unlock_step}
 \title{Pipeline alias functions}
 \usage{
-pipe_get_out(pip, ...)
-
 pipe_get_params(pip, ...)
 
 pipe_get_params_at_step(pip, ...)

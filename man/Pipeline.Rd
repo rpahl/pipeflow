@@ -1189,7 +1189,7 @@ if (require("visNetwork", quietly = TRUE)) {
 \if{html}{\out{<a id="method-Pipeline-get_out"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-get_out}{}}}
 \subsection{Method \code{get_out()}}{
-Get output of given step after pipeline run.
+Get output of given step
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_out(step)}\if{html}{\out{</div>}}
 }

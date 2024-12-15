@@ -7,6 +7,8 @@
 pipe_get_graph(pip, groups = NULL)
 }
 \arguments{
+\item{pip}{\code{Pipeline} object}
+
 \item{groups}{\code{character} if not \code{NULL}, only steps belonging to the
 given groups are considered.}
 }
