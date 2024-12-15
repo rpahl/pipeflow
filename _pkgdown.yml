@@ -47,6 +47,7 @@ reference:
   - pipe_get_graph
   - pipe_get_out
   - starts_with("pipe_get_params")
+  - matches("pipe_get_step|pipe_has_step")
 
 - subtitle: "Modify"
   contents:

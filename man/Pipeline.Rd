@@ -279,7 +279,7 @@ p$run()
 add1 <- p$get_step("add1")
 print(add1)
 add1[["params"]]
-add1[["out"]]
+add1[["fun"]]
 try()
 try(p$get_step("foo")) # error: step 'foo' does not exist
 
@@ -1383,8 +1383,7 @@ Get step of pipeline
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-\code{data.table} row containing the step. If step not found, an
-error is given.
+\code{data.table} row containing the step.
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
@@ -1395,7 +1394,7 @@ p$run()
 add1 <- p$get_step("add1")
 print(add1)
 add1[["params"]]
-add1[["out"]]
+add1[["fun"]]
 try()
 try(p$get_step("foo")) # error: step 'foo' does not exist
 }
@@ -1463,7 +1462,7 @@ p$get_step_number("f2")
 \if{html}{\out{<a id="method-Pipeline-has_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-has_step}{}}}
 \subsection{Method \code{has_step()}}{
-Determine whether pipeline has given step.
+Check if pipeline has given step
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$has_step(step)}\if{html}{\out{</div>}}
 }

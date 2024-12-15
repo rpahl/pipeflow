@@ -2,10 +2,6 @@
 % Please edit documentation in R/pipeflow_aliases.R
 \name{pipelineAliases}
 \alias{pipelineAliases}
-\alias{pipe_get_step}
-\alias{pipe_get_step_names}
-\alias{pipe_get_step_number}
-\alias{pipe_has_step}
 \alias{pipe_insert_after}
 \alias{pipe_insert_before}
 \alias{pipe_length}
@@ -28,14 +24,6 @@
 \alias{pipe_unlock_step}
 \title{Pipeline alias functions}
 \usage{
-pipe_get_step(pip, ...)
-
-pipe_get_step_names(pip, ...)
-
-pipe_get_step_number(pip, ...)
-
-pipe_has_step(pip, ...)
-
 pipe_insert_after(pip, ...)
 
 pipe_insert_before(pip, ...)

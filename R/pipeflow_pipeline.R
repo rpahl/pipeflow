@@ -762,8 +762,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Get step of pipeline
         #' @param step `string` name of step
-        #' @return `data.table` row containing the step. If step not found, an
-        #' error is given.
+        #' @return `data.table` row containing the step.
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
         #' p$add("add1", \(data = ~data, x = 1) x + data)
@@ -772,7 +771,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' add1 <- p$get_step("add1")
         #' print(add1)
         #' add1[["params"]]
-        #' add1[["out"]]
+        #' add1[["fun"]]
         #' try()
         #' try(p$get_step("foo")) # error: step 'foo' does not exist
         get_step = function(step)
@@ -813,7 +812,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             match(step, self$get_step_names())
         },
 
-        #' @description Determine whether pipeline has given step.
+        #' @description Check if pipeline has given step
         #' @param step `string` name of step
         #' @return `logical` whether step exists
         #' @examples

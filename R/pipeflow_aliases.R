@@ -191,7 +191,7 @@ pipe_append_to_step_names <- function(
 #' p1
 #' p2
 #' @export
-pipe_clone = function(pip, deep = FALSE)
+pipe_clone <- function(pip, deep = FALSE)
 {
     pip$clone(deep = deep)
 }
@@ -199,8 +199,9 @@ pipe_clone = function(pip, deep = FALSE)
 
 #' @title Collect output from entire pipeline
 #' @description Collects output afer pipeline run, by default, from all
-#' steps for which `keepOut` was set to `TRUE`. The output is grouped
-#' by the group names (see also `group` parameter in [pipe_add()]),
+#' steps for which `keepOut` was set to `TRUE` when steps were added
+#' (see [pipe_add()]). The output is grouped by the group names (see
+#' `group` parameter in [pipe_add()]),
 #' which by default are set identical to the step names.
 #' @param pip `Pipeline` object
 #' @param groupBy `string` column of pipeline by which to group the
@@ -234,7 +235,7 @@ pipe_clone = function(pip, deep = FALSE)
 #'
 #' pipe_collect_out(p, groupBy = "state", all = TRUE) |> str()
 #' @export
-pipe_collect_out = function(pip, groupBy = "group", all = FALSE)
+pipe_collect_out <- function(pip, groupBy = "group", all = FALSE)
 {
     pip$collect_out(groupBy = groupBy, all = all)
 }
@@ -277,7 +278,7 @@ pipe_collect_out = function(pip, groupBy = "group", all = FALSE)
 #' # Trying to discard non-existent steps is just ignored
 #' pipe_discard_steps(p, "non-existent")
 #' @export
-pipe_discard_steps = function(
+pipe_discard_steps <- function(
     pip,
     pattern,
     recursive = FALSE,
@@ -304,7 +305,7 @@ pipe_discard_steps = function(
 #' pipe_set_data(p, 3:4)
 #' pipe_get_data(p)
 #' @export
-pipe_get_data = function(pip)
+pipe_get_data <- function(pip)
 {
     pip$get_data()
 }
@@ -347,9 +348,9 @@ pipe_get_data = function(pip)
 #' pipe_add(p, "mult4", \(x = ~add2) x * 4)
 #' pipe_get_depends_up(p, "mult4")
 #' pipe_get_depends_up(p, "mult4", recursive = FALSE)
-#' @rdname get_depends
+#' @rdname pipe_get_depends
 #' @export
-pipe_get_depends = function(pip)
+pipe_get_depends <- function(pip)
 {
     pip$get_depends()
 }
@@ -359,9 +360,9 @@ pipe_get_depends = function(pip)
 #' @param recursive `logical` if `TRUE`, dependencies of dependencies
 #' are also returned.
 #'
-#' @rdname get_depends
+#' @rdname pipe_get_depends
 #' @export
-pipe_get_depends_down = function(pip, step, recursive = TRUE)
+pipe_get_depends_down <- function(pip, step, recursive = TRUE)
 {
     pip$get_depends_down(step = step, recursive = recursive)
 }
@@ -370,9 +371,9 @@ pipe_get_depends_down = function(pip, step, recursive = TRUE)
 #' @param step `string` name of step
 #' @param recursive `logical` if `TRUE`, dependencies of dependencies
 #' are also returned.
-#' @rdname get_depends
+#' @rdname pipe_get_depends
 #' @export
-pipe_get_depends_up = function(pip, step, recursive = TRUE)
+pipe_get_depends_up <- function(pip, step, recursive = TRUE)
 {
     pip$get_depends_up(step = step, recursive = recursive)
 }
@@ -398,7 +399,7 @@ pipe_get_depends_up = function(pip, step, recursive = TRUE)
 #'     do.call(visNetwork, args = graph)
 #' }
 #' @export
-pipe_get_graph = function(pip, groups = NULL)
+pipe_get_graph <- function(pip, groups = NULL)
 {
     pip$get_graph(groups = groups)
 }
@@ -417,7 +418,7 @@ pipe_get_graph = function(pip, groups = NULL)
 #' pipe_get_out(p, "add1")
 #' pipe_get_out(p, "add2")
 #' @export
-pipe_get_out = function(pip, step)
+pipe_get_out <- function(pip, step)
 {
     pip$get_out(step)
 }
@@ -465,83 +466,121 @@ pipe_get_out = function(pip, step)
 #' # get_params_unique_json
 #' pipe_get_params_unique_json(p)
 #' pipe_get_params_unique_json(p, ignoreHidden = FALSE)
-#' @rdname get_params
+#' @rdname pipe_get_params
 #' @export
-pipe_get_params = function(pip, ignoreHidden = TRUE)
+pipe_get_params <- function(pip, ignoreHidden = TRUE)
 {
     pip$get_params(ignoreHidden = ignoreHidden)
 }
 
 
-#' @rdname get_params
+#' @rdname pipe_get_params
 #' @export
-pipe_get_params_at_step = function(pip, step, ignoreHidden = TRUE)
+pipe_get_params_at_step <- function(pip, step, ignoreHidden = TRUE)
 {
     pip$get_params_at_step(step = step, ignoreHidden = ignoreHidden)
 }
 
 
-#' @rdname get_params
+#' @rdname pipe_get_params
 #' @export
-pipe_get_params_unique = function(pip, ignoreHidden = TRUE)
+pipe_get_params_unique <- function(pip, ignoreHidden = TRUE)
 {
     pip$get_params_unique(ignoreHidden = ignoreHidden)
 }
 
 
-#' @rdname get_params
+#' @rdname pipe_get_params
 #' @export
-pipe_get_params_unique_json = function(pip, ignoreHidden = TRUE)
+pipe_get_params_unique_json <- function(pip, ignoreHidden = TRUE)
 {
     pip$get_params_unique_json(ignoreHidden = ignoreHidden)
 }
 
 
-#' @rdname pipelineAliases
+#' @title Get step information
+#' @param pip `Pipeline` object
+#' @param step `string` name of step
+#' @return
+#' * `pipe_get_step`: `data.table` row containing the step
+#' * `pipe_get_step_names`: `character` vector of step names
+#' * `pipe_get_step_number`: the step number in the pipeline
+#' * `pipe_get_step_number`: whether step exists
+#' @examples
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
+#' pipe_add(p, "add2", \(x = 1, y = 2, z = ~add1) x + y + z)
+#' pipe_run(p)
+#'
+#' # pipe_get_step_names
+#' pipe_get_step_names(p)
+#'
+#' # get_step_number
+#' pipe_get_step_number(p, "add1")
+#' pipe_get_step_number(p, "add2")
+#'
+#' # pipe_has_step
+#' pipe_has_step(p, "add1")
+#' pipe_has_step(p, "foo")
+#'
+#' # pipe_get_step
+#' add1 <- pipe_get_step(p, "add1")
+#' add1
+#'
+#' add1[["params"]]
+#'
+#' add1[["fun"]]
+#'
+#' try(p$get_step("foo")) # error: step 'foo' does not exist
+#' @rdname step_info
 #' @export
-pipe_get_step = function(pip, ...)
-    pip$get_step(...)
+pipe_get_step <- function(pip, step)
+{
+    pip$get_step(step)
+}
 
 
-#' @rdname pipelineAliases
+#' @rdname step_info
 #' @export
-pipe_get_step_names = function(pip, ...)
+pipe_get_step_names <- function(pip, ...)
     pip$get_step_names(...)
 
 
-#' @rdname pipelineAliases
+#' @rdname step_info
 #' @export
-pipe_get_step_number = function(pip, ...)
+pipe_get_step_number <- function(pip, ...)
     pip$get_step_number(...)
 
 
-#' @rdname pipelineAliases
+#' @rdname step_info
 #' @export
-pipe_has_step = function(pip, ...)
-    pip$has_step(...)
+pipe_has_step <- function(pip, step)
+{
+    pip$has_step(step)
+}
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_insert_after = function(pip, ...)
+pipe_insert_after <- function(pip, ...)
     pip$insert_after(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_insert_before = function(pip, ...)
+pipe_insert_before <- function(pip, ...)
     pip$insert_before(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_length = function(pip, ...)
+pipe_length <- function(pip, ...)
     pip$length(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_lock_step = function(pip, ...)
+pipe_lock_step <- function(pip, ...)
     pip$lock_step(...)
 
 #' @title Create new pipeline
@@ -590,7 +629,7 @@ pipe_lock_step = function(pip, ...)
 #' p <- pipe_new("myPipe", data = data, logger = my_logger)
 #' p |> pipe_run() |> pipe_get_out("data")
 #' @export
-pipe_new = function(
+pipe_new <- function(
     name,
     data = NULL,
     logger = NULL
@@ -601,36 +640,36 @@ pipe_new = function(
 
 #' @rdname pipelineAliases
 #' @export
-pipe_print = function(pip, ...)
+pipe_print <- function(pip, ...)
     pip$print(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_pop_step = function(pip, ...)
+pipe_pop_step <- function(pip, ...)
     pip$pop_step(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_pop_steps_after = function(pip, ...)
+pipe_pop_steps_after <- function(pip, ...)
     pip$pop_steps_after(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_pop_steps_from = function(pip, ...)
+pipe_pop_steps_from <- function(pip, ...)
     pip$pop_steps_from(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_remove_step = function(pip, ...)
+pipe_remove_step <- function(pip, ...)
     pip$remove_step(...)
 
 #' @rdname pipelineAliases
 #' @export
-pipe_rename_step = function(pip, ...)
+pipe_rename_step <- function(pip, ...)
     pip$rename_step(...)
 
 
@@ -670,7 +709,7 @@ pipe_rename_step = function(pip, ...)
 #' pipe_run(p) |> pipe_collect_out()
 #' try(pipe_replace_step(p, "foo", \(x = 1) x))   # step 'foo' does not exist
 #' @export
-pipe_replace_step = function(
+pipe_replace_step <- function(
     pip,
     step,
     fun,
@@ -701,61 +740,61 @@ pipe_replace_step = function(
 
 #' @rdname pipelineAliases
 #' @export
-pipe_reset = function(pip, ...)
+pipe_reset <- function(pip, ...)
     pip$reset(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_run = function(pip, ...)
+pipe_run <- function(pip, ...)
     pip$run(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_run_step = function(pip, ...)
+pipe_run_step <- function(pip, ...)
     pip$run_step(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_set_data = function(pip, ...)
+pipe_set_data <- function(pip, ...)
     pip$set_data(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_set_data_split = function(pip, ...)
+pipe_set_data_split <- function(pip, ...)
     pip$set_data_split(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_set_keep_out = function(pip, ...)
+pipe_set_keep_out <- function(pip, ...)
     pip$set_keep_out(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_set_params = function(pip, ...)
+pipe_set_params <- function(pip, ...)
     pip$set_params(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_set_params_at_step = function(pip, ...)
+pipe_set_params_at_step <- function(pip, ...)
     pip$set_params_at_step(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_split = function(pip, ...)
+pipe_split <- function(pip, ...)
     pip$split(...)
 
 
 #' @rdname pipelineAliases
 #' @export
-pipe_unlock_step = function(pip, ...)
+pipe_unlock_step <- function(pip, ...)
     pip$unlock_step(...)
 
 # nocov end

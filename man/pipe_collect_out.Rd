@@ -21,8 +21,9 @@ by default, are the steps.
 }
 \description{
 Collects output afer pipeline run, by default, from all
-steps for which \code{keepOut} was set to \code{TRUE}. The output is grouped
-by the group names (see also \code{group} parameter in \code{\link[=pipe_add]{pipe_add()}}),
+steps for which \code{keepOut} was set to \code{TRUE} when steps were added
+(see \code{\link[=pipe_add]{pipe_add()}}). The output is grouped by the group names (see
+\code{group} parameter in \code{\link[=pipe_add]{pipe_add()}}),
 which by default are set identical to the step names.
 }
 \examples{
