@@ -1032,9 +1032,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         },
 
 
-        #' @description Remove certain step from the pipeline. If step does
-        #' not exist, an error is given. If other steps depend on the step to
-        #' be removed, an error is given, unless `recursive = TRUE`.
+        #' @description Remove certain step from the pipeline.
+        #' If other steps depend on the step to be removed, an error is
+        #' given and the removal is blocked, unless `recursive` was set to
+        #' `TRUE`.
         #' @param step `string` the name of the step to be removed.
         #' @param recursive `logical` if `TRUE` the step is removed together
         #' with all its downstream dependencies.
@@ -1064,7 +1065,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 if (!recursive) {
                     stop(
                         "cannot remove step '", step, "' because the ",
-                        "following steps depend on it: ", stepsString
+                        "following steps depend on it: ", stepsString,
+                        call. = FALSE
                     )
                 }
 

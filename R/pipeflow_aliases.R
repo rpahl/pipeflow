@@ -769,6 +769,7 @@ pipe_pop_steps_from <- function(pip, step)
 
 
 #' @title Print the pipeline as a table
+#' @param pip `Pipeline` object
 #' @param verbose `logical` if `TRUE`, print all columns of the
 #' pipeline, otherwise only the most relevant columns are displayed.
 #' @return the `Pipeline` object invisibly
@@ -790,10 +791,33 @@ pipe_print <- function(pip, verbose = FALSE)
 }
 
 
-#' @rdname pipelineAliases
+#' @title Remove certain step from the pipeline.
+#' @description Can be used to remove any given step.
+#' If other steps depend on the step to be removed, an error is
+#' given and the removal is blocked, unless `recursive` was set to `TRUE`.
+#' @param pip `Pipeline` object
+#' @param step `string` the name of the step to be removed
+#' @param recursive `logical` if `TRUE` the step is removed together
+#' with all its downstream dependencies.
+#' @return the `Pipeline` object invisibly
+#' @examples
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
+#' pipe_add(p, "add2", \(x = 1, y = ~add1) x + y)
+#' pipe_add(p, "mult1", \(x = 1, y = ~add2) x * y)
+#' p
+#'
+#' pipe_remove_step(p, "mult1")
+#' p
+#'
+#' try(pipe_remove_step(p, "add1"))
+#' pipe_remove_step(p, "add1", recursive = TRUE)
+#' p
 #' @export
-pipe_remove_step <- function(pip, ...)
-    pip$remove_step(...)
+pipe_remove_step <- function(pip, step, recursive = FALSE)
+{
+    pip$remove_step(step = step, recursive = recursive)
+}
 
 #' @rdname pipelineAliases
 #' @export

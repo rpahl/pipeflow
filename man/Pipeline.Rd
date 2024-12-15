@@ -1757,9 +1757,10 @@ p$print()
 \if{html}{\out{<a id="method-Pipeline-remove_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-remove_step}{}}}
 \subsection{Method \code{remove_step()}}{
-Remove certain step from the pipeline. If step does
-not exist, an error is given. If other steps depend on the step to
-be removed, an error is given, unless \code{recursive = TRUE}.
+Remove certain step from the pipeline.
+If other steps depend on the step to be removed, an error is
+given and the removal is blocked, unless \code{recursive} was set to
+\code{TRUE}.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$remove_step(step, recursive = FALSE)}\if{html}{\out{</div>}}
 }

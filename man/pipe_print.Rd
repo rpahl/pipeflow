@@ -7,6 +7,8 @@
 pipe_print(pip, verbose = FALSE)
 }
 \arguments{
+\item{pip}{\code{Pipeline} object}
+
 \item{verbose}{\code{logical} if \code{TRUE}, print all columns of the
 pipeline, otherwise only the most relevant columns are displayed.}
 }
