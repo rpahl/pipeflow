@@ -943,7 +943,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Remove last step from the pipeline.
+        #' @description Drop last step from the pipeline.
         #' @return `string` the name of the step that was removed
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
@@ -960,7 +960,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             lastStepName
         },
 
-        #' @description Remove all steps after the given step.
+        #' @description Drop all steps after the given step.
         #' @param step `string` name of step
         #' @return `character` vector of steps that were removed.
         #' @examples
@@ -987,7 +987,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             removedSteps
         },
 
-        #' @description Remove all steps from and including the given step.
+        #' @description Drop all steps from and including the given step.
         #' @param step `string` name of step
         #' @return `character` vector of steps that were removed.
         #' @examples

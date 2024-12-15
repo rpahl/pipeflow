@@ -67,6 +67,7 @@ reference:
 - subtitle: "Remove"
   contents:
   - pipe_discard_steps
+  - starts_with("pipe_pop_step")
 
 - subtitle: "Setters"
   contents:

@@ -10,6 +10,8 @@ pipe_lock_step(pip, step)
 pipe_unlock_step(pip, step)
 }
 \arguments{
+\item{pip}{\code{Pipeline} object}
+
 \item{step}{\code{string} name of step to lock or unlock}
 }
 \value{

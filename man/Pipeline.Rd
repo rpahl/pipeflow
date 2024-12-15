@@ -1633,7 +1633,7 @@ p$get_out("add2")
 \if{html}{\out{<a id="method-Pipeline-pop_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-pop_step}{}}}
 \subsection{Method \code{pop_step()}}{
-Remove last step from the pipeline.
+Drop last step from the pipeline.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$pop_step()}\if{html}{\out{</div>}}
 }
@@ -1659,7 +1659,7 @@ p
 \if{html}{\out{<a id="method-Pipeline-pop_steps_after"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-pop_steps_after}{}}}
 \subsection{Method \code{pop_steps_after()}}{
-Remove all steps after the given step.
+Drop all steps after the given step.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$pop_steps_after(step)}\if{html}{\out{</div>}}
 }
@@ -1692,7 +1692,7 @@ p
 \if{html}{\out{<a id="method-Pipeline-pop_steps_from"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-pop_steps_from}{}}}
 \subsection{Method \code{pop_steps_from()}}{
-Remove all steps from and including the given step.
+Drop all steps from and including the given step.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$pop_steps_from(step)}\if{html}{\out{</div>}}
 }

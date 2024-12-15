@@ -625,6 +625,7 @@ pipe_length <- function(pip)
 #' setting new pipeline parameters nor future pipeline runs can change
 #' the current parameter and output content. To unlock a locked step,
 #' use [pipe_unlock_step()].
+#' @param pip `Pipeline` object
 #' @param step `string` name of step to lock or unlock
 #' @return the `Pipeline` object invisibly
 #' @examples
@@ -711,22 +712,60 @@ pipe_new <- function(
 }
 
 
-#' @rdname pipelineAliases
+#' @title Pop steps from the pipeline
+#' @description Use this function to drop steps from the end of the pipeline.
+#' @section Methods:
+#' * `pipe_pop_step`: drop last step from the pipeline
+#' * `pipe_pop_steps_after`: drop all steps after given steps
+#' * `pipe_pop_steps_from`: drop all steps from and including given steps
+#' @return `string` the name of the step that was removed
+#' @param pip `Pipeline` object
+#' @examples
+#' # pipe_pop_step
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "f1", \(x = 1) x)
+#' pipe_add(p, "f2", \(y = 1) y)
+#' p
+#' pipe_pop_step(p)
+#' p
+#'
+#' # pipe_pop_steps_after
+#' pipe_add(p, "f2", \(y = 1) y)
+#' pipe_add(p, "f3", \(z = 1) z)
+#' p
+#' pipe_pop_steps_after(p, "f1")
+#' p
+#'
+#' # pipe_pop_steps_from
+#' pipe_add(p, "f2", \(y = 1) y)
+#' pipe_add(p, "f3", \(z = 1) z)
+#' p
+#' pipe_pop_steps_from(p, "f1")
+#' p
+#' @rdname pipe_pop_step
 #' @export
-pipe_pop_step <- function(pip, ...)
-    pip$pop_step(...)
+pipe_pop_step <- function(pip)
+{
+    pip$pop_step()
+}
 
 
-#' @rdname pipelineAliases
+#' @rdname pipe_pop_step
+#' @param step `string` name of step
 #' @export
-pipe_pop_steps_after <- function(pip, ...)
-    pip$pop_steps_after(...)
+pipe_pop_steps_after <- function(pip, step)
+{
+    pip$pop_steps_after(step)
+}
 
 
-#' @rdname pipelineAliases
+#' @rdname pipe_pop_step
+#' @param step `string` name of step
 #' @export
-pipe_pop_steps_from <- function(pip, ...)
-    pip$pop_steps_from(...)
+pipe_pop_steps_from <- function(pip, step)
+{
+    pip$pop_steps_from(step)
+}
 
 
 #' @title Print the pipeline as a table
