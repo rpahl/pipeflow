@@ -919,11 +919,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         length = function() nrow(self$pipeline),
 
         #' @description Locking a step means that both its parameters and its
-        #' output (given it has output) are locked. If it does not have output,
-        #' only the parameters are locked. Locking a step is useful if the
-        #' step happens to share parameter names with other steps but should not
-        #' be affected when parameters are set commonly for the entire pipeline
-        #' (see function `set_params` below).
+        #' output (given it has output) are locked such that neither
+        #' setting new pipeline parameters nor future pipeline runs can change
+        #' the current parameter and output content.
         #' @param step `string` name of step
         #' @return the `Pipeline` object invisibly
         #' @examples

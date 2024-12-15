@@ -619,10 +619,42 @@ pipe_length <- function(pip)
 }
 
 
-#' @rdname pipelineAliases
+#' @title Lock steps
+#' @description Locking a step means that both its parameters and its
+#' output (given it has output) are locked such that neither
+#' setting new pipeline parameters nor future pipeline runs can change
+#' the current parameter and output content. To unlock a locked step,
+#' use [pipe_unlock_step()].
+#' @param step `string` name of step to lock or unlock
+#' @return the `Pipeline` object invisibly
+#' @examples
+#' # pipe_lock_step
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "add1", \(x = 1, data = ~data) x + data)
+#' pipe_add(p, "add2", \(x = 1, data = ~data) x + data)
+#' pipe_run(p)
+#' pipe_get_out(p, "add1")
+#' pipe_get_out(p, "add2")
+#' pipe_lock_step(p, "add1")
+#'
+#' pipe_set_data(p, 3)
+#' pipe_set_params(p, list(x = 3))
+#' pipe_run(p)
+#' pipe_get_out(p, "add1")
+#' pipe_get_out(p, "add2")
+#'
+#' # pipe_unlock_step
+#' pipe_unlock_step(p, "add1")
+#' pipe_set_params(p, list(x = 3))
+#' pipe_run(p)
+#' pipe_get_out(p, "add1")
+#' @rdname pipe_lock_unlock
 #' @export
-pipe_lock_step <- function(pip, ...)
-    pip$lock_step(...)
+pipe_lock_step <- function(pip, step)
+{
+    pip$lock_step(step)
+}
+
 
 #' @title Create new pipeline
 #' @description A new pipeline is always initialized with one 'data' step,
@@ -833,9 +865,11 @@ pipe_split <- function(pip, ...)
     pip$split(...)
 
 
-#' @rdname pipelineAliases
+#' @rdname pipe_lock_unlock
 #' @export
-pipe_unlock_step <- function(pip, ...)
-    pip$unlock_step(...)
+pipe_unlock_step <- function(pip, step)
+{
+    pip$unlock_step(step)
+}
 
 # nocov end

@@ -2,7 +2,6 @@
 % Please edit documentation in R/pipeflow_aliases.R
 \name{pipelineAliases}
 \alias{pipelineAliases}
-\alias{pipe_lock_step}
 \alias{pipe_print}
 \alias{pipe_pop_step}
 \alias{pipe_pop_steps_after}
@@ -18,11 +17,8 @@
 \alias{pipe_set_params}
 \alias{pipe_set_params_at_step}
 \alias{pipe_split}
-\alias{pipe_unlock_step}
 \title{Pipeline alias functions}
 \usage{
-pipe_lock_step(pip, ...)
-
 pipe_print(pip, ...)
 
 pipe_pop_step(pip, ...)
@@ -52,8 +48,6 @@ pipe_set_params(pip, ...)
 pipe_set_params_at_step(pip, ...)
 
 pipe_split(pip, ...)
-
-pipe_unlock_step(pip, ...)
 }
 \arguments{
 \item{pip}{A pipeline object}

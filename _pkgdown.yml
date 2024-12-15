@@ -67,6 +67,9 @@ reference:
   contents:
   - pipe_discard_steps
 
+- subtitle: "Setters"
+  contents:
+  - matches("pipe_lock_step|pipe_unlock_step")
 
 - subtitle: "Logging"
   contents:
