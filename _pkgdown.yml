@@ -50,10 +50,6 @@ reference:
   - starts_with("pipe_get_params")
   - matches("pipe_get_step|pipe_has_step")
 
-- subtitle: "Final output"
-  contents:
-  - pipe_collect_out
-
 - subtitle: "Information"
   contents:
   - pipe_length
@@ -62,6 +58,11 @@ reference:
   contents:
   - pipe_append_to_step_names
   - pipe_replace_step
+
+- subtitle: "Output"
+  contents:
+  - pipe_collect_out
+  - pipe_print
 
 - subtitle: "Remove"
   contents:

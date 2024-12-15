@@ -2,7 +2,6 @@
 % Please edit documentation in R/pipeflow_aliases.R
 \name{pipelineAliases}
 \alias{pipelineAliases}
-\alias{pipe_print}
 \alias{pipe_pop_step}
 \alias{pipe_pop_steps_after}
 \alias{pipe_pop_steps_from}
@@ -19,8 +18,6 @@
 \alias{pipe_split}
 \title{Pipeline alias functions}
 \usage{
-pipe_print(pip, ...)
-
 pipe_pop_step(pip, ...)
 
 pipe_pop_steps_after(pip, ...)

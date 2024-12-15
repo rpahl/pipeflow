@@ -943,27 +943,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Print the pipeline as a table.
-        #' @param verbose `logical` if `TRUE`, print all columns of the
-        #' pipeline, otherwise only a subset of columns is printed.
-        #' @return the `Pipeline` object invisibly
-        #' @examples
-        #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("f1", \(x = 1) x)
-        #' p$add("f2", \(y = 1) y)
-        #' p$print()
-        print = function(verbose = FALSE) {
-            if (verbose) {
-                print(self$pipeline)
-            } else {
-                columns2print <- c(
-                    "step", "depends", "out", "keepOut", "group", "state"
-                )
-                print(self$pipeline[, columns2print, with = FALSE])
-            }
-            invisible(self)
-        },
-
         #' @description Remove last step from the pipeline.
         #' @return `string` the name of the step that was removed
         #' @examples
@@ -1028,6 +1007,28 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             self$pipeline <- self$pipeline[-numbers2remove, ]
 
             removedStepNames
+        },
+
+
+        #' @description Print the pipeline as a table.
+        #' @param verbose `logical` if `TRUE`, print all columns of the
+        #' pipeline, otherwise only the most relevant columns are displayed.
+        #' @return the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(y = 1) y)
+        #' p$print()
+        print = function(verbose = FALSE) {
+            if (verbose) {
+                print(self$pipeline)
+            } else {
+                columns2print <- c(
+                    "step", "depends", "out", "keepOut", "group", "state"
+                )
+                print(self$pipeline[, columns2print, with = FALSE])
+            }
+            invisible(self)
         },
 
 

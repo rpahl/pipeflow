@@ -713,12 +713,6 @@ pipe_new <- function(
 
 #' @rdname pipelineAliases
 #' @export
-pipe_print <- function(pip, ...)
-    pip$print(...)
-
-
-#' @rdname pipelineAliases
-#' @export
 pipe_pop_step <- function(pip, ...)
     pip$pop_step(...)
 
@@ -733,6 +727,28 @@ pipe_pop_steps_after <- function(pip, ...)
 #' @export
 pipe_pop_steps_from <- function(pip, ...)
     pip$pop_steps_from(...)
+
+
+#' @title Print the pipeline as a table
+#' @param verbose `logical` if `TRUE`, print all columns of the
+#' pipeline, otherwise only the most relevant columns are displayed.
+#' @return the `Pipeline` object invisibly
+#' @examples
+#' p <- pipe_new("pipe", data = 1:2)
+#' p$add("f1", \(x = 1) x)
+#' p$add("f2", \(y = 1) y)
+
+#' pipe_print(p)
+#' pipe_print(p, verbose = TRUE)
+#'
+#' # Also works with standard print function
+#' print(p)
+#' print(p, verbose = TRUE)
+#' @export
+pipe_print <- function(pip, verbose = FALSE)
+{
+    pip$print(verbose = verbose)
+}
 
 
 #' @rdname pipelineAliases

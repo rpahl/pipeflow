@@ -359,15 +359,6 @@ p$get_out("add1")
 p$get_out("add2")
 
 ## ------------------------------------------------
-## Method `Pipeline$print`
-## ------------------------------------------------
-
-p <- Pipeline$new("pipe", data = 1:2)
-p$add("f1", \(x = 1) x)
-p$add("f2", \(y = 1) y)
-p$print()
-
-## ------------------------------------------------
 ## Method `Pipeline$pop_step`
 ## ------------------------------------------------
 
@@ -399,6 +390,15 @@ p$add("f2", \(y = 1) y)
 p$add("f3", \(z = 1) z)
 p$pop_steps_from("f2")  # "f2", "f3"
 p
+
+## ------------------------------------------------
+## Method `Pipeline$print`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$print()
 
 ## ------------------------------------------------
 ## Method `Pipeline$remove_step`
@@ -645,10 +645,10 @@ Roman Pahl
 \item \href{#method-Pipeline-insert_before}{\code{Pipeline$insert_before()}}
 \item \href{#method-Pipeline-length}{\code{Pipeline$length()}}
 \item \href{#method-Pipeline-lock_step}{\code{Pipeline$lock_step()}}
-\item \href{#method-Pipeline-print}{\code{Pipeline$print()}}
 \item \href{#method-Pipeline-pop_step}{\code{Pipeline$pop_step()}}
 \item \href{#method-Pipeline-pop_steps_after}{\code{Pipeline$pop_steps_after()}}
 \item \href{#method-Pipeline-pop_steps_from}{\code{Pipeline$pop_steps_from()}}
+\item \href{#method-Pipeline-print}{\code{Pipeline$print()}}
 \item \href{#method-Pipeline-remove_step}{\code{Pipeline$remove_step()}}
 \item \href{#method-Pipeline-rename_step}{\code{Pipeline$rename_step()}}
 \item \href{#method-Pipeline-replace_step}{\code{Pipeline$replace_step()}}
@@ -1630,38 +1630,6 @@ p$get_out("add2")
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-print"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-print}{}}}
-\subsection{Method \code{print()}}{
-Print the pipeline as a table.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$print(verbose = FALSE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{verbose}}{\code{logical} if \code{TRUE}, print all columns of the
-pipeline, otherwise only a subset of columns is printed.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-the \code{Pipeline} object invisibly
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{p <- Pipeline$new("pipe", data = 1:2)
-p$add("f1", \(x = 1) x)
-p$add("f2", \(y = 1) y)
-p$print()
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-pop_step"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-pop_step}{}}}
 \subsection{Method \code{pop_step()}}{
@@ -1747,6 +1715,38 @@ p$add("f2", \(y = 1) y)
 p$add("f3", \(z = 1) z)
 p$pop_steps_from("f2")  # "f2", "f3"
 p
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-print"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-print}{}}}
+\subsection{Method \code{print()}}{
+Print the pipeline as a table.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$print(verbose = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{verbose}}{\code{logical} if \code{TRUE}, print all columns of the
+pipeline, otherwise only the most relevant columns are displayed.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)
+p$add("f2", \(y = 1) y)
+p$print()
 }
 \if{html}{\out{</div>}}
 
