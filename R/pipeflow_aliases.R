@@ -423,28 +423,78 @@ pipe_get_out = function(pip, step)
 }
 
 
-#' @rdname pipelineAliases
+#' @title Get pipeline parameters
+#' @description Retrieves all unbound function parameters defined in
+#' the pipeline where 'unbound' refers to parameters that are not pointing
+#' to other steps.
+#'
+#' @param pip `Pipeline` object
+#' @param step `string` name of step
+#' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
+#' paramater names starting with a dot) are ignored and thus not returned.
+#' @return
+#' * `pipe_get_params`: list of parameters, sorted and named by step -
+#'    steps with no parameters are filtered out
+#' * `pipe_get_params_at_step`: list of parameters at given step
+#' * `pipe_get_params_unique`:  list of parameters where each parameter
+#'   is only listed once. The values of the parameters will be the values
+#'   of the first step where the parameters were defined, respectively.
+#' * `get_params_unique_json`: flat unnamed json list of unique parameters
+#' @examples
+#' # pipe_get_params
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
+#' pipe_add(p, "add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+#' pipe_add(p, "add3", \() 1 + 2)
+#' pipe_get_params(p, ) |> str()
+#' pipe_get_params(p, ignoreHidden = FALSE) |> str()
+#'
+#' # pipe_get_params_at_step
+#' pipe_get_params_at_step(p, "add2")
+#' pipe_get_params_at_step(p, "add2", ignoreHidden = FALSE)
+#' pipe_get_params_at_step(p, "add3")
+#'
+#' # pipe_get_params_unique
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
+#' pipe_add(p, "add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+#' pipe_add(p, "mult1", \(x = 4, y = 5, .z = 6, b = ~add2) x * y * b)
+#' pipe_get_params_unique(p)
+#' pipe_get_params_unique(p, ignoreHidden = FALSE)
+#'
+#' # get_params_unique_json
+#' pipe_get_params_unique_json(p)
+#' pipe_get_params_unique_json(p, ignoreHidden = FALSE)
+#' @rdname get_params
 #' @export
-pipe_get_params = function(pip, ...)
-    pip$get_params(...)
+pipe_get_params = function(pip, ignoreHidden = TRUE)
+{
+    pip$get_params(ignoreHidden = ignoreHidden)
+}
 
 
-#' @rdname pipelineAliases
+#' @rdname get_params
 #' @export
-pipe_get_params_at_step = function(pip, ...)
-    pip$get_params_at_step(...)
+pipe_get_params_at_step = function(pip, step, ignoreHidden = TRUE)
+{
+    pip$get_params_at_step(step = step, ignoreHidden = ignoreHidden)
+}
 
 
-#' @rdname pipelineAliases
+#' @rdname get_params
 #' @export
-pipe_get_params_unique = function(pip, ...)
-    pip$get_params_unique(...)
+pipe_get_params_unique = function(pip, ignoreHidden = TRUE)
+{
+    pip$get_params_unique(ignoreHidden = ignoreHidden)
+}
 
 
-#' @rdname pipelineAliases
+#' @rdname get_params
 #' @export
-pipe_get_params_unique_json = function(pip, ...)
-    pip$get_params_unique_json(...)
+pipe_get_params_unique_json = function(pip, ignoreHidden = TRUE)
+{
+    pip$get_params_unique_json(ignoreHidden = ignoreHidden)
+}
 
 
 #' @rdname pipelineAliases

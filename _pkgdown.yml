@@ -46,6 +46,7 @@ reference:
   - starts_with("pipe_get_depends")
   - pipe_get_graph
   - pipe_get_out
+  - starts_with("pipe_get_params")
 
 - subtitle: "Modify"
   contents:

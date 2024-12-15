@@ -2,10 +2,6 @@
 % Please edit documentation in R/pipeflow_aliases.R
 \name{pipelineAliases}
 \alias{pipelineAliases}
-\alias{pipe_get_params}
-\alias{pipe_get_params_at_step}
-\alias{pipe_get_params_unique}
-\alias{pipe_get_params_unique_json}
 \alias{pipe_get_step}
 \alias{pipe_get_step_names}
 \alias{pipe_get_step_number}
@@ -32,14 +28,6 @@
 \alias{pipe_unlock_step}
 \title{Pipeline alias functions}
 \usage{
-pipe_get_params(pip, ...)
-
-pipe_get_params_at_step(pip, ...)
-
-pipe_get_params_unique(pip, ...)
-
-pipe_get_params_unique_json(pip, ...)
-
 pipe_get_step(pip, ...)
 
 pipe_get_step_names(pip, ...)
