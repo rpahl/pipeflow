@@ -41,7 +41,7 @@ reference:
   - pipe_append
   - starts_with("pipe_insert")
 
-- subtitle: "Getters"
+- subtitle: "Get"
   contents:
   - pipe_get_data
   - starts_with("pipe_get_depends")
@@ -59,6 +59,7 @@ reference:
   - pipe_append_to_step_names
   - pipe_replace_step
   - pipe_rename_step
+  - pipe_reset
 
 - subtitle: "Output"
   contents:
@@ -71,7 +72,11 @@ reference:
   - starts_with("pipe_pop_step")
   - pipe_remove_step
 
-- subtitle: "Setters"
+- subtitle: "Run"
+  contents:
+  - pipe_run
+
+- subtitle: "Set"
   contents:
   - matches("pipe_lock_step|pipe_unlock_step")
 

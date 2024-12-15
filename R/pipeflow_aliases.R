@@ -909,16 +909,100 @@ pipe_replace_step <- function(
 }
 
 
-#' @rdname pipelineAliases
+#' @title  Reset pipeline
+#' @description Resets the pipeline to the state before it was run.
+#' This means that all output is removed and the state of all steps
+#' is reset to 'New'.
+#' @param pip `Pipeline` object
+#' @return returns the `Pipeline` object invisibly
+#' @examples
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "f1", \(x = 1) x)
+#' pipe_add(p, "f2", \(y = 1) y)
+#' pipe_run(p, )
+#' p
+#'
+#' pipe_reset(p, )
+#' p
 #' @export
-pipe_reset <- function(pip, ...)
-    pip$reset(...)
+pipe_reset <- function(pip)
+{
+    pip$reset()
+}
 
 
-#' @rdname pipelineAliases
+#' @title Run pipeline
+#' @description Runs all new and/or outdated pipeline steps.
+#' @param force `logical` if `TRUE` all steps are run regardless of
+#' whether they are outdated or not.
+#' @param recursive `logical` if `TRUE` and a step returns a new
+#' pipeline, the run of the current pipeline is aborted and the
+#' new pipeline is run recursively.
+#' @param cleanUnkept `logical` if `TRUE` all output that was not
+#' marked to be kept is removed after the pipeline run. This option
+#' can be useful if temporary results require a lot of memory.
+#' @param progress `function` this parameter can be used to provide a
+#' custom progress function of the form `function(value, detail)`,
+#' which will show the progress of the pipeline run for each step,
+#' where `value` is the current step number and `detail` is the name
+#' of the step.
+#' @param showLog `logical` should the steps be logged during the
+#' pipeline run?
+#' @return returns the `Pipeline` object invisibly
+#' @examples
+#' # Simple pipeline
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
+#' pipe_add(p, "add2", \(x = ~add1, z = 2) x + z)
+#' pipe_add(p, "final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+#' p |> pipe_run() |> pipe_collect_out()
+
+#' pipe_set_params(p, list(z = 4))  # outdates steps add2 and final
+#' p
+#'
+#' p |> pipe_run() |> pipe_collect_out()
+#'
+#' pipe_run(p, cleanUnkept = TRUE)
+#' p
+#'
+#' # Recursive pipeline (for advanced users)
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
+#' pipe_add(p, "new_pipe", \(x = ~add1) {
+#'     pp <- pipe_new("new_pipe", data = x)
+#'     pipe_add(p, "add1", \(x = ~data) x + 1)
+#'     pipe_add(p, "add2", \(x = ~add1) x + 2, keepOut = TRUE)
+#'   }
+#' )
+#' p |> pipe_run() |> pipe_collect_out()
+#'
+#' # Run pipeline with progress bar
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "first step", \() Sys.sleep(0.5))
+#' pipe_add(p, "second step", \() Sys.sleep(0.5))
+#' pipe_add(p, "last step", \() Sys.sleep(0.5))
+#' pb <- txtProgressBar(min = 1, max = pipe_length(p), style = 3)
+#' fprogress <- function(value, detail) {
+#'    setTxtProgressBar(pb, value)
+#' }
+#' pipe_run(p, progress = fprogress, showLog = FALSE)
 #' @export
-pipe_run <- function(pip, ...)
-    pip$run(...)
+pipe_run <- function(
+    pip,
+    force = FALSE,
+    recursive = TRUE,
+    cleanUnkept = FALSE,
+    progress = NULL,
+    showLog = TRUE
+) {
+    pip$run(
+        force = force,
+        recursive = recursive,
+        cleanUnkept = cleanUnkept,
+        progress = progress,
+        showLog = showLog
+    )
+}
 
 
 #' @rdname pipelineAliases
