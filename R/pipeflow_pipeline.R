@@ -63,11 +63,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             logger = NULL
         ) {
             if (!is_string(name)) {
-                stop("name must be a string")
+                stop_no_call("name must be a string")
             }
 
             if (!nzchar(name)) {
-                stop("name must not be empty")
+                stop_no_call("name must not be empty")
             }
 
             stopifnot(is.null(logger) || is.function(logger))
@@ -77,7 +77,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             if (is.function(logger)) {
                 expectedFormals <- c("level", "msg", "...")
                 if (!setequal(names(formals(logger)), expectedFormals)) {
-                    stop(
+                    stop_no_call(
                         "logger function must have the following signature: ",
                         "function(", paste(expectedFormals, collapse = ", "),
                         ")"
@@ -269,7 +269,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             if (any(duplicated(stepNames))) {
                 duplicatedNames <- stepNames[duplicated(stepNames)]
                 if (!tryAutofixNames) {
-                    stop(
+                    stop_no_call(
                         "combined pipeline would have duplicated step names: ",
                         paste0("'", duplicatedNames, "'", sep = ", ")
                     )
@@ -277,7 +277,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 for (name in duplicatedNames) {
                     newName <- paste(name, p2$name, sep = sep)
                     if (self$has_step(newName)) {
-                        stop(
+                        stop_no_call(
                             "Cannot auto-fix name clash for step '",
                             name, "' in pipeline '",
                             p2$name, "'. Step '", newName,
@@ -508,7 +508,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             steps <- self$get_step_names()
 
             if (!"data" %in% steps) {
-                stop("no data step defined")
+                stop_no_call("no data step defined")
             }
 
             pos <- match("data", steps)
@@ -780,7 +780,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             pos <- Position(
                 self$pipeline[["step"]],
                 f = function(x) x == step,
-                nomatch = stop("step '", step, "' not found")
+                nomatch = stop_no_call("step '", step, "' not found")
             )
 
             self$pipeline[pos, ]
@@ -849,7 +849,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             private$.verify_step_does_not_exist(step)
 
             if (!self$has_step(afterStep)) {
-                stop("step '", afterStep, "' does not exist")
+                stop_no_call("step '", afterStep, "' does not exist")
             }
 
             pos <- match(afterStep, self$get_step_names())
@@ -887,12 +887,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             private$.verify_step_does_not_exist(step)
 
             if (!self$has_step(beforeStep)) {
-                stop("step '", beforeStep, "' does not exist")
+                stop_no_call("step '", beforeStep, "' does not exist")
             }
 
             pos <- match(beforeStep, self$get_step_names()) - 1
             if (pos == 0) {
-                stop("cannot insert before first step")
+                stop_no_call("cannot insert before first step")
             }
 
             pip <- Pipeline$new(name = self$name)
@@ -1063,10 +1063,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 stepsString <- paste0("'", deps, "'", collapse = ", ")
 
                 if (!recursive) {
-                    stop(
+                    stop_no_call(
                         "cannot remove step '", step, "' because the ",
-                        "following steps depend on it: ", stepsString,
-                        call. = FALSE
+                        "following steps depend on it: ", stepsString
                     )
                 }
 
@@ -1669,7 +1668,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             extra <- setdiff(names(params), names(current))
             if (length(extra) > 0) {
-                stop(
+                stop_no_call(
                     "Unable to set parameter(s) ", toString(extra),
                     " at step ", step, " - candidates are ",
                     toString(names(current))
@@ -2086,7 +2085,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             absIndex <- relative_dep + startIndex
 
             if (absIndex < 1) {
-                stop(
+                stop_no_call(
                     "step '", step, "': relative dependency ",
                     paste0(dependencyName, "=", relative_dep),
                     " points to outside the pipeline"
@@ -2139,7 +2138,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 error = function(e) {
                     msg <- e$message
                     private$.lg(level = "error", msg = msg, context = context)
-                    stop(e$message, call. = FALSE)
+                    stop_no_call(e$message)
                 },
                 warning = function(w) {
                     msg <- w$message
@@ -2221,7 +2220,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         msg, " up to step '", consideredSteps[toIndex], "'"
                     )
                 }
-                stop(msg, call. = FALSE)
+                stop_no_call(msg)
             }
 
             invisible(TRUE)
@@ -2238,10 +2237,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
 
             if (to > self$length()) {
-                stop(
-                    "'to' must not be larger than pipeline length",
-                    call. = FALSE
-                )
+                stop_no_call("'to' must not be larger than pipeline length")
             }
 
             invisible(TRUE)
@@ -2268,10 +2264,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             } else {
                 unknownParams <- setdiff(names(params), names(fargs))
                 if (length(unknownParams) > 0) {
-                    stop(
+                    stop_no_call(
                         paste0("'", unknownParams, "'", collapse = ", "),
-                        " are no function parameters of '", funcName, "'",
-                        call. = FALSE
+                        " are no function parameters of '", funcName, "'"
                     )
                 }
             }
@@ -2282,10 +2277,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
             undefinedParams <- Filter(params, f = isUndefined)
             if (length(undefinedParams) > 0) {
-                stop(
+                stop_no_call(
                     paste0("'", names(undefinedParams), "'", collapse = ", "),
-                    " parameter(s) must have default values",
-                    call. = FALSE
+                    " parameter(s) must have default values"
                 )
             }
 
@@ -2295,14 +2289,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         .verify_step_does_not_exist = function(step)
         {
             if (self$has_step(step)) {
-                stop("step '", step, "' already exists", call. = FALSE)
+                stop_no_call("step '", step, "' already exists")
             }
         },
 
         .verify_step_exists = function(step)
         {
             if (!self$has_step(step)) {
-                stop("step '", step, "' does not exist", call. = FALSE)
+                stop_no_call("step '", step, "' does not exist")
             }
         }
     )

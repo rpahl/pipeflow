@@ -180,3 +180,23 @@ test_that("pipe_filter_params",
         )
     })
 })
+
+
+describe("stop_no_call",
+{
+    f1 <- function(x) {
+        if (x > 5) stop("x is too big")
+    }
+    f2 <- function(x) {
+        if (x > 5) stop_no_call("x is too big")
+    }
+
+    it("in contrast to standard stop gives an error without the call",
+    {
+        res1 <- tryCatch(f1(10), error = identity)
+        expect_equal(deparse(res1$call), "f1(10)")
+
+        res2 <- tryCatch(f2(10), error = identity)
+        expect_true(is.null(res2$call))
+    })
+})
