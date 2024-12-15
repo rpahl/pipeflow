@@ -819,10 +819,29 @@ pipe_remove_step <- function(pip, step, recursive = FALSE)
     pip$remove_step(step = step, recursive = recursive)
 }
 
-#' @rdname pipelineAliases
+
+#' @title Rename step
+#' @description Safely rename a step in the pipeline. If new step
+#' name would result in a name clash, an error is given.
+#' @param pip `Pipeline` object
+#' @param from `string` the name of the step to be renamed.
+#' @param to `string` the new name of the step.
+#' @return the `Pipeline` object invisibly
+#' @examples
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
+#' pipe_add(p, "add2", \(x = 1, y = ~add1) x + y)
+#' p
+#'
+#' try(pipe_rename_step(p, from = "add1", to = "add2"))
+#'
+#' pipe_rename_step(p, from = "add1", to = "first_add")
+#' p
 #' @export
-pipe_rename_step <- function(pip, ...)
-    pip$rename_step(...)
+pipe_rename_step <- function(pip, from, to)
+{
+    pip$rename_step(from = from, to = to)
+}
 
 
 #' @title Replace pipeline step

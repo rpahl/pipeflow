@@ -58,6 +58,7 @@ reference:
   contents:
   - pipe_append_to_step_names
   - pipe_replace_step
+  - pipe_rename_step
 
 - subtitle: "Output"
   contents:
