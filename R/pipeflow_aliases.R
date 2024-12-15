@@ -31,15 +31,15 @@ NULL
 #' parameters of the passed function.
 #' @param description `string` optional description of the step
 #' @param group `string` output collected after pipeline execution
-#' (see function `collect_out`) is grouped by the defined group
+#' (see [pipe_collect_out()] is grouped by the defined group
 #' names. By default, this is the name of the step, which comes in
 #' handy when the pipeline is copy-appended multiple times to keep
 #' the results of the same function/step grouped at one place.
 #' @param keepOut `logical` if `FALSE` (default) the output of the
-#' step is not collected when calling `collect_out` after the pipeline
+#' step is not collected when calling [pipe_collect_out()] after the pipeline
 #' run. This option is used to only keep the results that matter
 #' and skip intermediate results that are not needed. See also
-#' function `collect_out` for more details.
+#' function [pipe_collect_out()] for more details.
 #' @return returns the `Pipeline` object invisibly
 #' @examples
 #' # Add steps with lambda functions
@@ -156,6 +156,7 @@ pipe_append <- function(
 #' @title Append string to all step names
 #' @description Appends string to all step names and takes care
 #' of updating step dependencies accordingly.
+#' @param pip `Pipeline` object
 #' @param postfix `string` to be appended to each step name.
 #' @param sep `string` separator between step name and postfix.
 #' @return returns the `Pipeline` object invisibly
@@ -179,6 +180,7 @@ pipe_append_to_step_names <- function(
 
 #' @title Clone pipeline
 #' @description Creates a copy of a pipeline object.
+#' @param pip `Pipeline` object
 #' @param deep `logical` whether to perform a deep copy
 #' @return returns the copied `Pipeline` object
 #' @examples
@@ -200,41 +202,47 @@ pipe_clone = function(pip, deep = FALSE)
 #' steps for which `keepOut` was set to `TRUE`. The output is grouped
 #' by the group names (see also `group` parameter in [pipe_add()]),
 #' which by default are set identical to the step names.
+#' @param pip `Pipeline` object
 #' @param groupBy `string` column of pipeline by which to group the
-#' output. To see all available columns,
+#' output.
 #' @param all `logical` if `TRUE` all output is collected
 #' regardless of the `keepOut` flag. This can be useful for debugging.
 #' @return `list` containing the output, named after the groups, which,
 #' by default, are the steps.
 #' @examples
-#' p <- Pipeline$new("pipe", data = 1:2)
-#' p$add("step1", \(x = ~data) x + 2)
-#' p$add("step2", \(x = ~step1) x + 2, keepOut = TRUE)
-#' p$run()
-#' p$collect_out()
-#' p$collect_out(all = TRUE) |> str()
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "step1", \(x = ~data) x + 2)
+#' pipe_add(p, "step2", \(x = ~step1) x + 2, keepOut = TRUE)
+#' pipe_run(p)
+#' pipe_collect_out(p)
+#' pipe_collect_out(p, all = TRUE) |> str()
 #'
 #' # Grouped output
-#' p <- Pipeline$new("pipe", data = 1:2)
-#' p$add("step1", \(x = ~data) x + 2, group = "add")
-#' p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
-#' p$add("step3", \(x = ~data) x * 3, group = "mult")
-#' p$add("step4", \(x = ~data, y = 2) x * y, group = "mult")
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "step1", \(x = ~data) x + 2, group = "add")
+#' pipe_add(p, "step2", \(x = ~step1, y = 2) x + y, group = "add")
+#' pipe_add(p, "step3", \(x = ~data) x * 3, group = "mult")
+#' pipe_add(p, "step4", \(x = ~data, y = 2) x * y, group = "mult")
 #' p
-#' p$run()
-#' p$collect_out(all = TRUE) |> str()
+#'
+#' pipe_run(p)
+#' pipe_collect_out(p, all = TRUE) |> str()
 #'
 #' # Grouped by state
-#' p$set_params(list(y = 5))
+#' pipe_set_params(p, list(y = 5))
 #' p
-#' p$collect_out(groupBy = "state", all = TRUE) |> str()
+#'
+#' pipe_collect_out(p, groupBy = "state", all = TRUE) |> str()
 #' @export
-pipe_collect_out = function(pip, ...)
-    pip$collect_out(...)
+pipe_collect_out = function(pip, groupBy = "group", all = FALSE)
+{
+    pip$collect_out(groupBy = groupBy, all = all)
+}
 
 
 #' @title Discard steps from the pipeline
 #' @description Discard all steps that match a given `pattern`.
+#' @param pip `Pipeline` object
 #' @param pattern `string` containing a regular expression (or
 #' character string for `fixed = TRUE`) to be matched.
 #' @param fixed `logical` If `TRUE`, `pattern` is a string to
@@ -285,34 +293,114 @@ pipe_discard_steps = function(
 }
 
 
-#' @rdname pipelineAliases
+#' @title Get data
+#' @description Get the data set for the pipeline
+#' @param pip `Pipeline` object
+#' @return the output defined in the `data` step, which by default is
+#' the first step of the pipeline
+#' @examples
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_get_data(p)
+#' pipe_set_data(p, 3:4)
+#' pipe_get_data(p)
 #' @export
-pipe_get_data = function(pip, ...)
-    pip$get_data(...)
+pipe_get_data = function(pip)
+{
+    pip$get_data()
+}
 
 
-#' @rdname pipelineAliases
+#' @title Get step dependencies
+#' @section Methods:
+#' * `pipe_get_depends`: get all dependencies for all steps defined
+#' in the pipeline
+#' * `pipe_get_depends_down`: get all downstream dependencies of a
+#' given step, by default descending recursively.
+#' * `pipe_get_depends_up`: get all upstream dependencies of a
+#' given step, by default descending recursively.
+#' @param pip `Pipeline` object
+#' @return
+#' * `pipe_get_depends`: named list of dependencies for each step
+#' * `pipe_get_depends_down`: list of downstream dependencies
+#' * `pipe_get_depends_up`: list of downstream dependencies
+#' @examples
+#' # pipe_get_depends
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "add1", \(x = ~data) x + 1)
+#' pipe_add(p, "add2", \(x = ~data, y = ~add1) x + y)
+#' pipe_get_depends(p)
+#'
+#' # pipe_get_depends_down
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "add1", \(x = ~data) x + 1)
+#' pipe_add(p, "add2", \(x = ~data, y = ~add1) x + y)
+#' pipe_add(p, "mult3", \(x = ~add1) x * 3)
+#' pipe_add(p, "mult4", \(x = ~add2) x * 4)
+#' pipe_get_depends_down(p, "add1")
+#' pipe_get_depends_down(p, "add1", recursive = FALSE)
+#'
+#' # pipe_get_depends_up
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "add1", \(x = ~data) x + 1)
+#' pipe_add(p, "add2", \(x = ~data, y = ~add1) x + y)
+#' pipe_add(p, "mult3", \(x = ~add1) x * 3)
+#' pipe_add(p, "mult4", \(x = ~add2) x * 4)
+#' pipe_get_depends_up(p, "mult4")
+#' pipe_get_depends_up(p, "mult4", recursive = FALSE)
+#' @rdname get_depends
 #' @export
-pipe_get_depends = function(pip, ...)
-    pip$get_depends(...)
+pipe_get_depends = function(pip)
+{
+    pip$get_depends()
+}
 
 
-#' @rdname pipelineAliases
+#' @param step `string` name of step
+#' @param recursive `logical` if `TRUE`, dependencies of dependencies
+#' are also returned.
+#'
+#' @rdname get_depends
 #' @export
-pipe_get_depends_down = function(pip, ...)
-    pip$get_depends_down(...)
+pipe_get_depends_down = function(pip, step, recursive = TRUE)
+{
+    pip$get_depends_down(step = step, recursive = recursive)
+}
 
 
-#' @rdname pipelineAliases
+#' @param step `string` name of step
+#' @param recursive `logical` if `TRUE`, dependencies of dependencies
+#' are also returned.
+#' @rdname get_depends
 #' @export
-pipe_get_depends_up = function(pip, ...)
-    pip$get_depends_up(...)
+pipe_get_depends_up = function(pip, step, recursive = TRUE)
+{
+    pip$get_depends_up(step = step, recursive = recursive)
+}
 
 
-#' @rdname pipelineAliases
+#' @title Pipeline graph
+#' @description Get the pipeline as a graph with nodes and edges.
+#' @param groups `character` if not `NULL`, only steps belonging to the
+#' given groups are considered.
+#' @return list with two data frames, one for nodes and one for edges
+#' ready to be used with the [visNetwork::visNetwork()] function of the
+#' \link[visNetwork]{visNetwork} package.
+#' @examples
+#' p <- pipe_new("pipe", data = 1:2)
+#' pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
+#' pipe_add(p, "add2", \(x = 1, y = ~add1) x + y)
+#' pipe_add(p, "mult1", \(x = ~add1, y = ~add2) x * y)
+#' graph <- pipe_get_graph(p)
+#' graph
+#'
+#' if (require("visNetwork", quietly = TRUE)) {
+#'     do.call(visNetwork, args = graph)
+#' }
 #' @export
-pipe_get_graph = function(pip, ...)
-    pip$get_graph(...)
+pipe_get_graph = function(pip, groups = NULL)
+{
+    pip$get_graph(groups = groups)
+}
 
 
 #' @rdname pipelineAliases
@@ -497,15 +585,15 @@ pipe_rename_step = function(pip, ...)
 #' parameters of the passed function.
 #' @param description `string` optional description of the step
 #' @param group `string` output collected after pipeline execution
-#' (see function `collect_out`) is grouped by the defined group
+#' (see function [pipe_collect_out()]) is grouped by the defined group
 #' names. By default, this is the name of the step, which comes in
 #' handy when the pipeline is copy-appended multiple times to keep
 #' the results of the same function/step grouped at one place.
 #' @param keepOut `logical` if `FALSE` (default) the output of the
-#' step is not collected when calling `collect_out` after the pipeline
-#' run. This option is used to only keep the results that matter
+#' step is not collected when calling [pipe_collect_out()] after the
+#' pipeline run. This option is used to only keep the results that matter
 #' and skip intermediate results that are not needed. See also
-#' function `collect_out` for more details.
+#' function [pipe_collect_out()] for more details.
 #' @return returns the `Pipeline` object invisibly
 #' @seealso [pipe_add()]
 #' @examples

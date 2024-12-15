@@ -35,10 +35,16 @@ reference:
   - pipe_new
   - pipe_clone
 
-- subtitle: "Add, append, and insert"
+- subtitle: "Add, append, insert"
   contents:
   - pipe_add
   - pipe_append
+
+- subtitle: "Getters"
+  contents:
+  - pipe_get_data
+  - starts_with("pipe_get_depends")
+  - pipe_get_graph
 
 - subtitle: "Modify"
   contents:

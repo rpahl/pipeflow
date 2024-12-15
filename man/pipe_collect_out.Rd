@@ -4,11 +4,13 @@
 \alias{pipe_collect_out}
 \title{Collect output from entire pipeline}
 \usage{
-pipe_collect_out(pip, ...)
+pipe_collect_out(pip, groupBy = "group", all = FALSE)
 }
 \arguments{
+\item{pip}{\code{Pipeline} object}
+
 \item{groupBy}{\code{string} column of pipeline by which to group the
-output. To see all available columns,}
+output.}
 
 \item{all}{\code{logical} if \code{TRUE} all output is collected
 regardless of the \code{keepOut} flag. This can be useful for debugging.}
@@ -24,25 +26,27 @@ by the group names (see also \code{group} parameter in \code{\link[=pipe_add]{pi
 which by default are set identical to the step names.
 }
 \examples{
-p <- Pipeline$new("pipe", data = 1:2)
-p$add("step1", \(x = ~data) x + 2)
-p$add("step2", \(x = ~step1) x + 2, keepOut = TRUE)
-p$run()
-p$collect_out()
-p$collect_out(all = TRUE) |> str()
+p <- pipe_new("pipe", data = 1:2)
+pipe_add(p, "step1", \(x = ~data) x + 2)
+pipe_add(p, "step2", \(x = ~step1) x + 2, keepOut = TRUE)
+pipe_run(p)
+pipe_collect_out(p)
+pipe_collect_out(p, all = TRUE) |> str()
 
 # Grouped output
-p <- Pipeline$new("pipe", data = 1:2)
-p$add("step1", \(x = ~data) x + 2, group = "add")
-p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
-p$add("step3", \(x = ~data) x * 3, group = "mult")
-p$add("step4", \(x = ~data, y = 2) x * y, group = "mult")
+p <- pipe_new("pipe", data = 1:2)
+pipe_add(p, "step1", \(x = ~data) x + 2, group = "add")
+pipe_add(p, "step2", \(x = ~step1, y = 2) x + y, group = "add")
+pipe_add(p, "step3", \(x = ~data) x * 3, group = "mult")
+pipe_add(p, "step4", \(x = ~data, y = 2) x * y, group = "mult")
 p
-p$run()
-p$collect_out(all = TRUE) |> str()
+
+pipe_run(p)
+pipe_collect_out(p, all = TRUE) |> str()
 
 # Grouped by state
-p$set_params(list(y = 5))
+pipe_set_params(p, list(y = 5))
 p
-p$collect_out(groupBy = "state", all = TRUE) |> str()
+
+pipe_collect_out(p, groupBy = "state", all = TRUE) |> str()
 }

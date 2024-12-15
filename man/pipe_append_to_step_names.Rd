@@ -7,6 +7,8 @@
 pipe_append_to_step_names(pip, postfix, sep = ".")
 }
 \arguments{
+\item{pip}{\code{Pipeline} object}
+
 \item{postfix}{\code{string} to be appended to each step name.}
 
 \item{sep}{\code{string} separator between step name and postfix.}

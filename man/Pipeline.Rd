@@ -205,6 +205,9 @@ p <- Pipeline$new("pipe", data = 1:2)
 p$add("add1", \(data = ~data, x = 1) x + data)
 p$add("add2", \(x = 1, y = ~add1) x + y)
 p$add("mult1", \(x = ~add1, y = ~add2) x * y)
+graph <- pipe_get_graph(p)
+graph
+
 if (require("visNetwork", quietly = TRUE)) {
     do.call(visNetwork, args = p$get_graph())
 }
@@ -1170,6 +1173,9 @@ used with the \code{visNetwork} package.
 p$add("add1", \(data = ~data, x = 1) x + data)
 p$add("add2", \(x = 1, y = ~add1) x + y)
 p$add("mult1", \(x = ~add1, y = ~add2) x * y)
+graph <- pipe_get_graph(p)
+graph
+
 if (require("visNetwork", quietly = TRUE)) {
     do.call(visNetwork, args = p$get_graph())
 }

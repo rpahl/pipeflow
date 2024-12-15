@@ -33,16 +33,16 @@ parameters of the passed function.}
 \item{description}{\code{string} optional description of the step}
 
 \item{group}{\code{string} output collected after pipeline execution
-(see function \code{collect_out}) is grouped by the defined group
+(see \code{\link[=pipe_collect_out]{pipe_collect_out()}} is grouped by the defined group
 names. By default, this is the name of the step, which comes in
 handy when the pipeline is copy-appended multiple times to keep
 the results of the same function/step grouped at one place.}
 
 \item{keepOut}{\code{logical} if \code{FALSE} (default) the output of the
-step is not collected when calling \code{collect_out} after the pipeline
+step is not collected when calling \code{\link[=pipe_collect_out]{pipe_collect_out()}} after the pipeline
 run. This option is used to only keep the results that matter
 and skip intermediate results that are not needed. See also
-function \code{collect_out} for more details.}
+function \code{\link[=pipe_collect_out]{pipe_collect_out()}} for more details.}
 }
 \value{
 returns the \code{Pipeline} object invisibly

@@ -7,6 +7,8 @@
 pipe_clone(pip, deep = FALSE)
 }
 \arguments{
+\item{pip}{\code{Pipeline} object}
+
 \item{deep}{\code{logical} whether to perform a deep copy}
 }
 \value{

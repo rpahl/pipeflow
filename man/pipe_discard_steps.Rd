@@ -7,6 +7,8 @@
 pipe_discard_steps(pip, pattern, recursive = FALSE, fixed = TRUE, ...)
 }
 \arguments{
+\item{pip}{\code{Pipeline} object}
+
 \item{pattern}{\code{string} containing a regular expression (or
 character string for \code{fixed = TRUE}) to be matched.}
 
