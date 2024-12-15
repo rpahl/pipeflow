@@ -922,7 +922,7 @@ pipe_replace_step <- function(
 #' pipe_run(p, )
 #' p
 #'
-#' pipe_reset(p, )
+#' pipe_reset(p)
 #' p
 #' @export
 pipe_reset <- function(pip)
@@ -933,6 +933,7 @@ pipe_reset <- function(pip)
 
 #' @title Run pipeline
 #' @description Runs all new and/or outdated pipeline steps.
+#' @param pip `Pipeline` object
 #' @param force `logical` if `TRUE` all steps are run regardless of
 #' whether they are outdated or not.
 #' @param recursive `logical` if `TRUE` and a step returns a new
@@ -969,9 +970,9 @@ pipe_reset <- function(pip)
 #' p <- pipe_new("pipe", data = 1)
 #' pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 #' pipe_add(p, "new_pipe", \(x = ~add1) {
-#'     pp <- pipe_new("new_pipe", data = x)
-#'     pipe_add(p, "add1", \(x = ~data) x + 1)
-#'     pipe_add(p, "add2", \(x = ~add1) x + 2, keepOut = TRUE)
+#'     p2 <- pipe_new("new_pipe", data = x)
+#'     pipe_add(p2, "add1", \(x = ~data) x + 1)
+#'     pipe_add(p2, "add2", \(x = ~add1) x + 2, keepOut = TRUE)
 #'   }
 #' )
 #' p |> pipe_run() |> pipe_collect_out()
@@ -1005,10 +1006,44 @@ pipe_run <- function(
 }
 
 
-#' @rdname pipelineAliases
+#' @title Run specific step
+#' @description Run given pipeline step possibly together with
+#' upstream and/or downstream dependencies.
+#' @param pip `Pipeline` object
+#' @param step `string` name of step
+#' @param upstream `logical` if `TRUE`, run all dependent upstream
+#' steps first.
+#' @param downstream `logical` if `TRUE`, run all depdendent
+#' downstream afterwards.
+#' @param cleanUnkept `logical` if `TRUE` all output that was not
+#' marked to be kept is removed after the pipeline run. This option
+#' can be useful if temporary results require a lot of memory.
+#' @return returns the `Pipeline` object invisibly
+#' @examples
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
+#' pipe_add(p, "add2", \(x = ~add1, z = 2) x + z)
+#' pipe_add(p, "mult", \(x = ~add1, y = ~add2) x * y)
+#' pipe_run_step(p, "add2")
+#'
+#' pipe_run_step(p, "add2", downstream = TRUE)
+#'
+#' pipe_run_step(p, "mult", upstream = TRUE)
 #' @export
-pipe_run_step <- function(pip, ...)
-    pip$run_step(...)
+pipe_run_step <- function(
+    pip,
+    step,
+    upstream = TRUE,
+    downstream = FALSE,
+    cleanUnkept = FALSE
+) {
+    pip$run_step(
+        step = step,
+        upstream = upstream,
+        downstream = downstream,
+        cleanUnkept = cleanUnkept
+    )
+}
 
 
 #' @rdname pipelineAliases

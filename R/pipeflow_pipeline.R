@@ -1266,7 +1266,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #'     pp$add("add2", \(x = ~add1) x + 2, keepOut = TRUE)
         #'     }
         #' )
-        #' p$run()$collect_out()
+        #' p$run(recursive = TRUE)$collect_out()
         #'
         #' # Run pipeline with progress bar
         #' p <- Pipeline$new("pipe", data = 1)

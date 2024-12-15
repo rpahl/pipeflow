@@ -24,6 +24,6 @@ pipe_add(p, "f2", \(y = 1) y)
 pipe_run(p, )
 p
 
-pipe_reset(p, )
+pipe_reset(p)
 p
 }

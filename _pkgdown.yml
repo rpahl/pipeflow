@@ -75,6 +75,7 @@ reference:
 - subtitle: "Run"
   contents:
   - pipe_run
+  - pipe_run_step
 
 - subtitle: "Set"
   contents:

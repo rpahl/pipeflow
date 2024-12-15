@@ -14,6 +14,8 @@ pipe_run(
 )
 }
 \arguments{
+\item{pip}{\code{Pipeline} object}
+
 \item{force}{\code{logical} if \code{TRUE} all steps are run regardless of
 whether they are outdated or not.}
 
@@ -59,9 +61,9 @@ p
 p <- pipe_new("pipe", data = 1)
 pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 pipe_add(p, "new_pipe", \(x = ~add1) {
-    pp <- pipe_new("new_pipe", data = x)
-    pipe_add(p, "add1", \(x = ~data) x + 1)
-    pipe_add(p, "add2", \(x = ~add1) x + 2, keepOut = TRUE)
+    p2 <- pipe_new("new_pipe", data = x)
+    pipe_add(p2, "add1", \(x = ~data) x + 1)
+    pipe_add(p2, "add2", \(x = ~add1) x + 2, keepOut = TRUE)
   }
 )
 p |> pipe_run() |> pipe_collect_out()

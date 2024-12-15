@@ -2,7 +2,6 @@
 % Please edit documentation in R/pipeflow_aliases.R
 \name{pipelineAliases}
 \alias{pipelineAliases}
-\alias{pipe_run_step}
 \alias{pipe_set_data}
 \alias{pipe_set_data_split}
 \alias{pipe_set_keep_out}
@@ -11,8 +10,6 @@
 \alias{pipe_split}
 \title{Pipeline alias functions}
 \usage{
-pipe_run_step(pip, ...)
-
 pipe_set_data(pip, ...)
 
 pipe_set_data_split(pip, ...)
