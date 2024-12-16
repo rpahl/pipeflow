@@ -2,26 +2,7 @@
 % Please edit documentation in R/pipeflow_aliases.R
 \name{pipelineAliases}
 \alias{pipelineAliases}
-\alias{pipe_set_data}
-\alias{pipe_set_data_split}
-\alias{pipe_set_keep_out}
-\alias{pipe_set_params}
-\alias{pipe_set_params_at_step}
-\alias{pipe_split}
 \title{Pipeline alias functions}
-\usage{
-pipe_set_data(pip, ...)
-
-pipe_set_data_split(pip, ...)
-
-pipe_set_keep_out(pip, ...)
-
-pipe_set_params(pip, ...)
-
-pipe_set_params_at_step(pip, ...)
-
-pipe_split(pip, ...)
-}
 \arguments{
 \item{pip}{A pipeline object}
 

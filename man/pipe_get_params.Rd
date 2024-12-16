@@ -35,8 +35,8 @@ of the first step where the parameters were defined, respectively.
 }
 }
 \description{
-Retrieves all unbound function parameters defined in
-the pipeline where 'unbound' refers to parameters that are not pointing
+Retrieves unbound function parameters defined in
+the pipeline where 'unbound' means parameters that are not linked
 to other steps.
 }
 \examples{

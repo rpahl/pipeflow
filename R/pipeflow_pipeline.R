@@ -628,8 +628,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             self$get_step(step)[["out"]][[1]]
         },
 
-        #' @description Get all unbound (i.e. not referring to other steps)
-        #' function parameters defined in the pipeline.
+        #' @description Set unbound function parameters defined in
+        #' the pipeline where 'unbound' means parameters that are not linked
+        #' to other steps. Trying #' to set parameters that don't exist in
+        #' the pipeline is ignored, by default, with a warning.
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
         #' @return `list` of parameters, sorted and named by step. Steps with
@@ -1437,7 +1439,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         },
 
         #' @description Set data in first step of pipeline.
-        #' @param data `data.frame` initial data set.
+        #' @param data initial data set
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
@@ -1455,10 +1457,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
         },
 
-        #' @description Split-copy pipeline by list of data sets. Each
-        #' sub-pipeline will have one of the data sets set as input data.
-        #' The step names of the sub-pipelines will be the original step names
-        #' plus the name of the data set.
+        #' @description This function can be used to apply the pipeline
+        #' repeatedly to various data sets. For this, the pipeline split-copies
+        #' itself by the list of given data sets. Each sub-pipeline will have
+        #' one of the data sets set as input data.
+        #' The step names of the sub-pipelines will be the original
+        #' step names plus the name of the data set.
         #' @param dataList `list` of data sets
         #' @param toStep `string` step name marking optional subset of
         #' the pipeline, at which the data split should be applied to.
@@ -1474,23 +1478,41 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p <- Pipeline$new("pipe")
         #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
         #' p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-        #' p3 <- p$set_data_split(dataList)
-        #' p3
-        #' p3$run()$collect_out() |> str()
+        #' p$set_data_split(dataList)
+        #' p
+        #' p$run()$collect_out() |> str()
         #'
         #' # Don't group output by split
         #' p <- Pipeline$new("pipe")
         #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
         #' p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-        #' p3 <- p$set_data_split(dataList, groupBySplit = FALSE)
-        #' p3
-        #' p3$run()$collect_out() |> str()
+        #' p$set_data_split(dataList, groupBySplit = FALSE)
+        #' p
+        #' p$run()$collect_out() |> str()
+        #'
+        #' # Split up to certain step
+        #' p <- Pipeline$new("pipe")
+        #' p$add("add1", \(x = ~data) x + 1)
+        #' p$add("mult", \(x = ~data, y = ~add1) x * y)
+        #' p$add("average_result", \(x = ~mult) mean(unlist(x)), keepOut = TRUE)
+        #' p
+        #' p$get_depends()[["average_result"]]
+        #'
+        #' p$set_data_split(dataList, toStep = "mult")
+        #' p
+        #' p$get_depends()[["average_result"]]
+        #'
+        #' p$run()$collect_out()
         set_data_split = function(
             dataList,
-            toStep = utils::tail(self$get_step_names(), 1),
+            toStep = character(),
             groupBySplit = TRUE,
             sep = "."
         ) {
+            if (length(toStep) == 0) {
+                toStep <- utils::tail(self$get_step_names(), 1)
+            }
+
             stopifnot(
                 is.list(dataList),
                 is_string(toStep),
@@ -1590,25 +1612,31 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Set parameters in the pipeline. If a parameter occurs
         #' in several steps, the parameter is set commonly in all steps.
+        #' Trying to set parameters that don't exist in the pipeline is ignored,
+        #' by default, with a warning.
         #' @param params `list` of parameters to be set
-        #' @param warnUndefined `logical` whether to give a warning if a
-        #' parameter is not defined in the pipeline.
+        #' @param warnUndefined `logical` whether to give a warning when trying
+        #' to set a parameter that is not defined in the pipeline.
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
-        #' p$add("add1", \(x = ~data, y = 1) x + y)
-        #' p$add("add2", \(x = ~data, y = 1) x + y)
-        #' p$add("mult", \(x = 1, z = 1) x * z)
+        #' p$add("add1", \(x = ~data, y = 2) x + y)
+        #' p$add("add2", \(x = ~data, y = 3) x + y)
+        #' p$add("mult", \(x = 4, z = 5) x * z)
         #' p$get_params()
         #' p$set_params(list(x = 3, y = 3))
         #' p$get_params()
         #' p$set_params(list(x = 5, z = 3))
         #' p$get_params()
         #' suppressWarnings(
-        #'     p$set_params(list(foo = 3))  # warning: trying to set undefined
+        #'     p$set_params(list(foo = 3)) # gives warning as 'foo' is undefined
         #' )
+        #' p$set_params(list(foo = 3), warnUndefined = FALSE)
         set_params = function(params, warnUndefined = TRUE)
         {
+            if (!is.list(params)) {
+                stop_no_call("params must be a list")
+            }
             definedParams <- self$get_params_unique(ignoreHidden = FALSE)
             extra <- setdiff(names(params), names(definedParams))
 
@@ -1620,29 +1648,30 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             for (step in self$get_step_names()) {
-                paramsAtStep = self$get_params_at_step(
+                paramsAtStep <- self$get_params_at_step(
                     step,
                     ignoreHidden = FALSE
                 )
                 overlap <- intersect(names(params), names(paramsAtStep))
 
                 if (length(overlap) > 0) {
-                    paramsAtStep[overlap] = params[overlap]
+                    paramsAtStep[overlap] <- params[overlap]
                     self$set_params_at_step(step, paramsAtStep)
                 }
             }
             invisible(self)
         },
 
-        #' @description Set unbound parameter values at given pipeline step.
+        #' @description Set unbound function parameters defined at given
+        #' pipeline step where 'unbound' means parameters that are not
+        #' linked to other steps.
         #' @param step `string` the name of the step
         #' @param params `list` of parameters to be set
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
-        #' p$add("add1", \(x = ~data, y = 1, z = 2) x + y)
-        #' p$add("add2", \(x = ~data, y = 1, z = 2) x + y)
-        #' p$set_params_at_step("add1", list(y = 3, z = 3))
+        #' p$add("add1", \(x = ~data, y = 2, z = 3) x + y)
+        #' p$set_params_at_step("add1", list(y = 5, z = 6))
         #' p$get_params()
         #' try(p$set_params_at_step("add1", list(foo = 3))) # foo not defined
         set_params_at_step = function(
@@ -1725,7 +1754,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p <- Pipeline$new("pipe")
         #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
         #' p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-        #' pips <- p$set_data_split(dataList)$split()
+        #' pipes <- p$set_data_split(dataList)$split()
+        #' pipes
         split = function()
         {
             groups <- private$.get_depends_grouped()

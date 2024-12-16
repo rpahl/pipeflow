@@ -35,6 +35,13 @@ reference:
   - pipe_new
   - pipe_clone
 
+- subtitle: "Change"
+  contents:
+  - pipe_append_to_step_names
+  - pipe_replace_step
+  - pipe_rename_step
+  - pipe_reset
+
 - subtitle: "Add, append, insert"
   contents:
   - pipe_add
@@ -53,13 +60,6 @@ reference:
 - subtitle: "Information"
   contents:
   - pipe_length
-
-- subtitle: "Modify"
-  contents:
-  - pipe_append_to_step_names
-  - pipe_replace_step
-  - pipe_rename_step
-  - pipe_reset
 
 - subtitle: "Output"
   contents:
@@ -80,6 +80,15 @@ reference:
 - subtitle: "Set"
   contents:
   - matches("pipe_lock_step|pipe_unlock_step")
+  - pipe_set_data
+  - pipe_set_keep_out
+  - pipe_set_params
+  - pipe_set_params_at_step
+
+- subtitle: "Split"
+  contents:
+  - pipe_set_data_split
+  - pipe_split
 
 - subtitle: "Logging"
   contents:

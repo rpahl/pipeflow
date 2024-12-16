@@ -425,8 +425,8 @@ pipe_get_out <- function(pip, step)
 
 
 #' @title Get pipeline parameters
-#' @description Retrieves all unbound function parameters defined in
-#' the pipeline where 'unbound' refers to parameters that are not pointing
+#' @description Retrieves unbound function parameters defined in
+#' the pipeline where 'unbound' means parameters that are not linked
 #' to other steps.
 #'
 #' @param pip `Pipeline` object
@@ -1046,40 +1046,200 @@ pipe_run_step <- function(
 }
 
 
-#' @rdname pipelineAliases
+#' @title Set data
+#' @description Set data in first step of pipeline.
+#' @param pip `Pipeline` object
+#' @param data initial data set.
+#' @return returns the `Pipeline` object invisibly
+#' @examples
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+#' p |> pipe_run() |> pipe_collect_out()
+#'
+#' pipe_set_data(p, 3)
+#' p |> pipe_run() |> pipe_collect_out()
 #' @export
-pipe_set_data <- function(pip, ...)
-    pip$set_data(...)
+pipe_set_data <- function(pip, data)
+{
+    pip$set_data(data = data)
+}
 
 
-#' @rdname pipelineAliases
+#' @title Split-multiply pipeline by list of data sets
+#' @description This function can be used to apply the pipeline
+#' repeatedly to various data sets. For this, the pipeline split-copies
+#' itself by the list of given data sets. Each sub-pipeline will have
+#' one of the data sets set as input data.
+#' The step names of the sub-pipelines will be the original
+#' step names plus the name of the data set.
+#' @param pip `Pipeline` object
+#' @param dataList `list` of data sets
+#' @param toStep `string` step name marking optional subset of
+#' the pipeline, to which the data split should be applied to.
+#' @param groupBySplit `logical` whether to set step groups according
+#' to data split.
+#' @param sep `string` separator to be used between step name and
+#' data set name when creating the new step names.
+#' @return new combined `Pipeline` with each sub-pipeline having set
+#' one of the data sets.
+#' @examples
+#' # Split by three data sets
+#' dataList <- list(a = 1, b = 2, c = 3)
+#' p <- pipe_new("pipe")
+#' pipe_add(p, "add1", \(x = ~data) x + 1, keepOut = TRUE)
+#' pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+#' pipe_set_data_split(p, dataList)
+#' p
+#'
+#' p |> pipe_run() |> pipe_collect_out() |> str()
+#'
+#' # Don't group output by split
+#' p <- pipe_new("pipe")
+#' pipe_add(p, "add1", \(x = ~data) x + 1, keepOut = TRUE)
+#' pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+#' pipe_set_data_split(p, dataList, groupBySplit = FALSE)
+#' p
+#'
+#' p |> pipe_run() |> pipe_collect_out() |> str()
+#'
+#' # Split up to certain step
+#' p <- pipe_new("pipe")
+#' pipe_add(p, "add1", \(x = ~data) x + 1)
+#' pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y)
+#' pipe_add(p, "average_result", \(x = ~mult) mean(unlist(x)), keepOut = TRUE)
+#' p
+#' pipe_get_depends(p)[["average_result"]]
+#'
+#' pipe_set_data_split(p, dataList, toStep = "mult")
+#' p
+#' pipe_get_depends(p)[["average_result"]]
+#'
+#' p |> pipe_run() |> pipe_collect_out() |> str()
 #' @export
-pipe_set_data_split <- function(pip, ...)
-    pip$set_data_split(...)
+pipe_set_data_split <- function(
+    pip,
+    dataList,
+    toStep = character(),
+    groupBySplit = TRUE,
+    sep = "."
+) {
+    pip$set_data_split(
+        dataList = dataList,
+        toStep = toStep,
+        groupBySplit = groupBySplit,
+        sep = sep
+    )
+}
 
 
-#' @rdname pipelineAliases
+#' @title Change output flag
+#' @description Change the `keepOut` flag at a given pipeline step,
+#' which determines whether the output of that step is collected
+#' when calling [pipe_collect_out()]` after the pipeline was run.
+#' See column `keepOut` when printing a pipeline to view the status.
+#' @param pip `Pipeline` object
+#' @param step `string` name of step
+#' @param keepOut `logical` whether to keep output of step
+#' @return the `Pipeline` object invisibly
+#' @examples
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+#' pipe_add(p, "add2", \(x = ~data, y = 2) x + y)
+#' pipe_add(p, "mult", \(x = ~add1, y = ~add2) x * y)
+#' p |> pipe_run() |> pipe_collect_out()
+#'
+#' pipe_set_keep_out(p, "add1", keepOut = FALSE)
+#' pipe_set_keep_out(p, "mult", keepOut = TRUE)
+#' p |> pipe_run() |> pipe_collect_out()
 #' @export
-pipe_set_keep_out <- function(pip, ...)
-    pip$set_keep_out(...)
+pipe_set_keep_out <- function(pip, step, keepOut = TRUE)
+{
+    pip$set_keep_out(step = step, keepOut = keepOut)
+}
 
 
-#' @rdname pipelineAliases
+#' @title Set pipeline parameters
+#' @description Set unbound function parameters defined in
+#' the pipeline where 'unbound' means parameters that are not linked
+#' to other steps. Trying to set parameters that don't exist in
+#' the pipeline is ignored, by default, with a warning.
+#' @param pip `Pipeline` object
+#' @param params `list` of parameters to be set
+#' @param warnUndefined `logical` whether to give a warning when trying
+#' to set a parameter that is not defined in the pipeline.
+#' @return returns the `Pipeline` object invisibly
+#' @examples
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "add1", \(x = ~data, y = 2) x + y)
+#' pipe_add(p, "add2", \(x = ~data, y = 3) x + y)
+#' pipe_add(p, "mult", \(x = 4, z = 5) x * z)
+#' pipe_get_params(p)
+#' pipe_set_params(p, params = list(x = 3, y = 3))
+#' pipe_get_params(p)
+#' pipe_set_params(p, params = list(x = 5, z = 3))
+#' pipe_get_params(p)
+#'
+#' suppressWarnings(
+#'   pipe_set_params(p, list(foo = 3)) # gives warning as 'foo' is undefined
+#' )
+#' pipe_set_params(p, list(foo = 3), warnUndefined = FALSE)
 #' @export
-pipe_set_params <- function(pip, ...)
-    pip$set_params(...)
+pipe_set_params <- function(pip, params, warnUndefined = TRUE)
+{
+    pip$set_params(params = params, warnUndefined = warnUndefined)
+}
 
 
-#' @rdname pipelineAliases
+#' @title Set parameters at step
+#' @description Set unbound function parameters defined at given pipeline
+#' step where 'unbound' means parameters that are not linked to other
+#' steps. If one or more parameters don't exist, an error is given.
+#' @param pip `Pipeline` object
+#' @param step `string` the name of the step
+#' @param params `list` of parameters to be set
+#' @return returns the `Pipeline` object invisibly
+#' @examples
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "add1", \(x = ~data, y = 2, z = 3) x + y)
+#' pipe_set_params_at_step(p, step = "add1", params = list(y = 5, z = 6))
+#' pipe_get_params(p)
+#'
+#' try(
+#'   pipe_set_params_at_step(p, step = "add1", params = list(foo = 3))
+#' )
 #' @export
-pipe_set_params_at_step <- function(pip, ...)
-    pip$set_params_at_step(...)
+pipe_set_params_at_step <- function(pip, step, params)
+{
+    pip$set_params_at_step(step = step, params = params)
+}
 
 
-#' @rdname pipelineAliases
+#' @title Split-up pipeline
+#' @description Splits pipeline into its independent parts. This can be useful,
+#' for example, to split-up the pipeline in order to run each part in parallel.
+#' @param pip `Pipeline` object
+#' @return list of `Pipeline` objects
+#' @examples
+#' # Example for two independent calculation paths
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "f1", \(x = ~data) x)
+#' pipe_add(p, "f2", \(x = 1) x)
+#' pipe_add(p, "f3", \(x = ~f1) x)
+#' pipe_add(p, "f4", \(x = ~f2) x)
+#' pipe_split(p)
+#'
+#' # Example of split by three data sets
+#' dataList <- list(a = 1, b = 2, c = 3)
+#' p <- pipe_new("pipe")
+#' pipe_add(p, "add1", \(x = ~data) x + 1, keepOut = TRUE)
+#' pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+#' pipes <- pipe_set_data_split(p, dataList) |> pipe_split()
+#' pipes
 #' @export
-pipe_split <- function(pip, ...)
-    pip$split(...)
+pipe_split <- function(pip)
+{
+    pip$split()
+}
 
 
 #' @rdname pipe_lock_unlock
