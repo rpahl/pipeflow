@@ -105,9 +105,14 @@ reference:
   contents:
   - set_log_layout
 
+news:
+  releases:
+  - text: "Version 0.2.1"
+    href: https://rpahl.github.io/pipeflow/articles/v01-get-started.html
+
 navbar:
   structure:
-    left: [home, getStarted, reference, articles, myPackages]
+    left: [home, getStarted, reference, news, articles, myPackages]
     right: [github, stackoverflow, bluesky, blog]
   components:
     home:
@@ -117,6 +122,7 @@ navbar:
     getStarted:
       text: "Get Started"
       href: articles/v01-get-started.html
+
     articles:
       text: "Articles"
       menu:
