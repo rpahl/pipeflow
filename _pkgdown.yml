@@ -27,8 +27,19 @@ reference:
   desc: There is one alias function for each member function of a
     Pipeline object. It starts with `pipe_` followed by the name
     of the resepective member function.
+
+- subtitle: "Basic usage"
+  desc: These functions are required for basic usage and also likely the
+    most frequently used functions. Further down below you find all
+    functions categorized by type of functionality.
   contents:
-  - pipelineAliases
+  - pipe_new
+  - pipe_add
+  - pipe_set_data
+  - pipe_set_params
+  - pipe_run
+  - pipe_get_out
+  - pipe_collect_out
 
 - subtitle: "Create"
   contents:

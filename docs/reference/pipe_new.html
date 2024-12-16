@@ -76,7 +76,7 @@ which basically is a function returning the data.</p>
 
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
 <dd><p>optional data used at the start of the pipeline. The
-data also can be set later using the <code><a href="pipelineAliases.html">pipe_set_data()</a></code> function.</p></dd>
+data also can be set later using the <code><a href="pipe_set_data.html">pipe_set_data()</a></code> function.</p></dd>
 
 
 <dt id="arg-logger">logger<a class="anchor" aria-label="anchor" href="#arg-logger"></a></dt>
@@ -105,30 +105,30 @@ any time via <code><a href="set_log_layout.html">set_log_layout()</a></code>.</p
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">2</span>, y <span class="op">=</span> <span class="fl">3</span><span class="op">:</span><span class="fl">4</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu">pipe_new</span><span class="op">(</span><span class="st">"myPipe"</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">p</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipelineAliases.html">pipe_run</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipelineAliases.html">pipe_get_out</a></span><span class="op">(</span><span class="st">"data"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-14 17:22:58.874] Start run of 'myPipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-14 17:22:58.876] Step 1/1 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-14 17:22:58.877] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-14 17:22:58.878] Done.</span>
+<span class="r-in"><span><span class="va">p</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipe_run.html">pipe_run</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipe_get_out.html">pipe_get_out</a></span><span class="op">(</span><span class="st">"data"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-16 09:51:37.644] Start run of 'myPipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-16 09:51:37.645] Step 1/1 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-16 09:51:37.646] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-16 09:51:37.647] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   x y</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 1 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2 2 4</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Setting data later</span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu">pipe_new</span><span class="op">(</span><span class="st">"myPipe"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="pipelineAliases.html">pipe_get_data</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="pipe_get_data.html">pipe_get_data</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="pipelineAliases.html">pipe_set_data</a></span><span class="op">(</span><span class="va">p</span>, <span class="va">data</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="pipelineAliases.html">pipe_get_data</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="pipe_set_data.html">pipe_set_data</a></span><span class="op">(</span><span class="va">p</span>, <span class="va">data</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="pipe_get_data.html">pipe_get_data</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   x y</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 1 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2 2 4</span>
-<span class="r-in"><span><span class="va">p</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipelineAliases.html">pipe_run</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipelineAliases.html">pipe_get_out</a></span><span class="op">(</span><span class="st">"data"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-14 17:22:58.884] Start run of 'myPipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-14 17:22:58.885] Step 1/1 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-14 17:22:58.887] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-14 17:22:58.887] Done.</span>
+<span class="r-in"><span><span class="va">p</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipe_run.html">pipe_run</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipe_get_out.html">pipe_get_out</a></span><span class="op">(</span><span class="st">"data"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-16 09:51:37.653] Start run of 'myPipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-16 09:51:37.654] Step 1/1 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-16 09:51:37.655] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2024-12-16 09:51:37.655] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   x y</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 1 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2 2 4</span>
@@ -138,7 +138,7 @@ any time via <code><a href="set_log_layout.html">set_log_layout()</a></code>.</p
 <span class="r-in"><span>   <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">level</span>, <span class="va">msg</span>, <span class="st">"\n"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu">pipe_new</span><span class="op">(</span><span class="st">"myPipe"</span>, data <span class="op">=</span> <span class="va">data</span>, logger <span class="op">=</span> <span class="va">my_logger</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">p</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipelineAliases.html">pipe_run</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipelineAliases.html">pipe_get_out</a></span><span class="op">(</span><span class="st">"data"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">p</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipe_run.html">pipe_run</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipe_get_out.html">pipe_get_out</a></span><span class="op">(</span><span class="st">"data"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> info Start run of 'myPipe' pipeline: </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> info Step 1/1 data </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> info Finished execution of steps. </span>

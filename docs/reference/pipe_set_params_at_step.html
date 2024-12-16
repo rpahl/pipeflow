@@ -108,7 +108,8 @@ steps. If one or more parameters don't exist, an error is given.</p>
 <span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/try.html" class="external-link">try</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu">pipe_set_params_at_step</span><span class="op">(</span><span class="va">p</span>, step <span class="op">=</span> <span class="st">"add1"</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>foo <span class="op">=</span> <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Error : Unable to set parameter(s) foo at step add1 - candidates are y, z</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Error in pip$set_params_at_step(...) : </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Unable to set parameter(s) foo at step add1 - candidates are y, z</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

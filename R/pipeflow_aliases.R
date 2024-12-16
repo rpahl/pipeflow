@@ -1,15 +1,4 @@
 
-# nocov start
-#' @title Pipeline alias functions
-#' @description Alias functions, one for each member function of a Pipeline
-#'  object.
-#' @param pip A pipeline object
-#' @param ... Arguments passed to the respective pipeline method
-#' @return The result of the respective pipeline method
-#' @name pipelineAliases
-NULL
-
-
 #' @title Add pipeline step
 #' @description A pipeline consists of a series of steps, which usually
 #' are added one by one. Each step is made up of a function computing
