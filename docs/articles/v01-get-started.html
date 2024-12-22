@@ -264,13 +264,13 @@ remains unchanged:</p>
 the pipeline, which will produce the following output:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:16.242] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:16.273] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:16.281] Step 2/4 data_prep</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:16.307] Step 3/4 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:16.313] Step 4/4 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:16.325] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:16.326] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-22 15:46:50.660] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:50.689] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:50.698] Step 2/4 data_prep</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:50.721] Step 3/4 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:50.724] Step 4/4 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:50.736] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:50.737] Done.</span></span></code></pre></div>
 <p>Let’s inspect the pipeline again.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
@@ -355,13 +355,13 @@ to be rerun. We can do this by calling the <code>run()</code> method on
 the pipeline again.</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.334] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.336] Step 1/4 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.337] Step 2/4 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.337] Step 3/4 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.341] Step 4/4 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.351] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.352] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-22 15:46:51.710] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:51.711] Step 1/4 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:51.712] Step 2/4 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:51.713] Step 3/4 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:51.716] Step 4/4 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:51.726] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:51.726] Done.</span></span></code></pre></div>
 <p>The outdated steps were re-run as expected and the output was updated
 accordingly.</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
@@ -380,13 +380,13 @@ accordingly.</p>
 <span><span class="co"># 4: model_plot model_fit,data_prep            &lt;gg[11]&gt;   FALSE model_plot Outdated</span></span></code></pre></div>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_plot"</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.709] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.711] Step 1/4 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.711] Step 2/4 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.712] Step 3/4 model_fit - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.713] Step 4/4 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.719] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.719] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.082] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.083] Step 1/4 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.084] Step 2/4 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.085] Step 3/4 model_fit - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.086] Step 4/4 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.091] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.091] Done.</span></span></code></pre></div>
 <p><img src="v01-get-started_files/figure-html/inspect-plot-after-title-change-1.png" alt="model-plot" width="700"></p>
 <p>If instead we were to change the input data, since all steps depend
 on it, we expect all steps to be rerun.</p>
@@ -401,13 +401,13 @@ on it, we expect all steps to be rerun.</p>
 <span><span class="co"># 4: model_plot model_fit,data_prep            &lt;gg[11]&gt;   FALSE model_plot Outdated</span></span></code></pre></div>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_plot"</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.998] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:17.999] Step 1/4 data</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:18.003] Step 2/4 data_prep</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:18.008] Step 3/4 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:18.011] Step 4/4 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:18.020] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:18.020] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.369] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.370] Step 1/4 data</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.373] Step 2/4 data_prep</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.377] Step 3/4 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.380] Step 4/4 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.388] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:52.389] Done.</span></span></code></pre></div>
 <p><img src="v01-get-started_files/figure-html/inspect-plot-after-data-change-1.png" alt="model-plot" width="700"></p>
 </div>
 <div class="section level3">

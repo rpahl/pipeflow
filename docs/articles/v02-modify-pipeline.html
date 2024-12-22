@@ -219,14 +219,14 @@ inspect the output.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span>, yVar <span class="op">=</span> <span class="st">"Wind"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:22.800] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:22.801] Step 1/5 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:22.802] Step 2/5 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:22.803] Step 3/5 standardize</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:22.805] Step 4/5 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:22.808] Step 5/5 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:22.813] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-22 15:09:22.814] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-22 15:46:56.968] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:56.970] Step 1/5 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:56.970] Step 2/5 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:56.971] Step 3/5 standardize</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:56.974] Step 4/5 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:56.977] Step 5/5 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:56.982] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:46:56.982] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_fit"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#  (Intercept)      Solar.R </span></span>
