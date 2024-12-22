@@ -3,16 +3,14 @@ Title: Lightweight, General-Purpose Data Analysis Pipelines
 Version: 0.2.2
 Authors@R:
     person("Roman", "Pahl", , "roman.pahl@gmail.com", role = c("aut", "cre"))
-Description: A lightweight yet powerful framework for building robust
-    data analysis pipelines. With 'pipeflow', you initialize a pipeline
-    with your dataset and construct your workflow step by step by seamlessly
-    adding R functions. Modify, remove, or insert steps at any stage while
-    'pipeflow' ensures the integrity and correctness of your pipeline.
-    Designed to help you focus on the 'what' rather than the 'how', this
-    package simplifies the implementation of complex workflows, making
-    even large-scale data analysis projects manageable, adaptable, and
-    reusable with ease.
-License: GPL-3
+Description: A lightweight yet powerful framework for building robust data
+    analysis pipelines. With 'pipeflow', you initialize a pipeline with your
+    dataset and construct workflows step by step by adding R functions.
+    You can modify, remove, or insert steps and parameters at any stage,
+    while 'pipeflow' ensures the pipeline's integrity.
+    Overall, this package offers a beginner-friendly framework that simplifies
+    and streamlines the development of data analysis pipelines by making
+    them modular, intuitive, and adaptable.
 Imports:
     data.table,
     jsonlite,
@@ -38,4 +36,5 @@ Language: en-US
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 NeedsCompilation: no
+License: GPL-3
 Maintainer: Roman Pahl <roman.pahl@gmail.com>

@@ -47,7 +47,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-news" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">News</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-news">
 <li><h6 class="dropdown-header" data-toc-skip>Releases</h6></li>
-    <li><a class="external-link dropdown-item" href="https://rpahl.github.io/pipeflow/articles/v01-get-started.html">Version 0.2.1</a></li>
+    <li><a class="external-link dropdown-item" href="https://rpahl.github.io/r-some-blog/posts/2024-12-21-introducing-pipeflow/">Version 0.2.1</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../news/index.html">Changelog</a></li>
   </ul>
@@ -219,14 +219,14 @@ inspect the output.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span>, yVar <span class="op">=</span> <span class="st">"Wind"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-16 17:52:18.241] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-16 17:52:18.242] Step 1/5 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-16 17:52:18.243] Step 2/5 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-16 17:52:18.244] Step 3/5 standardize</span></span>
-<span><span class="co"># INFO  [2024-12-16 17:52:18.247] Step 4/5 model_fit</span></span>
-<span><span class="co"># INFO  [2024-12-16 17:52:18.250] Step 5/5 model_plot</span></span>
-<span><span class="co"># INFO  [2024-12-16 17:52:18.255] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-16 17:52:18.256] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2024-12-22 15:09:22.800] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:09:22.801] Step 1/5 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:09:22.802] Step 2/5 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:09:22.803] Step 3/5 standardize</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:09:22.805] Step 4/5 model_fit</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:09:22.808] Step 5/5 model_plot</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:09:22.813] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2024-12-22 15:09:22.814] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_fit"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#  (Intercept)      Solar.R </span></span>

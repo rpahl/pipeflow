@@ -108,7 +108,7 @@ reference:
 news:
   releases:
   - text: "Version 0.2.1"
-    href: https://rpahl.github.io/pipeflow/articles/v01-get-started.html
+    href: https://rpahl.github.io/r-some-blog/posts/2024-12-21-introducing-pipeflow/
 
 navbar:
   structure:

@@ -38,27 +38,31 @@ old <- options(width = 100L)
 
 # pipeflow <img src="man/figures/logo.png" alt="logo" align="right" width="163" height="121"/>
 
-A lightweight yet powerful framework for building robust data analysis pipelines.
-With `pipeflow`, you initialize a pipeline with your dataset and construct your workflow
-step by step by seamlessly adding R functions. Modify, remove, or insert steps at
-any stage while `pipeflow` ensures the integrity and correctness of your pipeline.
+A lightweight yet powerful framework for building robust data
+analysis pipelines. With `pipeflow`, you initialize a pipeline with your
+dataset and construct workflows step by step by adding R functions.
+You can modify, remove, or insert steps and parameters at any stage,
+while `pipeflow` ensures the pipeline's integrity.
 
-Designed to help you focus on the *what* rather than the *how*, this package simplifies
-the implementation of complex workflows, making even large-scale data analysis projects
-manageable, adaptable, and reusable with ease.
+Overall, `pipeflow` offers a beginner-friendly framework that simplifies
+and streamlines the development of data analysis pipelines by making
+them modular, intuitive, and adaptable.
+Thanks to its intuitive interface, using `pipeflow` quickly pays off.
+
 
 ### Why use `pipeflow`
 
 * Easy to learn yet suited for complex workflows
 * Automatically manages function dependencies
-* Promotes standardized, reproducible analysis
+* Promotes standardized, modular, and reproducible analyses
 * Simplifies error handling, debugging, and reusability
 
 
 ### Key features
 
 * *Flexible Application:* Use interactively or programmatically in R
-* *Dependency Management:* Dependencies checked at definition, ensuring reliable workflows
+* *Dependency Management:* Dependencies checked at definition time always
+   ensure the pipeline's integrity
 * *Comprehensive Logging:* Logs each step, with customizable logger options
 * *Parameter Control:* View and manage all analysis parameters in one place
 * *Modular Composition:* Modify, extend, and combine pipelines effortlessly
