@@ -2101,6 +2101,72 @@ describe("pipe_replace_step",
         expect_equal(pipe_get_step(pip, "f3")$state, "Outdated")
         expect_equal(pipe_get_step(pip, "f4")$state, "Outdated")
     })
+
+
+    it("can have a variable defined outside as parameter default",
+    {
+        x <- 3
+        pip <- pipe_new("pipe") |> pipe_add("f1", \(x = 1) x)
+        pip |> pipe_replace_step("f1", fun = \(a) a, params = list(a = x))
+
+        out <- pipe_run(pip) |> pipe_get_out("f1")
+        expect_equal(out, x)
+    })
+
+    it("handles Param object args",
+    {
+        pip <- pipe_new("pipe") |> pipe_add("f1", \(x = 1) x)
+        pip |> pipe_replace_step(
+            "f1",
+            fun = \(a = new("NumericParam", "a", value = 3)) a
+        )
+
+        out <- pipe_run(pip) |> pipe_get_out("f1")
+        expect_equal(out, 3)
+    })
+
+    it("can have a Param object defined outside as parameter default",
+    {
+        x <- 3
+        pip <- pipe_new("pipe") |> pipe_add("f1", \(x = 1) x)
+        p <- new("NumericParam", "a", value = x)
+
+        pip |> pipe_replace_step("f1", fun = \(a) a, params = list(a = p))
+
+        pip <- pipe_new("pipe") |>
+            pipe_add("f1", \(a) a, params = list(a = p))
+
+        expect_equal(pipe_get_params_at_step(pip, "f1")$a, p)
+        out <- pipe_run(pip) |> pipe_get_out("f1")
+        expect_equal(out, x)
+    })
+
+    it("function can be passed as a string",
+    {
+        pip <- pipe_new("pipe") |> pipe_add("f1", \(x = 1) x)
+        pip |> pipe_replace_step("f1", fun = "mean", params = list(x = 1:5))
+
+        out <- pipe_run(pip) |> pipe_get_out("f1")
+        expect_equal(out, mean(1:5))
+        expect_equal(pipe_get_step(pip, "f1")[["funcName"]], "mean")
+    })
+
+    it("if passed as a function, name is derived from the function",
+    {
+        pip <- pipe_new("pipe") |> pipe_add("f1", \(x = 1) x)
+        pip |> pipe_replace_step("f1", fun = mean, params = list(x = 1:5))
+
+        out <- pipe_run(pip) |> pipe_get_out("f1")
+        expect_equal(out, mean(1:5))
+        expect_equal(pipe_get_step(pip, "f1")[["funcName"]], "mean")
+    })
+
+    it("lampda functions, are named 'function'",
+    {
+        pip <- pipe_new("pipe") |> pipe_add("f1", \(x = 1) x)
+        pip |> pipe_replace_step("f1", fun = \(x = 1) x)
+        expect_equal(pipe_get_step(pip, "f1")[["funcName"]], "function")
+    })
 })
 
 
@@ -3293,72 +3359,3 @@ describe("pipe_unlock_step",
     })
 })
 
-
-describe("pipe_pipe_replace_step",
-{
-
-    it("can have a variable defined outside as parameter default",
-    {
-        x <- 3
-        pip <- pipe_new("pipe") |> pipe_add("f1", \(x = 1) x)
-        pip |> pipe_replace_step("f1", fun = \(a) a, params = list(a = x))
-
-        out <- pipe_run(pip) |> pipe_get_out("f1")
-        expect_equal(out, x)
-    })
-
-    it("handles Param object args",
-    {
-        pip <- pipe_new("pipe") |> pipe_add("f1", \(x = 1) x)
-        pip |> pipe_replace_step(
-            "f1",
-            fun = \(a = new("NumericParam", "a", value = 3)) a
-        )
-
-        out <- pipe_run(pip) |> pipe_get_out("f1")
-        expect_equal(out, 3)
-    })
-
-    it("can have a Param object defined outside as parameter default",
-    {
-        x <- 3
-        pip <- pipe_new("pipe") |> pipe_add("f1", \(x = 1) x)
-        p <- new("NumericParam", "a", value = x)
-
-        pip |> pipe_replace_step("f1", fun = \(a) a, params = list(a = p))
-
-        pip <- pipe_new("pipe") |>
-            pipe_add("f1", \(a) a, params = list(a = p))
-
-        expect_equal(pipe_get_params_at_step(pip, "f1")$a, p)
-        out <- pipe_run(pip) |> pipe_get_out("f1")
-        expect_equal(out, x)
-    })
-
-    it("function can be passed as a string",
-    {
-        pip <- pipe_new("pipe") |> pipe_add("f1", \(x = 1) x)
-        pip |> pipe_replace_step("f1", fun = "mean", params = list(x = 1:5))
-
-        out <- pipe_run(pip) |> pipe_get_out("f1")
-        expect_equal(out, mean(1:5))
-        expect_equal(pipe_get_step(pip, "f1")[["funcName"]], "mean")
-    })
-
-    it("if passed as a function, name is derived from the function",
-    {
-        pip <- pipe_new("pipe") |> pipe_add("f1", \(x = 1) x)
-        pip |> pipe_replace_step("f1", fun = mean, params = list(x = 1:5))
-
-        out <- pipe_run(pip) |> pipe_get_out("f1")
-        expect_equal(out, mean(1:5))
-        expect_equal(pipe_get_step(pip, "f1")[["funcName"]], "mean")
-    })
-
-    it("lampda functions, are named 'function'",
-    {
-        pip <- pipe_new("pipe") |> pipe_add("f1", \(x = 1) x)
-        pip |> pipe_replace_step("f1", fun = \(x = 1) x)
-        expect_equal(pipe_get_step(pip, "f1")[["funcName"]], "function")
-    })
-})
