@@ -484,7 +484,6 @@ describe("append_to_step_names",
             f2.foo = c(a = "data.foo", b = "f1.foo")
         )
 
-        depends <- pip$get_depends()
         expect_equal(pip$get_depends(), expected_depends)
     })
 })
