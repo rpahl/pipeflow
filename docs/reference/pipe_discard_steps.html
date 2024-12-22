@@ -142,8 +142,7 @@ be matched as is. Overrides all conflicting arguments.</p></dd>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Discarding 'add1' does not work ...</span></span></span>
 <span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/try.html" class="external-link">try</a></span><span class="op">(</span><span class="fu">pipe_discard_steps</span><span class="op">(</span><span class="va">p</span>, <span class="st">"add1"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Error in self$remove_step(step, recursive = recursive) : </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   cannot remove step 'add1' because the following steps depend on it: 'add2', 'mult3'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Error : cannot remove step 'add1' because the following steps depend on it: 'add2', 'mult3'</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># ... unless we enforce to remove its downstream dependencies as well</span></span></span>
 <span class="r-in"><span><span class="fu">pipe_discard_steps</span><span class="op">(</span><span class="va">p</span>, <span class="st">"add1"</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
