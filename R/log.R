@@ -3,7 +3,7 @@
 {
     local <- time
     gmt <- strptime(
-        as.POSIXlt(time, "GMT"),
+        as.POSIXlt(time, tz = "GMT"),
         format = "%Y-%m-%d %H:%M:%S"
     )
     hours_diff <- round(as.numeric(difftime(local, gmt, units = "hours")))

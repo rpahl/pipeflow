@@ -1,15 +1,16 @@
 
 describe(".get_formatted_time",
 {
-    # nolint start
+    expectedTimePattern <- paste0(
+        "[0-9]{4}-[0-9]{2}-[0-9]{2}T",
+        "[0-9]{2}:[0-9]{2}:[0-9]{2}[+|-][012]?[0-9]{1}:00"
+    )
+
     test_that("time can be formatted to contain GMT offset",
     {
         ft <- .get_formatted_time()
 
-        hasCorrectFormat <- grepl(
-            "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+|-][0-9]{1}:00",
-            x = ft
-        )
+        hasCorrectFormat <- grepl(pattern = expectedTimePattern, x = ft)
         expect_true(hasCorrectFormat)
     })
 
@@ -20,13 +21,9 @@ describe(".get_formatted_time",
         Sys.setenv(TZ = "America/Los_Angeles")
         ft <- .get_formatted_time()
 
-        hasCorrectFormat <- grepl(
-            "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[+|-][0-9]{1}:00",
-            x = ft
-        )
+        hasCorrectFormat <- grepl(pattern = expectedTimePattern, x = ft)
         expect_true(hasCorrectFormat)
     })
-    # nolint end
 })
 
 
