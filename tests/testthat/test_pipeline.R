@@ -1,10 +1,8 @@
 
 # Pipeline
 
-test_that("initialize",
+describe("initialize",
 {
-    expect_true(is.function(Pipeline$new("pipe")$initialize))
-
     test_that("returns a pipeline object",
     {
         expect_true(methods::is(Pipeline$new("pipe"), "Pipeline"))
@@ -108,11 +106,8 @@ test_that("initialize",
 })
 
 
-
-test_that("add",
+describe("add",
 {
-    expect_true(is.function(Pipeline$new("pipe")$add))
-
     test_that("step must be non-empty string",
     {
         pip <- Pipeline$new("pipe1")
@@ -352,10 +347,8 @@ test_that("add",
 })
 
 
-test_that("append",
+describe("append",
 {
-    expect_true(is.function(Pipeline$new("pipe")$append))
-
     test_that("pipelines can be combined even if their steps share names,
         unless tryAutofixNames is FALSE",
     {
@@ -471,10 +464,8 @@ test_that("append",
 
 
 
-test_that("append_to_step_names",
+describe("append_to_step_names",
 {
-    expect_true(is.function(Pipeline$new("pipe")$append_to_step_names))
-
     test_that("postfix can be appended to step names",
     {
         pip <- Pipeline$new("pipe", data = 1)
@@ -499,10 +490,8 @@ test_that("append_to_step_names",
 
 
 
-test_that("collect_out",
+describe("collect_out",
 {
-    expect_true(is.function(Pipeline$new("pipe")$collect_out))
-
     test_that("data is set as first step but not part of output by default",
     {
         dat <- data.frame(a = 1:2, b = 1:2)
@@ -645,10 +634,8 @@ test_that("collect_out",
 
 
 
-test_that("discard_steps",
+describe("discard_steps",
 {
-    expect_true(is.function(Pipeline$new("pipe")$discard_steps))
-
     test_that("pipeline steps can be discarded by pattern",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -711,10 +698,8 @@ test_that("discard_steps",
 })
 
 
-test_that("get_data",
+describe("get_data",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_data))
-
     test_that(
         "data can be retrieved",
     {
@@ -739,10 +724,8 @@ test_that("get_data",
 })
 
 
-test_that("get_depends",
+describe("get_depends",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_depends))
-
     test_that(
         "dependencies can be retrieved and are named after the steps",
     {
@@ -765,10 +748,8 @@ test_that("get_depends",
 
 
 
-test_that("get_depends_down",
+describe("get_depends_down",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_depends_down))
-
     test_that("dependencies can be determined recursively for given step",
     {
         pip <- Pipeline$new("pipe")
@@ -832,10 +813,8 @@ test_that("get_depends_down",
 
 
 
-test_that("get_depends_up",
+describe("get_depends_up",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_depends_up))
-
     test_that("dependencies can be determined recursively for given step",
     {
         pip <- Pipeline$new("pipe")
@@ -892,10 +871,8 @@ test_that("get_depends_up",
 })
 
 
-test_that("get_graph",
+describe("get_graph",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_graph))
-
     pip <- Pipeline$new("pipe") |>
         pipe_add("f1", function(a = 1) a) |>
         pipe_add("f2", function(a = ~f1, b = ~data) a)
@@ -943,10 +920,8 @@ test_that("get_graph",
 })
 
 
-test_that("get_out",
+describe("get_out",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_out))
-
     test_that("output at given step can be retrieved",
     {
         data <- airquality
@@ -976,10 +951,8 @@ test_that("get_out",
 
 
 
-test_that("get_params",
+describe("get_params",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_params))
-
     test_that("parameters can be retrieved",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -1054,10 +1027,8 @@ test_that("get_params",
 
 
 
-test_that("get_params_at_step",
+describe("get_params_at_step",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_params_at_step))
-
     test_that("list of step parameters can be retrieved",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -1160,10 +1131,8 @@ test_that("get_params_at_step",
 })
 
 
-test_that("get_params_unique",
+describe("get_params_unique",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_params_unique))
-
     test_that("parameters can be retrieved uniquely and if occuring multiple
         times, the 1st default value is used",
     {
@@ -1225,10 +1194,8 @@ test_that("get_params_unique",
 
 
 
-test_that("get_params_unique_json",
+describe("get_params_unique_json",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_params_unique_json))
-
     test_that("the elements are not named",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -1364,10 +1331,8 @@ test_that("get_params_unique_json",
 
 
 
-test_that("get_step",
+describe("get_step",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_step))
-
     test_that("single steps can be retrieved",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -1398,10 +1363,8 @@ test_that("get_step",
 })
 
 
-test_that("get_step_names",
+describe("get_step_names",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_step_names))
-
     test_that("step names be retrieved",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -1414,10 +1377,8 @@ test_that("get_step_names",
 
 
 
-test_that("get_step_number",
+describe("get_step_number",
 {
-    expect_true(is.function(Pipeline$new("pipe")$get_step_number))
-
     test_that("get_step_number",
     {
         expect_true(is.function(Pipeline$new("pipe")$get_step_number))
@@ -1446,10 +1407,8 @@ test_that("get_step_number",
 })
 
 
-test_that("has_step",
+describe("has_step",
 {
-    expect_true(is.function(Pipeline$new("pipe")$has_step))
-
     test_that("it can be checked if pipeline has a step",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -1461,10 +1420,8 @@ test_that("has_step",
 })
 
 
-test_that("insert_after",
+describe("insert_after",
 {
-    expect_true(is.function(Pipeline$new("pipe")$insert_after))
-
     test_that("can insert a step after another step",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -1541,10 +1498,8 @@ test_that("insert_after",
 })
 
 
-test_that("insert_before",
+describe("insert_before",
 {
-    expect_true(is.function(Pipeline$new("pipe")$insert_before))
-
     test_that("can insert a step after another step",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -1614,10 +1569,8 @@ test_that("insert_before",
 })
 
 
-test_that("length",
+describe("length",
 {
-    expect_true(is.function(Pipeline$new("pipe")$length))
-
     test_that("returns the number of steps",
     {
         pip <- Pipeline$new("pipe")
@@ -1632,10 +1585,8 @@ test_that("length",
 })
 
 
-test_that("lock_step",
+describe("lock_step",
 {
-    expect_true(is.function(Pipeline$new("pipe")$lock_step))
-
     test_that("sets state to 'locked'",
     {
         pip <- Pipeline$new("pipe") |>
@@ -1649,10 +1600,8 @@ test_that("lock_step",
 })
 
 
-test_that("print",
+describe("print",
 {
-    expect_true(is.function(Pipeline$new("pipe")$print))
-
     test_that("pipeline can be printed",
     {
         pip <- Pipeline$new("pipe1", data = 9)
@@ -1684,10 +1633,8 @@ test_that("print",
 })
 
 
-test_that("pop_step",
+describe("pop_step",
 {
-    expect_true(is.function(Pipeline$new("pipe")$pop_step))
-
     test_that("last pipeline step can be popped",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -1710,11 +1657,8 @@ test_that("pop_step",
 
 
 
-
-test_that("pop_steps_after",
+describe("pop_steps_after",
 {
-    expect_true(is.function(Pipeline$new("pipe")$pop_steps_after))
-
     test_that("all steps after a given step can be removed",
     {
 
@@ -1761,10 +1705,8 @@ test_that("pop_steps_after",
 
 
 
-test_that("pop_steps_from",
+describe("pop_steps_from",
 {
-    expect_true(is.function(Pipeline$new("pipe")$pop_steps_from))
-
     test_that("all steps from a given step can be removed",
     {
 
@@ -1811,10 +1753,8 @@ test_that("pop_steps_from",
 
 
 
-test_that("remove_step",
+describe("remove_step",
 {
-    expect_true(is.function(Pipeline$new("pipe")$remove_step))
-
     test_that("pipeline step can be removed",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -1906,10 +1846,9 @@ test_that("remove_step",
 })
 
 
-test_that("remove_step",
+describe("remove_step",
 {
     f <- Pipeline$new("pipe")$remove_step
-    expect_true(is.function(f))
 
     test_that("pipeline step can be renamed",
     {
@@ -1956,10 +1895,8 @@ test_that("remove_step",
 })
 
 
-test_that("replace_step",
+describe("replace_step",
 {
-    expect_true(is.function(Pipeline$new("pipe")$replace_step))
-
     test_that("pipeline steps can be replaced",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -2143,9 +2080,8 @@ test_that("replace_step",
 })
 
 
-test_that("reset",
+describe("reset",
 {
-    expect_true(is.function(Pipeline$new("pipe")$reset))
     test_that(
         "after reset pipeline is the same as before the run",
     {
@@ -2170,9 +2106,9 @@ test_that("reset",
     })
 })
 
-test_that("run",
+
+describe("run",
 {
-    expect_true(is.function(Pipeline$new("pipe")$run))
     test_that("empty pipeline can be run",
     {
         expect_no_error(Pipeline$new("pipe1")$run())
@@ -2443,10 +2379,8 @@ test_that("run",
 
 
 
-test_that("run_step",
+describe("run_step",
 {
-    expect_true(is.function(Pipeline$new("pipe")$run_step))
-
     test_that("pipeline can be run at given step",
     {
         pip <- Pipeline$new("pipe") |>
@@ -2644,10 +2578,8 @@ test_that("run_step",
 
 
 
-test_that("set_data",
+describe("set_data",
 {
-    expect_true(is.function(Pipeline$new("pipe")$set_data))
-
     test_that("data can be set later after pipeline definition",
     {
         dat <- data.frame(a = 1:2, b = 1:2)
@@ -2684,10 +2616,8 @@ test_that("set_data",
 
 
 
-test_that("set_data_split",
+describe("set_data_split",
 {
-    expect_true(is.function(Pipeline$new("pipe")$set_data_split))
-
     test_that("the new steps have the names of the list attached",
     {
         dataList <- list(A = 1, B = 2)
@@ -2908,10 +2838,8 @@ test_that("set_data_split",
 
 
 
-test_that("set_keep_out",
+describe("set_keep_out",
 {
-    expect_true(is.function(Pipeline$new("pipe")$set_keep_out))
-
     test_that("keep-out state can be set",
     {
         pip <- Pipeline$new("pipe1", data = 0) |>
@@ -2962,10 +2890,8 @@ test_that("set_keep_out",
 
 
 
-test_that("set_params",
+describe("set_params",
 {
-    expect_true(is.function(Pipeline$new("pipe")$set_params))
-
     test_that("parameters can be set commonly on existing pipeline",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -3084,10 +3010,8 @@ test_that("set_params",
 })
 
 
-test_that("set_params_at_step",
+describe("set_params_at_step",
 {
-    expect_true(is.function(Pipeline$new("pipe")$set_params_at_step))
-
     test_that("parameters can be set at given step",
     {
         pip <- Pipeline$new("pipe1") |>
@@ -3238,10 +3162,8 @@ test_that("set_params_at_step",
 })
 
 
-test_that("split",
+describe("split",
 {
-    expect_true(is.function(Pipeline$new("pipe")$split))
-
     test_that("pipeline split of initial pipeline gives the expected result",
     {
         pip <- Pipeline$new("pipe")
@@ -3313,10 +3235,8 @@ test_that("split",
 
 
 
-test_that("unlock_step",
+describe("unlock_step",
 {
-    expect_true(is.function(Pipeline$new("pipe")$lock_step))
-
     test_that("sets state to 'unlocked' if it was locked before",
     {
         pip <- Pipeline$new("pipe") |>
@@ -3337,9 +3257,8 @@ test_that("unlock_step",
 
 
 
-# Pipeline logging
 
-test_that("pipeline logging works as expected",
+describe("pipeline logging",
 {
     expect_no_error(set_log_layout("json"))
     on.exit(set_log_layout("text"))
@@ -3419,11 +3338,12 @@ test_that("pipeline logging works as expected",
     })
 })
 
+
 # ---------------
 # private methods
 # ---------------
 
-test_that("private methods work as expected",
+describe("private methods",
 {
     # Helper function to access private fields
     get_private <- function(x) {

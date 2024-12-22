@@ -1,8 +1,7 @@
 
-test_that("is_string",
+describe("is_string",
 {
     f <- is_string
-    expect_true(is.function(f))
 
     test_that("detects a string",
     {
@@ -21,10 +20,10 @@ test_that("is_string",
     })
 })
 
-test_that("is_number",
+
+describe("is_number",
 {
     f <- is_number
-    expect_true(is.function(f))
 
     test_that("detects a number",
     {
@@ -45,10 +44,9 @@ test_that("is_number",
 })
 
 
-test_that("unlist1",
+describe("unlist1",
 {
     f <- unlist1
-    expect_true(is.function(f))
 
     test_that("unlist1 unravels a list by one level",
     {
@@ -62,10 +60,9 @@ test_that("unlist1",
 
 
 
-test_that("pipeflow_replace_string",
+describe("pipeflow_replace_string",
 {
     f <- pipeflow_replace_string
-    expect_true(is.function(f))
 
     test_that("x must be a character unless its of zero length",
     {
@@ -115,10 +112,9 @@ test_that("pipeflow_replace_string",
 })
 
 
-test_that("pipe_filter_params",
+describe("pipe_filter_params",
 {
     f <- pipe_filter_params
-    expect_true(is.function(f))
 
     x1 = StringParam(name = "x1", source = "s1", advanced = TRUE)
     x2 = StringParam(name = "x2", source = "s2", advanced = TRUE)
