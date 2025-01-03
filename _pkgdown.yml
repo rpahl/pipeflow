@@ -114,7 +114,7 @@ news:
 
 navbar:
   structure:
-    left: [home, getStarted, reference, news, articles, myPackages]
+    left: [home, getStarted, reference, news, articles]
     right: [github, stackoverflow, bluesky, blog]
   components:
     home:
