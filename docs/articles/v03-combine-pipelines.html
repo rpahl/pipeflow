@@ -290,8 +290,8 @@ mechanism we did manually before.</p>
 <span><span class="co"># [[1]]</span></span>
 <span><span class="co"># function (data = ~-1) </span></span>
 <span><span class="co"># data</span></span>
-<span><span class="co"># &lt;bytecode: 0x000001c615d19628&gt;</span></span>
-<span><span class="co"># &lt;environment: 0x000001c6151b6b38&gt;</span></span></code></pre></div>
+<span><span class="co"># &lt;bytecode: 0x0000027e19db3d98&gt;</span></span>
+<span><span class="co"># &lt;environment: 0x0000027e16aa0ab0&gt;</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level3">
@@ -300,15 +300,15 @@ mechanism we did manually before.</p>
 <p>Let’s now run the combined pipeline and inspect the plot.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:58.532] Start run of 'preprocessing.modeling' pipeline:</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:58.560] Step 1/6 data</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:58.569] Step 2/6 data_prep</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:58.586] Step 3/6 standardize</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:58.589] Step 4/6 data.modeling</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:58.591] Step 5/6 fit</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:58.597] Step 6/6 plot</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:58.609] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:58.609] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2025-01-03 12:13:54.885] Start run of 'preprocessing.modeling' pipeline:</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:54.931] Step 1/6 data</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:54.940] Step 2/6 data_prep</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:54.959] Step 3/6 standardize</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:54.962] Step 4/6 data.modeling</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:54.964] Step 5/6 fit</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:54.968] Step 6/6 plot</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:54.979] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:54.980] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"plot"</span><span class="op">)</span></span>
 <span><span class="co"># Warning: Removed 37 rows containing missing values or values outside the scale range</span></span>
@@ -322,15 +322,15 @@ x-variable of the model and rerun the pipeline.</p>
 <div id="htmlwidget-10b3b7155e8045a1b2ad" style="width:700px;height:100px;" class="visNetwork html-widget"></div>
 <script type="application/json" data-for="htmlwidget-10b3b7155e8045a1b2ad">{"x":{"nodes":{"id":[1,2,3,4,5,6],"label":["data","data_prep","standardize","data.modeling","fit","plot"],"group":["data","data_prep","standardize","data.modeling","fit","plot"],"shape":["database","database","box","database","box","box"],"color":["lightgreen","lightgreen","lightgreen","lightgreen","orange","orange"],"title":["<p><\/p>","<p><\/p>","<p><\/p>","<p>output of last step of first pipeline<\/p>","<p><\/p>","<p><\/p>"]},"edges":{"from":[1,2,3,4,4,5],"to":[2,3,4,5,6,6],"arrows":["to","to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":["data","data_prep","standardize","data.modeling","fit","plot"],"width":null,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:59.216] Start run of 'preprocessing.modeling' pipeline:</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:59.218] Step 1/6 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:59.219] Step 2/6 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:59.220] Step 3/6 standardize - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:59.221] Step 4/6 data.modeling - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:59.222] Step 5/6 fit</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:59.227] Step 6/6 plot</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:59.238] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2025-01-03 11:56:59.239] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2025-01-03 12:13:55.584] Start run of 'preprocessing.modeling' pipeline:</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:55.586] Step 1/6 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:55.587] Step 2/6 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:55.588] Step 3/6 standardize - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:55.589] Step 4/6 data.modeling - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:55.590] Step 5/6 fit</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:55.595] Step 6/6 plot</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:55.606] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2025-01-03 12:13:55.607] Done.</span></span></code></pre></div>
 <div id="htmlwidget-4018eef1a407a0df6b52" style="width:700px;height:100px;" class="visNetwork html-widget"></div>
 <script type="application/json" data-for="htmlwidget-4018eef1a407a0df6b52">{"x":{"nodes":{"id":[1,2,3,4,5,6],"label":["data","data_prep","standardize","data.modeling","fit","plot"],"group":["data","data_prep","standardize","data.modeling","fit","plot"],"shape":["database","database","box","database","box","box"],"color":["lightgreen","lightgreen","lightgreen","lightgreen","lightgreen","lightgreen"],"title":["<p><\/p>","<p><\/p>","<p><\/p>","<p>output of last step of first pipeline<\/p>","<p><\/p>","<p><\/p>"]},"edges":{"from":[1,2,3,4,4,5],"to":[2,3,4,5,6,6],"arrows":["to","to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":["data","data_prep","standardize","data.modeling","fit","plot"],"width":null,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"plot"</span><span class="op">)</span></span>
