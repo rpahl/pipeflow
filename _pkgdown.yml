@@ -13,6 +13,8 @@ home:
   links:
   - text: Visit my R blog
     href: https://rpahl.github.io/r-some-blog/
+  - text: Visit my R packages universe
+    href: https://rpahl.r-universe.dev/packages/
 
 
 reference:
@@ -144,16 +146,6 @@ navbar:
         href: articles/v05-split-and-combine.html
       - text: "How pipelines can modify themselves at runtime"
         href: articles/v06-self-modify-pipeline.html
-
-    myPackages:
-      text: "My Packages"
-      menu:
-      - text: "container"
-        href: https://rpahl.github.io/container/
-      - text: "GroupSeq"
-        href: https://rpahl.github.io/GroupSeq/
-      - text: "pipeflow"
-        href: https://rpahl.github.io/pipeflow/
 
 
     github:

@@ -68,14 +68,6 @@
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">How pipelines can modify themselves at runtime</a></li>
   </ul>
 </li>
-<li class="nav-item dropdown">
-  <button class="nav-link dropdown-toggle" type="button" id="dropdown-my-packages" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">My Packages</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-my-packages">
-<li><a class="external-link dropdown-item" href="https://rpahl.github.io/container/">container</a></li>
-    <li><a class="external-link dropdown-item" href="https://rpahl.github.io/GroupSeq/">GroupSeq</a></li>
-    <li><a class="external-link dropdown-item" href="https://rpahl.github.io/pipeflow/">pipeflow</a></li>
-  </ul>
-</li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><a class="nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
@@ -298,8 +290,8 @@ mechanism we did manually before.</p>
 <span><span class="co"># [[1]]</span></span>
 <span><span class="co"># function (data = ~-1) </span></span>
 <span><span class="co"># data</span></span>
-<span><span class="co"># &lt;bytecode: 0x000001fa1852a128&gt;</span></span>
-<span><span class="co"># &lt;environment: 0x000001fa15266b68&gt;</span></span></code></pre></div>
+<span><span class="co"># &lt;bytecode: 0x000001b0f4bb4fb8&gt;</span></span>
+<span><span class="co"># &lt;environment: 0x000001b0f1926ce0&gt;</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level3">
@@ -308,15 +300,15 @@ mechanism we did manually before.</p>
 <p>Let’s now run the combined pipeline and inspect the plot.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:57.458] Start run of 'preprocessing.modeling' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:57.511] Step 1/6 data</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:57.522] Step 2/6 data_prep</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:57.542] Step 3/6 standardize</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:57.545] Step 4/6 data.modeling</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:57.548] Step 5/6 fit</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:57.552] Step 6/6 plot</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:57.566] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:57.567] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.286] Start run of 'preprocessing.modeling' pipeline:</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.335] Step 1/6 data</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.344] Step 2/6 data_prep</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.363] Step 3/6 standardize</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.366] Step 4/6 data.modeling</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.368] Step 5/6 fit</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.372] Step 6/6 plot</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.383] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.383] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"plot"</span><span class="op">)</span></span>
 <span><span class="co"># Warning: Removed 37 rows containing missing values or values outside the scale range</span></span>
@@ -330,15 +322,15 @@ x-variable of the model and rerun the pipeline.</p>
 <div id="htmlwidget-10b3b7155e8045a1b2ad" style="width:700px;height:100px;" class="visNetwork html-widget"></div>
 <script type="application/json" data-for="htmlwidget-10b3b7155e8045a1b2ad">{"x":{"nodes":{"id":[1,2,3,4,5,6],"label":["data","data_prep","standardize","data.modeling","fit","plot"],"group":["data","data_prep","standardize","data.modeling","fit","plot"],"shape":["database","database","box","database","box","box"],"color":["lightgreen","lightgreen","lightgreen","lightgreen","orange","orange"],"title":["<p><\/p>","<p><\/p>","<p><\/p>","<p>output of last step of first pipeline<\/p>","<p><\/p>","<p><\/p>"]},"edges":{"from":[1,2,3,4,4,5],"to":[2,3,4,5,6,6],"arrows":["to","to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":["data","data_prep","standardize","data.modeling","fit","plot"],"width":null,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:58.247] Start run of 'preprocessing.modeling' pipeline:</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:58.250] Step 1/6 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:58.251] Step 2/6 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:58.252] Step 3/6 standardize - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:58.253] Step 4/6 data.modeling - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:58.254] Step 5/6 fit</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:58.259] Step 6/6 plot</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:58.272] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2024-12-22 21:48:58.273] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.987] Start run of 'preprocessing.modeling' pipeline:</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.988] Step 1/6 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.989] Step 2/6 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.990] Step 3/6 standardize - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.991] Step 4/6 data.modeling - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.992] Step 5/6 fit</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:25.997] Step 6/6 plot</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:26.008] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2025-01-03 11:50:26.009] Done.</span></span></code></pre></div>
 <div id="htmlwidget-4018eef1a407a0df6b52" style="width:700px;height:100px;" class="visNetwork html-widget"></div>
 <script type="application/json" data-for="htmlwidget-4018eef1a407a0df6b52">{"x":{"nodes":{"id":[1,2,3,4,5,6],"label":["data","data_prep","standardize","data.modeling","fit","plot"],"group":["data","data_prep","standardize","data.modeling","fit","plot"],"shape":["database","database","box","database","box","box"],"color":["lightgreen","lightgreen","lightgreen","lightgreen","lightgreen","lightgreen"],"title":["<p><\/p>","<p><\/p>","<p><\/p>","<p>output of last step of first pipeline<\/p>","<p><\/p>","<p><\/p>"]},"edges":{"from":[1,2,3,4,4,5],"to":[2,3,4,5,6,6],"arrows":["to","to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":["data","data_prep","standardize","data.modeling","fit","plot"],"width":null,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"plot"</span><span class="op">)</span></span>

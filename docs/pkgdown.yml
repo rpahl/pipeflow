@@ -8,7 +8,7 @@ articles:
   v04-collect-output: v04-collect-output.html
   v05-split-and-combine: v05-split-and-combine.html
   v06-self-modify-pipeline: v06-self-modify-pipeline.html
-last_built: 2024-12-22T20:48Z
+last_built: 2025-01-03T10:49Z
 urls:
   reference: https://github.com/rpahl/pipeflow/reference
   article: https://github.com/rpahl/pipeflow/articles
