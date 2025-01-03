@@ -1,8 +1,7 @@
 
-test_that("is_string",
+describe("is_string",
 {
     f <- is_string
-    expect_true(is.function(f))
 
     test_that("detects a string",
     {
@@ -21,10 +20,10 @@ test_that("is_string",
     })
 })
 
-test_that("is_number",
+
+describe("is_number",
 {
     f <- is_number
-    expect_true(is.function(f))
 
     test_that("detects a number",
     {
@@ -45,10 +44,9 @@ test_that("is_number",
 })
 
 
-test_that("unlist1",
+describe("unlist1",
 {
     f <- unlist1
-    expect_true(is.function(f))
 
     test_that("unlist1 unravels a list by one level",
     {
@@ -62,10 +60,9 @@ test_that("unlist1",
 
 
 
-test_that("pipeflow_replace_string",
+describe("pipeflow_replace_string",
 {
     f <- pipeflow_replace_string
-    expect_true(is.function(f))
 
     test_that("x must be a character unless its of zero length",
     {
@@ -115,10 +112,9 @@ test_that("pipeflow_replace_string",
 })
 
 
-test_that("pipe_filter_params",
+describe("pipe_filter_params",
 {
     f <- pipe_filter_params
-    expect_true(is.function(f))
 
     x1 = StringParam(name = "x1", source = "s1", advanced = TRUE)
     x2 = StringParam(name = "x2", source = "s2", advanced = TRUE)
@@ -178,5 +174,25 @@ test_that("pipe_filter_params",
             f(pip, "foo" = "s1"),
             "no slot of name \"foo\""
         )
+    })
+})
+
+
+describe("stop_no_call",
+{
+    f1 <- function(x) {
+        if (x > 5) stop("x is too big")
+    }
+    f2 <- function(x) {
+        if (x > 5) stop_no_call("x is too big")
+    }
+
+    it("in contrast to standard stop gives an error without the call",
+    {
+        res1 <- tryCatch(f1(10), error = identity)
+        expect_equal(deparse(res1$call), "f1(10)")
+
+        res2 <- tryCatch(f2(10), error = identity)
+        expect_true(is.null(res2$call))
     })
 })

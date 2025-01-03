@@ -63,11 +63,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             logger = NULL
         ) {
             if (!is_string(name)) {
-                stop("name must be a string")
+                stop_no_call("name must be a string")
             }
 
             if (!nzchar(name)) {
-                stop("name must not be empty")
+                stop_no_call("name must not be empty")
             }
 
             stopifnot(is.null(logger) || is.function(logger))
@@ -77,7 +77,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             if (is.function(logger)) {
                 expectedFormals <- c("level", "msg", "...")
                 if (!setequal(names(formals(logger)), expectedFormals)) {
-                    stop(
+                    stop_no_call(
                         "logger function must have the following signature: ",
                         "function(", paste(expectedFormals, collapse = ", "),
                         ")"
@@ -110,7 +110,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' @param step `string` the name of the step. Each step name must
         #' be unique.
         #' @param fun `function` or name of the function to be applied at
-        #' the step. Both existing and lambda/anonymous functions can be used.
+        #' the step. Both existing and anonymous/lambda functions can be used.
+        #' All function parameters must have default values. If a parameter
+        #' is missing a default value in the function signature, alternatively,
+        #' it can be set via the `params` argument (see Examples section with
+        #' [mean()] function).
+        #'
         #' @param params `list` list of parameters to set or overwrite
         #' parameters of the passed function.
         #' @param description `string` optional description of the step
@@ -134,18 +139,18 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' try(p$add("s3", \(z = ~foo) 3)) # dependency 'foo' not found
         #' p
         #'
-        # Add step with existing function
+        #' # Add step with existing function
         #' p <- Pipeline$new("myPipe", data = c(1, 2, NA, 3, 4))
         #' p$add("calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
         #' p$run()$get_out("calc_mean")
         #'
-        # Step description
+        #' # Step description
         #' p <- Pipeline$new("myPipe", data = 1:10)
         #' p$add("s1", \(x = ~data) 2*x, description = "multiply by 2")
         #' print(p)
         #' print(p, verbose = TRUE) # print all columns
         #'
-        # Group output
+        #' # Group output
         #' p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
         #' p$add("prep_x", \(data = ~data) data$x, group = "prep")
         #' p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
@@ -205,13 +210,17 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Append another pipeline. The append takes care of name
-        #' clashes and dependencies, which will be changed after the append.
+        #' @description  Append another pipeline
+        #' When appending, `pipeflow` takes care of potential name clashes with
+        #' respect to step names and dependencies, that is, if needed, it will
+        #' automatically adapt step names and dependencies to make sure they
+        #' are unique in the merged pipeline.
         #' @param p `Pipeline` object to be appended.
         #' @param outAsIn `logical` if `TRUE`, output of first pipeline is used
         #' as input for the second pipeline.
         #' @param tryAutofixNames `logical` if `TRUE`, name clashes are tried
         #' to be automatically resolved by appending the 2nd pipeline's name.
+        #' Only set to `FALSE`, if you know what you are doing.
         #' @param sep `string` separator used when auto-resolving step names
         #' @return returns new combined `Pipeline`.
         #' @examples
@@ -222,10 +231,23 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p2$add("step2", \(y = 1) y)
         #' p1$append(p2)
         #'
-        # Append pipeline with potential name clashes
+        #' # Append pipeline with potential name clashes
         #' p3 <- Pipeline$new("pipe3")
         #' p3$add("step1", \(z = 1) z)
         #' p1$append(p2)$append(p3)
+        #'
+        #' # Use output of first pipeline as input for second pipeline
+        #' p1 <- Pipeline$new("pipe1", data = 8)
+        #' p2 <- Pipeline$new("pipe2")
+        #' p1$add("square", \(x = ~data) x^2)
+        #' p2$add("log2", \(x = ~data) log2(x))
+        #'
+        #' p12 <- p1$append(p2, outAsIn = TRUE)
+        #' p12$run()$get_out("log2")
+        #' p12
+        #'
+        #' # Custom name separator
+        #' p1$append(p2, sep = "___")
         append = function(
             p,
             outAsIn = FALSE,
@@ -247,7 +269,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             if (any(duplicated(stepNames))) {
                 duplicatedNames <- stepNames[duplicated(stepNames)]
                 if (!tryAutofixNames) {
-                    stop(
+                    stop_no_call(
                         "combined pipeline would have duplicated step names: ",
                         paste0("'", duplicatedNames, "'", sep = ", ")
                     )
@@ -255,7 +277,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 for (name in duplicatedNames) {
                     newName <- paste(name, p2$name, sep = sep)
                     if (self$has_step(newName)) {
-                        stop(
+                        stop_no_call(
                             "Cannot auto-fix name clash for step '",
                             name, "' in pipeline '",
                             p2$name, "'. Step '", newName,
@@ -288,8 +310,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             combinedPipe
         },
 
-        #' @description Append string to all step names. Also takes care
-        #' of updating dependencies accordingly.
+        #' @description Appends string to all step names and takes care
+        #' of updating step dependencies accordingly.
         #' @param postfix `string` to be appended to each step name.
         #' @param sep `string` separator between step name and postfix.
         #' @return returns the `Pipeline` object invisibly
@@ -299,7 +321,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$add("step2", \(y = 1) y)
         #' p$append_to_step_names("new")
         #' p
-        #' p$append_to_step_names("new", sep = "_")
+        #' p$append_to_step_names("foo", sep = "__")
         #' p
         append_to_step_names = function(postfix, sep = ".") {
 
@@ -326,8 +348,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Collect output afer pipeline run, by default, from all
         #' steps for which `keepOut` was set to `TRUE`. The output is grouped
-        #' by the group names (see `group` parameter in function `add`)
-        #' which if not set explicitly corresponds to the step names.
+        #' by the group names (see `group` parameter in function `add`),
+        #' which by default are set identical to the step names.
         #' @param groupBy `string` column of pipeline by which to group the
         #' output.
         #' @param all `logical` if `TRUE` all output is collected
@@ -342,7 +364,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$collect_out()
         #' p$collect_out(all = TRUE) |> str()
         #'
-        # Grouped output
+        #' # Grouped output
         #' p <- Pipeline$new("pipe", data = 1:2)
         #' p$add("step1", \(x = ~data) x + 2, group = "add")
         #' p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
@@ -358,10 +380,13 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$collect_out(groupBy = "state", all = TRUE) |> str()
         collect_out = function(groupBy = "group", all = FALSE)
         {
+            # nolint start
             stopifnot(
-                is_string(groupBy),
-                groupBy %in% colnames(self$pipeline)
+                "groupBy must be a single string" = is_string(groupBy),
+                "groupBy column does not exist" = groupBy %in% colnames(self$pipeline),
+                "groupBy column must be character" = is.character(self$pipeline[[groupBy]])
             )
+            # nolint end
 
             keepOut <- if (all) {
                 rep(TRUE, self$length())
@@ -414,7 +439,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             result |> .subset(orderedGroupLabels)
         },
 
-        #' @description Discard all steps that match the given `pattern`.
+        #' @description Discard all steps that match a given `pattern`.
         #' @param pattern `string` containing a regular expression (or
         #' character string for `fixed = TRUE`) to be matched.
         #' @param fixed `logical` If `TRUE`, `pattern` is a string to
@@ -429,6 +454,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$add("add2", \(x = ~add1) x + 2)
         #' p$add("mult3", \(x = ~add1) x * 3)
         #' p$add("mult4", \(x = ~add2) x * 4)
+        #' p
+        #'
         #' p$discard_steps("mult")
         #' p
         #'
@@ -436,8 +463,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$add("mult3", \(x = ~add1) x * 3)
         #' p$add("mult4", \(x = ~add2) x * 4)
         #' p
-        #' # Discard step 'add1' does'nt work as 'add2' and 'mult3' depend on it
+        #' # Discarding 'add1' does not work ...
         #' try(p$discard_steps("add1"))
+        #'
+        #' # ... unless we enforce to remove its downstream dependencies as well
         #' p$discard_steps("add1", recursive = TRUE)   # this works
         #' p
         #'
@@ -479,7 +508,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             steps <- self$get_step_names()
 
             if (!"data" %in% steps) {
-                stop("no data step defined")
+                stop_no_call("no data step defined")
             }
 
             pos <- match("data", steps)
@@ -569,6 +598,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$add("add1", \(data = ~data, x = 1) x + data)
         #' p$add("add2", \(x = 1, y = ~add1) x + y)
         #' p$add("mult1", \(x = ~add1, y = ~add2) x * y)
+        #' graph <- pipe_get_graph(p)
+        #' graph
+        #'
         #' if (require("visNetwork", quietly = TRUE)) {
         #'     do.call(visNetwork, args = p$get_graph())
         #' }
@@ -581,7 +613,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             list(nodes = nodes, edges = edges)
         },
 
-        #' @description Get output of given step after pipeline run.
+        #' @description Get output of given step
         #' @param step `string` name of step
         #' @return the output at the given step.
         #' @examples
@@ -596,8 +628,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             self$get_step(step)[["out"]][[1]]
         },
 
-        #' @description Get all unbound (i.e. not referring to other steps)
-        #' function parameters defined in the pipeline.
+        #' @description Set unbound function parameters defined in
+        #' the pipeline where 'unbound' means parameters that are not linked
+        #' to other steps. Trying #' to set parameters that don't exist in
+        #' the pipeline is ignored, by default, with a warning.
         #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
         #' names starting with a dot) are ignored and thus not returned.
         #' @return `list` of parameters, sorted and named by step. Steps with
@@ -730,8 +764,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Get step of pipeline
         #' @param step `string` name of step
-        #' @return `data.table` row containing the step. If step not found, an
-        #' error is given.
+        #' @return `data.table` row containing the step.
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
         #' p$add("add1", \(data = ~data, x = 1) x + data)
@@ -740,7 +773,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' add1 <- p$get_step("add1")
         #' print(add1)
         #' add1[["params"]]
-        #' add1[["out"]]
+        #' add1[["fun"]]
         #' try()
         #' try(p$get_step("foo")) # error: step 'foo' does not exist
         get_step = function(step)
@@ -749,7 +782,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             pos <- Position(
                 self$pipeline[["step"]],
                 f = function(x) x == step,
-                nomatch = stop("step '", step, "' not found")
+                nomatch = stop_no_call("step '", step, "' not found")
             )
 
             self$pipeline[pos, ]
@@ -781,7 +814,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             match(step, self$get_step_names())
         },
 
-        #' @description Determine whether pipeline has given step.
+        #' @description Check if pipeline has given step
         #' @param step `string` name of step
         #' @return `logical` whether step exists
         #' @examples
@@ -818,7 +851,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             private$.verify_step_does_not_exist(step)
 
             if (!self$has_step(afterStep)) {
-                stop("step '", afterStep, "' does not exist")
+                stop_no_call("step '", afterStep, "' does not exist")
             }
 
             pos <- match(afterStep, self$get_step_names())
@@ -856,12 +889,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             private$.verify_step_does_not_exist(step)
 
             if (!self$has_step(beforeStep)) {
-                stop("step '", beforeStep, "' does not exist")
+                stop_no_call("step '", beforeStep, "' does not exist")
             }
 
             pos <- match(beforeStep, self$get_step_names()) - 1
             if (pos == 0) {
-                stop("cannot insert before first step")
+                stop_no_call("cannot insert before first step")
             }
 
             pip <- Pipeline$new(name = self$name)
@@ -888,11 +921,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         length = function() nrow(self$pipeline),
 
         #' @description Locking a step means that both its parameters and its
-        #' output (given it has output) are locked. If it does not have output,
-        #' only the parameters are locked. Locking a step is useful if the
-        #' step happens to share parameter names with other steps but should not
-        #' be affected when parameters are set commonly for the entire pipeline
-        #' (see function `set_params` below).
+        #' output (given it has output) are locked such that neither
+        #' setting new pipeline parameters nor future pipeline runs can change
+        #' the current parameter and output content.
         #' @param step `string` name of step
         #' @return the `Pipeline` object invisibly
         #' @examples
@@ -914,28 +945,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Print the pipeline as a table.
-        #' @param verbose `logical` if `TRUE`, print all columns of the
-        #' pipeline, otherwise only a subset of columns is printed.
-        #' @return the `Pipeline` object invisibly
-        #' @examples
-        #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("f1", \(x = 1) x)
-        #' p$add("f2", \(y = 1) y)
-        #' p$print()
-        print = function(verbose = FALSE) {
-            if (verbose) {
-                print(self$pipeline)
-            } else {
-                columns2print <- c(
-                    "step", "depends", "out", "keepOut", "group", "state"
-                )
-                print(self$pipeline[, columns2print, with = FALSE])
-            }
-            invisible(self)
-        },
-
-        #' @description Remove last step from the pipeline.
+        #' @description Drop last step from the pipeline.
         #' @return `string` the name of the step that was removed
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
@@ -952,7 +962,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             lastStepName
         },
 
-        #' @description Remove all steps after the given step.
+        #' @description Drop all steps after the given step.
         #' @param step `string` name of step
         #' @return `character` vector of steps that were removed.
         #' @examples
@@ -979,7 +989,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             removedSteps
         },
 
-        #' @description Remove all steps from and including the given step.
+        #' @description Drop all steps from and including the given step.
         #' @param step `string` name of step
         #' @return `character` vector of steps that were removed.
         #' @examples
@@ -1002,9 +1012,32 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         },
 
 
-        #' @description Remove certain step from the pipeline. If step does
-        #' not exist, an error is given. If other steps depend on the step to
-        #' be removed, an error is given, unless `recursive = TRUE`.
+        #' @description Print the pipeline as a table.
+        #' @param verbose `logical` if `TRUE`, print all columns of the
+        #' pipeline, otherwise only the most relevant columns are displayed.
+        #' @return the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)
+        #' p$add("f2", \(y = 1) y)
+        #' p$print()
+        print = function(verbose = FALSE) {
+            if (verbose) {
+                print(self$pipeline)
+            } else {
+                columns2print <- c(
+                    "step", "depends", "out", "keepOut", "group", "state"
+                )
+                print(self$pipeline[, columns2print, with = FALSE])
+            }
+            invisible(self)
+        },
+
+
+        #' @description Remove certain step from the pipeline.
+        #' If other steps depend on the step to be removed, an error is
+        #' given and the removal is blocked, unless `recursive` was set to
+        #' `TRUE`.
         #' @param step `string` the name of the step to be removed.
         #' @param recursive `logical` if `TRUE` the step is removed together
         #' with all its downstream dependencies.
@@ -1032,7 +1065,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 stepsString <- paste0("'", deps, "'", collapse = ", ")
 
                 if (!recursive) {
-                    stop(
+                    stop_no_call(
                         "cannot remove step '", step, "' because the ",
                         "following steps depend on it: ", stepsString
                     )
@@ -1087,7 +1120,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             invisible(self)
         },
 
-        #' @description Replace pipeline step.
+        #' @description Replaces an existing pipeline step.
         #' @param step `string` the name of the step to be replaced. Step must
         #' exist.
         #' @param fun `string` or `function` operation to be applied at the
@@ -1235,7 +1268,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #'     pp$add("add2", \(x = ~add1) x + 2, keepOut = TRUE)
         #'     }
         #' )
-        #' p$run()$collect_out()
+        #' p$run(recursive = TRUE)$collect_out()
         #'
         #' # Run pipeline with progress bar
         #' p <- Pipeline$new("pipe", data = 1)
@@ -1406,7 +1439,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         },
 
         #' @description Set data in first step of pipeline.
-        #' @param data `data.frame` initial data set.
+        #' @param data initial data set
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
@@ -1424,10 +1457,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
         },
 
-        #' @description Split-copy pipeline by list of data sets. Each
-        #' sub-pipeline will have one of the data sets set as input data.
-        #' The step names of the sub-pipelines will be the original step names
-        #' plus the name of the data set.
+        #' @description This function can be used to apply the pipeline
+        #' repeatedly to various data sets. For this, the pipeline split-copies
+        #' itself by the list of given data sets. Each sub-pipeline will have
+        #' one of the data sets set as input data.
+        #' The step names of the sub-pipelines will be the original
+        #' step names plus the name of the data set.
         #' @param dataList `list` of data sets
         #' @param toStep `string` step name marking optional subset of
         #' the pipeline, at which the data split should be applied to.
@@ -1443,23 +1478,41 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p <- Pipeline$new("pipe")
         #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
         #' p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-        #' p3 <- p$set_data_split(dataList)
-        #' p3
-        #' p3$run()$collect_out() |> str()
+        #' p$set_data_split(dataList)
+        #' p
+        #' p$run()$collect_out() |> str()
         #'
         #' # Don't group output by split
         #' p <- Pipeline$new("pipe")
         #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
         #' p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-        #' p3 <- p$set_data_split(dataList, groupBySplit = FALSE)
-        #' p3
-        #' p3$run()$collect_out() |> str()
+        #' p$set_data_split(dataList, groupBySplit = FALSE)
+        #' p
+        #' p$run()$collect_out() |> str()
+        #'
+        #' # Split up to certain step
+        #' p <- Pipeline$new("pipe")
+        #' p$add("add1", \(x = ~data) x + 1)
+        #' p$add("mult", \(x = ~data, y = ~add1) x * y)
+        #' p$add("average_result", \(x = ~mult) mean(unlist(x)), keepOut = TRUE)
+        #' p
+        #' p$get_depends()[["average_result"]]
+        #'
+        #' p$set_data_split(dataList, toStep = "mult")
+        #' p
+        #' p$get_depends()[["average_result"]]
+        #'
+        #' p$run()$collect_out()
         set_data_split = function(
             dataList,
-            toStep = utils::tail(self$get_step_names(), 1),
+            toStep = character(),
             groupBySplit = TRUE,
             sep = "."
         ) {
+            if (length(toStep) == 0) {
+                toStep <- utils::tail(self$get_step_names(), 1)
+            }
+
             stopifnot(
                 is.list(dataList),
                 is_string(toStep),
@@ -1559,25 +1612,31 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
         #' @description Set parameters in the pipeline. If a parameter occurs
         #' in several steps, the parameter is set commonly in all steps.
+        #' Trying to set parameters that don't exist in the pipeline is ignored,
+        #' by default, with a warning.
         #' @param params `list` of parameters to be set
-        #' @param warnUndefined `logical` whether to give a warning if a
-        #' parameter is not defined in the pipeline.
+        #' @param warnUndefined `logical` whether to give a warning when trying
+        #' to set a parameter that is not defined in the pipeline.
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
-        #' p$add("add1", \(x = ~data, y = 1) x + y)
-        #' p$add("add2", \(x = ~data, y = 1) x + y)
-        #' p$add("mult", \(x = 1, z = 1) x * z)
+        #' p$add("add1", \(x = ~data, y = 2) x + y)
+        #' p$add("add2", \(x = ~data, y = 3) x + y)
+        #' p$add("mult", \(x = 4, z = 5) x * z)
         #' p$get_params()
         #' p$set_params(list(x = 3, y = 3))
         #' p$get_params()
         #' p$set_params(list(x = 5, z = 3))
         #' p$get_params()
         #' suppressWarnings(
-        #'     p$set_params(list(foo = 3))  # warning: trying to set undefined
+        #'     p$set_params(list(foo = 3)) # gives warning as 'foo' is undefined
         #' )
+        #' p$set_params(list(foo = 3), warnUndefined = FALSE)
         set_params = function(params, warnUndefined = TRUE)
         {
+            if (!is.list(params)) {
+                stop_no_call("params must be a list")
+            }
             definedParams <- self$get_params_unique(ignoreHidden = FALSE)
             extra <- setdiff(names(params), names(definedParams))
 
@@ -1589,29 +1648,30 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             for (step in self$get_step_names()) {
-                paramsAtStep = self$get_params_at_step(
+                paramsAtStep <- self$get_params_at_step(
                     step,
                     ignoreHidden = FALSE
                 )
                 overlap <- intersect(names(params), names(paramsAtStep))
 
                 if (length(overlap) > 0) {
-                    paramsAtStep[overlap] = params[overlap]
+                    paramsAtStep[overlap] <- params[overlap]
                     self$set_params_at_step(step, paramsAtStep)
                 }
             }
             invisible(self)
         },
 
-        #' @description Set unbound parameter values at given pipeline step.
+        #' @description Set unbound function parameters defined at given
+        #' pipeline step where 'unbound' means parameters that are not
+        #' linked to other steps.
         #' @param step `string` the name of the step
         #' @param params `list` of parameters to be set
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
-        #' p$add("add1", \(x = ~data, y = 1, z = 2) x + y)
-        #' p$add("add2", \(x = ~data, y = 1, z = 2) x + y)
-        #' p$set_params_at_step("add1", list(y = 3, z = 3))
+        #' p$add("add1", \(x = ~data, y = 2, z = 3) x + y)
+        #' p$set_params_at_step("add1", list(y = 5, z = 6))
         #' p$get_params()
         #' try(p$set_params_at_step("add1", list(foo = 3))) # foo not defined
         set_params_at_step = function(
@@ -1637,7 +1697,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             extra <- setdiff(names(params), names(current))
             if (length(extra) > 0) {
-                stop(
+                stop_no_call(
                     "Unable to set parameter(s) ", toString(extra),
                     " at step ", step, " - candidates are ",
                     toString(names(current))
@@ -1694,7 +1754,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p <- Pipeline$new("pipe")
         #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
         #' p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-        #' pips <- p$set_data_split(dataList)$split()
+        #' pipes <- p$set_data_split(dataList)$split()
+        #' pipes
         split = function()
         {
             groups <- private$.get_depends_grouped()
@@ -2054,7 +2115,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             absIndex <- relative_dep + startIndex
 
             if (absIndex < 1) {
-                stop(
+                stop_no_call(
                     "step '", step, "': relative dependency ",
                     paste0(dependencyName, "=", relative_dep),
                     " points to outside the pipeline"
@@ -2107,7 +2168,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 error = function(e) {
                     msg <- e$message
                     private$.lg(level = "error", msg = msg, context = context)
-                    stop(e$message, call. = FALSE)
+                    stop_no_call(e$message)
                 },
                 warning = function(w) {
                     msg <- w$message
@@ -2189,7 +2250,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         msg, " up to step '", consideredSteps[toIndex], "'"
                     )
                 }
-                stop(msg, call. = FALSE)
+                stop_no_call(msg)
             }
 
             invisible(TRUE)
@@ -2206,10 +2267,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
 
             if (to > self$length()) {
-                stop(
-                    "'to' must not be larger than pipeline length",
-                    call. = FALSE
-                )
+                stop_no_call("'to' must not be larger than pipeline length")
             }
 
             invisible(TRUE)
@@ -2236,10 +2294,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             } else {
                 unknownParams <- setdiff(names(params), names(fargs))
                 if (length(unknownParams) > 0) {
-                    stop(
+                    stop_no_call(
                         paste0("'", unknownParams, "'", collapse = ", "),
-                        " are no function parameters of '", funcName, "'",
-                        call. = FALSE
+                        " are no function parameters of '", funcName, "'"
                     )
                 }
             }
@@ -2250,10 +2307,9 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
             undefinedParams <- Filter(params, f = isUndefined)
             if (length(undefinedParams) > 0) {
-                stop(
+                stop_no_call(
                     paste0("'", names(undefinedParams), "'", collapse = ", "),
-                    " parameter(s) must have default values",
-                    call. = FALSE
+                    " parameter(s) must have default values"
                 )
             }
 
@@ -2263,14 +2319,14 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         .verify_step_does_not_exist = function(step)
         {
             if (self$has_step(step)) {
-                stop("step '", step, "' already exists", call. = FALSE)
+                stop_no_call("step '", step, "' already exists")
             }
         },
 
         .verify_step_exists = function(step)
         {
             if (!self$has_step(step)) {
-                stop("step '", step, "' does not exist", call. = FALSE)
+                stop_no_call("step '", step, "' does not exist")
             }
         }
     )

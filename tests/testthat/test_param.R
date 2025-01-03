@@ -1,5 +1,5 @@
 
-test_that("Param class",
+describe("Param class",
 {
     expect_no_error(getClass("Param"))
 
@@ -10,7 +10,7 @@ test_that("Param class",
     })
 })
 
-test_that("it can be tested if an object is a Param",
+describe("it can be tested if an object is a Param",
 {
     expect_true(methods::is(new("StringParam", "foo"), "Param"))
     expect_true(methods::is(new("BooleanParam", "foo"), "Param"))
@@ -22,10 +22,8 @@ test_that("it can be tested if an object is a Param",
 
 
 
-test_that("BooleanParam class",
+describe("BooleanParam class",
 {
-    expect_no_error(getClass("BooleanParam"))
-
     test_that("Boolean value of TRUE and FALSE is initialized as expected",
     {
         p = new("BooleanParam", name = "my bool", value = TRUE)
@@ -108,10 +106,8 @@ test_that("BooleanParam class",
 
 
 
-test_that("CategoricalParam class",
+describe("CategoricalParam class",
 {
-    expect_no_error(getClass("CategoricalParam"))
-
     test_that(
         "value of Categorical parameter must be a string from the choices",
     {
@@ -160,10 +156,8 @@ test_that("CategoricalParam class",
 
 
 
-test_that("DataframeParam class",
+describe("DataframeParam class",
 {
-    expect_no_error(getClass("DataframeParam"))
-
     test_that("value of DataframeParam is the passed data.frame",
     {
         daf = data.frame(x = 1:2, y = 1:2)
@@ -182,10 +176,8 @@ test_that("DataframeParam class",
 
 
 
-test_that("ListParam class",
+describe("ListParam class",
 {
-    expect_no_error(getClass("ListParam"))
-
     test_that("value of ListParam must be a list",
     {
         name = "my list"
@@ -223,10 +215,8 @@ test_that("ListParam class",
 
 
 
-test_that("NumericParam class",
+describe("NumericParam class",
 {
-    expect_no_error(getClass("NumericParam"))
-
     test_that("value of NumericParam is converted to number",
     {
         name = "my num"
@@ -287,10 +277,8 @@ test_that("NumericParam class",
 
 
 
-test_that("NumericRangeParam class",
+describe("NumericRangeParam class",
 {
-    expect_no_error(getClass("NumericRangeParam"))
-
     test_that("value of NumericRangeParam is converted to number",
     {
         name = "my num"
@@ -355,11 +343,8 @@ test_that("NumericRangeParam class",
 })
 
 
-
-test_that("StringParam class",
+describe("StringParam class",
 {
-    expect_no_error(getClass("StringParam"))
-
     test_that("name sets the name and value the value",
     {
         name = "my string"
@@ -480,35 +465,40 @@ test_that("StringParam class",
 
 
 
-
-# Param list to and from json
-
-test_that("when transforming param list to json, list names are taken over",
+describe("param_list_to_json",
 {
-    p1 = StringParam(name = "my string", value = "hello")
-    p2 = NumericParam(name = "my number", value = 5, min = 0, max = 10)
-    p3 = DataframeParam(name = "p3", value = data.frame(x = 1:4, y = 1:4))
+    test_that(
+        "when transforming param list to json, list names are taken over",
+    {
+        p1 = StringParam(name = "my string", value = "hello")
+        p2 = NumericParam(name = "my number", value = 5, min = 0, max = 10)
+        p3 = DataframeParam(name = "p3", value = data.frame(x = 1:4, y = 1:4))
 
-    l = list(p1 = p3, p2 = p2)
-    ll = param_list_from_json(param_list_to_json(l))
-    expect_equal(names(ll), names(l))
+        l = list(p1 = p3, p2 = p2)
+        ll = param_list_from_json(param_list_to_json(l))
+        expect_equal(names(ll), names(l))
+    })
 })
 
 
-test_that("Param list can be converted back and forth to and from json",
+describe("param_list_to_json",
 {
-    p1 = StringParam(name = "p1", value = "hello")
-    p2 = NumericParam(name = "p2", value = 5, min = 0, max = 10)
-    p3 = DataframeParam(name = "p3", value = data.frame(x = 1:4, y = 1:4))
+    test_that(
+        "Param list can be converted back and forth to and from json",
+    {
+        p1 = StringParam(name = "p1", value = "hello")
+        p2 = NumericParam(name = "p2", value = 5, min = 0, max = 10)
+        p3 = DataframeParam(name = "p3", value = data.frame(x = 1:4, y = 1:4))
 
-    l = list(p1 = p1, p2 = p2, p3 = p3)
-    json = param_list_to_json(l[1:2])
-    expect_true(is(json, "json"))
+        l = list(p1 = p1, p2 = p2, p3 = p3)
+        json = param_list_to_json(l[1:2])
+        expect_true(is(json, "json"))
 
-    ll = param_list_from_json(json)
-    expect_equal(l[1:2], ll)
+        ll = param_list_from_json(json)
+        expect_equal(l[1:2], ll)
 
 
-    ll = param_list_from_json(param_list_to_json(l))
-    expect_equal(l, ll)
+        ll = param_list_from_json(param_list_to_json(l))
+        expect_equal(l, ll)
+    })
 })

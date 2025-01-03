@@ -3,21 +3,27 @@
 
 <!-- badges: start -->
 
-[![](https://www.r-pkg.org/badges/version/pipeflow)](https://cran.r-project.org/package=pipeflow)
-[![dependencies](https://tinyverse.netlify.app/badge/pipeflow)](https://CRAN.R-project.org/package=pipeflow)
-[![](https://codecov.io/gh/rpahl/pipeflow/branch/main/graph/badge.svg)](https://app.codecov.io/gh/rpahl/pipeflow)
-[![R build
+[![CRAN
+release](https://www.r-pkg.org/badges/version/pipeflow)](https://cran.r-project.org/package=pipeflow)
+[![Dependencies](https://tinyverse.netlify.app/badge/pipeflow)](https://CRAN.R-project.org/package=pipeflow)
+[![Code
+coverage](https://codecov.io/gh/rpahl/pipeflow/branch/main/graph/badge.svg)](https://app.codecov.io/gh/rpahl/pipeflow)
+[![R-CMD-check
 status](https://github.com/rpahl/pipeflow/workflows/R-CMD-check/badge.svg)](https://github.com/rpahl/pipeflow/actions)
-[![R build
-status](https://github.com/rpahl/pipeflow/workflows/test-coverage/badge.svg)](https://github.com/rpahl/pipeflow/actions)
-[![R build
+[![Test
+coverage](https://github.com/rpahl/pipeflow/workflows/test-coverage/badge.svg)](https://github.com/rpahl/pipeflow/actions)
+[![Linter
 status](https://github.com/rpahl/pipeflow/workflows/lint/badge.svg)](https://github.com/rpahl/pipeflow/actions)
 [![CRAN
 checks](https://badges.cranchecks.info/summary/pipeflow.svg)](https://cran.r-project.org/web/checks/check_results_pipeflow.html)
-[![](http://cranlogs.r-pkg.org/badges/last-month/pipeflow)](https://cran.r-project.org/package=pipeflow)
-[![](http://cranlogs.r-pkg.org/badges/grand-total/pipeflow)](https://cran.r-project.org/package=pipeflow)
-[![](https://img.shields.io/github/last-commit/rpahl/pipeflow.svg)](https://github.com/rpahl/pipeflow/commits/main)
-[![](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![Downloads per
+month](http://cranlogs.r-pkg.org/badges/last-month/pipeflow)](https://cran.r-project.org/package=pipeflow)
+[![Downloads
+total](http://cranlogs.r-pkg.org/badges/grand-total/pipeflow)](https://cran.r-project.org/package=pipeflow)
+[![Last
+commit](https://img.shields.io/github/last-commit/rpahl/pipeflow.svg)](https://github.com/rpahl/pipeflow/commits/main)
+[![Lifecycle
+status](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 
 <!-- badges: end -->
 
@@ -25,27 +31,27 @@ checks](https://badges.cranchecks.info/summary/pipeflow.svg)](https://cran.r-pro
 
 A lightweight yet powerful framework for building robust data analysis
 pipelines. With `pipeflow`, you initialize a pipeline with your dataset
-and construct your workflow step by step by seamlessly adding R
-functions. Modify, remove, or insert steps at any stage while `pipeflow`
-ensures the integrity and correctness of your pipeline.
+and construct workflows step by step by adding R functions. You can
+modify, remove, or insert steps and parameters at any stage, while
+`pipeflow` ensures the pipeline’s integrity.
 
-Designed to help you focus on the *what* rather than the *how*, this
-package simplifies the implementation of complex workflows, making even
-large-scale data analysis projects manageable, adaptable, and reusable
-with ease.
+Overall, `pipeflow` offers a beginner-friendly framework that simplifies
+and streamlines the development of data analysis pipelines by making
+them modular, intuitive, and adaptable. Thanks to its intuitive
+interface, using `pipeflow` quickly pays off.
 
 ### Why use `pipeflow`
 
 - Easy to learn yet suited for complex workflows
 - Automatically manages function dependencies
-- Promotes standardized, reproducible analysis
+- Promotes standardized, modular, and reproducible analyses
 - Simplifies error handling, debugging, and reusability
 
 ### Key features
 
 - *Flexible Application:* Use interactively or programmatically in R
-- *Dependency Management:* Dependencies checked at definition, ensuring
-  reliable workflows
+- *Dependency Management:* Dependencies checked at definition time
+  always ensure the pipeline’s integrity
 - *Comprehensive Logging:* Logs each step, with customizable logger
   options
 - *Parameter Control:* View and manage all analysis parameters in one

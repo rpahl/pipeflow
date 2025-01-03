@@ -16,25 +16,103 @@ home:
 
 
 reference:
-- subtitle: "Pipeline"
+- title: "Pipeline"
   desc: A pipeline is created by instantiating an object of the Pipeline
     class. Follow the Pipeline link below for a detailed documenation of
     all member functions provided by a Pipeline object.
   contents:
   - Pipeline
-- subtitle: "Alias functions"
+
+- title: "Alias functions"
   desc: There is one alias function for each member function of a
-    Pipeline object. For the function documentation see the respective
-    member function under the Pipeline class link above.
+    Pipeline object. It starts with `pipe_` followed by the name
+    of the resepective member function.
+
+- subtitle: "Basic usage"
+  desc: These functions are required for basic usage and also likely the
+    most frequently used functions. Further down below you find all
+    functions categorized by type of functionality.
   contents:
-  - pipelineAliases
+  - pipe_new
+  - pipe_add
+  - pipe_set_data
+  - pipe_set_params
+  - pipe_run
+  - pipe_get_out
+  - pipe_collect_out
+
+- subtitle: "Create"
+  contents:
+  - pipe_new
+  - pipe_clone
+
+- subtitle: "Change"
+  contents:
+  - pipe_append_to_step_names
+  - pipe_replace_step
+  - pipe_rename_step
+  - pipe_reset
+
+- subtitle: "Add, append, insert"
+  contents:
+  - pipe_add
+  - pipe_append
+  - starts_with("pipe_insert")
+
+- subtitle: "Get"
+  contents:
+  - pipe_get_data
+  - starts_with("pipe_get_depends")
+  - pipe_get_graph
+  - pipe_get_out
+  - starts_with("pipe_get_params")
+  - matches("pipe_get_step|pipe_has_step")
+
+- subtitle: "Information"
+  contents:
+  - pipe_length
+
+- subtitle: "Output"
+  contents:
+  - pipe_collect_out
+  - pipe_print
+
+- subtitle: "Remove"
+  contents:
+  - pipe_discard_steps
+  - starts_with("pipe_pop_step")
+  - pipe_remove_step
+
+- subtitle: "Run"
+  contents:
+  - pipe_run
+  - pipe_run_step
+
+- subtitle: "Set"
+  contents:
+  - matches("pipe_lock_step|pipe_unlock_step")
+  - pipe_set_data
+  - pipe_set_keep_out
+  - pipe_set_params
+  - pipe_set_params_at_step
+
+- subtitle: "Split"
+  contents:
+  - pipe_set_data_split
+  - pipe_split
+
 - subtitle: "Logging"
   contents:
   - set_log_layout
 
+news:
+  releases:
+  - text: "Version 0.2.1"
+    href: https://rpahl.github.io/r-some-blog/posts/2024-12-21-introducing-pipeflow/
+
 navbar:
   structure:
-    left: [home, getStarted, reference, articles, myPackages]
+    left: [home, getStarted, reference, news, articles, myPackages]
     right: [github, stackoverflow, bluesky, blog]
   components:
     home:
@@ -44,6 +122,7 @@ navbar:
     getStarted:
       text: "Get Started"
       href: articles/v01-get-started.html
+
     articles:
       text: "Articles"
       menu:

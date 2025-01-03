@@ -17,8 +17,8 @@
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Lightweight, General-Purpose Data Analysis Pipelines">
-<meta name="description" content="A lightweight yet powerful framework for building robust data analysis pipelines. With pipeflow, you initialize a pipeline with your dataset and construct your workflow step by step by seamlessly adding R functions. Modify, remove, or insert steps at any stage while pipeflow ensures the integrity and correctness of your pipeline. Designed to help you focus on the what rather than the how, this package simplifies the implementation of complex workflows, making even large-scale data analysis projects manageable, adaptable, and reusable with ease.">
-<meta property="og:description" content="A lightweight yet powerful framework for building robust data analysis pipelines. With pipeflow, you initialize a pipeline with your dataset and construct your workflow step by step by seamlessly adding R functions. Modify, remove, or insert steps at any stage while pipeflow ensures the integrity and correctness of your pipeline. Designed to help you focus on the what rather than the how, this package simplifies the implementation of complex workflows, making even large-scale data analysis projects manageable, adaptable, and reusable with ease.">
+<meta name="description" content="A lightweight yet powerful framework for building robust data analysis pipelines. With pipeflow, you initialize a pipeline with your dataset and construct workflows step by step by adding R functions. You can modify, remove, or insert steps and parameters at any stage, while pipeflow ensures the pipeline's integrity. Overall, this package offers a beginner-friendly framework that simplifies and streamlines the development of data analysis pipelines by making them modular, intuitive, and adaptable.">
+<meta property="og:description" content="A lightweight yet powerful framework for building robust data analysis pipelines. With pipeflow, you initialize a pipeline with your dataset and construct workflows step by step by adding R functions. You can modify, remove, or insert steps and parameters at any stage, while pipeflow ensures the pipeline's integrity. Overall, this package offers a beginner-friendly framework that simplifies and streamlines the development of data analysis pipelines by making them modular, intuitive, and adaptable.">
 <meta property="og:image" content="https://github.com/rpahl/pipeflow/logo.png">
 </head>
 <body>
@@ -29,7 +29,7 @@
 
     <a class="navbar-brand me-2" href="index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -41,6 +41,15 @@
 <li class="active nav-item"><a class="nav-link" href="index.html" aria-label="home"><span class="fa fa-home fa-lg"></span></a></li>
 <li class="nav-item"><a class="nav-link" href="articles/v01-get-started.html">Get Started</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-news" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">News</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-news">
+<li><h6 class="dropdown-header" data-toc-skip>Releases</h6></li>
+    <li><a class="external-link dropdown-item" href="https://rpahl.github.io/r-some-blog/posts/2024-12-21-introducing-pipeflow/">Version 0.2.1</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="news/index.html">Changelog</a></li>
+  </ul>
+</li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
@@ -85,8 +94,8 @@
 <img src="logo.png" class="logo" alt=""><h1 id="pipeflow-">pipeflow <a class="anchor" aria-label="anchor" href="#pipeflow-"></a>
 </h1>
 </div>
-<p>A lightweight yet powerful framework for building robust data analysis pipelines. With <code>pipeflow</code>, you initialize a pipeline with your dataset and construct your workflow step by step by seamlessly adding R functions. Modify, remove, or insert steps at any stage while <code>pipeflow</code> ensures the integrity and correctness of your pipeline.</p>
-<p>Designed to help you focus on the <em>what</em> rather than the <em>how</em>, this package simplifies the implementation of complex workflows, making even large-scale data analysis projects manageable, adaptable, and reusable with ease.</p>
+<p>A lightweight yet powerful framework for building robust data analysis pipelines. With <code>pipeflow</code>, you initialize a pipeline with your dataset and construct workflows step by step by adding R functions. You can modify, remove, or insert steps and parameters at any stage, while <code>pipeflow</code> ensures the pipeline’s integrity.</p>
+<p>Overall, <code>pipeflow</code> offers a beginner-friendly framework that simplifies and streamlines the development of data analysis pipelines by making them modular, intuitive, and adaptable. Thanks to its intuitive interface, using <code>pipeflow</code> quickly pays off.</p>
 <div class="section level3">
 <h3 id="why-use-pipeflow">Why use <code>pipeflow</code>
 <a class="anchor" aria-label="anchor" href="#why-use-pipeflow"></a>
@@ -94,7 +103,7 @@
 <ul>
 <li>Easy to learn yet suited for complex workflows</li>
 <li>Automatically manages function dependencies</li>
-<li>Promotes standardized, reproducible analysis</li>
+<li>Promotes standardized, modular, and reproducible analyses</li>
 <li>Simplifies error handling, debugging, and reusability</li>
 </ul>
 </div>
@@ -105,7 +114,7 @@
 <li>
 <em>Flexible Application:</em> Use interactively or programmatically in R</li>
 <li>
-<em>Dependency Management:</em> Dependencies checked at definition, ensuring reliable workflows</li>
+<em>Dependency Management:</em> Dependencies checked at definition time always ensure the pipeline’s integrity</li>
 <li>
 <em>Comprehensive Logging:</em> Logs each step, with customizable logger options</li>
 <li>
@@ -202,17 +211,17 @@
 <div class="dev-status">
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
-<li><a href="https://cran.r-project.org/package=pipeflow" class="external-link"><img src="https://www.r-pkg.org/badges/version/pipeflow"></a></li>
-<li><a href="https://CRAN.R-project.org/package=pipeflow" class="external-link"><img src="https://tinyverse.netlify.app/badge/pipeflow" alt="dependencies"></a></li>
-<li><a href="https://app.codecov.io/gh/rpahl/pipeflow" class="external-link"><img src="https://codecov.io/gh/rpahl/pipeflow/branch/main/graph/badge.svg"></a></li>
-<li><a href="https://github.com/rpahl/pipeflow/actions"><img src="https://github.com/rpahl/pipeflow/workflows/R-CMD-check/badge.svg" alt="R build status"></a></li>
-<li><a href="https://github.com/rpahl/pipeflow/actions"><img src="https://github.com/rpahl/pipeflow/workflows/test-coverage/badge.svg" alt="R build status"></a></li>
-<li><a href="https://github.com/rpahl/pipeflow/actions"><img src="https://github.com/rpahl/pipeflow/workflows/lint/badge.svg" alt="R build status"></a></li>
+<li><a href="https://cran.r-project.org/package=pipeflow" class="external-link"><img src="https://www.r-pkg.org/badges/version/pipeflow" alt="CRAN release"></a></li>
+<li><a href="https://CRAN.R-project.org/package=pipeflow" class="external-link"><img src="https://tinyverse.netlify.app/badge/pipeflow" alt="Dependencies"></a></li>
+<li><a href="https://app.codecov.io/gh/rpahl/pipeflow" class="external-link"><img src="https://codecov.io/gh/rpahl/pipeflow/branch/main/graph/badge.svg" alt="Code coverage"></a></li>
+<li><a href="https://github.com/rpahl/pipeflow/actions"><img src="https://github.com/rpahl/pipeflow/workflows/R-CMD-check/badge.svg" alt="R-CMD-check status"></a></li>
+<li><a href="https://github.com/rpahl/pipeflow/actions"><img src="https://github.com/rpahl/pipeflow/workflows/test-coverage/badge.svg" alt="Test coverage"></a></li>
+<li><a href="https://github.com/rpahl/pipeflow/actions"><img src="https://github.com/rpahl/pipeflow/workflows/lint/badge.svg" alt="Linter status"></a></li>
 <li><a href="https://cran.r-project.org/web/checks/check_results_pipeflow.html" class="external-link"><img src="https://badges.cranchecks.info/summary/pipeflow.svg" alt="CRAN checks"></a></li>
-<li><a href="https://cran.r-project.org/package=pipeflow" class="external-link"><img src="http://cranlogs.r-pkg.org/badges/last-month/pipeflow"></a></li>
-<li><a href="https://cran.r-project.org/package=pipeflow" class="external-link"><img src="http://cranlogs.r-pkg.org/badges/grand-total/pipeflow"></a></li>
-<li><a href="https://github.com/rpahl/pipeflow/commits/main"><img src="https://img.shields.io/github/last-commit/rpahl/pipeflow.svg"></a></li>
-<li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg"></a></li>
+<li><a href="https://cran.r-project.org/package=pipeflow" class="external-link"><img src="http://cranlogs.r-pkg.org/badges/last-month/pipeflow" alt="Downloads per month"></a></li>
+<li><a href="https://cran.r-project.org/package=pipeflow" class="external-link"><img src="http://cranlogs.r-pkg.org/badges/grand-total/pipeflow" alt="Downloads total"></a></li>
+<li><a href="https://github.com/rpahl/pipeflow/commits/main"><img src="https://img.shields.io/github/last-commit/rpahl/pipeflow.svg" alt="Last commit"></a></li>
+<li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle status"></a></li>
 </ul>
 </div>
 

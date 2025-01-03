@@ -9,7 +9,7 @@ object."><meta property="og:image" content="https://github.com/rpahl/pipeflow/lo
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,92 +61,6 @@ object."><meta property="og:image" content="https://github.com/rpahl/pipeflow/lo
 object.</p>
     </div>
 
-    <div class="section level2">
-    <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">pipe_add</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_append</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_append_to_step_names</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_clone</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_collect_out</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_discard_steps</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_data</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_depends</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_depends_down</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_depends_up</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_graph</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_out</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_params</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_params_at_step</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_params_unique</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_params_unique_json</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_step</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_step_names</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_get_step_number</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_has_step</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_insert_after</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_insert_before</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_length</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_lock_step</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_new</span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_print</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_pop_step</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_pop_steps_after</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_pop_steps_from</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_remove_step</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_rename_step</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_replace_step</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_reset</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_run</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_run_step</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_set_data</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_set_data_split</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_set_keep_out</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_set_params</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_set_params_at_step</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_split</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu">pipe_unlock_step</span><span class="op">(</span><span class="va">pip</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
-    </div>
 
     <div class="section level2">
     <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>

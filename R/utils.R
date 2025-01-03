@@ -49,3 +49,9 @@ pipe_filter_params <- function(pipe, ...)
 
     params
 }
+
+
+stop_no_call <- function(...)
+{
+    stop(..., call. = FALSE)
+}
