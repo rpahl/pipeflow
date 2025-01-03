@@ -27,7 +27,7 @@ logger_config function from the lgr package.'><meta property="og:image" content=
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-news" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">News</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-news"><li><h6 class="dropdown-header" data-toc-skip>Releases</h6></li>
-    <li><a class="external-link dropdown-item" href="https://rpahl.github.io/r-some-blog/posts/2024-12-21-introducing-pipeflow/">Version 0.2.1</a></li>
+    <li><a class="external-link dropdown-item" href="https://rpahl.github.io/r-some-blog/posts/2024-12-21-introducing-pipeflow/">Version 0.2.2</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../news/index.html">Changelog</a></li>
   </ul></li>
@@ -92,11 +92,11 @@ which you can retrieve via <code>lgr::get_logger("pipeflow")</code>, see e.g. th
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="va"><a href="Pipeline.html">Pipeline</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="st">"pipe"</span>, data <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add1"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">x</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">data</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:10.487] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:10.488] Step 1/2 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:10.491] Step 2/2 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:10.492] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:10.493] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:43.656] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:43.658] Step 1/2 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:43.660] Step 2/2 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:43.661] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:43.661] Done.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">lg</span> <span class="op">&lt;-</span> <span class="fu">set_log_layout</span><span class="op">(</span><span class="st">"json"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">lg</span><span class="op">)</span></span></span>
@@ -106,19 +106,19 @@ which you can retrieve via <code>lgr::get_logger("pipeflow")</code>, see e.g. th
 <span class="r-out co"><span class="r-pr">#&gt;</span>   [[1]]: &lt;AppenderConsole&gt; [all] -&gt; console</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2025-01-03T11:50:10+1:00","message":"Start run of 'pipe' pipeline:"}</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2025-01-03T11:50:10+1:00","message":"Step 1/2 data - skip 'done' step"}</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2025-01-03T11:50:10+1:00","message":"Step 2/2 add1 - skip 'done' step"}</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2025-01-03T11:50:10+1:00","message":"Finished execution of steps."}</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2025-01-03T11:50:10+1:00","message":"Done."}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2025-01-03T11:56:43+1:00","message":"Start run of 'pipe' pipeline:"}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2025-01-03T11:56:43+1:00","message":"Step 1/2 data - skip 'done' step"}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2025-01-03T11:56:43+1:00","message":"Step 2/2 add1 - skip 'done' step"}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2025-01-03T11:56:43+1:00","message":"Finished execution of steps."}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2025-01-03T11:56:43+1:00","message":"Done."}</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu">set_log_layout</span><span class="op">(</span><span class="st">"text"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:10.525] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:10.526] Step 1/2 data - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:10.527] Step 2/2 add1 - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:10.527] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:10.528] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:43.694] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:43.695] Step 1/2 data - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:43.696] Step 2/2 add1 - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:43.696] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:43.697] Done.</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

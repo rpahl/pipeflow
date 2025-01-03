@@ -109,7 +109,7 @@ reference:
 
 news:
   releases:
-  - text: "Version 0.2.1"
+  - text: "Version 0.2.2"
     href: https://rpahl.github.io/r-some-blog/posts/2024-12-21-introducing-pipeflow/
 
 navbar:

@@ -33,7 +33,7 @@ syntax x = ~earlier_step_name - see the Examples for more details."><meta proper
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-news" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">News</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-news"><li><h6 class="dropdown-header" data-toc-skip>Releases</h6></li>
-    <li><a class="external-link dropdown-item" href="https://rpahl.github.io/r-some-blog/posts/2024-12-21-introducing-pipeflow/">Version 0.2.1</a></li>
+    <li><a class="external-link dropdown-item" href="https://rpahl.github.io/r-some-blog/posts/2024-12-21-introducing-pipeflow/">Version 0.2.2</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="../news/index.html">Changelog</a></li>
   </ul></li>
@@ -165,11 +165,11 @@ function <code><a href="pipe_collect_out.html">pipe_collect_out()</a></code> for
 <span class="r-out co"><span class="r-pr">#&gt;</span> Error : 'x' parameter(s) must have default values</span>
 <span class="r-in"><span><span class="fu">pipe_add</span><span class="op">(</span><span class="va">p</span>, <span class="st">"calc_mean"</span>, <span class="va">mean</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipe_run.html">pipe_run</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipe_get_out.html">pipe_get_out</a></span><span class="op">(</span><span class="st">"calc_mean"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:00.982] Start run of 'myPipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:00.983] Step 1/2 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:00.985] Step 2/2 calc_mean</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:00.986] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:00.987] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:34.464] Start run of 'myPipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:34.465] Step 1/2 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:34.467] Step 2/2 calc_mean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:34.468] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:34.468] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2.5</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Step description</span></span></span>
@@ -182,8 +182,8 @@ function <code><a href="pipe_collect_out.html">pipe_collect_out()</a></code> for
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:     s1 &lt;function[1]&gt; function &lt;list[1]&gt;    data [NULL]   FALSE     s1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      description                time  state</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           &lt;char&gt;              &lt;POSc&gt; &lt;char&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:               2025-01-03 11:50:00    New</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: multiply by 2 2025-01-03 11:50:00    New</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:               2025-01-03 11:56:34    New</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: multiply by 2 2025-01-03 11:56:34    New</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Group output</span></span></span>
@@ -192,13 +192,13 @@ function <code><a href="pipe_collect_out.html">pipe_collect_out()</a></code> for
 <span class="r-in"><span><span class="fu">pipe_add</span><span class="op">(</span><span class="va">p</span>, <span class="st">"prep_y"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">y</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span>, group <span class="op">=</span> <span class="st">"prep"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">pipe_add</span><span class="op">(</span><span class="va">p</span>, <span class="st">"sum"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">prep_x</span>, <span class="va">y</span> <span class="op">=</span> <span class="op">~</span><span class="va">prep_y</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipe_run.html">pipe_run</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="pipe_collect_out.html">pipe_collect_out</a></span><span class="op">(</span>all <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:01.001] Start run of 'myPipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:01.002] Step 1/4 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:01.005] Step 2/4 prep_x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:01.007] Step 3/4 prep_y</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:01.009] Step 4/4 sum</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:01.010] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:50:01.010] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:34.482] Start run of 'myPipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:34.483] Step 1/4 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:34.485] Step 2/4 prep_x</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:34.487] Step 3/4 prep_y</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:34.489] Step 4/4 sum</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:34.490] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2025-01-03 11:56:34.491] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $data</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   x y</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 1 3</span>
