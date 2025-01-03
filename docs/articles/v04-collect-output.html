@@ -197,15 +197,15 @@ rectangle boxes.</p>
 the flagged steps.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.298] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.323] Step 1/6 data</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.335] Step 2/6 data_prep</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.355] Step 3/6 data_summary</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.357] Step 4/6 model_fit</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.362] Step 5/6 model_summary</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.364] Step 6/6 model_plot</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.379] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.379] Done.</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:09.765] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:09.790] Step 1/6 data</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:09.802] Step 2/6 data_prep</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:09.822] Step 3/6 data_summary</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:09.824] Step 4/6 model_fit</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:09.828] Step 5/6 model_summary</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:09.831] Step 6/6 model_plot</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:09.845] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:09.845] Done.</span></span>
 <span></span>
 <span><span class="va">out</span> <span class="op">&lt;-</span> <span class="va">pip</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -309,15 +309,15 @@ is, each step represents the trivial case of a one-sized group. Again,
 we run the pipeline and collect the output.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.606] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.607] Step 1/6 data</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.613] Step 2/6 data_prep</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.616] Step 3/6 used_data</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.618] Step 4/6 model_fit</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.621] Step 5/6 model_summary</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.622] Step 6/6 model_plot</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.628] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2025-01-03 12:13:59.628] Done.</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:10.073] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:10.074] Step 1/6 data</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:10.080] Step 2/6 data_prep</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:10.083] Step 3/6 used_data</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:10.084] Step 4/6 model_fit</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:10.087] Step 5/6 model_summary</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:10.089] Step 6/6 model_plot</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:10.095] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2025-01-03 19:13:10.095] Done.</span></span>
 <span></span>
 <span><span class="va">out</span> <span class="op">&lt;-</span> <span class="va">pip</span><span class="op">$</span><span class="fu">collect_out</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
