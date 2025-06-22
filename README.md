@@ -1,6 +1,5 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-
 <!-- badges: start -->
 
 [![CRAN
@@ -14,8 +13,7 @@ status](https://github.com/rpahl/pipeflow/workflows/R-CMD-check/badge.svg)](http
 coverage](https://github.com/rpahl/pipeflow/workflows/test-coverage/badge.svg)](https://github.com/rpahl/pipeflow/actions)
 [![Linter
 status](https://github.com/rpahl/pipeflow/workflows/lint/badge.svg)](https://github.com/rpahl/pipeflow/actions)
-[![CRAN
-checks](https://badges.cranchecks.info/summary/pipeflow.svg)](https://cran.r-project.org/web/checks/check_results_pipeflow.html)
+<!-- [![CRAN checks](https://badges.cranchecks.info/summary/pipeflow.svg)](https://cran.r-project.org/web/checks/check_results_pipeflow.html) -->
 [![Downloads per
 month](https://cranlogs.r-pkg.org/badges/last-month/pipeflow)](https://cran.r-project.org/package=pipeflow)
 [![Downloads
@@ -39,6 +37,8 @@ Overall, `pipeflow` offers a beginner-friendly framework that simplifies
 and streamlines the development of data analysis pipelines by making
 them modular, intuitive, and adaptable. Thanks to its intuitive
 interface, using `pipeflow` quickly pays off.
+
+<img src="man/figures/cartoon.png" alt="cartoon" align="right" width="330"/>
 
 ### Why use `pipeflow`
 
