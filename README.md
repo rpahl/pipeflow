@@ -13,8 +13,7 @@ status](https://github.com/rpahl/pipeflow/workflows/R-CMD-check/badge.svg)](http
 coverage](https://github.com/rpahl/pipeflow/workflows/test-coverage/badge.svg)](https://github.com/rpahl/pipeflow/actions)
 [![Linter
 status](https://github.com/rpahl/pipeflow/workflows/lint/badge.svg)](https://github.com/rpahl/pipeflow/actions)
-[![CRAN
-checks](https://badges.cranchecks.info/summary/pipeflow.svg)](https://cran.r-project.org/web/checks/check_results_pipeflow.html)
+<!-- [![CRAN checks](https://badges.cranchecks.info/summary/pipeflow.svg)](https://cran.r-project.org/web/checks/check_results_pipeflow.html) -->
 [![Downloads per
 month](https://cranlogs.r-pkg.org/badges/last-month/pipeflow)](https://cran.r-project.org/package=pipeflow)
 [![Downloads
