@@ -1,6 +1,5 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-
 <!-- badges: start -->
 
 [![CRAN
@@ -39,6 +38,8 @@ Overall, `pipeflow` offers a beginner-friendly framework that simplifies
 and streamlines the development of data analysis pipelines by making
 them modular, intuitive, and adaptable. Thanks to its intuitive
 interface, using `pipeflow` quickly pays off.
+
+<img src="man/figures/cartoon.png" alt="cartoon" align="right" width="330"/>
 
 ### Why use `pipeflow`
 

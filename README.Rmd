@@ -49,6 +49,7 @@ and streamlines the development of data analysis pipelines by making
 them modular, intuitive, and adaptable.
 Thanks to its intuitive interface, using `pipeflow` quickly pays off.
 
+<img src="man/figures/cartoon.png" alt="cartoon" align="right" width="330"/>
 
 ### Why use `pipeflow`
 
