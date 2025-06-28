@@ -14,6 +14,7 @@ vignette: >
 
 ```{r knitr-setup, include = FALSE}
 require(pipeflow)
+showVis <- as.logical(Sys.getenv("pipeflow.visNetwork", unset = "FALSE"))
 
 knitr::opts_chunk$set(
   comment = "#",
@@ -40,7 +41,7 @@ pip$add(
 pip$add(
     "model_fit",
     function(
-        data = ~`data_prep`,
+        data = ~data_prep,
         xVar = "Temp.Celsius"
     ) {
         lm(paste("Ozone ~", xVar), data = data)
@@ -49,8 +50,8 @@ pip$add(
 pip$add(
     "model_plot",
     function(
-        model = ~`model_fit`,
-        data = ~`data_prep`,
+        model = ~model_fit,
+        data = ~data_prep,
         xVar = "Temp.Celsius",
         title = "Linear model fit"
     ) {
@@ -92,7 +93,7 @@ pip$insert_after(
     afterStep = "data_prep",
     step = "standardize",
     function(
-        data = ~`data_prep`,
+        data = ~data_prep,
         yVar = "Ozone"
     ) {
         data[, yVar] <- scale(data[, yVar])
@@ -106,19 +107,19 @@ pip$insert_after(
 pip
 ```
 
-```{r, eval = getOption("pipeflow.visNetwork", default = FALSE)}
+```{r, eval = FALSE, echo = showVis}
 library(visNetwork)
 do.call(visNetwork, args = pip$get_graph()) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
-```{r, echo = FALSE, eval = getOption("pipeflow.visNetwork", default = FALSE)}
+```{r, echo = FALSE, eval = showVis}
 library(visNetwork)
 do.call(visNetwork, args = c(pip$get_graph(), list(height = 300))) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
-As we can see, the `standardize` step is now part of the pipeline, but
+The `standardize` step is now part of the pipeline, but
 so far it is not used by any other step.
 
 ### Replace existing steps
@@ -131,7 +132,7 @@ pip$get_step("model_fit")[["fun"]]
 
 To use the standardized data, we need to change the data dependency
 such that it refers to the `standardize` step. Also instead of
-a fixed y-variable in the model, we want to pass it as a paramter.
+a fixed y-variable in the model, we want to pass it as a parameter.
 
 ```{r replace-model-fit-step}
 pip$replace_step(
@@ -180,8 +181,8 @@ do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
-We see that the `model_fit` and `model_plot` steps now use the standardized data.
-Let's re-run the pipeline and inspect the output.
+We see that the `model_fit` and `model_plot` steps now use (i.e., depend on) the
+standardized data.  Let's re-run the pipeline and inspect the output.
 
 ```{r}
 pip$set_params(list(xVar = "Solar.R", yVar = "Wind"))

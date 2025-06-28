@@ -83,8 +83,8 @@
 
 
 
-
-<div class="row">
+<script src="v02-modify-pipeline_files/htmlwidgets-1.6.4/htmlwidgets.js"></script><link href="v02-modify-pipeline_files/vis-9.1.0/vis-network.min.css" rel="stylesheet">
+<script src="v02-modify-pipeline_files/vis-9.1.0/vis-network.min.js"></script><script src="v02-modify-pipeline_files/visNetwork-binding-2.1.2/visNetwork.js"></script><div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Modifying existing pipelines</h1>
             
@@ -126,7 +126,7 @@ is, we have the following pipeline</p>
 <span>    afterStep <span class="op">=</span> <span class="st">"data_prep"</span>,</span>
 <span>    step <span class="op">=</span> <span class="st">"standardize"</span>,</span>
 <span>    <span class="kw">function</span><span class="op">(</span></span>
-<span>        <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">`data_prep`</span>,</span>
+<span>        <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data_prep</span>,</span>
 <span>        <span class="va">yVar</span> <span class="op">=</span> <span class="st">"Ozone"</span></span>
 <span>    <span class="op">)</span> <span class="op">{</span></span>
 <span>        <span class="va">data</span><span class="op">[</span>, <span class="va">yVar</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">data</span><span class="op">[</span>, <span class="va">yVar</span><span class="op">]</span><span class="op">)</span></span>
@@ -146,8 +146,9 @@ is, we have the following pipeline</p>
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://datastorm-open.github.io/visNetwork/" class="external-link">visNetwork</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">visNetwork</span>, args <span class="op">=</span> <span class="va">pip</span><span class="op">$</span><span class="fu">get_graph</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/pkg/visNetwork/man/visHierarchicalLayout.html" class="external-link">visHierarchicalLayout</a></span><span class="op">(</span>direction <span class="op">=</span> <span class="st">"LR"</span>, sortMethod <span class="op">=</span> <span class="st">"directed"</span><span class="op">)</span></span></code></pre></div>
-<p>As we can see, the <code>standardize</code> step is now part of the
-pipeline, but so far it is not used by any other step.</p>
+<div id="htmlwidget-ac96cb3ee4656e2e9ec3" style="width:700px;height:300px;" class="visNetwork html-widget"></div>
+<script type="application/json" data-for="htmlwidget-ac96cb3ee4656e2e9ec3">{"x":{"nodes":{"id":[1,2,3,4,5],"label":["data","data_prep","standardize","model_fit","model_plot"],"group":["data","data_prep","standardize","model_fit","model_plot"],"shape":["database","database","box","box","box"],"color":["lightgreen","lightgreen","lightblue","lightgreen","lightgreen"],"title":["<p><\/p>","<p><\/p>","<p><\/p>","<p><\/p>","<p><\/p>"]},"edges":{"from":[1,2,2,2,4],"to":[2,3,4,5,5],"arrows":["to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":["data","data_prep","standardize","model_fit","model_plot"],"width":null,"height":300,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>The <code>standardize</code> step is now part of the pipeline, but so
+far it is not used by any other step.</p>
 </div>
 <div class="section level3">
 <h3 id="replace-existing-steps">Replace existing steps<a class="anchor" aria-label="anchor" href="#replace-existing-steps"></a>
@@ -164,7 +165,7 @@ step</p>
 <p>To use the standardized data, we need to change the data dependency
 such that it refers to the <code>standardize</code> step. Also instead
 of a fixed y-variable in the model, we want to pass it as a
-paramter.</p>
+parameter.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">replace_step</span><span class="op">(</span></span>
 <span>    <span class="st">"model_fit"</span>,</span>
@@ -206,19 +207,19 @@ way.</p>
 <span><span class="co"># 4:   model_fit           standardize             [NULL]   FALSE   model_fit    New</span></span>
 <span><span class="co"># 5:  model_plot model_fit,standardize             [NULL]   FALSE  model_plot    New</span></span></code></pre></div>
 <p>We see that the <code>model_fit</code> and <code>model_plot</code>
-steps now use the standardized data. Let’s re-run the pipeline and
-inspect the output.</p>
+steps now use (i.e., depend on) the standardized data. Let’s re-run the
+pipeline and inspect the output.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span>, yVar <span class="op">=</span> <span class="st">"Wind"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># INFO  [2025-01-03 19:13:00.140] Start run of 'my-pipeline' pipeline:</span></span>
-<span><span class="co"># INFO  [2025-01-03 19:13:00.141] Step 1/5 data - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2025-01-03 19:13:00.142] Step 2/5 data_prep - skip 'done' step</span></span>
-<span><span class="co"># INFO  [2025-01-03 19:13:00.143] Step 3/5 standardize</span></span>
-<span><span class="co"># INFO  [2025-01-03 19:13:00.146] Step 4/5 model_fit</span></span>
-<span><span class="co"># INFO  [2025-01-03 19:13:00.148] Step 5/5 model_plot</span></span>
-<span><span class="co"># INFO  [2025-01-03 19:13:00.153] Finished execution of steps.</span></span>
-<span><span class="co"># INFO  [2025-01-03 19:13:00.154] Done.</span></span></code></pre></div>
+<span><span class="co"># INFO  [2025-06-28 14:25:12.578] Start run of 'my-pipeline' pipeline:</span></span>
+<span><span class="co"># INFO  [2025-06-28 14:25:12.579] Step 1/5 data - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2025-06-28 14:25:12.580] Step 2/5 data_prep - skip 'done' step</span></span>
+<span><span class="co"># INFO  [2025-06-28 14:25:12.581] Step 3/5 standardize</span></span>
+<span><span class="co"># INFO  [2025-06-28 14:25:12.584] Step 4/5 model_fit</span></span>
+<span><span class="co"># INFO  [2025-06-28 14:25:12.586] Step 5/5 model_plot</span></span>
+<span><span class="co"># INFO  [2025-06-28 14:25:12.592] Finished execution of steps.</span></span>
+<span><span class="co"># INFO  [2025-06-28 14:25:12.593] Done.</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="fu">get_out</span><span class="op">(</span><span class="st">"model_fit"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#  (Intercept)      Solar.R </span></span>
@@ -248,7 +249,8 @@ error if removing the step would violate the integrity of the
 pipeline.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/try.html" class="external-link">try</a></span><span class="op">(</span><span class="va">pip</span><span class="op">$</span><span class="fu">remove_step</span><span class="op">(</span><span class="st">"standardize"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co"># Error : cannot remove step 'standardize' because the following steps depend on it: 'model_fit', 'model_plot'</span></span></code></pre></div>
+<span><span class="co"># Error in pip$remove_step("standardize") : </span></span>
+<span><span class="co">#   cannot remove step 'standardize' because the following steps depend on it: 'model_fit', 'model_plot'</span></span></code></pre></div>
 <p>To enforce removing a step together with all its downstream
 dependencies, you can use the <code>recursive</code> argument.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
