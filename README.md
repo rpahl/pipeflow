@@ -29,24 +29,23 @@ status](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https:/
 
 A lightweight yet powerful framework for building robust data analysis
 pipelines. With `pipeflow`, you initialize a pipeline with your dataset
-and construct workflows step by step by adding R functions. You can
-modify, remove, or insert steps and parameters at any stage, while
+and construct workflows step by step simply by adding R functions. You
+can modify, remove, or insert steps and parameters at any stage, while
 `pipeflow` ensures the pipeline’s integrity.
 
-Overall, `pipeflow` offers a beginner-friendly framework that simplifies
-and streamlines the development of data analysis pipelines by making
-them modular, intuitive, and adaptable. Thanks to its intuitive
-interface, using `pipeflow` quickly pays off and always helps you to
-keep a clear and structured overview of your project.
+Thanks to its intuitive interface, using `pipeflow` quickly pays off in
+the beginning while in the long run will help you to keep a clear and
+structured overview of your project.
 
 <img src="man/figures/cartoon.png" alt="cartoon" align="right" width="330"/>
 
 ### Why use `pipeflow`
 
 - Easy to learn yet suited for growingly complex workflows
-- Automatically manages function dependencies
-- Promotes standardized and modular code
-- Simplifies error handling, debugging, and reusability
+- Automatically manages function and parameter dependencies
+- Promotes structured and modular code
+- Facilitates reusability and collaboration
+- Simplifies error handling and debugging
 
 ### Installation
 
