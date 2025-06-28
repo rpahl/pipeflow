@@ -14,7 +14,7 @@ vignette: >
 
 ```{r knitr-setup, include = FALSE}
 require(pipeflow)
-showVis <- getOption("pipeflow.visNetwork", default = FALSE)
+showVis <- as.logical(Sys.getenv("pipeflow.visNetwork", unset = "FALSE"))
 
 knitr::opts_chunk$set(
   comment = "#",
@@ -114,10 +114,14 @@ Looking at the pipeline, we see that the steps `data_summary`, `model-summary`, 
 pip
 ```
 
-Graphically, steps flagged with `keepOut = TRUE` are displayed with a circle
-shape while "normal" steps are shown as rectangle boxes.
+```{r, include = showVis, results = "asis", echo = FALSE}
+cat(
+    "Graphically, steps flagged with `keepOut = TRUE` are displayed",
+    "with a circle shape while \"normal\" steps are shown as rectangle boxes."
+)
+```
 
-```{r, echo = FALSE, eval = getOption("pipeflow.visNetwork", default = FALSE)}
+```{r, echo = FALSE, eval = showVis}
 library(visNetwork)
 do.call(visNetwork, args = c(pip$get_graph(), list(height = 300))) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
