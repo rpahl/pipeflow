@@ -1,5 +1,9 @@
 # pipeflow (development version)
 
+# pipeflow 0.2.3
+
+* Add Depends R >= 4.2.0 to DESCRIPTION
+* Fix issue caused by update of lgr package (#571e8260)
 * Fix badge links in README
 
 # pipeflow 0.2.2
