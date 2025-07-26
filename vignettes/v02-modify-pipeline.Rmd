@@ -14,7 +14,6 @@ vignette: >
 
 ```{r knitr-setup, include = FALSE}
 require(pipeflow)
-showVis <- as.logical(Sys.getenv("pipeflow.visNetwork", unset = "FALSE"))
 
 knitr::opts_chunk$set(
   comment = "#",
@@ -107,13 +106,13 @@ pip$insert_after(
 pip
 ```
 
-```{r, eval = FALSE, echo = showVis}
+```{r, eval = FALSE, echo = as.logical(Sys.getenv("pipeflow.visNetwork", unset = "FALSE"))}
 library(visNetwork)
 do.call(visNetwork, args = pip$get_graph()) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
-```{r, echo = FALSE, eval = showVis}
+```{r, echo = FALSE, eval = as.logical(Sys.getenv("pipeflow.visNetwork", unset = "FALSE"))}
 library(visNetwork)
 do.call(visNetwork, args = c(pip$get_graph(), list(height = 300))) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
