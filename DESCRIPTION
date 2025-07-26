@@ -11,6 +11,7 @@ Description: A lightweight yet powerful framework for building robust data
     Overall, this package offers a beginner-friendly framework that simplifies
     and streamlines the development of data analysis pipelines by making
     them modular, intuitive, and adaptable.
+Depends: R (>= 4.2.0)
 Imports:
     data.table,
     jsonlite,
