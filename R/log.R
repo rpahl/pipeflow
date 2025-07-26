@@ -30,7 +30,7 @@ LogLayoutJson <- R6::R6Class(
 
             custom_names = setdiff(
                 names(event$values),
-                c("msg", "timestamp", "level", "caller", "logger")
+                c("msg", "timestamp", "level", "caller", "logger", "rawMsg")
             )
 
             log_fields = c(default_fields, event$values[custom_names])
