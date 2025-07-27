@@ -113,14 +113,14 @@ Looking at the pipeline, we see that the steps `data_summary`, `model-summary`, 
 pip
 ```
 
-```{r, include = nzchar(Sys.getenv("pipeflow.visNetwork")), results = "asis", echo = FALSE}
+```{r, include = nzchar(Sys.getenv("IN_PKGDOWN")), results = "asis", echo = FALSE}
 cat(
     "Graphically, steps flagged with `keepOut = TRUE` are displayed",
     "with a circle shape while \"normal\" steps are shown as rectangle boxes."
 )
 ```
 
-```{r, echo = FALSE, eval = nzchar(Sys.getenv("pipeflow.visNetwork"))}
+```{r, echo = FALSE, eval = nzchar(Sys.getenv("IN_PKGDOWN"))}
 library(visNetwork)
 do.call(visNetwork, args = c(pip$get_graph(), list(height = 300))) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")

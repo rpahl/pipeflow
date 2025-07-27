@@ -106,13 +106,13 @@ pip$insert_after(
 pip
 ```
 
-```{r, eval = FALSE, echo = nzchar(Sys.getenv("pipeflow.visNetwork"))}
+```{r, eval = FALSE, echo = nzchar(Sys.getenv("IN_PKGDOWN"))}
 library(visNetwork)
 do.call(visNetwork, args = pip$get_graph()) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
-```{r, echo = FALSE, eval = nzchar(Sys.getenv("pipeflow.visNetwork"))}
+```{r, echo = FALSE, eval = nzchar(Sys.getenv("IN_PKGDOWN"))}
 library(visNetwork)
 do.call(visNetwork, args = c(pip$get_graph(), list(height = 300))) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
@@ -174,7 +174,7 @@ The updated pipeline now looks as follows.
 pip
 ```
 
-```{r, echo = FALSE, eval = nzchar(Sys.getenv("pipeflow.visNetwork"))}
+```{r, echo = FALSE, eval = nzchar(Sys.getenv("IN_PKGDOWN"))}
 library(visNetwork)
 do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
     visHierarchicalLayout(direction = "LR")
