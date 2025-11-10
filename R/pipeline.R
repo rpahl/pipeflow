@@ -103,6 +103,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             self$add("data", function() data, keepOut = FALSE)
 
+            private$.reindex()
+
             invisible(self)
         },
 
@@ -207,6 +209,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                     )
                 )
 
+            private$.reindex()
+
             invisible(self)
         },
 
@@ -293,6 +297,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             combinedName <- paste0(p1$name, sep, p2$name)
             combinedPipe <- Pipeline$new(combinedName)
             combinedPipe$pipeline <- rbind(p1$pipeline, p2$pipeline)
+            combinedPipe$.__enclos_env__$private$.reindex()
 
             if (outAsIn) {
                 # Replace first step of p2, with the output of last step of p1
@@ -341,6 +346,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             self$pipeline[["step"]] <- add_postfix(steps)
             self$pipeline[["depends"]] <- lapply(deps, add_postfix)
+
+            private$.reindex()
 
             invisible(self)
         },
@@ -779,13 +786,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         get_step = function(step)
         {
             private$.verify_step_exists(step)
-            pos <- Position(
-                self$pipeline[["step"]],
-                f = function(x) x == step,
-                nomatch = stop_no_call("step '", step, "' not found")
-            )
-
-            self$pipeline[pos, ]
+            i <- self$get_step_number(step)
+            self$pipeline[i, ]
         },
 
         #' @description Get step names of pipeline
@@ -811,7 +813,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         get_step_number = function(step)
         {
             private$.verify_step_exists(step)
-            match(step, self$get_step_names())
+            private$idx[[step]]
         },
 
         #' @description Check if pipeline has given step
@@ -854,9 +856,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 stop_no_call("step '", afterStep, "' does not exist")
             }
 
-            pos <- match(afterStep, self$get_step_names())
+            pos <- self$get_step_number(afterStep)
             pip <- Pipeline$new(name = self$name)
             pip$pipeline <- self$pipeline[seq_len(pos), ]
+            pip$.__enclos_env__$private$.reindex()
             pip$add(step = step, ...)
 
             if (pos < self$length()) {
@@ -867,6 +870,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             self$pipeline <- pip$pipeline
+            private$.reindex()
+
             invisible(self)
         },
 
@@ -892,7 +897,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 stop_no_call("step '", beforeStep, "' does not exist")
             }
 
-            pos <- match(beforeStep, self$get_step_names()) - 1
+            pos <- self$get_step_number(beforeStep) - 1
             if (pos == 0) {
                 stop_no_call("cannot insert before first step")
             }
@@ -900,6 +905,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             pip <- Pipeline$new(name = self$name)
 
             pip$pipeline <- self$pipeline[seq_len(pos), ]
+            pip$.__enclos_env__$private$.reindex()
             pip$add(step = step, ...)
 
             pip$pipeline <- rbind(
@@ -908,6 +914,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             )
 
             self$pipeline <- pip$pipeline
+            private$.reindex()
+
             invisible(self)
         },
 
@@ -959,6 +967,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             lastStepName <- self$get_step_names()[len]
 
             self$pipeline <- self$pipeline[-len, ]
+            private$.reindex()
+
             lastStepName
         },
 
@@ -985,6 +995,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             removedSteps <- self$pipeline[["step"]][numbers2remove]
 
             self$pipeline <- self$pipeline[-numbers2remove, ]
+            private$.reindex()
 
             removedSteps
         },
@@ -1007,6 +1018,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             removedStepNames <- self$pipeline[["step"]][numbers2remove]
 
             self$pipeline <- self$pipeline[-numbers2remove, ]
+            private$.reindex()
 
             removedStepNames
         },
@@ -1081,6 +1093,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             stepNumber <- self$get_step_number(step)
             self$pipeline = self$pipeline[-stepNumber, ]
+            private$.reindex()
+
             invisible(self)
         },
 
@@ -1116,6 +1130,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 target = from,
                 replacement = to
             )
+            private$.reindex()
 
             invisible(self)
         },
@@ -1207,6 +1222,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             self$pipeline[stepNumber, ] <- newStep
             private$.update_states_downstream(step, state = "Outdated")
+            private$.reindex()
 
             invisible(self)
         },
@@ -1556,6 +1572,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 c(pip, pipes),
                 f = function(x, y) x$append(y, sep = sep)
             )
+            combined$.__enclos_env__$private$.reindex()
             combined$remove_step("data")
 
             # If subset was used for split, append the remaining steps and
@@ -1582,6 +1599,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             self$pipeline <- combined$pipeline
+            private$.reindex()
+
             invisible(self)
         },
 
@@ -1805,6 +1824,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             value
         },
 
+        idx = NULL,
+        .reindex = function() {
+            private$idx <- as.list(seq_len(nrow(self$pipeline)))
+            names(private$idx) <- self$pipeline[["step"]]
+        },
+
         .clean_out_not_kept = function()
         {
             areNotKept <- !self$pipeline[["keepOut"]]
@@ -2011,6 +2036,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             res
         },
 
+        .normalize_depvec = function(x) {
+            if (is.null(x) || length(x) == 0) return(character())
+            if (is.list(x)) return(unlist(x, use.names = FALSE))
+            as.character(x)
+        },
+
         .get_downstream_depends = function(
             step,
             depends,
@@ -2022,23 +2053,50 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is.logical(recursive)
             )
 
-            result <- depends |>
-                Filter(f = function(x) step %in% unlist(x)) |>
-                names()
+            if (length(depends) == 0) {
+                return(character())
+            }
 
-            if (recursive) {
-                result <- c(
-                    result,
-                    sapply(
-                        result,
-                        FUN = private$.get_downstream_depends,
-                        depends = depends,
-                        recursive = TRUE
+            # Build reverse adjacency lookup (dep -> steps that depend on it)
+            rev_adj <- list()
+            dn <- names(depends)
+            for (i in seq_along(depends)) {
+                s  <- dn[[i]]
+                ds <- private$.normalize_depvec(depends[[i]])
+                if (!length(ds)) next
+                for (d in ds) {
+                    key <- d
+                    rev_adj[[key]] <- c(rev_adj[[key]], s)
+                }
+            }
+
+            key <- as.character(step)
+            if (!recursive) {
+                return(
+                    unique(
+                        rev_adj[[key]] %||% character()
                     )
                 )
             }
 
-            unique(unlist(result)) |> as.character()
+            # BFS from immediate children outwards
+            q <- rev_adj[[key]] %||% character()
+            head <- 1L
+            seen <- new.env(parent = emptyenv(), hash = TRUE)
+            out  <- character()
+
+            while (head <= length(q)) {
+                s <- q[[head]]
+                head <- head + 1L
+                if (!exists(s, envir = seen, inherits = FALSE)) {
+                    assign(s, TRUE, envir = seen)
+                    out <- c(out, s)
+                    nbrs <- rev_adj[[s]] %||% character()
+                    if (length(nbrs)) q <- c(q, nbrs)
+                }
+            }
+
+            out
         },
 
         .get_last_step = function() {
@@ -2060,21 +2118,36 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 return(character())
             }
 
-            result <- unlist(depends[[step]]) |> as.character()
-
-            if (recursive) {
-                result <- c(
-                    result,
-                    sapply(
-                        result,
-                        FUN = private$.get_upstream_depends,
-                        depends = depends,
-                        recursive = TRUE
+            if (!recursive) {
+                return(
+                    unique(
+                        private$.normalize_depvec(
+                            depends[[step]] %||% character()
+                        )
                     )
                 )
             }
 
-            unique(unlist(result)) |> as.character()
+            # BFS from immediate parents outward
+            q <- private$.normalize_depvec(depends[[step]] %||% character())
+            head <- 1L
+            seen <- new.env(parent = emptyenv(), hash = TRUE)
+            out  <- character()
+
+            while (head <= length(q)) {
+                s <- as.character(q[[head]])
+                head <- head + 1L
+                if (!exists(s, envir = seen, inherits = FALSE)) {
+                    assign(s, TRUE, envir = seen)
+                    out <- c(out, s)
+                    next_up <- private$.normalize_depvec(
+                        depends[[s]] %||% character()
+                    )
+                    if (length(next_up)) q <- c(q, next_up)
+                }
+            }
+
+            out
         },
 
         .prepare_and_verify_params = function(
