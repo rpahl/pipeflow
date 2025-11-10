@@ -61,3 +61,6 @@ renv.lock
 
 tags
 tags.lock
+
+# macOS
+.DS_Store
