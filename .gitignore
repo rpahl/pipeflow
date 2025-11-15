@@ -4,6 +4,7 @@
 
 # Session Data files
 .RData
+.RDataTmp
 
 # User-specific files
 .Ruserdata
@@ -55,9 +56,11 @@ dev
 
 # renv
 renv/
-renv.lock
 
 .Rprofile
 
 tags
-tags.lock
+
+check
+/doc/
+/Meta/

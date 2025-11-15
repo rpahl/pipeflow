@@ -1,25 +1,39 @@
+# Reproducibility / project infra (exclude from built package)
 ^renv$
 ^renv\.lock$
+^\.renvignore$
+^\.Rprofile$
+
+# RStudio / IDE project files
 ^.*\.Rproj$
 ^\.Rproj\.user$
 
-.lintr
-.vscode
+# Development scratch directories
+^check$
+^dev$
+^data-raw$
+^tags$
 
+# CI / VCS / editor config
 ^\.git$
 ^\.github$
-^\.gitignore$
-^.*\.Rproj$
-^\.Rproj\.user$
-^dev$
-^pkgdown$
+^\.vscode$
+^\.lintr$
+
+# Documentation/site generation (optional)
+^README\.md$
+^README\.Rmd$
 ^_pkgdown\.yml$
+^pkgdown$
 ^docs$
 ^doc$
-^README\.Rmd$
-^README\.md$
+
+# Repository meta docs (optional to exclude; safe to keep if you prefer)
+^cran-comments\.md$
+^CODE_OF_CONDUCT\.md$
+^CONTRIBUTING\.md$
+^CHANGELOG\.md$
 ^Meta$
 
-TODO
-^logo$
-^tags$
+# Misc artifacts
+^workflows\.zip$

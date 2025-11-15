@@ -1,0 +1,163 @@
+name: CI
+on: [push]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+  TZ: UTC
+  LANG: C.UTF-8
+  R_KEEP_PKG_SOURCE: yes
+
+jobs:
+  lint:
+    name: Lint (lintr)
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      security-events: write   # if uploading SARIF
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: renv          # pick R version from renv.lock
+          Ncpus: 6
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::lintr
+          needs: lintr
+
+      - name: Lint
+        shell: Rscript {0}
+        run: |
+          l <- lintr::lint_package()
+          if (length(l)) print(l)
+          if (length(l) > 0) quit('no', 1)
+      # Optional SARIF upload:
+      # - name: Lint (SARIF)
+      #   shell: Rscript {0}
+      #   run: |
+      #     l <- lintr::lint_package()
+      #     lintr::write_sarif(l, "lintr.sarif")
+      # - uses: github/codeql-action/upload-sarif@v3
+      #   if: always()
+      #   with:
+      #     sarif_file: lintr.sarif
+
+  check:
+    name: R CMD check
+    runs-on: ${{ matrix.os }}
+    needs: lint
+    permissions:
+      contents: read           # private repos need this
+      checks: write            # required to create/update check runs
+      pull-requests: write
+      issues: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: ./.github/actions/r-check-env
+
+      - name: R CMD check with renv-pinned deps
+        shell: Rscript {0}
+        run: |
+          rcmdcheck::rcmdcheck(
+            args = c("--no-manual"),
+            error_on = "warning",
+            check_dir = "check"
+          )
+        env:
+          TESTTHAT_CPUS: 6
+          _R_CHECK_LIMIT_CORES_: FALSE   # allow more than 2 cores
+
+      - name: R CMD check against current CRAN
+        uses: r-lib/actions/check-r-package@v2
+        with:
+          upload-snapshots: true
+          build_args: 'c("--no-manual")'
+        env:
+          TESTTHAT_CPUS: 6
+          _R_CHECK_LIMIT_CORES_: FALSE   # allow more than 2 cores
+
+      - name: Publish Linux Test Results
+        if: always() && startsWith(matrix.os, 'ubuntu')
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: check/*.Rcheck/tests/testthat/*.xml
+          deduplicate_classes_by_file_name: true
+
+      - name: Upload R CMD check artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r-cmd-check-${{ matrix.os }}
+          path: check
+
+  coverage:
+    name: Coverage (covr)
+    runs-on: ubuntu-latest
+    needs: check
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      # Pandoc for rmarkdown/knitr/pkgdown/vignettes
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - name: Setup R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: renv          # pick R version from renv.lock
+          Ncpus: 6
+          use-public-rspm: true
+
+      - name: Setup renv
+        uses: r-lib/actions/setup-renv@v2
+
+      - name: Run covr and export Cobertura + HTML
+        shell: Rscript {0}
+        run: |
+          Sys.setenv(RUNNING_COVERAGE = 'true', SKIP_VISUAL_TESTS = 'true')
+          cov <- covr::package_coverage(
+            quiet = FALSE, clean = FALSE,
+            install_path = file.path(Sys.getenv("RUNNER_TEMP"), "package")
+          )
+          covr::to_cobertura(cov, filename = "cobertura.xml")
+          covr::report(cov, file = "coverage.html")
+          Sys.unsetenv(c("RUNNING_COVERAGE","SKIP_VISUAL_TESTS"))
+
+      - name: Coverage Summary
+        uses: ./.github/actions/publish-cov-results
+        with:
+          badge: true
+          filename: cobertura.xml
+          format: "markdown"
+          output: "both"
+      - name: Write coverage to Job Summary
+        run: |
+          echo -e "# Code coverage \n" >> $GITHUB_STEP_SUMMARY
+          cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload coverage workspace on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-test-failures
+          path: ${{ runner.temp }}/package

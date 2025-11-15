@@ -1,0 +1,75 @@
+name: Bump dev version
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, master]
+
+concurrency:
+  group: bump-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  bump_dev_version:
+    if: ${{ github.event.pull_request.merged }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUBPAT }}
+
+      - name: Lock remote to PAT + set identity
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUBPAT }}@github.com/${{ github.repository }}.git
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      # ---- Option A (recommended): use fledge ----
+      - name: Bump dev version with fledge
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUBPAT }}  # for {gh}
+          GITHUB_PAT:   ${{ secrets.GITHUBPAT }}  # for {gert}/libgit2
+        shell: Rscript {0}
+        run: |
+          install.packages("fledge")
+          fledge::bump_version()
+          fledge::finalize_version(push = TRUE)
+
+
+      # ---- Option B (fallback): pure desc logic ----
+      # If fledge is not available, comment the step above and uncomment this:
+      # - name: Bump dev version (desc fallback)
+      #   shell: Rscript {0}
+      #   run: |
+      #     install.packages("desc")
+      #     ver <- package_version(desc::desc_get_version())
+      #     parts <- unclass(ver)[[1]]
+      #     if (length(parts) == 3L) {
+      #       #  x.y.z -> x.y.z.9000
+      #       new <- sprintf("%d.%d.%d.9000", parts[1], parts[2], parts[3])
+      #     } else {
+      #       #  x.y.z.N -> x.y.z.(N+1) if N >= 9000, else set to 9000
+      #       dev <- if (parts[4] >= 9000) parts[4] + 1L else 9000L
+      #       new <- sprintf("%d.%d.%d.%d", parts[1], parts[2], parts[3], dev)
+      #     }
+      #     desc::desc_set_version(new)
+      #     message("New dev version: ", new)
+      #- name: Commit and push
+      #  run: |
+      #    git add DESCRIPTION NEWS.md || true
+      #    if git diff --cached --quiet; then
+      #      echo "No dev bump needed."
+      #      exit 0
+      #    fi
+      #    # [skip ci] prevents your main CI from re-running needlessly
+      #    git commit -m "ci(version): bump dev version [skip ci]"
+      #    git push
+      # ----
