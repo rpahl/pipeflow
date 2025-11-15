@@ -56,9 +56,11 @@ dev
 
 # renv
 renv/
-renv.lock
 
 .Rprofile
 
 tags
-tags.lock
+
+check
+/doc/
+/Meta/
