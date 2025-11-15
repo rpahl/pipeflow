@@ -1,0 +1,8 @@
+
+check
+docs
+man
+Meta
+pkgdown
+tests/testthat/data
+tests/testthat/_snaps
