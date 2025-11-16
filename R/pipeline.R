@@ -87,19 +87,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             self$name <- name
-            self$pipeline <- data.table::data.table(
-                step = character(0),
-                fun = list(),
-                funcName = character(0),
-                params = list(),
-                depends = list(),
-                out = list(),
-                keepOut = logical(),
-                group = character(0),
-                description = character(0),
-                time = structure(numeric(0), class = c("POSIXct", "POSIXt")),
-                state = character(0)
-            )
+            self$pipeline <- private$._empty_pipeline()
 
             self$add("data", function() data, keepOut = FALSE)
 
@@ -205,7 +193,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         group = group,
                         description = description,
                         time = Sys.time(),
-                        state = "New"
+                        state = "New",
+                        locked = FALSE
                     )
                 )
 
@@ -785,7 +774,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' try(p$get_step("foo")) # error: step 'foo' does not exist
         get_step = function(step)
         {
-            private$.verify_step_exists(step)
             i <- self$get_step_number(step)
             self$pipeline[i, ]
         },
@@ -813,7 +801,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         get_step_number = function(step)
         {
             private$.verify_step_exists(step)
-            private$idx[[step]]
+            private$.idx[[step]]
         },
 
         #' @description Check if pipeline has given step
@@ -831,7 +819,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is_string(step),
                 nzchar(step)
             )
-            step %in% self$get_step_names()
+            step %in% names(private$.idx)
         },
 
         #' @description Insert step after a certain step
@@ -1217,7 +1205,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 group = group,
                 description = description,
                 time = Sys.time(),
-                state = "New"
+                state = "New",
+                locked = FALSE
             )
 
             self$pipeline[stepNumber, ] <- newStep
@@ -1816,7 +1805,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
     ),
 
     private = list(
-        .lg = NULL, # the logger function
         deep_clone = function(name, value) {
             if (name == "pipeline")
                 return(data.table::copy(value))
@@ -1824,10 +1812,24 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             value
         },
 
-        idx = NULL,
-        .reindex = function() {
-            private$idx <- as.list(seq_len(nrow(self$pipeline)))
-            names(private$idx) <- self$pipeline[["step"]]
+        .idx = NULL,    # step name to row index mapping
+        .lg = NULL,     # the logger function
+
+        ._empty_pipeline = function() {
+            data.table::data.table(
+                step = character(0),
+                fun = list(),
+                funcName = character(0),
+                params = list(),
+                depends = list(),
+                out = list(),
+                keepOut = logical(0),
+                group = character(0),
+                description = character(0),
+                time = as.POSIXct(character(0)),
+                state = character(0),
+                locked = logical(0)
+            )
         },
 
         .clean_out_not_kept = function()
@@ -2170,6 +2172,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             params
         },
 
+        .reindex = function() {
+            private$.idx <- seq_len(nrow(self$pipeline))
+            names(private$.idx) <- self$pipeline[["step"]]
+        },
+
         .relative_dependency_to_index = function(
             relative_dep,
             dependencyName,
@@ -2278,6 +2285,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             } else {
                 stopifnot(data.class(value) == class)
                 self$pipeline[[field]][i] <- value
+            }
+
+            if (field == "step") {
+                private$.reindex()
             }
         },
 
