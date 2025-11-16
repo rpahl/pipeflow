@@ -1,0 +1,90 @@
+---
+title: "pipeflow benchmarks"
+output:
+  md_document:
+    variant: gfm   # GitHub-friendly markdown
+    preserve_yaml: true
+---
+
+```{r libs, include = FALSE}
+requireNamespace("devtools")
+requireNamespace("ggplot2")
+requireNamespace("microbenchmark")
+requireNamespace("lgr")
+
+devtools::load_all("../")
+lgr::suspend_logging()
+```
+
+```{r knitr-setup, include = FALSE}
+knitr::opts_chunk$set(
+  comment = "#",
+  prompt = FALSE,
+  tidy = FALSE,
+  cache = FALSE,
+  collapse = TRUE,
+  echo = FALSE
+)
+
+```
+
+Package version: pipeflow `r as.character(packageVersion("pipeflow"))`
+
+## Long linear pipelines
+
+```{r pipe-generator, include = FALSE}
+create_linear_pipeline <- function(n = 100) {
+    void_logger <- function(level, msg, ...) {}
+    pip <- Pipeline$new("counter-test", data = 0, logger = void_logger)
+
+    # Add steps 1 to n where each step links to the prior step
+    sapply(seq_len(n), function(i) {
+        pip$add(step = as.character(i), function(data = ~-1) data + 1)
+    })
+    pip$add("output", function(data = ~-1) data, keepOut = TRUE)
+    pip
+}
+```
+
+```{r verify-pipeline, include = FALSE}
+# Verify pipeline
+n <- 10
+pip <- create_linear_pipeline(n = n)
+pip$run()
+stopifnot(pip$get_out("output") == n)
+```
+
+
+```{r long-pipe-benchmark}
+nn <- c(32, 64, 128)
+pips <- lapply(nn, create_linear_pipeline) |> setNames(nn)
+unit <- "ms"
+
+bm <- microbenchmark::microbenchmark(
+    control = list(order="inorder"),
+    times = 10,
+    "n = 32" = pips[["32"]]$set_data(0)$run(),
+    "n = 64" = pips[["64"]]$set_data(0)$run(),
+    "n = 128" = pips[["128"]]$set_data(0)$run()
+)
+```
+
+
+Benchmark results for long linear pipelines (in `r unit`):
+
+```{r, , results='asis'}
+tab <- summary(bm, unit = "ms")[, c("expr", "min", "mean", "median", "max")]
+tab[, "median/n"] <- tab[, "median"] / nn
+knitr::kable(tab, digits = 0)
+```
+
+
+## Session info
+
+```{r session-info}
+sessionInfo()
+```
+
+```{r, include=FALSE}
+lgr::unsuspend_logging()
+```
