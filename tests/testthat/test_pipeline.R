@@ -1580,15 +1580,34 @@ describe("length",
 
 describe("lock_step",
 {
-    test_that("sets state to 'locked'",
+    test_that("sets 'locked' flag of a step to TRUE",
     {
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a = 1) a)
+        pip <- Pipeline$new("pipe")$add("f1", \(a = 1) a)
+
+        expect_false(pip$get_step("f1")[["locked"]])
+        pip$lock_step("f1")
+        expect_true(pip$get_step("f1")[["locked"]])
+    })
+
+    test_that("locking an already locked step has no effect",
+    {
+        pip <- Pipeline$new("pipe")$add("f1", \(a = 1) a)
 
         pip$lock_step("f1")
-        expect_equal(pip$get_step("f1")[["state"]], "Locked")
+        expect_true(pip$get_step("f1")[["locked"]])
 
-        pip
+        pip$lock_step("f1")
+        expect_true(pip$get_step("f1")[["locked"]])
+    })
+
+    test_that("step must exist",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$lock_step("f1"),
+            "step 'f1' does not exist"
+        )
     })
 })
 
@@ -3303,21 +3322,37 @@ describe("split",
 
 describe("unlock_step",
 {
-    test_that("sets state to 'unlocked' if it was locked before",
+    test_that("it sets 'locked' flag to FALSE",
+    {
+        pip <- Pipeline$new("pipe")$
+            add("f1", \(a = 1) a)$
+            lock_step("f1")
+
+        expect_true(pip$get_step("f1")[["locked"]])
+        pip$unlock_step("f1")
+        expect_false(pip$get_step("f1")[["locked"]])
+    })
+
+    test_that("unlocking an already unlocked step has no effect",
     {
         pip <- Pipeline$new("pipe")$
             add("f1", \(a = 1) a)
 
-        pip$lock_step("f1")
-        expect_equal(pip$get_step("f1")[["state"]], "Locked")
+        expect_false(pip$get_step("f1")[["locked"]])
+        expect_no_error(pip$unlock_step("f1"))
+        expect_false(pip$get_step("f1")[["locked"]])
+    })
 
-        pip$unlock_step("data")
-        expect_equal(pip$get_step("data")[["state"]], "New")
+    test_that("unlocking a non-existing step signals an error",
+    {
+        pip <- Pipeline$new("pipe")$
+            add("f1", \(a = 1) a)
 
-        pip$unlock_step("f1")
-        expect_equal(pip$get_step("f1")[["state"]], "Unlocked")
-
-        pip
+        expect_error(
+            pip$unlock_step("f2"),
+            "step 'f2' does not exist",
+            fixed = TRUE
+        )
     })
 })
 

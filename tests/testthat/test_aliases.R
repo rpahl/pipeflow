@@ -1604,13 +1604,13 @@ describe("pipe_length",
 
 describe("pipe_lock_step",
 {
-    test_that("sets state to 'locked'",
+    test_that("sets 'locked' flag of step to TRUE",
     {
         pip <- pipe_new("pipe") |>
             pipe_add("f1", \(a = 1) a)
 
         pipe_lock_step(pip, "f1")
-        expect_equal(pipe_get_step(pip, "f1")[["state"]], "Locked")
+        expect_true(pipe_get_step(pip, "f1")[["locked"]])
 
         pip
     })
@@ -3340,19 +3340,16 @@ describe("pipe_split",
 
 describe("pipe_unlock_step",
 {
-    test_that("sets state to 'unlocked' if it was locked before",
+    test_that("sets 'locked' flag to FALSE if it was TRUE before",
     {
         pip <- pipe_new("pipe") |>
-            pipe_add("f1", \(a = 1) a)
+            pipe_add("f1", \(a = 1) a) |>
+            pipe_lock_step("f1")
 
-        pipe_lock_step(pip, "f1")
-        expect_equal(pipe_get_step(pip, "f1")[["state"]], "Locked")
-
-        pipe_unlock_step(pip, "data")
-        expect_equal(pipe_get_step(pip, "data")[["state"]], "New")
+        expect_true(pipe_get_step(pip, "f1")[["locked"]])
 
         pipe_unlock_step(pip, "f1")
-        expect_equal(pipe_get_step(pip, "f1")[["state"]], "Unlocked")
+        expect_false(pipe_get_step(pip, "f1")[["locked"]])
 
         pip
     })

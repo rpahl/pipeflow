@@ -820,6 +820,20 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             !is.na(private$.idx[step])
         },
 
+        #' @description Check if given step is locked
+        #' @param step `string` name of step
+        #' @return `logical` whether step is locked
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)$lock_step("f1")
+        #' p$add("f2", \(y = 1) y)
+        #' p$has_step_locked("f1")  # TRUE
+        #' p$has_step_locked("f2")  # FALSE
+        has_step_locked = function(step)
+        {
+            self$get_step(step)[["locked"]]
+        },
+
         #' @description Insert step after a certain step
         #' @param afterStep `string` name of step after which to insert
         #' @param step `string` name of step to insert
@@ -935,7 +949,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$get_out("add1")
         #' p$get_out("add2")
         lock_step = function(step) {
-            private$.set_at_step(step, "state", "Locked")
+            private$.set_at_step(step, "locked", TRUE)
             invisible(self)
         },
 
@@ -1314,11 +1328,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 state <- self$get_step(step)[["state"]]
                 info <- gettextf("Step %i/%i %s", i, to, step)
 
-                if (state == "Locked" || (state == "Done" && !force)) {
-                    paste0(info, " - skip '", tolower(state), "' step") |>
-                        log_info()
+                if (self$has_step_locked(step)) {
+                    paste0(info, " - skip locked step") |> log_info()
                     next()
                 }
+
+                if (state == "Done" && !force) {
+                    paste0(info, " - skip 'Done' step") |> log_info()
+                    next()
+                }
+
                 log_info(info)
 
                 res <- private$.run_step(step)
@@ -1420,9 +1439,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 }
                 info <- gettextf("Step %i/%i %s%s",  i, nStep, step, stream)
 
-                if (state == "Locked") {
-                    paste0(info, " - skip '", tolower(state), "' step") |>
-                        log_info()
+                if (self$has_step_locked(step)) {
+                    paste0(info, " - skip locked step") |> log_info()
                     next()
                 }
                 log_info(info)
@@ -1689,8 +1707,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is.list(params)
             )
 
-            isLocked <- self$get_step(step)[["state"]] == "Locked"
-            if (isLocked) {
+            if (self$has_step_locked(step)) {
                 message(
                     "skipping setting parameters ",
                     paste0(names(params), collapse = ", "),
@@ -1793,11 +1810,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$set_params(list(x = 3))
         #' p$get_params()
         unlock_step = function(step) {
-            state <- self$get_step(step)[["state"]]
-            if (state == "Locked") {
-                private$.set_at_step(step, "state", "Unlocked")
-            }
-
+            private$.set_at_step(step, "locked", FALSE)
             invisible(self)
         }
     ),
@@ -1915,7 +1928,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             nodes[["color"]][pip[["state"]] == "Done"] <- "lightgreen"
             nodes[["color"]][pip[["state"]] == "Outdated"] <- "orange"
             nodes[["color"]][pip[["state"]] == "Failed"] <- "red"
-            nodes[["color"]][pip[["state"]] == "Locked"] <- "grey"
             areDataNodes <- nodes[, "label"] |> startsWith("data")
             if (any(areDataNodes)) {
                 nodes[areDataNodes, "shape"] <- "database"
@@ -2297,8 +2309,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             deps <- self$get_depends_down(step, recursive = TRUE)
             for (dep in deps) {
-                current <- self$get_step(dep)[["state"]]
-                if (current != "Locked") {
+                if (!self$has_step_locked(dep)) {
                     private$.set_at_step(dep, "state", value = state)
                 }
             }
