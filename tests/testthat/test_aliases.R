@@ -1399,28 +1399,25 @@ describe("pipe_get_step_names",
 
 describe("pipe_get_step_number",
 {
-    test_that("get_step_number",
+    test_that("get_step_number works as expected",
     {
-        test_that("get_step_number works as expected",
-        {
-            pip <- expect_no_error(pipe_new("pipe"))
-            pipe_add(pip, "f1", \(a = 1) a)
-            pipe_add(pip, "f2", \(a = 1) a)
+        pip <- expect_no_error(pipe_new("pipe"))
+        pipe_add(pip, "f1", \(a = 1) a)
+        pipe_add(pip, "f2", \(a = 1) a)
 
-            pipe_get_step_number(pip, "f1") |> expect_equal(2)
-            pipe_get_step_number(pip, "f2") |> expect_equal(3)
-        })
+        pipe_get_step_number(pip, "f1") |> expect_equal(2)
+        pipe_get_step_number(pip, "f2") |> expect_equal(3)
+    })
 
-        test_that("signals non-existent step",
-        {
-            pip <- expect_no_error(pipe_new("pipe"))
-            pipe_add(pip, "f1", \(a = 1) a)
+    test_that("signals non-existent step",
+    {
+        pip <- expect_no_error(pipe_new("pipe"))
+        pipe_add(pip, "f1", \(a = 1) a)
 
-            expect_error(
-                pipe_get_step_number(pip, "non-existent"),
-                "step 'non-existent' does not exist"
-            )
-        })
+        expect_error(
+            pipe_get_step_number(pip, "non-existent"),
+            "step 'non-existent' does not exist"
+        )
     })
 })
 
