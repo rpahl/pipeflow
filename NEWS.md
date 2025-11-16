@@ -1,5 +1,13 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.2.3.9002
+
+* refactor: ensure unit tests for logging is always done with logging enabled
+* refactor:  add 'locked' column and improve indexing performance
+* refactor: implement slightly faster step existence check
+* feat: set locked status via boolean flag and add has_step_locked function
+
+
 # pipeflow 0.2.3.9001
 
 * feat: implement index map and BFS for dependency graphs (improved performance)
