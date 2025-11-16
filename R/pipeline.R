@@ -501,14 +501,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$get_data()
         get_data = function()
         {
-            steps <- self$get_step_names()
-
-            if (!"data" %in% steps) {
+            if (!self$has_step("data")) {
                 stop_no_call("no data step defined")
             }
 
-            pos <- match("data", steps)
-            self$pipeline[["fun"]][[pos]]()
+            self$get_step("data")[["fun"]][[1]]()
         },
 
         #' @description Get all dependencies defined in the pipeline
@@ -819,7 +816,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is_string(step),
                 nzchar(step)
             )
-            step %in% names(private$.idx)
+
+            !is.na(private$.idx[step])
         },
 
         #' @description Insert step after a certain step
@@ -1180,7 +1178,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             # Derive and verify dependencies
             allSteps <- self$get_step_names()
             stepNumber <- self$get_step_number(step)
-            toStep = allSteps[stepNumber - 1]
+            toStep <- allSteps[stepNumber - 1]
 
             deps <- private$.derive_dependencies(
                 params = params,
@@ -1812,8 +1810,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             value
         },
 
-        .idx = NULL,    # step name to row index mapping
-        .lg = NULL,     # the logger function
+        .idx = numeric(),   # step name to row index mapping
+        .lg = NULL,         # the logger function
 
         ._empty_pipeline = function() {
             data.table::data.table(
@@ -2318,10 +2316,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is_string(toStep)
             )
 
-            private$.verify_step_exists(toStep)
-
+            toIndex <- self$get_step_number(toStep)
             allSteps <- self$get_step_names()
-            toIndex <- match(toStep, allSteps)
             consideredSteps <- allSteps[seq_len(toIndex)]
 
             if (!(dep %in% consideredSteps)) {

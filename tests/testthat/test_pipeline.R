@@ -1397,13 +1397,18 @@ describe("get_step_number",
 
 describe("has_step",
 {
+    pip <- Pipeline$new("pipe1")
+
+    test_that("pipeline has data step initially",
+    {
+        expect_true(pip$has_step("data"))
+    })
+
     test_that("it can be checked if pipeline has a step",
     {
-        pip <- Pipeline$new("pipe1")$
-            add("f1", \(a = 1) a)
-
+        expect_false(pip$has_step("f1"))
+        pip$add("f1", \(a = 1) a)
         expect_true(pip$has_step("f1"))
-        expect_false(pip$has_step("f2"))
     })
 })
 
