@@ -9,6 +9,7 @@
 ^\.Rproj\.user$
 
 # Development scratch directories
+^bench$
 ^check$
 ^dev$
 ^data-raw$
