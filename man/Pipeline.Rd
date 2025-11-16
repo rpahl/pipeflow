@@ -312,6 +312,16 @@ p$has_step("f2")
 p$has_step("foo")
 
 ## ------------------------------------------------
+## Method `Pipeline$has_step_locked`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)$lock_step("f1")
+p$add("f2", \(y = 1) y)
+p$has_step_locked("f1")  # TRUE
+p$has_step_locked("f2")  # FALSE
+
+## ------------------------------------------------
 ## Method `Pipeline$insert_after`
 ## ------------------------------------------------
 
@@ -656,6 +666,7 @@ Roman Pahl
 \item \href{#method-Pipeline-get_step_names}{\code{Pipeline$get_step_names()}}
 \item \href{#method-Pipeline-get_step_number}{\code{Pipeline$get_step_number()}}
 \item \href{#method-Pipeline-has_step}{\code{Pipeline$has_step()}}
+\item \href{#method-Pipeline-has_step_locked}{\code{Pipeline$has_step_locked()}}
 \item \href{#method-Pipeline-insert_after}{\code{Pipeline$insert_after()}}
 \item \href{#method-Pipeline-insert_before}{\code{Pipeline$insert_before()}}
 \item \href{#method-Pipeline-length}{\code{Pipeline$length()}}
@@ -1501,6 +1512,38 @@ p$add("f1", \(x = 1) x)
 p$add("f2", \(y = 1) y)
 p$has_step("f2")
 p$has_step("foo")
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-has_step_locked"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-has_step_locked}{}}}
+\subsection{Method \code{has_step_locked()}}{
+Check if given step is locked
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$has_step_locked(step)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{\code{string} name of step}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+\code{logical} whether step is locked
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1:2)
+p$add("f1", \(x = 1) x)$lock_step("f1")
+p$add("f2", \(y = 1) y)
+p$has_step_locked("f1")  # TRUE
+p$has_step_locked("f2")  # FALSE
 }
 \if{html}{\out{</div>}}
 

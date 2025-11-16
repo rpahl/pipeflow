@@ -1350,7 +1350,6 @@ describe("pipe_get_params_unique_json",
 })
 
 
-
 describe("pipe_get_step",
 {
     test_that("single steps can be retrieved",
@@ -1399,28 +1398,25 @@ describe("pipe_get_step_names",
 
 describe("pipe_get_step_number",
 {
-    test_that("get_step_number",
+    test_that("get_step_number works as expected",
     {
-        test_that("get_step_number works as expected",
-        {
-            pip <- expect_no_error(pipe_new("pipe"))
-            pipe_add(pip, "f1", \(a = 1) a)
-            pipe_add(pip, "f2", \(a = 1) a)
+        pip <- expect_no_error(pipe_new("pipe"))
+        pipe_add(pip, "f1", \(a = 1) a)
+        pipe_add(pip, "f2", \(a = 1) a)
 
-            pipe_get_step_number(pip, "f1") |> expect_equal(2)
-            pipe_get_step_number(pip, "f2") |> expect_equal(3)
-        })
+        pipe_get_step_number(pip, "f1") |> expect_equal(2)
+        pipe_get_step_number(pip, "f2") |> expect_equal(3)
+    })
 
-        test_that("signals non-existent step",
-        {
-            pip <- expect_no_error(pipe_new("pipe"))
-            pipe_add(pip, "f1", \(a = 1) a)
+    test_that("signals non-existent step",
+    {
+        pip <- expect_no_error(pipe_new("pipe"))
+        pipe_add(pip, "f1", \(a = 1) a)
 
-            expect_error(
-                pipe_get_step_number(pip, "non-existent"),
-                "step 'non-existent' does not exist"
-            )
-        })
+        expect_error(
+            pipe_get_step_number(pip, "non-existent"),
+            "step 'non-existent' does not exist"
+        )
     })
 })
 
@@ -1608,13 +1604,13 @@ describe("pipe_length",
 
 describe("pipe_lock_step",
 {
-    test_that("sets state to 'locked'",
+    test_that("sets 'locked' flag of step to TRUE",
     {
         pip <- pipe_new("pipe") |>
             pipe_add("f1", \(a = 1) a)
 
         pipe_lock_step(pip, "f1")
-        expect_equal(pipe_get_step(pip, "f1")[["state"]], "Locked")
+        expect_true(pipe_get_step(pip, "f1")[["locked"]])
 
         pip
     })
@@ -2296,7 +2292,6 @@ describe("pipe_run",
                     pip <- pipe_new("2nd pipe", data = data) |>
                         pipe_add("step1", \(x = ~data) x) |>
                         pipe_add("step2", \(x = ~step1) {
-                            print(x)
                             2 * x
                         }, keepOut = TRUE)
                 }
@@ -2385,8 +2380,10 @@ describe("pipe_run",
             }) |>
             pipe_add("f3", \(x = ~f2) x)
 
-        log <- utils::capture.output(
-            expect_warning(pipe_run(pip), "something might be wrong")
+        lgr::with_logging(
+            log <- utils::capture.output(
+                expect_warning(pipe_run(pip), "something might be wrong")
+            )
         )
 
         Filter(log, f =\(x) x |>
@@ -2408,8 +2405,10 @@ describe("pipe_run",
             }) |>
             pipe_add("f3", \(x = ~f2) x)
 
-        log <- utils::capture.output(
-            expect_error(pipe_run(pip), "something went wrong")
+        lgr::with_logging(
+            log <- utils::capture.output(
+                expect_error(pipe_run(pip), "something went wrong")
+            )
         )
 
         Filter(log, f =\(x) x |>
@@ -3341,19 +3340,16 @@ describe("pipe_split",
 
 describe("pipe_unlock_step",
 {
-    test_that("sets state to 'unlocked' if it was locked before",
+    test_that("sets 'locked' flag to FALSE if it was TRUE before",
     {
         pip <- pipe_new("pipe") |>
-            pipe_add("f1", \(a = 1) a)
+            pipe_add("f1", \(a = 1) a) |>
+            pipe_lock_step("f1")
 
-        pipe_lock_step(pip, "f1")
-        expect_equal(pipe_get_step(pip, "f1")[["state"]], "Locked")
-
-        pipe_unlock_step(pip, "data")
-        expect_equal(pipe_get_step(pip, "data")[["state"]], "New")
+        expect_true(pipe_get_step(pip, "f1")[["locked"]])
 
         pipe_unlock_step(pip, "f1")
-        expect_equal(pipe_get_step(pip, "f1")[["state"]], "Unlocked")
+        expect_false(pipe_get_step(pip, "f1")[["locked"]])
 
         pip
     })

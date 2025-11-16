@@ -6,7 +6,7 @@ output:
     preserve_yaml: true
 ---
 
-Package version: pipeflow 0.2.3.9000
+Package version: pipeflow 0.2.3.9001
 
 ## Long linear pipelines
 
@@ -14,9 +14,9 @@ Benchmark results for long linear pipelines (in ms):
 
 | expr    |  min | mean | median |  max | median/n |
 |:--------|-----:|-----:|-------:|-----:|---------:|
-| n = 32  |  187 |  196 |    192 |  221 |        6 |
-| n = 64  |  631 |  655 |    659 |  670 |       10 |
-| n = 128 | 2356 | 2422 |   2432 | 2477 |       19 |
+| n = 32  |  160 |  177 |    168 |  240 |        5 |
+| n = 64  |  535 |  559 |    560 |  593 |        9 |
+| n = 128 | 2015 | 2086 |   2093 | 2143 |       16 |
 
 ## Session info
 
@@ -39,7 +39,7 @@ Benchmark results for long linear pipelines (in ms):
     # [1] stats     graphics  grDevices utils     datasets  methods   base     
     # 
     # other attached packages:
-    # [1] pipeflow_0.2.3.9000 testthat_3.2.3     
+    # [1] pipeflow_0.2.3.9001 testthat_3.2.3     
     # 
     # loaded via a namespace (and not attached):
     #  [1] generics_0.1.4       digest_0.6.37        magrittr_2.0.4      

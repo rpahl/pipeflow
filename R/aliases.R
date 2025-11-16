@@ -494,7 +494,8 @@ pipe_get_params_unique_json <- function(pip, ignoreHidden = TRUE)
 #' * `pipe_get_step`: `data.table` row containing the step
 #' * `pipe_get_step_names`: `character` vector of step names
 #' * `pipe_get_step_number`: the step number in the pipeline
-#' * `pipe_get_step_number`: whether step exists
+#' * `pipe_has_step`: whether step exists
+#' * `pipe_has_step_locked`: whether step is locked
 #' @examples
 #' p <- pipe_new("pipe", data = 1:2)
 #' pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
@@ -511,6 +512,11 @@ pipe_get_params_unique_json <- function(pip, ignoreHidden = TRUE)
 #' # pipe_has_step
 #' pipe_has_step(p, "add1")
 #' pipe_has_step(p, "foo")
+#'
+#' # pipe_has_step_locked
+#' pipe_has_step_locked(p, "add1")
+#' pipe_lock_step(p, "add1")
+#' pipe_has_step_locked(p, "add1")
 #'
 #' # pipe_get_step
 #' add1 <- pipe_get_step(p, "add1")
@@ -550,6 +556,13 @@ pipe_get_step_number <- function(pip, step)
 pipe_has_step <- function(pip, step)
 {
     pip$has_step(step)
+}
+
+#' @rdname step_info
+#' @export
+pipe_has_step_locked <- function(pip, step)
+{
+    pip$has_step_locked(step)
 }
 
 

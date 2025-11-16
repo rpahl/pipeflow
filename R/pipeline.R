@@ -87,19 +87,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             }
 
             self$name <- name
-            self$pipeline <- data.table::data.table(
-                step = character(0),
-                fun = list(),
-                funcName = character(0),
-                params = list(),
-                depends = list(),
-                out = list(),
-                keepOut = logical(),
-                group = character(0),
-                description = character(0),
-                time = structure(numeric(0), class = c("POSIXct", "POSIXt")),
-                state = character(0)
-            )
+            self$pipeline <- private$._empty_pipeline()
 
             self$add("data", function() data, keepOut = FALSE)
 
@@ -205,7 +193,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                         group = group,
                         description = description,
                         time = Sys.time(),
-                        state = "New"
+                        state = "New",
+                        locked = FALSE
                     )
                 )
 
@@ -512,14 +501,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$get_data()
         get_data = function()
         {
-            steps <- self$get_step_names()
-
-            if (!"data" %in% steps) {
+            if (!self$has_step("data")) {
                 stop_no_call("no data step defined")
             }
 
-            pos <- match("data", steps)
-            self$pipeline[["fun"]][[pos]]()
+            self$get_step("data")[["fun"]][[1]]()
         },
 
         #' @description Get all dependencies defined in the pipeline
@@ -785,7 +771,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' try(p$get_step("foo")) # error: step 'foo' does not exist
         get_step = function(step)
         {
-            private$.verify_step_exists(step)
             i <- self$get_step_number(step)
             self$pipeline[i, ]
         },
@@ -813,7 +798,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         get_step_number = function(step)
         {
             private$.verify_step_exists(step)
-            private$idx[[step]]
+            private$.idx[[step]]
         },
 
         #' @description Check if pipeline has given step
@@ -831,7 +816,22 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is_string(step),
                 nzchar(step)
             )
-            step %in% self$get_step_names()
+
+            !is.na(private$.idx[step])
+        },
+
+        #' @description Check if given step is locked
+        #' @param step `string` name of step
+        #' @return `logical` whether step is locked
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("f1", \(x = 1) x)$lock_step("f1")
+        #' p$add("f2", \(y = 1) y)
+        #' p$has_step_locked("f1")  # TRUE
+        #' p$has_step_locked("f2")  # FALSE
+        has_step_locked = function(step)
+        {
+            self$get_step(step)[["locked"]]
         },
 
         #' @description Insert step after a certain step
@@ -949,7 +949,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$get_out("add1")
         #' p$get_out("add2")
         lock_step = function(step) {
-            private$.set_at_step(step, "state", "Locked")
+            private$.set_at_step(step, "locked", TRUE)
             invisible(self)
         },
 
@@ -1192,7 +1192,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             # Derive and verify dependencies
             allSteps <- self$get_step_names()
             stepNumber <- self$get_step_number(step)
-            toStep = allSteps[stepNumber - 1]
+            toStep <- allSteps[stepNumber - 1]
 
             deps <- private$.derive_dependencies(
                 params = params,
@@ -1217,7 +1217,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 group = group,
                 description = description,
                 time = Sys.time(),
-                state = "New"
+                state = "New",
+                locked = FALSE
             )
 
             self$pipeline[stepNumber, ] <- newStep
@@ -1327,11 +1328,16 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 state <- self$get_step(step)[["state"]]
                 info <- gettextf("Step %i/%i %s", i, to, step)
 
-                if (state == "Locked" || (state == "Done" && !force)) {
-                    paste0(info, " - skip '", tolower(state), "' step") |>
-                        log_info()
+                if (self$has_step_locked(step)) {
+                    paste0(info, " - skip locked step") |> log_info()
                     next()
                 }
+
+                if (state == "Done" && !force) {
+                    paste0(info, " - skip 'Done' step") |> log_info()
+                    next()
+                }
+
                 log_info(info)
 
                 res <- private$.run_step(step)
@@ -1433,9 +1439,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 }
                 info <- gettextf("Step %i/%i %s%s",  i, nStep, step, stream)
 
-                if (state == "Locked") {
-                    paste0(info, " - skip '", tolower(state), "' step") |>
-                        log_info()
+                if (self$has_step_locked(step)) {
+                    paste0(info, " - skip locked step") |> log_info()
                     next()
                 }
                 log_info(info)
@@ -1702,8 +1707,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is.list(params)
             )
 
-            isLocked <- self$get_step(step)[["state"]] == "Locked"
-            if (isLocked) {
+            if (self$has_step_locked(step)) {
                 message(
                     "skipping setting parameters ",
                     paste0(names(params), collapse = ", "),
@@ -1806,17 +1810,12 @@ Pipeline = R6::R6Class("Pipeline", #nolint
         #' p$set_params(list(x = 3))
         #' p$get_params()
         unlock_step = function(step) {
-            state <- self$get_step(step)[["state"]]
-            if (state == "Locked") {
-                private$.set_at_step(step, "state", "Unlocked")
-            }
-
+            private$.set_at_step(step, "locked", FALSE)
             invisible(self)
         }
     ),
 
     private = list(
-        .lg = NULL, # the logger function
         deep_clone = function(name, value) {
             if (name == "pipeline")
                 return(data.table::copy(value))
@@ -1824,10 +1823,24 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             value
         },
 
-        idx = NULL,
-        .reindex = function() {
-            private$idx <- as.list(seq_len(nrow(self$pipeline)))
-            names(private$idx) <- self$pipeline[["step"]]
+        .idx = numeric(),   # step name to row index mapping
+        .lg = NULL,         # the logger function
+
+        ._empty_pipeline = function() {
+            data.table::data.table(
+                step = character(0),
+                fun = list(),
+                funcName = character(0),
+                params = list(),
+                depends = list(),
+                out = list(),
+                keepOut = logical(0),
+                group = character(0),
+                description = character(0),
+                time = as.POSIXct(character(0)),
+                state = character(0),
+                locked = logical(0)
+            )
         },
 
         .clean_out_not_kept = function()
@@ -1915,7 +1928,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             nodes[["color"]][pip[["state"]] == "Done"] <- "lightgreen"
             nodes[["color"]][pip[["state"]] == "Outdated"] <- "orange"
             nodes[["color"]][pip[["state"]] == "Failed"] <- "red"
-            nodes[["color"]][pip[["state"]] == "Locked"] <- "grey"
             areDataNodes <- nodes[, "label"] |> startsWith("data")
             if (any(areDataNodes)) {
                 nodes[areDataNodes, "shape"] <- "database"
@@ -2170,6 +2182,11 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             params
         },
 
+        .reindex = function() {
+            private$.idx <- seq_len(nrow(self$pipeline))
+            names(private$.idx) <- self$pipeline[["step"]]
+        },
+
         .relative_dependency_to_index = function(
             relative_dep,
             dependencyName,
@@ -2279,6 +2296,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 stopifnot(data.class(value) == class)
                 self$pipeline[[field]][i] <- value
             }
+
+            if (field == "step") {
+                private$.reindex()
+            }
         },
 
         .update_states_downstream = function(step, state)
@@ -2288,8 +2309,7 @@ Pipeline = R6::R6Class("Pipeline", #nolint
 
             deps <- self$get_depends_down(step, recursive = TRUE)
             for (dep in deps) {
-                current <- self$get_step(dep)[["state"]]
-                if (current != "Locked") {
+                if (!self$has_step_locked(dep)) {
                     private$.set_at_step(dep, "state", value = state)
                 }
             }
@@ -2307,10 +2327,8 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 is_string(toStep)
             )
 
-            private$.verify_step_exists(toStep)
-
+            toIndex <- self$get_step_number(toStep)
             allSteps <- self$get_step_names()
-            toIndex <- match(toStep, allSteps)
             consideredSteps <- allSteps[seq_len(toIndex)]
 
             if (!(dep %in% consideredSteps)) {

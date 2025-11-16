@@ -1397,13 +1397,18 @@ describe("get_step_number",
 
 describe("has_step",
 {
+    pip <- Pipeline$new("pipe1")
+
+    test_that("pipeline has data step initially",
+    {
+        expect_true(pip$has_step("data"))
+    })
+
     test_that("it can be checked if pipeline has a step",
     {
-        pip <- Pipeline$new("pipe1")$
-            add("f1", \(a = 1) a)
-
+        expect_false(pip$has_step("f1"))
+        pip$add("f1", \(a = 1) a)
         expect_true(pip$has_step("f1"))
-        expect_false(pip$has_step("f2"))
     })
 })
 
@@ -1575,15 +1580,34 @@ describe("length",
 
 describe("lock_step",
 {
-    test_that("sets state to 'locked'",
+    test_that("sets 'locked' flag of a step to TRUE",
     {
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a = 1) a)
+        pip <- Pipeline$new("pipe")$add("f1", \(a = 1) a)
+
+        expect_false(pip$get_step("f1")[["locked"]])
+        pip$lock_step("f1")
+        expect_true(pip$get_step("f1")[["locked"]])
+    })
+
+    test_that("locking an already locked step has no effect",
+    {
+        pip <- Pipeline$new("pipe")$add("f1", \(a = 1) a)
 
         pip$lock_step("f1")
-        expect_equal(pip$get_step("f1")[["state"]], "Locked")
+        expect_true(pip$get_step("f1")[["locked"]])
 
-        pip
+        pip$lock_step("f1")
+        expect_true(pip$get_step("f1")[["locked"]])
+    })
+
+    test_that("step must exist",
+    {
+        pip <- Pipeline$new("pipe")
+
+        expect_error(
+            pip$lock_step("f1"),
+            "step 'f1' does not exist"
+        )
     })
 })
 
@@ -2257,7 +2281,6 @@ describe("run",
                     pip <- Pipeline$new("2nd pipe", data = data)$
                         add("step1", \(x = ~data) x)$
                         add("step2", \(x = ~step1) {
-                            print(x)
                             2 * x
                         }, keepOut = TRUE)
                 }
@@ -2346,8 +2369,10 @@ describe("run",
             })$
             add("f3", \(x = ~f2) x)
 
-        log <- utils::capture.output(
-            expect_warning(pip$run(), "something might be wrong")
+        lgr::with_logging(
+            log <- utils::capture.output(
+                expect_warning(pip$run(), "something might be wrong")
+            )
         )
 
         Filter(log, f =\(x) x |>
@@ -2369,8 +2394,10 @@ describe("run",
             })$
             add("f3", \(x = ~f2) x)
 
-        log <- utils::capture.output(
-            expect_error(pip$run(), "something went wrong")
+        lgr::with_logging(
+            log <- utils::capture.output(
+                expect_error(pip$run(), "something went wrong")
+            )
         )
 
         Filter(log, f =\(x) x |>
@@ -3295,21 +3322,37 @@ describe("split",
 
 describe("unlock_step",
 {
-    test_that("sets state to 'unlocked' if it was locked before",
+    test_that("it sets 'locked' flag to FALSE",
+    {
+        pip <- Pipeline$new("pipe")$
+            add("f1", \(a = 1) a)$
+            lock_step("f1")
+
+        expect_true(pip$get_step("f1")[["locked"]])
+        pip$unlock_step("f1")
+        expect_false(pip$get_step("f1")[["locked"]])
+    })
+
+    test_that("unlocking an already unlocked step has no effect",
     {
         pip <- Pipeline$new("pipe")$
             add("f1", \(a = 1) a)
 
-        pip$lock_step("f1")
-        expect_equal(pip$get_step("f1")[["state"]], "Locked")
+        expect_false(pip$get_step("f1")[["locked"]])
+        expect_no_error(pip$unlock_step("f1"))
+        expect_false(pip$get_step("f1")[["locked"]])
+    })
 
-        pip$unlock_step("data")
-        expect_equal(pip$get_step("data")[["state"]], "New")
+    test_that("unlocking a non-existing step signals an error",
+    {
+        pip <- Pipeline$new("pipe")$
+            add("f1", \(a = 1) a)
 
-        pip$unlock_step("f1")
-        expect_equal(pip$get_step("f1")[["state"]], "Unlocked")
-
-        pip
+        expect_error(
+            pip$unlock_step("f2"),
+            "step 'f2' does not exist",
+            fixed = TRUE
+        )
     })
 })
 
