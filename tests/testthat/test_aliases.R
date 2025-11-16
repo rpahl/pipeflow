@@ -1350,7 +1350,6 @@ describe("pipe_get_params_unique_json",
 })
 
 
-
 describe("pipe_get_step",
 {
     test_that("single steps can be retrieved",
@@ -2293,7 +2292,6 @@ describe("pipe_run",
                     pip <- pipe_new("2nd pipe", data = data) |>
                         pipe_add("step1", \(x = ~data) x) |>
                         pipe_add("step2", \(x = ~step1) {
-                            print(x)
                             2 * x
                         }, keepOut = TRUE)
                 }
@@ -2374,7 +2372,6 @@ describe("pipe_run",
 
     test_that("logs warning without interrupting the run",
     {
-
         pip <- pipe_new("pipe", data = 1) |>
             pipe_add("f1", \(x = 2) x) |>
             pipe_add("f2", \(x = ~f1) {

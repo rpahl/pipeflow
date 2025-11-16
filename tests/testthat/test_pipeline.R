@@ -2257,7 +2257,6 @@ describe("run",
                     pip <- Pipeline$new("2nd pipe", data = data)$
                         add("step1", \(x = ~data) x)$
                         add("step2", \(x = ~step1) {
-                            print(x)
                             2 * x
                         }, keepOut = TRUE)
                 }
