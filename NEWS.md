@@ -1,5 +1,11 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.2.3.9001
+
+* feat: implement index map and BFS for dependency graphs (improved performance)
+* chore: add benchmark for running long linear pipelines
+
+
 # pipeflow 0.2.3.9000
 
 - Same as previous version.
