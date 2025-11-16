@@ -2346,8 +2346,10 @@ describe("run",
             })$
             add("f3", \(x = ~f2) x)
 
-        log <- utils::capture.output(
-            expect_warning(pip$run(), "something might be wrong")
+        lgr::with_logging(
+            log <- utils::capture.output(
+                expect_warning(pip$run(), "something might be wrong")
+            )
         )
 
         Filter(log, f =\(x) x |>
@@ -2369,8 +2371,10 @@ describe("run",
             })$
             add("f3", \(x = ~f2) x)
 
-        log <- utils::capture.output(
-            expect_error(pip$run(), "something went wrong")
+        lgr::with_logging(
+            log <- utils::capture.output(
+                expect_error(pip$run(), "something went wrong")
+            )
         )
 
         Filter(log, f =\(x) x |>

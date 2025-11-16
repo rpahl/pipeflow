@@ -2374,6 +2374,7 @@ describe("pipe_run",
 
     test_that("logs warning without interrupting the run",
     {
+
         pip <- pipe_new("pipe", data = 1) |>
             pipe_add("f1", \(x = 2) x) |>
             pipe_add("f2", \(x = ~f1) {
@@ -2382,8 +2383,10 @@ describe("pipe_run",
             }) |>
             pipe_add("f3", \(x = ~f2) x)
 
-        log <- utils::capture.output(
-            expect_warning(pipe_run(pip), "something might be wrong")
+        lgr::with_logging(
+            log <- utils::capture.output(
+                expect_warning(pipe_run(pip), "something might be wrong")
+            )
         )
 
         Filter(log, f =\(x) x |>
@@ -2405,8 +2408,10 @@ describe("pipe_run",
             }) |>
             pipe_add("f3", \(x = ~f2) x)
 
-        log <- utils::capture.output(
-            expect_error(pipe_run(pip), "something went wrong")
+        lgr::with_logging(
+            log <- utils::capture.output(
+                expect_error(pipe_run(pip), "something went wrong")
+            )
         )
 
         Filter(log, f =\(x) x |>
