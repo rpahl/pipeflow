@@ -258,17 +258,6 @@ p$get_params_unique()
 p$get_params_unique(ignoreHidden = FALSE)
 
 ## ------------------------------------------------
-## Method `Pipeline$get_params_unique_json`
-## ------------------------------------------------
-
-p <- Pipeline$new("pipe", data = 1:2)
-p$add("add1", \(data = ~data, x = 1) x + data)
-p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
-p$add("mult1", \(x = 1, y = 2, .z = 3, b = ~add2) x * y * b)
-p$get_params_unique_json()
-p$get_params_unique_json(ignoreHidden = FALSE)
-
-## ------------------------------------------------
 ## Method `Pipeline$get_step`
 ## ------------------------------------------------
 
@@ -661,7 +650,6 @@ Roman Pahl
 \item \href{#method-Pipeline-get_params}{\code{Pipeline$get_params()}}
 \item \href{#method-Pipeline-get_params_at_step}{\code{Pipeline$get_params_at_step()}}
 \item \href{#method-Pipeline-get_params_unique}{\code{Pipeline$get_params_unique()}}
-\item \href{#method-Pipeline-get_params_unique_json}{\code{Pipeline$get_params_unique_json()}}
 \item \href{#method-Pipeline-get_step}{\code{Pipeline$get_step()}}
 \item \href{#method-Pipeline-get_step_names}{\code{Pipeline$get_step_names()}}
 \item \href{#method-Pipeline-get_step_number}{\code{Pipeline$get_step_number()}}
@@ -1354,40 +1342,6 @@ p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
 p$add("mult1", \(x = 1, y = 2, .z = 3, b = ~add2) x * y * b)
 p$get_params_unique()
 p$get_params_unique(ignoreHidden = FALSE)
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-get_params_unique_json"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-get_params_unique_json}{}}}
-\subsection{Method \code{get_params_unique_json()}}{
-Get all unique function parameters in json format.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_params_unique_json(ignoreHidden = TRUE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{ignoreHidden}}{\code{logical} if TRUE, hidden parameters (i.e. all
-names starting with a dot) are ignored and thus not returned.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-\code{list} flat unnamed json list of unique function parameters
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{p <- Pipeline$new("pipe", data = 1:2)
-p$add("add1", \(data = ~data, x = 1) x + data)
-p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
-p$add("mult1", \(x = 1, y = 2, .z = 3, b = ~add2) x * y * b)
-p$get_params_unique_json()
-p$get_params_unique_json(ignoreHidden = FALSE)
 }
 \if{html}{\out{</div>}}
 

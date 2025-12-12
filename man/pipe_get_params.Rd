@@ -4,7 +4,6 @@
 \alias{pipe_get_params}
 \alias{pipe_get_params_at_step}
 \alias{pipe_get_params_unique}
-\alias{pipe_get_params_unique_json}
 \title{Get pipeline parameters}
 \usage{
 pipe_get_params(pip, ignoreHidden = TRUE)
@@ -12,8 +11,6 @@ pipe_get_params(pip, ignoreHidden = TRUE)
 pipe_get_params_at_step(pip, step, ignoreHidden = TRUE)
 
 pipe_get_params_unique(pip, ignoreHidden = TRUE)
-
-pipe_get_params_unique_json(pip, ignoreHidden = TRUE)
 }
 \arguments{
 \item{pip}{\code{Pipeline} object}
@@ -31,7 +28,6 @@ steps with no parameters are filtered out
 \item \code{pipe_get_params_unique}:  list of parameters where each parameter
 is only listed once. The values of the parameters will be the values
 of the first step where the parameters were defined, respectively.
-\item \code{get_params_unique_json}: flat unnamed json list of unique parameters
 }
 }
 \description{
@@ -61,7 +57,4 @@ pipe_add(p, "mult1", \(x = 4, y = 5, .z = 6, b = ~add2) x * y * b)
 pipe_get_params_unique(p)
 pipe_get_params_unique(p, ignoreHidden = FALSE)
 
-# get_params_unique_json
-pipe_get_params_unique_json(p)
-pipe_get_params_unique_json(p, ignoreHidden = FALSE)
 }
