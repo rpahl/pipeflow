@@ -1,19 +1,43 @@
-
-test_that("an alias function is defined for each member function
-    with the correct body",
+describe("Alias functions",
 {
-    skip_if(Sys.getenv("R_CODECOV_ENV") == "GITHUB_ACTION")
+    test_that(
+        "alias functions are defined and correct",
+    {
+        skip_if(Sys.getenv("R_CODECOV_ENV") == "GITHUB_ACTION")
 
-    pip <- Pipeline$new("pipe")
-    funs2check <- sapply(names(pip), \(x) is.function(pip[[x]])) |>
-        Filter(f = isTRUE) |>
-        names() |>
-        setdiff("initialize")
+        pip <- Pipeline$new("pipe")
+        funs2check <- sapply(names(pip), \(x) is.function(pip[[x]])) |>
+            Filter(f = isTRUE) |>
+            names() |>
+            setdiff("initialize")
 
-    for (fun in funs2check) {
-        alias_fun <- paste0("pipe_", fun)
-        expect_true(exists(alias_fun), info = fun)
-    }
+        for (fun in funs2check) {
+            alias_fun <- paste0("pipe_", fun)
+            expect_true(exists(alias_fun), info = fun)
+
+            # Check that the alias body calls the correct method
+            alias_body <- body(get(alias_fun))
+            body_str <- paste(deparse(alias_body), collapse = "\n")
+            expect_true(
+                grepl(paste0("pip\\$", fun), body_str),
+                info = paste("Alias", alias_fun, "does not call pip$", fun)
+            )
+
+            # Verify that all arguments are passed to the member function
+            alias_formals <- formals(get(alias_fun))
+            expected_args <- names(alias_formals)[names(alias_formals) != "pip"] |>
+                setdiff("...")
+            for (arg in expected_args) {
+                expect_true(
+                    grepl(paste0("\\b", arg, "\\s*=\\s*", arg, "\\b"), body_str),
+                    info = sprintf(
+                        "Alias '%s' does not pass arg '%s' correctly to 'pip$%s'",
+                        alias_fun, arg, fun
+                    )
+                )
+            }
+        }
+    })
 })
 
 
