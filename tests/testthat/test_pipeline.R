@@ -287,29 +287,6 @@ describe("add",
         expect_equal(out[["f1"]], x)
     })
 
-    test_that("handles Param object args",
-    {
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a = new("NumericParam", "a", value = 1)) a)
-
-        out <- pip$run()$collect_out(all = TRUE)
-        expect_equal(out[["f1"]], 1)
-    })
-
-    test_that(
-        "can have a Param object defined outside as parameter default",
-    {
-        x <- 1
-        p <- new("NumericParam", "a", value = x)
-
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a) a, params = list(a = p))
-
-        expect_equal(pip$get_params_at_step("f1")$a, p)
-
-        out <- pip$run()$collect_out(all = TRUE)
-        expect_equal(out[["f1"]], x)
-    })
 
     test_that(
         "function can be passed as a string",
@@ -991,38 +968,6 @@ describe("get_params",
         p <- pip$get_params(ignoreHidden = FALSE)
         expect_equal(p, list(f1 = list(a = 1, .hidden = 2)))
     })
-
-    test_that("works with Param objects",
-    {
-        pip <- Pipeline$new("pipe1")$
-            add(
-                "f1",
-               \(
-                    x = new("NumericParam", "x", value = 1),
-                    y = new("NumericParam", "y", value = 2)
-                ) {
-                    x + y
-                }
-            )$
-            add(
-                "f2",
-               \(
-                    s1 = new("StringParam", "s1", "Hello"),
-                    s2 = new("StringParam", "s2", "World")
-                ) {
-                    paste(s1, s2)
-                }
-            )
-
-        par <- pip$get_params()
-        expect_true(all(par$f1 |> sapply(is, "NumericParam")))
-        expect_equal(par$f1$x@value, 1)
-        expect_equal(par$f1$y@value, 2)
-
-        expect_true(all(par$f2 |> sapply(is, "StringParam")))
-        expect_equal(par$f2$s1@value, "Hello")
-        expect_equal(par$f2$s2@value, "World")
-    })
 })
 
 
@@ -1095,39 +1040,6 @@ describe("get_params_at_step",
             "step 'foo' does not exist"
         )
     })
-
-    test_that("works with Param objects",
-    {
-        pip <- Pipeline$new("pipe1")$
-            add(
-                "f1",
-               \(
-                    x = new("NumericParam", "x", value = 1),
-                    y = new("NumericParam", "y", value = 2)
-                ) {
-                    x + y
-                }
-            )$
-            add(
-                "f2",
-               \(
-                    s1 = new("StringParam", "s1", "Hello"),
-                    s2 = new("StringParam", "s2", "World")
-                ) {
-                    paste(s1, s2)
-                }
-            )
-
-        par1 <- pip$get_params_at_step("f1")
-        expect_true(all(par1 |> sapply(is, "NumericParam")))
-        expect_equal(par1$x@value, 1)
-        expect_equal(par1$y@value, 2)
-
-        par2 <- pip$get_params_at_step("f2")
-        expect_true(all(par2 |> sapply(is, "StringParam")))
-        expect_equal(par2$s1@value, "Hello")
-        expect_equal(par2$s2@value, "World")
-    })
 })
 
 
@@ -1156,164 +1068,6 @@ describe("get_params_unique",
         pip <- Pipeline$new("pipe")$
             add("f1", \() 1)
         expect_equivalent(pip$get_params_unique(), list())
-    })
-
-    test_that("works with Param objects",
-    {
-        pip <- Pipeline$new("pipe1")$
-            add(
-                "f1",
-               \(
-                    a = 0,
-                    x = new("NumericParam", "x", value = 1),
-                    y = new("NumericParam", "y", value = 2)
-                ) {
-                    a * (x + y)
-                }
-            )$
-            add(
-                "f2",
-               \(
-                    a = new("NumericParam", "a", value = 0),
-                    x = new("NumericParam", "x", value = 1),
-                    y = 2,
-                    z = new("NumericParam", "y", value = 3)
-                ) {
-                    a * (x + y + z)
-                }
-            )
-
-        par <- pip$get_params_unique()
-        expect_equal(names(par), c("a", "x", "y", "z"))
-        expect_equal(par$a, 0)
-        expect_equal(par$x@value, 1)
-        expect_equal(par$y@value, 2)
-        expect_equal(par$z@value, 3)
-    })
-})
-
-
-
-describe("get_params_unique_json",
-{
-    test_that("the elements are not named",
-    {
-        pip <- Pipeline$new("pipe1")$
-            add("f1", \(a = 1) a, keepOut = TRUE)
-
-        p <- pip$get_params_unique_json()
-        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
-        expect_equal(names(pl), NULL)
-
-
-        pip <- Pipeline$new("pipe1")$
-            add("f1", \(x = new("StringParam", "my x", "some x")) x)$
-            add("f2", \(y = new("StringParam", "my y", "some y")) y)
-
-        p <- pip$get_params_unique_json()
-        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
-        expect_equal(names(pl), NULL)
-    })
-
-
-    test_that("standard parameters are returned as name-value pairs",
-    {
-        pip <- Pipeline$new("pipe1")$
-            add("f1", \(a = 1) a)$
-            add("f2", \(a = 1, b = 2) a)$
-            add("f3", \(a = 1, b = 2, c = list(a = 1, b = 2)) a)
-
-        p <- pip$get_params_unique_json()
-        expect_true(methods::is(p, "json"))
-
-        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
-        expect_equal(
-            pl,
-            list(
-                list(name = "a", value = 1),
-                list(name = "b", value = 2),
-                list(name = "c", value = list(a = 1, b = 2))
-            )
-        )
-    })
-
-    test_that("Param objects are returned with full information",
-    {
-        pip <- Pipeline$new("pipe1")$
-            add("f1", \(x = new("StringParam", "my x", "some x")) x)$
-            add("f2", \(y = new("StringParam", "my y", "some y")) y)
-
-        p <- pip$get_params_unique_json()
-        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
-
-        expect_equal(
-            pl,
-            list(
-                list(
-                    value = "some x",
-                    name = "x",
-                    advanced = FALSE,
-                    label = "my x",
-                    description = "",
-                    source = "internal",
-                    domain = "",
-                    class = "StringParam"
-                ),
-                list(
-                    value = "some y",
-                    name = "y",
-                    advanced = FALSE,
-                    label = "my y",
-                    description = "",
-                    source = "internal",
-                    domain = "",
-                    class = "StringParam"
-                )
-            )
-        )
-    })
-
-    test_that("the name of the arg is set to the name of the Param object",
-    {
-        pip <- Pipeline$new("pipe1")$
-            add("f1", \(x = new("StringParam", "my x", "some x")) x)$
-            add("f2", \(y = new("StringParam", "my y", "some y")) y)
-
-        p <- pip$get_params_unique_json()
-        pl <- jsonlite::fromJSON(p)
-
-        expect_true(pl[["label"]][[1]] == "my x")
-        expect_false(pl[["name"]][[1]] == "my x")
-        hasArgName <- pl[["name"]][[1]] == "x"
-
-        expect_true(pl[["label"]][[2]] == "my y")
-        expect_false(pl[["name"]][[2]] == "my y")
-        hasArgName <- pl[["name"]][[2]] == "y"
-    })
-
-    test_that("works with mixed, that is, standard and Param objects",
-    {
-        pip <- Pipeline$new("pipe1")$
-            add("f1", \(x = 1) x)$
-            add("f2", \(s = new("StringParam", "my s", "some s")) s)
-
-        p <- pip$get_params_unique_json()
-        pl <- jsonlite::fromJSON(p, simplifyVector = FALSE)
-
-        expect_equal(pl[[1]], list(name = "x", value = 1L))
-        expect_equal(
-            pl[[2]],
-            list(
-                value = "some s",
-                name = "s",
-                advanced = FALSE,
-                label = "my s",
-                description = "",
-                source = "internal",
-                domain = "",
-                class = "StringParam"
-            )
-        )
     })
 })
 
@@ -2100,33 +1854,6 @@ describe("replace_step",
         expect_equal(out, x)
     })
 
-    it("handles Param object args",
-    {
-        pip <- Pipeline$new("pipe")$add("f1", \(x = 1) x)
-        pip$replace_step(
-            "f1",
-            fun = \(a = new("NumericParam", "a", value = 3)) a
-        )
-
-        out <- pip$run()$get_out("f1")
-        expect_equal(out, 3)
-    })
-
-    it("can have a Param object defined outside as parameter default",
-    {
-        x <- 3
-        pip <- Pipeline$new("pipe")$add("f1", \(x = 1) x)
-        p <- new("NumericParam", "a", value = x)
-
-        pip$replace_step("f1", fun = \(a) a, params = list(a = p))
-
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a) a, params = list(a = p))
-
-        expect_equal(pip$get_params_at_step("f1")$a, p)
-        out <- pip$run()$get_out("f1")
-        expect_equal(out, x)
-    })
 
     it("function can be passed as a string",
     {
@@ -2427,33 +2154,6 @@ describe("run",
         expect_equal(args[[2]][["detail"]], "f1")
         expect_equal(args[[3]][[1]], 3)
         expect_equal(args[[3]][["detail"]], "f2")
-    })
-
-    test_that("works with Param objects",
-    {
-        pip <- Pipeline$new("pipe1")$
-            add(
-                "f1",
-               \(
-                    x = new("NumericParam", "x", value = 1),
-                    y = new("NumericParam", "y", value = 2)
-                ) {
-                    x + y
-                }
-            )$
-            add(
-                "f2",
-               \(
-                    s1 = new("StringParam", "s1", "Hello"),
-                    s2 = new("StringParam", "s2", "World")
-                ) {
-                    paste(s1, s2)
-                }
-            )
-
-        pip$run()
-        pip$get_out("f1") |> expect_equal(3)
-        pip$get_out("f2") |> expect_equal("Hello World")
     })
 })
 
@@ -3227,22 +2927,6 @@ describe("set_params_at_step",
             pip$get_params_at_step("f1"),
             list(a = 1, b = NULL)
         )
-    })
-
-    test_that("preserves Param objects",
-    {
-        pip <- Pipeline$new("pipe1")$
-        add("f1", \(
-            a = 1,
-            b = new("NumericParam", "num", 2)) a + b
-        )
-
-        pip$set_params_at_step("f1", list(a = 3, b = 4))
-
-        params <- pip$get_params_at_step("f1")
-        expect_equal(params$a, 3)
-        expect_true(params$b |> is("NumericParam"))
-        expect_equal(params$b@value, 4)
     })
 })
 
@@ -4452,15 +4136,6 @@ describe("private methods",
             pip$pipeline[i, "out"] <- 2
 
             expect_equal(f(step = "B"), 2)
-        })
-
-        test_that("accepts Param object args",
-        {
-            pip <- Pipeline$new("pipe")$
-                add("A", \(a = new("NumericParam", "a", value = 1)) a)
-
-            f <- get_private(pip)$.run_step
-            expect_no_error(f("A"))
         })
 
         test_that("if error, the failing step is given in the log",

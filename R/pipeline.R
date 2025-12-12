@@ -720,41 +720,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             paramValues[!duplicated(names(paramValues))]
         },
 
-        #' @description Get all unique function parameters in json format.
-        #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
-        #' names starting with a dot) are ignored and thus not returned.
-        #' @return `list` flat unnamed json list of unique function parameters
-        #' @examples
-        #' p <- Pipeline$new("pipe", data = 1:2)
-        #' p$add("add1", \(data = ~data, x = 1) x + data)
-        #' p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
-        #' p$add("mult1", \(x = 1, y = 2, .z = 3, b = ~add2) x * y * b)
-        #' p$get_params_unique_json()
-        #' p$get_params_unique_json(ignoreHidden = FALSE)
-        get_params_unique_json = function(ignoreHidden = TRUE)
-        {
-            params = self$get_params_unique(ignoreHidden)
-
-            param_to_list <- function(p, name) {
-                if (methods::is(p, "Param")) {
-                    p = as.list(attributes(eval(p)))
-                    p[["name"]] = name
-                } else {
-                    p <- list(name = name, value = p)
-                }
-                p
-            }
-
-            mapply(
-                params,
-                name = names(params),
-                FUN = param_to_list,
-                SIMPLIFY = FALSE
-            ) |>
-                stats::setNames(NULL) |>
-                jsonlite::toJSON(auto_unbox = TRUE, pretty = TRUE)
-        },
-
         #' @description Get step of pipeline
         #' @param step `string` name of step
         #' @return `data.table` row containing the step.
@@ -1730,24 +1695,10 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             toUpdate <- intersect(names(params), names(current))
             hasUpdate <- length(toUpdate) > 0
 
-            replace_param <- function(old, new) {
-                is <- methods::is
-                if (old |> is("Param") && !(new |> is("Param"))) {
-                    old@value <- new
-                    return(old)
-                }
-                new
-            }
-
             if (hasUpdate) {
                 # Update params
                 current <- self$get_step(step)[["params"]] |> unlist1()
-                current[toUpdate] <- mapply(
-                    FUN = replace_param,
-                    old = current[toUpdate],
-                    new = params[toUpdate],
-                    SIMPLIFY = FALSE
-                )
+                current[toUpdate] <- params[toUpdate]
                 private$.set_at_step(step, "params", value = current)
 
                 # Update state if applicable
@@ -2240,14 +2191,6 @@ Pipeline = R6::R6Class("Pipeline", #nolint
                 depdendentOut <- private$.extract_dependent_out(deps, out)
                 args[names(depdendentOut)] <- depdendentOut
             }
-
-            # If arg is encapsulated in a Param object, get the value
-            args <- lapply(
-                args,
-                FUN = function(arg) {
-                    if (methods::is(arg, "Param")) arg@value else arg
-                }
-            )
 
             iStep <- self$get_step_number(step)
             context <- gettextf("Step %i ('%s')", iStep, step)
