@@ -409,7 +409,7 @@ pipe_get_graph <- function(pip, groups = NULL)
 #' @export
 pipe_get_out <- function(pip, step)
 {
-    pip$get_out(step)
+    pip$get_out(step = step)
 }
 
 
@@ -429,7 +429,6 @@ pipe_get_out <- function(pip, step)
 #' * `pipe_get_params_unique`:  list of parameters where each parameter
 #'   is only listed once. The values of the parameters will be the values
 #'   of the first step where the parameters were defined, respectively.
-#' * `get_params_unique_json`: flat unnamed json list of unique parameters
 #' @examples
 #' # pipe_get_params
 #' p <- pipe_new("pipe", data = 1:2)
@@ -452,9 +451,6 @@ pipe_get_out <- function(pip, step)
 #' pipe_get_params_unique(p)
 #' pipe_get_params_unique(p, ignoreHidden = FALSE)
 #'
-#' # get_params_unique_json
-#' pipe_get_params_unique_json(p)
-#' pipe_get_params_unique_json(p, ignoreHidden = FALSE)
 #' @rdname pipe_get_params
 #' @export
 pipe_get_params <- function(pip, ignoreHidden = TRUE)
@@ -476,14 +472,6 @@ pipe_get_params_at_step <- function(pip, step, ignoreHidden = TRUE)
 pipe_get_params_unique <- function(pip, ignoreHidden = TRUE)
 {
     pip$get_params_unique(ignoreHidden = ignoreHidden)
-}
-
-
-#' @rdname pipe_get_params
-#' @export
-pipe_get_params_unique_json <- function(pip, ignoreHidden = TRUE)
-{
-    pip$get_params_unique_json(ignoreHidden = ignoreHidden)
 }
 
 
@@ -531,7 +519,7 @@ pipe_get_params_unique_json <- function(pip, ignoreHidden = TRUE)
 #' @export
 pipe_get_step <- function(pip, step)
 {
-    pip$get_step(step)
+    pip$get_step(step = step)
 }
 
 
@@ -547,7 +535,7 @@ pipe_get_step_names <- function(pip)
 #' @export
 pipe_get_step_number <- function(pip, step)
 {
-    pip$get_step_number(step)
+    pip$get_step_number(step = step)
 }
 
 
@@ -555,14 +543,14 @@ pipe_get_step_number <- function(pip, step)
 #' @export
 pipe_has_step <- function(pip, step)
 {
-    pip$has_step(step)
+    pip$has_step(step = step)
 }
 
 #' @rdname step_info
 #' @export
 pipe_has_step_locked <- function(pip, step)
 {
-    pip$has_step_locked(step)
+    pip$has_step_locked(step = step)
 }
 
 
@@ -655,7 +643,7 @@ pipe_length <- function(pip)
 #' @export
 pipe_lock_step <- function(pip, step)
 {
-    pip$lock_step(step)
+    pip$lock_step(step = step)
 }
 
 
@@ -710,7 +698,7 @@ pipe_new <- function(
     data = NULL,
     logger = NULL
 ) {
-    Pipeline$new(name, data = data, logger = logger)
+    Pipeline$new(name = name, data = data, logger = logger)
 }
 
 
@@ -757,7 +745,7 @@ pipe_pop_step <- function(pip)
 #' @export
 pipe_pop_steps_after <- function(pip, step)
 {
-    pip$pop_steps_after(step)
+    pip$pop_steps_after(step = step)
 }
 
 
@@ -766,7 +754,7 @@ pipe_pop_steps_after <- function(pip, step)
 #' @export
 pipe_pop_steps_from <- function(pip, step)
 {
-    pip$pop_steps_from(step)
+    pip$pop_steps_from(step = step)
 }
 
 
@@ -1248,7 +1236,7 @@ pipe_split <- function(pip)
 #' @export
 pipe_unlock_step <- function(pip, step)
 {
-    pip$unlock_step(step)
+    pip$unlock_step(step = step)
 }
 
 # nocov end
