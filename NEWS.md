@@ -1,5 +1,11 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.2.3.9003
+
+* Refactor: Remove Param object handling from pipeline and utility functions
+* Refactor: Remove unused get_params_unique_json method and its documentation
+
+
 # pipeflow 0.2.3.9002
 
 * refactor: ensure unit tests for logging is always done with logging enabled
