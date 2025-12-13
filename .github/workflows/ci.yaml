@@ -14,6 +14,7 @@ env:
   LANG: C.UTF-8
   R_KEEP_PKG_SOURCE: yes
 
+
 jobs:
   lint:
     name: Lint (lintr)
@@ -21,35 +22,48 @@ jobs:
     permissions:
       contents: read
       security-events: write   # if uploading SARIF
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: r-lib/actions/setup-r@v2
         with:
-          r-version: renv          # pick R version from renv.lock
+          r-version: renv          # R version from renv.lock
           Ncpus: 6
           use-public-rspm: true
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: any::lintr
-          needs: lintr
+      # If not available, install renv itself (small, from CRAN)
+      - name: Install renv
+        shell: Rscript {0}
+        run: |
+          hasRenv <- requireNamespace("renv")
+          if (!hasRenv) {
+            install.packages("renv")
+          }
+
+      # Restore *only* lintr (and its deps) at the versions from renv.lock
+      - name: Restore lintr from renv.lock
+        shell: Rscript {0}
+        run: |
+          renv::restore(packages = "lintr", prompt = FALSE, clean = FALSE)
 
       - name: Lint
         shell: Rscript {0}
         run: |
           l <- lintr::lint_package()
           if (length(l)) print(l)
-          if (length(l) > 0) quit('no', 1)
-      # Optional SARIF upload:
-      # - name: Lint (SARIF)
-      #   shell: Rscript {0}
-      #   run: |
-      #     l <- lintr::lint_package()
-      #     lintr::write_sarif(l, "lintr.sarif")
-      # - uses: github/codeql-action/upload-sarif@v3
-      #   if: always()
-      #   with:
-      #     sarif_file: lintr.sarif
+          if (length(l) > 0) quit("no", 1)
+
+    # Optional SARIF upload, kept as-is but commented out in your file
+    # - name: Lint (SARIF)
+    #   shell: Rscript {0}
+    #   run: |
+    #     l <- lintr::lint_package()
+    #     lintr::write_sarif(l, "lintr.sarif")
+    # - uses: github/codeql-action/upload-sarif@v3
+    #   if: always()
+    #   with:
+    #     sarif_file: lintr.sarif
 
   check:
     name: R CMD check
@@ -118,18 +132,7 @@ jobs:
         with:
           lfs: true
 
-      # Pandoc for rmarkdown/knitr/pkgdown/vignettes
-      - uses: r-lib/actions/setup-pandoc@v2
-
-      - name: Setup R
-        uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: renv          # pick R version from renv.lock
-          Ncpus: 6
-          use-public-rspm: true
-
-      - name: Setup renv
-        uses: r-lib/actions/setup-renv@v2
+      - uses: ./.github/actions/r-check-env
 
       - name: Run covr and export Cobertura + HTML
         shell: Rscript {0}
