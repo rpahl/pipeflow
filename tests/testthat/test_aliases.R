@@ -25,16 +25,18 @@ describe("Alias functions",
 
             # Verify that all arguments are passed to the member function
             alias_formals <- formals(get(alias_fun))
-            expected_args <- names(alias_formals)[names(alias_formals) != "pip"] |>
-                setdiff("...")
+            nm <- names(alias_formals)
+            expected_args <- nm[nm != "pip"] |> setdiff("...")
             for (arg in expected_args) {
-                expect_true(
-                    grepl(paste0("\\b", arg, "\\s*=\\s*", arg, "\\b"), body_str),
-                    info = sprintf(
-                        "Alias '%s' does not pass arg '%s' correctly to 'pip$%s'",
-                        alias_fun, arg, fun
-                    )
+                info <- sprintf(
+                    "Alias '%s' does not pass arg '%s' correctly to 'pip$%s'",
+                    alias_fun, arg, fun
                 )
+                setsArg <- grepl(
+                    pattern = paste0("\\b", arg, "\\s*=\\s*", arg, "\\b"),
+                    x = body_str
+                )
+                expect_true(setsArg, info = info)
             }
         }
     })
