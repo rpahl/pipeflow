@@ -38,4 +38,4 @@
 
 # Misc artifacts
 ^workflows\.zip$
-^logo$
+^logo/logo.xcf$
