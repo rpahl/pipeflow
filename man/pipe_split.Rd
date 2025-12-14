@@ -24,12 +24,4 @@ pipe_add(p, "f2", \(x = 1) x)
 pipe_add(p, "f3", \(x = ~f1) x)
 pipe_add(p, "f4", \(x = ~f2) x)
 pipe_split(p)
-
-# Example of split by three data sets
-dataList <- list(a = 1, b = 2, c = 3)
-p <- pipe_new("pipe")
-pipe_add(p, "add1", \(x = ~data) x + 1, keepOut = TRUE)
-pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-pipes <- pipe_set_data_split(p, dataList) |> pipe_split()
-pipes
 }

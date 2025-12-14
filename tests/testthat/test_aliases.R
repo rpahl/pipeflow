@@ -2627,34 +2627,6 @@ describe("pipe_split",
             pip$collect_out()[c("data", "f1", "f4")]
         )
     })
-
-    test_that(
-        "split is done correctly for complete data split",
-    {
-        dat1 <- data.frame(x = 1:2)
-        dat2 <- data.frame(y = 1:2)
-        dataList <- list(dat1, dat2)
-
-        pip <- pipe_new("pipe") |>
-            pipe_add("f1", \(a = 1) a) |>
-            pipe_add("f2", \(a = ~f1, b = 2) b) |>
-            pipe_add("f3", \(x = ~f1, y = ~f2) x + y)
-
-        pipe_set_data_split(pip, dataList)
-
-        res <- pipe_split(pip)
-        steps <- lapply(res, \(x) x$get_step_names())
-
-        expect_equal(
-            steps,
-            list(
-                "data.1",
-                c("f1.1", "f2.1", "f3.1"),
-                "data.2",
-                c("f1.2", "f2.2", "f3.2")
-            )
-        )
-    })
 })
 
 

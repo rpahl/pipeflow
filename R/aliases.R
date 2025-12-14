@@ -1039,73 +1039,6 @@ pipe_set_data <- function(pip, data)
 }
 
 
-#' @title Split-multiply pipeline by list of data sets
-#' @description This function can be used to apply the pipeline
-#' repeatedly to various data sets. For this, the pipeline split-copies
-#' itself by the list of given data sets. Each sub-pipeline will have
-#' one of the data sets set as input data.
-#' The step names of the sub-pipelines will be the original
-#' step names plus the name of the data set.
-#' @param pip `Pipeline` object
-#' @param dataList `list` of data sets
-#' @param toStep `string` step name marking optional subset of
-#' the pipeline, to which the data split should be applied to.
-#' @param groupBySplit `logical` whether to set step groups according
-#' to data split.
-#' @param sep `string` separator to be used between step name and
-#' data set name when creating the new step names.
-#' @return new combined `Pipeline` with each sub-pipeline having set
-#' one of the data sets.
-#' @examples
-#' # Split by three data sets
-#' dataList <- list(a = 1, b = 2, c = 3)
-#' p <- pipe_new("pipe")
-#' pipe_add(p, "add1", \(x = ~data) x + 1, keepOut = TRUE)
-#' pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-#' pipe_set_data_split(p, dataList)
-#' p
-#'
-#' p |> pipe_run() |> pipe_collect_out() |> str()
-#'
-#' # Don't group output by split
-#' p <- pipe_new("pipe")
-#' pipe_add(p, "add1", \(x = ~data) x + 1, keepOut = TRUE)
-#' pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-#' pipe_set_data_split(p, dataList, groupBySplit = FALSE)
-#' p
-#'
-#' p |> pipe_run() |> pipe_collect_out() |> str()
-#'
-#' # Split up to certain step
-#' p <- pipe_new("pipe")
-#' pipe_add(p, "add1", \(x = ~data) x + 1)
-#' pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y)
-#' pipe_add(p, "average_result", \(x = ~mult) mean(unlist(x)), keepOut = TRUE)
-#' p
-#' pipe_get_depends(p)[["average_result"]]
-#'
-#' pipe_set_data_split(p, dataList, toStep = "mult")
-#' p
-#' pipe_get_depends(p)[["average_result"]]
-#'
-#' p |> pipe_run() |> pipe_collect_out() |> str()
-#' @export
-pipe_set_data_split <- function(
-    pip,
-    dataList,
-    toStep = character(),
-    groupBySplit = TRUE,
-    sep = "."
-) {
-    pip$set_data_split(
-        dataList = dataList,
-        toStep = toStep,
-        groupBySplit = groupBySplit,
-        sep = sep
-    )
-}
-
-
 #' @title Set pipeline parameters
 #' @description Set unbound function parameters defined in
 #' the pipeline where 'unbound' means parameters that are not linked
@@ -1175,14 +1108,6 @@ pipe_set_params_at_step <- function(pip, step, params)
 #' pipe_add(p, "f3", \(x = ~f1) x)
 #' pipe_add(p, "f4", \(x = ~f2) x)
 #' pipe_split(p)
-#'
-#' # Example of split by three data sets
-#' dataList <- list(a = 1, b = 2, c = 3)
-#' p <- pipe_new("pipe")
-#' pipe_add(p, "add1", \(x = ~data) x + 1, keepOut = TRUE)
-#' pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-#' pipes <- pipe_set_data_split(p, dataList) |> pipe_split()
-#' pipes
 #' @export
 pipe_split <- function(pip)
 {

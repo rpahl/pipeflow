@@ -498,41 +498,6 @@ p$set_data(3)
 p$run()$collect_out()
 
 ## ------------------------------------------------
-## Method `Pipeline$set_data_split`
-## ------------------------------------------------
-
-# Split by three data sets
-dataList <- list(a = 1, b = 2, c = 3)
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
-p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-p$set_data_split(dataList)
-p
-p$run()$collect_out() |> str()
-
-# Don't group output by split
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
-p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-p$set_data_split(dataList, groupBySplit = FALSE)
-p
-p$run()$collect_out() |> str()
-
-# Split up to certain step
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1)
-p$add("mult", \(x = ~data, y = ~add1) x * y)
-p$add("average_result", \(x = ~mult) mean(unlist(x)), keepOut = TRUE)
-p
-p$get_depends()[["average_result"]]
-
-p$set_data_split(dataList, toStep = "mult")
-p
-p$get_depends()[["average_result"]]
-
-p$run()$collect_out()
-
-## ------------------------------------------------
 ## Method `Pipeline$set_params`
 ## ------------------------------------------------
 
@@ -598,14 +563,6 @@ p$add("f2", \(x = 1) x)
 p$add("f3", \(x = ~f1) x)
 p$add("f4", \(x = ~f2) x)
 p$split()
-
-# Example of split by three data sets
-dataList <- list(a = 1, b = 2, c = 3)
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
-p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-pipes <- p$set_data_split(dataList)$split()
-pipes
 
 ## ------------------------------------------------
 ## Method `Pipeline$unlock_step`
@@ -700,7 +657,6 @@ Roman Pahl
 \item \href{#method-Pipeline-run}{\code{Pipeline$run()}}
 \item \href{#method-Pipeline-run_step}{\code{Pipeline$run_step()}}
 \item \href{#method-Pipeline-set_data}{\code{Pipeline$set_data()}}
-\item \href{#method-Pipeline-set_data_split}{\code{Pipeline$set_data_split()}}
 \item \href{#method-Pipeline-set_params}{\code{Pipeline$set_params()}}
 \item \href{#method-Pipeline-set_params_at_step}{\code{Pipeline$set_params_at_step()}}
 \item \href{#method-Pipeline-skip_group}{\code{Pipeline$skip_group()}}
@@ -2105,83 +2061,6 @@ p$run()$collect_out()
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-set_data_split"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-set_data_split}{}}}
-\subsection{Method \code{set_data_split()}}{
-This function can be used to apply the pipeline
-repeatedly to various data sets. For this, the pipeline split-copies
-itself by the list of given data sets. Each sub-pipeline will have
-one of the data sets set as input data.
-The step names of the sub-pipelines will be the original
-step names plus the name of the data set.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_data_split(
-  dataList,
-  toStep = character(),
-  groupBySplit = TRUE,
-  sep = "."
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{dataList}}{\code{list} of data sets}
-
-\item{\code{toStep}}{\code{string} step name marking optional subset of
-the pipeline, at which the data split should be applied to.}
-
-\item{\code{groupBySplit}}{\code{logical} whether to set step groups according
-to data split.}
-
-\item{\code{sep}}{\code{string} separator to be used between step name and
-data set name when creating the new step names.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-new combined \code{Pipeline} with each sub-pipeline having set
-one of the data sets.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{# Split by three data sets
-dataList <- list(a = 1, b = 2, c = 3)
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
-p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-p$set_data_split(dataList)
-p
-p$run()$collect_out() |> str()
-
-# Don't group output by split
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
-p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-p$set_data_split(dataList, groupBySplit = FALSE)
-p
-p$run()$collect_out() |> str()
-
-# Split up to certain step
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1)
-p$add("mult", \(x = ~data, y = ~add1) x * y)
-p$add("average_result", \(x = ~mult) mean(unlist(x)), keepOut = TRUE)
-p
-p$get_depends()[["average_result"]]
-
-p$set_data_split(dataList, toStep = "mult")
-p
-p$get_depends()[["average_result"]]
-
-p$run()$collect_out()
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-set_params"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-set_params}{}}}
 \subsection{Method \code{set_params()}}{
@@ -2365,14 +2244,6 @@ p$add("f2", \(x = 1) x)
 p$add("f3", \(x = ~f1) x)
 p$add("f4", \(x = ~f2) x)
 p$split()
-
-# Example of split by three data sets
-dataList <- list(a = 1, b = 2, c = 3)
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
-p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-pipes <- p$set_data_split(dataList)$split()
-pipes
 }
 \if{html}{\out{</div>}}
 

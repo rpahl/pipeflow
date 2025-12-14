@@ -735,34 +735,6 @@ describe("get_depends_down",
             "step 'f1' does not exist"
         )
     })
-
-    test_that(
-        "works with complex dependencies as created by data splits",
-    {
-        dat1 <- data.frame(x = 1:2)
-        dat2 <- data.frame(y = 1:2)
-        dataList <- list(dat1, dat2)
-
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a = 1) a)$
-            add("f2", \(a = ~f1, b = 2) b)$
-            add("f3", \(x = ~f1, y = ~f2) x + y)
-
-        pip$set_data_split(dataList, toStep = "f2")
-
-        expect_equal(
-            pip$get_depends_down("f1.1"),
-            c("f2.1", "f3")
-        )
-
-        expect_equal(
-            pip$get_depends_down("f1.2"),
-            c("f2.2", "f3")
-        )
-
-        expect_equal(pip$get_depends_down("f2.1"), "f3")
-        expect_equal(pip$get_depends_down("f2.2"), "f3")
-    })
 })
 
 
@@ -798,28 +770,6 @@ describe("get_depends_up",
         expect_error(
             pip$get_depends_up("f1"),
             "step 'f1' does not exist"
-        )
-    })
-
-    test_that("works with complex dependencies as created by data splits",
-    {
-        dat1 <- data.frame(x = 1:2)
-        dat2 <- data.frame(y = 1:2)
-        dataList <- list(dat1, dat2)
-
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a = 1) a)$
-            add("f2", \(a = ~f1, b = 2) b)$
-            add("f3", \(x = ~f1, y = ~f2) x + y)
-
-        pip$set_data_split(dataList, toStep = "f2")
-
-        expect_equal(pip$get_depends_up("f2.1"), c("f1.1"))
-        expect_equal(pip$get_depends_up("f2.2"), c("f1.2"))
-
-        expect_equivalent(
-            pip$get_depends_up("f3"),
-            c("f1.1", "f2.1", "f1.2", "f2.2")
         )
     })
 })
@@ -2380,229 +2330,6 @@ describe("set_data",
 
 
 
-describe("set_data_split",
-{
-    test_that("the new steps have the names of the list attached",
-    {
-        dataList <- list(A = 1, B = 2)
-
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a = 1) a)
-
-        pip$set_data_split(dataList)
-
-        pip$get_step_names() |>
-            expect_equal(c("data.A", "f1.A", "data.B", "f1.B"))
-    })
-
-    test_that("the separator used in the creation of the new steps
-    can be customized",
-    {
-        dataList <- list(A = 1, B = 2)
-
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a = 1) a)
-
-        pip$set_data_split(dataList, sep = "_")
-
-        pip$get_step_names() |>
-            expect_equal(c("data_A", "f1_A", "data_B", "f1_B"))
-    })
-
-
-    test_that("simple split pipeline computes results as expected",
-    {
-        dataList <- list(A = 1, B = 2, C = 3)
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a = 1) a)$
-            add("f2", \(a = ~f1, b = ~data) {
-                b + a
-            })
-
-        pip$set_data_split(dataList)
-
-        out <- pip$run()$collect_out()
-        expectedOut <- list(
-            A = list(data.A = 1, f1.A = 1, f2.A = 2),
-            B = list(data.B = 2, f1.B = 1, f2.B = 3),
-            C = list(data.C = 3, f1.C = 1, f2.C = 4)
-        )
-        expect_equal(out, expectedOut)
-    })
-
-
-    test_that(
-        "split pipeline by default overrides output groups according to split",
-    {
-        dataList <- list(A = 1, B = 2)
-
-        pip <- Pipeline$new("pipe")$
-            add("f0", \(a = 1) a, group = "id")$
-            add("f1", \(a = 1) a, group = "id")$
-            add("f2", \(a = 2) a)
-
-        pip$set_data_split(dataList)
-
-        out <- pip$run()$collect_out()
-        expect_equal(names(out), names(dataList))
-    })
-
-    test_that("the grouping override can be omitted",
-    {
-        dataList <- list(A = 1, B = 2)
-
-        pip <- Pipeline$new("pipe")$
-            add("f0", \(a = 1) a, group = "id")$
-            add("f1", \(a = 1) a, group = "id")$
-            add("f2", \(a = 2) a)
-
-        pip$set_data_split(dataList, groupBySplit = FALSE)
-
-        out <- pip$run()$collect_out()
-
-        expect_equal(
-            names(out),
-            c("data.A", "id.A", "f2.A", "data.B", "id.B", "f2.B")
-        )
-    })
-
-    test_that("the separator used in the creation of the groups
-        can be customized",
-    {
-        dataList <- list(A = 1, B = 2)
-
-        pip <- Pipeline$new("pipe")$
-            add("f0", \(a = 1) a, group = "id")$
-            add("f1", \(a = 1) a, group = "id")$
-            add("f2", \(a = 2) a)
-
-        pip$set_data_split(dataList, groupBySplit = FALSE, sep = "_")
-
-        out <- pip$run()$collect_out()
-
-        expect_equal(
-            names(out),
-            c("data_A", "id_A", "f2_A", "data_B", "id_B", "f2_B")
-        )
-    })
-
-    test_that("split pipeline works for list of data",
-    {
-        dataList <- list(A = 1, B = 2, C = 3)
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a = ~data) a)$
-            add("f2", \(a = ~f1, b = ~data) a + b)
-
-        pip$set_data_split(dataList)
-
-        out <- pip$run()$collect_out()
-
-        expectedOut <- list(
-            A = list(data.A = 1, f1.A = 1, f2.A = 2),
-            B = list(data.B = 2, f1.B = 2, f2.B = 4),
-            C = list(data.C = 3, f1.C = 3, f2.C = 6)
-        )
-        expect_equal(out, expectedOut)
-    })
-
-
-    test_that("if unnamed list of data, they are named with numbers",
-    {
-        dataList <- list(1, 2)
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a = ~data) a)$
-            add("f2", \(a = ~f1, b = ~data) a + b)
-
-        pip$set_data_split(dataList)
-
-        out <- pip$run()$collect_out()
-
-        expectedOut <- list(
-            "1" = list(data.1 = 1, f1.1 = 1, f2.1 = 2),
-            "2" = list(data.2 = 2, f1.2 = 2, f2.2 = 4)
-        )
-        expect_equal(out, expectedOut)
-    })
-
-
-    test_that(
-        "depends are updated correctly, if data split on subset of pipeline",
-    {
-        skip("for now")
-        dat1 <- data.frame(x = 1:2)
-        dat2 <- data.frame(y = 1:2)
-        dataList <- list(dat1, dat2)
-
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a = 1) a)$
-            add("f2", \(a = ~f1, b = ~data) b, keepOut = TRUE)$
-            add("f3", \(x = ~f1, y = ~f2) list(x, y), keepOut = TRUE)$
-            add("f4", \(x = ~f3) x[[1]], keepOut = TRUE)
-
-        pip$set_data_split(dataList, toStep = "f2")
-
-        ee = expect_equivalent
-        pp = pip$pipeline
-
-        depends <- pip$get_depends()
-
-        expect_equal(depends[["f2.1"]], c(a = "f1.1", b = "data.1"))
-        expect_equal(depends[["f2.2"]], c(a = "f1.2", b = "data.2"))
-
-        # Pipeline was not split for f3, which therefore has parameters that
-        # each depend on two steps
-        expect_equal(
-            depends[["f3"]],
-            list(x = c("f1.1", "f1.2"), y = c("f2.1", "f2.2"))
-        )
-
-        # Pipeline was not split for f4, so just depdends on f3
-        ee(depends[["f4"]], c(x = "f3"))
-
-
-        out <- pip$run()$collect_out()
-
-        expect_equal(out[["1"]], dat1)
-        expect_equal(out[["2"]], dat2)
-        expected_f3_res = list(
-            list("f1.1" = 1, "f1.2" = 1),
-            list("f2.1" = dat1, "f2.2" = dat2)
-        )
-        expect_equal(out[["f3"]], expected_f3_res)
-        expect_equal(out[["f4"]], expected_f3_res[[1]])
-    })
-
-    test_that("split data set can be created dynamically",
-    {
-        skip("for now")
-        data = data.frame(a = 1:10, group = c("a", "b"))
-
-        pip <- Pipeline$new("pipe", data = data)$
-            add("split_data_step",
-               \(.self = NULL, data = ~data)
-                {
-                    splitData = split(data, data[, "group"])
-
-                    .self$remove_step("split_data_step")
-                    .self$set_data_split(splitData)
-                    .self$name = paste(.self$name, "after data split")
-                    .self
-                }
-            )$
-            add("f1", \(data = ~data) {
-                data
-            }, keepOut = TRUE)
-
-        pip$set_params(list(.self = pip))
-
-        out <- pip$run(recursive = TRUE)$collect_out()
-
-        expect_equivalent(out, split(data, data[, "group"]))
-    })
-})
-
-
-
 describe("set_params",
 {
     test_that("parameters can be set commonly on existing pipeline",
@@ -3009,34 +2736,6 @@ describe("split",
             pip$collect_out()[c("data", "f1", "f4")]
         )
     })
-
-    test_that(
-        "split is done correctly for complete data split",
-    {
-        dat1 <- data.frame(x = 1:2)
-        dat2 <- data.frame(y = 1:2)
-        dataList <- list(dat1, dat2)
-
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a = 1) a)$
-            add("f2", \(a = ~f1, b = 2) b)$
-            add("f3", \(x = ~f1, y = ~f2) x + y)
-
-        pip$set_data_split(dataList)
-
-        res <- pip$split()
-        steps <- lapply(res, \(x) x$get_step_names())
-
-        expect_equal(
-            steps,
-            list(
-                "data.1",
-                c("f1.1", "f2.1", "f3.1"),
-                "data.2",
-                c("f1.2", "f2.2", "f3.2")
-            )
-        )
-    })
 })
 
 
@@ -3139,6 +2838,7 @@ describe("unskip_step",
         expect_false(p$get_step("s1")$skip)
     })
 })
+
 
 
 
@@ -3354,41 +3054,6 @@ describe("private methods",
                 f(groups = 1),
                 "is.character(groups) is not TRUE",
                 fixed = TRUE
-            )
-        })
-
-        test_that("can be created for parameters with multiple dependencies",
-        {
-            pip <- Pipeline$new("pipe")
-
-            # step1 is data
-            pip$add("step2", \(x = ~data) x + 1)
-            pip$add("step3", \(y = ~step2) sum(unlist(y)))
-
-            pip$set_data_split(
-                list(data.frame(x = 1:2), data.frame(x = 3:4)),
-                toStep = "step2"
-            )
-
-            # Step 3 depends on both step2.1 and step2.2
-            expect_equal(
-                pip$get_depends()$step3$y,
-                c("step2.1", "step2.2")
-            )
-
-            f <- get_private(pip)$.create_edge_table
-            res <- f()
-
-            expectedRes <- data.frame(
-                from = 1:4,
-                to = c(2, 5, 4, 5),
-                arrows = "to"
-            )
-            expect_equivalent(res, expectedRes)
-
-            expect_equal(
-                rownames(res),
-                c("step2.1", "step3.y1", "step2.2", "step3.y2")
             )
         })
     })
@@ -3690,58 +3355,6 @@ describe("private methods",
                 list(
                     c("f2", "f3"),
                     c("data", "f1", "f4")
-                )
-            )
-        })
-
-        test_that("grouped dependencies are obtained correctly for
-            complete data split",
-        {
-            dat1 <- data.frame(x = 1:2)
-            dat2 <- data.frame(y = 1:2)
-            dataList <- list(dat1, dat2)
-
-            pip <- Pipeline$new("pipe")$
-                add("f1", \(a = 1) a)$
-                add("f2", \(a = ~f1, b = 2) b)$
-                add("f3", \(x = ~f1, y = ~f2) x + y)
-
-
-            f <- get_private(pip)$.get_depends_grouped
-            pip$set_data_split(dataList, toStep = "f3")
-
-            expect_equal(
-                f(),
-                list(
-                    "data.1",
-                    c("f1.1", "f2.1", "f3.1"),
-                    "data.2",
-                    c("f1.2", "f2.2", "f3.2")
-                )
-            )
-        })
-
-        test_that("grouped dependencies are obtained correctly for
-            partial data split",
-        {
-            dat1 <- data.frame(x = 1:2)
-            dat2 <- data.frame(y = 1:2)
-            dataList <- list(dat1, dat2)
-
-            pip <- Pipeline$new("pipe")$
-                add("f1", \(a = 1) a)$
-                add("f2", \(a = ~f1, b = 2) b)$
-                add("f3", \(x = ~f1, y = ~f2) x + y)
-
-            f <- get_private(pip)$.get_depends_grouped
-            pip$set_data_split(dataList, toStep = "f2")
-
-            expect_equal(
-                f(),
-                list(
-                    "data.1",
-                    "data.2",
-                    c("f1.1", "f2.1", "f1.2", "f2.2", "f3")
                 )
             )
         })
