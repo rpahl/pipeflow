@@ -518,10 +518,11 @@ pipe_get_step <- function(pip, step)
 
 #' @title Get specific field of a step
 #' @description Get a specific field/entry of a step
+#' @param pip `Pipeline` object
 #' @param step `string` name of step
 #' @param what `string` name of the pipeline column to return
 #' @return the requested entry at the given step
-pipe_get_step_field = function(pip, step, what)
+pipe_get_step_field <- function(pip, step, what)
 {
     pip$get_step_field(step = step, what = what)
 }
@@ -1120,6 +1121,7 @@ pipe_split <- function(pip)
 #' Works like calling `skip_step` on every step in that group. Skipped
 #' steps are not executed during `run()` and their outputs (if any)
 #' are not considered for `collect_out()`.
+#' @param pip `Pipeline` object
 #' @param group `string` name of the group whose steps should be
 #' skipped.
 #' @return the `Pipeline` object invisibly
@@ -1152,6 +1154,7 @@ pipe_skip_group <- function(pip, group)
 #' collected output list.
 #' In contrast to `lock_step`, skipping a step does not "protect" the
 #' step against changing the step's parameters.
+#' @param pip `Pipeline` object
 #' @param step `string` name of step
 #' @return the `Pipeline` object invisibly
 #' @examples

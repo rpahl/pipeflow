@@ -10,6 +10,8 @@ pipe_skip_group(pip, group)
 pipe_unskip_group(pip, group)
 }
 \arguments{
+\item{pip}{\code{Pipeline} object}
+
 \item{group}{\code{string} name of the group whose steps should be
 skipped.}
 }

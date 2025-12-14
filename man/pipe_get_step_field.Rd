@@ -7,6 +7,8 @@
 pipe_get_step_field(pip, step, what)
 }
 \arguments{
+\item{pip}{\code{Pipeline} object}
+
 \item{step}{\code{string} name of step}
 
 \item{what}{\code{string} name of the pipeline column to return}

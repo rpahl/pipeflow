@@ -10,6 +10,8 @@ pipe_skip_step(pip, step)
 pipe_unskip_step(pip, step)
 }
 \arguments{
+\item{pip}{\code{Pipeline} object}
+
 \item{step}{\code{string} name of step}
 }
 \value{
