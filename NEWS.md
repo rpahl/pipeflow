@@ -1,5 +1,10 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.2.3.9005
+
+* refactor: deprecate `keepOut` field and introduce `tags` field
+
+
 # pipeflow 0.2.3.9004
 
 * deprecate `all` parameter in `pipe_collect_out()` 

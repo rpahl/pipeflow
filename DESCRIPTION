@@ -1,6 +1,6 @@
 Package: pipeflow
 Title: Lightweight, General-Purpose Data Analysis Pipelines
-Version: 0.2.3.9004
+Version: 0.2.3.9005
 Authors@R:
     person("Roman", "Pahl", , "roman.pahl@gmail.com", role = c("aut", "cre"))
 Description: A lightweight yet powerful framework for building robust data
