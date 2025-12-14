@@ -36,7 +36,7 @@ Runs all new and/or outdated pipeline steps.
 p <- pipe_new("pipe", data = 1)
 pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 pipe_add(p, "add2", \(x = ~add1, z = 2) x + z)
-pipe_add(p, "final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+pipe_add(p, "final", \(x = ~add1, y = ~add2) x * y)
 p |> pipe_run() |> pipe_collect_out()
 pipe_set_params(p, list(z = 4))  # outdates steps add2 and final
 p
@@ -49,7 +49,7 @@ pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 pipe_add(p, "new_pipe", \(x = ~add1) {
     p2 <- pipe_new("new_pipe", data = x)
     pipe_add(p2, "add1", \(x = ~data) x + 1)
-    pipe_add(p2, "add2", \(x = ~add1) x + 2, keepOut = TRUE)
+    pipe_add(p2, "add2", \(x = ~add1) x + 2)
   }
 )
 p |> pipe_run() |> pipe_collect_out()

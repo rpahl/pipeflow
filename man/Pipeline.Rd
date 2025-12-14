@@ -420,9 +420,9 @@ p
 p <- Pipeline$new("pipe", data = 1)
 p$add("add1", \(x = ~data, y = 1) x + y)
 p$add("add2", \(x = ~data, y = 2) x + y)
-p$add("mult", \(x = 1, y = 2) x * y, keepOut = TRUE)
+p$add("mult", \(x = 1, y = 2) x * y)
 p$run()$collect_out()
-p$replace_step("mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+p$replace_step("mult", \(x = ~add1, y = ~add2) x * y)
 p$run()$collect_out()
 try(p$replace_step("foo", \(x = 1) x))   # step 'foo' does not exist
 
@@ -446,11 +446,11 @@ p
 p <- Pipeline$new("pipe", data = 1)
 p$add("add1", \(x = ~data, y = 1) x + y)
 p$add("add2", \(x = ~add1, z = 2) x + z)
-p$add("final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+p$add("final", \(x = ~add1, y = ~add2) x * y)
 p$run()$collect_out()
 p$set_params(list(z = 4))  # outdates steps add2 and final
 p
-p$run()$collect_out()
+p$run()$collect_out() |> str()
 p
 
 # Recursive pipeline
@@ -459,10 +459,10 @@ p$add("add1", \(x = ~data, y = 1) x + y)
 p$add("new_pipe", \(x = ~add1) {
     pp <- Pipeline$new("new_pipe", data = x)
     pp$add("add1", \(x = ~data) x + 1)
-    pp$add("add2", \(x = ~add1) x + 2, keepOut = TRUE)
+    pp$add("add2", \(x = ~add1) x + 2)
     }
 )
-p$run(recursive = TRUE)$collect_out()
+p$run(recursive = TRUE)$collect_out() |> str()
 
 # Run pipeline with progress bar
 p <- Pipeline$new("pipe", data = 1)
@@ -492,7 +492,7 @@ p$run_step("mult", upstream = TRUE)
 ## ------------------------------------------------
 
 p <- Pipeline$new("pipe", data = 1)
-p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+p$add("add1", \(x = ~data, y = 1) x + y)
 p$run()$collect_out()
 p$set_data(3)
 p$run()$collect_out()
@@ -530,27 +530,27 @@ try(p$set_params_at_step("add1", list(foo = 3))) # foo not defined
 ## ------------------------------------------------
 
 p <- Pipeline$new("pipe", data = 15)
-p$add("f1", \(data = ~data, x = 1) data + x, keepOut = TRUE)
+p$add("f1", \(data = ~data, x = 1) data + x)
 p$add("log2", \(x = ~f1) log2(x), group = "prep")
 p$add("sqrt", \(x = ~log2) sqrt(x), group = "prep")
-p$add("final",  \(x = ~sqrt, y = ~f1) x + y, keepOut = TRUE)
-p$run()$collect_out()
+p$add("final",  \(x = ~sqrt, y = ~f1) x + y)
+p$run()$collect_out() |> str()
 
 p$set_params_at_step("f1", list(x = 5))$skip_group("prep")
 p$run()$collect_out()
-p$unskip_group("prep")$run()$collect_out()
+p$unskip_group("prep")$run()$collect_out() |> str()
 
 ## ------------------------------------------------
 ## Method `Pipeline$skip_step`
 ## ------------------------------------------------
 
 p <- Pipeline$new("pipe", data = 1)
-p$add("add1", \(x = 2, data = ~data) x + data, keepOut = TRUE)
-p$add("add2", \(x = 2, data = ~add1) x + data, keepOut = TRUE)
-p$run()$collect_out()
+p$add("add1", \(x = 2, data = ~data) x + data)
+p$add("add2", \(x = 2, data = ~add1) x + data)
+p$run()$collect_out() |> str()
 
 p$skip_step("add1")$set_params(list(x = 3))
-p$run()$collect_out()
+p$run()$collect_out() |> str()
 
 ## ------------------------------------------------
 ## Method `Pipeline$split`
@@ -583,29 +583,29 @@ p$get_params()
 ## ------------------------------------------------
 
 p <- Pipeline$new("pipe", data = 15)
-p$add("f1", \(data = ~data, x = 1) data + x, keepOut = TRUE)
+p$add("f1", \(data = ~data, x = 1) data + x)
 p$add("log2", \(x = ~f1) log2(x), group = "prep")
 p$add("sqrt", \(x = ~log2) sqrt(x), group = "prep")
-p$add("final",  \(x = ~sqrt, y = ~f1) x + y, keepOut = TRUE)
-p$run()$collect_out()
+p$add("final",  \(x = ~sqrt, y = ~f1) x + y)
+p$run()$collect_out() |> str()
 
 p$set_params_at_step("f1", list(x = 5))$skip_group("prep")
-p$run()$collect_out()
-p$unskip_group("prep")$run()$collect_out()
+p$run()$collect_out() |> str()
+p$unskip_group("prep")$run()$collect_out() |> str()
 
 ## ------------------------------------------------
 ## Method `Pipeline$unskip_step`
 ## ------------------------------------------------
 
 p <- Pipeline$new("pipe", data = 1)
-p$add("add1", \(x = 2, data = ~data) x + data, keepOut = TRUE)
-p$add("add2", \(x = 2, data = ~add1) x + data, keepOut = TRUE)
-p$run()$collect_out()
+p$add("add1", \(x = 2, data = ~data) x + data)
+p$add("add2", \(x = 2, data = ~add1) x + data)
+p$run()$collect_out() |> str()
 
 p$skip_step("add1")$set_params(list(x = 3))
-p$run()$collect_out()
+p$run()$collect_out() |> str()
 
-p$unskip_step("add1")$run()$collect_out()
+p$unskip_step("add1")$run()$collect_out() |> str()
 }
 \author{
 Roman Pahl
@@ -736,7 +736,7 @@ Add pipeline step
   params = list(),
   description = "",
   group = step,
-  keepOut = FALSE
+  tags = character(0)
 )}\if{html}{\out{</div>}}
 }
 
@@ -764,11 +764,9 @@ names. By default, this is the name of the step, which comes in
 handy when the pipeline is copy-appended multiple times to keep
 the results of the same function/step grouped at one place.}
 
-\item{\code{keepOut}}{\code{logical} if \code{FALSE} (default) the output of the
-step is not collected when calling \code{collect_out} after the pipeline
-run. This option is used to only keep the results that matter
-and skip intermediate results that are not needed. See also
-function \code{collect_out} for more details.}
+\item{\code{tags}}{\code{character} Optional tags associated with the step.
+Tags can be used later to select certain parts of a pipeline,
+for example, to collect output from or skip steps of a certain tag.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1835,7 +1833,7 @@ Replaces an existing pipeline step.
   params = list(),
   description = "",
   group = step,
-  keepOut = FALSE
+  tags = character(0)
 )}\if{html}{\out{</div>}}
 }
 
@@ -1860,9 +1858,9 @@ for example, comes in handy when the pipeline is copy-appended
 multiple times to keep the results of the same function/step at one
 place.}
 
-\item{\code{keepOut}}{\code{logical} if \code{FALSE} the output of the function will
-be cleaned at the end of the whole pipeline execution. This option
-is used to only keep the results that matter.}
+\item{\code{tags}}{\code{character} Optional tags associated with the step.
+Tags can be used later to select certain parts of a pipeline,
+for example, to collect output from or skip steps of a certain tag.}
 }
 \if{html}{\out{</div>}}
 }
@@ -1874,9 +1872,9 @@ the \code{Pipeline} object invisibly
 \preformatted{p <- Pipeline$new("pipe", data = 1)
 p$add("add1", \(x = ~data, y = 1) x + y)
 p$add("add2", \(x = ~data, y = 2) x + y)
-p$add("mult", \(x = 1, y = 2) x * y, keepOut = TRUE)
+p$add("mult", \(x = 1, y = 2) x * y)
 p$run()$collect_out()
-p$replace_step("mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+p$replace_step("mult", \(x = ~add1, y = ~add2) x * y)
 p$run()$collect_out()
 try(p$replace_step("foo", \(x = 1) x))   # step 'foo' does not exist
 }
@@ -1953,11 +1951,11 @@ returns the \code{Pipeline} object invisibly
 p <- Pipeline$new("pipe", data = 1)
 p$add("add1", \(x = ~data, y = 1) x + y)
 p$add("add2", \(x = ~add1, z = 2) x + z)
-p$add("final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+p$add("final", \(x = ~add1, y = ~add2) x * y)
 p$run()$collect_out()
 p$set_params(list(z = 4))  # outdates steps add2 and final
 p
-p$run()$collect_out()
+p$run()$collect_out() |> str()
 p
 
 # Recursive pipeline
@@ -1966,10 +1964,10 @@ p$add("add1", \(x = ~data, y = 1) x + y)
 p$add("new_pipe", \(x = ~add1) {
     pp <- Pipeline$new("new_pipe", data = x)
     pp$add("add1", \(x = ~data) x + 1)
-    pp$add("add2", \(x = ~add1) x + 2, keepOut = TRUE)
+    pp$add("add2", \(x = ~add1) x + 2)
     }
 )
-p$run(recursive = TRUE)$collect_out()
+p$run(recursive = TRUE)$collect_out() |> str()
 
 # Run pipeline with progress bar
 p <- Pipeline$new("pipe", data = 1)
@@ -2032,7 +2030,7 @@ p$run_step("mult", upstream = TRUE)
 \if{html}{\out{<a id="method-Pipeline-set_data"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-set_data}{}}}
 \subsection{Method \code{set_data()}}{
-Set data in first step of pipeline.
+Convenience function to set data in first step of pipeline.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_data(data)}\if{html}{\out{</div>}}
 }
@@ -2050,7 +2048,7 @@ returns the \code{Pipeline} object invisibly
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{p <- Pipeline$new("pipe", data = 1)
-p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+p$add("add1", \(x = ~data, y = 1) x + y)
 p$run()$collect_out()
 p$set_data(3)
 p$run()$collect_out()
@@ -2168,15 +2166,15 @@ the \code{Pipeline} object invisibly
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{p <- Pipeline$new("pipe", data = 15)
-p$add("f1", \(data = ~data, x = 1) data + x, keepOut = TRUE)
+p$add("f1", \(data = ~data, x = 1) data + x)
 p$add("log2", \(x = ~f1) log2(x), group = "prep")
 p$add("sqrt", \(x = ~log2) sqrt(x), group = "prep")
-p$add("final",  \(x = ~sqrt, y = ~f1) x + y, keepOut = TRUE)
-p$run()$collect_out()
+p$add("final",  \(x = ~sqrt, y = ~f1) x + y)
+p$run()$collect_out() |> str()
 
 p$set_params_at_step("f1", list(x = 5))$skip_group("prep")
 p$run()$collect_out()
-p$unskip_group("prep")$run()$collect_out()
+p$unskip_group("prep")$run()$collect_out() |> str()
 }
 \if{html}{\out{</div>}}
 
@@ -2211,12 +2209,12 @@ the \code{Pipeline} object invisibly
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{p <- Pipeline$new("pipe", data = 1)
-p$add("add1", \(x = 2, data = ~data) x + data, keepOut = TRUE)
-p$add("add2", \(x = 2, data = ~add1) x + data, keepOut = TRUE)
-p$run()$collect_out()
+p$add("add1", \(x = 2, data = ~data) x + data)
+p$add("add2", \(x = 2, data = ~add1) x + data)
+p$run()$collect_out() |> str()
 
 p$skip_step("add1")$set_params(list(x = 3))
-p$run()$collect_out()
+p$run()$collect_out() |> str()
 }
 \if{html}{\out{</div>}}
 
@@ -2311,15 +2309,15 @@ the \code{Pipeline} object invisibly
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{p <- Pipeline$new("pipe", data = 15)
-p$add("f1", \(data = ~data, x = 1) data + x, keepOut = TRUE)
+p$add("f1", \(data = ~data, x = 1) data + x)
 p$add("log2", \(x = ~f1) log2(x), group = "prep")
 p$add("sqrt", \(x = ~log2) sqrt(x), group = "prep")
-p$add("final",  \(x = ~sqrt, y = ~f1) x + y, keepOut = TRUE)
-p$run()$collect_out()
+p$add("final",  \(x = ~sqrt, y = ~f1) x + y)
+p$run()$collect_out() |> str()
 
 p$set_params_at_step("f1", list(x = 5))$skip_group("prep")
-p$run()$collect_out()
-p$unskip_group("prep")$run()$collect_out()
+p$run()$collect_out() |> str()
+p$unskip_group("prep")$run()$collect_out() |> str()
 }
 \if{html}{\out{</div>}}
 
@@ -2349,14 +2347,14 @@ the \code{Pipeline} object invisibly
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{p <- Pipeline$new("pipe", data = 1)
-p$add("add1", \(x = 2, data = ~data) x + data, keepOut = TRUE)
-p$add("add2", \(x = 2, data = ~add1) x + data, keepOut = TRUE)
-p$run()$collect_out()
+p$add("add1", \(x = 2, data = ~data) x + data)
+p$add("add2", \(x = 2, data = ~add1) x + data)
+p$run()$collect_out() |> str()
 
 p$skip_step("add1")$set_params(list(x = 3))
-p$run()$collect_out()
+p$run()$collect_out() |> str()
 
-p$unskip_step("add1")$run()$collect_out()
+p$unskip_step("add1")$run()$collect_out() |> str()
 }
 \if{html}{\out{</div>}}
 

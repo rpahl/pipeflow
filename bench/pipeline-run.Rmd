@@ -41,7 +41,7 @@ create_linear_pipeline <- function(n = 100) {
     sapply(seq_len(n), function(i) {
         pip$add(step = as.character(i), function(data = ~-1) data + 1)
     })
-    pip$add("output", function(data = ~-1) data, keepOut = TRUE)
+    pip$add("output", function(data = ~-1) data)
     pip
 }
 ```

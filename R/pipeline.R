@@ -88,7 +88,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             self$name <- name
             self$pipeline <- private$._empty_pipeline()
 
-            self$add("data", function() data, keepOut = FALSE)
+            self$add("data", function() data)
 
             private$.reindex()
 
@@ -113,11 +113,10 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' names. By default, this is the name of the step, which comes in
         #' handy when the pipeline is copy-appended multiple times to keep
         #' the results of the same function/step grouped at one place.
-        #' @param keepOut `logical` if `FALSE` (default) the output of the
-        #' step is not collected when calling `collect_out` after the pipeline
-        #' run. This option is used to only keep the results that matter
-        #' and skip intermediate results that are not needed. See also
-        #' function `collect_out` for more details.
+        #' @param tags `character` Optional tags associated with the step.
+        #' Tags can be used later to select certain parts of a pipeline,
+        #' for example, to collect output from or skip steps of a certain tag.
+        #'
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' # Add steps with lambda functions
@@ -151,7 +150,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             params = list(),
             description = "",
             group = step,
-            keepOut = FALSE
+            tags = character(0)
         ) {
             private$.verify_step_does_not_exist(step)
             stopifnot(
@@ -159,7 +158,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 is.list(params),
                 is_string(description),
                 is_string(group) && nzchar(group),
-                is.logical(keepOut)
+                is.character(tags)
             )
 
             if (is.function(fun)) {
@@ -188,7 +187,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                         params = list(params),
                         depends = list(deps),
                         out = list(NULL),
-                        keepOut = keepOut,
+                        tags = list(tags),
                         group = group,
                         description = description,
                         time = Sys.time(),
@@ -296,8 +295,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 combinedPipe$replace_step(
                     step = firstStep2,
                     fun = function(data = ~-1) data,
-                    description = "output of last step of first pipeline",
-                    keepOut = p2$pipeline[["keepOut"]][[1]]
+                    description = "output of last step of first pipeline"
                 )
             }
 
@@ -383,9 +381,9 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             groupBy <- match.arg(groupBy)
             hasField <- groupBy %in% colnames(self$pipeline)
 
-            keepOut <- !self$pipeline[["skip"]]
+            doCollect <- !self$pipeline[["skip"]]
 
-            if (!any(keepOut)) {
+            if (!any(doCollect)) {
                 return(list())
             }
 
@@ -395,7 +393,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 results
             }
 
-            pipeOut <- self$pipeline[keepOut, ]
+            pipeOut <- self$pipeline[doCollect, ]
             result <- list()
 
             groupLabels <- pipeOut[[groupBy]]
@@ -1001,7 +999,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 print(self$pipeline)
             } else {
                 columns2print <- c(
-                    "step", "depends", "out", "keepOut", "group", "state"
+                    "step", "depends", "out", "group", "state"
                 )
                 print(self$pipeline[, columns2print, with = FALSE])
             }
@@ -1112,17 +1110,18 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' for example, comes in handy when the pipeline is copy-appended
         #' multiple times to keep the results of the same function/step at one
         #' place.
-        #' @param keepOut `logical` if `FALSE` the output of the function will
-        #' be cleaned at the end of the whole pipeline execution. This option
-        #' is used to only keep the results that matter.
+        #' @param tags `character` Optional tags associated with the step.
+        #' Tags can be used later to select certain parts of a pipeline,
+        #' for example, to collect output from or skip steps of a certain tag.
+        #'
         #' @return the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
         #' p$add("add1", \(x = ~data, y = 1) x + y)
         #' p$add("add2", \(x = ~data, y = 2) x + y)
-        #' p$add("mult", \(x = 1, y = 2) x * y, keepOut = TRUE)
+        #' p$add("mult", \(x = 1, y = 2) x * y)
         #' p$run()$collect_out()
-        #' p$replace_step("mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+        #' p$replace_step("mult", \(x = ~add1, y = ~add2) x * y)
         #' p$run()$collect_out()
         #' try(p$replace_step("foo", \(x = 1) x))   # step 'foo' does not exist
         replace_step = function(
@@ -1131,7 +1130,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             params = list(),
             description = "",
             group = step,
-            keepOut = FALSE
+            tags = character(0)
         ) {
             private$.verify_step_exists(step)
             stopifnot(
@@ -1139,7 +1138,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 is.list(params),
                 is_string(description),
                 is_string(group) && nzchar(group),
-                is.logical(keepOut)
+                is.character(tags)
             )
 
             if (is.function(fun)) {
@@ -1176,7 +1175,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 params = list(params),
                 depends = list(deps),
                 out = list(NULL),
-                keepOut = keepOut,
+                tags = list(tags),
                 group = group,
                 description = description,
                 time = Sys.time(),
@@ -1229,11 +1228,11 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' p <- Pipeline$new("pipe", data = 1)
         #' p$add("add1", \(x = ~data, y = 1) x + y)
         #' p$add("add2", \(x = ~add1, z = 2) x + z)
-        #' p$add("final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+        #' p$add("final", \(x = ~add1, y = ~add2) x * y)
         #' p$run()$collect_out()
         #' p$set_params(list(z = 4))  # outdates steps add2 and final
         #' p
-        #' p$run()$collect_out()
+        #' p$run()$collect_out() |> str()
         #' p
         #'
         #' # Recursive pipeline
@@ -1242,10 +1241,10 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' p$add("new_pipe", \(x = ~add1) {
         #'     pp <- Pipeline$new("new_pipe", data = x)
         #'     pp$add("add1", \(x = ~data) x + 1)
-        #'     pp$add("add2", \(x = ~add1) x + 2, keepOut = TRUE)
+        #'     pp$add("add2", \(x = ~add1) x + 2)
         #'     }
         #' )
-        #' p$run(recursive = TRUE)$collect_out()
+        #' p$run(recursive = TRUE)$collect_out() |> str()
         #'
         #' # Run pipeline with progress bar
         #' p <- Pipeline$new("pipe", data = 1)
@@ -1402,23 +1401,20 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             invisible(self)
         },
 
-        #' @description Set data in first step of pipeline.
+        #' @description
+        #' Convenience function to set data in first step of pipeline.
         #' @param data initial data set
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
-        #' p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+        #' p$add("add1", \(x = ~data, y = 1) x + y)
         #' p$run()$collect_out()
         #' p$set_data(3)
         #' p$run()$collect_out()
         set_data = function(data)
         {
             step <- self$get_step_names()[1]
-            self$replace_step(
-                step = step,
-                fun = function() data,
-                keepOut = FALSE
-            )
+            self$replace_step(step = step, fun = function() data)
         },
 
 
@@ -1544,15 +1540,15 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' @return the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 15)
-        #' p$add("f1", \(data = ~data, x = 1) data + x, keepOut = TRUE)
+        #' p$add("f1", \(data = ~data, x = 1) data + x)
         #' p$add("log2", \(x = ~f1) log2(x), group = "prep")
         #' p$add("sqrt", \(x = ~log2) sqrt(x), group = "prep")
-        #' p$add("final",  \(x = ~sqrt, y = ~f1) x + y, keepOut = TRUE)
-        #' p$run()$collect_out()
+        #' p$add("final",  \(x = ~sqrt, y = ~f1) x + y)
+        #' p$run()$collect_out() |> str()
         #'
         #' p$set_params_at_step("f1", list(x = 5))$skip_group("prep")
         #' p$run()$collect_out()
-        #' p$unskip_group("prep")$run()$collect_out()
+        #' p$unskip_group("prep")$run()$collect_out() |> str()
         skip_group = function(group) {
             steps <- private$.get_steps_in_group(group)
             lapply(steps, \(step) self$skip_step(step))
@@ -1570,12 +1566,12 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' @return the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
-        #' p$add("add1", \(x = 2, data = ~data) x + data, keepOut = TRUE)
-        #' p$add("add2", \(x = 2, data = ~add1) x + data, keepOut = TRUE)
-        #' p$run()$collect_out()
+        #' p$add("add1", \(x = 2, data = ~data) x + data)
+        #' p$add("add2", \(x = 2, data = ~add1) x + data)
+        #' p$run()$collect_out() |> str()
         #'
         #' p$skip_step("add1")$set_params(list(x = 3))
-        #' p$run()$collect_out()
+        #' p$run()$collect_out() |> str()
         skip_step = function(step) {
             isSkipped <- self$get_step_field(step, "skip")
             if (isSkipped) {
@@ -1645,15 +1641,15 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' @return the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 15)
-        #' p$add("f1", \(data = ~data, x = 1) data + x, keepOut = TRUE)
+        #' p$add("f1", \(data = ~data, x = 1) data + x)
         #' p$add("log2", \(x = ~f1) log2(x), group = "prep")
         #' p$add("sqrt", \(x = ~log2) sqrt(x), group = "prep")
-        #' p$add("final",  \(x = ~sqrt, y = ~f1) x + y, keepOut = TRUE)
-        #' p$run()$collect_out()
+        #' p$add("final",  \(x = ~sqrt, y = ~f1) x + y)
+        #' p$run()$collect_out() |> str()
         #'
         #' p$set_params_at_step("f1", list(x = 5))$skip_group("prep")
-        #' p$run()$collect_out()
-        #' p$unskip_group("prep")$run()$collect_out()
+        #' p$run()$collect_out() |> str()
+        #' p$unskip_group("prep")$run()$collect_out() |> str()
         unskip_group = function(group) {
             steps <- private$.get_steps_in_group(group)
             lapply(steps, \(step) self$unskip_step(step))
@@ -1666,14 +1662,14 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' @return the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
-        #' p$add("add1", \(x = 2, data = ~data) x + data, keepOut = TRUE)
-        #' p$add("add2", \(x = 2, data = ~add1) x + data, keepOut = TRUE)
-        #' p$run()$collect_out()
+        #' p$add("add1", \(x = 2, data = ~data) x + data)
+        #' p$add("add2", \(x = 2, data = ~add1) x + data)
+        #' p$run()$collect_out() |> str()
         #'
         #' p$skip_step("add1")$set_params(list(x = 3))
-        #' p$run()$collect_out()
+        #' p$run()$collect_out() |> str()
         #'
-        #' p$unskip_step("add1")$run()$collect_out()
+        #' p$unskip_step("add1")$run()$collect_out() |> str()
         unskip_step = function(step) {
             wasSkipped <- self$get_step(step)[["skip"]]
             private$.set_at_step(step, "skip", FALSE)
@@ -1704,7 +1700,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 params = list(),
                 depends = list(),
                 out = list(),
-                keepOut = logical(0),
+                tags = list(),
                 group = character(0),
                 description = character(0),
                 time = as.POSIXct(character(0)),
@@ -1786,7 +1782,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             if (any(areDataNodes)) {
                 nodes[areDataNodes, "shape"] <- "database"
             }
-            nodes[["shape"]][pip[["keepOut"]]] <- "circle"
 
             if (!is.null(groups)) {
                 stopifnot(

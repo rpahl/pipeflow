@@ -19,7 +19,7 @@ Set data in first step of pipeline.
 }
 \examples{
 p <- pipe_new("pipe", data = 1)
-pipe_add(p, "add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 p |> pipe_run() |> pipe_collect_out()
 
 pipe_set_data(p, 3)
