@@ -5,7 +5,6 @@
 \alias{pipe_get_step_names}
 \alias{pipe_get_step_number}
 \alias{pipe_has_step}
-\alias{pipe_has_step_locked}
 \title{Get step information}
 \usage{
 pipe_get_step(pip, step)
@@ -15,8 +14,6 @@ pipe_get_step_names(pip)
 pipe_get_step_number(pip, step)
 
 pipe_has_step(pip, step)
-
-pipe_has_step_locked(pip, step)
 }
 \arguments{
 \item{pip}{\code{Pipeline} object}
@@ -29,7 +26,6 @@ pipe_has_step_locked(pip, step)
 \item \code{pipe_get_step_names}: \code{character} vector of step names
 \item \code{pipe_get_step_number}: the step number in the pipeline
 \item \code{pipe_has_step}: whether step exists
-\item \code{pipe_has_step_locked}: whether step is locked
 }
 }
 \description{
@@ -51,11 +47,6 @@ pipe_get_step_number(p, "add2")
 # pipe_has_step
 pipe_has_step(p, "add1")
 pipe_has_step(p, "foo")
-
-# pipe_has_step_locked
-pipe_has_step_locked(p, "add1")
-pipe_lock_step(p, "add1")
-pipe_has_step_locked(p, "add1")
 
 # pipe_get_step
 add1 <- pipe_get_step(p, "add1")

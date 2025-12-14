@@ -2,37 +2,35 @@
 % Please edit documentation in R/aliases.R
 \name{pipe_collect_out}
 \alias{pipe_collect_out}
-\title{Collect output from entire pipeline}
+\title{Collect structured output from entire pipeline}
 \usage{
-pipe_collect_out(pip, groupBy = "group", all = FALSE)
+pipe_collect_out(pip, groupBy = c("group", "state"))
 }
 \arguments{
 \item{pip}{\code{Pipeline} object}
 
-\item{groupBy}{\code{string} column of pipeline by which to group the
+\item{groupBy}{\code{string} field of pipeline by which to group the
 output.}
-
-\item{all}{\code{logical} if \code{TRUE} all output is collected
-regardless of the \code{keepOut} flag. This can be useful for debugging.}
 }
 \value{
 \code{list} containing the output, named after the groups, which,
 by default, are the steps.
 }
 \description{
-Collects output afer pipeline run, by default, from all
-steps for which \code{keepOut} was set to \code{TRUE} when steps were added
-(see \code{\link[=pipe_add]{pipe_add()}}). The output is grouped by the group names (see
-\code{group} parameter in \code{\link[=pipe_add]{pipe_add()}}),
-which by default are set identical to the step names.
+Collect outputs produced by the pipeline run.
+Only steps that were not skipped contribute results.
+The output is grouped by the user-defined group names
+(see \code{group} parameter in function \code{\link[=pipe_add]{pipe_add()}}), which by default
+are identical to the step names, that is, trivial groups of
+size 1. Use \code{groupBy = "state"} to group results by the step's
+state instead.
 }
 \examples{
 p <- pipe_new("pipe", data = 1:2)
 pipe_add(p, "step1", \(x = ~data) x + 2)
-pipe_add(p, "step2", \(x = ~step1) x + 2, keepOut = TRUE)
+pipe_add(p, "step2", \(x = ~step1) x + 2)
 pipe_run(p)
 pipe_collect_out(p)
-pipe_collect_out(p, all = TRUE) |> str()
 
 # Grouped output
 p <- pipe_new("pipe", data = 1:2)
@@ -43,11 +41,11 @@ pipe_add(p, "step4", \(x = ~data, y = 2) x * y, group = "mult")
 p
 
 pipe_run(p)
-pipe_collect_out(p, all = TRUE) |> str()
+pipe_collect_out(p) |> str()
 
 # Grouped by state
 pipe_set_params(p, list(y = 5))
 p
 
-pipe_collect_out(p, groupBy = "state", all = TRUE) |> str()
+pipe_collect_out(p, groupBy = "state") |> str()
 }

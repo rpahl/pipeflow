@@ -58,7 +58,7 @@ p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
 p$add("prep_x", \(data = ~data) data$x, group = "prep")
 p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
 p$add("sum", \(x = ~prep_x, y = ~prep_y) x + y)
-p$run()$collect_out(all = TRUE)
+p$run()$collect_out()
 
 ## ------------------------------------------------
 ## Method `Pipeline$append`
@@ -107,10 +107,9 @@ p
 
 p <- Pipeline$new("pipe", data = 1:2)
 p$add("step1", \(x = ~data) x + 2)
-p$add("step2", \(x = ~step1) x + 2, keepOut = TRUE)
+p$add("step2", \(x = ~step1) x + 2)
 p$run()
 p$collect_out()
-p$collect_out(all = TRUE) |> str()
 
 # Grouped output
 p <- Pipeline$new("pipe", data = 1:2)
@@ -119,13 +118,12 @@ p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
 p$add("step3", \(x = ~data) x * 3, group = "mult")
 p$add("step4", \(x = ~data, y = 2) x * y, group = "mult")
 p
-p$run()
-p$collect_out(all = TRUE) |> str()
+p$run()$collect_out() |> str()
 
 # Grouped by state
 p$set_params(list(y = 5))
 p
-p$collect_out(groupBy = "state", all = TRUE) |> str()
+p$collect_out(groupBy = "state") |> str()
 
 ## ------------------------------------------------
 ## Method `Pipeline$discard_steps`
@@ -301,16 +299,6 @@ p$has_step("f2")
 p$has_step("foo")
 
 ## ------------------------------------------------
-## Method `Pipeline$has_step_locked`
-## ------------------------------------------------
-
-p <- Pipeline$new("pipe", data = 1:2)
-p$add("f1", \(x = 1) x)$lock_step("f1")
-p$add("f2", \(y = 1) y)
-p$has_step_locked("f1")  # TRUE
-p$has_step_locked("f2")  # FALSE
-
-## ------------------------------------------------
 ## Method `Pipeline$insert_after`
 ## ------------------------------------------------
 
@@ -463,7 +451,6 @@ p$run()$collect_out()
 p$set_params(list(z = 4))  # outdates steps add2 and final
 p
 p$run()$collect_out()
-p$run(cleanUnkept = TRUE)  # clean up temporary results
 p
 
 # Recursive pipeline
@@ -511,54 +498,6 @@ p$set_data(3)
 p$run()$collect_out()
 
 ## ------------------------------------------------
-## Method `Pipeline$set_data_split`
-## ------------------------------------------------
-
-# Split by three data sets
-dataList <- list(a = 1, b = 2, c = 3)
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
-p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-p$set_data_split(dataList)
-p
-p$run()$collect_out() |> str()
-
-# Don't group output by split
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
-p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-p$set_data_split(dataList, groupBySplit = FALSE)
-p
-p$run()$collect_out() |> str()
-
-# Split up to certain step
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1)
-p$add("mult", \(x = ~data, y = ~add1) x * y)
-p$add("average_result", \(x = ~mult) mean(unlist(x)), keepOut = TRUE)
-p
-p$get_depends()[["average_result"]]
-
-p$set_data_split(dataList, toStep = "mult")
-p
-p$get_depends()[["average_result"]]
-
-p$run()$collect_out()
-
-## ------------------------------------------------
-## Method `Pipeline$set_keep_out`
-## ------------------------------------------------
-
-p <- Pipeline$new("pipe", data = 1)
-p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
-p$add("add2", \(x = ~data, y = 2) x + y)
-p$add("mult", \(x = ~add1, y = ~add2) x * y)
-p$run()$collect_out()
-p$set_keep_out("add1", keepOut = FALSE)
-p$set_keep_out("mult", keepOut = TRUE)
-p$collect_out()
-
-## ------------------------------------------------
 ## Method `Pipeline$set_params`
 ## ------------------------------------------------
 
@@ -587,6 +526,33 @@ p$get_params()
 try(p$set_params_at_step("add1", list(foo = 3))) # foo not defined
 
 ## ------------------------------------------------
+## Method `Pipeline$skip_group`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 15)
+p$add("f1", \(data = ~data, x = 1) data + x, keepOut = TRUE)
+p$add("log2", \(x = ~f1) log2(x), group = "prep")
+p$add("sqrt", \(x = ~log2) sqrt(x), group = "prep")
+p$add("final",  \(x = ~sqrt, y = ~f1) x + y, keepOut = TRUE)
+p$run()$collect_out()
+
+p$set_params_at_step("f1", list(x = 5))$skip_group("prep")
+p$run()$collect_out()
+p$unskip_group("prep")$run()$collect_out()
+
+## ------------------------------------------------
+## Method `Pipeline$skip_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = 2, data = ~data) x + data, keepOut = TRUE)
+p$add("add2", \(x = 2, data = ~add1) x + data, keepOut = TRUE)
+p$run()$collect_out()
+
+p$skip_step("add1")$set_params(list(x = 3))
+p$run()$collect_out()
+
+## ------------------------------------------------
 ## Method `Pipeline$split`
 ## ------------------------------------------------
 
@@ -597,14 +563,6 @@ p$add("f2", \(x = 1) x)
 p$add("f3", \(x = ~f1) x)
 p$add("f4", \(x = ~f2) x)
 p$split()
-
-# Example of split by three data sets
-dataList <- list(a = 1, b = 2, c = 3)
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
-p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-pipes <- p$set_data_split(dataList)$split()
-pipes
 
 ## ------------------------------------------------
 ## Method `Pipeline$unlock_step`
@@ -619,6 +577,35 @@ p$get_params()
 p$unlock_step("add1")
 p$set_params(list(x = 3))
 p$get_params()
+
+## ------------------------------------------------
+## Method `Pipeline$unskip_group`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 15)
+p$add("f1", \(data = ~data, x = 1) data + x, keepOut = TRUE)
+p$add("log2", \(x = ~f1) log2(x), group = "prep")
+p$add("sqrt", \(x = ~log2) sqrt(x), group = "prep")
+p$add("final",  \(x = ~sqrt, y = ~f1) x + y, keepOut = TRUE)
+p$run()$collect_out()
+
+p$set_params_at_step("f1", list(x = 5))$skip_group("prep")
+p$run()$collect_out()
+p$unskip_group("prep")$run()$collect_out()
+
+## ------------------------------------------------
+## Method `Pipeline$unskip_step`
+## ------------------------------------------------
+
+p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = 2, data = ~data) x + data, keepOut = TRUE)
+p$add("add2", \(x = 2, data = ~add1) x + data, keepOut = TRUE)
+p$run()$collect_out()
+
+p$skip_step("add1")$set_params(list(x = 3))
+p$run()$collect_out()
+
+p$unskip_step("add1")$run()$collect_out()
 }
 \author{
 Roman Pahl
@@ -651,10 +638,10 @@ Roman Pahl
 \item \href{#method-Pipeline-get_params_at_step}{\code{Pipeline$get_params_at_step()}}
 \item \href{#method-Pipeline-get_params_unique}{\code{Pipeline$get_params_unique()}}
 \item \href{#method-Pipeline-get_step}{\code{Pipeline$get_step()}}
+\item \href{#method-Pipeline-get_step_field}{\code{Pipeline$get_step_field()}}
 \item \href{#method-Pipeline-get_step_names}{\code{Pipeline$get_step_names()}}
 \item \href{#method-Pipeline-get_step_number}{\code{Pipeline$get_step_number()}}
 \item \href{#method-Pipeline-has_step}{\code{Pipeline$has_step()}}
-\item \href{#method-Pipeline-has_step_locked}{\code{Pipeline$has_step_locked()}}
 \item \href{#method-Pipeline-insert_after}{\code{Pipeline$insert_after()}}
 \item \href{#method-Pipeline-insert_before}{\code{Pipeline$insert_before()}}
 \item \href{#method-Pipeline-length}{\code{Pipeline$length()}}
@@ -670,12 +657,14 @@ Roman Pahl
 \item \href{#method-Pipeline-run}{\code{Pipeline$run()}}
 \item \href{#method-Pipeline-run_step}{\code{Pipeline$run_step()}}
 \item \href{#method-Pipeline-set_data}{\code{Pipeline$set_data()}}
-\item \href{#method-Pipeline-set_data_split}{\code{Pipeline$set_data_split()}}
-\item \href{#method-Pipeline-set_keep_out}{\code{Pipeline$set_keep_out()}}
 \item \href{#method-Pipeline-set_params}{\code{Pipeline$set_params()}}
 \item \href{#method-Pipeline-set_params_at_step}{\code{Pipeline$set_params_at_step()}}
+\item \href{#method-Pipeline-skip_group}{\code{Pipeline$skip_group()}}
+\item \href{#method-Pipeline-skip_step}{\code{Pipeline$skip_step()}}
 \item \href{#method-Pipeline-split}{\code{Pipeline$split()}}
 \item \href{#method-Pipeline-unlock_step}{\code{Pipeline$unlock_step()}}
+\item \href{#method-Pipeline-unskip_group}{\code{Pipeline$unskip_group()}}
+\item \href{#method-Pipeline-unskip_step}{\code{Pipeline$unskip_step()}}
 \item \href{#method-Pipeline-clone}{\code{Pipeline$clone()}}
 }
 }
@@ -812,7 +801,7 @@ p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
 p$add("prep_x", \(data = ~data) data$x, group = "prep")
 p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
 p$add("sum", \(x = ~prep_x, y = ~prep_y) x + y)
-p$run()$collect_out(all = TRUE)
+p$run()$collect_out()
 }
 \if{html}{\out{</div>}}
 
@@ -924,22 +913,22 @@ p
 \if{html}{\out{<a id="method-Pipeline-collect_out"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-collect_out}{}}}
 \subsection{Method \code{collect_out()}}{
-Collect output afer pipeline run, by default, from all
-steps for which \code{keepOut} was set to \code{TRUE}. The output is grouped
-by the group names (see \code{group} parameter in function \code{add}),
-which by default are set identical to the step names.
+Collect outputs produced by the pipeline run.
+Only steps that were not skipped contribute results.
+The output is grouped by the user-defined group names
+(see \code{group} parameter in function \code{add()}), which by default
+are identical to the step names, that is, trivial groups of
+size 1. Use \code{groupBy = "state"} to group results by the step's
+state instead.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$collect_out(groupBy = "group", all = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$collect_out(groupBy = c("group", "state"))}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{groupBy}}{\code{string} column of pipeline by which to group the
+\item{\code{groupBy}}{\code{string} field of pipeline by which to group the
 output.}
-
-\item{\code{all}}{\code{logical} if \code{TRUE} all output is collected
-regardless of the \code{keepOut} flag. This can be useful for debugging.}
 }
 \if{html}{\out{</div>}}
 }
@@ -951,10 +940,9 @@ by default, are the steps.
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{p <- Pipeline$new("pipe", data = 1:2)
 p$add("step1", \(x = ~data) x + 2)
-p$add("step2", \(x = ~step1) x + 2, keepOut = TRUE)
+p$add("step2", \(x = ~step1) x + 2)
 p$run()
 p$collect_out()
-p$collect_out(all = TRUE) |> str()
 
 # Grouped output
 p <- Pipeline$new("pipe", data = 1:2)
@@ -963,13 +951,12 @@ p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
 p$add("step3", \(x = ~data) x * 3, group = "mult")
 p$add("step4", \(x = ~data, y = 2) x * y, group = "mult")
 p
-p$run()
-p$collect_out(all = TRUE) |> str()
+p$run()$collect_out() |> str()
 
 # Grouped by state
 p$set_params(list(y = 5))
 p
-p$collect_out(groupBy = "state", all = TRUE) |> str()
+p$collect_out(groupBy = "state") |> str()
 }
 \if{html}{\out{</div>}}
 
@@ -1386,6 +1373,28 @@ try(p$get_step("foo")) # error: step 'foo' does not exist
 
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-get_step_field"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-get_step_field}{}}}
+\subsection{Method \code{get_step_field()}}{
+Get a specific field/entry of a step
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$get_step_field(step, what)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{\code{string} name of step}
+
+\item{\code{what}}{\code{string} name of the pipeline column to return}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the requested entry at the given step
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-get_step_names"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-get_step_names}{}}}
 \subsection{Method \code{get_step_names()}}{
@@ -1466,38 +1475,6 @@ p$add("f1", \(x = 1) x)
 p$add("f2", \(y = 1) y)
 p$has_step("f2")
 p$has_step("foo")
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-has_step_locked"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-has_step_locked}{}}}
-\subsection{Method \code{has_step_locked()}}{
-Check if given step is locked
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$has_step_locked(step)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{step}}{\code{string} name of step}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-\code{logical} whether step is locked
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{p <- Pipeline$new("pipe", data = 1:2)
-p$add("f1", \(x = 1) x)$lock_step("f1")
-p$add("f2", \(y = 1) y)
-p$has_step_locked("f1")  # TRUE
-p$has_step_locked("f2")  # FALSE
 }
 \if{html}{\out{</div>}}
 
@@ -1943,13 +1920,7 @@ p
 \subsection{Method \code{run()}}{
 Run all new and/or outdated pipeline steps.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run(
-  force = FALSE,
-  recursive = TRUE,
-  cleanUnkept = FALSE,
-  progress = NULL,
-  showLog = TRUE
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run(force = FALSE, recursive = TRUE, progress = NULL, showLog = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -1961,10 +1932,6 @@ whether they are outdated or not.}
 \item{\code{recursive}}{\code{logical} if \code{TRUE} and a step returns a new
 pipeline, the run of the current pipeline is aborted and the
 new pipeline is run recursively.}
-
-\item{\code{cleanUnkept}}{\code{logical} if \code{TRUE} all output that was not
-marked to be kept is removed after the pipeline run. This option
-can be useful if temporary results require a lot of memory.}
 
 \item{\code{progress}}{\code{function} this parameter can be used to provide a
 custom progress function of the form \verb{function(value, detail)},
@@ -1991,7 +1958,6 @@ p$run()$collect_out()
 p$set_params(list(z = 4))  # outdates steps add2 and final
 p
 p$run()$collect_out()
-p$run(cleanUnkept = TRUE)  # clean up temporary results
 p
 
 # Recursive pipeline
@@ -2028,12 +1994,7 @@ p$run(progress = fprogress, showLog = FALSE)
 Run given pipeline step possibly together with
 upstream and downstream dependencies.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run_step(
-  step,
-  upstream = TRUE,
-  downstream = FALSE,
-  cleanUnkept = FALSE
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$run_step(step, upstream = TRUE, downstream = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -2046,10 +2007,6 @@ steps first.}
 
 \item{\code{downstream}}{\code{logical} if \code{TRUE}, run all depdendent
 downstream afterwards.}
-
-\item{\code{cleanUnkept}}{\code{logical} if \code{TRUE} all output that was not
-marked to be kept is removed after the pipeline run. This option
-can be useful if temporary results require a lot of memory.}
 }
 \if{html}{\out{</div>}}
 }
@@ -2097,122 +2054,6 @@ p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
 p$run()$collect_out()
 p$set_data(3)
 p$run()$collect_out()
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-set_data_split"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-set_data_split}{}}}
-\subsection{Method \code{set_data_split()}}{
-This function can be used to apply the pipeline
-repeatedly to various data sets. For this, the pipeline split-copies
-itself by the list of given data sets. Each sub-pipeline will have
-one of the data sets set as input data.
-The step names of the sub-pipelines will be the original
-step names plus the name of the data set.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_data_split(
-  dataList,
-  toStep = character(),
-  groupBySplit = TRUE,
-  sep = "."
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{dataList}}{\code{list} of data sets}
-
-\item{\code{toStep}}{\code{string} step name marking optional subset of
-the pipeline, at which the data split should be applied to.}
-
-\item{\code{groupBySplit}}{\code{logical} whether to set step groups according
-to data split.}
-
-\item{\code{sep}}{\code{string} separator to be used between step name and
-data set name when creating the new step names.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-new combined \code{Pipeline} with each sub-pipeline having set
-one of the data sets.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{# Split by three data sets
-dataList <- list(a = 1, b = 2, c = 3)
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
-p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-p$set_data_split(dataList)
-p
-p$run()$collect_out() |> str()
-
-# Don't group output by split
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
-p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-p$set_data_split(dataList, groupBySplit = FALSE)
-p
-p$run()$collect_out() |> str()
-
-# Split up to certain step
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1)
-p$add("mult", \(x = ~data, y = ~add1) x * y)
-p$add("average_result", \(x = ~mult) mean(unlist(x)), keepOut = TRUE)
-p
-p$get_depends()[["average_result"]]
-
-p$set_data_split(dataList, toStep = "mult")
-p
-p$get_depends()[["average_result"]]
-
-p$run()$collect_out()
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-Pipeline-set_keep_out"></a>}}
-\if{latex}{\out{\hypertarget{method-Pipeline-set_keep_out}{}}}
-\subsection{Method \code{set_keep_out()}}{
-Change the \code{keepOut} flag at a given pipeline step,
-which determines whether the output of that step is collected
-when calling \code{collect_out()} after the pipeline was run.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{Pipeline$set_keep_out(step, keepOut = TRUE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{step}}{\code{string} name of step}
-
-\item{\code{keepOut}}{\code{logical} whether to keep output of step}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-the \code{Pipeline} object invisibly
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{p <- Pipeline$new("pipe", data = 1)
-p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
-p$add("add2", \(x = ~data, y = 2) x + y)
-p$add("mult", \(x = ~add1, y = ~add2) x * y)
-p$run()$collect_out()
-p$set_keep_out("add1", keepOut = FALSE)
-p$set_keep_out("mult", keepOut = TRUE)
-p$collect_out()
 }
 \if{html}{\out{</div>}}
 
@@ -2302,6 +2143,87 @@ try(p$set_params_at_step("add1", list(foo = 3))) # foo not defined
 
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-skip_group"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-skip_group}{}}}
+\subsection{Method \code{skip_group()}}{
+Skips all steps that belong to the specified group.
+Works like calling \code{skip_step} on every step in that group. Skipped
+steps are not executed during \code{run()} and their outputs (if any)
+are not considered for \code{collect_out()}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$skip_group(group)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{group}}{\code{string} name of the group whose steps should be
+skipped.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 15)
+p$add("f1", \(data = ~data, x = 1) data + x, keepOut = TRUE)
+p$add("log2", \(x = ~f1) log2(x), group = "prep")
+p$add("sqrt", \(x = ~log2) sqrt(x), group = "prep")
+p$add("final",  \(x = ~sqrt, y = ~f1) x + y, keepOut = TRUE)
+p$run()$collect_out()
+
+p$set_params_at_step("f1", list(x = 5))$skip_group("prep")
+p$run()$collect_out()
+p$unskip_group("prep")$run()$collect_out()
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-skip_step"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-skip_step}{}}}
+\subsection{Method \code{skip_step()}}{
+Skipping a step means that it is skipped during a
+pipeline run and therefore it's output (if existing) remains
+untouched. In addition, it is skipped when collecting output via
+\code{collect_out}, that is, it's output will not be part of the
+collected output list.
+In contrast to \code{lock_step}, skipping a step does not "protect" the
+step against changing the step's parameters.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$skip_step(step)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{\code{string} name of step}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = 2, data = ~data) x + data, keepOut = TRUE)
+p$add("add2", \(x = 2, data = ~add1) x + data, keepOut = TRUE)
+p$run()$collect_out()
+
+p$skip_step("add1")$set_params(list(x = 3))
+p$run()$collect_out()
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-Pipeline-split"></a>}}
 \if{latex}{\out{\hypertarget{method-Pipeline-split}{}}}
 \subsection{Method \code{split()}}{
@@ -2322,14 +2244,6 @@ p$add("f2", \(x = 1) x)
 p$add("f3", \(x = ~f1) x)
 p$add("f4", \(x = ~f2) x)
 p$split()
-
-# Example of split by three data sets
-dataList <- list(a = 1, b = 2, c = 3)
-p <- Pipeline$new("pipe")
-p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
-p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
-pipes <- p$set_data_split(dataList)$split()
-pipes
 }
 \if{html}{\out{</div>}}
 
@@ -2341,7 +2255,7 @@ pipes
 \if{latex}{\out{\hypertarget{method-Pipeline-unlock_step}{}}}
 \subsection{Method \code{unlock_step()}}{
 Unlock previously locked step. If step was not locked,
-the command is ignored.
+the command is ignored and a message is printed hinting at that.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Pipeline$unlock_step(step)}\if{html}{\out{</div>}}
 }
@@ -2367,6 +2281,82 @@ p$get_params()
 p$unlock_step("add1")
 p$set_params(list(x = 3))
 p$get_params()
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-unskip_group"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-unskip_group}{}}}
+\subsection{Method \code{unskip_group()}}{
+Unskips all steps that belong to the specified group.
+Works like calling \code{unskip_step} on every step in that group.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$unskip_group(group)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{group}}{\code{string} name of the group whose steps should be
+unskipped.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 15)
+p$add("f1", \(data = ~data, x = 1) data + x, keepOut = TRUE)
+p$add("log2", \(x = ~f1) log2(x), group = "prep")
+p$add("sqrt", \(x = ~log2) sqrt(x), group = "prep")
+p$add("final",  \(x = ~sqrt, y = ~f1) x + y, keepOut = TRUE)
+p$run()$collect_out()
+
+p$set_params_at_step("f1", list(x = 5))$skip_group("prep")
+p$run()$collect_out()
+p$unskip_group("prep")$run()$collect_out()
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Pipeline-unskip_step"></a>}}
+\if{latex}{\out{\hypertarget{method-Pipeline-unskip_step}{}}}
+\subsection{Method \code{unskip_step()}}{
+Unskip previously skipped step. If step was not skipped,
+the command is ignored, but a warning is given.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Pipeline$unskip_step(step)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{step}}{\code{string} name of step}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+the \code{Pipeline} object invisibly
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{p <- Pipeline$new("pipe", data = 1)
+p$add("add1", \(x = 2, data = ~data) x + data, keepOut = TRUE)
+p$add("add2", \(x = 2, data = ~add1) x + data, keepOut = TRUE)
+p$run()$collect_out()
+
+p$skip_step("add1")$set_params(list(x = 3))
+p$run()$collect_out()
+
+p$unskip_step("add1")$run()$collect_out()
 }
 \if{html}{\out{</div>}}
 

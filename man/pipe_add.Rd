@@ -82,5 +82,5 @@ p <- pipe_new("myPipe", data = data.frame(x = 1:2, y = 3:4))
 pipe_add(p, "prep_x", \(data = ~data) data$x, group = "prep")
 pipe_add(p, "prep_y", \(data = ~data) (data$y)^2, group = "prep")
 pipe_add(p, "sum", \(x = ~prep_x, y = ~prep_y) x + y)
-p |> pipe_run() |> pipe_collect_out(all = TRUE)
+p |> pipe_run() |> pipe_collect_out()
 }

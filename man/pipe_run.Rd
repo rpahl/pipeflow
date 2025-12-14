@@ -4,14 +4,7 @@
 \alias{pipe_run}
 \title{Run pipeline}
 \usage{
-pipe_run(
-  pip,
-  force = FALSE,
-  recursive = TRUE,
-  cleanUnkept = FALSE,
-  progress = NULL,
-  showLog = TRUE
-)
+pipe_run(pip, force = FALSE, recursive = TRUE, progress = NULL, showLog = TRUE)
 }
 \arguments{
 \item{pip}{\code{Pipeline} object}
@@ -22,10 +15,6 @@ whether they are outdated or not.}
 \item{recursive}{\code{logical} if \code{TRUE} and a step returns a new
 pipeline, the run of the current pipeline is aborted and the
 new pipeline is run recursively.}
-
-\item{cleanUnkept}{\code{logical} if \code{TRUE} all output that was not
-marked to be kept is removed after the pipeline run. This option
-can be useful if temporary results require a lot of memory.}
 
 \item{progress}{\code{function} this parameter can be used to provide a
 custom progress function of the form \verb{function(value, detail)},
@@ -53,9 +42,6 @@ pipe_set_params(p, list(z = 4))  # outdates steps add2 and final
 p
 
 p |> pipe_run() |> pipe_collect_out()
-
-pipe_run(p, cleanUnkept = TRUE)
-p
 
 # Recursive pipeline (for advanced users)
 p <- pipe_new("pipe", data = 1)

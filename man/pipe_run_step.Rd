@@ -4,13 +4,7 @@
 \alias{pipe_run_step}
 \title{Run specific step}
 \usage{
-pipe_run_step(
-  pip,
-  step,
-  upstream = TRUE,
-  downstream = FALSE,
-  cleanUnkept = FALSE
-)
+pipe_run_step(pip, step, upstream = TRUE, downstream = FALSE)
 }
 \arguments{
 \item{pip}{\code{Pipeline} object}
@@ -22,10 +16,6 @@ steps first.}
 
 \item{downstream}{\code{logical} if \code{TRUE}, run all depdendent
 downstream afterwards.}
-
-\item{cleanUnkept}{\code{logical} if \code{TRUE} all output that was not
-marked to be kept is removed after the pipeline run. This option
-can be useful if temporary results require a lot of memory.}
 }
 \value{
 returns the \code{Pipeline} object invisibly
