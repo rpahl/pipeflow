@@ -166,13 +166,13 @@ describe("add",
         )
     })
 
-    test_that("keepOut must be logical",
+    test_that("tags must be character vector",
     {
         pip <- Pipeline$new("pipe")
 
         expect_error(
-            pip$add("step1", fun =\() 1, keepOut = 1),
-            "is.logical(keepOut) is not TRUE",
+            pip$add("step1", fun =\() 1, tags = 1),
+            "is.character(tags)",
             fixed = TRUE
         )
     })
@@ -205,12 +205,12 @@ describe("add",
     {
         pip <- Pipeline$new("pipe1")
         pip$add("f1", \(a = 5) a)
-        pip$add("f2", \(x = ~-1) 2*x, keepOut = TRUE)
+        pip$add("f2", \(x = ~-1) 2*x)
 
         out <- pip$run()$collect_out()
         expect_equal(out[["f2"]][[1]], 10)
 
-        pip$add("f3", \(x = ~-1, a = ~-2) x + a, keepOut = TRUE)
+        pip$add("f3", \(x = ~-1, a = ~-2) x + a)
         out <- pip$run()$collect_out()
         expect_equal(out[["f3"]][[1]], 10 + 5)
     })
@@ -233,11 +233,10 @@ describe("add",
         data <- 9
         pip <- Pipeline$new("pipe1", data = data)
 
-        pip$add("f1", \(data = ~data) data, keepOut = TRUE)
+        pip$add("f1", \(data = ~data) data)
         a <- 1
         pip$add("f2", \(a, b) a + b,
-            params = list(a = a, b = ~f1),
-            keepOut = TRUE
+            params = list(a = a, b = ~f1)
         )
 
         expect_equal(unlist(pip$get_step("f1")[["depends"]]), c(data = "data"))
@@ -262,7 +261,7 @@ describe("add",
         pip <- Pipeline$new("pipe", data = v)
 
         params <- list(x = ~data, na.rm = TRUE)
-        pip$add("mean", fun = foo, params = params, keepOut = TRUE)
+        pip$add("mean", fun = foo, params = params)
 
         out <- pip$run()$collect_out()
         expect_equal(out[["mean"]], mean(v, na.rm = TRUE))
@@ -277,7 +276,7 @@ describe("add",
         x <- 1
 
         pip <- Pipeline$new("pipe")$
-            add("f1", \(a) a, params = list(a = x), keepOut = TRUE)
+            add("f1", \(a) a, params = list(a = x))
 
         expect_equal(pip$get_params_at_step("f1")$a, x)
 
@@ -290,7 +289,7 @@ describe("add",
         "function can be passed as a string",
     {
         pip <- Pipeline$new("pipe")$
-            add("f1", fun = "mean", params = list(x = 1:5), keepOut = TRUE)
+            add("f1", fun = "mean", params = list(x = 1:5))
 
         out <- pip$run()$collect_out()
         expect_equal(out[["f1"]], mean(1:5))
@@ -860,12 +859,11 @@ describe("get_params",
     test_that("parameters can be retrieved",
     {
         pip <- Pipeline$new("pipe1")$
-            add("f1", \(a = 1) a, keepOut = TRUE)$
+            add("f1", \(a = 1) a)$
             add("f2", \(a, b = ~f1) a + b,
-                params = list(a = 8),
-                keepOut = TRUE
+                params = list(a = 8)
             )$
-            add("f3", \(a = ~f2, b = 3) a + b, keepOut = TRUE)
+            add("f3", \(a = ~f2, b = 3) a + b)
 
         p <- pip$get_params()
         expect_equal(
@@ -1040,14 +1038,12 @@ describe("get_step_field",
             add(
                 "f1", \(a = 1) a,
                 params = list(a = 1),
-                group = "grp",
-                keepOut = TRUE
+                group = "grp"
             )
 
 
         expect_equal(pip$get_step_field("f1", "step"), "f1")
         expect_equal(pip$get_step_field("f1", "funcName"), "function")
-        expect_equal(pip$get_step_field("f1", "keepOut"), TRUE)
         expect_equal(pip$get_step_field("f1", "state"), "New")
     })
 
@@ -1055,14 +1051,16 @@ describe("get_step_field",
     {
         f1 <- function(a = 1) a
         f1_params <- list(a = 1)
+        f1_tags <- c("tag1", "tag2")
 
         pip <- Pipeline$new("pipe", data = 1)$
-            add("f1", f1, params = f1_params, group = "grp", keepOut = TRUE)
+            add("f1", f1, params = f1_params, group = "grp", tags = f1_tags)
 
         pip$run()
 
         expect_equal(pip$get_step_field("f1", "fun"), f1)
         expect_equal(pip$get_step_field("f1", "params"), f1_params)
+        expect_equal(pip$get_step_field("f1", "tags"), f1_tags)
         expect_equal(pip$get_step_field("data", "out"), 1)
     })
 
@@ -1713,14 +1711,14 @@ describe("replace_step",
         )
     })
 
-    test_that("keepOut must be logical",
+    test_that("tags must be character vector",
     {
         pip <- Pipeline$new("pipe")$
             add("step1", \(a = 1) a)
 
         expect_error(
-            pip$replace_step("step1", fun =\() 1, keepOut = 1),
-            "is.logical(keepOut) is not TRUE",
+            pip$replace_step("step1", fun =\() 1, tags = 1),
+            "is.character(tags) is not TRUE",
             fixed = TRUE
         )
     })
@@ -1728,8 +1726,7 @@ describe("replace_step",
     test_that("the replacing function can be passed as a string",
     {
 
-        pip <- Pipeline$new("pipe1")$
-            add("f1", \(x = 3) x, keepOut = TRUE)
+        pip <- Pipeline$new("pipe1")$add("f1", \(x = 3) x)
 
         out = unname(unlist(pip$run()$collect_out()))
         expect_equal(out, 3)
@@ -1740,7 +1737,7 @@ describe("replace_step",
         assign(".my_func", .my_func, envir = globalenv())
         on.exit(rm(".my_func", envir = globalenv()))
 
-        pip$replace_step("f1", fun = ".my_func", keepOut = TRUE)
+        pip$replace_step("f1", fun = ".my_func")
 
         out = unname(unlist(pip$run()$collect_out()))
         expect_equal(out, 6)
@@ -1750,8 +1747,7 @@ describe("replace_step",
         "when replacing function, default parameters can be overridden",
     {
 
-        pip <- Pipeline$new("pipe1")$
-            add("f1", \(x = 1:3) x, keepOut = TRUE)
+        pip <- Pipeline$new("pipe1")$add("f1", \(x = 1:3) x)
 
         .my_func <-\(x = 3) {
             2 * x
@@ -1763,7 +1759,7 @@ describe("replace_step",
             "f1",
             fun = ".my_func",
             params = list(x = 10),
-            keepOut = TRUE
+            tags = c("tag1", "tag2")
         )
 
         out = unname(unlist(pip$run()$collect_out()))
@@ -1775,7 +1771,7 @@ describe("replace_step",
         pip <- Pipeline$new("pipe1")$
             add("f1", \(a = 1) a)$
             add("f2", \(b = 2) b)$
-            add("f3", \(c = ~f2) c, keepOut = TRUE)
+            add("f3", \(c = ~f2) c)
 
         expect_error(pip$replace_step("non-existent", \(z = 4) z))
     })
@@ -1787,7 +1783,7 @@ describe("replace_step",
         pip <- Pipeline$new("pipe1")$
             add("f1", \(a = 1) a)$
             add("f2", \(b = 2) b)$
-            add("f3", \(c = ~f2) c, keepOut = TRUE)
+            add("f3", \(c = ~f2) c)
 
         expect_error(
             pip$replace_step("f2", \(z = ~foo) z),
@@ -1811,8 +1807,8 @@ describe("replace_step",
         pip <- Pipeline$new("pipe1")$
             add("f1", \(a = 1) a)$
             add("f2", \(a = 2) a)$
-            add("f3", \(a = ~f2) a, keepOut = TRUE)$
-            add("f4", \(a = ~f3) a, keepOut = TRUE)
+            add("f3", \(a = ~f2) a)$
+            add("f4", \(a = ~f3) a)
 
         pip$run()
 
@@ -1909,7 +1905,7 @@ describe("run",
         resultList = list(foo = 1)
 
         pip <- Pipeline$new("pipe")$
-            add("f1", \() resultList, keepOut = TRUE)
+            add("f1", \() resultList)
 
         out = pip$run()$collect_out()
         expect_equal(out[["f1"]], resultList)
@@ -1918,7 +1914,7 @@ describe("run",
         resultList = list(foo = 1, bar = 2)
 
         pip <- Pipeline$new("pipe")$
-            add("f1", \() resultList, keepOut = TRUE)
+            add("f1", \() resultList)
 
         out = pip$run()$collect_out()
         expect_equal(out[["f1"]], resultList)
@@ -1933,8 +1929,8 @@ describe("run",
         bar <-\(a, b) a + b
 
         a <- 5
-        pip$add("f1", foo, params = list(a = a), keepOut = TRUE)
-        pip$add("f2", bar, params = list(a = ~data, b = ~f1), keepOut = TRUE)
+        pip$add("f1", foo, params = list(a = a))
+        pip$add("f2", bar, params = list(a = ~data, b = ~f1))
 
         pip$run()
 
@@ -1967,7 +1963,7 @@ describe("run",
         "can handle 'NULL' results",
     {
         pip <- Pipeline$new("pipe", data = 1)$
-            add("f1", \(x = ~data) x, keepOut = TRUE)
+            add("f1", \(x = ~data) x)
 
         out <- pip$run()$collect_out()
         expect_equal(out[["f1"]], 1)
@@ -1986,9 +1982,7 @@ describe("run",
                 fun =\(data = 10) {
                     pip <- Pipeline$new("2nd pipe", data = data)$
                         add("step1", \(x = ~data) x)$
-                        add("step2", \(x = ~step1) {
-                            2 * x
-                        }, keepOut = TRUE)
+                        add("step2", \(x = ~step1) 2 * x)
                 }
             )
 
@@ -2244,7 +2238,7 @@ describe("run_step",
         "updates the timestamp of the run steps",
     {
         pip <- Pipeline$new("pipe", data = 1)$
-            add("f1", \(x = ~data) x, keepOut = TRUE)
+            add("f1", \(x = ~data) x)
 
         before <- pip$pipeline[["time"]]
         Sys.sleep(1)
@@ -2260,7 +2254,7 @@ describe("run_step",
         "updates the state of the run steps",
     {
         pip <- Pipeline$new("pipe", data = 1)$
-            add("f1", \(x = ~data) x, keepOut = TRUE)
+            add("f1", \(x = ~data) x)
 
         before <- pip$pipeline[["state"]]
         pip$run_step("f1", upstream = FALSE)
@@ -2299,7 +2293,7 @@ describe("set_data",
         dat <- data.frame(a = 1:2, b = 1:2)
 
         pip <- Pipeline$new("pipe1")$
-            add("f1", \(x = ~data) x, keepOut = TRUE)
+            add("f1", \(x = ~data) x)
 
         out <- pip$run()$collect_out()
         expect_equal(out[["f1"]], NULL)
@@ -2315,8 +2309,8 @@ describe("set_data",
         dat <- data.frame(a = 1:2, b = 1:2)
 
         pip <- Pipeline$new("pipe1")$
-            add("f1", \(x = ~data) x, keepOut = TRUE)$
-            add("f2", \(x = ~f1) x, keepOut = TRUE)
+            add("f1", \(x = ~data) x)$
+            add("f2", \(x = ~f1) x)
 
         pip$run()
 
@@ -2327,7 +2321,6 @@ describe("set_data",
         expect_equal(pip$get_step("f2")$state, "Outdated")
     })
 })
-
 
 
 describe("set_params",
@@ -3868,7 +3861,8 @@ describe("private methods",
             )
         })
 
-        test_that("sets the value without change data class of the fields",
+        test_that(
+            "sets the value without changing the data class of the fields",
         {
             pip <- Pipeline$new("pipe")$
                 add("f1", \(a = 1) a)
@@ -3881,7 +3875,7 @@ describe("private methods",
             f("f2", field = "funcName", value = "my fun")
             f("f2", field = "params", value = list(a = 1, b = 2))
             f("f2", field = "out", value = 1)
-            f("f2", field = "keepOut", value = TRUE)
+            f("f2", field = "tags", value = c("tag1", "tag2"))
             f("f2", field = "group", value = "my group")
             f("f2", field = "description", value = "my description")
             f("f2", field = "time", value = Sys.time())
@@ -3904,7 +3898,7 @@ describe("private methods",
             ee(f("f2", field = "fun", value = "mean"))
             ee(f("f2", field = "funcName", value = list("my fun")))
             ee(f("f2", field = "params", value = c(a = 1, b = 2)))
-            ee(f("f2", field = "keepOut", value = 1))
+            ee(f("f2", field = "tags", value = 1))
             ee(f("f2", field = "group", value = list("my group")))
             ee(f("f2", field = "description", value = list("my description")))
             ee(f("f2", field = "time", value = as.character(Sys.time())))
