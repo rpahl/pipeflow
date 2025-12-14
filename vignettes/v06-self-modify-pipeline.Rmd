@@ -64,8 +64,7 @@ pip <- pipe_new("my-pipeline") |>
             residuals <- residuals(fit)
             p <- shapiro.test(residuals)$p.value
             p
-        },
-        keepOut = TRUE
+        }
     ) |>
 
     pipe_add(
@@ -81,8 +80,7 @@ pip <- pipe_new("my-pipeline") |>
                 geom_point(shape = 21, color = pointColor) +
                 geom_hline(yintercept = 0, linetype = "dashed") +
                 theme_minimal()
-        },
-        keepOut = TRUE
+        }
     )
 ```
 
@@ -135,8 +133,7 @@ pip$replace_step(
         }
 
         p
-    },
-    keepOut = TRUE
+    }
 )
 ```
 

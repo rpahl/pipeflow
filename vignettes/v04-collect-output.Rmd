@@ -62,8 +62,7 @@ pip <- pipe_new(
             yVar = "Ozone"
         ) {
             data[, c(xVar, yVar)]
-        },
-        keepOut = TRUE              # <- keep this
+        }
     ) |>
 
     pipe_add(
@@ -83,8 +82,7 @@ pip <- pipe_new(
             fit = ~model_fit
         ) {
             summary(fit)
-        },
-        keepOut = TRUE              # <- keep this
+        }
     ) |>
 
     pipe_add(
@@ -101,8 +99,7 @@ pip <- pipe_new(
                 geom_point(aes(.data[[xVar]], .data[["Ozone"]])) +
                 geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
                 labs(title = title)
-        },
-        keepOut = TRUE              # <- keep this
+        }
     )
 ```
 
@@ -111,19 +108,6 @@ Looking at the pipeline, we see that the steps `data_summary`, `model-summary`, 
 
 ```{r}
 pip
-```
-
-```{r, include = nzchar(Sys.getenv("IN_PKGDOWN")), results = "asis", echo = FALSE}
-cat(
-    "Graphically, steps flagged with `keepOut = TRUE` are displayed",
-    "with a circle shape while \"normal\" steps are shown as rectangle boxes."
-)
-```
-
-```{r, echo = FALSE, eval = nzchar(Sys.getenv("IN_PKGDOWN"))}
-library(visNetwork)
-do.call(visNetwork, args = c(pip$get_graph(), list(height = 300))) |>
-    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
 
@@ -168,7 +152,6 @@ pip <- Pipeline$new("my-pipeline", data = airquality) |>
         ) {
             data[, c(xVar, yVar)]
         },
-        keepOut = TRUE,
         group = "Data"                 # <- define 'Data' group here
     ) |>
 
@@ -190,7 +173,6 @@ pip <- Pipeline$new("my-pipeline", data = airquality) |>
         ) {
             summary(fit)
         },
-        keepOut = TRUE,
         group = "Model"                # <- define 'Model' group here
     ) |>
 
@@ -209,7 +191,6 @@ pip <- Pipeline$new("my-pipeline", data = airquality) |>
                 geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
                 labs(title = title)
         },
-        keepOut = TRUE,
         group = "Model"                # <- define 'Model' group here
     )
 ```
