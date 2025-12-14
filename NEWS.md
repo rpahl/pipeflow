@@ -1,5 +1,14 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.2.3.9004
+
+* deprecate `all` parameter in `pipe_collect_out()` 
+* deprecate `pipe_set_data_split()` and `pipe_set_keep_out()`
+* add new functions to skip and unskip pipeline steps and groups: `pipe_skip_step()`, `pipe_unskip_step()`, `pipe_skip_group()`, and `pipe_unskip_group()`.
+* add new function, `pipe_get_step_field()` to retrieve a specific field of a pipeline step
+* remove advanced vignette on using pipeflow with split data sets
+
+
 # pipeflow 0.2.3.9003
 
 * Refactor: Remove Param object handling from pipeline and utility functions
