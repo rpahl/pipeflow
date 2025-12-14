@@ -3,7 +3,7 @@
 \name{pipe_lock_step}
 \alias{pipe_lock_step}
 \alias{pipe_unlock_step}
-\title{Lock steps}
+\title{Lock/unlock steps}
 \usage{
 pipe_lock_step(pip, step)
 

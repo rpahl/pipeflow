@@ -2,6 +2,10 @@ expect_equivalent = function(...) {
     testthat::expect_equal(..., ignore_attr = TRUE)
 }
 
+expect_error_fixed = function(...) {
+    testthat::expect_error(..., fixed = TRUE)
+}
+
 expect_no_error = function(...) {
     testthat::expect_error(..., regexp = NA)
 }
