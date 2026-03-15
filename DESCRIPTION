@@ -18,6 +18,7 @@ Imports:
     lgr,
     methods,
     R6,
+    Rcpp (>= 1.1.1),
     stats,
     utils
 Suggests:
@@ -39,3 +40,4 @@ RoxygenNote: 7.3.3
 NeedsCompilation: no
 License: GPL-3
 Maintainer: Roman Pahl <roman.pahl@gmail.com>
+LinkingTo: Rcpp
