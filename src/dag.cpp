@@ -16,28 +16,70 @@ struct Node {
 
 class Dag {
 public:
-    // Dag() : nodes() {} ;
-
     // Inspection
     uint32_t size() const { return nodes.size(); }
-    std::vector<NodeId> get_topo_order() const { return topo_order; }
+    // TODO: maybe size() should be the number of alive nodes
+    std::vector<NodeId> get_nodes_order() const { return nodes_order; }
+    std::vector<NodeId> get_nodes_pos() const { return nodes_pos; }
+    std::vector<NodeId> determine_downstream_nodes(NodeId id) {
+        uint32_t len = nodes.size();
+        if (id >= len) {
+            throw Rcpp::exception("Invalid node ID");
+        }
+        if (!nodes[id].alive) {
+            return {};
+        }
+
+        init_visitor_marking();
+
+        std::vector<NodeId> result;
+        work_stack.clear();
+        work_stack.push_back(id);
+        visited[id] = visitor_mark;
+
+        while (!work_stack.empty()) {
+            NodeId cur = work_stack.back();
+            work_stack.pop_back();
+
+            for (NodeId nxt : nodes[cur].outgoing) {
+                if (!nodes[nxt].alive) continue;
+                // TODO: evaluate if removing dead nodes from all incoming and
+                // outgoing nodes could improve performance by avoiding the
+                // above check entirely.
+
+                if (visited[nxt] == visitor_mark) continue;
+
+                visited[nxt] = visitor_mark;
+                result.push_back(nxt);
+                work_stack.push_back(nxt);
+            }
+        }
+
+        std::sort(result.begin(), result.end(),
+                [this](NodeId a, NodeId b) {
+                    return nodes_pos[a] < nodes_pos[b];
+                });
+
+        return result;
+    }
 
     // Add
     NodeId add_node() {
-        uint32_t pos = this->size();
-        Rcpp::Rcout << "add pos:" << pos << std::endl;
-        return this->add_node_at(pos);
+        NodeId id = nodes.size();
+        nodes.emplace_back();
+        nodes_order.push_back(id);
+        nodes_pos.push_back(id);
+        return id;
     }
 
     NodeId add_node_at(uint32_t pos) {
-        NodeId id = this->size();
-        Rcpp::Rcout << "node id:" << id << std::endl;
+        NodeId id = nodes.size();
         if (pos > id) {
             throw Rcpp::exception("Invalid position");
         }
         nodes.emplace_back();
-        topo_order.insert(topo_order.begin() + pos, id);
-        // rebuild_topo_pos(*this);
+        nodes_order.insert(nodes_order.begin() + pos, id);
+        rebuild_topo_pos();
         return id;
     }
 
@@ -66,15 +108,45 @@ public:
         this->discard_node(id, recursive);
     }
 
+    // ---------
+    // Internals
+    // ---------
+    void rebuild_topo_pos() {
+        nodes_pos.resize(nodes.size());
+        for (uint32_t i = 0; i < nodes_order.size(); ++i) {
+            nodes_pos[nodes_order[i]] = i;
+        }
+    }
+
+    void init_visitor_marking() {
+        if (visited.size() < nodes.size()) {
+            visited.resize(nodes.size(), 0);
+        }
+        ++visitor_mark;
+
+        // Handle wraparound
+        if (visitor_mark == 0) {
+            std::fill(visited.begin(), visited.end(), 0);
+            visitor_mark = 1;
+        }
+    }
+
+    // -------
     // Members
+    // -------
     std::vector<Node> nodes;            // nodes stored by running id
 
     // We keep the topological order of the nodes separately. This allows us
     // to later insert nodes by just modifying the order vector, that is,
     // without having to update all dependencies.
-    std::vector<NodeId> topo_order;     // logical order in DAG
-    std::vector<uint32_t> topo_pos;     // inverse mapping
+    std::vector<NodeId> nodes_order;     // logical order in DAG
+    std::vector<NodeId> nodes_pos;       // inverse mapping
     // std::vector<NodeId> free_ids;    // optional
+
+    // Caching/Memoization
+    std::vector<uint16_t> visited;      // used to keep track of node visits
+    uint16_t visitor_mark = 0;
+    std::vector<NodeId> work_stack;
 };
 
 int dag_size(Dag* dag) { return dag->nodes.size(); }
@@ -88,10 +160,8 @@ RCPP_MODULE(Dag){
 
     // Inspection
     .const_method("size", &Dag::size)
-    .const_method("get_topo_order", &Dag::get_topo_order)
-    // .field("nodes", &Dag::nodes)
-    // .field_readonly("topo_order", &Dag::topo_order)
-    // .field_readonly("topo_pos", &Dag::topo_pos)
+    .const_method("get_nodes_order", &Dag::get_nodes_order)
+    .const_method("get_nodes_pos", &Dag::get_nodes_pos)
 
     // Add
     .method("add_node", &Dag::add_node)
