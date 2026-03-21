@@ -16,17 +16,13 @@ struct Node {
 
 class Dag {
 public:
-    // Inspection
-    uint32_t size() const { return nodes.size(); }
-    // TODO: maybe size() should be the number of alive nodes
-    std::vector<NodeId> get_nodes_order() const { return nodes_order; }
-    std::vector<NodeId> get_nodes_pos() const { return nodes_pos; }
-    std::vector<NodeId> determine_downstream_nodes(NodeId id) {
-        uint32_t len = nodes.size();
-        if (id >= len) {
-            throw Rcpp::exception("Invalid node ID");
-        }
-        if (!nodes[id].alive) {
+
+    // -------
+    // Inspect
+    // -------
+    std::vector<NodeId> get_downstream_nodes(NodeId id)
+    {
+        if (!has_node(id)) {
             return {};
         }
 
@@ -55,16 +51,40 @@ public:
             }
         }
 
-        std::sort(result.begin(), result.end(),
-                [this](NodeId a, NodeId b) {
-                    return nodes_pos[a] < nodes_pos[b];
-                });
-
         return result;
     }
+    std::vector<NodeId> get_nodes_order() const { return nodes_order; }
+    std::vector<NodeId> get_nodes_pos() const { return nodes_pos; }
+    bool has_edge(NodeId from, NodeId to, bool warn = true) const
+    {
+        if (!has_node(from, warn) || !has_node(to, warn)) {
+            return false;
+        }
+        const auto& out = nodes[from].outgoing;
+        return std::find(out.begin(), out.end(), to) != out.end();
+    }
+    bool has_node(NodeId id, bool warn = true) const
+    {
+        if (id < nodes.size() && nodes[id].alive) {
+            return true;
+        }
+        if (warn) {
+            Rcpp::warning("node id %u not in DAG", id);
+        }
+        return false;
+    }
+    bool is_cyclic()
+    {
+        throw Rcpp::exception("is_cyclic not yet implemented");
+    }
+    uint32_t size() const { return nodes.size(); }
+    // TODO: maybe size() should be the number of alive nodes
 
+    // ---
     // Add
-    NodeId add_node() {
+    // ---
+    NodeId add_node()
+    {
         NodeId id = nodes.size();
         nodes.emplace_back();
         nodes_order.push_back(id);
@@ -72,26 +92,99 @@ public:
         return id;
     }
 
-    NodeId add_node_at(uint32_t pos) {
+    NodeId add_node_at(uint32_t pos)
+    {
         NodeId id = nodes.size();
+
         if (pos > id) {
-            throw Rcpp::exception("Invalid position");
+            Rcpp::warning(
+                "position %u exceeds number of nodes - no node added",
+                pos
+            );
+            return id;
         }
+
         nodes.emplace_back();
         nodes_order.insert(nodes_order.begin() + pos, id);
-        rebuild_topo_pos();
+        rebuild_nodes_pos();
         return id;
     }
 
-    bool add_edge(NodeId from, NodeId to) {
-        if (from >= nodes.size() || to >= nodes.size()) return false;
-        nodes[to].incoming.push_back(from);
+    bool add_edge(NodeId from, NodeId to, bool warn = true)
+    {
+        if (!has_node(from, warn) || !has_node(to, warn)) {
+            return false;
+        }
+
+        // Check if edge already exists
+        const auto& out = nodes[from].outgoing;
+        bool hasEdge = std::find(out.begin(), out.end(), to) != out.end();
+        if (hasEdge) {
+            if (warn) {
+                Rcpp::warning(
+                    "edge %u -> %u already exists - operation ignored",
+                    from, to
+                );
+            }
+            return false;
+        }
+
         nodes[from].outgoing.push_back(to);
+        nodes[to].incoming.push_back(from);
+
+        if (this->is_cyclic()) {
+            // Undo edge addition and throw
+            nodes[from].outgoing.pop_back();
+            nodes[to].incoming.pop_back();
+            Rcpp::warning(
+                "adding edge %u -> %u creates a cycle - operation ignored",
+                from, to
+            );
+            return false;
+        }
+
         return true;
     }
 
+    bool add_edge_in_order(NodeId from, NodeId to, bool warn = true)
+    {
+        if (!has_node(from, warn) || !has_node(to, warn)) {
+            return false;
+        }
+
+        if (nodes_pos[from] >= nodes_pos[to]) {
+            if (warn) {
+                Rcpp::warning(
+                    "edge %u -> %u not in topological order and thus not added",
+                    from, to
+                );
+            }
+            return false;
+        }
+
+        const auto& out = nodes[from].outgoing;
+        bool hasEdge = std::find(out.begin(), out.end(), to) != out.end();
+        if (hasEdge) {
+            if (warn) {
+                Rcpp::warning(
+                    "edge %u -> %u already exists - operation ignored",
+                    from, to
+                );
+            }
+            return false;
+        }
+
+        nodes[from].outgoing.push_back(to);
+        nodes[to].incoming.push_back(from);
+        return true;
+    }
+
+
+    // ------
     // Remove
-    void discard_node(NodeId id, bool recursive = true) {
+    // ------
+    void discard_node(NodeId id, bool recursive = true)
+    {
         if (id >= nodes.size()) return;
         nodes[id].alive = false;
         if (recursive) {
@@ -100,7 +193,8 @@ public:
     }
     // void pop()
 
-    void remove_node(NodeId id, bool recursive = true) {
+    void remove_node(NodeId id, bool recursive = true)
+    {
         if (id >= nodes.size()) {
             std::cerr << "Invalid node ID: " << id << std::endl;
             return;
@@ -108,17 +202,20 @@ public:
         this->discard_node(id, recursive);
     }
 
-    // ---------
-    // Internals
-    // ---------
-    void rebuild_topo_pos() {
+
+    // -------------
+    // House keeping
+    // -------------
+    void rebuild_nodes_pos()
+    {
         nodes_pos.resize(nodes.size());
         for (uint32_t i = 0; i < nodes_order.size(); ++i) {
             nodes_pos[nodes_order[i]] = i;
         }
     }
 
-    void init_visitor_marking() {
+    void init_visitor_marking()
+    {
         if (visited.size() < nodes.size()) {
             visited.resize(nodes.size(), 0);
         }
@@ -136,20 +233,20 @@ public:
     // -------
     std::vector<Node> nodes;            // nodes stored by running id
 
-    // We keep the topological order of the nodes separately. This allows us
-    // to later insert nodes by just modifying the order vector, that is,
-    // without having to update all dependencies.
-    std::vector<NodeId> nodes_order;     // logical order in DAG
-    std::vector<NodeId> nodes_pos;       // inverse mapping
+    // We keep track of the topological nodes order. This allows us to later
+    // insert nodes by just modifying the order vector, that is, without
+    // having to update all dependencies, edges, etc ...
+    std::vector<NodeId> nodes_order;    // order in which nodes appear in DAG
+    std::vector<NodeId> nodes_pos;      /* position of nodes in the DAG, i.e.,
+                                           inverse mapping of nodes_order */
     // std::vector<NodeId> free_ids;    // optional
 
-    // Caching/Memoization
+    // Caching and memoization
     std::vector<uint16_t> visited;      // used to keep track of node visits
-    uint16_t visitor_mark = 0;
+    uint16_t visitor_mark = 0;          // allows re-use of visited without reset
     std::vector<NodeId> work_stack;
 };
 
-int dag_size(Dag* dag) { return dag->nodes.size(); }
 
 
 RCPP_MODULE(Dag){
@@ -159,14 +256,17 @@ RCPP_MODULE(Dag){
     .default_constructor()
 
     // Inspection
-    .const_method("size", &Dag::size)
+    .method("get_downstream_nodes", &Dag::get_downstream_nodes)
     .const_method("get_nodes_order", &Dag::get_nodes_order)
     .const_method("get_nodes_pos", &Dag::get_nodes_pos)
+    .const_method("has_edge", &Dag::has_edge)
+    .const_method("has_node", &Dag::has_node)
+    .const_method("size", &Dag::size)
 
     // Add
     .method("add_node", &Dag::add_node)
     .method("add_node_at", &Dag::add_node_at)
-    .method("add_edge", &Dag::add_edge)
+    .method("add_edge_in_order", &Dag::add_edge_in_order)
 
     // Remove
     ;
