@@ -27,6 +27,12 @@ describe("Dag creation and inspection",
         expect_false(d$has_edge(0, 3))
         expect_true(d$add_edge_in_order(0, 3))
         expect_true(d$has_edge(0, 3))
+
+        expect_true(d$add_edge_in_order(3, 1))
+        expect_true(d$has_edge(3, 1))
+
+        expect_true(d$add_edge_in_order(3, 2))
+        expect_true(d$has_edge(3, 2))
     })
 
     it("can check if node exists",
@@ -88,11 +94,16 @@ describe("Dag creation and inspection",
     it("can get downstream nodes",
     {
         expect_equal(d$get_downstream_nodes(0), c(1, 3, 2))
+        expect_equal(d$get_downstream_nodes(3), c(1, 2))
         expect_equal(d$get_downstream_nodes(1), c(2))
         expect_equal(d$get_downstream_nodes(2), numeric())
-        expect_equal(d$get_downstream_nodes(3), numeric())
+    })
 
-        expect_true(d$add_edge_in_order(3, 2))
-        expect_equal(d$get_downstream_nodes(3), c(2))
+    it("can get upstream nodes",
+    {
+        expect_equal(d$get_upstream_nodes(0), numeric())
+        expect_equal(d$get_upstream_nodes(3), c(0))
+        expect_equal(d$get_upstream_nodes(1), c(0, 3))
+        expect_equal(d$get_upstream_nodes(2), c(1, 3, 0))
     })
 })

@@ -43,12 +43,13 @@ bool is_cyclic(const Dag* dag);
 std::vector<NodeId> get_nodes_order(const Dag* dag);
 std::vector<NodeId> get_nodes_pos(const Dag* dag);
 std::vector<NodeId> get_downstream_nodes(Dag* dag, NodeId id);
+std::vector<NodeId> get_upstream_nodes(Dag* dag, NodeId id);
 
 // Add
-bool add_edge(Dag* dag, NodeId from, NodeId to);
-bool add_edge_in_order(Dag* dag, NodeId from, NodeId to);
 NodeId add_node(Dag* dag);
 NodeId add_node_at(Dag* dag, NodeId pos);
+bool add_edge(Dag* dag, NodeId from, NodeId to);
+bool add_edge_in_order(Dag* dag, NodeId from, NodeId to);
 
 // Remove
 void discard_node(Dag* dag, NodeId id, bool recursive = true);
@@ -126,11 +127,69 @@ std::vector<NodeId> get_downstream_nodes(Dag* dag, NodeId id)
     return result;
 }
 
+std::vector<NodeId> get_upstream_nodes(Dag* dag, NodeId id)
+{
+    if (!has_node(dag, id)) {
+        return {};
+    }
+
+    init_visitor_marking(dag);
+
+    std::vector<NodeId> result;
+    dag->work_stack.clear();
+    dag->work_stack.push_back(id);
+    dag->visited[id] = dag->visitor_mark;
+
+    while (!dag->work_stack.empty()) {
+        NodeId cur = dag->work_stack.back();
+        dag->work_stack.pop_back();
+        for (NodeId nxt : dag->nodes[cur].incoming) {
+            if (!dag->nodes[nxt].alive) continue;
+            // TODO: evaluate if removing dead nodes from all incoming and
+            // outgoing nodes could improve performance by avoiding the
+            // above check entirely.
+
+            if (dag->visited[nxt] == dag->visitor_mark) continue;
+
+            dag->visited[nxt] = dag->visitor_mark;
+            result.push_back(nxt);
+            dag->work_stack.push_back(nxt);
+        }
+    }
+    return result;
+}
 
 
 // ---
 // Add
 // ---
+NodeId add_node(Dag* dag)
+{
+    NodeId id = dag->nodes.size();
+    dag->nodes.emplace_back();
+    dag->nodes_order.push_back(id);
+    dag->nodes_pos.push_back(id);
+    return id;
+}
+
+NodeId add_node_at(Dag* dag, NodeId pos)
+{
+    NodeId id = dag->nodes.size();
+
+    if (pos > id) {
+        Rcpp::warning(
+            "position %u exceeds number of nodes - no node added",
+            pos
+        );
+        return id;
+    }
+
+    dag->nodes.emplace_back();
+    dag->nodes_order.insert(dag->nodes_order.begin() + pos, id);
+    rebuild_nodes_pos(dag);
+    return id;
+}
+
 bool add_edge(Dag* dag, NodeId from, NodeId to)
 {
     if (!has_node(dag, from) || !has_node(dag, to)) {
@@ -194,33 +253,6 @@ bool add_edge_in_order(Dag* dag, NodeId from, NodeId to)
     return true;
 }
 
-NodeId add_node(Dag* dag)
-{
-    NodeId id = dag->nodes.size();
-    dag->nodes.emplace_back();
-    dag->nodes_order.push_back(id);
-    dag->nodes_pos.push_back(id);
-    return id;
-}
-
-NodeId add_node_at(Dag* dag, NodeId pos)
-{
-    NodeId id = dag->nodes.size();
-
-    if (pos > id) {
-        Rcpp::warning(
-            "position %u exceeds number of nodes - no node added",
-            pos
-        );
-        return id;
-    }
-
-    dag->nodes.emplace_back();
-    dag->nodes_order.insert(dag->nodes_order.begin() + pos, id);
-    rebuild_nodes_pos(dag);
-    return id;
-}
-
 
 // ------
 // Remove
@@ -279,13 +311,15 @@ RCPP_MODULE(Dag){
     class_<Dag>("Dag")
     .default_constructor()
 
-    // Inspection
-    .method("get_downstream_nodes", &get_downstream_nodes)
-    .const_method("get_nodes_order", &get_nodes_order)
-    .const_method("get_nodes_pos", &get_nodes_pos)
+    // Inspect
+    .const_method("size", &size)
     .const_method("has_edge", &has_edge)
     .const_method("has_node", &has_node)
-    .const_method("size", &size)
+    .const_method("get_nodes_order", &get_nodes_order)
+    .const_method("get_nodes_pos", &get_nodes_pos)
+    .method("get_downstream_nodes", &get_downstream_nodes)
+    .method("get_upstream_nodes", &get_upstream_nodes)
+
     // Add
     .method("add_node", &add_node)
     .method("add_node_at", &add_node_at)
