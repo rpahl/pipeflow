@@ -17,12 +17,13 @@ struct Node {
 struct Dag {
     std::vector<Node> nodes;            // nodes stored by running id
 
-    // We keep track of the topological nodes order. This allows us to later
-    // insert nodes by just modifying the order vector, that is, without
-    // having to update all dependencies, edges, etc ...
-    std::vector<NodeId> nodes_order;    // order in which nodes appear in DAG
-    std::vector<NodeId> nodes_pos;      /* position of nodes in the DAG, i.e.,
-                                           inverse mapping of nodes_order */
+    // We keep track of the topological order and position of nodes in the DAG,
+    // which allows to insert nodes in between by just modifying these vectors,
+    // that is, without having to update all dependencies, edges, etc
+    std::vector<NodeId> nodes_pos;      // basically inverse mapping of order
+    std::vector<NodeId> nodes_order;    // order of nodes
+
+    bool needs_pos_rebuild = false;
     // std::vector<NodeId> free_ids;    // optional
 
     // Caching and memoization
@@ -47,17 +48,19 @@ std::vector<NodeId> get_upstream_nodes(Dag* dag, NodeId id);
 
 // Add
 NodeId add_node(Dag* dag);
-NodeId add_node_at(Dag* dag, NodeId pos);
-bool add_edge(Dag* dag, NodeId from, NodeId to);
-bool add_edge_in_order(Dag* dag, NodeId from, NodeId to);
+NodeId add_node_at(Dag* dag, NodeId pos, bool rebuild_pos = true);
+bool add_edge(Dag* dag, NodeId from, NodeId to,
+    bool checkTopo = true, bool checkCycle = false
+);
 
 // Remove
 void discard_node(Dag* dag, NodeId id, bool recursive = true);
 void remove_node(Dag* dag, NodeId id, bool recursive = true);
 
-// House keeping
+// Helpers for internal state
 void init_visitor_marking(Dag* dag);
 void rebuild_nodes_pos(Dag* dag);
+void tidy_up(Dag* dag);
 
 
 // ---------------------------------------------------------------------------
@@ -72,7 +75,12 @@ std::size_t size(const Dag* dag) { return dag->nodes.size(); }
 
 bool has_edge(const Dag* dag, NodeId from, NodeId to)
 {
-    if (!has_node(dag, from) || !has_node(dag, to)) {
+    if (!has_node(dag, from)) {
+        Rcpp::warning("node id %u not in DAG", from);
+        return false;
+    }
+    if (!has_node(dag, to)) {
+        Rcpp::warning("node id %u not in DAG", to);
         return false;
     }
     const auto& out = dag->nodes[from].outgoing;
@@ -81,11 +89,7 @@ bool has_edge(const Dag* dag, NodeId from, NodeId to)
 
 bool has_node(const Dag* dag, NodeId id)
 {
-    if (id < dag->nodes.size() && dag->nodes[id].alive) {
-        return true;
-    }
-    Rcpp::warning("node id %u not in DAG", id);
-    return false;
+    return id < dag->nodes.size() && dag->nodes[id].alive;
 }
 
 bool is_cyclic(const Dag* dag)
@@ -98,6 +102,7 @@ std::vector<NodeId> get_nodes_pos(const Dag* dag) { return dag->nodes_pos; }
 std::vector<NodeId> get_downstream_nodes(Dag* dag, NodeId id)
 {
     if (!has_node(dag, id)) {
+        Rcpp::warning("node id %u not in DAG", id);
         return {};
     }
 
@@ -130,6 +135,7 @@ std::vector<NodeId> get_downstream_nodes(Dag* dag, NodeId id)
 std::vector<NodeId> get_upstream_nodes(Dag* dag, NodeId id)
 {
     if (!has_node(dag, id)) {
+        Rcpp::warning("node id %u not in DAG", id);
         return {};
     }
 
@@ -172,7 +178,7 @@ NodeId add_node(Dag* dag)
     return id;
 }
 
-NodeId add_node_at(Dag* dag, NodeId pos)
+NodeId add_node_at(Dag* dag, NodeId pos, bool rebuild_pos)
 {
     NodeId id = dag->nodes.size();
 
@@ -186,13 +192,27 @@ NodeId add_node_at(Dag* dag, NodeId pos)
 
     dag->nodes.emplace_back();
     dag->nodes_order.insert(dag->nodes_order.begin() + pos, id);
-    rebuild_nodes_pos(dag);
+    dag->needs_pos_rebuild = true;
+
+    if (rebuild_pos) {  // set this to false for efficient batch additions
+        rebuild_nodes_pos(dag);
+    }
     return id;
 }
 
-bool add_edge(Dag* dag, NodeId from, NodeId to)
-{
-    if (!has_node(dag, from) || !has_node(dag, to)) {
+bool add_edge(
+    Dag* dag,
+    NodeId from,
+    NodeId to,
+    bool checkTopo,
+    bool checkCycle
+) {
+    if (!has_node(dag, from)) {
+        Rcpp::warning("node id %u not in DAG - operation ignored", from);
+        return false;
+    }
+    if (!has_node(dag, to)) {
+        Rcpp::warning("node id %u not in DAG - operation ignored", to);
         return false;
     }
 
@@ -207,10 +227,23 @@ bool add_edge(Dag* dag, NodeId from, NodeId to)
         return false;
     }
 
+    if (checkTopo) {
+        if (dag->needs_pos_rebuild) {
+            rebuild_nodes_pos(dag);
+        }
+        if (dag->nodes_pos[from] >= dag->nodes_pos[to]) {
+            Rcpp::warning(
+                "edge %u -> %u not in topological order and thus not added",
+                from, to
+            );
+            return false;
+        }
+    }
+
     dag->nodes[from].outgoing.push_back(to);
     dag->nodes[to].incoming.push_back(from);
 
-    if (is_cyclic(dag)) {
+    if (checkCycle && is_cyclic(dag)) {
         // Undo edge addition and throw
         dag->nodes[from].outgoing.pop_back();
         dag->nodes[to].incoming.pop_back();
@@ -221,35 +254,6 @@ bool add_edge(Dag* dag, NodeId from, NodeId to)
         return false;
     }
 
-    return true;
-}
-
-bool add_edge_in_order(Dag* dag, NodeId from, NodeId to)
-{
-    if (!has_node(dag, from) || !has_node(dag, to)) {
-        return false;
-    }
-
-    if (dag->nodes_pos[from] >= dag->nodes_pos[to]) {
-        Rcpp::warning(
-            "edge %u -> %u not in topological order and thus not added",
-            from, to
-        );
-        return false;
-    }
-
-    const auto& out = dag->nodes[from].outgoing;
-    bool hasEdge = std::find(out.begin(), out.end(), to) != out.end();
-    if (hasEdge) {
-        Rcpp::warning(
-            "edge %u -> %u already exists - operation ignored",
-            from, to
-        );
-        return false;
-    }
-
-    dag->nodes[from].outgoing.push_back(to);
-    dag->nodes[to].incoming.push_back(from);
     return true;
 }
 
@@ -301,8 +305,15 @@ void rebuild_nodes_pos(Dag* dag)
     for (NodeId i = 0; i < dag->nodes_order.size(); ++i) {
         dag->nodes_pos[dag->nodes_order[i]] = i;
     }
+    dag->needs_pos_rebuild = false;
 }
 
+void tidy_up(Dag* dag)
+{
+    if (dag->needs_pos_rebuild) {
+        rebuild_nodes_pos(dag);
+    }
+}
 
 
 RCPP_MODULE(Dag){
@@ -323,8 +334,11 @@ RCPP_MODULE(Dag){
     // Add
     .method("add_node", &add_node)
     .method("add_node_at", &add_node_at)
-    .method("add_edge_in_order", &add_edge_in_order)
+    .method("add_edge", &add_edge)
 
     // Remove
+
+    // Helpers
+    .method("tidy_up", &tidy_up)
     ;
 }
