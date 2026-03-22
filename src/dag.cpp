@@ -16,221 +16,6 @@ struct Node {
 
 class Dag {
 public:
-
-    // -------
-    // Inspect
-    // -------
-    std::vector<NodeId> get_downstream_nodes(NodeId id)
-    {
-        if (!has_node(id)) {
-            return {};
-        }
-
-        init_visitor_marking();
-
-        std::vector<NodeId> result;
-        work_stack.clear();
-        work_stack.push_back(id);
-        visited[id] = visitor_mark;
-
-        while (!work_stack.empty()) {
-            NodeId cur = work_stack.back();
-            work_stack.pop_back();
-
-            for (NodeId nxt : nodes[cur].outgoing) {
-                if (!nodes[nxt].alive) continue;
-                // TODO: evaluate if removing dead nodes from all incoming and
-                // outgoing nodes could improve performance by avoiding the
-                // above check entirely.
-
-                if (visited[nxt] == visitor_mark) continue;
-
-                visited[nxt] = visitor_mark;
-                result.push_back(nxt);
-                work_stack.push_back(nxt);
-            }
-        }
-
-        return result;
-    }
-    std::vector<NodeId> get_nodes_order() const { return nodes_order; }
-    std::vector<NodeId> get_nodes_pos() const { return nodes_pos; }
-    bool has_edge(NodeId from, NodeId to, bool warn = true) const
-    {
-        if (!has_node(from, warn) || !has_node(to, warn)) {
-            return false;
-        }
-        const auto& out = nodes[from].outgoing;
-        return std::find(out.begin(), out.end(), to) != out.end();
-    }
-    bool has_node(NodeId id, bool warn = true) const
-    {
-        if (id < nodes.size() && nodes[id].alive) {
-            return true;
-        }
-        if (warn) {
-            Rcpp::warning("node id %u not in DAG", id);
-        }
-        return false;
-    }
-    bool is_cyclic()
-    {
-        throw Rcpp::exception("is_cyclic not yet implemented");
-    }
-    uint32_t size() const { return nodes.size(); }
-    // TODO: maybe size() should be the number of alive nodes
-
-    // ---
-    // Add
-    // ---
-    NodeId add_node()
-    {
-        NodeId id = nodes.size();
-        nodes.emplace_back();
-        nodes_order.push_back(id);
-        nodes_pos.push_back(id);
-        return id;
-    }
-
-    NodeId add_node_at(uint32_t pos)
-    {
-        NodeId id = nodes.size();
-
-        if (pos > id) {
-            Rcpp::warning(
-                "position %u exceeds number of nodes - no node added",
-                pos
-            );
-            return id;
-        }
-
-        nodes.emplace_back();
-        nodes_order.insert(nodes_order.begin() + pos, id);
-        rebuild_nodes_pos();
-        return id;
-    }
-
-    bool add_edge(NodeId from, NodeId to, bool warn = true)
-    {
-        if (!has_node(from, warn) || !has_node(to, warn)) {
-            return false;
-        }
-
-        // Check if edge already exists
-        const auto& out = nodes[from].outgoing;
-        bool hasEdge = std::find(out.begin(), out.end(), to) != out.end();
-        if (hasEdge) {
-            if (warn) {
-                Rcpp::warning(
-                    "edge %u -> %u already exists - operation ignored",
-                    from, to
-                );
-            }
-            return false;
-        }
-
-        nodes[from].outgoing.push_back(to);
-        nodes[to].incoming.push_back(from);
-
-        if (this->is_cyclic()) {
-            // Undo edge addition and throw
-            nodes[from].outgoing.pop_back();
-            nodes[to].incoming.pop_back();
-            Rcpp::warning(
-                "adding edge %u -> %u creates a cycle - operation ignored",
-                from, to
-            );
-            return false;
-        }
-
-        return true;
-    }
-
-    bool add_edge_in_order(NodeId from, NodeId to, bool warn = true)
-    {
-        if (!has_node(from, warn) || !has_node(to, warn)) {
-            return false;
-        }
-
-        if (nodes_pos[from] >= nodes_pos[to]) {
-            if (warn) {
-                Rcpp::warning(
-                    "edge %u -> %u not in topological order and thus not added",
-                    from, to
-                );
-            }
-            return false;
-        }
-
-        const auto& out = nodes[from].outgoing;
-        bool hasEdge = std::find(out.begin(), out.end(), to) != out.end();
-        if (hasEdge) {
-            if (warn) {
-                Rcpp::warning(
-                    "edge %u -> %u already exists - operation ignored",
-                    from, to
-                );
-            }
-            return false;
-        }
-
-        nodes[from].outgoing.push_back(to);
-        nodes[to].incoming.push_back(from);
-        return true;
-    }
-
-
-    // ------
-    // Remove
-    // ------
-    void discard_node(NodeId id, bool recursive = true)
-    {
-        if (id >= nodes.size()) return;
-        nodes[id].alive = false;
-        if (recursive) {
-            // TODO
-        }
-    }
-    // void pop()
-
-    void remove_node(NodeId id, bool recursive = true)
-    {
-        if (id >= nodes.size()) {
-            std::cerr << "Invalid node ID: " << id << std::endl;
-            return;
-        }
-        this->discard_node(id, recursive);
-    }
-
-
-    // -------------
-    // House keeping
-    // -------------
-    void rebuild_nodes_pos()
-    {
-        nodes_pos.resize(nodes.size());
-        for (uint32_t i = 0; i < nodes_order.size(); ++i) {
-            nodes_pos[nodes_order[i]] = i;
-        }
-    }
-
-    void init_visitor_marking()
-    {
-        if (visited.size() < nodes.size()) {
-            visited.resize(nodes.size(), 0);
-        }
-        ++visitor_mark;
-
-        // Handle wraparound
-        if (visitor_mark == 0) {
-            std::fill(visited.begin(), visited.end(), 0);
-            visitor_mark = 1;
-        }
-    }
-
-    // -------
-    // Members
-    // -------
     std::vector<Node> nodes;            // nodes stored by running id
 
     // We keep track of the topological nodes order. This allows us to later
@@ -247,6 +32,245 @@ public:
     std::vector<NodeId> work_stack;
 };
 
+// ---------------------------------------------------------------------------
+// Method declaration
+// ---------------------------------------------------------------------------
+
+// Inspect
+std::vector<NodeId> get_downstream_nodes(Dag* dag, NodeId id);
+std::vector<NodeId> get_nodes_order(const Dag* dag);
+std::vector<NodeId> get_nodes_pos(const Dag* dag);
+bool has_edge(const Dag* dag, NodeId from, NodeId to);
+bool has_node(const Dag* dag, NodeId id);
+std::size_t size(const Dag* dag);
+
+// Add
+NodeId add_node(Dag* dag);
+NodeId add_node_at(Dag* dag, uint32_t pos);
+bool add_edge(Dag* dag, NodeId from, NodeId to);
+bool add_edge_in_order(Dag* dag, NodeId from, NodeId to);
+
+// Remove
+void discard_node(Dag* dag, NodeId id, bool recursive = true);
+void remove_node(Dag* dag, NodeId id, bool recursive = true);
+
+// House keeping
+void rebuild_nodes_pos(Dag* dag);
+void init_visitor_marking(Dag* dag);
+
+
+// ---------------------------------------------------------------------------
+// Method implementation
+// ---------------------------------------------------------------------------
+
+// -------
+// Inspect
+// -------
+std::vector<NodeId> get_downstream_nodes(Dag* dag, NodeId id)
+{
+    if (!has_node(dag, id)) {
+        return {};
+    }
+
+    init_visitor_marking(dag);
+
+    std::vector<NodeId> result;
+    dag->work_stack.clear();
+    dag->work_stack.push_back(id);
+    dag->visited[id] = dag->visitor_mark;
+
+    while (!dag->work_stack.empty()) {
+        NodeId cur = dag->work_stack.back();
+        dag->work_stack.pop_back();
+        for (NodeId nxt : dag->nodes[cur].outgoing) {
+            if (!dag->nodes[nxt].alive) continue;
+            // TODO: evaluate if removing dead nodes from all incoming and
+            // outgoing nodes could improve performance by avoiding the
+            // above check entirely.
+
+            if (dag->visited[nxt] == dag->visitor_mark) continue;
+
+            dag->visited[nxt] = dag->visitor_mark;
+            result.push_back(nxt);
+            dag->work_stack.push_back(nxt);
+        }
+    }
+
+    return result;
+}
+
+std::vector<NodeId> get_nodes_order(const Dag* dag) { return dag->nodes_order; }
+std::vector<NodeId> get_nodes_pos(const Dag* dag) { return dag->nodes_pos; }
+
+bool has_edge(const Dag* dag, NodeId from, NodeId to)
+{
+    if (!has_node(dag, from) || !has_node(dag, to)) {
+        return false;
+    }
+    const auto& out = dag->nodes[from].outgoing;
+    return std::find(out.begin(), out.end(), to) != out.end();
+}
+
+bool has_node(const Dag* dag, NodeId id)
+{
+    if (id < dag->nodes.size() && dag->nodes[id].alive) {
+        return true;
+    }
+    Rcpp::warning("node id %u not in DAG", id);
+    return false;
+}
+
+bool is_cyclic(const Dag* dag)
+{
+    throw Rcpp::exception("is_cyclic not yet implemented");
+}
+
+std::size_t size(const Dag* dag) { return dag->nodes.size(); }
+// TODO: maybe size() should be the number of alive nodes
+
+// ---
+// Add
+// ---
+NodeId add_node(Dag* dag)
+{
+    NodeId id = dag->nodes.size();
+    dag->nodes.emplace_back();
+    dag->nodes_order.push_back(id);
+    dag->nodes_pos.push_back(id);
+    return id;
+}
+
+NodeId add_node_at(Dag* dag, uint32_t pos)
+{
+    NodeId id = dag->nodes.size();
+
+    if (pos > id) {
+        Rcpp::warning(
+            "position %u exceeds number of nodes - no node added",
+            pos
+        );
+        return id;
+    }
+
+    dag->nodes.emplace_back();
+    dag->nodes_order.insert(dag->nodes_order.begin() + pos, id);
+    rebuild_nodes_pos(dag);
+    return id;
+}
+
+bool add_edge(Dag* dag, NodeId from, NodeId to)
+{
+    if (!has_node(dag, from) || !has_node(dag, to)) {
+        return false;
+    }
+
+    // Check if edge already exists
+    const auto& out = dag->nodes[from].outgoing;
+    bool hasEdge = std::find(out.begin(), out.end(), to) != out.end();
+    if (hasEdge) {
+        Rcpp::warning(
+            "edge %u -> %u already exists - operation ignored",
+            from, to
+        );
+        return false;
+    }
+
+    dag->nodes[from].outgoing.push_back(to);
+    dag->nodes[to].incoming.push_back(from);
+
+    if (is_cyclic(dag)) {
+        // Undo edge addition and throw
+        dag->nodes[from].outgoing.pop_back();
+        dag->nodes[to].incoming.pop_back();
+        Rcpp::warning(
+            "adding edge %u -> %u creates a cycle - operation ignored",
+            from, to
+        );
+        return false;
+    }
+
+    return true;
+}
+
+bool add_edge_in_order(Dag* dag, NodeId from, NodeId to)
+{
+    if (!has_node(dag, from) || !has_node(dag, to)) {
+        return false;
+    }
+
+    if (dag->nodes_pos[from] >= dag->nodes_pos[to]) {
+        Rcpp::warning(
+            "edge %u -> %u not in topological order and thus not added",
+            from, to
+        );
+        return false;
+    }
+
+    const auto& out = dag->nodes[from].outgoing;
+    bool hasEdge = std::find(out.begin(), out.end(), to) != out.end();
+    if (hasEdge) {
+        Rcpp::warning(
+            "edge %u -> %u already exists - operation ignored",
+            from, to
+        );
+        return false;
+    }
+
+    dag->nodes[from].outgoing.push_back(to);
+    dag->nodes[to].incoming.push_back(from);
+    return true;
+}
+
+
+// ------
+// Remove
+// ------
+void discard_node(Dag* dag, NodeId id, bool recursive)
+{
+    if (id >= dag->nodes.size()) return;
+    dag->nodes[id].alive = false;
+    if (recursive) {
+        // TODO
+    }
+}
+// void pop()
+
+void remove_node(Dag* dag, NodeId id, bool recursive)
+{
+    if (id >= dag->nodes.size()) {
+        std::cerr << "Invalid node ID: " << id << std::endl;
+        return;
+    }
+    discard_node(dag, id, recursive);
+}
+
+
+// -------------
+// House keeping
+// -------------
+void rebuild_nodes_pos(Dag* dag)
+{
+    dag->nodes_pos.resize(dag->nodes.size());
+    for (uint32_t i = 0; i < dag->nodes_order.size(); ++i) {
+        dag->nodes_pos[dag->nodes_order[i]] = i;
+    }
+}
+
+void init_visitor_marking(Dag* dag)
+{
+    if (dag->visited.size() < dag->nodes.size()) {
+        dag->visited.resize(dag->nodes.size(), 0);
+    }
+    // ++visitor_mark;
+    ++dag->visitor_mark;
+
+    // Handle wraparound
+    if (dag->visitor_mark == 0) {
+        std::fill(dag->visited.begin(), dag->visited.end(), 0);
+        dag->visitor_mark = 1;
+    }
+}
+
 
 
 RCPP_MODULE(Dag){
@@ -256,17 +280,16 @@ RCPP_MODULE(Dag){
     .default_constructor()
 
     // Inspection
-    .method("get_downstream_nodes", &Dag::get_downstream_nodes)
-    .const_method("get_nodes_order", &Dag::get_nodes_order)
-    .const_method("get_nodes_pos", &Dag::get_nodes_pos)
-    .const_method("has_edge", &Dag::has_edge)
-    .const_method("has_node", &Dag::has_node)
-    .const_method("size", &Dag::size)
-
+    .method("get_downstream_nodes", &get_downstream_nodes)
+    .const_method("get_nodes_order", &get_nodes_order)
+    .const_method("get_nodes_pos", &get_nodes_pos)
+    .const_method("has_edge", &has_edge)
+    .const_method("has_node", &has_node)
+    .const_method("size", &size)
     // Add
-    .method("add_node", &Dag::add_node)
-    .method("add_node_at", &Dag::add_node_at)
-    .method("add_edge_in_order", &Dag::add_edge_in_order)
+    .method("add_node", &add_node)
+    .method("add_node_at", &add_node_at)
+    .method("add_edge_in_order", &add_edge_in_order)
 
     // Remove
     ;
