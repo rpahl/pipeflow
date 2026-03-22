@@ -36,26 +36,27 @@ struct Dag {
 // ---------------------------------------------------------------------------
 
 // Inspect
-std::vector<NodeId> get_downstream_nodes(Dag* dag, NodeId id);
-std::vector<NodeId> get_nodes_order(const Dag* dag);
-std::vector<NodeId> get_nodes_pos(const Dag* dag);
+std::size_t size(const Dag* dag);
 bool has_edge(const Dag* dag, NodeId from, NodeId to);
 bool has_node(const Dag* dag, NodeId id);
-std::size_t size(const Dag* dag);
+bool is_cyclic(const Dag* dag);
+std::vector<NodeId> get_nodes_order(const Dag* dag);
+std::vector<NodeId> get_nodes_pos(const Dag* dag);
+std::vector<NodeId> get_downstream_nodes(Dag* dag, NodeId id);
 
 // Add
-NodeId add_node(Dag* dag);
-NodeId add_node_at(Dag* dag, NodeId pos);
 bool add_edge(Dag* dag, NodeId from, NodeId to);
 bool add_edge_in_order(Dag* dag, NodeId from, NodeId to);
+NodeId add_node(Dag* dag);
+NodeId add_node_at(Dag* dag, NodeId pos);
 
 // Remove
 void discard_node(Dag* dag, NodeId id, bool recursive = true);
 void remove_node(Dag* dag, NodeId id, bool recursive = true);
 
 // House keeping
-void rebuild_nodes_pos(Dag* dag);
 void init_visitor_marking(Dag* dag);
+void rebuild_nodes_pos(Dag* dag);
 
 
 // ---------------------------------------------------------------------------
@@ -65,6 +66,34 @@ void init_visitor_marking(Dag* dag);
 // -------
 // Inspect
 // -------
+// TODO: maybe size() should be the number of alive nodes
+std::size_t size(const Dag* dag) { return dag->nodes.size(); }
+
+bool has_edge(const Dag* dag, NodeId from, NodeId to)
+{
+    if (!has_node(dag, from) || !has_node(dag, to)) {
+        return false;
+    }
+    const auto& out = dag->nodes[from].outgoing;
+    return std::find(out.begin(), out.end(), to) != out.end();
+}
+
+bool has_node(const Dag* dag, NodeId id)
+{
+    if (id < dag->nodes.size() && dag->nodes[id].alive) {
+        return true;
+    }
+    Rcpp::warning("node id %u not in DAG", id);
+    return false;
+}
+
+bool is_cyclic(const Dag* dag)
+{
+    throw Rcpp::exception("is_cyclic not yet implemented");
+}
+
+std::vector<NodeId> get_nodes_order(const Dag* dag) { return dag->nodes_order; }
+std::vector<NodeId> get_nodes_pos(const Dag* dag) { return dag->nodes_pos; }
 std::vector<NodeId> get_downstream_nodes(Dag* dag, NodeId id)
 {
     if (!has_node(dag, id)) {
@@ -94,69 +123,14 @@ std::vector<NodeId> get_downstream_nodes(Dag* dag, NodeId id)
             dag->work_stack.push_back(nxt);
         }
     }
-
     return result;
 }
 
-std::vector<NodeId> get_nodes_order(const Dag* dag) { return dag->nodes_order; }
-std::vector<NodeId> get_nodes_pos(const Dag* dag) { return dag->nodes_pos; }
 
-bool has_edge(const Dag* dag, NodeId from, NodeId to)
-{
-    if (!has_node(dag, from) || !has_node(dag, to)) {
-        return false;
-    }
-    const auto& out = dag->nodes[from].outgoing;
-    return std::find(out.begin(), out.end(), to) != out.end();
-}
-
-bool has_node(const Dag* dag, NodeId id)
-{
-    if (id < dag->nodes.size() && dag->nodes[id].alive) {
-        return true;
-    }
-    Rcpp::warning("node id %u not in DAG", id);
-    return false;
-}
-
-bool is_cyclic(const Dag* dag)
-{
-    throw Rcpp::exception("is_cyclic not yet implemented");
-}
-
-size_t size(const Dag* dag) { return dag->nodes.size(); }
-// TODO: maybe size() should be the number of alive nodes
 
 // ---
 // Add
 // ---
-NodeId add_node(Dag* dag)
-{
-    NodeId id = dag->nodes.size();
-    dag->nodes.emplace_back();
-    dag->nodes_order.push_back(id);
-    dag->nodes_pos.push_back(id);
-    return id;
-}
-
-NodeId add_node_at(Dag* dag, NodeId pos)
-{
-    NodeId id = dag->nodes.size();
-
-    if (pos > id) {
-        Rcpp::warning(
-            "position %u exceeds number of nodes - no node added",
-            pos
-        );
-        return id;
-    }
-
-    dag->nodes.emplace_back();
-    dag->nodes_order.insert(dag->nodes_order.begin() + pos, id);
-    rebuild_nodes_pos(dag);
-    return id;
-}
-
 bool add_edge(Dag* dag, NodeId from, NodeId to)
 {
     if (!has_node(dag, from) || !has_node(dag, to)) {
@@ -220,6 +194,33 @@ bool add_edge_in_order(Dag* dag, NodeId from, NodeId to)
     return true;
 }
 
+NodeId add_node(Dag* dag)
+{
+    NodeId id = dag->nodes.size();
+    dag->nodes.emplace_back();
+    dag->nodes_order.push_back(id);
+    dag->nodes_pos.push_back(id);
+    return id;
+}
+
+NodeId add_node_at(Dag* dag, NodeId pos)
+{
+    NodeId id = dag->nodes.size();
+
+    if (pos > id) {
+        Rcpp::warning(
+            "position %u exceeds number of nodes - no node added",
+            pos
+        );
+        return id;
+    }
+
+    dag->nodes.emplace_back();
+    dag->nodes_order.insert(dag->nodes_order.begin() + pos, id);
+    rebuild_nodes_pos(dag);
+    return id;
+}
+
 
 // ------
 // Remove
@@ -247,14 +248,6 @@ void remove_node(Dag* dag, NodeId id, bool recursive)
 // -------------
 // House keeping
 // -------------
-void rebuild_nodes_pos(Dag* dag)
-{
-    dag->nodes_pos.resize(dag->nodes.size());
-    for (NodeId i = 0; i < dag->nodes_order.size(); ++i) {
-        dag->nodes_pos[dag->nodes_order[i]] = i;
-    }
-}
-
 void init_visitor_marking(Dag* dag)
 {
     if (dag->visited.size() < dag->nodes.size()) {
@@ -267,6 +260,14 @@ void init_visitor_marking(Dag* dag)
     if (dag->visitor_mark == 0) {
         std::fill(dag->visited.begin(), dag->visited.end(), 0);
         dag->visitor_mark = 1;
+    }
+}
+
+void rebuild_nodes_pos(Dag* dag)
+{
+    dag->nodes_pos.resize(dag->nodes.size());
+    for (NodeId i = 0; i < dag->nodes_order.size(); ++i) {
+        dag->nodes_pos[dag->nodes_order[i]] = i;
     }
 }
 
