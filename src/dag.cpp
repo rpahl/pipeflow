@@ -14,8 +14,7 @@ struct Node {
 };
 
 
-class Dag {
-public:
+struct Dag {
     std::vector<Node> nodes;            // nodes stored by running id
 
     // We keep track of the topological nodes order. This allows us to later
@@ -46,7 +45,7 @@ std::size_t size(const Dag* dag);
 
 // Add
 NodeId add_node(Dag* dag);
-NodeId add_node_at(Dag* dag, uint32_t pos);
+NodeId add_node_at(Dag* dag, NodeId pos);
 bool add_edge(Dag* dag, NodeId from, NodeId to);
 bool add_edge_in_order(Dag* dag, NodeId from, NodeId to);
 
@@ -125,7 +124,7 @@ bool is_cyclic(const Dag* dag)
     throw Rcpp::exception("is_cyclic not yet implemented");
 }
 
-std::size_t size(const Dag* dag) { return dag->nodes.size(); }
+size_t size(const Dag* dag) { return dag->nodes.size(); }
 // TODO: maybe size() should be the number of alive nodes
 
 // ---
@@ -140,7 +139,7 @@ NodeId add_node(Dag* dag)
     return id;
 }
 
-NodeId add_node_at(Dag* dag, uint32_t pos)
+NodeId add_node_at(Dag* dag, NodeId pos)
 {
     NodeId id = dag->nodes.size();
 
@@ -251,7 +250,7 @@ void remove_node(Dag* dag, NodeId id, bool recursive)
 void rebuild_nodes_pos(Dag* dag)
 {
     dag->nodes_pos.resize(dag->nodes.size());
-    for (uint32_t i = 0; i < dag->nodes_order.size(); ++i) {
+    for (NodeId i = 0; i < dag->nodes_order.size(); ++i) {
         dag->nodes_pos[dag->nodes_order[i]] = i;
     }
 }
