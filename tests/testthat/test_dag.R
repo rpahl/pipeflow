@@ -137,44 +137,48 @@ describe("Dag",
         expect_true(d$has_edge(1, 0))
     })
 
-    it("can get downstream and upstream nodes",
+    it("can determine downstream and upstream nodes",
     {
         d <- new(Dag)
         d$add_node()
         d$add_node()
         d$add_node()
+        d$add_node()
+        expect_equal(d$get_reachable_nodes_down(0), 0)
+        expect_equal(d$get_reachable_nodes_down(1), 1)
+        expect_equal(d$get_reachable_nodes_up(2), 2)
+        expect_equal(d$get_reachable_nodes_up(3), 3)
+
         dag_add_edge(d, 0, 1)
+        dag_add_edge(d, 2, 3)
+        expect_equal(d$get_reachable_nodes_down(0), c(0, 1))
+        expect_equal(d$get_reachable_nodes_down(1), 1)
+        expect_equal(d$get_reachable_nodes_down(2), c(2, 3))
+        expect_equal(d$get_reachable_nodes_down(3), 3)
+        expect_equal(d$get_reachable_nodes_down(c(0, 2)), c(0, 2, 3, 1))
+
+        expect_equal(d$get_reachable_nodes_up(0), 0)
+        expect_equal(d$get_reachable_nodes_up(1), c(1, 0))
+        expect_equal(d$get_reachable_nodes_up(2), 2)
+        expect_equal(d$get_reachable_nodes_up(3), c(3, 2))
+
+        # Connecting both subgraphs should make all nodes reachable
         dag_add_edge(d, 1, 2)
-        expect_equal(d$get_downstream_nodes(0), c(1, 2))
-        expect_equal(d$get_downstream_nodes(1), c(2))
-        expect_equal(d$get_downstream_nodes(2), numeric())
-
-        dag_add_node_at(d, 1)
-        dag_add_edge(d, 0, 3)
-        dag_add_edge(d, 3, 1)
-        dag_add_edge(d, 3, 2)
-
-        expect_equal(d$get_downstream_nodes(0), c(1, 3, 2))
-        expect_equal(d$get_downstream_nodes(1), c(2))
-        expect_equal(d$get_downstream_nodes(2), numeric())
-        expect_equal(d$get_downstream_nodes(3), c(1, 2))
-
-        expect_equal(d$get_upstream_nodes(0), numeric())
-        expect_equal(d$get_upstream_nodes(3), c(0))
-        expect_equal(d$get_upstream_nodes(1), c(0, 3))
-        expect_equal(d$get_upstream_nodes(2), c(1, 3, 0))
+        expect_equal(d$get_reachable_nodes_down(0), c(0, 1, 2, 3))
+        expect_equal(d$get_reachable_nodes_up(3), c(3, 2, 1, 0))
     })
+
 
     it("downstream or upstream of non-existent nodes gives warning",
     {
         d <- new(Dag)
         d$add_node()
         expect_warning(
-            expect_equal(d$get_downstream_nodes(1), numeric()),
+            expect_equal(d$get_reachable_nodes_down(1), numeric()),
             "node id 1 not in DAG"
         )
         expect_warning(
-            expect_equal(d$get_upstream_nodes(1), numeric()),
+            expect_equal(d$get_reachable_nodes_up(1), numeric()),
             "node id 1 not in DAG"
         )
     })

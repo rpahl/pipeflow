@@ -4,11 +4,11 @@
 // using namespace Rcpp;
 
 using NodeId = uint32_t;
+using nodeID_vec = std::vector<NodeId>;
 
 struct Node {
-    std::vector<NodeId> incoming;
-    std::vector<NodeId> outgoing;
-
+    nodeID_vec incoming;
+    nodeID_vec outgoing;
     bool alive = true;
     bool dirty = false;
 };
@@ -20,16 +20,18 @@ struct Dag {
     // We keep track of the topological order and position of nodes in the DAG,
     // which allows to insert nodes in between by just modifying these vectors,
     // that is, without having to update all dependencies, edges, etc
-    std::vector<NodeId> nodes_pos;      // basically inverse mapping of order
-    std::vector<NodeId> nodes_order;    // order of nodes
+    nodeID_vec nodes_pos;             // basically inverse mapping of order
+    nodeID_vec nodes_order;           // order of nodes
 
-    bool needs_pos_rebuild = false;
-    // std::vector<NodeId> free_ids;    // optional
+    // nodeID_vec free_ids;    // optional
 
     // Caching and memoization
     std::vector<uint16_t> visited;      // used to keep track of node visits
-    uint16_t visitor_mark = 0;          // allows re-use of visited without reset
-    std::vector<NodeId> work_stack;
+    uint16_t visitor_mark = 0;          // allows repeated re-use of visited
+    nodeID_vec work_stack;
+
+    // Dag state
+    bool needs_pos_rebuild = false;
 };
 
 // ---------------------------------------------------------------------------
@@ -41,10 +43,12 @@ std::size_t size(const Dag* dag);
 bool has_edge(const Dag* dag, NodeId from, NodeId to);
 bool has_node(const Dag* dag, NodeId id);
 bool is_cyclic(const Dag* dag);
-std::vector<NodeId> get_nodes_order(const Dag* dag);
-std::vector<NodeId> get_nodes_pos(const Dag* dag);
-std::vector<NodeId> get_downstream_nodes(Dag* dag, NodeId id);
-std::vector<NodeId> get_upstream_nodes(Dag* dag, NodeId id);
+nodeID_vec get_nodes_order(const Dag* dag);
+nodeID_vec get_nodes_pos(const Dag* dag);
+template <nodeID_vec Node::*EdgesMember>
+nodeID_vec get_reachable_nodes(Dag* dag, const nodeID_vec& start_ids);
+nodeID_vec get_reachable_nodes_down(Dag* dag, const nodeID_vec& start_ids);
+nodeID_vec get_reachable_nodes_up(Dag* dag, const nodeID_vec& start_ids);
 
 // Add
 NodeId add_node(Dag* dag);
@@ -97,72 +101,50 @@ bool is_cyclic(const Dag* dag)
     throw Rcpp::exception("is_cyclic not yet implemented");
 }
 
-std::vector<NodeId> get_nodes_order(const Dag* dag) { return dag->nodes_order; }
-std::vector<NodeId> get_nodes_pos(const Dag* dag) { return dag->nodes_pos; }
-std::vector<NodeId> get_downstream_nodes(Dag* dag, NodeId id)
+nodeID_vec get_nodes_order(const Dag* dag) { return dag->nodes_order; }
+nodeID_vec get_nodes_pos(const Dag* dag) { return dag->nodes_pos; }
+
+template <nodeID_vec Node::*EdgesMember>
+nodeID_vec get_reachable_nodes(Dag* dag, const nodeID_vec& start_ids)
 {
-    if (!has_node(dag, id)) {
-        Rcpp::warning("node id %u not in DAG", id);
-        return {};
-    }
-
     init_visitor_marking(dag);
-
     std::vector<NodeId> result;
     dag->work_stack.clear();
-    dag->work_stack.push_back(id);
-    dag->visited[id] = dag->visitor_mark;
+
+    for (NodeId id : start_ids) {
+        if (!has_node(dag, id)) {
+            Rcpp::warning("node id %u not in DAG", id);
+            continue;
+        }
+        if (dag->visited[id] == dag->visitor_mark) continue;
+        dag->visited[id] = dag->visitor_mark;
+        dag->work_stack.push_back(id);
+        result.push_back(id);
+    }
 
     while (!dag->work_stack.empty()) {
         NodeId cur = dag->work_stack.back();
         dag->work_stack.pop_back();
-        for (NodeId nxt : dag->nodes[cur].outgoing) {
-            if (!dag->nodes[nxt].alive) continue;
-            // TODO: evaluate if removing dead nodes from all incoming and
-            // outgoing nodes could improve performance by avoiding the
-            // above check entirely.
+        const auto& neighbors = dag->nodes[cur].*EdgesMember;
 
+        for (NodeId nxt : neighbors) {
             if (dag->visited[nxt] == dag->visitor_mark) continue;
 
             dag->visited[nxt] = dag->visitor_mark;
-            result.push_back(nxt);
             dag->work_stack.push_back(nxt);
+            result.push_back(nxt);
         }
     }
+
     return result;
 }
-
-std::vector<NodeId> get_upstream_nodes(Dag* dag, NodeId id)
+nodeID_vec get_reachable_nodes_down(Dag* dag, const nodeID_vec& start_ids)
 {
-    if (!has_node(dag, id)) {
-        Rcpp::warning("node id %u not in DAG", id);
-        return {};
-    }
-
-    init_visitor_marking(dag);
-
-    std::vector<NodeId> result;
-    dag->work_stack.clear();
-    dag->work_stack.push_back(id);
-    dag->visited[id] = dag->visitor_mark;
-
-    while (!dag->work_stack.empty()) {
-        NodeId cur = dag->work_stack.back();
-        dag->work_stack.pop_back();
-        for (NodeId nxt : dag->nodes[cur].incoming) {
-            if (!dag->nodes[nxt].alive) continue;
-            // TODO: evaluate if removing dead nodes from all incoming and
-            // outgoing nodes could improve performance by avoiding the
-            // above check entirely.
-
-            if (dag->visited[nxt] == dag->visitor_mark) continue;
-
-            dag->visited[nxt] = dag->visitor_mark;
-            result.push_back(nxt);
-            dag->work_stack.push_back(nxt);
-        }
-    }
-    return result;
+    return get_reachable_nodes<&Node::outgoing>(dag, start_ids);
+}
+nodeID_vec get_reachable_nodes_up(Dag* dag, const nodeID_vec& start_ids)
+{
+    return get_reachable_nodes<&Node::incoming>(dag, start_ids);
 }
 
 
@@ -328,8 +310,8 @@ RCPP_MODULE(Dag){
     .const_method("has_node", &has_node)
     .const_method("get_nodes_order", &get_nodes_order)
     .const_method("get_nodes_pos", &get_nodes_pos)
-    .method("get_downstream_nodes", &get_downstream_nodes)
-    .method("get_upstream_nodes", &get_upstream_nodes)
+    .method("get_reachable_nodes_down", &get_reachable_nodes_down)
+    .method("get_reachable_nodes_up", &get_reachable_nodes_up)
 
     // Add
     .method("add_node", &add_node)
