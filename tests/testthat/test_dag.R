@@ -142,6 +142,85 @@ describe("Dag creation and properties",
 })
 
 
+describe("node removal",
+{
+    it("unconnected nodes can always be removed",
+    {
+        d <- new(Dag)
+        d$add_node()
+        d$add_node()
+        expect_equal(d$get_nodes_order(), c(0, 1))
+        expect_equal(d$get_nodes_pos(), c(0, 1))
+        expect_true(d$is_tidy())
+
+        expect_true(dag_remove_node(d, 0))
+        expect_false(d$has_node(0))
+        expect_true(d$has_node(1))
+        expect_equal(d$get_nodes_order(), c(0, 1))
+        expect_false(d$is_tidy())
+
+        expect_true(dag_remove_node(d, 1))
+        expect_false(d$has_node(1))
+        expect_warning(
+            expect_equal(dag_get_reachable_nodes_down(d, 1), numeric()),
+            "node id 1 not in DAG"
+        )
+        expect_equal(d$get_nodes_order(), c(0, 1))
+        d$tidy_up()
+        expect_equal(d$get_nodes_order(), numeric())
+        expect_equal(d$get_nodes_pos(), numeric())
+    })
+
+    it("connected nodes can be removed directly if they have no outgoing edges",
+    {
+        d <- new(Dag)
+        d$add_node()
+        d$add_node()
+        dag_add_edge(d, 0, 1)
+
+        expect_true(d$is_tidy())
+        expect_false(dag_remove_node(d, 0)) |>
+            expect_warning("would leave downstream node 1 dangling")
+
+        expect_true(d$is_tidy())
+        expect_true(dag_remove_node(d, 1)) |> expect_no_warning()
+        expect_false(d$has_node(1))
+        expect_false(d$is_tidy())
+    })
+
+
+    it("signals if removal would leave downstream nodes dangling",
+    {
+        # Diamond
+        d <- create_diamond_dag()
+        expect_true(d$is_tidy())
+        expect_true(dag_remove_node(d, 1)) |> expect_no_warning()
+        expect_false(d$is_tidy())
+
+        expect_false(dag_remove_node(d, 2)) |>
+            expect_warning("would leave downstream node 3 dangling")
+        expect_true(dag_remove_node(d, 3))
+        expect_true(dag_remove_node(d, 2))
+
+        # Tree
+        d <- create_bin_tree_dag()
+        expect_false(dag_remove_node(d, 4)) |>
+            expect_warning("would leave downstream node 5 dangling")
+        expect_true(dag_remove_node(d, 5))
+        expect_false(dag_remove_node(d, 4)) |>
+            expect_warning("would leave downstream node 6 dangling")
+        expect_true(dag_remove_node(d, 6))
+        expect_true(dag_remove_node(d, 4))
+
+        # Snake
+        d <- create_snake_dag()
+        expect_true(dag_remove_node(d, 3))
+        expect_false(dag_remove_node(d, 1)) |>
+            expect_warning("would leave downstream node 2 dangling")
+    })
+})
+
+
 describe("reachable nodes",
 {
     it("can determine reachable nodes up- and downstream",
@@ -185,22 +264,7 @@ describe("reachable nodes",
 
     it("correctly determines reachable nodes if nodes were inserted",
     {
-        d <- new(Dag)
-        d$add_node()
-        d$add_node()
-        d$add_node()
-        expect_equal(dag_add_node_at(d, 1), 3)
-        dag_add_edge(d, 0, 3)
-        dag_add_edge(d, 3, 1)
-        dag_add_edge(d, 1, 2)
-        # 0 - 3 - 1 - 2
-
-        dag_add_edge(d, 0, 1)
-        dag_add_edge(d, 3, 2)
-        #  /------\
-        # 0 - 3 - 1 - 2
-        #      \-----/
-
+        d <- create_snake_dag()
         expect_equal(dag_get_reachable_nodes_down(d, 0), c(0, 3, 1, 2))
         expect_equal(dag_get_reachable_nodes_down(d, 3), c(3, 1, 2))
         expect_equal(dag_get_reachable_nodes_down(d, 1), c(1, 2))
@@ -212,6 +276,27 @@ describe("reachable nodes",
         expect_equal(dag_get_reachable_nodes_up(d, 2), c(2, 1, 3, 0))
     })
 
+    it("can determine reachable nodes even if graph is not tidy after removal",
+    {
+        d <- create_diamond_dag()
+        expect_true(d$is_tidy())
+        expect_equal(d$get_nodes_order(), 0:3)
+        expect_equal(dag_get_reachable_nodes_down(d, 0), 0:3)
+
+        expect_true(dag_remove_node(d, 1)) |> expect_no_warning()
+        expect_false(d$is_tidy())
+        expect_equal(d$get_nodes_order(), 0:3)
+        expect_equal(dag_get_reachable_nodes_down(d, 0), c(0, 2, 3))
+
+        expect_equal(dag_get_reachable_nodes_up(d, 3), c(3, 2, 0))
+        expect_equal(
+            dag_get_reachable_nodes_up(d, 3, inTopoOrder = TRUE),
+            c(0, 2, 3)
+        )
+        # Using inTopoOrder = TRUE automatically tidies the graph
+        expect_true(d$is_tidy())
+        expect_equal(d$get_nodes_order(), c(0, 2, 3))
+    })
 
     it("trying to reach non-existent nodes gives warning",
     {
@@ -225,63 +310,5 @@ describe("reachable nodes",
             expect_equal(dag_get_reachable_nodes_up(d, 1), numeric()),
             "node id 1 not in DAG"
         )
-    })
-})
-
-
-describe("node removal",
-{
-    it("unconnected nodes can always be removed",
-    {
-        d <- new(Dag)
-        d$add_node()
-        d$add_node()
-
-        expect_true(dag_remove_node(d, 0))
-        expect_false(d$has_node(0))
-        expect_true(d$has_node(1))
-
-        expect_true(dag_remove_node(d, 1))
-        expect_false(d$has_node(1))
-        expect_warning(
-            expect_equal(dag_get_reachable_nodes_down(d, 1), numeric()),
-            "node id 1 not in DAG"
-        )
-    })
-
-    it("connected nodes can be removed directly if they have no outgoing edges",
-    {
-        d <- new(Dag)
-        d$add_node()
-        d$add_node()
-        dag_add_edge(d, 0, 1)
-
-        expect_false(dag_remove_node(d, 0)) |>
-            expect_warning("would leave downstream node id 1 dangling")
-
-        expect_true(dag_remove_node(d, 1)) |> expect_no_warning()
-        expect_false(d$has_node(1))
-    })
-
-
-    it("signals if removal would leave downstream nodes dangling",
-    {
-        # Diamond
-        d <- create_diamond_dag()
-        expect_true(dag_remove_node(d, 1)) |> expect_no_warning()
-        expect_false(dag_remove_node(d, 2)) |>
-            expect_warning("would leave downstream node id 3 dangling")
-        expect_true(dag_remove_node(d, 3))
-        expect_true(dag_remove_node(d, 2))
-
-        # Tree
-        d <- create_bin_tree_dag()
-        expect_false(dag_remove_node(d, 4)) |>
-            expect_warning("would leave downstream node id 5 dangling")
-        expect_true(dag_remove_node(d, 5))
-        expect_false(dag_remove_node(d, 4)) |>
-            expect_warning("would leave downstream node id 6 dangling")
-        expect_true(dag_remove_node(d, 6))
-        expect_true(dag_remove_node(d, 4))
     })
 })

@@ -296,6 +296,8 @@ void kill_node(Dag* dag, nodeId id)
     }
 
     node.alive = false;
+    dag->needs_order_rebuild = true;
+    dag->needs_pos_rebuild = true;
 }
 
 // void pop_node()
@@ -319,8 +321,8 @@ bool remove_node(Dag* dag, nodeId id, bool force)
         // Each downstream node needs at least two incoming edges to not dangle.
         bool wouldBeDangling = dag->nodes[nid].incoming.size() < 2;
         if (wouldBeDangling) {
-            std::string info = "node id " + std::to_string(id) +
-                " would leave downstream node id " + std::to_string(nid) +
+            std::string info = "removing node " + std::to_string(id) +
+                " would leave downstream node " + std::to_string(nid) +
                 " dangling - use `force = true` to remove it anyway";
             Rcpp::warning(info.c_str());
             return false;
@@ -366,7 +368,7 @@ void tidy_up(Dag* dag)
     }
 
     if (dag->needs_pos_rebuild) {
-        dag->nodes_pos.resize(dag->nodes.size());
+        dag->nodes_pos.resize(dag->nodes_order.size());
         for (nodeId i = 0; i < dag->nodes_order.size(); ++i) {
             dag->nodes_pos[dag->nodes_order[i]] = i;
         }
