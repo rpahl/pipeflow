@@ -1,5 +1,5 @@
 
-describe("Dag",
+describe("Dag creation and properties",
 {
     it("can add nodes and edges",
     {
@@ -139,7 +139,11 @@ describe("Dag",
         )
         expect_true(d$has_edge(1, 0))
     })
+})
 
+
+describe("reachable nodes",
+{
     it("can determine reachable nodes up- and downstream",
     {
         d <- new(Dag)
@@ -223,6 +227,7 @@ describe("Dag",
         )
     })
 })
+
 
 describe("node removal",
 {
