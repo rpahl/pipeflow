@@ -1,7 +1,7 @@
 
-dag_add_node_at <- function(dag, pos, rebuild_pos = TRUE)
+dag_add_node_at <- function(dag, pos, stayTidy = TRUE)
 {
-    dag$add_node_at(pos, rebuild_pos)
+    dag$add_node_at(pos, stayTidy)
 }
 
 dag_add_edge <- function(
@@ -12,3 +12,17 @@ dag_add_edge <- function(
     dag$add_edge(from, to, checkTopo, checkCycle)
 }
 
+dag_get_reachable_nodes_down <- function(dag, start_ids, inTopoOrder = FALSE)
+{
+    dag$get_reachable_nodes_down(start_ids, inTopoOrder)
+}
+
+dag_get_reachable_nodes_up <- function(dag, start_ids, inTopoOrder = FALSE)
+{
+    dag$get_reachable_nodes_up(start_ids, inTopoOrder)
+}
+
+dag_remove_node <- function(dag, id, force = FALSE)
+{
+    dag$remove_node(id, force)
+}

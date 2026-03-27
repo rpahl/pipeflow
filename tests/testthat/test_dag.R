@@ -35,14 +35,17 @@ describe("Dag",
         d$add_node()
         d$add_node()
         d$add_node()
+        # nodes order
+        # 0 - 1 - 2
 
-        # 0 1 2
         expect_equal(d$get_nodes_order(), c(0, 1, 2))
         expect_equal(d$get_nodes_pos(), c(0, 1, 2))
 
         expect_equal(dag_add_node_at(d, 1), 3)
-        # 0 (3) 1 2 <- new nodes order
+        # new nodes order
+        # 0 - 3 - 1 - 2
         expect_equal(d$get_nodes_order(), c(0, 3, 1, 2))
+
         # new nodes pos
         # 0 => 0
         # 1 => 2
@@ -60,8 +63,8 @@ describe("Dag",
 
         expect_equal(d$get_nodes_pos(), c(0, 1, 2))
 
-        expect_equal(dag_add_node_at(d, 1, rebuild_pos = FALSE), 3)
-        expect_equal(dag_add_node_at(d, 0, rebuild_pos = FALSE), 4)
+        expect_equal(dag_add_node_at(d, 1, stayTidy = FALSE), 3)
+        expect_equal(dag_add_node_at(d, 0, stayTidy = FALSE), 4)
         expect_equal(d$get_nodes_order(), c(4, 0, 3, 1, 2))
         expect_equal(d$get_nodes_pos(), c(0, 1, 2))
 
@@ -137,49 +140,143 @@ describe("Dag",
         expect_true(d$has_edge(1, 0))
     })
 
-    it("can determine downstream and upstream nodes",
+    it("can determine reachable nodes up- and downstream",
     {
         d <- new(Dag)
         d$add_node()
         d$add_node()
         d$add_node()
         d$add_node()
-        expect_equal(d$get_reachable_nodes_down(0), 0)
-        expect_equal(d$get_reachable_nodes_down(1), 1)
-        expect_equal(d$get_reachable_nodes_up(2), 2)
-        expect_equal(d$get_reachable_nodes_up(3), 3)
+        expect_equal(dag_get_reachable_nodes_down(d, 0), 0)
+        expect_equal(dag_get_reachable_nodes_down(d, 1), 1)
+        expect_equal(dag_get_reachable_nodes_up(d, 2), 2)
+        expect_equal(dag_get_reachable_nodes_up(d, 3), 3)
 
         dag_add_edge(d, 0, 1)
         dag_add_edge(d, 2, 3)
-        expect_equal(d$get_reachable_nodes_down(0), c(0, 1))
-        expect_equal(d$get_reachable_nodes_down(1), 1)
-        expect_equal(d$get_reachable_nodes_down(2), c(2, 3))
-        expect_equal(d$get_reachable_nodes_down(3), 3)
-        expect_equal(d$get_reachable_nodes_down(c(0, 2)), c(0, 2, 3, 1))
+        expect_equal(dag_get_reachable_nodes_down(d, 0), c(0, 1))
+        expect_equal(dag_get_reachable_nodes_down(d, 1), 1)
+        expect_equal(dag_get_reachable_nodes_down(d, 2), c(2, 3))
+        expect_equal(dag_get_reachable_nodes_down(d, 3), 3)
+        expect_equal(dag_get_reachable_nodes_down(d, c(0, 2)), c(0, 2, 3, 1))
+        expect_equal(
+            dag_get_reachable_nodes_down(d, c(0, 2), inTopoOrder = TRUE),
+            c(0, 1, 2, 3)
+        )
 
-        expect_equal(d$get_reachable_nodes_up(0), 0)
-        expect_equal(d$get_reachable_nodes_up(1), c(1, 0))
-        expect_equal(d$get_reachable_nodes_up(2), 2)
-        expect_equal(d$get_reachable_nodes_up(3), c(3, 2))
+        expect_equal(dag_get_reachable_nodes_up(d, 0), 0)
+        expect_equal(dag_get_reachable_nodes_up(d, 1), c(1, 0))
+        expect_equal(dag_get_reachable_nodes_up(d, 2), 2)
+        expect_equal(dag_get_reachable_nodes_up(d, 3), c(3, 2))
+        expect_equal(
+            dag_get_reachable_nodes_up(d, 3, inTopoOrder = TRUE),
+            c(2, 3)
+        )
 
         # Connecting both subgraphs should make all nodes reachable
         dag_add_edge(d, 1, 2)
-        expect_equal(d$get_reachable_nodes_down(0), c(0, 1, 2, 3))
-        expect_equal(d$get_reachable_nodes_up(3), c(3, 2, 1, 0))
+        expect_equal(dag_get_reachable_nodes_down(d, 0), c(0, 1, 2, 3))
+        expect_equal(dag_get_reachable_nodes_up(d, 3), c(3, 2, 1, 0))
+    })
+
+    it("correctly determines reachable nodes if nodes were inserted",
+    {
+        d <- new(Dag)
+        d$add_node()
+        d$add_node()
+        d$add_node()
+        expect_equal(dag_add_node_at(d, 1), 3)
+        dag_add_edge(d, 0, 3)
+        dag_add_edge(d, 3, 1)
+        dag_add_edge(d, 1, 2)
+        # 0 - 3 - 1 - 2
+
+        dag_add_edge(d, 0, 1)
+        dag_add_edge(d, 3, 2)
+        #  /------\
+        # 0 - 3 - 1 - 2
+        #      \-----/
+
+        expect_equal(dag_get_reachable_nodes_down(d, 0), c(0, 3, 1, 2))
+        expect_equal(dag_get_reachable_nodes_down(d, 3), c(3, 1, 2))
+        expect_equal(dag_get_reachable_nodes_down(d, 1), c(1, 2))
+        expect_equal(dag_get_reachable_nodes_down(d, 2), c(2))
+
+        expect_equal(dag_get_reachable_nodes_up(d, 0), c(0))
+        expect_equal(dag_get_reachable_nodes_up(d, 3), c(3, 0))
+        expect_equal(dag_get_reachable_nodes_up(d, 1), c(1, 3, 0))
+        expect_equal(dag_get_reachable_nodes_up(d, 2), c(2, 1, 3, 0))
     })
 
 
-    it("downstream or upstream of non-existent nodes gives warning",
+    it("trying to reach non-existent nodes gives warning",
     {
         d <- new(Dag)
         d$add_node()
         expect_warning(
-            expect_equal(d$get_reachable_nodes_down(1), numeric()),
+            expect_equal(dag_get_reachable_nodes_down(d, 1), numeric()),
             "node id 1 not in DAG"
         )
         expect_warning(
-            expect_equal(d$get_reachable_nodes_up(1), numeric()),
+            expect_equal(dag_get_reachable_nodes_up(d, 1), numeric()),
             "node id 1 not in DAG"
         )
+    })
+})
+
+describe("node removal",
+{
+    it("unconnected nodes can always be removed",
+    {
+        d <- new(Dag)
+        d$add_node()
+        d$add_node()
+
+        expect_true(dag_remove_node(d, 0))
+        expect_false(d$has_node(0))
+        expect_true(d$has_node(1))
+
+        expect_true(dag_remove_node(d, 1))
+        expect_false(d$has_node(1))
+        expect_warning(
+            expect_equal(dag_get_reachable_nodes_down(d, 1), numeric()),
+            "node id 1 not in DAG"
+        )
+    })
+
+    it("connected nodes can be removed directly if they have no outgoing edges",
+    {
+        d <- new(Dag)
+        d$add_node()
+        d$add_node()
+        dag_add_edge(d, 0, 1)
+
+        expect_false(dag_remove_node(d, 0)) |>
+            expect_warning("would leave downstream node id 1 dangling")
+
+        expect_true(dag_remove_node(d, 1)) |> expect_no_warning()
+        expect_false(d$has_node(1))
+    })
+
+
+    it("signals if removal would leave downstream nodes dangling",
+    {
+        # Diamond
+        d <- create_diamond_dag()
+        expect_true(dag_remove_node(d, 1)) |> expect_no_warning()
+        expect_false(dag_remove_node(d, 2)) |>
+            expect_warning("would leave downstream node id 3 dangling")
+        expect_true(dag_remove_node(d, 3))
+        expect_true(dag_remove_node(d, 2))
+
+        # Tree
+        d <- create_bin_tree_dag()
+        expect_false(dag_remove_node(d, 4)) |>
+            expect_warning("would leave downstream node id 5 dangling")
+        expect_true(dag_remove_node(d, 5))
+        expect_false(dag_remove_node(d, 4)) |>
+            expect_warning("would leave downstream node id 6 dangling")
+        expect_true(dag_remove_node(d, 6))
+        expect_true(dag_remove_node(d, 4))
     })
 })
