@@ -29,6 +29,23 @@ describe("Dag creation and properties",
         expect_true(d$has_edge(0, 2))
     })
 
+    it("can be cloned",
+    {
+        d <- new(Dag)
+        d$add_node()
+        d$add_node()
+        dag_add_edge(d, 0, 1)
+        d_clone <- d$clone()
+        expect_equal(d$size(), d_clone$size())
+        expect_equal(d$get_nodes_order(), d_clone$get_nodes_order())
+        expect_equal(d$get_nodes_pos(), d_clone$get_nodes_pos())
+
+        d$add_node()
+        expect_equal(d$size(), d_clone$size() + 1)
+        expect_true(d$has_node(2))
+        expect_false(d_clone$has_node(2))
+    })
+
     it("can insert node in between",
     {
         d <- new(Dag)
@@ -364,4 +381,22 @@ describe("reachable nodes",
             "node id 1 not in DAG"
         )
     })
+})
+
+
+describe("dag rebuild",
+{
+    # Tree
+    d <- create_bin_tree_dag()
+    nord <- d$get_nodes_order()
+    res <- d$rebuild()
+    expect_equal(res, nord)
+    expect_equal(d$get_nodes_order(), 1:d$size() - 1)
+
+    # Snake
+    d <- create_snake_dag()
+    expect_true(dag_remove_node(d, 1))
+    expect_equal(d$get_nodes_order(), c(0, 3, 2))
+    d$rebuild()
+    expect_equal(d$get_nodes_order(), 0:2)
 })

@@ -37,6 +37,9 @@ struct Dag {
 // Method declaration
 // ---------------------------------------------------------------------------
 
+// Copy
+Dag* clone(const Dag* dag);
+
 // Inspect
 std::size_t size(const Dag* dag);
 bool has_edge(const Dag* dag, nodeId from, nodeId to);
@@ -72,16 +75,35 @@ bool add_edge(Dag* dag, nodeId from, nodeId to,
 bool remove_node(Dag* dag, nodeId id, bool force = false);
 bool remove_edge(Dag* dag, nodeId from, nodeId to, bool force = false);
 
+// Reshape
+void tidy_up(Dag* dag);
+nodeId_vec rebuild(Dag* dag);
+
 // Serialization
 void print(Dag* dag, nodeId from);
 
 // House keeping
 void init_visitor_marking(Dag* dag);
-void tidy_up(Dag* dag);
 
 // ---------------------------------------------------------------------------
 // Method implementation
 // ---------------------------------------------------------------------------
+
+// ----
+// Copy
+// ----
+Dag* clone(const Dag* dag)
+{
+    if (dag == nullptr) {
+        Rcpp::warning("cannot clone null Dag pointer");
+        return new Dag();
+    }
+
+    Dag* out = new Dag(*dag);
+    out->work_stack.clear();
+    return out;
+}
+
 
 // -------
 // Inspect
@@ -406,6 +428,87 @@ bool remove_edge(Dag* dag, nodeId from, nodeId to, bool force)
     return true;
 }
 
+// -------
+// Reshape
+// -------
+void tidy_up(Dag* dag)
+{
+    if (dag->needs_order_rebuild) {
+        // Remove any dead nodes
+        auto& order = dag->nodes_order;
+        order.erase(
+            std::remove_if(order.begin(), order.end(),
+                [&](nodeId id) { return !dag->nodes[id].alive; }),
+            order.end()
+        );
+        dag->needs_pos_rebuild = true;
+        dag->needs_order_rebuild = false;
+    }
+
+    if (dag->needs_pos_rebuild) {
+        dag->nodes_pos.resize(dag->nodes_order.size());
+        for (nodeId i = 0; i < dag->nodes_order.size(); ++i) {
+            dag->nodes_pos[dag->nodes_order[i]] = i;
+        }
+        dag->needs_pos_rebuild = false;
+    }
+}
+
+nodeId_vec rebuild(Dag* dag)
+{
+    tidy_up(dag);
+
+    nodeId_vec old_order = dag->nodes_order;
+    const nodeId n = static_cast<nodeId>(old_order.size());
+    const nodeId kInvalid = static_cast<nodeId>(-1);
+
+    // old id -> new id
+    nodeId_vec old_to_new(dag->nodes.size(), kInvalid);
+    for (nodeId new_id = 0; new_id < n; ++new_id) {
+        old_to_new[old_order[new_id]] = new_id;
+    }
+
+    std::vector<Node> new_nodes;
+    new_nodes.reserve(n);
+
+    for (nodeId new_id = 0; new_id < n; ++new_id) {
+        nodeId old_id = old_order[new_id];
+        const Node& old_node = dag->nodes[old_id];
+
+        Node nn;
+        nn.alive = true;
+        nn.dirty = old_node.dirty;
+
+        nn.incoming.reserve(old_node.incoming.size());
+        for (nodeId old_inc : old_node.incoming) {
+            nn.incoming.push_back(old_to_new[old_inc]);
+        }
+
+        nn.outgoing.reserve(old_node.outgoing.size());
+        for (nodeId old_out : old_node.outgoing) {
+            nn.outgoing.push_back(old_to_new[old_out]);
+        }
+        new_nodes.push_back(std::move(nn));
+    }
+
+    dag->nodes = std::move(new_nodes);
+
+    dag->nodes_order.resize(n);
+    dag->nodes_pos.resize(n);
+    for (nodeId i = 0; i < n; ++i) {
+        dag->nodes_order[i] = i;
+        dag->nodes_pos[i] = i;
+    }
+
+    dag->needs_order_rebuild = false;
+    dag->needs_pos_rebuild = false;
+    dag->visited.assign(n, 0);
+    dag->visitor_mark = 0;
+    dag->work_stack.clear();
+
+    return old_order;
+}
+
 
 // -------------
 // Serialization
@@ -564,35 +667,13 @@ void init_visitor_marking(Dag* dag)
     }
 }
 
-void tidy_up(Dag* dag)
-{
-    if (dag->needs_order_rebuild) {
-        // Remove any dead nodes
-        auto& order = dag->nodes_order;
-        order.erase(
-            std::remove_if(order.begin(), order.end(),
-                [&](nodeId id) { return !dag->nodes[id].alive; }),
-            order.end()
-        );
-        dag->needs_pos_rebuild = true;
-        dag->needs_order_rebuild = false;
-    }
-
-    if (dag->needs_pos_rebuild) {
-        dag->nodes_pos.resize(dag->nodes_order.size());
-        for (nodeId i = 0; i < dag->nodes_order.size(); ++i) {
-            dag->nodes_pos[dag->nodes_order[i]] = i;
-        }
-        dag->needs_pos_rebuild = false;
-    }
-}
-
 
 RCPP_MODULE(Dag){
     using namespace Rcpp;
 
     class_<Dag>("Dag")
     .default_constructor()
+    .const_method("clone", static_cast<Dag* (*)(const Dag*)>(&::clone))
 
     // Inspect
     .const_method("size", &size)
@@ -615,10 +696,11 @@ RCPP_MODULE(Dag){
     .method("remove_node", &remove_node)
     .method("remove_edge", &remove_edge)
 
+    // Reshape
+    .method("tidy_up", &tidy_up)
+    .method("rebuild", &rebuild)
+
     // Serialization
     .method("print", &print)
-
-    // Helpers
-    .method("tidy_up", &tidy_up)
     ;
 }
