@@ -36,6 +36,10 @@ struct Dag {
 // Method declaration
 // ---------------------------------------------------------------------------
 
+// Node methods
+bool is_dangling_node(const Node& node);
+void shift_node(Node& node, nodeId offset);
+
 // Copy
 Dag* clone(const Dag* dag);
 
@@ -47,8 +51,9 @@ bool has_edge(const Dag* dag, nodeId from, nodeId to);
 bool has_node(const Dag* dag, nodeId id);
 bool has_dangling_node(const Dag* dag);
 bool is_cyclic(const Dag* dag);
-bool is_dangling_node(const Node& node);
 bool is_tidy(const Dag* dag);
+nodeId_vec get_outgoing(const Dag* dag, nodeId id);
+nodeId_vec get_incoming(const Dag* dag, nodeId id);
 nodeId_vec get_nodes_order(const Dag* dag);
 nodeId_vec get_nodes_pos(const Dag* dag);
 nodeId_vec get_dangling_nodes(const Dag* dag);
@@ -70,7 +75,8 @@ nodeId add_node_at(Dag* dag, nodeId pos);
 bool add_edge(Dag* dag, nodeId from, nodeId to,
     bool checkTopo = true, bool checkCycle = false
 );
-// nodeId add_dag(Dag* dag, const Dag* other); // returns new node id of other's root node
+// nodeId_vec add_dag(Dag* dag, Dag* other);
+nodeId_vec add_dag(Dag* dag, SEXP other_sexp);
 
 // Remove
 bool remove_node(Dag* dag, nodeId id, bool force = false);
@@ -90,6 +96,26 @@ void init_visitor_marking(Dag* dag);
 // ---------------------------------------------------------------------------
 // Method implementation
 // ---------------------------------------------------------------------------
+
+// ------------
+// Node methods
+// ------------
+bool is_dangling_node(const Node& node)
+{
+    return node.alive && node.incoming.empty();
+}
+
+void shift_node(Node& node, nodeId offset)
+{
+    if (offset == 0) return;
+
+    for (auto& inc : node.incoming) {
+        inc += offset;
+    }
+    for (auto& out : node.outgoing) {
+        out += offset;
+    }
+}
 
 // ----
 // Copy
@@ -158,16 +184,19 @@ bool is_cyclic(const Dag* dag)
     throw Rcpp::exception("is_cyclic not yet implemented");
 }
 
-bool is_dangling_node(const Node& node)
-{
-    return node.alive && node.incoming.empty();
-}
-
 bool is_tidy(const Dag* dag)
 {
     return !dag->needs_pos_rebuild && !dag->needs_order_rebuild;
 }
 
+nodeId_vec get_outgoing(const Dag* dag, nodeId id)
+{
+    return dag->nodes[id].outgoing;
+}
+nodeId_vec get_incoming(const Dag* dag, nodeId id)
+{
+    return dag->nodes[id].incoming;
+}
 nodeId_vec get_nodes_order(const Dag* dag) { return dag->nodes_order; }
 nodeId_vec get_nodes_pos(const Dag* dag) { return dag->nodes_pos; }
 nodeId_vec get_dangling_nodes(const Dag* dag)
@@ -328,6 +357,43 @@ bool add_edge(
     }
 
     return true;
+}
+
+nodeId_vec add_dag(Dag* dag, SEXP other_sexp)
+{
+    Rcpp::S4 s4(other_sexp);
+    Rcpp::Environment env(s4);
+    SEXP ptr_sexp = env.get(".pointer");
+    Dag* other = static_cast<Dag*>(R_ExternalPtrAddr(ptr_sexp));
+    if (other == nullptr) {
+        Rcpp::warning("cannot add null Dag pointer");
+        return {};
+    }
+
+    nodeId offset = get_max_id(dag) - get_min_id(other) + 1;
+
+    if (size(other) == 0) return {};
+
+    Dag* copy = clone(other);
+    shift(copy, offset);
+
+    // Add copy to existing dag
+    std::size_t new_size = dag->nodes.size() + copy->nodes.size();
+    dag->nodes.reserve(new_size);
+    dag->nodes_order.reserve(new_size);
+    dag->nodes_pos.reserve(new_size);
+    for (nodeId id : copy->nodes_order) {
+        dag->nodes.push_back(copy->nodes[id]);
+        dag->nodes_order.push_back(id);
+        dag->nodes_pos.push_back(id);
+    }
+
+    dag->needs_pos_rebuild = true;
+    tidy_up(dag);
+
+    nodeId_vec result = copy->nodes_order;
+    delete copy;
+    return result;
 }
 
 
@@ -518,28 +584,36 @@ nodeId_vec rebuild(Dag* dag)
 
 void shift(Dag* dag, nodeId offset)
 {
-    if (size(dag) == 0) {
+    if (size(dag) == 0 || offset == 0) {
         return;
     }
 
+    // Shift all edge references
     for (auto& node : dag->nodes) {
-        for (auto& inc : node.incoming) {
-            inc += offset;
-        }
-        for (auto& out : node.outgoing) {
-            out += offset;
-        }
+        // if (!node.alive) continue;
+        shift_node(node, offset);
     }
 
+    // Prepend `offset` dead padding nodes so that
+    // id == index invariant holds after shifting.
+    std::vector<Node> padded(offset);
+    for (auto& n : padded) {
+        n.alive = false;
+    }
+    padded.reserve(offset + dag->nodes.size());
+    for (auto& node : dag->nodes) {
+        padded.push_back(std::move(node));
+    }
+
+    dag->nodes = std::move(padded);
+
+    // Shift order vector
     for (auto& id : dag->nodes_order) {
         id += offset;
     }
 
-    for (auto& pos : dag->nodes_pos) {
-        pos += offset;
-    }
+    dag->needs_pos_rebuild = true;
 }
-
 
 // -------------
 // Serialization
@@ -712,6 +786,8 @@ RCPP_MODULE(Dag){
     .const_method("get_max_id", &get_max_id)
     .const_method("has_edge", &has_edge)
     .const_method("has_node", &has_node)
+    .const_method("get_outgoing", &get_outgoing)
+    .const_method("get_incoming", &get_incoming)
     .const_method("has_dangling_node", &has_dangling_node)
     .const_method("get_nodes_order", &get_nodes_order)
     .const_method("get_nodes_pos", &get_nodes_pos)
@@ -724,6 +800,7 @@ RCPP_MODULE(Dag){
     .method("add_node", &add_node)
     .method("add_node_at", &add_node_at)
     .method("add_edge", &add_edge)
+    .method("add_dag", &add_dag)
 
     // Remove
     .method("remove_node", &remove_node)

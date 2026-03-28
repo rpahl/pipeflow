@@ -174,6 +174,48 @@ describe("Dag creation and properties",
     })
 })
 
+describe("add dag",
+{
+    it("can add one dag to another",
+    {
+        d <- new(Dag)
+        d$add_node()
+        d$add_node()
+        dag_add_edge(d, 0, 1)
+
+        other <- new(Dag)
+        other$add_node()
+        other$add_node()
+        dag_add_edge(other, 0, 1)
+
+        expect_equal(d$get_nodes_order(), c(0, 1))
+        expect_equal(other$get_nodes_order(), c(0, 1))
+
+        res <- d$add_dag(other)
+        expect_equal(res, 2:3)
+        expect_equal(d$get_nodes_order(), 0:3)
+        expect_equal(other$get_nodes_order(), 0:1) # other was not changed
+
+        expect_equal(d$get_outgoing(0), 1)
+        expect_equal(d$get_incoming(1), 0)
+        expect_equal(d$get_outgoing(2), 3)
+        expect_equal(d$get_incoming(3), 2)
+    })
+
+    it("can add snake to diamond graph",
+    {
+        d <- create_diamond_dag()
+        n <- d$size()
+        s <- create_snake_dag()
+
+        expect_equal(d$get_nodes_order(), 0:3)
+        s_nodes <- s$get_nodes_order()
+        expect_equal(s_nodes, c(0, 3, 1, 2))
+        res <- d$add_dag(s)
+        expect_equal(res, s_nodes + n)
+        expect_equal(d$get_nodes_order(), c(0:3, s_nodes + n))
+    })
+})
 
 describe("node removal",
 {
@@ -427,29 +469,39 @@ describe("dag shift",
         expect_no_error(d$shift(10))
         expect_equal(d$size(), 0)
     })
-    it("shifts node IDs by a given offset",
+
+    it("correctly shifts node IDs and edges of bin snake example",
     {
-        d <- new(Dag)
-        d$add_node()
-        d$add_node()
-        d$add_node()
-        d$add_node_at(1)
-        d$tidy_up()
+        d <- create_snake_dag()
+        expect_true(d$has_edge(0, 3))
+        expect_true(d$has_edge(0, 1))
+        expect_equal(d$get_outgoing(0), c(3, 1))
         ids <- d$get_nodes_order()
         pos <- d$get_nodes_pos()
         d$shift(10)
-
+        expect_true(d$has_node(10))
+        expect_equal(d$get_outgoing(10), c(13, 11))
         expect_equal(d$get_nodes_order(), ids + 10)
-        expect_equal(d$get_nodes_pos(), pos + 10)
+        # Relative pos should still be the same
+        expect_equal(d$get_nodes_pos(), pos)
+
+        expect_true(d$has_edge(10, 13))
+        expect_true(d$has_edge(10, 11))
+        expect_true(d$has_edge(11, 12))
+        expect_true(d$has_edge(13, 12))
     })
 
-    it("shifts node IDs of bin tree example by a given offset",
+    it("correctly shifts node IDs and edges of bin tree",
     {
         d <- create_bin_tree_dag()
+        out0 <- d$get_outgoing(0)
+        in0 <- d$get_incoming(0)
         ids <- d$get_nodes_order()
         pos <- d$get_nodes_pos()
         d$shift(10)
         expect_equal(d$get_nodes_order(), ids + 10)
-        expect_equal(d$get_nodes_pos(), pos + 10)
+        expect_equal(d$get_nodes_pos(), pos)
+        expect_equal(d$get_outgoing(10), out0 + 10)
+        expect_equal(d$get_incoming(10), in0 + 10)
     })
 })
