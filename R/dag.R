@@ -1,9 +1,4 @@
 
-dag_add_node_at <- function(dag, pos, stayTidy = TRUE)
-{
-    dag$add_node_at(pos, stayTidy)
-}
-
 dag_add_edge <- function(
     dag, from, to,
     checkTopo = TRUE,

@@ -24,7 +24,7 @@ create_snake_dag <- function()
     d$add_node()
     d$add_node()
     d$add_node()
-    expect_equal(dag_add_node_at(d, 1), 3)
+    expect_equal(d$add_node_at(1), 3)
     dag_add_edge(d, 0, 3)
     dag_add_edge(d, 3, 1)
     dag_add_edge(d, 1, 2)
@@ -35,6 +35,8 @@ create_snake_dag <- function()
     #  /------\
     # 0 - 3 - 1 - 2
     #      \-----/
+
+    d$tidy_up()
     d
 }
 
@@ -45,7 +47,7 @@ create_bin_tree_dag <- function()
     d$add_node()
     d$add_node()
     d$add_node()
-    expect_equal(dag_add_node_at(d, 2), 4)
+    expect_equal(d$add_node_at(2), 4)
     d$add_node()
     d$add_node()
     # 0 1 4 2 3 5 6
@@ -61,5 +63,7 @@ create_bin_tree_dag <- function()
     #    1   4
     #   / \ / \
     #  2  3 5  6
+
+    d$tidy_up()
     d
 }

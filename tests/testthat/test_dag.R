@@ -46,6 +46,21 @@ describe("Dag creation and properties",
         expect_false(d_clone$has_node(2))
     })
 
+    it("can inspect the min and max node id",
+    {
+        d <- new(Dag)
+        d$add_node()
+        d$add_node()
+        d$add_node()
+        expect_equal(d$get_min_id(), 0)
+        expect_equal(d$get_max_id(), 2)
+        d$add_node_at(1)
+        expect_equal(d$get_max_id(), 3)
+        dag_remove_node(d, 0)
+        d$tidy_up()
+        expect_equal(d$get_min_id(), 1)
+    })
+
     it("can insert node in between",
     {
         d <- new(Dag)
@@ -58,7 +73,8 @@ describe("Dag creation and properties",
         expect_equal(d$get_nodes_order(), c(0, 1, 2))
         expect_equal(d$get_nodes_pos(), c(0, 1, 2))
 
-        expect_equal(dag_add_node_at(d, 1), 3)
+        expect_equal(d$add_node_at(1), 3)
+        d$tidy_up()
         # new nodes order
         # 0 - 3 - 1 - 2
         expect_equal(d$get_nodes_order(), c(0, 3, 1, 2))
@@ -80,8 +96,8 @@ describe("Dag creation and properties",
 
         expect_equal(d$get_nodes_pos(), c(0, 1, 2))
 
-        expect_equal(dag_add_node_at(d, 1, stayTidy = FALSE), 3)
-        expect_equal(dag_add_node_at(d, 0, stayTidy = FALSE), 4)
+        expect_equal(d$add_node_at(1), 3)
+        expect_equal(d$add_node_at(0), 4)
         expect_equal(d$get_nodes_order(), c(4, 0, 3, 1, 2))
         expect_equal(d$get_nodes_pos(), c(0, 1, 2))
 

@@ -12,7 +12,6 @@ struct Node {
     bool alive = true;
 };
 
-
 struct Dag {
     std::vector<Node> nodes;            // nodes stored by running id
 
@@ -32,6 +31,7 @@ struct Dag {
     bool needs_order_rebuild = false;
 };
 
+
 // ---------------------------------------------------------------------------
 // Method declaration
 // ---------------------------------------------------------------------------
@@ -40,7 +40,9 @@ struct Dag {
 Dag* clone(const Dag* dag);
 
 // Inspect
-std::size_t size(const Dag* dag);
+std::size_t size(const Dag* dag) { return dag->nodes_order.size(); }
+nodeId get_min_id(const Dag* dag);
+nodeId get_max_id(const Dag* dag);
 bool has_edge(const Dag* dag, nodeId from, nodeId to);
 bool has_node(const Dag* dag, nodeId id);
 bool has_dangling_node(const Dag* dag);
@@ -64,7 +66,7 @@ nodeId_vec get_reachable_nodes_up(
 
 // Add
 nodeId add_node(Dag* dag);
-nodeId add_node_at(Dag* dag, nodeId pos, bool stayTidy = true);
+nodeId add_node_at(Dag* dag, nodeId pos);
 bool add_edge(Dag* dag, nodeId from, nodeId to,
     bool checkTopo = true, bool checkCycle = false
 );
@@ -107,7 +109,16 @@ Dag* clone(const Dag* dag)
 // -------
 // Inspect
 // -------
-std::size_t size(const Dag* dag) { return dag->nodes_order.size(); }
+nodeId get_min_id(const Dag* dag)
+{
+    if (dag->nodes_order.empty()) return 0;
+    return *std::min_element(dag->nodes_order.begin(), dag->nodes_order.end());
+}
+nodeId get_max_id(const Dag* dag)
+{
+    if (dag->nodes_order.empty()) return 0;
+    return *std::max_element(dag->nodes_order.begin(), dag->nodes_order.end());
+}
 
 bool has_edge(const Dag* dag, nodeId from, nodeId to)
 {
@@ -244,7 +255,7 @@ nodeId add_node(Dag* dag)
     return id;
 }
 
-nodeId add_node_at(Dag* dag, nodeId pos, bool stayTidy)
+nodeId add_node_at(Dag* dag, nodeId pos)
 {
     nodeId id = dag->nodes.size();
 
@@ -260,9 +271,6 @@ nodeId add_node_at(Dag* dag, nodeId pos, bool stayTidy)
     dag->nodes_order.insert(dag->nodes_order.begin() + pos, id);
     dag->needs_pos_rebuild = true;
 
-    if (stayTidy) {
-        tidy_up(dag);
-    }
     return id;
 }
 
@@ -675,6 +683,8 @@ RCPP_MODULE(Dag){
 
     // Inspect
     .const_method("size", &size)
+    .const_method("get_min_id", &get_min_id)
+    .const_method("get_max_id", &get_max_id)
     .const_method("has_edge", &has_edge)
     .const_method("has_node", &has_node)
     .const_method("has_dangling_node", &has_dangling_node)
