@@ -72,8 +72,10 @@ bool add_edge(Dag* dag, nodeId from, nodeId to,
 bool remove_node(Dag* dag, nodeId id, bool force = false);
 bool remove_edge(Dag* dag, nodeId from, nodeId to, bool force = false);
 
+// Serialization
+void print(Dag* dag, nodeId from);
 
-// Helpers for internal state
+// House keeping
 void init_visitor_marking(Dag* dag);
 void tidy_up(Dag* dag);
 
@@ -404,6 +406,146 @@ bool remove_edge(Dag* dag, nodeId from, nodeId to, bool force)
     return true;
 }
 
+
+// -------------
+// Serialization
+// -------------
+void print(Dag* dag, nodeId from)
+{
+    // Below implementation was taken from GPT-5.3-Codex
+    if (!has_node(dag, from)) {
+        Rcpp::warning("node id %u not in DAG", from);
+        return;
+    }
+
+    nodeId_vec reachable = get_reachable_nodes_down(dag, {from}, true);
+    if (reachable.empty()) {
+        return;
+    }
+
+    std::vector<bool> is_reachable(dag->nodes.size(), false);
+    for (nodeId id : reachable) {
+        is_reachable[id] = true;
+    }
+
+    // lane index -> node id currently occupying that lane
+    // free lane marker
+    const nodeId kFree = static_cast<nodeId>(-1);
+
+    // node id -> lane index, -1 means no lane assigned
+    std::vector<int> lane_of(dag->nodes.size(), -1);
+    nodeId_vec active_lanes;
+
+    auto ensure_lane = [&](nodeId id) -> int {
+        if (lane_of[id] >= 0) {
+            return lane_of[id];
+        }
+
+        for (std::size_t i = 0; i < active_lanes.size(); ++i) {
+            if (active_lanes[i] == kFree) {
+                active_lanes[i] = id;
+                lane_of[id] = static_cast<int>(i);
+                return static_cast<int>(i);
+            }
+        }
+
+        active_lanes.push_back(id);
+        lane_of[id] = static_cast<int>(active_lanes.size() - 1);
+        return lane_of[id];
+    };
+
+    auto in_child_lanes = [](const std::vector<int>& lanes, int lane) -> bool {
+        return std::find(lanes.begin(), lanes.end(), lane) != lanes.end();
+    };
+
+    for (nodeId nid : reachable) {
+        int cur_lane = ensure_lane(nid);
+
+        nodeId_vec children;
+        for (nodeId ch : dag->nodes[nid].outgoing) {
+            if (is_reachable[ch]) {
+                children.push_back(ch);
+            }
+        }
+
+        // deterministic child order in topological position
+        std::sort(children.begin(), children.end(), [&](nodeId a, nodeId b) {
+            return dag->nodes_pos[a] < dag->nodes_pos[b];
+        });
+
+        // Render current node line
+        std::string row;
+        for (std::size_t i = 0; i < active_lanes.size(); ++i) {
+            if (static_cast<int>(i) == cur_lane) {
+                row += "* ";
+            } else if (active_lanes[i] != kFree) {
+                row += "| ";
+            } else {
+                row += "  ";
+            }
+        }
+
+        row += std::to_string(nid);
+        if (!children.empty()) {
+            row += " -> [";
+            for (std::size_t i = 0; i < children.size(); ++i) {
+                if (i > 0) {
+                    row += ", ";
+                }
+                row += std::to_string(children[i]);
+            }
+            row += "]";
+        }
+
+        Rcpp::Rcout << row << std::endl;
+
+        // Update lanes after printing this row
+        std::vector<int> child_lanes;
+        if (children.empty()) {
+            active_lanes[cur_lane] = kFree;
+        } else {
+            nodeId first = children[0];
+
+            if (lane_of[first] < 0) {
+                lane_of[first] = cur_lane;
+                active_lanes[cur_lane] = first;
+            } else if (lane_of[first] != cur_lane) {
+                // child already has another active lane (merge)
+                active_lanes[cur_lane] = kFree;
+            } else {
+                active_lanes[cur_lane] = first;
+            }
+
+            child_lanes.push_back(lane_of[first]);
+
+            for (std::size_t i = 1; i < children.size(); ++i) {
+                int lane = ensure_lane(children[i]);
+                child_lanes.push_back(lane);
+            }
+        }
+
+        // Optional connector row for forks/merges (git-like feel)
+        bool needs_connector = children.size() > 1 ||
+            (!children.empty() && child_lanes[0] != cur_lane);
+
+        if (needs_connector) {
+            std::string conn;
+            for (std::size_t i = 0; i < active_lanes.size(); ++i) {
+                bool draw = active_lanes[i] != kFree ||
+                    in_child_lanes(child_lanes, static_cast<int>(i));
+                conn += draw ? "| " : "  ";
+            }
+            Rcpp::Rcout << conn << std::endl;
+        }
+
+        // Trim trailing free lanes
+        while (!active_lanes.empty() && active_lanes.back() == kFree) {
+            active_lanes.pop_back();
+        }
+    }
+}
+
+
 // -------------
 // House keeping
 // -------------
@@ -472,6 +614,9 @@ RCPP_MODULE(Dag){
     // Remove
     .method("remove_node", &remove_node)
     .method("remove_edge", &remove_edge)
+
+    // Serialization
+    .method("print", &print)
 
     // Helpers
     .method("tidy_up", &tidy_up)
