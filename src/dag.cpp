@@ -10,7 +10,6 @@ struct Node {
     nodeId_vec incoming;
     nodeId_vec outgoing;
     bool alive = true;
-    bool dirty = false;
 };
 
 
@@ -477,7 +476,6 @@ nodeId_vec rebuild(Dag* dag)
 
         Node nn;
         nn.alive = true;
-        nn.dirty = old_node.dirty;
 
         nn.incoming.reserve(old_node.incoming.size());
         for (nodeId old_inc : old_node.incoming) {

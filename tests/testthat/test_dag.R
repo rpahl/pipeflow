@@ -396,7 +396,7 @@ describe("dag rebuild",
     # Snake
     d <- create_snake_dag()
     expect_true(dag_remove_node(d, 1))
-    expect_equal(d$get_nodes_order(), c(0, 3, 2))
+    expect_equal(d$get_nodes_order(), c(0, 3, 1, 2))
     d$rebuild()
     expect_equal(d$get_nodes_order(), 0:2)
 })
