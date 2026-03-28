@@ -416,3 +416,40 @@ describe("dag rebuild",
     d$rebuild()
     expect_equal(d$get_nodes_order(), 0:2)
 })
+
+
+describe("dag shift",
+{
+    it("works with empty DAG",
+    {
+        d <- new(Dag)
+        expect_equal(d$size(), 0)
+        expect_no_error(d$shift(10))
+        expect_equal(d$size(), 0)
+    })
+    it("shifts node IDs by a given offset",
+    {
+        d <- new(Dag)
+        d$add_node()
+        d$add_node()
+        d$add_node()
+        d$add_node_at(1)
+        d$tidy_up()
+        ids <- d$get_nodes_order()
+        pos <- d$get_nodes_pos()
+        d$shift(10)
+
+        expect_equal(d$get_nodes_order(), ids + 10)
+        expect_equal(d$get_nodes_pos(), pos + 10)
+    })
+
+    it("shifts node IDs of bin tree example by a given offset",
+    {
+        d <- create_bin_tree_dag()
+        ids <- d$get_nodes_order()
+        pos <- d$get_nodes_pos()
+        d$shift(10)
+        expect_equal(d$get_nodes_order(), ids + 10)
+        expect_equal(d$get_nodes_pos(), pos + 10)
+    })
+})

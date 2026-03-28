@@ -79,6 +79,7 @@ bool remove_edge(Dag* dag, nodeId from, nodeId to, bool force = false);
 // Reshape
 void tidy_up(Dag* dag);
 nodeId_vec rebuild(Dag* dag);
+void shift(Dag* dag, nodeId offset);
 
 // Serialization
 void print(Dag* dag, nodeId from);
@@ -515,6 +516,30 @@ nodeId_vec rebuild(Dag* dag)
     return old_order;
 }
 
+void shift(Dag* dag, nodeId offset)
+{
+    if (size(dag) == 0) {
+        return;
+    }
+
+    for (auto& node : dag->nodes) {
+        for (auto& inc : node.incoming) {
+            inc += offset;
+        }
+        for (auto& out : node.outgoing) {
+            out += offset;
+        }
+    }
+
+    for (auto& id : dag->nodes_order) {
+        id += offset;
+    }
+
+    for (auto& pos : dag->nodes_pos) {
+        pos += offset;
+    }
+}
+
 
 // -------------
 // Serialization
@@ -707,6 +732,7 @@ RCPP_MODULE(Dag){
     // Reshape
     .method("tidy_up", &tidy_up)
     .method("rebuild", &rebuild)
+    .method("shift", &shift)
 
     // Serialization
     .method("print", &print)
