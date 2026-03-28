@@ -218,6 +218,24 @@ describe("node removal",
         expect_false(dag_remove_node(d, 1)) |>
             expect_warning("would leave downstream node 2 dangling")
     })
+
+    it("can enforce removal of nodes resulting in dangling nodes",
+    {
+        d <- new(Dag)
+        d$add_node()
+        d$add_node()
+        d$add_node()
+        dag_add_edge(d, 0, 1)
+        dag_add_edge(d, 1, 2)
+        expect_false(dag_remove_node(d, 1)) |>
+            expect_warning("would leave downstream node 2 dangling")
+
+        expect_true(dag_remove_node(d, 1, force = TRUE)) |> expect_no_warning()
+        expect_equal(dag_get_reachable_nodes_down(d, 0), 0)
+        d$tidy_up()
+        expect_equal(d$get_nodes_order(), c(0, 2))
+        expect_equal(d$get_dangling_nodes(), 2)
+    })
 })
 
 

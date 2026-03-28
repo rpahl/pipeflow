@@ -41,10 +41,13 @@ struct Dag {
 std::size_t size(const Dag* dag);
 bool has_edge(const Dag* dag, nodeId from, nodeId to);
 bool has_node(const Dag* dag, nodeId id);
+bool has_dangling_node(const Dag* dag);
 bool is_cyclic(const Dag* dag);
+bool is_dangling_node(const Node& node);
 bool is_tidy(const Dag* dag);
 nodeId_vec get_nodes_order(const Dag* dag);
 nodeId_vec get_nodes_pos(const Dag* dag);
+nodeId_vec get_dangling_nodes(const Dag* dag);
 
 template <nodeId_vec Node::*EdgesMember>
 nodeId_vec get_reachable_nodes(
@@ -63,9 +66,11 @@ nodeId add_node_at(Dag* dag, nodeId pos, bool stayTidy = true);
 bool add_edge(Dag* dag, nodeId from, nodeId to,
     bool checkTopo = true, bool checkCycle = false
 );
+nodeId append_dag(Dag* dag, const Dag* other); // returns new node id of other's root node
 
 // Remove
 bool remove_node(Dag* dag, nodeId id, bool force = false);
+
 
 // Helpers for internal state
 void init_visitor_marking(Dag* dag);
@@ -78,8 +83,7 @@ void tidy_up(Dag* dag);
 // -------
 // Inspect
 // -------
-// TODO: maybe size() should be the number of alive nodes
-std::size_t size(const Dag* dag) { return dag->nodes.size(); }
+std::size_t size(const Dag* dag) { return dag->nodes_order.size(); }
 
 bool has_edge(const Dag* dag, nodeId from, nodeId to)
 {
@@ -100,9 +104,27 @@ bool has_node(const Dag* dag, nodeId id)
     return id < dag->nodes.size() && dag->nodes[id].alive;
 }
 
+bool has_dangling_node(const Dag* dag)
+{
+    if (dag->nodes_order.size() < 2) return false;
+
+    for (std::size_t i = 1; i < dag->nodes_order.size(); ++i) {
+        nodeId nid = dag->nodes_order[i];
+        if (is_dangling_node(dag->nodes[nid])) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool is_cyclic(const Dag* dag)
 {
     throw Rcpp::exception("is_cyclic not yet implemented");
+}
+
+bool is_dangling_node(const Node& node)
+{
+    return node.alive && node.incoming.empty();
 }
 
 bool is_tidy(const Dag* dag)
@@ -112,6 +134,20 @@ bool is_tidy(const Dag* dag)
 
 nodeId_vec get_nodes_order(const Dag* dag) { return dag->nodes_order; }
 nodeId_vec get_nodes_pos(const Dag* dag) { return dag->nodes_pos; }
+nodeId_vec get_dangling_nodes(const Dag* dag)
+{
+    if (dag->nodes_order.size() < 2) return {};
+
+    nodeId_vec dangling;
+    for (std::size_t i = 1; i < dag->nodes_order.size(); ++i) {
+        nodeId nid = dag->nodes_order[i];
+        if (is_dangling_node(dag->nodes[nid])) {
+            dangling.push_back(nid);
+        }
+    }
+
+    return dangling;
+}
 
 // As the only difference in the implementation of reaching nodes is whether
 // we traverse outgoing or incoming edges, we use a template parameter to
@@ -265,8 +301,12 @@ bool add_edge(
 // ------
 // Remove
 // ------
-void kill_node(Dag* dag, nodeId id)
+bool kill_node(Dag* dag, nodeId id)
 {
+    if (!has_node(dag, id)) {
+        Rcpp::warning("node id %u not in DAG", id);
+        return false;
+    }
     auto& node = dag->nodes[id];
 
     // Cut all incoming edges
@@ -298,9 +338,8 @@ void kill_node(Dag* dag, nodeId id)
     node.alive = false;
     dag->needs_order_rebuild = true;
     dag->needs_pos_rebuild = true;
+    return true;
 }
-
-// void pop_node()
 
 bool remove_node(Dag* dag, nodeId id, bool force)
 {
@@ -313,8 +352,7 @@ bool remove_node(Dag* dag, nodeId id, bool force)
     bool hasOutgoing = node.outgoing.size() > 0;
 
     if (force || !hasOutgoing) {
-        kill_node(dag, id);
-        return true;
+        return kill_node(dag, id);
     }
 
     for (nodeId nid : node.outgoing) {
@@ -329,8 +367,7 @@ bool remove_node(Dag* dag, nodeId id, bool force)
         }
     }
 
-    kill_node(dag, id);
-    return true;
+    return kill_node(dag, id);
 }
 
 
@@ -351,7 +388,6 @@ void init_visitor_marking(Dag* dag)
         dag->visitor_mark = 1;
     }
 }
-
 
 void tidy_up(Dag* dag)
 {
@@ -387,8 +423,10 @@ RCPP_MODULE(Dag){
     .const_method("size", &size)
     .const_method("has_edge", &has_edge)
     .const_method("has_node", &has_node)
+    .const_method("has_dangling_node", &has_dangling_node)
     .const_method("get_nodes_order", &get_nodes_order)
     .const_method("get_nodes_pos", &get_nodes_pos)
+    .const_method("get_dangling_nodes", &get_dangling_nodes)
     .const_method("is_tidy", &is_tidy)
     .method("get_reachable_nodes_down", &get_reachable_nodes_down)
     .method("get_reachable_nodes_up", &get_reachable_nodes_up)
