@@ -66,10 +66,11 @@ nodeId add_node_at(Dag* dag, nodeId pos, bool stayTidy = true);
 bool add_edge(Dag* dag, nodeId from, nodeId to,
     bool checkTopo = true, bool checkCycle = false
 );
-nodeId append_dag(Dag* dag, const Dag* other); // returns new node id of other's root node
+// nodeId add_dag(Dag* dag, const Dag* other); // returns new node id of other's root node
 
 // Remove
 bool remove_node(Dag* dag, nodeId id, bool force = false);
+bool remove_edge(Dag* dag, nodeId from, nodeId to, bool force = false);
 
 
 // Helpers for internal state
@@ -370,6 +371,38 @@ bool remove_node(Dag* dag, nodeId id, bool force)
     return kill_node(dag, id);
 }
 
+bool remove_edge(Dag* dag, nodeId from, nodeId to, bool force)
+{
+    if (!has_edge(dag, from, to)) {
+        Rcpp::warning("edge %u -> %u not in DAG", from, to);
+        return false;
+    }
+
+    Node& fromNode = dag->nodes[from];
+    Node& toNode = dag->nodes[to];
+
+    bool wouldBeDangling = toNode.incoming.size() < 2;
+    if (wouldBeDangling && !force) {
+        std::string info = "removing edge " +
+            std::to_string(from) + " -> " + std::to_string(to) +
+            " would leave downstream node " + std::to_string(to) +
+            " dangling - use `force = true` to remove it anyway";
+        Rcpp::warning(info.c_str());
+        return false;
+    }
+
+    // Remove the edge
+    fromNode.outgoing.erase(
+        std::remove(fromNode.outgoing.begin(), fromNode.outgoing.end(), to),
+        fromNode.outgoing.end()
+    );
+    toNode.incoming.erase(
+        std::remove(toNode.incoming.begin(), toNode.incoming.end(), from),
+        toNode.incoming.end()
+    );
+
+    return true;
+}
 
 // -------------
 // House keeping
@@ -438,6 +471,7 @@ RCPP_MODULE(Dag){
 
     // Remove
     .method("remove_node", &remove_node)
+    .method("remove_edge", &remove_edge)
 
     // Helpers
     .method("tidy_up", &tidy_up)

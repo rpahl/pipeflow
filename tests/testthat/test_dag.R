@@ -238,6 +238,41 @@ describe("node removal",
     })
 })
 
+describe("edge removal",
+{
+    it("connected nodes can be removed directly if not dangling afterwards",
+    {
+        d <- new(Dag)
+        d$add_node()
+        d$add_node()
+        d$add_node()
+        dag_add_edge(d, 0, 2)
+
+        expect_false(dag_remove_edge(d, 0, 2)) |>
+            expect_warning("would leave downstream node 2 dangling")
+        expect_true(d$has_edge(0, 2))
+
+        dag_add_edge(d, 1, 2)
+        expect_true(dag_remove_edge(d, 0, 2)) |> expect_no_warning()
+        expect_false(d$has_edge(0, 2))
+    })
+
+    it("can enforce removal of edges resulting in dangling nodes",
+    {
+        d <- new(Dag)
+        d$add_node()
+        d$add_node()
+        dag_add_edge(d, 0, 1)
+        expect_true(d$has_edge(0, 1))
+        expect_false(dag_remove_edge(d, 0, 1)) |>
+            expect_warning("would leave downstream node 1 dangling")
+
+        expect_true(dag_remove_edge(d, 0, 1, force = TRUE)) |>
+            expect_no_warning()
+        expect_false(d$has_edge(0, 1))
+    })
+})
+
 
 describe("reachable nodes",
 {

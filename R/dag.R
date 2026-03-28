@@ -26,3 +26,8 @@ dag_remove_node <- function(dag, id, force = FALSE)
 {
     dag$remove_node(id, force)
 }
+
+dag_remove_edge <- function(dag, from, to, force = FALSE)
+{
+    dag$remove_edge(from, to, force)
+}
