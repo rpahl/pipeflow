@@ -161,6 +161,7 @@ bool has_edge(const Dag* dag, nodeId from, nodeId to)
     return std::find(out.begin(), out.end(), to) != out.end();
 }
 
+
 bool has_node(const Dag* dag, nodeId id)
 {
     return id < dag->nodes.size() && dag->nodes[id].alive;
