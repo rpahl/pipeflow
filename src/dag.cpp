@@ -37,13 +37,16 @@ struct Dag {
 // ---------------------------------------------------------------------------
 
 // Node methods
+// ------------
 bool is_dangling_node(const Node& node);
 void shift_node(Node& node, nodeId offset);
 
 // Copy
+// ----
 Dag* clone(const Dag* dag);
 
 // Inspect
+// -------
 std::size_t size(const Dag* dag) { return dag->nodes_order.size(); }
 nodeId get_min_id(const Dag* dag);
 nodeId get_max_id(const Dag* dag);
@@ -70,34 +73,38 @@ nodeId_vec get_reachable_nodes_up(
 );
 
 // Add
+// ---
 nodeId add_node(Dag* dag);
 nodeId add_node_at(Dag* dag, nodeId pos);
-bool add_edge(Dag* dag, nodeId from, nodeId to,
+bool add_edge(
+    Dag* dag, nodeId from, nodeId to,
     bool checkTopo = true, bool checkCycle = false
 );
-// nodeId_vec add_dag(Dag* dag, Dag* other);
-nodeId_vec add_dag(Dag* dag, SEXP other_sexp);
+nodeId_vec add_dag(Dag* dag, Dag* other);
 
 // Remove
+// ------
 bool remove_node(Dag* dag, nodeId id, bool force = false);
 bool remove_edge(Dag* dag, nodeId from, nodeId to, bool force = false);
 
 // Reshape
+// -------
 void tidy_up(Dag* dag);
 nodeId_vec rebuild(Dag* dag);
 void shift(Dag* dag, nodeId offset);
 
 // Serialization
-void print(Dag* dag, nodeId from);
+// -------------
+void print(Dag* dag, nodeId from = 0);
 
-// House keeping
+// Internal state
+// --------------
 void init_visitor_marking(Dag* dag);
 
 // ---------------------------------------------------------------------------
 // Method implementation
 // ---------------------------------------------------------------------------
 
-// ------------
 // Node methods
 // ------------
 bool is_dangling_node(const Node& node)
@@ -117,7 +124,6 @@ void shift_node(Node& node, nodeId offset)
     }
 }
 
-// ----
 // Copy
 // ----
 Dag* clone(const Dag* dag)
@@ -133,7 +139,6 @@ Dag* clone(const Dag* dag)
 }
 
 
-// -------
 // Inspect
 // -------
 nodeId get_min_id(const Dag* dag)
@@ -274,7 +279,6 @@ nodeId_vec get_reachable_nodes_up(
 }
 
 
-// ---
 // Add
 // ---
 nodeId add_node(Dag* dag)
@@ -360,33 +364,32 @@ bool add_edge(
     return true;
 }
 
-nodeId_vec add_dag(Dag* dag, SEXP other_sexp)
+nodeId_vec add_dag(Dag* dag, Dag* other)
 {
-    Rcpp::S4 s4(other_sexp);
-    Rcpp::Environment env(s4);
-    SEXP ptr_sexp = env.get(".pointer");
-    Dag* other = static_cast<Dag*>(R_ExternalPtrAddr(ptr_sexp));
     if (other == nullptr) {
         Rcpp::warning("cannot add null Dag pointer");
         return {};
     }
+    if (size(other) == 0) {
+        return {};
+    }
 
-    nodeId offset = get_max_id(dag) - get_min_id(other) + 1;
-
-    if (size(other) == 0) return {};
+    nodeId offset = 0;
+    if (size(dag) > 0) {
+        offset = get_max_id(dag) + 1 - get_min_id(other);
+    }
 
     Dag* copy = clone(other);
     shift(copy, offset);
 
-    // Add copy to existing dag
-    std::size_t new_size = dag->nodes.size() + copy->nodes.size();
-    dag->nodes.reserve(new_size);
-    dag->nodes_order.reserve(new_size);
-    dag->nodes_pos.reserve(new_size);
+    // Ensure id == index invariant on target storage
+    if (dag->nodes.size() < copy->nodes.size()) {
+        dag->nodes.resize(copy->nodes.size());
+    }
+
     for (nodeId id : copy->nodes_order) {
-        dag->nodes.push_back(copy->nodes[id]);
+        dag->nodes[id] = copy->nodes[id];
         dag->nodes_order.push_back(id);
-        dag->nodes_pos.push_back(id);
     }
 
     dag->needs_pos_rebuild = true;
@@ -503,7 +506,6 @@ bool remove_edge(Dag* dag, nodeId from, nodeId to, bool force)
     return true;
 }
 
-// -------
 // Reshape
 // -------
 void tidy_up(Dag* dag)
@@ -616,7 +618,6 @@ void shift(Dag* dag, nodeId offset)
     dag->needs_pos_rebuild = true;
 }
 
-// -------------
 // Serialization
 // -------------
 void print(Dag* dag, nodeId from)
@@ -755,9 +756,8 @@ void print(Dag* dag, nodeId from)
 }
 
 
-// -------------
-// House keeping
-// -------------
+// Internal state
+// --------------
 void init_visitor_marking(Dag* dag)
 {
     if (dag->visited.size() < dag->nodes.size()) {
@@ -774,45 +774,290 @@ void init_visitor_marking(Dag* dag)
 }
 
 
-RCPP_MODULE(Dag){
-    using namespace Rcpp;
+// -------------------
+// Rcpp export helpers
+// --------------------
 
-    class_<Dag>("Dag")
-    .default_constructor()
-    .const_method("clone", static_cast<Dag* (*)(const Dag*)>(&::clone))
+static Dag* cast_sexp_to_dag_ptr(SEXP dp)
+{
+    if (TYPEOF(dp) != EXTPTRSXP) {
+        Rcpp::stop("expected external pointer to Dag");
+    }
+    Dag* dag = static_cast<Dag*>(R_ExternalPtrAddr(dp));
+    if (dag == nullptr) {
+        Rcpp::stop("null Dag pointer");
+    }
+    return dag;
+}
 
-    // Inspect
-    .const_method("size", &size)
-    .const_method("get_min_id", &get_min_id)
-    .const_method("get_max_id", &get_max_id)
-    .const_method("has_edge", &has_edge)
-    .const_method("has_node", &has_node)
-    .const_method("get_outgoing", &get_outgoing)
-    .const_method("get_incoming", &get_incoming)
-    .const_method("has_dangling_node", &has_dangling_node)
-    .const_method("get_nodes_order", &get_nodes_order)
-    .const_method("get_nodes_pos", &get_nodes_pos)
-    .const_method("get_dangling_nodes", &get_dangling_nodes)
-    .const_method("is_tidy", &is_tidy)
-    .method("get_reachable_nodes_down", &get_reachable_nodes_down)
-    .method("get_reachable_nodes_up", &get_reachable_nodes_up)
+static Rcpp::IntegerVector as_int_vec(const nodeId_vec& x)
+{
+    Rcpp::IntegerVector out(x.size());
+    for (std::size_t i = 0; i < x.size(); ++i) {
+        out[i] = static_cast<int>(x[i]);
+    }
+    return out;
+}
 
-    // Add
-    .method("add_node", &add_node)
-    .method("add_node_at", &add_node_at)
-    .method("add_edge", &add_edge)
-    .method("add_dag", &add_dag)
+static void dag_finalizer(SEXP dp)
+{
+    Dag* dag = static_cast<Dag*>(R_ExternalPtrAddr(dp));
+    if (dag != nullptr) {
+        delete dag;
+        R_ClearExternalPtr(dp);
+    }
+}
 
-    // Remove
-    .method("remove_node", &remove_node)
-    .method("remove_edge", &remove_edge)
+static nodeId_vec as_node_vec(const Rcpp::IntegerVector& x)
+{
+    nodeId_vec out;
+    out.reserve(x.size());
+    for (int id : x) {
+        out.push_back(static_cast<nodeId>(id));
+    }
+    return out;
+}
 
-    // Reshape
-    .method("tidy_up", &tidy_up)
-    .method("rebuild", &rebuild)
-    .method("shift", &shift)
 
-    // Serialization
-    .method("print", &print)
-    ;
+// Rcpp exports
+// ------------
+
+// [[Rcpp::export]]
+SEXP dag_new()
+{
+    Dag* dag = new Dag();
+    SEXP dp = PROTECT(R_MakeExternalPtr(dag, R_NilValue, R_NilValue));
+    R_RegisterCFinalizerEx(dp, dag_finalizer, TRUE);
+    UNPROTECT(1);
+    return dp;
+}
+
+// [[Rcpp::export]]
+SEXP dag_clone(SEXP dp)
+{
+    Dag* dag = cast_sexp_to_dag_ptr(dp);
+    Dag* out = clone(dag);
+    SEXP out_dp = PROTECT(R_MakeExternalPtr(out, R_NilValue, R_NilValue));
+    R_RegisterCFinalizerEx(out_dp, dag_finalizer, TRUE);
+    UNPROTECT(1);
+    return out_dp;
+}
+
+
+// Inspect
+// -------
+
+// [[Rcpp::export]]
+int dag_size(SEXP dp)
+{
+    return static_cast<int>(size(cast_sexp_to_dag_ptr(dp)));
+}
+
+// [[Rcpp::export]]
+int dag_get_min_id(SEXP dp)
+{
+    return static_cast<int>(get_min_id(cast_sexp_to_dag_ptr(dp)));
+}
+
+// [[Rcpp::export]]
+int dag_get_max_id(SEXP dp)
+{
+    return static_cast<int>(get_max_id(cast_sexp_to_dag_ptr(dp)));
+}
+
+// [[Rcpp::export]]
+bool dag_has_edge(SEXP dp, int from, int to)
+{
+    return has_edge(
+        cast_sexp_to_dag_ptr(dp),
+        static_cast<nodeId>(from),
+        static_cast<nodeId>(to)
+    );
+}
+
+// [[Rcpp::export]]
+bool dag_has_node(SEXP dp, int id)
+{
+    return has_node(
+        cast_sexp_to_dag_ptr(dp),
+        static_cast<nodeId>(id)
+    );
+}
+
+// [[Rcpp::export]]
+bool dag_has_dangling_node(SEXP dp)
+{
+    return has_dangling_node(cast_sexp_to_dag_ptr(dp));
+}
+
+// [[Rcpp::export]]
+bool dag_is_cyclic(SEXP dp)
+{
+    return is_cyclic(cast_sexp_to_dag_ptr(dp));
+}
+
+// [[Rcpp::export]]
+bool dag_is_tidy(SEXP dp)
+{
+    return is_tidy(cast_sexp_to_dag_ptr(dp));
+}
+
+// [[Rcpp::export]]
+Rcpp::IntegerVector dag_get_outgoing(SEXP dp, int id)
+{
+    return as_int_vec(
+        get_outgoing(cast_sexp_to_dag_ptr(dp), static_cast<nodeId>(id))
+    );
+}
+
+// [[Rcpp::export]]
+Rcpp::IntegerVector dag_get_incoming(SEXP dp, int id)
+{
+    return as_int_vec(
+        get_incoming(cast_sexp_to_dag_ptr(dp), static_cast<nodeId>(id))
+    );
+}
+
+// [[Rcpp::export]]
+Rcpp::IntegerVector dag_get_nodes_order(SEXP dp)
+{
+    return as_int_vec(
+        get_nodes_order(cast_sexp_to_dag_ptr(dp))
+    );
+}
+
+// [[Rcpp::export]]
+Rcpp::IntegerVector dag_get_nodes_pos(SEXP dp)
+{
+    return as_int_vec(
+        get_nodes_pos(cast_sexp_to_dag_ptr(dp))
+    );
+}
+
+// [[Rcpp::export]]
+Rcpp::IntegerVector dag_get_dangling_nodes(SEXP dp)
+{
+    return as_int_vec(
+        get_dangling_nodes(cast_sexp_to_dag_ptr(dp))
+    );
+}
+
+// [[Rcpp::export]]
+Rcpp::IntegerVector dag_get_reachable_nodes_down(
+    SEXP dp,
+    const Rcpp::IntegerVector& start_ids,
+    bool inTopoOrder = false
+) {
+    return as_int_vec(
+        get_reachable_nodes_down(
+            cast_sexp_to_dag_ptr(dp),
+            as_node_vec(start_ids),
+            inTopoOrder
+        )
+    );
+}
+
+// [[Rcpp::export]]
+Rcpp::IntegerVector dag_get_reachable_nodes_up(
+    SEXP dp,
+    const Rcpp::IntegerVector& start_ids,
+    bool inTopoOrder = false
+) {
+    return as_int_vec(
+        get_reachable_nodes_up(
+            cast_sexp_to_dag_ptr(dp),
+            as_node_vec(start_ids),
+            inTopoOrder
+        )
+    );
+}
+
+// Add
+// ---
+
+// [[Rcpp::export]]
+int dag_add_node(SEXP dp)
+{
+    return static_cast<int>(add_node(cast_sexp_to_dag_ptr(dp)));
+}
+
+// [[Rcpp::export]]
+int dag_add_node_at(SEXP dp, int pos)
+{
+    return static_cast<int>(
+        add_node_at(cast_sexp_to_dag_ptr(dp), static_cast<nodeId>(pos))
+    );
+}
+
+// [[Rcpp::export]]
+bool dag_add_edge(SEXP dp, int from, int to, bool checkTopo = true)
+{
+    return add_edge(
+        cast_sexp_to_dag_ptr(dp),
+        static_cast<nodeId>(from),
+        static_cast<nodeId>(to),
+        checkTopo,
+        false
+    );
+}
+
+// [[Rcpp::export]]
+Rcpp::IntegerVector dag_add_dag(SEXP dp, SEXP other_dp)
+{
+    return as_int_vec(
+        add_dag(cast_sexp_to_dag_ptr(dp), cast_sexp_to_dag_ptr(other_dp))
+    );
+}
+
+// Remove
+// ------
+
+// [[Rcpp::export]]
+bool dag_remove_node(SEXP dp, int id, bool force = false)
+{
+    return remove_node(
+        cast_sexp_to_dag_ptr(dp), static_cast<nodeId>(id), force
+    );
+}
+
+// [[Rcpp::export]]
+bool dag_remove_edge(SEXP dp, int from, int to, bool force = false)
+{
+    return remove_edge(
+        cast_sexp_to_dag_ptr(dp),
+        static_cast<nodeId>(from), static_cast<nodeId>(to),
+        force
+    );
+}
+
+
+// Reshape
+// -------
+
+// [[Rcpp::export]]
+void dag_tidy_up(SEXP dp)
+{
+    tidy_up(cast_sexp_to_dag_ptr(dp));
+}
+
+// [[Rcpp::export]]
+Rcpp::IntegerVector dag_rebuild(SEXP dp)
+{
+    return as_int_vec(rebuild(cast_sexp_to_dag_ptr(dp)));
+}
+
+// [[Rcpp::export]]
+void dag_shift(SEXP dp, int offset)
+{
+    shift(cast_sexp_to_dag_ptr(dp), static_cast<nodeId>(offset));
+}
+
+
+// Serialization
+// -------------
+
+// [[Rcpp::export]]
+void dag_print(SEXP dp, int from = 0)
+{
+    print(cast_sexp_to_dag_ptr(dp), static_cast<nodeId>(from));
 }

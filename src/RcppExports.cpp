@@ -10,11 +10,349 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-
-RcppExport SEXP _rcpp_module_boot_Dag();
+// dag_new
+SEXP dag_new();
+RcppExport SEXP _pipeflow_dag_new() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(dag_new());
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_clone
+SEXP dag_clone(SEXP dp);
+RcppExport SEXP _pipeflow_dag_clone(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_clone(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_size
+int dag_size(SEXP dp);
+RcppExport SEXP _pipeflow_dag_size(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_size(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_get_min_id
+int dag_get_min_id(SEXP dp);
+RcppExport SEXP _pipeflow_dag_get_min_id(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_get_min_id(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_get_max_id
+int dag_get_max_id(SEXP dp);
+RcppExport SEXP _pipeflow_dag_get_max_id(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_get_max_id(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_has_edge
+bool dag_has_edge(SEXP dp, int from, int to);
+RcppExport SEXP _pipeflow_dag_has_edge(SEXP dpSEXP, SEXP fromSEXP, SEXP toSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< int >::type from(fromSEXP);
+    Rcpp::traits::input_parameter< int >::type to(toSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_has_edge(dp, from, to));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_has_node
+bool dag_has_node(SEXP dp, int id);
+RcppExport SEXP _pipeflow_dag_has_node(SEXP dpSEXP, SEXP idSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< int >::type id(idSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_has_node(dp, id));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_has_dangling_node
+bool dag_has_dangling_node(SEXP dp);
+RcppExport SEXP _pipeflow_dag_has_dangling_node(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_has_dangling_node(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_is_cyclic
+bool dag_is_cyclic(SEXP dp);
+RcppExport SEXP _pipeflow_dag_is_cyclic(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_is_cyclic(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_is_tidy
+bool dag_is_tidy(SEXP dp);
+RcppExport SEXP _pipeflow_dag_is_tidy(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_is_tidy(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_get_outgoing
+Rcpp::IntegerVector dag_get_outgoing(SEXP dp, int id);
+RcppExport SEXP _pipeflow_dag_get_outgoing(SEXP dpSEXP, SEXP idSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< int >::type id(idSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_get_outgoing(dp, id));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_get_incoming
+Rcpp::IntegerVector dag_get_incoming(SEXP dp, int id);
+RcppExport SEXP _pipeflow_dag_get_incoming(SEXP dpSEXP, SEXP idSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< int >::type id(idSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_get_incoming(dp, id));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_get_nodes_order
+Rcpp::IntegerVector dag_get_nodes_order(SEXP dp);
+RcppExport SEXP _pipeflow_dag_get_nodes_order(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_get_nodes_order(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_get_nodes_pos
+Rcpp::IntegerVector dag_get_nodes_pos(SEXP dp);
+RcppExport SEXP _pipeflow_dag_get_nodes_pos(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_get_nodes_pos(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_get_dangling_nodes
+Rcpp::IntegerVector dag_get_dangling_nodes(SEXP dp);
+RcppExport SEXP _pipeflow_dag_get_dangling_nodes(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_get_dangling_nodes(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_get_reachable_nodes_down
+Rcpp::IntegerVector dag_get_reachable_nodes_down(SEXP dp, const Rcpp::IntegerVector& start_ids, bool inTopoOrder);
+RcppExport SEXP _pipeflow_dag_get_reachable_nodes_down(SEXP dpSEXP, SEXP start_idsSEXP, SEXP inTopoOrderSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type start_ids(start_idsSEXP);
+    Rcpp::traits::input_parameter< bool >::type inTopoOrder(inTopoOrderSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_get_reachable_nodes_down(dp, start_ids, inTopoOrder));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_get_reachable_nodes_up
+Rcpp::IntegerVector dag_get_reachable_nodes_up(SEXP dp, const Rcpp::IntegerVector& start_ids, bool inTopoOrder);
+RcppExport SEXP _pipeflow_dag_get_reachable_nodes_up(SEXP dpSEXP, SEXP start_idsSEXP, SEXP inTopoOrderSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type start_ids(start_idsSEXP);
+    Rcpp::traits::input_parameter< bool >::type inTopoOrder(inTopoOrderSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_get_reachable_nodes_up(dp, start_ids, inTopoOrder));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_add_node
+int dag_add_node(SEXP dp);
+RcppExport SEXP _pipeflow_dag_add_node(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_add_node(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_add_node_at
+int dag_add_node_at(SEXP dp, int pos);
+RcppExport SEXP _pipeflow_dag_add_node_at(SEXP dpSEXP, SEXP posSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< int >::type pos(posSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_add_node_at(dp, pos));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_add_edge
+bool dag_add_edge(SEXP dp, int from, int to, bool checkTopo);
+RcppExport SEXP _pipeflow_dag_add_edge(SEXP dpSEXP, SEXP fromSEXP, SEXP toSEXP, SEXP checkTopoSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< int >::type from(fromSEXP);
+    Rcpp::traits::input_parameter< int >::type to(toSEXP);
+    Rcpp::traits::input_parameter< bool >::type checkTopo(checkTopoSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_add_edge(dp, from, to, checkTopo));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_add_dag
+Rcpp::IntegerVector dag_add_dag(SEXP dp, SEXP other_dp);
+RcppExport SEXP _pipeflow_dag_add_dag(SEXP dpSEXP, SEXP other_dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type other_dp(other_dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_add_dag(dp, other_dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_remove_node
+bool dag_remove_node(SEXP dp, int id, bool force);
+RcppExport SEXP _pipeflow_dag_remove_node(SEXP dpSEXP, SEXP idSEXP, SEXP forceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< int >::type id(idSEXP);
+    Rcpp::traits::input_parameter< bool >::type force(forceSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_remove_node(dp, id, force));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_remove_edge
+bool dag_remove_edge(SEXP dp, int from, int to, bool force);
+RcppExport SEXP _pipeflow_dag_remove_edge(SEXP dpSEXP, SEXP fromSEXP, SEXP toSEXP, SEXP forceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< int >::type from(fromSEXP);
+    Rcpp::traits::input_parameter< int >::type to(toSEXP);
+    Rcpp::traits::input_parameter< bool >::type force(forceSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_remove_edge(dp, from, to, force));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_tidy_up
+void dag_tidy_up(SEXP dp);
+RcppExport SEXP _pipeflow_dag_tidy_up(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    dag_tidy_up(dp);
+    return R_NilValue;
+END_RCPP
+}
+// dag_rebuild
+Rcpp::IntegerVector dag_rebuild(SEXP dp);
+RcppExport SEXP _pipeflow_dag_rebuild(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_rebuild(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_shift
+void dag_shift(SEXP dp, int offset);
+RcppExport SEXP _pipeflow_dag_shift(SEXP dpSEXP, SEXP offsetSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< int >::type offset(offsetSEXP);
+    dag_shift(dp, offset);
+    return R_NilValue;
+END_RCPP
+}
+// dag_print
+void dag_print(SEXP dp, int from);
+RcppExport SEXP _pipeflow_dag_print(SEXP dpSEXP, SEXP fromSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< int >::type from(fromSEXP);
+    dag_print(dp, from);
+    return R_NilValue;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rcpp_module_boot_Dag", (DL_FUNC) &_rcpp_module_boot_Dag, 0},
+    {"_pipeflow_dag_new", (DL_FUNC) &_pipeflow_dag_new, 0},
+    {"_pipeflow_dag_clone", (DL_FUNC) &_pipeflow_dag_clone, 1},
+    {"_pipeflow_dag_size", (DL_FUNC) &_pipeflow_dag_size, 1},
+    {"_pipeflow_dag_get_min_id", (DL_FUNC) &_pipeflow_dag_get_min_id, 1},
+    {"_pipeflow_dag_get_max_id", (DL_FUNC) &_pipeflow_dag_get_max_id, 1},
+    {"_pipeflow_dag_has_edge", (DL_FUNC) &_pipeflow_dag_has_edge, 3},
+    {"_pipeflow_dag_has_node", (DL_FUNC) &_pipeflow_dag_has_node, 2},
+    {"_pipeflow_dag_has_dangling_node", (DL_FUNC) &_pipeflow_dag_has_dangling_node, 1},
+    {"_pipeflow_dag_is_cyclic", (DL_FUNC) &_pipeflow_dag_is_cyclic, 1},
+    {"_pipeflow_dag_is_tidy", (DL_FUNC) &_pipeflow_dag_is_tidy, 1},
+    {"_pipeflow_dag_get_outgoing", (DL_FUNC) &_pipeflow_dag_get_outgoing, 2},
+    {"_pipeflow_dag_get_incoming", (DL_FUNC) &_pipeflow_dag_get_incoming, 2},
+    {"_pipeflow_dag_get_nodes_order", (DL_FUNC) &_pipeflow_dag_get_nodes_order, 1},
+    {"_pipeflow_dag_get_nodes_pos", (DL_FUNC) &_pipeflow_dag_get_nodes_pos, 1},
+    {"_pipeflow_dag_get_dangling_nodes", (DL_FUNC) &_pipeflow_dag_get_dangling_nodes, 1},
+    {"_pipeflow_dag_get_reachable_nodes_down", (DL_FUNC) &_pipeflow_dag_get_reachable_nodes_down, 3},
+    {"_pipeflow_dag_get_reachable_nodes_up", (DL_FUNC) &_pipeflow_dag_get_reachable_nodes_up, 3},
+    {"_pipeflow_dag_add_node", (DL_FUNC) &_pipeflow_dag_add_node, 1},
+    {"_pipeflow_dag_add_node_at", (DL_FUNC) &_pipeflow_dag_add_node_at, 2},
+    {"_pipeflow_dag_add_edge", (DL_FUNC) &_pipeflow_dag_add_edge, 4},
+    {"_pipeflow_dag_add_dag", (DL_FUNC) &_pipeflow_dag_add_dag, 2},
+    {"_pipeflow_dag_remove_node", (DL_FUNC) &_pipeflow_dag_remove_node, 3},
+    {"_pipeflow_dag_remove_edge", (DL_FUNC) &_pipeflow_dag_remove_edge, 4},
+    {"_pipeflow_dag_tidy_up", (DL_FUNC) &_pipeflow_dag_tidy_up, 1},
+    {"_pipeflow_dag_rebuild", (DL_FUNC) &_pipeflow_dag_rebuild, 1},
+    {"_pipeflow_dag_shift", (DL_FUNC) &_pipeflow_dag_shift, 2},
+    {"_pipeflow_dag_print", (DL_FUNC) &_pipeflow_dag_print, 2},
     {NULL, NULL, 0}
 };
 

@@ -1,11 +1,11 @@
 
 create_diamond_dag <- function()
 {
-    d <- new(Dag)
-    d$add_node()
-    d$add_node()
-    d$add_node()
-    d$add_node()
+    d <- dag_new()
+    dag_add_node(d)
+    dag_add_node(d)
+    dag_add_node(d)
+    dag_add_node(d)
     dag_add_edge(d, 0, 1)
     dag_add_edge(d, 0, 2)
     dag_add_edge(d, 1, 3)
@@ -20,11 +20,11 @@ create_diamond_dag <- function()
 
 create_snake_dag <- function()
 {
-    d <- new(Dag)
-    d$add_node()
-    d$add_node()
-    d$add_node()
-    expect_equal(d$add_node_at(1), 3)
+    d <- dag_new()
+    dag_add_node(d)
+    dag_add_node(d)
+    dag_add_node(d)
+    expect_equal(dag_add_node_at(d, 1), 3)
     dag_add_edge(d, 0, 3)
     dag_add_edge(d, 3, 1)
     dag_add_edge(d, 1, 2)
@@ -36,20 +36,20 @@ create_snake_dag <- function()
     # 0 - 3 - 1 - 2
     #      \-----/
 
-    d$tidy_up()
+    dag_tidy_up(d)
     d
 }
 
 create_bin_tree_dag <- function()
 {
-    d <- new(Dag)
-    d$add_node()
-    d$add_node()
-    d$add_node()
-    d$add_node()
-    expect_equal(d$add_node_at(2), 4)
-    d$add_node()
-    d$add_node()
+    d <- dag_new()
+    dag_add_node(d)
+    dag_add_node(d)
+    dag_add_node(d)
+    dag_add_node(d)
+    expect_equal(dag_add_node_at(d, 2), 4)
+    dag_add_node(d)
+    dag_add_node(d)
     # 0 1 4 2 3 5 6
 
     dag_add_edge(d, 0, 1)
@@ -64,6 +64,6 @@ create_bin_tree_dag <- function()
     #   / \ / \
     #  2  3 5  6
 
-    d$tidy_up()
+    dag_tidy_up(d)
     d
 }
