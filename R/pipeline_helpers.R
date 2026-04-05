@@ -17,12 +17,12 @@
 }
 
 
-.new_step <- function(step, fun, params, depends, group)
+.new_step <- function(step, fun, fargs, refs, group)
 {
     list(
         step = step,
-        params = list(params),
-        depends = list(depends),
+        params = list(fargs),
+        depends = list(refs),
         out = list(NULL),
         group = group,
         tags = list(character(0)),
@@ -76,7 +76,7 @@
     stepNumber <- startPos - relPos
 
     if (stepNumber < 1) {
-        stop("relative index -", relPos, " points outside pipeline")
+        stop_no_call("relative index -", relPos, " points outside pipeline")
     }
 
     stepNumber
@@ -89,25 +89,25 @@
     toPos = as.integer(length(steps))
 ) {
     if (!is.list(fargs)) {
-        stop("fargs must be a list")
+        stop_no_call("fargs must be a list")
     }
     if (!is.character(steps)) {
-        stop("steps must be a character vector")
+        stop_no_call("steps must be a character vector")
     }
 
     if(!is.integer(toPos)) {
-        stop("toPos must be an integer")
+        stop_no_call("toPos must be an integer")
     }
     if (toPos > length(steps)) {
-        stop("toPos exceeds number of steps")
+        stop_no_call("toPos exceeds number of steps")
     }
 
     # References to other steps are marked using a formula and can be either
     # referencing earlier steps (e.g. x = ~step1) or using positional indices
     # by pointing backwards a certain number of steps (e.g. x = ~-1)
-    refs <- fargs |>
-        Filter(f = \(x) methods::is(x, "formula")) |>
-        lapply(FUN = \(x) trimws(deparse(x[[2]]))) |>
+    refs <- lapply(fargs, FUN = \(x) trimws(deparse(x))) |>
+        Filter(f = \(x) startsWith(x, "~")) |>
+        lapply(\(x) substring(x, 2)) |>
         unlist()
 
     if (length(refs) == 0) {

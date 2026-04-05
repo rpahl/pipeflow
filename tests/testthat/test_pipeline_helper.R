@@ -15,8 +15,8 @@ describe(".new_step",
     step <- .new_step(
         step = "step2",
         fun = function(x) x^2,
-        params = list(x = 1, y = "step1"),
-        depends = c(y = "step1"),
+        fargs = list(x = 1, y = "step1"),
+        refs = c(y = "step1"),
         group = "group1"
     )
 
@@ -24,8 +24,8 @@ describe(".new_step",
     {
         expect_equal(step$step, "step2")
         expect_equal(step$group, "group1")
-        expect_equal(step$depends, c(y = "step1"))
-        expect_equal(step$fun(2), 4)
+        expect_equal(step$depends, list(c(y = "step1")))
+        expect_equal(step$fun[[1]](2), 4)
         expect_equal(step$state, "new")
     })
 
@@ -128,6 +128,10 @@ describe(".extract_refs_to_steps",
     it("extracts all dependencies defined relative",
     {
         expect_equal(
+            .extract_refs_to_steps(list(x = ~-1), steps = c("f1", "f2")),
+            c(x = "f1")
+        )
+        expect_equal(
             .extract_refs_to_steps(list(a = ~-1, b = 2), steps),
             c(a = "s2")
         )
@@ -137,8 +141,19 @@ describe(".extract_refs_to_steps",
         )
     })
 
+    it("signals bad steps input",
+    {
+        expect_error(
+            .extract_refs_to_steps(list(a = ~-1), character(0)),
+            "startPos must be at least 1"
+        )
+    })
     it("signals relative index out of bound",
     {
+        expect_error(
+            .extract_refs_to_steps(list(a = ~-1), "s1"),
+            "relative index -1 points outside pipeline"
+        )
         expect_error(
             .extract_refs_to_steps(list(a = ~-4), steps),
             "relative index -4 points outside pipeline"

@@ -4,20 +4,10 @@ describe("pipe_new",
     it("creates a new pipeline",
     {
         p <- pipe_new()
+        expect_true(.pip_is_pipeflow_pipe(p))
     })
 })
 
-
-describe("pipe_add",
-{
-    it("can add a new step",
-    {
-        p <- pipe_new()
-        pipe_add(p, "s1", \(a = 1) a)
-        expect_equal(pipe_length(p), 1)
-
-    })
-})
 
 describe("pipe_add",
 {
@@ -34,7 +24,7 @@ describe("pipe_add",
     {
         p <- pipe_new()
         expect_error(
-            pipe_add(p, "step1", fun = "not a function"),
+            pipe_add(p, "s1", fun = "not a function"),
             "fun must be a function"
         )
     })
@@ -44,15 +34,15 @@ describe("pipe_add",
         p <- pipe_new()
 
         expect_error(
-            pipe_add(p, "step1", fun = \() 1, group = list("not a string")),
+            pipe_add(p, "s1", fun = \() 1, group = list("not a string")),
             "group must be a non-empty valid string"
         )
         expect_error(
-            pipe_add(p, "step1", fun = \() 1, group = ""),
+            pipe_add(p, "s1", fun = \() 1, group = ""),
             "group must be a non-empty valid string"
         )
         expect_error(
-            pipe_add(p, "step1", fun = \() 1, group = c("a", "b")),
+            pipe_add(p, "s1", fun = \() 1, group = c("a", "b")),
             "group must be a non-empty valid string"
         )
     })
@@ -60,73 +50,58 @@ describe("pipe_add",
     it("signals duplicate step names",
     {
         p <- pipe_new()
-        pipe_add(p, "f1", foo)
-        expect_error(pipe_add(p, "f1", foo), "step 'f1' already exists")
+        pipe_add(p, "s1", foo)
+        expect_error(pipe_add(p, "s1", foo), "step 's1' already exists")
     })
 
     it("signals undefined dependencies",
     {
         p <- pipe_new()
-        pipe_add(p, "f1", \(x = ~undefined) x)
-
         expect_error(
-            pipe_add(p, "f2", \(x = ~undefined) x),
+            pipe_add(p, "s1", \(x = ~undefined) x),
             "dependency 'undefined' not found"
+
         )
     })
 
     it("step can refer to previous step by relative number",
     {
-        pip <- Pipeline$new("pipe1")
-        pip$add("f1", \(a = 5) a)
-        pip$add("f2", \(x = ~-1) 2*x)
+        p <- pipe_new()
+        pipe_add(p, "s1", \(a = 5) a)
+        pipe_add(p, "s2", \(x = ~-1) 2*x)
 
-        out <- pip$run()$collect_out()
-        expect_equal(out[["f2"]][[1]], 10)
-
-        pip$add("f3", \(x = ~-1, a = ~-2) x + a)
-        out <- pip$run()$collect_out()
-        expect_equal(out[["f3"]][[1]], 10 + 5)
+        expect_equal(p$pipeline$depends[[2]], c(x = "s1"))
     })
 
     it("a bad relative step referal is signalled",
     {
-        pip <- Pipeline$new("pipe1")
-        expect_error(
-            pip$add("f1", \(x = ~-10) x),
-            paste(
-                "step 'f1': relative dependency x=-10",
-                "points to outside the pipeline"
-            ),
-            fixed = TRUE
-        )
+        p <- pipe_new()
+        pipe_add(p, "s1", \(a = 5) a)
+
+        expect_error(pipe_add(p, "s2", \(x = ~-2) 2*x))
+        expect_equal(pipe_length(p), 1L)
     })
 
-    it("added step can use lambda functions",
+    it("if add is aborted, pipeline remains unchanged",
     {
-        data <- 9
-        pip <- Pipeline$new("pipe1", data = data)
-
-        pip$add("f1", \(data = ~data) data)
-        a <- 1
-        pip$add("f2", \(a, b) a + b,
-            params = list(a = a, b = ~f1)
+        p <- pipe_new()
+        pipe_add(p, "s1", \(a = 5) a)
+        expect_error(
+            pipe_add(p, "s2", \(x = ~-2) 2*x),
+            "relative index -2 points outside pipeline"
         )
-
-        expect_equal(unlist(pip$get_step("f1")[["depends"]]), c(data = "data"))
-        expect_equal(unlist(pip$get_step("f2")[["depends"]]), c(b = "f1"))
-
-        out <- pip$run()$collect_out()
-        expect_equal(out[["f1"]][[1]], data)
-        expect_equal(out[["f2"]][[1]], a + data)
     })
 
+    it("can refer to the pipeline itself via the .self argument",
+    {
+        p <- pipe_new()
+        pipe_add(p, "s1", \(x = 1, .self = NULL) pipe_length(.self))
+        expect_equal(p$pipeline[["params"]][[1]]$.self, p)
+    })
 
     it("supports functions with wildcard arguments",
     {
-        my_mean <-\(x, na.rm = FALSE) {
-            mean(x, na.rm = na.rm)
-        }
+        skip("move to test for pipe_run_step")
         foo <-\(x, ...) {
             my_mean(x, ...)
         }
@@ -143,63 +118,39 @@ describe("pipe_add",
         out <- pip$run()$collect_out()
         expect_equal(out[["mean"]], as.numeric(NA))
     })
+})
 
-    it("can have a variable defined outside as parameter default",
+
+describe("pipe_get_step_number",
+{
+    it("returns the step number for a given step",
     {
-        x <- 1
-
-        pip <- Pipeline$new("pipe")$
-            add("f1", \(a) a, params = list(a = x))
-
-        expect_equal(pip$get_params_at_step("f1")$a, x)
-
-        out <- pip$run()$collect_out()
-        expect_equal(out[["f1"]], x)
+        p <- pipe_new()
+        pipe_add(p, "s1", \(a = 1) a)
+        pipe_add(p, "s2", \(a = 1) a)
+        expect_equal(pipe_get_step_number(p, "s1"), 1L)
+        expect_equal(pipe_get_step_number(p, "s2"), 2L)
     })
 
-
-    it("function can be passed as a string",
+    it("signals if step does not exist",
     {
-        pip <- Pipeline$new("pipe")$
-            add("f1", fun = "mean", params = list(x = 1:5))
-
-        out <- pip$run()$collect_out()
-        expect_equal(out[["f1"]], mean(1:5))
-
-        expect_equal(pip$get_step("f1")[["funcName"]], "mean")
-    })
-
-    it("if passed as a function, name is derived from the function",
-    {
-        pip <- Pipeline$new("pipe")
-        pip$add("f1", fun = mean, params = list(x = 1:5))
-        expect_equal(pip$get_step("f1")[["funcName"]], "mean")
-
-        pip <- Pipeline$new("pipe")$
-            add("f1", fun = mean, params = list(x = 1:5))
-        expect_equal(pip$get_step("f1")[["funcName"]], "mean")
-    })
-
-    it("lampda functions, are named 'function'",
-    {
-        pip <- Pipeline$new("pipe")$add("f1", fun = \(x = 1) x)
-        expect_equal(pip$get_step("f1")[["funcName"]], "function")
-
-        pip <- Pipeline$new("pipe")$
-            add("f1", fun = \(x = 1) x)
-        expect_equal(pip$get_step("f1")[["funcName"]], "function")
+        p <- pipe_new()
+        expect_error(
+            pipe_get_step_number(p, "non-existent"),
+            "step 'non-existent' does not exist in the pipeline"
+        )
     })
 })
 
+
 describe("pipe_has_step",
 {
-    p <- pipe_new()
-
     it("can be checked if pipeline has a step",
     {
-        expect_false(pipe_has_step(p, "f1"))
+        p <- pipe_new()
+        expect_false(pipe_has_step(p, "s1"))
         pipe_add(p, "s1", \(a = 1) a)
-        # expect_true(pipe_has_step(p, "s1"))
+        expect_true(pipe_has_step(p, "s1"))
     })
 
     it("errors at bad step argument",
@@ -220,5 +171,13 @@ describe("pipe_length",
     {
         p <- pipe_new()
         expect_true(is.integer(pipe_length(p)))
+    })
+
+    it("returns the expected value",
+    {
+        p <- pipe_new()
+        expect_equal(pipe_length(p), 0L)
+        pipe_add(p, "s1", \(a = 1) a)
+        expect_equal(pipe_length(p), 1L)
     })
 })

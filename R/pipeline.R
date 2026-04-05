@@ -68,7 +68,10 @@ pipe_add <- function(pip, step, fun, group = step)
 
     # Determine and verify potential links to existing steps
     fargs <- .extract_fun_args(fun)
-    steps <- pip[["pipeline"]][["step"]]
+    if (".self" %in% names(fargs)) {
+        fargs[[".self"]] <- pip
+    }
+    steps <- c(pip[["pipeline"]][["step"]], step)
     refs <- .extract_refs_to_steps(fargs = fargs, steps = steps)
     for (ref in refs) {
         if (!.pip_step_exists(pip, ref)) {
@@ -76,35 +79,27 @@ pipe_add <- function(pip, step, fun, group = step)
         }
     }
     newStep <- .new_step(step, fun, fargs, refs, group)
-    pip[["pipeline"]] <- data.table::rbindlist(list(pip[["pipeline"]], newStep))
 
-    # Update internal pipeline state
+    # Update DAG
     d <- pip[[".dag"]]
     nodeId <- dag_add_node(d)
-    pip[[".step_to_node"]][[step]] <- nodeId
-    pip[[".step_to_row"]][[step]] <- nrow(pip[["pipeline"]])
     for (ref in refs) {
         dag_add_edge(d, from = pip[[".step_to_node"]][[ref]], to = nodeId)
     }
+
+    # Update internal pipeline state
+    pip[["pipeline"]] <- data.table::rbindlist(list(pip[["pipeline"]], newStep))
+    pip[[".step_to_node"]][[step]] <- nodeId
+    pip[[".step_to_row"]][[step]] <- nrow(pip[["pipeline"]])
 
     invisible(pip)
 }
 
 
-pipe_get_step_names <- function(pip)
-{
-    if (!.pip_is_pipeflow_pipe(pip)) {
-        stop("pip must be a pipeflow pipeline")
-    }
-
-    pip$pipeline[["step"]]
-}
-
-
 pipe_get_step_number <- function(pip, step)
 {
-    if (!.pip_is_pipeflow_pipe(pip)) {
-        stop("pip must be a pipeflow pipeline")
+    if (!pipe_has_step(pip, step)) {
+        stop("step '", step, "' does not exist in the pipeline")
     }
 
     .pip_step_row(pip, step)
@@ -132,10 +127,9 @@ pipe_has_step <- function(pip, step)
     .pip_step_exists(pip, step)
 }
 
-
 pipe_length <- function(pip)
 {
-    nrow(pip[["pipeline"]])
+    as.integer(nrow(pip[["pipeline"]]))
 }
 
 #' Print a pipeflow pipeline
