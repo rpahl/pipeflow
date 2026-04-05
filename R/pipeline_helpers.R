@@ -1,4 +1,22 @@
 
+.new_step <- function(step, fun, params, depends, group)
+{
+    list(
+        step = step,
+        params = params,
+        depends = depends,
+        out = list(),
+        group = group,
+        tags = character(0),
+        state = .step_states[["new"]],
+        time = Sys.time(),
+        lock = FALSE,
+        skip = FALSE,
+        fun = fun,
+        meta = list()
+    )
+}
+
 .extract_fun_args = function(fun)
 {
     fargs <- formals(fun)
@@ -47,7 +65,7 @@
 }
 
 
-.extract_references_to_steps = function(
+.extract_refs_to_steps = function(
     fargs,
     steps,
     toPos = as.integer(length(steps))

@@ -1,4 +1,24 @@
 
+describe(".new_step",
+{
+    it("can create a new step",
+    {
+        step <- .new_step(
+            step = "step2",
+            fun = function(x) x^2,
+            params = list(x = 1, y = "step1"),
+            depends = c(y = "step1"),
+            group = "group1"
+        )
+        expect_equal(step$step, "step2")
+        expect_equal(step$group, "group1")
+        expect_equal(step$state, .step_states[["new"]])
+        expect_equal(step$depends, c(y = "step1"))
+        expect_equal(step$fun(2), 4)
+    })
+})
+
+
 describe(".extract_fun_args",
 {
     it("returns TRUE if function has no args",
@@ -54,18 +74,18 @@ describe(".extract_fun_args",
 })
 
 
-describe(".extract_references_to_steps",
+describe(".extract_refs_to_steps",
 {
     steps <- c("s1", "s2", "s3")
 
     it("returns an empty character vector if no fargs are defined",
     {
         expect_equal(
-            .extract_references_to_steps(list(), steps),
+            .extract_refs_to_steps(list(), steps),
             character(0)
         )
         expect_equal(
-            .extract_references_to_steps(list(a = 1), steps),
+            .extract_refs_to_steps(list(a = 1), steps),
             character(0)
         )
     })
@@ -73,11 +93,11 @@ describe(".extract_references_to_steps",
     it("extracts all dependencies defined via step name",
     {
         expect_equal(
-            .extract_references_to_steps(list(a = ~s1, b = 2), steps),
+            .extract_refs_to_steps(list(a = ~s1, b = 2), steps),
             c(a = "s1")
         )
         expect_equal(
-            .extract_references_to_steps(list(a = ~s1, b = ~s2), steps),
+            .extract_refs_to_steps(list(a = ~s1, b = ~s2), steps),
             c(a = "s1", b = "s2")
         )
     })
@@ -85,11 +105,11 @@ describe(".extract_references_to_steps",
     it("extracts all dependencies defined relative",
     {
         expect_equal(
-            .extract_references_to_steps(list(a = ~-1, b = 2), steps),
+            .extract_refs_to_steps(list(a = ~-1, b = 2), steps),
             c(a = "s2")
         )
         expect_equal(
-            .extract_references_to_steps(list(a = ~-2, b = ~-1), steps),
+            .extract_refs_to_steps(list(a = ~-2, b = ~-1), steps),
             c(a = "s1", b = "s2")
         )
     })
@@ -97,7 +117,7 @@ describe(".extract_references_to_steps",
     it("signals relative index out of bound",
     {
         expect_error(
-            .extract_references_to_steps(list(a = ~-4), steps),
+            .extract_refs_to_steps(list(a = ~-4), steps),
             "relative index -4 points outside pipeline"
         )
     })
@@ -105,7 +125,7 @@ describe(".extract_references_to_steps",
     it("extracts all dependencies if defined both ways",
     {
         expect_equal(
-            .extract_references_to_steps(list(a = ~-1, b = ~s1, c = 3), steps),
+            .extract_refs_to_steps(list(a = ~-1, b = ~s1, c = 3), steps),
             c(a = "s2", b = "s1")
         )
     })
@@ -113,14 +133,14 @@ describe(".extract_references_to_steps",
     it("signals toPos exceeding number of steps",
     {
         expect_error(
-            .extract_references_to_steps(list(), steps, 4L),
+            .extract_refs_to_steps(list(), steps, 4L),
             "toPos exceeds number of steps"
         )
     })
 
     it("signals bad arg types",
     {
-        f <- .extract_references_to_steps
+        f <- .extract_refs_to_steps
         expect_error(
             f("not a list", steps),
             "fargs must be a list"
