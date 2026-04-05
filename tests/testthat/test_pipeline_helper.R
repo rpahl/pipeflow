@@ -17,16 +17,20 @@ describe(".new_step",
         fun = function(x) x^2,
         fargs = list(x = 1, y = "step1"),
         refs = c(y = "step1"),
-        group = "group1"
+        group = "group1",
+        .nodeId = 0
     )
 
     it("contains the correct elements",
     {
         expect_equal(step$step, "step2")
-        expect_equal(step$group, "group1")
-        expect_equal(step$depends, list(c(y = "step1")))
         expect_equal(step$fun[[1]](2), 4)
+        expect_equal(step$fargs[[1]], list(x = 1, y = "step1"))
+        expect_equal(step$signature, "(x)")
+        expect_equal(step$refs, list(c(y = "step1")))
+        expect_equal(step$group, "group1")
         expect_equal(step$state, "new")
+        expect_equal(step$.nodeId, 0)
     })
 
     it("aligns with the empty pipeline",

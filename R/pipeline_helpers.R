@@ -2,8 +2,10 @@
 .empty_pipeline <- function() {
     data.table::data.table(
         step = character(0),
-        params = list(),
-        depends = list(),
+        fun = list(),
+        fargs = list(),
+        signature = character(0),
+        refs = list(),
         out = list(),
         group = character(0),
         tags = list(),
@@ -11,18 +13,20 @@
         time = as.POSIXct(character(0)),
         lock = logical(0),
         skip = logical(0),
-        fun = list(),
-        meta = list()
+        meta = list(),
+        .nodeId = integer()
     )
 }
 
 
-.new_step <- function(step, fun, fargs, refs, group)
+.new_step <- function(step, fun, fargs, refs, group, .nodeId)
 {
     list(
         step = step,
-        params = list(fargs),
-        depends = list(refs),
+        fun = list(fun),
+        fargs = list(fargs),
+        signature = trimws(substring(deparse(args(fun))[1], 10)),
+        refs = list(refs),
         out = list(NULL),
         group = group,
         tags = list(character(0)),
@@ -30,8 +34,8 @@
         time = Sys.time(),
         lock = FALSE,
         skip = FALSE,
-        fun = list(fun),
-        meta = list(list())
+        meta = list(list()),
+        .nodeId = .nodeId
     )
 }
 
