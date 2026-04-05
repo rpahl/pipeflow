@@ -21,17 +21,17 @@
 {
     list(
         step = step,
-        params = params,
-        depends = depends,
-        out = list(),
+        params = list(params),
+        depends = list(depends),
+        out = list(NULL),
         group = group,
-        tags = character(0),
-        state = .step_states[["new"]],
+        tags = list(character(0)),
+        state = .step_states[["new"]][["name"]],
         time = Sys.time(),
         lock = FALSE,
         skip = FALSE,
-        fun = fun,
-        meta = list()
+        fun = list(fun),
+        meta = list(list())
     )
 }
 

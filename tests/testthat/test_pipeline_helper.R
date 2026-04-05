@@ -24,14 +24,20 @@ describe(".new_step",
     {
         expect_equal(step$step, "step2")
         expect_equal(step$group, "group1")
-        expect_equal(step$state, .step_states[["new"]])
         expect_equal(step$depends, c(y = "step1"))
         expect_equal(step$fun(2), 4)
+        expect_equal(step$state, "new")
     })
 
-    it("the step structure aligns with the empty pipeline",
+    it("aligns with the empty pipeline",
     {
         expect_equal(names(step), names(.empty_pipeline()))
+    })
+
+    it("can be appended to the empty pipeline",
+    {
+        dt <- data.table::rbindlist(list(.empty_pipeline(), step))
+        expect_equal(nrow(dt), 1)
     })
 })
 
