@@ -8,7 +8,7 @@
 pipe_new <- function(name = "pipe")
 {
     stopifnot(
-        "name must be a single string" = is_string(name),
+        "name must be a single string" = .is_single(name, "character"),
         "name must not be NA" = !is.na(name)
     )
 
@@ -16,9 +16,7 @@ pipe_new <- function(name = "pipe")
     env[["name"]] <- name
     env[["pipeline"]] <- .empty_pipeline()
     env[[".dag"]] <- dag_new()
-    env[[".step_to_node"]] <- new.env(hash = TRUE, parent = emptyenv())
-    env[[".step_to_row"]] <- new.env(hash = TRUE, parent = emptyenv())
-    # node_to_row = new.env(hash = TRUE, parent = emptyenv())
+    env[[".steps"]] <- new.env(hash = TRUE, parent = emptyenv())
 
     structure(env, class = c("pipeflow_pipe", "environment"))
     env
@@ -38,15 +36,63 @@ pipe_new <- function(name = "pipe")
     inherits(pip, "pipeflow_pipe")
 }
 
-.pip_step_exists <- function(pip, step)
+.pip_nodes_to_steps <- function(pip, nodes)
 {
-    exists(step, envir = pip[[".step_to_row"]], inherits = FALSE)
-    # !is.null(pip[[".step_to_row"]][[step]])
+    pip[["pipeline"]][list(nodes), on = ".nodeId"][["step"]]
 }
 
-.pip_step_row <- function(pip, step)
+.pip_reindex <- function(pip)
 {
-    pip[[".step_to_row"]][[step]]
+    data.table::setindexv(pip[["pipeline"]], list("step", ".nodeId"))
+}
+
+.pip_run_row <- function(pip, i, lgr)
+{
+    pipi <- unlist1(pip[["pipeline"]][i])
+    fun <- pipi[["fun"]]
+    args <- pipi[["args"]]
+    refs <- pipi[["refs"]]
+
+    # If calculation depends on results of earlier steps, get them from
+    # respective referenced output slots of the pipeline.
+    if (length(refs) > 0) {
+        # out <- pip[refs][["out"]]
+        # depdendentOut <- private$.extract_dependent_out(refs, out)
+        args[refs] <- pip[["pipeline"]][refs][["out"]]
+    }
+
+    step <- pipi[["step"]]
+    context <- sprintf("step %i ('%s')", i, step)
+
+    out <- withCallingHandlers(
+        do.call(fun, args = args),
+        error = function(e) {
+            pip[["pipeline"]][i, "state"] <- "failed"
+            lgr(level = "error", msg = e$message, context = context)
+            stop_no_call(e$message)
+        },
+        warning = function(w) {
+            lgr(level = "warn", msg = w$message, context = context)
+        }
+    )
+
+    pip[["pipeline"]][i, "time"] <- Sys.time()
+    pip[["pipeline"]][i, "out"] <- list(out)
+    pip[["pipeline"]][i, "state"] <- "done"
+
+    #.pip_update_states_downstream(step, "outdated")
+
+    invisible(ok)
+}
+
+.pip_step_exists <- function(pip, step)
+{
+    exists(step, envir = pip[[".steps"]], inherits = FALSE)
+}
+
+.pip_steps_to_nodes <- function(pip, steps)
+{
+    pip[["pipeline"]][list(steps), on = "step"][[".nodeId"]]
 }
 
 
@@ -62,7 +108,7 @@ pipe_add <- function(pip, step, fun, group = step)
     if (!is.function(fun)) {
         stop("fun must be a function")
     }
-    if (!is_string(group) || is.na(group) || !nzchar(group)) {
+    if (!.is_single(group, "character") || is.na(group) || !nzchar(group)) {
         stop("group must be a non-empty valid string")
     }
 
@@ -78,31 +124,21 @@ pipe_add <- function(pip, step, fun, group = step)
             stop("step '", step, "': dependency '", ref, "' not found")
         }
     }
-    newStep <- .new_step(step, fun, fargs, refs, group)
 
     # Update DAG
     d <- pip[[".dag"]]
     nodeId <- dag_add_node(d)
     for (ref in refs) {
-        dag_add_edge(d, from = pip[[".step_to_node"]][[ref]], to = nodeId)
+        from <- pip[["pipeline"]][list(ref), on = "step"][[".nodeId"]]
+        dag_add_edge(d, from = from, to = nodeId)
     }
 
-    # Update internal pipeline state
+    # Create and append step
+    newStep <- .new_step(step, fun, fargs, refs, group, .nodeId = nodeId)
     pip[["pipeline"]] <- data.table::rbindlist(list(pip[["pipeline"]], newStep))
-    pip[[".step_to_node"]][[step]] <- nodeId
-    pip[[".step_to_row"]][[step]] <- nrow(pip[["pipeline"]])
+    pip[[".steps"]][[step]] <- TRUE
 
-    invisible(pip)
-}
-
-
-pipe_get_step_number <- function(pip, step)
-{
-    if (!pipe_has_step(pip, step)) {
-        stop("step '", step, "' does not exist in the pipeline")
-    }
-
-    .pip_step_row(pip, step)
+    invisible(.pip_reindex(pip))
 }
 
 
@@ -112,7 +148,7 @@ pipe_has_step <- function(pip, step)
         stop("pip must be a pipeflow pipeline")
     }
 
-    if (!is_string(step)) {
+    if (!.is_single(step, "character")) {
         stop("step must be a single string")
     }
 
@@ -132,11 +168,56 @@ pipe_length <- function(pip)
     as.integer(nrow(pip[["pipeline"]]))
 }
 
+pipe_run <- function(
+    pip,
+    force = FALSE,
+    progress = function(value, detail) {},
+    lgr = pipeflow_lgr
+) {
+    stopifnot(
+        "pip must be a pipeflow pipeline" = .pip_is_pipeflow_pipe(pip),
+        "force must be a single logical value" = .is_single(force, "logical"),
+        "progress must be a function" = is.function(progress),
+        "lgr must be a function" = is.function(lgr)
+    )
+    log_info <- function(msg, ...) lgr(level = "info", msg = msg, ...)
+
+    sprintf("Start run of '%s' pipeline:", pip[["name"]]) |> log_info()
+
+    to <- pipe_length(pip)
+    for (i in seq(from = 1, to = to)) {
+        pipi <- unlist1(pip[["pipeline"]][i])
+        step <- as.character(pipi[["step"]])
+        progress(value = i, detail = step)
+        info <- sprintf("Step %i/%i %s", i, to, step)
+
+        if (pipi[["state"]] == "done" && !force) {
+            paste0(info, " - skipping done step") |> log_info()
+            next()
+        }
+        if (pipi[["skip"]]) {
+            paste0(info, " - skipping step marked for skip") |> log_info()
+            next()
+        }
+        if (pipi[["lock"]]) {
+            paste0(info, " - skipping locked step") |> log_info()
+            next()
+        }
+
+        log_info(info)
+        .pip_run_row(pip, i)
+    }
+
+    sprintf("Finished run of '%s' pipeline:", pip[["name"]]) |> log_info()
+    invisible(self)
+}
+
+
 #' Print a pipeflow pipeline
 #'
 #' @param x A pipeflow pipeline.
 #' @param cols The columns to be printed. Can be either one of
-#' "important" or "all" to print the most important or all columns,
+#' "main" or "all" to print the most main or all columns,
 #' respectively, or a character vector of columns to be printed.
 #' @param topn The number of rows to be printed from the beginning
 #' and end of tables with more than `nrows` rows.
@@ -147,7 +228,7 @@ pipe_length <- function(pip)
 #' @param ...  Other arguments passed to `print.data.table`
 #' @export
 print.pipeflow_pipe <- function(x,
-    cols = getOption("pipeflow.print.cols", default = "important"),
+    cols = getOption("pipeflow.print.cols", default = "main"),
     topn = getOption("pipeflow.print.topn", default = 5),
     nrows = getOption("pipeflow.print.nrows", default = 100),
     row.names = getOption("pipeflow.print.rownames", default = TRUE),
@@ -159,10 +240,10 @@ print.pipeflow_pipe <- function(x,
     dt <- x[["pipeline"]]
     n <- nrow(dt)
 
-    important <- c("step", "depends", "out", "group", "state")
+    main <- c("step", "signature", "out", "state", "time")
     if (length(cols) == 1) {
         cols <- switch(cols,
-            important = important,
+            main = main,
             all = names(dt),
             stop("Invalid value for 'cols': ", cols)
         )

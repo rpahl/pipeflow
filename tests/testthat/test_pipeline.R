@@ -11,8 +11,6 @@ describe("pipe_new",
 
 describe("pipe_add",
 {
-    foo <- \(a = 0) a
-
     it("signals if step is not a single non-empty string",
     {
         p <- pipe_new()
@@ -50,8 +48,8 @@ describe("pipe_add",
     it("signals duplicate step names",
     {
         p <- pipe_new()
-        pipe_add(p, "s1", foo)
-        expect_error(pipe_add(p, "s1", foo), "step 's1' already exists")
+        pipe_add(p, "s1", \(a = 0) a)
+        expect_error(pipe_add(p, "s1", \(a = 0) a), "step 's1' already exists")
     })
 
     it("signals undefined dependencies",
@@ -70,7 +68,7 @@ describe("pipe_add",
         pipe_add(p, "s1", \(a = 5) a)
         pipe_add(p, "s2", \(x = ~-1) 2*x)
 
-        expect_equal(p$pipeline$depends[[2]], c(x = "s1"))
+        expect_equal(p$pipeline$refs[[2]], c(x = "s1"))
     })
 
     it("a bad relative step referal is signalled",
@@ -96,20 +94,19 @@ describe("pipe_add",
     {
         p <- pipe_new()
         pipe_add(p, "s1", \(x = 1, .self = NULL) pipe_length(.self))
-        expect_equal(p$pipeline[["params"]][[1]]$.self, p)
+        expect_equal(p$pipeline[["fargs"]][[1]]$.self, p)
     })
 
     it("supports functions with wildcard arguments",
     {
         skip("move to test for pipe_run_step")
         foo <-\(x, ...) {
-            my_mean(x, ...)
         }
         v <- c(1, 2, NA, 3, 4)
         pip <- Pipeline$new("pipe", data = v)
 
-        params <- list(x = ~data, na.rm = TRUE)
-        pip$add("mean", fun = foo, params = params)
+        fargs <- list(x = ~data, na.rm = TRUE)
+        pip$add("mean", fun = foo, fargs = fargs)
 
         out <- pip$run()$collect_out()
         expect_equal(out[["mean"]], mean(v, na.rm = TRUE))
@@ -117,28 +114,6 @@ describe("pipe_add",
         pip$set_params_at_step("mean", list(na.rm = FALSE))
         out <- pip$run()$collect_out()
         expect_equal(out[["mean"]], as.numeric(NA))
-    })
-})
-
-
-describe("pipe_get_step_number",
-{
-    it("returns the step number for a given step",
-    {
-        p <- pipe_new()
-        pipe_add(p, "s1", \(a = 1) a)
-        pipe_add(p, "s2", \(a = 1) a)
-        expect_equal(pipe_get_step_number(p, "s1"), 1L)
-        expect_equal(pipe_get_step_number(p, "s2"), 2L)
-    })
-
-    it("signals if step does not exist",
-    {
-        p <- pipe_new()
-        expect_error(
-            pipe_get_step_number(p, "non-existent"),
-            "step 'non-existent' does not exist in the pipeline"
-        )
     })
 })
 
