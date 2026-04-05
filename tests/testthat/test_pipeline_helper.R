@@ -1,20 +1,37 @@
 
+describe(".empty_pipeline",
+{
+    it("returns an empty data.table",
+    {
+        dt <- .empty_pipeline()
+        expect_true(data.table::is.data.table(dt))
+        expect_equal(nrow(dt), 0)
+    })
+})
+
+
 describe(".new_step",
 {
-    it("can create a new step",
+    step <- .new_step(
+        step = "step2",
+        fun = function(x) x^2,
+        params = list(x = 1, y = "step1"),
+        depends = c(y = "step1"),
+        group = "group1"
+    )
+
+    it("contains the correct elements",
     {
-        step <- .new_step(
-            step = "step2",
-            fun = function(x) x^2,
-            params = list(x = 1, y = "step1"),
-            depends = c(y = "step1"),
-            group = "group1"
-        )
         expect_equal(step$step, "step2")
         expect_equal(step$group, "group1")
         expect_equal(step$state, .step_states[["new"]])
         expect_equal(step$depends, c(y = "step1"))
         expect_equal(step$fun(2), 4)
+    })
+
+    it("the step structure aligns with the empty pipeline",
+    {
+        expect_equal(names(step), names(.empty_pipeline()))
     })
 })
 

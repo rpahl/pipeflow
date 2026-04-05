@@ -1,4 +1,22 @@
 
+.empty_pipeline <- function() {
+    data.table::data.table(
+        step = character(0),
+        params = list(),
+        depends = list(),
+        out = list(),
+        group = character(0),
+        tags = list(),
+        state = character(0),
+        time = as.POSIXct(character(0)),
+        lock = logical(0),
+        skip = logical(0),
+        fun = list(),
+        meta = list()
+    )
+}
+
+
 .new_step <- function(step, fun, params, depends, group)
 {
     list(
