@@ -25,21 +25,64 @@
 }
 
 
-.filter_dependencies = function(fargs = list())
+.rel_pos_to_step_num <- function(relPos, startPos)
 {
-    if (length(fargs) == 0) {
-        return(character())
+    if (!is.integer(relPos)) {
+        stop("relPos must be an integer")
+    }
+    if (!is.integer(startPos)) {
+        stop("startPos must be an integer")
+    }
+    if (startPos < 1) {
+        stop("startPos must be at least 1")
     }
 
-    # Extract the dependency name from the formula, that is, ~x
-    # becomes "x" and ~-1 becomes -1
-    deps <- fargs |>
-        Filter(f = function(x) methods::is(x, "formula")) |>
-        sapply(FUN = function(x) deparse(x[[2]]))
+    stepNumber <- startPos - relPos
 
-    if (length(deps) == 0) {
-        return(character()) # otherwise named list() would be returned
+    if (stepNumber < 1) {
+        stop("relative index -", relPos, " points outside pipeline")
     }
 
-    deps
+    stepNumber
+}
+
+
+.extract_references_to_steps = function(
+    fargs,
+    steps,
+    toPos = as.integer(length(steps))
+) {
+    if (!is.list(fargs)) {
+        stop("fargs must be a list")
+    }
+    if (!is.character(steps)) {
+        stop("steps must be a character vector")
+    }
+
+    if(!is.integer(toPos)) {
+        stop("toPos must be an integer")
+    }
+    if (toPos > length(steps)) {
+        stop("toPos exceeds number of steps")
+    }
+
+    # References to other steps are marked using a formula and can be either
+    # referencing earlier steps (e.g. x = ~step1) or using positional indices
+    # by pointing backwards a certain number of steps (e.g. x = ~-1)
+    refs <- fargs |>
+        Filter(f = \(x) methods::is(x, "formula")) |>
+        lapply(FUN = \(x) trimws(deparse(x[[2]]))) |>
+        unlist()
+
+    if (length(refs) == 0) {
+        return(character(0))
+    }
+
+    iRelPos <- which(refs |> startsWith("-"))
+    stepNumbers <- refs[iRelPos] |> lapply(
+        FUN = \(x) .rel_pos_to_step_num(abs(as.integer(x)), toPos)
+    )
+    refs[iRelPos] <- steps[as.integer(stepNumbers)]
+
+    unlist(refs)
 }
