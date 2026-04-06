@@ -15,11 +15,10 @@ struct Node {
 struct Dag {
     std::vector<Node> nodes;            // nodes stored by running id
 
-    // We keep track of the topological order and position of nodes in the DAG,
-    // which allows to insert nodes in between by just modifying these vectors,
+    // We keep track of the topological order of nodes in the DAG, which
+    // allows to insert nodes in between by just modifying this vector,
     // that is, without having to update all dependencies, edges, etc
-    nodeId_vec nodes_pos;               // basically inverse mapping of order
-    nodeId_vec nodes_order;             // order of nodes
+    nodeId_vec nodes_order;
 
     // Caching and memoization
     std::vector<uint16_t> visited;      // used to keep track of node visits
@@ -27,7 +26,6 @@ struct Dag {
     nodeId_vec work_stack;
 
     // Dag state
-    bool needs_pos_rebuild = false;
     bool needs_order_rebuild = false;
 };
 
@@ -58,28 +56,18 @@ bool is_tidy(const Dag* dag);
 nodeId_vec get_outgoing(const Dag* dag, nodeId id);
 nodeId_vec get_incoming(const Dag* dag, nodeId id);
 nodeId_vec get_nodes_order(const Dag* dag);
-nodeId_vec get_nodes_pos(const Dag* dag);
 nodeId_vec get_dangling_nodes(const Dag* dag);
 
 template <nodeId_vec Node::*EdgesMember>
-nodeId_vec get_reachable_nodes(
-    Dag* dag, const nodeId_vec& start_ids, bool inTopoOrder = false
-);
-nodeId_vec get_reachable_nodes_down(
-    Dag* dag, const nodeId_vec& start_ids, bool inTopoOrder = false
-);
-nodeId_vec get_reachable_nodes_up(
-    Dag* dag, const nodeId_vec& start_ids, bool inTopoOrder = false
-);
+nodeId_vec get_reachable_nodes(Dag* dag, const nodeId_vec& start_ids);
+nodeId_vec get_reachable_nodes_down(Dag* dag, const nodeId_vec& start_ids);
+nodeId_vec get_reachable_nodes_up(Dag* dag, const nodeId_vec& start_ids);
 
 // Add
 // ---
 nodeId add_node(Dag* dag);
 nodeId add_node_at(Dag* dag, nodeId pos);
-bool add_edge(
-    Dag* dag, nodeId from, nodeId to,
-    bool checkTopo = true, bool checkCycle = false
-);
+bool add_edge(Dag* dag, nodeId from, nodeId to, bool checkCycle = false);
 nodeId_vec add_dag(Dag* dag, Dag* other);
 
 // Remove
@@ -92,10 +80,6 @@ bool remove_edge(Dag* dag, nodeId from, nodeId to, bool force = false);
 void tidy_up(Dag* dag);
 nodeId_vec rebuild(Dag* dag);
 void shift(Dag* dag, nodeId offset);
-
-// Serialization
-// -------------
-void print(Dag* dag, nodeId from = 0);
 
 // Internal state
 // --------------
@@ -192,7 +176,7 @@ bool is_cyclic(const Dag* dag)
 
 bool is_tidy(const Dag* dag)
 {
-    return !dag->needs_pos_rebuild && !dag->needs_order_rebuild;
+    return !dag->needs_order_rebuild;
 }
 
 nodeId_vec get_outgoing(const Dag* dag, nodeId id)
@@ -204,7 +188,6 @@ nodeId_vec get_incoming(const Dag* dag, nodeId id)
     return dag->nodes[id].incoming;
 }
 nodeId_vec get_nodes_order(const Dag* dag) { return dag->nodes_order; }
-nodeId_vec get_nodes_pos(const Dag* dag) { return dag->nodes_pos; }
 nodeId_vec get_dangling_nodes(const Dag* dag)
 {
     if (dag->nodes_order.size() < 2) return {};
@@ -224,9 +207,8 @@ nodeId_vec get_dangling_nodes(const Dag* dag)
 // we traverse outgoing or incoming edges, we use a template parameter to
 // specify which member of the Node struct to use.
 template <nodeId_vec Node::*EdgesMember>
-nodeId_vec get_reachable_nodes(
-    Dag* dag, const nodeId_vec& start_ids, bool inTopoOrder
-) {
+nodeId_vec get_reachable_nodes(Dag* dag, const nodeId_vec& start_ids)
+{
     init_visitor_marking(dag);
     std::vector<nodeId> result;
     dag->work_stack.clear();
@@ -256,26 +238,15 @@ nodeId_vec get_reachable_nodes(
         }
     }
 
-    if (inTopoOrder) {
-        tidy_up(dag);  // Ensure internal state is consistent
-
-        // Sort in topological order
-        std::sort(result.begin(), result.end(), [&](nodeId a, nodeId b) {
-            return dag->nodes_pos[a] < dag->nodes_pos[b];
-        });
-    }
-
     return result;
 }
-nodeId_vec get_reachable_nodes_down(
-    Dag* dag, const nodeId_vec& start_ids, bool inTopoOrder
-) {
-    return get_reachable_nodes<&Node::outgoing>(dag, start_ids, inTopoOrder);
+nodeId_vec get_reachable_nodes_down(Dag* dag, const nodeId_vec& start_ids)
+{
+    return get_reachable_nodes<&Node::outgoing>(dag, start_ids);
 }
-nodeId_vec get_reachable_nodes_up(
-    Dag* dag, const nodeId_vec& start_ids, bool inTopoOrder
-) {
-    return get_reachable_nodes<&Node::incoming>(dag, start_ids, inTopoOrder);
+nodeId_vec get_reachable_nodes_up(Dag* dag, const nodeId_vec& start_ids)
+{
+    return get_reachable_nodes<&Node::incoming>(dag, start_ids);
 }
 
 
@@ -286,7 +257,6 @@ nodeId add_node(Dag* dag)
     nodeId id = dag->nodes.size();
     dag->nodes.emplace_back();
     dag->nodes_order.push_back(id);
-    dag->nodes_pos.push_back(id);
     return id;
 }
 
@@ -304,18 +274,12 @@ nodeId add_node_at(Dag* dag, nodeId pos)
 
     dag->nodes.emplace_back();
     dag->nodes_order.insert(dag->nodes_order.begin() + pos, id);
-    dag->needs_pos_rebuild = true;
 
     return id;
 }
 
-bool add_edge(
-    Dag* dag,
-    nodeId from,
-    nodeId to,
-    bool checkTopo,
-    bool checkCycle
-) {
+bool add_edge(Dag* dag, nodeId from, nodeId to, bool checkCycle)
+{
     if (!has_node(dag, from)) {
         Rcpp::warning("node id %u not in DAG - operation ignored", from);
         return false;
@@ -334,17 +298,6 @@ bool add_edge(
             from, to
         );
         return false;
-    }
-
-    if (checkTopo) {
-        tidy_up(dag);
-        if (dag->nodes_pos[from] >= dag->nodes_pos[to]) {
-            Rcpp::warning(
-                "edge %u -> %u not in topological order and thus not added",
-                from, to
-            );
-            return false;
-        }
     }
 
     dag->nodes[from].outgoing.push_back(to);
@@ -392,9 +345,6 @@ nodeId_vec add_dag(Dag* dag, Dag* other)
         dag->nodes_order.push_back(id);
     }
 
-    dag->needs_pos_rebuild = true;
-    tidy_up(dag);
-
     nodeId_vec result = copy->nodes_order;
     delete copy;
     return result;
@@ -440,7 +390,6 @@ bool kill_node(Dag* dag, nodeId id)
 
     node.alive = false;
     dag->needs_order_rebuild = true;
-    dag->needs_pos_rebuild = true;
     return true;
 }
 
@@ -518,16 +467,7 @@ void tidy_up(Dag* dag)
                 [&](nodeId id) { return !dag->nodes[id].alive; }),
             order.end()
         );
-        dag->needs_pos_rebuild = true;
         dag->needs_order_rebuild = false;
-    }
-
-    if (dag->needs_pos_rebuild) {
-        dag->nodes_pos.resize(dag->nodes_order.size());
-        for (nodeId i = 0; i < dag->nodes_order.size(); ++i) {
-            dag->nodes_pos[dag->nodes_order[i]] = i;
-        }
-        dag->needs_pos_rebuild = false;
     }
 }
 
@@ -570,14 +510,11 @@ nodeId_vec rebuild(Dag* dag)
     dag->nodes = std::move(new_nodes);
 
     dag->nodes_order.resize(n);
-    dag->nodes_pos.resize(n);
     for (nodeId i = 0; i < n; ++i) {
         dag->nodes_order[i] = i;
-        dag->nodes_pos[i] = i;
     }
 
     dag->needs_order_rebuild = false;
-    dag->needs_pos_rebuild = false;
     dag->visited.assign(n, 0);
     dag->visitor_mark = 0;
     dag->work_stack.clear();
@@ -613,145 +550,6 @@ void shift(Dag* dag, nodeId offset)
     // Shift order vector
     for (auto& id : dag->nodes_order) {
         id += offset;
-    }
-
-    dag->needs_pos_rebuild = true;
-}
-
-// Serialization
-// -------------
-void print(Dag* dag, nodeId from)
-{
-    // Below implementation was taken from GPT-5.3-Codex
-    if (!has_node(dag, from)) {
-        Rcpp::warning("node id %u not in DAG", from);
-        return;
-    }
-
-    nodeId_vec reachable = get_reachable_nodes_down(dag, {from}, true);
-    if (reachable.empty()) {
-        return;
-    }
-
-    std::vector<bool> is_reachable(dag->nodes.size(), false);
-    for (nodeId id : reachable) {
-        is_reachable[id] = true;
-    }
-
-    // lane index -> node id currently occupying that lane
-    // free lane marker
-    const nodeId kFree = static_cast<nodeId>(-1);
-
-    // node id -> lane index, -1 means no lane assigned
-    std::vector<int> lane_of(dag->nodes.size(), -1);
-    nodeId_vec active_lanes;
-
-    auto ensure_lane = [&](nodeId id) -> int {
-        if (lane_of[id] >= 0) {
-            return lane_of[id];
-        }
-
-        for (std::size_t i = 0; i < active_lanes.size(); ++i) {
-            if (active_lanes[i] == kFree) {
-                active_lanes[i] = id;
-                lane_of[id] = static_cast<int>(i);
-                return static_cast<int>(i);
-            }
-        }
-
-        active_lanes.push_back(id);
-        lane_of[id] = static_cast<int>(active_lanes.size() - 1);
-        return lane_of[id];
-    };
-
-    auto in_child_lanes = [](const std::vector<int>& lanes, int lane) -> bool {
-        return std::find(lanes.begin(), lanes.end(), lane) != lanes.end();
-    };
-
-    for (nodeId nid : reachable) {
-        int cur_lane = ensure_lane(nid);
-
-        nodeId_vec children;
-        for (nodeId ch : dag->nodes[nid].outgoing) {
-            if (is_reachable[ch]) {
-                children.push_back(ch);
-            }
-        }
-
-        // deterministic child order in topological position
-        std::sort(children.begin(), children.end(), [&](nodeId a, nodeId b) {
-            return dag->nodes_pos[a] < dag->nodes_pos[b];
-        });
-
-        // Render current node line
-        std::string row;
-        for (std::size_t i = 0; i < active_lanes.size(); ++i) {
-            if (static_cast<int>(i) == cur_lane) {
-                row += "* ";
-            } else if (active_lanes[i] != kFree) {
-                row += "| ";
-            } else {
-                row += "  ";
-            }
-        }
-
-        row += std::to_string(nid);
-        if (!children.empty()) {
-            row += " -> [";
-            for (std::size_t i = 0; i < children.size(); ++i) {
-                if (i > 0) {
-                    row += ", ";
-                }
-                row += std::to_string(children[i]);
-            }
-            row += "]";
-        }
-
-        Rcpp::Rcout << row << std::endl;
-
-        // Update lanes after printing this row
-        std::vector<int> child_lanes;
-        if (children.empty()) {
-            active_lanes[cur_lane] = kFree;
-        } else {
-            nodeId first = children[0];
-
-            if (lane_of[first] < 0) {
-                lane_of[first] = cur_lane;
-                active_lanes[cur_lane] = first;
-            } else if (lane_of[first] != cur_lane) {
-                // child already has another active lane (merge)
-                active_lanes[cur_lane] = kFree;
-            } else {
-                active_lanes[cur_lane] = first;
-            }
-
-            child_lanes.push_back(lane_of[first]);
-
-            for (std::size_t i = 1; i < children.size(); ++i) {
-                int lane = ensure_lane(children[i]);
-                child_lanes.push_back(lane);
-            }
-        }
-
-        // Optional connector row for forks/merges (git-like feel)
-        bool needs_connector = children.size() > 1 ||
-            (!children.empty() && child_lanes[0] != cur_lane);
-
-        if (needs_connector) {
-            std::string conn;
-            for (std::size_t i = 0; i < active_lanes.size(); ++i) {
-                bool draw = active_lanes[i] != kFree ||
-                    in_child_lanes(child_lanes, static_cast<int>(i));
-                conn += draw ? "| " : "  ";
-            }
-            Rcpp::Rcout << conn << std::endl;
-        }
-
-        // Trim trailing free lanes
-        while (!active_lanes.empty() && active_lanes.back() == kFree) {
-            active_lanes.pop_back();
-        }
     }
 }
 
@@ -927,14 +725,6 @@ Rcpp::IntegerVector dag_get_nodes_order(SEXP dp)
 }
 
 // [[Rcpp::export]]
-Rcpp::IntegerVector dag_get_nodes_pos(SEXP dp)
-{
-    return as_int_vec(
-        get_nodes_pos(cast_sexp_to_dag_ptr(dp))
-    );
-}
-
-// [[Rcpp::export]]
 Rcpp::IntegerVector dag_get_dangling_nodes(SEXP dp)
 {
     return as_int_vec(
@@ -945,14 +735,12 @@ Rcpp::IntegerVector dag_get_dangling_nodes(SEXP dp)
 // [[Rcpp::export]]
 Rcpp::IntegerVector dag_get_reachable_nodes_down(
     SEXP dp,
-    const Rcpp::IntegerVector& start_ids,
-    bool inTopoOrder = false
+    const Rcpp::IntegerVector& start_ids
 ) {
     return as_int_vec(
         get_reachable_nodes_down(
             cast_sexp_to_dag_ptr(dp),
-            as_node_vec(start_ids),
-            inTopoOrder
+            as_node_vec(start_ids)
         )
     );
 }
@@ -960,14 +748,12 @@ Rcpp::IntegerVector dag_get_reachable_nodes_down(
 // [[Rcpp::export]]
 Rcpp::IntegerVector dag_get_reachable_nodes_up(
     SEXP dp,
-    const Rcpp::IntegerVector& start_ids,
-    bool inTopoOrder = false
+    const Rcpp::IntegerVector& start_ids
 ) {
     return as_int_vec(
         get_reachable_nodes_up(
             cast_sexp_to_dag_ptr(dp),
-            as_node_vec(start_ids),
-            inTopoOrder
+            as_node_vec(start_ids)
         )
     );
 }
@@ -990,13 +776,12 @@ int dag_add_node_at(SEXP dp, int pos)
 }
 
 // [[Rcpp::export]]
-bool dag_add_edge(SEXP dp, int from, int to, bool checkTopo = true)
+bool dag_add_edge(SEXP dp, int from, int to)
 {
     return add_edge(
         cast_sexp_to_dag_ptr(dp),
         static_cast<nodeId>(from),
         static_cast<nodeId>(to),
-        checkTopo,
         false
     );
 }
@@ -1050,14 +835,4 @@ Rcpp::IntegerVector dag_rebuild(SEXP dp)
 void dag_shift(SEXP dp, int offset)
 {
     shift(cast_sexp_to_dag_ptr(dp), static_cast<nodeId>(offset));
-}
-
-
-// Serialization
-// -------------
-
-// [[Rcpp::export]]
-void dag_print(SEXP dp, int from = 0)
-{
-    print(cast_sexp_to_dag_ptr(dp), static_cast<nodeId>(from));
 }

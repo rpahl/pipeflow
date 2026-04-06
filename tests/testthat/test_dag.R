@@ -36,7 +36,6 @@ describe("Dag creation and properties",
         d_clone <- dag_clone(d)
         expect_equal(dag_size(d), dag_size(d_clone))
         expect_equal(dag_get_nodes_order(d), dag_get_nodes_order(d_clone))
-        expect_equal(dag_get_nodes_pos(d), dag_get_nodes_pos(d_clone))
 
         dag_add_node(d)
         expect_equal(dag_size(d), dag_size(d_clone) + 1)
@@ -69,39 +68,12 @@ describe("Dag creation and properties",
         # 0 - 1 - 2
 
         expect_equal(dag_get_nodes_order(d), c(0, 1, 2))
-        expect_equal(dag_get_nodes_pos(d), c(0, 1, 2))
 
         expect_equal(dag_add_node_at(d, 1), 3)
         dag_tidy_up(d)
         # new nodes order
         # 0 - 3 - 1 - 2
         expect_equal(dag_get_nodes_order(d), c(0, 3, 1, 2))
-
-        # new nodes pos
-        # 0 => 0
-        # 1 => 2
-        # 2 => 3
-        # 3 => 1
-        expect_equal(dag_get_nodes_pos(d), c(0, 2, 3, 1))
-    })
-
-    it("can insert several nodes without rebuilding the node pos",
-    {
-        d <- dag_new()
-        dag_add_node(d)
-        dag_add_node(d)
-        dag_add_node(d)
-
-        expect_equal(dag_get_nodes_pos(d), c(0, 1, 2))
-
-        expect_equal(dag_add_node_at(d, 1), 3)
-        expect_equal(dag_add_node_at(d, 0), 4)
-        expect_equal(dag_get_nodes_order(d), c(4, 0, 3, 1, 2))
-        expect_equal(dag_get_nodes_pos(d), c(0, 1, 2))
-
-        dag_tidy_up(d) # rebuilds nodes pos
-        expect_equal(dag_get_nodes_order(d), c(4, 0, 3, 1, 2))
-        expect_equal(dag_get_nodes_pos(d), c(1, 3, 4, 2, 0))
     })
 
     it("warns if edge existence check refers to non-existent nodes",
@@ -141,33 +113,6 @@ describe("Dag creation and properties",
             expect_false(dag_add_edge(d, 0, 1)),
             "edge 0 -> 1 already exists - operation ignored"
         )
-    })
-
-    it("prevents adding self-loop edges",
-    {
-        d <- dag_new()
-        dag_add_node(d)
-        expect_warning(
-            expect_false(dag_add_edge(d, 0, 0)),
-            "edge 0 -> 0 not in topological order and thus not added"
-        )
-    })
-
-    it("by default prevents adding edges that are not in topological order",
-    {
-        d <- dag_new()
-        dag_add_node(d)
-        dag_add_node(d)
-        expect_warning(
-            expect_false(dag_add_edge(d, 1, 0)),
-            "edge 1 -> 0 not in topological order and thus not added"
-        )
-        expect_false(dag_has_edge(d, 1, 0))
-
-        expect_no_warning(
-            expect_true(dag_add_edge(d, 1, 0, checkTopo = FALSE))
-        )
-        expect_true(dag_has_edge(d, 1, 0))
     })
 })
 
@@ -222,7 +167,6 @@ describe("node removal",
         dag_add_node(d)
         dag_add_node(d)
         expect_equal(dag_get_nodes_order(d), c(0, 1))
-        expect_equal(dag_get_nodes_pos(d), c(0, 1))
         expect_true(dag_is_tidy(d))
 
         expect_true(dag_remove_node(d, 0))
@@ -240,7 +184,6 @@ describe("node removal",
         expect_equal(dag_get_nodes_order(d), c(0, 1))
         dag_tidy_up(d)
         expect_equal(dag_get_nodes_order(d), numeric())
-        expect_equal(dag_get_nodes_pos(d), numeric())
     })
 
     it("connected nodes can be removed directly if they have no outgoing edges",
@@ -368,19 +311,11 @@ describe("reachable nodes",
         expect_equal(dag_get_reachable_nodes_down(d, 2), c(2, 3))
         expect_equal(dag_get_reachable_nodes_down(d, 3), 3)
         expect_equal(dag_get_reachable_nodes_down(d, c(0, 2)), c(0, 2, 3, 1))
-        expect_equal(
-            dag_get_reachable_nodes_down(d, c(0, 2), inTopoOrder = TRUE),
-            c(0, 1, 2, 3)
-        )
 
         expect_equal(dag_get_reachable_nodes_up(d, 0), 0)
         expect_equal(dag_get_reachable_nodes_up(d, 1), c(1, 0))
         expect_equal(dag_get_reachable_nodes_up(d, 2), 2)
         expect_equal(dag_get_reachable_nodes_up(d, 3), c(3, 2))
-        expect_equal(
-            dag_get_reachable_nodes_up(d, 3, inTopoOrder = TRUE),
-            c(2, 3)
-        )
 
         # Connecting both subgraphs should make all nodes reachable
         dag_add_edge(d, 1, 2)
@@ -413,13 +348,9 @@ describe("reachable nodes",
         expect_false(dag_is_tidy(d))
         expect_equal(dag_get_nodes_order(d), 0:3)
         expect_equal(dag_get_reachable_nodes_down(d, 0), c(0, 2, 3))
-
         expect_equal(dag_get_reachable_nodes_up(d, 3), c(3, 2, 0))
-        expect_equal(
-            dag_get_reachable_nodes_up(d, 3, inTopoOrder = TRUE),
-            c(0, 2, 3)
-        )
-        # Using inTopoOrder = TRUE automatically tidies the graph
+
+        dag_tidy_up(d)
         expect_true(dag_is_tidy(d))
         expect_equal(dag_get_nodes_order(d), c(0, 2, 3))
     })
@@ -475,13 +406,10 @@ describe("dag shift",
         expect_true(dag_has_edge(d, 0, 1))
         expect_equal(dag_get_outgoing(d, 0), c(3, 1))
         ids <- dag_get_nodes_order(d)
-        pos <- dag_get_nodes_pos(d)
         dag_shift(d, 10)
         expect_true(dag_has_node(d, 10))
         expect_equal(dag_get_outgoing(d, 10), c(13, 11))
         expect_equal(dag_get_nodes_order(d), ids + 10)
-        # Relative pos should still be the same
-        expect_equal(dag_get_nodes_pos(d), pos)
 
         expect_true(dag_has_edge(d, 10, 13))
         expect_true(dag_has_edge(d, 10, 11))
@@ -495,30 +423,9 @@ describe("dag shift",
         out0 <- dag_get_outgoing(d, 0)
         in0 <- dag_get_incoming(d, 0)
         ids <- dag_get_nodes_order(d)
-        pos <- dag_get_nodes_pos(d)
         dag_shift(d, 10)
         expect_equal(dag_get_nodes_order(d), ids + 10)
-        expect_equal(dag_get_nodes_pos(d), pos)
         expect_equal(dag_get_outgoing(d, 10), out0 + 10)
         expect_equal(dag_get_incoming(d, 10), in0 + 10)
-    })
-})
-
-
-describe("dag serialization",
-{
-    it("can be printed to the console",
-    {
-        d <- create_diamond_dag()
-        out <- capture.output(dag_print(d))
-        expect_true(length(out) > 0)
-        out |> expect_equal(c(
-            "* 0 -> [1, 2]",
-            "| | ",
-            "* | 1 -> [3]",
-            "| * 2 -> [3]",
-            "|   ",
-            "* 3"
-        ))
     })
 })

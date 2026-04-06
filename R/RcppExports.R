@@ -53,20 +53,16 @@ dag_get_nodes_order <- function(dp) {
     .Call(`_pipeflow_dag_get_nodes_order`, dp)
 }
 
-dag_get_nodes_pos <- function(dp) {
-    .Call(`_pipeflow_dag_get_nodes_pos`, dp)
-}
-
 dag_get_dangling_nodes <- function(dp) {
     .Call(`_pipeflow_dag_get_dangling_nodes`, dp)
 }
 
-dag_get_reachable_nodes_down <- function(dp, start_ids, inTopoOrder = FALSE) {
-    .Call(`_pipeflow_dag_get_reachable_nodes_down`, dp, start_ids, inTopoOrder)
+dag_get_reachable_nodes_down <- function(dp, start_ids) {
+    .Call(`_pipeflow_dag_get_reachable_nodes_down`, dp, start_ids)
 }
 
-dag_get_reachable_nodes_up <- function(dp, start_ids, inTopoOrder = FALSE) {
-    .Call(`_pipeflow_dag_get_reachable_nodes_up`, dp, start_ids, inTopoOrder)
+dag_get_reachable_nodes_up <- function(dp, start_ids) {
+    .Call(`_pipeflow_dag_get_reachable_nodes_up`, dp, start_ids)
 }
 
 dag_add_node <- function(dp) {
@@ -77,8 +73,8 @@ dag_add_node_at <- function(dp, pos) {
     .Call(`_pipeflow_dag_add_node_at`, dp, pos)
 }
 
-dag_add_edge <- function(dp, from, to, checkTopo = TRUE) {
-    .Call(`_pipeflow_dag_add_edge`, dp, from, to, checkTopo)
+dag_add_edge <- function(dp, from, to) {
+    .Call(`_pipeflow_dag_add_edge`, dp, from, to)
 }
 
 dag_add_dag <- function(dp, other_dp) {
@@ -103,9 +99,5 @@ dag_rebuild <- function(dp) {
 
 dag_shift <- function(dp, offset) {
     invisible(.Call(`_pipeflow_dag_shift`, dp, offset))
-}
-
-dag_print <- function(dp, from = 0L) {
-    invisible(.Call(`_pipeflow_dag_print`, dp, from))
 }
 
