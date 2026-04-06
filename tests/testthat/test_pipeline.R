@@ -1,3 +1,26 @@
+# -------
+# Helpers
+# -------
+
+describe(".pip_update_downstream",
+{
+    it("can update state downstream",
+    {
+        p <- pipe_new()
+        pipe_add(p, "s1", \(x = 1) x)
+        pipe_add(p, "s2", \(x = ~-1) x)
+        pipe_add(p, "s3", \(x = ~s2) x)
+
+        expect_equal(p$pipeline[["state"]], c("new", "new", "new"))
+        .pip_update_downstream(p, "s1", what = "state", value = "outdated")
+        expect_equal(p$pipeline[["state"]], c("new", "outdated", "outdated"))
+    })
+})
+
+
+# ---------------------------
+# Exported pipeline functions
+# ---------------------------
 
 describe("pipe_new",
 {
@@ -57,8 +80,7 @@ describe("pipe_add",
         p <- pipe_new()
         expect_error(
             pipe_add(p, "s1", \(x = ~undefined) x),
-            "dependency 'undefined' not found"
-
+            "cannot reference unknown steps: 'undefined'"
         )
     })
 
@@ -154,5 +176,19 @@ describe("pipe_length",
         expect_equal(pipe_length(p), 0L)
         pipe_add(p, "s1", \(a = 1) a)
         expect_equal(pipe_length(p), 1L)
+    })
+})
+
+
+describe("pipe_run",
+{
+    it("runs all steps of the pipeline",
+    {
+        p <- pipe_new()
+        pipe_add(p, "s1", \(x = 1:2) x)
+        pipe_add(p, "s2", \(x = ~-1) x + 1)
+        pipe_add(p, "s3", \(x = ~s2, y = ~s1) x + y)
+        pipe_run(p)
+        expect_equal(p$pipeline[["out"]], list(1:2, c(2, 3), c(3, 5)))
     })
 })

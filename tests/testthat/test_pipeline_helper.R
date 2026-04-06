@@ -111,6 +111,10 @@ describe(".extract_refs_to_steps",
             .extract_refs_to_steps(list(), steps),
             character(0)
         )
+    })
+
+    it("returns an empty character vector if no refs are defined",
+    {
         expect_equal(
             .extract_refs_to_steps(list(a = 1), steps),
             character(0)

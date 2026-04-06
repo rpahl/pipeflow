@@ -1,17 +1,18 @@
 
-.get_formatted_time <- function(time = Sys.time())
+.formatted_time <- function(time = Sys.time())
 {
-    local <- time
-    gmt <- strptime(
-        as.POSIXlt(time, tz = "GMT"),
-        format = "%Y-%m-%d %H:%M:%S"
+    format(
+        time,
+        usetz = TRUE,
+        format = "%Y-%m-%d %H:%M:%OS",
+        digits = 3
     )
-    hours_diff <- round(as.numeric(difftime(local, gmt, units = "hours")))
+}
 
-    sign_str <- if (sign(hours_diff) > 0) "+" else "-"
-    number_str <- paste0(toString(abs(hours_diff)), ":00")
 
-    paste0(format(local, format = "%Y-%m-%dT%H:%M:%S"), sign_str, number_str)
+pipeflow_lgr <- function(level, msg, ...)
+{
+    cat(level, " [", .formatted_time(), "]: ", msg, "\n", sep = "")
 }
 
 
@@ -24,7 +25,7 @@ LogLayoutJson <- R6::R6Class(
             default_fields <- list(
                 "application" = event$logger,
                 "level" = unname(event$level_name),
-                "time" = .get_formatted_time(event$timestamp),
+                "time" = .formatted_time(event$timestamp),
                 "message" = event$msg
             )
 

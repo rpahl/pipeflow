@@ -1,3 +1,120 @@
+# -------
+# Helpers
+# -------
+
+.pip_get_last_step <- function(pip)
+{
+    utils::tail(pip[["pipeline"]][["step"]], n = 1)
+}
+
+.pip_is_indexed <- function(pip)
+{
+    !is.null(data.table::indices(pip[["pipeline"]]))
+}
+
+.pip_is_pipeflow_pipe <- function(pip)
+{
+    inherits(pip, "pipeflow_pipe")
+}
+
+.pip_filter_on_nodes <- function(pip, nodes)
+{
+    pip[["pipeline"]][list(nodes), on = ".nodeId"]
+}
+
+.pip_filter_on <- function(pip, on, values)
+{
+    pip[["pipeline"]][list(values), on = on]
+}
+
+.pip_reindex <- function(pip)
+{
+    data.table::setindexv(pip[["pipeline"]], list("step", ".nodeId"))
+}
+
+.pip_run_row <- function(pip, i, lgr)
+{
+    if (!.pip_is_indexed(pip)) {
+        .pip_reindex(pip)
+    }
+
+    dt <- pip[["pipeline"]]
+    fun <- dt[["fun"]][[i]]
+    args <- dt[["fargs"]][[i]]
+    refs <- dt[["refs"]][[i]]
+
+    # If calculation depends on results of earlier steps, get them from
+    # respective referenced output slots of the pipeline.
+    if (length(refs) > 0) {
+        refsOut <- .pip_filter_on(pip, on = "step", values = refs)[["out"]]
+        args[names(refs)] <- refsOut
+    }
+
+    step <- dt[["step"]][[i]]
+    context <- sprintf("step %i ('%s')", i, step)
+
+    out <- withCallingHandlers(
+        do.call(fun, args = args),
+        error = function(e) {
+            data.table::set(dt,
+                i = i, j = "state",
+                value = .step_states[["failed"]][["name"]]
+            )
+            lgr(level = "error", msg = e$message, context = context)
+            stop_no_call(e$message)
+        },
+        warning = function(w) {
+            lgr(level = "warn", msg = w$message, context = context)
+        }
+    )
+
+    data.table::set(dt,
+        i = i, j = c("out", "time", "state"),
+        value = list(list(out), Sys.time(), .step_states[["done"]][["name"]])
+    )
+
+    # TODO: not needed here - we will rather update states when changing
+    # step parameters
+    # .pip_update_downstream(
+    #     pip,
+    #     fromStep = step,
+    #     what = "state",
+    #     value = .step_states[["outdated"]][["name"]]
+    # )
+
+    invisible(pip)
+}
+
+.pip_step_exists <- function(pip, step)
+{
+    exists(step, where = pip[[".steps_to_nodes"]], inherits = FALSE)
+}
+
+.pip_steps_to_nodes <- function(pip, steps)
+{
+    mget(steps,
+        envir = pip[[".steps_to_nodes"]],
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    )
+}
+
+.pip_update_downstream <- function(pip, fromStep, what, value)
+{
+    startNode <- get(fromStep,
+        envir = pip[[".steps_to_nodes"]],
+        inherits = FALSE
+    )
+    nodes <- dag_get_reachable_nodes_down(pip[[".dag"]], startNode)[-1]
+    pip[["pipeline"]][list(nodes), (what) := value, on = ".nodeId"]
+
+    invisible(pip)
+}
+
+
+# ---------------------------
+# Exported pipeline functions
+# ---------------------------
 
 #' Create new pipeline
 #'
@@ -16,89 +133,12 @@ pipe_new <- function(name = "pipe")
     env[["name"]] <- name
     env[["pipeline"]] <- .empty_pipeline()
     env[[".dag"]] <- dag_new()
-    env[[".steps"]] <- new.env(hash = TRUE, parent = emptyenv())
+    env[[".steps_to_nodes"]] <- new.env(hash = TRUE, parent = emptyenv())
+    env[[".steps_downstream_nodes"]] <- new.env(hash = TRUE, parent = emptyenv())
 
     structure(env, class = c("pipeflow_pipe", "environment"))
     env
 }
-
-# -------
-# Helpers
-# -------
-
-.pip_get_last_step <- function(pip)
-{
-    utils::tail(pip[["pipeline"]][["step"]], n = 1)
-}
-
-.pip_is_pipeflow_pipe <- function(pip)
-{
-    inherits(pip, "pipeflow_pipe")
-}
-
-.pip_nodes_to_steps <- function(pip, nodes)
-{
-    pip[["pipeline"]][list(nodes), on = ".nodeId"][["step"]]
-}
-
-.pip_reindex <- function(pip)
-{
-    data.table::setindexv(pip[["pipeline"]], list("step", ".nodeId"))
-}
-
-.pip_run_row <- function(pip, i, lgr)
-{
-    pipi <- unlist1(pip[["pipeline"]][i])
-    fun <- pipi[["fun"]]
-    args <- pipi[["args"]]
-    refs <- pipi[["refs"]]
-
-    # If calculation depends on results of earlier steps, get them from
-    # respective referenced output slots of the pipeline.
-    if (length(refs) > 0) {
-        # out <- pip[refs][["out"]]
-        # depdendentOut <- private$.extract_dependent_out(refs, out)
-        args[refs] <- pip[["pipeline"]][refs][["out"]]
-    }
-
-    step <- pipi[["step"]]
-    context <- sprintf("step %i ('%s')", i, step)
-
-    out <- withCallingHandlers(
-        do.call(fun, args = args),
-        error = function(e) {
-            pip[["pipeline"]][i, "state"] <- "failed"
-            lgr(level = "error", msg = e$message, context = context)
-            stop_no_call(e$message)
-        },
-        warning = function(w) {
-            lgr(level = "warn", msg = w$message, context = context)
-        }
-    )
-
-    pip[["pipeline"]][i, "time"] <- Sys.time()
-    pip[["pipeline"]][i, "out"] <- list(out)
-    pip[["pipeline"]][i, "state"] <- "done"
-
-    #.pip_update_states_downstream(step, "outdated")
-
-    invisible(ok)
-}
-
-.pip_step_exists <- function(pip, step)
-{
-    exists(step, envir = pip[[".steps"]], inherits = FALSE)
-}
-
-.pip_steps_to_nodes <- function(pip, steps)
-{
-    pip[["pipeline"]][list(steps), on = "step"][[".nodeId"]]
-}
-
-
-# ----------------------
-# Pipeline functionality
-# ----------------------
 
 pipe_add <- function(pip, step, fun, group = step)
 {
@@ -119,26 +159,33 @@ pipe_add <- function(pip, step, fun, group = step)
     }
     steps <- c(pip[["pipeline"]][["step"]], step)
     refs <- .extract_refs_to_steps(fargs = fargs, steps = steps)
-    for (ref in refs) {
-        if (!.pip_step_exists(pip, ref)) {
-            stop("step '", step, "': dependency '", ref, "' not found")
-        }
+    refNodes <- mget(refs,
+        envir = pip[[".steps_to_nodes"]],
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    )
+    if (anyNA(refNodes)) {
+        notFound <- Filter(is.na, refNodes)
+        stop_no_call(
+            "while adding step '", step, "' - cannot reference unknown steps: ",
+            paste0("'", names(notFound), "'", collapse = ", ")
+        )
     }
 
     # Update DAG
     d <- pip[[".dag"]]
     nodeId <- dag_add_node(d)
-    for (ref in refs) {
-        from <- pip[["pipeline"]][list(ref), on = "step"][[".nodeId"]]
-        dag_add_edge(d, from = from, to = nodeId)
+    for (refNode in refNodes) {
+        dag_add_edge(d, from = refNode, to = nodeId)
+        # TODO: maybe implement dag_add_edges allowing vector args
     }
 
     # Create and append step
     newStep <- .new_step(step, fun, fargs, refs, group, .nodeId = nodeId)
     pip[["pipeline"]] <- data.table::rbindlist(list(pip[["pipeline"]], newStep))
-    pip[[".steps"]][[step]] <- TRUE
+    pip[[".steps_to_nodes"]][[step]] <- nodeId
 
-    invisible(.pip_reindex(pip))
+    invisible(pip)
 }
 
 
@@ -184,32 +231,32 @@ pipe_run <- function(
 
     sprintf("Start run of '%s' pipeline:", pip[["name"]]) |> log_info()
 
-    to <- pipe_length(pip)
+    dt <- pip[["pipeline"]]
+    to <- nrow(dt)
     for (i in seq(from = 1, to = to)) {
-        pipi <- unlist1(pip[["pipeline"]][i])
-        step <- as.character(pipi[["step"]])
+        step <- dt[["step"]][[i]]
         progress(value = i, detail = step)
         info <- sprintf("Step %i/%i %s", i, to, step)
 
-        if (pipi[["state"]] == "done" && !force) {
+        if (identical(dt[["state"]][[i]], "done") && !force) {
             paste0(info, " - skipping done step") |> log_info()
             next()
         }
-        if (pipi[["skip"]]) {
+        if (dt[["skip"]][[i]]) {
             paste0(info, " - skipping step marked for skip") |> log_info()
             next()
         }
-        if (pipi[["lock"]]) {
+        if (dt[["lock"]][[i]]) {
             paste0(info, " - skipping locked step") |> log_info()
             next()
         }
 
         log_info(info)
-        .pip_run_row(pip, i)
+        .pip_run_row(pip, i, lgr)
     }
 
     sprintf("Finished run of '%s' pipeline:", pip[["name"]]) |> log_info()
-    invisible(self)
+    invisible(pip)
 }
 
 

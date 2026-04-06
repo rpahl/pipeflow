@@ -1,5 +1,5 @@
 
-describe(".get_formatted_time",
+describe(".formatted_time",
 {
     expectedTimePattern <- paste0(
         "[0-9]{4}-[0-9]{2}-[0-9]{2}T",
@@ -8,7 +8,7 @@ describe(".get_formatted_time",
 
     test_that("time can be formatted to contain GMT offset",
     {
-        ft <- .get_formatted_time()
+        ft <- .formatted_time()
 
         hasCorrectFormat <- grepl(pattern = expectedTimePattern, x = ft)
         expect_true(hasCorrectFormat)
@@ -19,7 +19,7 @@ describe(".get_formatted_time",
         timezone <- Sys.getenv("TZ")
         on.exit(Sys.setenv(TZ = timezone))
         Sys.setenv(TZ = "America/Los_Angeles")
-        ft <- .get_formatted_time()
+        ft <- .formatted_time()
 
         hasCorrectFormat <- grepl(pattern = expectedTimePattern, x = ft)
         expect_true(hasCorrectFormat)
