@@ -140,6 +140,15 @@ describe("pipe_add",
 })
 
 
+describe("pipe_bind",
+{
+    # f <- function(x, y, z) {
+    #     x + y + z
+    # }
+    # microbenchmark(f(1, 2, 3), f(x = 1, y = 2, z = 3), times = 1e+6)
+})
+
+
 describe("pipe_has_step",
 {
     it("can be checked if pipeline has a step",

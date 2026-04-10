@@ -183,11 +183,38 @@ pipe_add <- function(pip, step, fun, group = step)
     }
 
     # Create and append step
-    newStep <- .new_step(step, fun, fargs, refs, group, .nodeId = nodeId)
+    newStep <- .new_step(
+        step = step, group = group, fun = fun, fargs = fargs, refs = refs,
+        .nodeId = nodeId
+    )
     pip[["pipeline"]] <- data.table::rbindlist(list(pip[["pipeline"]], newStep))
     pip[[".steps_to_nodes"]][[step]] <- nodeId
 
     invisible(pip)
+}
+
+
+pipe_bind <- function(pip, other, fix.names = TRUE, fix.sep = "_")
+{
+    if (!.pip_is_pipeflow_pipe(pip)) {
+        stop("pip must be a pipeflow pipeline")
+    }
+    if (!.pip_is_pipeflow_pipe(other)) {
+        stop("other must be a pipeflow pipeline")
+    }
+    if (!.is_single(fix.names, "logical")) {
+        stop("fix.names must be a single logical value")
+    }
+    if (!.is_single(fix.sep, "character")) {
+        stop("fix.sep must be a single character string")
+    }
+
+    stop("to be implemented")
+}
+
+
+pipe_collect_out <- function(pip, groupBy = c("group"))
+{
 }
 
 
@@ -302,7 +329,7 @@ print.pipeflow_pipe <- function(x,
     dt <- x[["pipeline"]]
     n <- nrow(dt)
 
-    main <- c("step", "signature", "out", "state", "time")
+    main <- c("step", "group", "signature", "out", "state", "time")
     if (length(cols) == 1) {
         cols <- switch(cols,
             main = main,

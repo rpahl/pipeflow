@@ -2,12 +2,12 @@
 .empty_pipeline <- function() {
     data.table::data.table(
         step = character(0),
+        group = character(0),
         fun = list(),
         fargs = list(),
         signature = character(0),
         refs = list(),
         out = list(),
-        group = character(0),
         tags = list(),
         state = character(0),
         time = as.POSIXct(character(0)),
@@ -19,16 +19,16 @@
 }
 
 
-.new_step <- function(step, fun, fargs, refs, group, .nodeId)
+.new_step <- function(step, group, fun, fargs, refs, .nodeId)
 {
     list(
         step = step,
+        group = group,
         fun = list(fun),
         fargs = list(fargs),
         signature = trimws(substring(deparse(args(fun))[1], 10)),
         refs = list(refs),
         out = list(NULL),
-        group = group,
         tags = list(character(0)),
         state = .step_states[["new"]][["name"]],
         time = Sys.time(),
