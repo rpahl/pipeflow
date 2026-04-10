@@ -124,10 +124,12 @@
 #' @noRd
 pipe_new <- function(name = "pipe")
 {
-    stopifnot(
-        "name must be a single string" = .is_single(name, "character"),
-        "name must not be NA" = !is.na(name)
-    )
+    if (!.is_single(name, "character")) {
+        "name must be a single string"
+    }
+    if (is.na(name)) {
+        "name must not be NA"
+    }
 
     env <- new.env(parent = emptyenv())
     env[["name"]] <- name
@@ -177,7 +179,7 @@ pipe_add <- function(pip, step, fun, group = step)
     nodeId <- dag_add_node(d)
     for (refNode in refNodes) {
         dag_add_edge(d, from = refNode, to = nodeId)
-        # TODO: maybe implement dag_add_edges allowing vector args
+        # TODO: implement dag_add_edges allowing vector args
     }
 
     # Create and append step
@@ -218,36 +220,49 @@ pipe_length <- function(pip)
 pipe_run <- function(
     pip,
     force = FALSE,
-    progress = function(value, detail) {},
-    lgr = pipeflow_lgr
+    lgr = pipeflow_lgr,
+    progress = NULL
 ) {
-    stopifnot(
-        "pip must be a pipeflow pipeline" = .pip_is_pipeflow_pipe(pip),
-        "force must be a single logical value" = .is_single(force, "logical"),
-        "progress must be a function" = is.function(progress),
-        "lgr must be a function" = is.function(lgr)
-    )
-    log_info <- function(msg, ...) lgr(level = "info", msg = msg, ...)
-
-    sprintf("Start run of '%s' pipeline:", pip[["name"]]) |> log_info()
+    if (!.pip_is_pipeflow_pipe(pip)) {
+        stop("pip must be a pipeflow pipeline")
+    }
+    if (!.is_single(force, "logical")) {
+        stop("force must be a single logical value")
+    }
+    if (!is.null(progress) && !is.function(progress)) {
+        stop("progress must be a function")
+    }
+    if (!is.null(lgr) && !is.function(lgr)) {
+        stop("lgr must be a function")
+    }
+    log_info <- if (is.null(lgr)) {
+        function(msg) {}
+    } else {
+        function(msg, ...) lgr(level = "info", msg = msg, ...)
+    }
 
     dt <- pip[["pipeline"]]
     to <- nrow(dt)
+
+    log_info(sprintf("Start run of '%s' pipeline:", pip[["name"]]))
+
     for (i in seq(from = 1, to = to)) {
         step <- dt[["step"]][[i]]
-        progress(value = i, detail = step)
+        if (!is.null(progress)) {
+            progress(value = i, detail = step)
+        }
         info <- sprintf("Step %i/%i %s", i, to, step)
 
         if (identical(dt[["state"]][[i]], "done") && !force) {
-            paste0(info, " - skipping done step") |> log_info()
+            log_info(sprintf("%s - skipping done step", info))
             next()
         }
         if (dt[["skip"]][[i]]) {
-            paste0(info, " - skipping step marked for skip") |> log_info()
+            log_info(sprintf("%s - skipping step marked for skip", info))
             next()
         }
         if (dt[["lock"]][[i]]) {
-            paste0(info, " - skipping locked step") |> log_info()
+            log_info(sprintf("%s - skipping locked step", info))
             next()
         }
 
@@ -255,7 +270,7 @@ pipe_run <- function(
         .pip_run_row(pip, i, lgr)
     }
 
-    sprintf("Finished run of '%s' pipeline:", pip[["name"]]) |> log_info()
+    log_info(sprintf("Finished run of '%s' pipeline:", pip[["name"]]))
     invisible(pip)
 }
 

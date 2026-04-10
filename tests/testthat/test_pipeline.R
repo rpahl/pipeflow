@@ -188,7 +188,7 @@ describe("pipe_run",
         pipe_add(p, "s1", \(x = 1:2) x)
         pipe_add(p, "s2", \(x = ~-1) x + 1)
         pipe_add(p, "s3", \(x = ~s2, y = ~s1) x + y)
-        pipe_run(p)
+        pipe_run(p, lgr = NULL)
         expect_equal(p$pipeline[["out"]], list(1:2, c(2, 3), c(3, 5)))
     })
 })
