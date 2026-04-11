@@ -12,9 +12,9 @@
     !is.null(data.table::indices(pip[["pipeline"]]))
 }
 
-.pip_is_pipeflow_pipe <- function(pip)
+.pip_is_pipeflow_pip <- function(pip)
 {
-    inherits(pip, "pipeflow_pipe")
+    inherits(pip, "pipeflow_pip")
 }
 
 .pip_is_pipeflow_view <- function(x)
@@ -127,7 +127,7 @@
 #'
 #' @return A pipeflow pipeline object.
 #' @noRd
-pipe_new <- function(name = "pipe")
+pip_new <- function(name = "pipe")
 {
     if (!.is_single(name, "character")) {
         "name must be a single string"
@@ -143,13 +143,13 @@ pipe_new <- function(name = "pipe")
     env[[".steps_to_nodes"]] <- new.env(hash = TRUE, parent = emptyenv())
     env[[".steps_downstream_nodes"]] <- new.env(hash = TRUE, parent = emptyenv())
 
-    structure(env, class = c("pipeflow_pipe", "environment"))
+    structure(env, class = c("pipeflow_pip", "environment"))
     env
 }
 
-pipe_add <- function(pip, step, fun, group = step, tags = character(0))
+pip_add <- function(pip, step, fun, group = step, tags = character(0))
 {
-    if (pipe_has_step(pip, step)) {
+    if (pip_has_step(pip, step)) {
         stop("step '", step, "' already exists in the pipeline")
     }
     if (!is.function(fun)) {
@@ -198,12 +198,12 @@ pipe_add <- function(pip, step, fun, group = step, tags = character(0))
 }
 
 
-pipe_bind <- function(pip, other, fix.names = TRUE, fix.sep = "_")
+pip_bind <- function(pip, other, fix.names = TRUE, fix.sep = "_")
 {
-    if (!.pip_is_pipeflow_pipe(pip)) {
+    if (!.pip_is_pipeflow_pip(pip)) {
         stop("pip must be a pipeflow pipeline")
     }
-    if (!.pip_is_pipeflow_pipe(other)) {
+    if (!.pip_is_pipeflow_pip(other)) {
         stop("other must be a pipeflow pipeline")
     }
     if (!.is_single(fix.names, "logical")) {
@@ -217,15 +217,15 @@ pipe_bind <- function(pip, other, fix.names = TRUE, fix.sep = "_")
 }
 
 
-pipe_collect_out <- function(pip, grouped = TRUE)
+pip_collect_out <- function(pip, grouped = TRUE)
 {
-    if (!.pip_is_pipeflow_pipe(pip)) {
+    if (!.pip_is_pipeflow_pip(pip)) {
         stop("pip must be a pipeflow pipeline")
     }
     if (!.is_single(grouped, "logical")) {
         stop("grouped must be a single logical value")
     }
-    if (pipe_length(pip) == 0) {
+    if (pip_length(pip) == 0) {
         return(list())
     }
 
@@ -242,9 +242,9 @@ pipe_collect_out <- function(pip, grouped = TRUE)
 
 
 
-pipe_has_step <- function(pip, step)
+pip_has_step <- function(pip, step)
 {
-    if (!.pip_is_pipeflow_pipe(pip)) {
+    if (!.pip_is_pipeflow_pip(pip)) {
         stop("pip must be a pipeflow pipeline")
     }
 
@@ -263,18 +263,18 @@ pipe_has_step <- function(pip, step)
     .pip_step_exists(pip, step)
 }
 
-pipe_length <- function(pip)
+pip_length <- function(pip)
 {
     as.integer(nrow(pip[["pipeline"]]))
 }
 
-pipe_run <- function(
+pip_run <- function(
     pip,
     force = FALSE,
     lgr = pipeflow_lgr,
     progress = NULL
 ) {
-    if (!.pip_is_pipeflow_pipe(pip)) {
+    if (!.pip_is_pipeflow_pip(pip)) {
         stop("pip must be a pipeflow pipeline")
     }
     if (!.is_single(force, "logical")) {
@@ -341,7 +341,34 @@ pipe_run <- function(
 #' @return A `pipeflow_view` object.
 #' @export
 #' @examples
-pipe_view <- function(
+#'
+#' # Character columns with fixed matching
+#' p <- pip_new()
+#' pip_add(p, "load", \(x = 1) x, group = "io")
+#' pip_add(p, "fit", \(x = ~-1) x + 1, group = "model")
+#' pip_add(p, "eval", \(x = ~fit) x, group = "model")
+#' pip_run_step(p, "fit")
+#' pip_view(p, filter = list(group = "model", state = "done"))
+#'
+#' # Filter by tags
+#' p <- pip_new()
+#' pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
+#' pip_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
+#' pip_add(p, "s3", \(x = ~-1) x, tags = c("daily", "report"))
+#'
+#' # Filter by regex
+#' p <- pip_new()
+#' pip_add(p, "load_raw", \(x = 1) x, group = "io")
+#' pip_add(p, "fit_model", \(x = ~-1) x + 1, group = "model")
+#' pip_add(p, "eval_model", \(x = ~fit_model) x, group = "model")
+#'
+#' # Filter using explicit row indices
+#' p <- pip_new()
+#' pip_add(p, "a1", \(x = 1) x, group = "g1")
+#' pip_add(p, "a2", \(x = ~-1) x, group = "g2")
+#' pip_add(p, "a3", \(x = ~-1) x, group = "g2")
+#'
+pip_view <- function(
     pip,
     i = integer(),
     filter = list(),
@@ -397,6 +424,7 @@ pipe_view <- function(
 #' Print a pipeflow pipeline
 #'
 #' @param x A pipeflow pipeline.
+#' @param rows Row indices to be printed. If empty, all rows are printed.
 #' @param cols The columns to be printed. Can be either one of
 #' `core` or `all` to print the core or all columns, respectively,
 #' or an explicit character vector of columns to be printed.
@@ -406,14 +434,18 @@ pipe_view <- function(
 #' @param class If TRUE, the resulting output will include above each
 #' column its storage class (or a self-evident abbreviation thereof).
 #' @param row.names If TRUE, row indices will be printed alongside x.
+#' @param header If TRUE, a header with the pipeline name and number
+#' of steps will be printed.
 #' @param ...  Other arguments passed to `print.data.table`
 #' @export
-print.pipeflow_pipe <- function(x,
+print.pipeflow_pip <- function(x,
+    rows = integer(),
     cols = getOption("pipeflow.print.cols", default = "core"),
     topn = getOption("pipeflow.print.topn", default = 5),
     nrows = getOption("pipeflow.print.nrows", default = 50),
     row.names = getOption("pipeflow.print.rownames", default = TRUE),
     class = getOption("pipeflow.print.class", default = FALSE),
+    header = TRUE,
     ...
 ) {
     dt <- x[["pipeline"]]
@@ -430,13 +462,18 @@ print.pipeflow_pipe <- function(x,
         cols <- names(dt)
     }
 
-    header <- sprintf(
-        "<pipeflow_pipe> %s (%d step%s)\n", x[["name"]],
-        n, ifelse(n == 1, "", "s")
-    )
-    cat(header)
+    if (header) {
+        cat(sprintf(
+            "<pipeflow_pip> %s (%d step%s)\n---------------\n",
+            x[["name"]], n, ifelse(n == 1, "", "s")
+        ))
+    }
 
-    print(dt[, cols, with = FALSE],
+    if (length(rows) == 0) {
+        rows <- seq_len(n)
+    }
+
+    print(dt[rows, cols, with = FALSE],
         topn = topn,
         nrows = nrows,
         row.names = row.names,
@@ -455,17 +492,22 @@ print.pipeflow_pipe <- function(x,
 #'
 #' @return Invisibly returns `x`.
 #' @export
-print.pipeflow_view <- function(x, ...)
+print.pipeflow_view <- function(x, header = TRUE, ...)
 {
     pip <- x[["pip"]]
     rows <- x[["rows"]]
-    cat(
-        sprintf(
-            "<pipeflow_view> %s (%d selected step%s)\n",
-            pip[["name"]],
-            length(rows),
-            ifelse(length(rows) == 1L, "", "s")
+    nr <- length(rows)
+    n <- nrow(pip[["pipeline"]])
+
+    if (header) {
+        cat(
+            sprintf(
+                "<pipeflow_view> %s (%d of %d step%s)\n---------------\n",
+
+                pip[["name"]], nr, n, ifelse(n == 1, "", "s")
+            )
         )
-    )
+    }
+    print(pip, rows = rows, header = FALSE, row.names = FALSE, ...)
     invisible(x)
 }

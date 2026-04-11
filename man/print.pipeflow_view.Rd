@@ -4,7 +4,7 @@
 \alias{print.pipeflow_view}
 \title{Print a pipeflow view}
 \usage{
-\method{print}{pipeflow_view}(x, ...)
+\method{print}{pipeflow_view}(x, header = TRUE, ...)
 }
 \arguments{
 \item{x}{A pipeflow view.}
