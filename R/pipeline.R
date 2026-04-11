@@ -17,12 +17,17 @@
     inherits(pip, "pipeflow_pipe")
 }
 
-.pip_filter_on_nodes <- function(pip, nodes)
+.pip_is_pipeflow_view <- function(x)
+{
+    inherits(x, "pipeflow_view")
+}
+
+.pip_filter_nodes <- function(pip, nodes)
 {
     pip[["pipeline"]][list(nodes), on = ".nodeId"]
 }
 
-.pip_filter_on <- function(pip, on, values)
+.pip_filter <- function(pip, on, values)
 {
     pip[["pipeline"]][list(values), on = on]
 }
@@ -46,7 +51,7 @@
     # If calculation depends on results of earlier steps, get them from
     # respective referenced output slots of the pipeline.
     if (length(refs) > 0) {
-        refsOut <- .pip_filter_on(pip, on = "step", values = refs)[["out"]]
+        refsOut <- .pip_filter(pip, on = "step", values = refs)[["out"]]
         args[names(refs)] <- refsOut
     }
 
@@ -142,7 +147,7 @@ pipe_new <- function(name = "pipe")
     env
 }
 
-pipe_add <- function(pip, step, fun, group = step)
+pipe_add <- function(pip, step, fun, group = step, tags = character(0))
 {
     if (pipe_has_step(pip, step)) {
         stop("step '", step, "' already exists in the pipeline")
@@ -176,20 +181,19 @@ pipe_add <- function(pip, step, fun, group = step)
 
     # Update DAG
     d <- pip[[".dag"]]
-    nodeId <- dag_add_node(d)
+    .nodeId <- dag_add_node(d)
     for (refNode in refNodes) {
-        dag_add_edge(d, from = refNode, to = nodeId)
+        dag_add_edge(d, from = refNode, to = .nodeId)
         # TODO: implement dag_add_edges allowing vector args
     }
 
     # Create and append step
     newStep <- .new_step(
         step = step, group = group, fun = fun, fargs = fargs, refs = refs,
-        .nodeId = nodeId
+        .nodeId = .nodeId, tags = tags
     )
     pip[["pipeline"]] <- data.table::rbindlist(list(pip[["pipeline"]], newStep))
-    pip[[".steps_to_nodes"]][[step]] <- nodeId
-
+    pip[[".steps_to_nodes"]][[step]] <- .nodeId
     invisible(pip)
 }
 
@@ -213,9 +217,29 @@ pipe_bind <- function(pip, other, fix.names = TRUE, fix.sep = "_")
 }
 
 
-pipe_collect_out <- function(pip, groupBy = c("group"))
+pipe_collect_out <- function(pip, grouped = TRUE)
 {
+    if (!.pip_is_pipeflow_pipe(pip)) {
+        stop("pip must be a pipeflow pipeline")
+    }
+    if (!.is_single(grouped, "logical")) {
+        stop("grouped must be a single logical value")
+    }
+    if (pipe_length(pip) == 0) {
+        return(list())
+    }
+
+    steps <- pip[["pipeline"]][["step"]]
+    # if (!is.null(pattern)) {
+    #     steps <- grep(pattern = pattern, x = steps, value = TRUE, ...)
+    # }
+
+    # dt <- .pip_filter(pip, on = "step", values = refs)
+
+    out <- dt[["out"]]
 }
+
+
 
 
 pipe_has_step <- function(pip, step)
@@ -284,11 +308,7 @@ pipe_run <- function(
             log_info(sprintf("%s - skipping done step", info))
             next()
         }
-        if (dt[["skip"]][[i]]) {
-            log_info(sprintf("%s - skipping step marked for skip", info))
-            next()
-        }
-        if (dt[["lock"]][[i]]) {
+        if (dt[["locked"]][[i]]) {
             log_info(sprintf("%s - skipping locked step", info))
             next()
         }
@@ -302,12 +322,84 @@ pipe_run <- function(
 }
 
 
+#' Pipeline view
+#'
+#' Create a filtered view of a pipeline
+#'
+#' @param pip A pipeflow pipeline.
+#' @param i Row indices to keep.
+#' @param filter A named list of filters to apply. Each element can be a
+#' character vector specifying the values to keep for the corresponding
+#' property or, if `fixed` is FALSE, a regular expression. See examples
+#' for usage.
+#' @param tags Tag filter (character). Keeps steps with any matching tag.
+#' @param fixed If TRUE, any values in `filter` are treated as fixed strings,
+#' otherwise they are treated as regular expressions.
+#' @param ... further args passed to `grepl` (only in effect when `fixed`
+#' is `FALSE`).
+#'
+#' @return A `pipeflow_view` object.
+#' @export
+#' @examples
+pipe_view <- function(
+    pip,
+    i = integer(),
+    filter = list(),
+    tags = character(),
+    fixed = TRUE,
+    ...
+) {
+    dt <- pip[["pipeline"]]
+    keep <- rep(TRUE, nrow(dt))
+
+    # Filters
+    availFilters <- names(which(sapply(dt, is.character)))
+    for (name in names(filter)) {
+        if (!(name %in% availFilters)) {
+            stop(sprintf(
+                "Invalid filter name: '%s' - can be one of: %s",
+                name, paste(availFilters, collapse = ", ")
+            ))
+        }
+        if (fixed) {
+            keep <- keep & (dt[[name]] %in% filter[[name]])
+        } else {
+            keep <- keep & grepl(pattern = filter[[name]], x = dt[[name]], ...)
+        }
+    }
+
+    # Tags
+    if (length(tags) > 0) {
+        hasTag <- vapply(dt[["tags"]],
+            FUN = \(x) any(x %in% tags),
+            FUN.VALUE = logical(1)
+        )
+        keep <- keep & hasTag
+    }
+
+    # Rows
+    rows <- which(keep)
+    if (length(i) > 0) {
+        if (any(i < 1L | i > nrow(dt))) {
+            stop(
+                "Invalid row indices in 'i': ",
+                paste(i[i < 1L | i > nrow(dt)], collapse = ", ")
+            )
+        }
+        rows <- intersect(rows, i)
+    }
+
+    view <- list(pip = pip, rows = rows)
+    class(view) <- "pipeflow_view"
+    view
+}
+
 #' Print a pipeflow pipeline
 #'
 #' @param x A pipeflow pipeline.
 #' @param cols The columns to be printed. Can be either one of
-#' "main" or "all" to print the most main or all columns,
-#' respectively, or a character vector of columns to be printed.
+#' `core` or `all` to print the core or all columns, respectively,
+#' or an explicit character vector of columns to be printed.
 #' @param topn The number of rows to be printed from the beginning
 #' and end of tables with more than `nrows` rows.
 #' @param nrows The number of rows printed before truncation is enforced.
@@ -317,25 +409,25 @@ pipe_run <- function(
 #' @param ...  Other arguments passed to `print.data.table`
 #' @export
 print.pipeflow_pipe <- function(x,
-    cols = getOption("pipeflow.print.cols", default = "main"),
+    cols = getOption("pipeflow.print.cols", default = "core"),
     topn = getOption("pipeflow.print.topn", default = 5),
-    nrows = getOption("pipeflow.print.nrows", default = 100),
+    nrows = getOption("pipeflow.print.nrows", default = 50),
     row.names = getOption("pipeflow.print.rownames", default = TRUE),
     class = getOption("pipeflow.print.class", default = FALSE),
     ...
 ) {
-    stopifnot(inherits(x, "pipeflow_pipe"))
-
     dt <- x[["pipeline"]]
     n <- nrow(dt)
 
-    main <- c("step", "group", "signature", "out", "state", "time")
-    if (length(cols) == 1) {
-        cols <- switch(cols,
-            main = main,
-            all = names(dt),
-            stop("Invalid value for 'cols': ", cols)
-        )
+    if (identical(cols, "core")) {
+        cols <- if (identical(dt[["step"]], dt[["group"]])) {
+            c("step", "signature", "out", "state", "time")
+        } else {
+            c("step", "group", "signature", "out", "state", "time")
+        }
+    }
+    if (identical(cols, "all")) {
+        cols <- names(dt)
     }
 
     header <- sprintf(
@@ -352,5 +444,28 @@ print.pipeflow_pipe <- function(x,
         ...
     )
 
+    invisible(x)
+}
+
+
+#' Print a pipeflow view
+#'
+#' @param x A pipeflow view.
+#' @param ... Unused.
+#'
+#' @return Invisibly returns `x`.
+#' @export
+print.pipeflow_view <- function(x, ...)
+{
+    pip <- x[["pip"]]
+    rows <- x[["rows"]]
+    cat(
+        sprintf(
+            "<pipeflow_view> %s (%d selected step%s)\n",
+            pip[["name"]],
+            length(rows),
+            ifelse(length(rows) == 1L, "", "s")
+        )
+    )
     invisible(x)
 }

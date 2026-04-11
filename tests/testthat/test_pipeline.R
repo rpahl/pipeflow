@@ -142,10 +142,7 @@ describe("pipe_add",
 
 describe("pipe_bind",
 {
-    # f <- function(x, y, z) {
-    #     x + y + z
-    # }
-    # microbenchmark(f(1, 2, 3), f(x = 1, y = 2, z = 3), times = 1e+6)
+    skip("TODO")
 })
 
 
@@ -200,4 +197,143 @@ describe("pipe_run",
         pipe_run(p, lgr = NULL)
         expect_equal(p$pipeline[["out"]], list(1:2, c(2, 3), c(3, 5)))
     })
+})
+
+
+describe("pipe_view",
+{
+    it("returns a view object",
+    {
+        p <- pipe_new()
+        pipe_add(p, "load", \(x = 1) x, group = "io")
+
+        v <- pipe_view(p)
+        expect_true(.pip_is_pipeflow_view(v))
+        expect_identical(v[["pip"]], p)
+    })
+
+    it("can filter by character columns with fixed matching",
+    {
+        p <- pipe_new()
+        pipe_add(p, "load", \(x = 1) x, group = "io")
+        pipe_add(p, "fit", \(x = ~-1) x + 1, group = "model")
+        pipe_add(p, "eval", \(x = ~fit) x, group = "model")
+
+        p[["pipeline"]][2, state := "done"]
+
+        v <- pipe_view(p,
+            filter = list(group = "model", state = "done")
+        )
+
+        expect_equal(v[["rows"]], 2L)
+    })
+
+    it("can filter by tags",
+    {
+        p <- pipe_new()
+        pipe_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
+        pipe_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
+        pipe_add(p, "s3", \(x = ~-1) x, tags = c("daily", "report"))
+
+        v <- pipe_view(p, tags = "daily")
+        expect_equal(v[["rows"]], c(1L, 3L))
+    })
+
+    it("can filter by regex when fixed is FALSE",
+    {
+        p <- pipe_new()
+        pipe_add(p, "load_raw", \(x = 1) x, group = "io")
+        pipe_add(p, "fit_model", \(x = ~-1) x + 1, group = "model")
+        pipe_add(p, "eval_model", \(x = ~fit_model) x, group = "model")
+
+        v <- pipe_view(
+            p,
+            filter = list(step = "_model$"),
+            fixed = FALSE
+        )
+
+        expect_equal(v[["rows"]], c(2L, 3L))
+    })
+
+    it("intersects filtered rows with explicit i",
+    {
+        p <- pipe_new()
+        pipe_add(p, "a1", \(x = 1) x, group = "g1")
+        pipe_add(p, "a2", \(x = ~-1) x, group = "g2")
+        pipe_add(p, "a3", \(x = ~-1) x, group = "g2")
+
+        v <- pipe_view(
+            p,
+            i = c(1L, 2L),
+            filter = list(group = "g2")
+        )
+
+        expect_equal(v[["rows"]], 2L)
+    })
+
+    it("signals invalid filter names",
+    {
+        p <- pipe_new()
+        pipe_add(p, "s1", \(x = 1) x)
+
+        expect_error(
+            pipe_view(p, filter = list(not_a_column = "x")),
+            "Invalid filter name"
+        )
+    })
+
+    it("signals invalid row indices",
+    {
+        p <- pipe_new()
+        pipe_add(p, "s1", \(x = 1) x)
+
+        expect_error(
+            pipe_view(p, i = c(0L, 1L)),
+            "Invalid row indices in 'i'"
+        )
+        expect_error(
+            pipe_view(p, i = c(2L)),
+            "Invalid row indices in 'i'"
+        )
+    })
+})
+
+
+
+describe("benchmarking",
+{
+    skip("benchmarking tests are skipped by default")
+    v <- c("hello", "world")
+    w <- c("hello", "this", "is", "my", "world")
+    grepv(pattern = v, x = w)
+    `%chin%` <- data.table::`%chin%`
+
+    N = 1e3
+    u = as.character(as.hexmode(1:10000))
+    y = sample(u,N,replace=TRUE)
+    x = sample(u, 100)
+    system.time(x %in% y)
+    system.time(x %chin% y)
+
+    microbenchmark(
+        y %in% x,
+        y %chin% x,
+        times = 1000
+    )
+
+
+    # Please type 'example(chmatch)' to run this and see timings on your machine
+
+    microbenchmark(x %in% y, x %chin% y, times = 100)
+    system.time(a <- x %in% y)               #  4.5s
+    system.time(b <- x %chin% y)             #  1.7s
+    identical(a,b)
+
+    # Different example with more unique strings ...
+    u = as.character(as.hexmode(1:(N/10)))
+    y = sample(u,N,replace=TRUE)
+    x = sample(u,N,replace=TRUE)
+    system.time(a <- match(x,y))               # 46s
+    system.time(b <- chmatch(x,y))             # 16s
+    identical(a,b)
 })

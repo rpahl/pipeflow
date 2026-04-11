@@ -11,16 +11,17 @@
         tags = list(),
         state = character(0),
         time = as.POSIXct(character(0)),
-        lock = logical(0),
-        skip = logical(0),
+        locked = logical(0),
         meta = list(),
         .nodeId = integer()
     )
 }
 
 
-.new_step <- function(step, group, fun, fargs, refs, .nodeId)
-{
+.new_step <- function(
+    step, group, fun, fargs, refs, .nodeId,
+    tags = character(0)
+) {
     list(
         step = step,
         group = group,
@@ -29,12 +30,11 @@
         signature = trimws(substring(deparse(args(fun))[1], 10)),
         refs = list(refs),
         out = list(NULL),
-        tags = list(character(0)),
+        tags = list(tags),
         state = .step_states[["new"]][["name"]],
         time = Sys.time(),
-        lock = FALSE,
-        skip = FALSE,
-        meta = list(list()),
+        locked = FALSE,
+        meta = list(NULL),
         .nodeId = .nodeId
     )
 }

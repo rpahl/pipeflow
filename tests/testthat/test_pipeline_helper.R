@@ -18,10 +18,11 @@ describe(".new_step",
         fun = function(x) x^2,
         fargs = list(x = 1, y = "step1"),
         refs = c(y = "step1"),
+        tags = c("t1", "t2"),
         .nodeId = 0
     )
 
-    it("contains the correct elements",
+    it("contains the expected elements",
     {
         expect_equal(step$step, "step2")
         expect_equal(step$group, "group1")
@@ -29,7 +30,12 @@ describe(".new_step",
         expect_equal(step$fargs[[1]], list(x = 1, y = "step1"))
         expect_equal(step$signature, "(x)")
         expect_equal(step$refs, list(c(y = "step1")))
+        expect_equal(step$out, list(NULL))
+        expect_equal(step$tags, list(c("t1", "t2")))
         expect_equal(step$state, "new")
+        expect_true(inherits(step$time, "POSIXct"))
+        expect_equal(step$locked, FALSE)
+        expect_equal(step$meta, list(NULL))
         expect_equal(step$.nodeId, 0)
     })
 

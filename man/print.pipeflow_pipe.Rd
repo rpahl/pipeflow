@@ -6,9 +6,9 @@
 \usage{
 \method{print}{pipeflow_pipe}(
   x,
-  cols = getOption("pipeflow.print.cols", default = "important"),
+  cols = getOption("pipeflow.print.cols", default = "core"),
   topn = getOption("pipeflow.print.topn", default = 5),
-  nrows = getOption("pipeflow.print.nrows", default = 100),
+  nrows = getOption("pipeflow.print.nrows", default = 50),
   row.names = getOption("pipeflow.print.rownames", default = TRUE),
   class = getOption("pipeflow.print.class", default = FALSE),
   ...
@@ -18,8 +18,8 @@
 \item{x}{A pipeflow pipeline.}
 
 \item{cols}{The columns to be printed. Can be either one of
-"important" or "all" to print the most important or all columns,
-respectively, or a character vector of columns to be printed.}
+\code{core} or \code{all} to print the core or all columns, respectively,
+or an explicit character vector of columns to be printed.}
 
 \item{topn}{The number of rows to be printed from the beginning
 and end of tables with more than \code{nrows} rows.}
