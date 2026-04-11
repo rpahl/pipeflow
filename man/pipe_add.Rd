@@ -4,7 +4,15 @@
 \alias{pipe_add}
 \title{Add pipeline step}
 \usage{
-pipe_add(pip, step, fun, group = step)
+pipe_add(
+  pip,
+  step,
+  fun,
+  params = list(),
+  description = "",
+  group = step,
+  tags = character()
+)
 }
 \arguments{
 \item{pip}{\code{Pipeline} object}
@@ -19,16 +27,16 @@ is missing a default value in the function signature, alternatively,
 it can be set via the \code{params} argument (see Examples section with
 \code{\link[=mean]{mean()}} function).}
 
+\item{params}{\code{list} list of parameters to set or overwrite
+parameters of the passed function.}
+
+\item{description}{\code{string} optional description of the step}
+
 \item{group}{\code{string} output collected after pipeline execution
 (see \code{\link[=pipe_collect_out]{pipe_collect_out()}} is grouped by the defined group
 names. By default, this is the name of the step, which comes in
 handy when the pipeline is copy-appended multiple times to keep
 the results of the same function/step grouped at one place.}
-
-\item{params}{\code{list} list of parameters to set or overwrite
-parameters of the passed function.}
-
-\item{description}{\code{string} optional description of the step}
 
 \item{tags}{\code{character} Optional tags associated with the step.
 Tags can be used later to select certain parts of a pipeline,

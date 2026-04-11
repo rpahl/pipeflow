@@ -4,7 +4,7 @@
 \alias{pipe_new}
 \title{Create new pipeline}
 \usage{
-pipe_new(name = "pipe")
+pipe_new(name, data = NULL, logger = NULL)
 }
 \arguments{
 \item{name}{the name of the Pipeline}
