@@ -2,19 +2,19 @@
 # Helpers
 # -------
 
-.pip_get_last_step <- function(pip)
+.pip_get_last_step <- function(x)
 {
-    utils::tail(pip[["pipeline"]][["step"]], n = 1)
+    utils::tail(x[["pipeline"]][["step"]], n = 1)
 }
 
-.pip_is_indexed <- function(pip)
+.pip_is_indexed <- function(x)
 {
-    !is.null(data.table::indices(pip[["pipeline"]]))
+    !is.null(data.table::indices(x[["pipeline"]]))
 }
 
-.pip_is_pipeflow_pip <- function(pip)
+.pip_is_pipeflow_pip <- function(x)
 {
-    inherits(pip, "pipeflow_pip")
+    inherits(x, "pipeflow_pip")
 }
 
 .pip_is_pipeflow_view <- function(x)
@@ -22,46 +22,46 @@
     inherits(x, "pipeflow_view")
 }
 
-.pip_filter_nodes <- function(pip, nodes)
+.pip_filter_nodes <- function(x, nodes)
 {
-    pip[["pipeline"]][list(nodes), on = ".nodeId"]
+    x[["pipeline"]][list(nodes), on = ".nodeId"]
 }
 
-.pip_filter <- function(pip, on, values)
+.pip_filter <- function(x, on, values)
 {
-    pip[["pipeline"]][list(values), on = on]
+    x[["pipeline"]][list(values), on = on]
 }
 
-.pip_reindex <- function(pip)
+.pip_reindex <- function(x)
 {
-    data.table::setindexv(pip[["pipeline"]], list("step", ".nodeId"))
+    data.table::setindexv(x[["pipeline"]], list("step", ".nodeId"))
 }
 
-.pip_run_row <- function(pip, i, lgr)
+.pip_run_row <- function(x, i, lgr)
 {
-    if (!.pip_is_indexed(pip)) {
-        .pip_reindex(pip)
+    if (!.pip_is_indexed(x)) {
+        .pip_reindex(x)
     }
 
-    dt <- pip[["pipeline"]]
-    fun <- dt[["fun"]][[i]]
-    args <- dt[["fargs"]][[i]]
-    refs <- dt[["refs"]][[i]]
+    dat <- x[["pipeline"]]
+    fun <- dat[["fun"]][[i]]
+    args <- dat[["fargs"]][[i]]
+    refs <- dat[["refs"]][[i]]
 
     # If calculation depends on results of earlier steps, get them from
     # respective referenced output slots of the pipeline.
     if (length(refs) > 0) {
-        refsOut <- .pip_filter(pip, on = "step", values = refs)[["out"]]
+        refsOut <- .pip_filter(x, on = "step", values = refs)[["out"]]
         args[names(refs)] <- refsOut
     }
 
-    step <- dt[["step"]][[i]]
+    step <- dat[["step"]][[i]]
     context <- sprintf("step %i ('%s')", i, step)
 
     out <- withCallingHandlers(
         do.call(fun, args = args),
         error = function(e) {
-            data.table::set(dt,
+            data.table::set(dat,
                 i = i, j = "state",
                 value = .step_states[["failed"]][["name"]]
             )
@@ -73,7 +73,7 @@
         }
     )
 
-    data.table::set(dt,
+    data.table::set(dat,
         i = i, j = c("out", "time", "state"),
         value = list(list(out), Sys.time(), .step_states[["done"]][["name"]])
     )
@@ -81,39 +81,39 @@
     # TODO: not needed here - we will rather update states when changing
     # step parameters
     # .pip_update_downstream(
-    #     pip,
+    #     x,
     #     fromStep = step,
     #     what = "state",
     #     value = .step_states[["outdated"]][["name"]]
     # )
 
-    invisible(pip)
+    invisible(x)
 }
 
-.pip_step_exists <- function(pip, step)
+.pip_step_exists <- function(x, step)
 {
-    exists(step, where = pip[[".steps_to_nodes"]], inherits = FALSE)
+    exists(step, where = x[[".steps_to_nodes"]], inherits = FALSE)
 }
 
-.pip_steps_to_nodes <- function(pip, steps)
+.pip_steps_to_nodes <- function(x, steps)
 {
     mget(steps,
-        envir = pip[[".steps_to_nodes"]],
+        envir = x[[".steps_to_nodes"]],
         ifnotfound = NA_integer_,
         inherits = FALSE
     )
 }
 
-.pip_update_downstream <- function(pip, fromStep, what, value)
+.pip_update_downstream <- function(x, fromStep, what, value)
 {
     startNode <- get(fromStep,
-        envir = pip[[".steps_to_nodes"]],
+        envir = x[[".steps_to_nodes"]],
         inherits = FALSE
     )
-    nodes <- dag_get_reachable_nodes_down(pip[[".dag"]], startNode)[-1]
-    pip[["pipeline"]][list(nodes), (what) := value, on = ".nodeId"]
+    nodes <- dag_get_reachable_nodes_down(x[[".dag"]], startNode)[-1]
+    x[["pipeline"]][list(nodes), (what) := value, on = ".nodeId"]
 
-    invisible(pip)
+    invisible(x)
 }
 
 
@@ -126,7 +126,7 @@
 #' @param name Pipeline name.
 #'
 #' @return A pipeflow pipeline object.
-#' @noRd
+#' @export
 pip_new <- function(name = "pipe")
 {
     if (!.is_single(name, "character")) {
@@ -147,9 +147,9 @@ pip_new <- function(name = "pipe")
     env
 }
 
-pip_add <- function(pip, step, fun, group = step, tags = character(0))
+pip_add <- function(x, step, fun, group = step, tags = character(0))
 {
-    if (pip_has_step(pip, step)) {
+    if (pip_has_step(x, step)) {
         stop("step '", step, "' already exists in the pipeline")
     }
     if (!is.function(fun)) {
@@ -162,12 +162,12 @@ pip_add <- function(pip, step, fun, group = step, tags = character(0))
     # Determine and verify potential links to existing steps
     fargs <- .extract_fun_args(fun)
     if (".self" %in% names(fargs)) {
-        fargs[[".self"]] <- pip
+        fargs[[".self"]] <- x
     }
-    steps <- c(pip[["pipeline"]][["step"]], step)
+    steps <- c(x[["pipeline"]][["step"]], step)
     refs <- .extract_refs_to_steps(fargs = fargs, steps = steps)
     refNodes <- mget(refs,
-        envir = pip[[".steps_to_nodes"]],
+        envir = x[[".steps_to_nodes"]],
         ifnotfound = NA_integer_,
         inherits = FALSE
     )
@@ -180,7 +180,7 @@ pip_add <- function(pip, step, fun, group = step, tags = character(0))
     }
 
     # Update DAG
-    d <- pip[[".dag"]]
+    d <- x[[".dag"]]
     .nodeId <- dag_add_node(d)
     for (refNode in refNodes) {
         dag_add_edge(d, from = refNode, to = .nodeId)
@@ -192,19 +192,19 @@ pip_add <- function(pip, step, fun, group = step, tags = character(0))
         step = step, group = group, fun = fun, fargs = fargs, refs = refs,
         .nodeId = .nodeId, tags = tags
     )
-    pip[["pipeline"]] <- data.table::rbindlist(list(pip[["pipeline"]], newStep))
-    pip[[".steps_to_nodes"]][[step]] <- .nodeId
-    invisible(pip)
+    x[["pipeline"]] <- data.table::rbindlist(list(x[["pipeline"]], newStep))
+    x[[".steps_to_nodes"]][[step]] <- .nodeId
+    invisible(x)
 }
 
 
-pip_bind <- function(pip, other, fix.names = TRUE, fix.sep = "_")
+pip_bind <- function(x, y, fix.names = TRUE, fix.sep = "_")
 {
-    if (!.pip_is_pipeflow_pip(pip)) {
-        stop("pip must be a pipeflow pipeline")
+    if (!.pip_is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
     }
-    if (!.pip_is_pipeflow_pip(other)) {
-        stop("other must be a pipeflow pipeline")
+    if (!.pip_is_pipeflow_pip(y)) {
+        stop("y must be a pipeflow pip")
     }
     if (!.is_single(fix.names, "logical")) {
         stop("fix.names must be a single logical value")
@@ -217,35 +217,43 @@ pip_bind <- function(pip, other, fix.names = TRUE, fix.sep = "_")
 }
 
 
-pip_collect_out <- function(pip, grouped = TRUE)
+pip_collect_out <- function(x, grouped = TRUE)
 {
-    if (!.pip_is_pipeflow_pip(pip)) {
-        stop("pip must be a pipeflow pipeline")
+    isView <- inherits(x, "pipeflow_view")
+    if (!(isView || .pip_is_pipeflow_pip(x))) {
+        stop("x must be a pipeflow x or view")
     }
     if (!.is_single(grouped, "logical")) {
         stop("grouped must be a single logical value")
     }
-    if (pip_length(pip) == 0) {
+
+    dat <- if (isView) {
+        x[["pipeline"]]
+    } else {
+        x[["pipeline"]]
+    }
+
+    if (pip_length(x) == 0) {
         return(list())
     }
 
-    steps <- pip[["pipeline"]][["step"]]
+    steps <- x[["pipeline"]][["step"]]
     # if (!is.null(pattern)) {
     #     steps <- grep(pattern = pattern, x = steps, value = TRUE, ...)
     # }
 
-    # dt <- .pip_filter(pip, on = "step", values = refs)
+    # dat <- .pip_filter(x, on = "step", values = refs)
 
-    out <- dt[["out"]]
+    out <- dat[["out"]]
 }
 
 
 
 
-pip_has_step <- function(pip, step)
+pip_has_step <- function(x, step)
 {
-    if (!.pip_is_pipeflow_pip(pip)) {
-        stop("pip must be a pipeflow pipeline")
+    if (!.pip_is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
     }
 
     if (!.is_single(step, "character")) {
@@ -260,22 +268,22 @@ pip_has_step <- function(pip, step)
         stop("step must be a non-empty string")
     }
 
-    .pip_step_exists(pip, step)
+    .pip_step_exists(x, step)
 }
 
-pip_length <- function(pip)
+pip_length <- function(x)
 {
-    as.integer(nrow(pip[["pipeline"]]))
+    as.integer(nrow(x[["pipeline"]]))
 }
 
 pip_run <- function(
-    pip,
+    x,
     force = FALSE,
     lgr = pipeflow_lgr,
     progress = NULL
 ) {
-    if (!.pip_is_pipeflow_pip(pip)) {
-        stop("pip must be a pipeflow pipeline")
+    if (!.pip_is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
     }
     if (!.is_single(force, "logical")) {
         stop("force must be a single logical value")
@@ -292,33 +300,33 @@ pip_run <- function(
         function(msg, ...) lgr(level = "info", msg = msg, ...)
     }
 
-    dt <- pip[["pipeline"]]
-    to <- nrow(dt)
+    dat <- x[["pipeline"]]
+    to <- nrow(dat)
 
-    log_info(sprintf("Start run of '%s' pipeline:", pip[["name"]]))
+    log_info(sprintf("Start run of '%s' pipeline:", x[["name"]]))
 
     for (i in seq(from = 1, to = to)) {
-        step <- dt[["step"]][[i]]
+        step <- dat[["step"]][[i]]
         if (!is.null(progress)) {
             progress(value = i, detail = step)
         }
         info <- sprintf("Step %i/%i %s", i, to, step)
 
-        if (identical(dt[["state"]][[i]], "done") && !force) {
+        if (identical(dat[["state"]][[i]], "done") && !force) {
             log_info(sprintf("%s - skipping done step", info))
             next()
         }
-        if (dt[["locked"]][[i]]) {
+        if (dat[["locked"]][[i]]) {
             log_info(sprintf("%s - skipping locked step", info))
             next()
         }
 
         log_info(info)
-        .pip_run_row(pip, i, lgr)
+        .pip_run_row(x, i, lgr)
     }
 
-    log_info(sprintf("Finished run of '%s' pipeline:", pip[["name"]]))
-    invisible(pip)
+    log_info(sprintf("Finished run of '%s' pipeline:", x[["name"]]))
+    invisible(x)
 }
 
 
@@ -326,7 +334,7 @@ pip_run <- function(
 #'
 #' Create a filtered view of a pipeline
 #'
-#' @param pip A pipeflow pipeline.
+#' @param x A pipeflow pipeline.
 #' @param i Row indices to keep.
 #' @param filter A named list of filters to apply. Each element can be a
 #' character vector specifying the values to keep for the corresponding
@@ -369,18 +377,18 @@ pip_run <- function(
 #' pip_add(p, "a3", \(x = ~-1) x, group = "g2")
 #'
 pip_view <- function(
-    pip,
+    x,
     i = integer(),
     filter = list(),
     tags = character(),
     fixed = TRUE,
     ...
 ) {
-    dt <- pip[["pipeline"]]
-    keep <- rep(TRUE, nrow(dt))
+    dat <- x[["pipeline"]]
+    keep <- rep(TRUE, nrow(dat))
 
     # Filters
-    availFilters <- names(which(sapply(dt, is.character)))
+    availFilters <- names(which(sapply(dat, is.character)))
     for (name in names(filter)) {
         if (!(name %in% availFilters)) {
             stop(sprintf(
@@ -389,15 +397,15 @@ pip_view <- function(
             ))
         }
         if (fixed) {
-            keep <- keep & (dt[[name]] %in% filter[[name]])
+            keep <- keep & (dat[[name]] %in% filter[[name]])
         } else {
-            keep <- keep & grepl(pattern = filter[[name]], x = dt[[name]], ...)
+            keep <- keep & grepl(pattern = filter[[name]], x = dat[[name]], ...)
         }
     }
 
     # Tags
     if (length(tags) > 0) {
-        hasTag <- vapply(dt[["tags"]],
+        hasTag <- vapply(dat[["tags"]],
             FUN = \(x) any(x %in% tags),
             FUN.VALUE = logical(1)
         )
@@ -407,16 +415,16 @@ pip_view <- function(
     # Rows
     rows <- which(keep)
     if (length(i) > 0) {
-        if (any(i < 1L | i > nrow(dt))) {
+        if (any(i < 1L | i > nrow(dat))) {
             stop(
                 "Invalid row indices in 'i': ",
-                paste(i[i < 1L | i > nrow(dt)], collapse = ", ")
+                paste(i[i < 1L | i > nrow(dat)], collapse = ", ")
             )
         }
         rows <- intersect(rows, i)
     }
 
-    view <- list(pip = pip, rows = rows)
+    view <- list(pip = x, rows = rows)
     class(view) <- "pipeflow_view"
     view
 }
@@ -448,18 +456,18 @@ print.pipeflow_pip <- function(x,
     header = TRUE,
     ...
 ) {
-    dt <- x[["pipeline"]]
-    n <- nrow(dt)
+    dat <- x[["pipeline"]]
+    n <- nrow(dat)
 
     if (identical(cols, "core")) {
-        cols <- if (identical(dt[["step"]], dt[["group"]])) {
+        cols <- if (identical(dat[["step"]], dat[["group"]])) {
             c("step", "signature", "out", "state", "time")
         } else {
             c("step", "group", "signature", "out", "state", "time")
         }
     }
     if (identical(cols, "all")) {
-        cols <- names(dt)
+        cols <- names(dat)
     }
 
     if (header) {
@@ -473,7 +481,7 @@ print.pipeflow_pip <- function(x,
         rows <- seq_len(n)
     }
 
-    print(dt[rows, cols, with = FALSE],
+    print(dat[rows, cols, with = FALSE],
         topn = topn,
         nrows = nrows,
         row.names = row.names,
