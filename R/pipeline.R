@@ -221,33 +221,51 @@ pip_collect_out <- function(x, grouped = TRUE)
 {
     isView <- inherits(x, "pipeflow_view")
     if (!(isView || .pip_is_pipeflow_pip(x))) {
-        stop("x must be a pipeflow x or view")
+        stop("x must be a pipeflow pip or view")
     }
     if (!.is_single(grouped, "logical")) {
         stop("grouped must be a single logical value")
     }
 
     dat <- if (isView) {
-        x[["pipeline"]]
+        rows <- x[["rows"]]
+        x[["pip"]][["pipeline"]][rows, ]
     } else {
         x[["pipeline"]]
     }
 
-    if (pip_length(x) == 0) {
+    if (nrow(dat) == 0) {
         return(list())
     }
 
-    steps <- x[["pipeline"]][["step"]]
-    # if (!is.null(pattern)) {
-    #     steps <- grep(pattern = pattern, x = steps, value = TRUE, ...)
-    # }
-
-    # dat <- .pip_filter(x, on = "step", values = refs)
-
+    steps <- dat[["step"]]
     out <- dat[["out"]]
+
+    # Straight-forward step-by-step output
+    if (!grouped) {
+        return(stats::setNames(out, steps))
+    }
+
+    # Grouped output
+    groups <- dat[["group"]]
+    groupLabels <- unique(groups)
+    res <- vector(mode = "list", length = length(groupLabels))
+    names(res) <- groupLabels
+    for (k in seq_along(groupLabels)) {
+        lab <- groupLabels[[k]]
+        idx <- which(groups == lab)
+
+        # Group output if at least two steps have the same group label
+        if (length(idx) > 1L) {
+            grp <- out[idx]
+            names(grp) <- steps[idx]
+            res[[k]] <- grp
+        } else {
+            res[[k]] <- out[[idx]]
+        }
+    }
+    res
 }
-
-
 
 
 pip_has_step <- function(x, step)

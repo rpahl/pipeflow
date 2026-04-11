@@ -200,6 +200,73 @@ describe("pip_run",
 })
 
 
+describe("pip_collect_out",
+{
+    it("returns empty list for empty pipeline",
+    {
+        p <- pip_new()
+        expect_equal(pip_collect_out(p), list())
+    })
+
+    it("returns named flat list when grouped is FALSE",
+    {
+        p <- pip_new()
+        pip_add(p, "s1", \(x = 1) x, group = "data")
+        pip_add(p, "s2", \(x = ~-1) x + 1, group = "model")
+
+        p[["pipeline"]][["out"]] <- list(10, 20)
+
+        out <- pip_collect_out(p, grouped = FALSE)
+        expect_equal(names(out), c("s1", "s2"))
+        expect_equal(unname(out), list(10, 20))
+    })
+
+    it("groups outputs if at least two steps share a group label",
+    {
+        p <- pip_new()
+        pip_add(p, "s1", \(x = 1) x, group = "data")
+        pip_add(p, "s2", \(x = ~-1) x + 1, group = "model")
+        pip_add(p, "s3", \(x = ~-1) x + 1, group = "model")
+        pip_add(p, "s4", \(x = ~-1) x + 1, group = "final")
+
+        p[["pipeline"]][["out"]] <- list("o1", "o2", "o3", "o4")
+
+        out <- pip_collect_out(p, grouped = TRUE)
+
+        expect_equal(names(out), c("data", "model", "final"))
+        expect_equal(out[["data"]], "o1")
+        expect_equal(out[["model"]], list(s2 = "o2", s3 = "o3"))
+        expect_equal(out[["final"]], "o4")
+    })
+
+    it("works on pipeline views",
+    {
+        p <- pip_new()
+        pip_add(p, "s1", \(x = 1) x, group = "data")
+        pip_add(p, "s2", \(x = ~-1) x + 1, group = "model")
+        pip_add(p, "s3", \(x = ~-1) x + 1, group = "model")
+
+        p[["pipeline"]][["out"]] <- list("o1", "o2", "o3")
+
+        v <- pip_view(p, filter = list(group = "model"))
+        out <- pip_collect_out(v)
+
+        expect_equal(names(out), "model")
+        expect_equal(out[["model"]], list(s2 = "o2", s3 = "o3"))
+    })
+
+    it("signals invalid arguments",
+    {
+        p <- pip_new()
+        expect_error(pip_collect_out(1), "x must be a pipeflow pip or view")
+        expect_error(
+            pip_collect_out(p, grouped = c(TRUE, FALSE)),
+            "grouped must be a single logical value"
+        )
+    })
+})
+
+
 describe("pip_view",
 {
     it("returns a view object",
