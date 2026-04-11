@@ -39,3 +39,6 @@ commit your latest changes, then stop, and do *not* open a PR.
 
 ## Commit Messages
 Conventional commits (feat:, fix:, test:, refactor:, docs:).
+
+## Other skills
+Read and follow the skills defined in caveman-skill.md
