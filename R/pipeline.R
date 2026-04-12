@@ -92,7 +92,7 @@
     # step parameters
     # .pip_update_downstream(
     #     x,
-    #     fromStep = step,
+    #     steps = step,
     #     what = "state",
     #     value = .step_states[["outdated"]][["name"]]
     # )
@@ -114,13 +114,13 @@
     )
 }
 
-.pip_update_downstream <- function(x, fromStep, what, value)
+.pip_update_downstream <- function(x, steps, what, value)
 {
-    startNode <- get(fromStep,
+    start_ids <- mget(steps,
         envir = x[[".steps_to_nodes"]],
         inherits = FALSE
     )
-    nodes <- dag_get_reachable_nodes_down(x[[".dag"]], startNode)[-1]
+    nodes <- dag_get_reachable_nodes_down(x[[".dag"]], as.integer(start_ids))
     x[["pipeline"]][list(nodes), (what) := value, on = ".nodeId"]
 
     invisible(x)
@@ -273,21 +273,21 @@ pip_collect_out <- function(x, grouped = TRUE)
     res
 }
 
-#' Extract independent pipeline parameters
+#' Extract all independent pipeline parameters
 #'
+#' Independent parameters are those that are not dependent on any other steps
+#' in the pipeline.
 #' @param x A pipeflow pip or view
 #' @return Unique list of all independent pipeline parameters
+#' @export
 pip_get_params <- function(x)
 {
     .assert_pip_or_view(x)
     dat <- .pip_data(x)
 
     params <- mapply(
-        par = dat[["params"]], deps = dat[["depends"]],
-        FUN = \(par, deps) {
-            indep <- setdiff(names(par), names(deps))
-            par[indep]
-        },
+        par = dat[["params"]], indeps = dat[[".indeps"]],
+        FUN = \(par, indeps) par[indeps],
         SIMPLIFY = FALSE
     ) |>
         Filter(f = \(x) length(x) > 0)
@@ -298,6 +298,12 @@ pip_get_params <- function(x)
 }
 
 
+#' Check if a step exists in the pipeline
+#'
+#' @param x A pipeflow pip
+#' @param step A step name
+#' @return Logical indicating if the step exists
+#' @export
 pip_has_step <- function(x, step)
 {
     if (!.is_pipeflow_pip(x)) {
@@ -326,6 +332,7 @@ pip_run <- function(
     lgr = pipeflow_lgr,
     progress = NULL
 ) {
+    # TODO: change implementation to work with pip and view
     if (!.is_pipeflow_pip(x)) {
         stop("x must be a pipeflow pip")
     }
@@ -371,6 +378,98 @@ pip_run <- function(
 
     log_info(sprintf("Finished run of '%s' pipeline:", x[["name"]]))
     invisible(x)
+}
+
+
+#' Set independent pipeline parameters
+#'
+#' Independent parameters are those that are not dependent on any other steps
+#' in the pipeline.
+#' @details Each step for which one or more parameters are set will have its
+#' state as well as the state of any downstream dependent steps updated to
+#' "outdated". The only exception is if a step is locked - parameters of
+#' locked steps are never changed and so their state remains unchanged.
+#' @param p A pipeflow pip or view
+#' @param params list of parameters to set
+#' @param warnUnused Logical indicating if a warning should be issued for
+#' unused parameters.
+#' @return The updated pipeline
+#' @export
+pip_set_params <- function(p, params = list(), warnUnused = FALSE)
+{
+    # Input checking
+    .assert_pip_or_view(p)
+    if (!.is_single(warnUnused, "logical")) {
+        stop("warnUnused must be a single logical value")
+    }
+    if (!is.list(params)) {
+        stop("params must be a list")
+    }
+    parNames <- names(params)
+    if (length(params) == 0) {
+        return(invisible(p))
+    }
+    allNamed <- length(parNames) == length(params) && all(nzchar(parNames))
+    if (!allNamed) {
+        stop("All parameters must be named")
+    }
+
+    # Narrow down the considered rows
+    isView <- .is_pipeflow_view(p)
+    x <- if (isView) p[["pip"]] else p
+    dat <- x[["pipeline"]]
+    rows <- if (isView) p[["rows"]] else seq_len(nrow(dat))
+    considered_rows <- setdiff(rows, which(dat[["locked"]]))
+
+    if (length(considered_rows) == 0L) {
+        if (warnUnused) {
+            warning(
+                "Trying to set parameters not defined in the target: ",
+                toString(parNames)
+            )
+        }
+        return(invisible(p))
+    }
+
+    # Determine which steps/rows are affected (i.e. have overlapping parameters)
+    overlaps <- lapply(dat[[".indeps"]][considered_rows],
+        FUN = \(indep) intersect(indep, parNames)
+    )
+
+    if (warnUnused) {
+        used <- unique(unlist(overlaps))
+        unused <- setdiff(parNames, used)
+        if (length(unused) > 0L) {
+            warning(
+                "Trying to set parameters not defined in the target: ",
+                toString(unused)
+            )
+        }
+    }
+
+    hasOverlap <- lengths(overlaps) > 0
+    if (any(hasOverlap)) {
+        # Set new parameters at all steps that are affected
+        set <- data.table::set
+        changedRows <- considered_rows[hasOverlap]
+        Map(
+            f = \(i, ov) {
+                rowPars <- dat[["params"]][[i]]
+                rowPars[ov] <- params[ov]
+                set(dat, i = i, j = "params", value = list(list(rowPars)))
+                set(dat, i = i, j = "state", value = "outdated")
+            },
+            i = changedRows, ov = overlaps[hasOverlap]
+        )
+
+        # Update states of changed steps and their downstream steps
+        steps <- dat[["step"]][changedRows]
+        .pip_update_downstream(
+            x, steps = steps, what = "state", value = "outdated"
+        )
+    }
+
+    invisible(p)
 }
 
 

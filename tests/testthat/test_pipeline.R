@@ -4,16 +4,41 @@
 
 describe(".pip_update_downstream",
 {
-    it("can update state downstream",
-    {
-        p <- pip_new()
-        pip_add(p, "s1", \(x = 1) x)
-        pip_add(p, "s2", \(x = ~-1) x)
-        pip_add(p, "s3", \(x = ~s2) x)
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("a1", \(x = 1) x) |>
+            pip_add("a2", \(x = ~a1) x) |>
+            pip_add("b1", \(x = 1) x) |>
+            pip_add("a3", \(x = ~a1) x) |>
+            pip_add("b2", \(x = ~b1) x)
+    }
 
-        expect_equal(p$pipeline[["state"]], c("new", "new", "new"))
-        .pip_update_downstream(p, "s1", what = "state", value = "outdated")
-        expect_equal(p$pipeline[["state"]], c("new", "outdated", "outdated"))
+    it("updates states downstream of single node as expected",
+    {
+        p <- test_pip()
+
+        expect_true(all(p$pipeline[["state"]] == "new"))
+        .pip_update_downstream(p, "a1", what = "state", value = "outdated")
+
+        expect_equal(
+            p$pipeline[["state"]],
+            c("outdated", "outdated", "new", "outdated", "new")
+        )
+    })
+
+    it("can update states downstream of multiple nodes",
+    {
+        p <- test_pip()
+        .pip_update_downstream(p, c("a1", "b1"), what = "state", value = "outdated")
+        expect_true(all(p$pipeline[["state"]] == "outdated"))
+
+        p <- test_pip()
+        .pip_update_downstream(p, c("a1", "b2"), what = "state", value = "outdated")
+
+        expect_equal(
+            p$pipeline[["state"]],
+            c("outdated", "outdated", "new", "outdated", "outdated")
+        )
     })
 })
 
@@ -215,20 +240,21 @@ describe("pip_collect_out",
 
 describe("pip_get_params",
 {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(data = data.frame(a = 1:2)) data) |>
+            pip_add("s2", \(data = ~s1, x = 1) data[, 2] + x) |>
+            pip_add("s3", \(y = ~s2) y) |>
+            pip_add("s4", \(x = 9, y = ~s2) x + y)
+    }
+
     it("returns independent params from a pipeline",
     {
-        p <- pip_new()
-        data <- data.frame(a = 1:2, b = 3:4)
-
-        pip_add(p, "s1", \(data = data) data)
-        pip_add(p, "s2", \(data = ~s1, x = 1) data[, 2] + x)
-        pip_add(p, "s3", \(y = ~s2) y)
-        pip_add(p, "s4", \(x = 9, y = ~s2) x + y)
-
+        p <- test_pip()
         params <- pip_get_params(p)
 
         expect_named(params, c("data", "x"))
-        expect_equal(params[["data"]], data)
+        expect_equal(params[["data"]], data.frame(a = 1:2))
         expect_equal(params[["x"]], 1)
     })
 
@@ -301,6 +327,101 @@ describe("pip_run",
         pip_add(p, "s3", \(x = ~s2, y = ~s1) x + y)
         pip_run(p, lgr = NULL)
         expect_equal(p$pipeline[["out"]], list(1:2, c(2, 3), c(3, 5)))
+    })
+})
+
+
+describe("pip_set_params",
+{
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(x = 1, data = data.frame(a = 1:2)) x) |>
+            pip_add("s2", \(x = ~s1, y = 2) x + y) |>
+            pip_add("s3", \(z = 3) z) |>
+            pip_add("s4", \(a = ~s1, b = ~s3) a + b)
+    }
+
+    it("can be used with pip or view",
+    {
+        p <- test_pip()
+        params <- list(x = 11, y = 22)
+
+        res <- pip_set_params(p, params = params)
+        expect_true(inherits(res, "pipeflow_pip"))
+
+        v <- pip_view(p, filter = list(step = "s2"))
+        res <- pip_set_params(v, params = params)
+        expect_true(inherits(res, "pipeflow_view"))
+    })
+
+    it("sets independent parameters in a pipeline",
+    {
+        p <- test_pip()
+        params <- list(x = 11, z = 33, data = data.frame(b = 3:4))
+
+        pip_set_params(p, params = params)
+        after <- p[["pipeline"]][["params"]]
+        expect_equal(after[[1]][["x"]], 11)
+        expect_equal(after[[1]][["data"]], data.frame(b = 3:4))
+        expect_equal(after[[2]][["y"]], 2)
+        expect_equal(after[[3]][["z"]], 33)
+    })
+
+    it("sets parameters only within the selected view",
+    {
+        p <- test_pip()
+
+        v <- pip_view(p, filter = list(step = "s3"))
+        pip_set_params(v, params = list(z = 33, x = 11, y = 22))
+        after <- p[["pipeline"]][["params"]]
+
+        expect_equal(after[[1]][["x"]], 1)
+        expect_equal(after[[2]][["y"]], 2)
+        expect_equal(after[[3]][["z"]], 33)
+    })
+
+    it("ignores locked steps",
+    {
+        p <- test_pip()
+        p$pipeline[["locked"]][[1]] <- TRUE
+        pip_set_params(p, params = list(x = 99))
+        after <- p[["pipeline"]][["params"]]
+        expect_equal(after[[1]][["x"]], 1)
+    })
+
+    it("warns for unused parameters when requested",
+    {
+        p <- pip_new()
+        pip_add(p, "s1", \(x = 1) x)
+
+        expect_warning(
+            pip_set_params(p, params = list(foo = 1), warnUnused = TRUE),
+            "Trying to set parameters not defined in the target: foo"
+        )
+    })
+
+    it("marks changed and dependent downstream steps as 'outdated'",
+    {
+        p <- test_pip()
+        pip_set_params(p, params = list(x = 5))
+        expect_equal(
+            p[["pipeline"]][["state"]],
+            c("outdated", "outdated", "new", "outdated")
+        )
+
+        p <- test_pip()
+        pip_set_params(p, params = list(y = 5))
+        expect_equal(
+            p[["pipeline"]][["state"]],
+            c("new", "outdated", "new", "new")
+        )
+
+        p <- test_pip()
+        pip_set_params(p, params = list(z = 5))
+        expect_equal(
+            p[["pipeline"]][["state"]],
+            c("new", "new", "outdated", "outdated")
+        )
     })
 })
 
