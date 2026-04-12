@@ -16,7 +16,7 @@ describe(".new_step",
         step = "step2",
         group = "group1",
         fun = function(x) x^2,
-        params = list(x = 1, y = "step1"),
+        params = list(x = 1, y = ~step1),
         depends = c(y = "step1"),
         tags = c("t1", "t2"),
         .nodeId = 0
@@ -27,7 +27,7 @@ describe(".new_step",
         expect_equal(step$step, "step2")
         expect_equal(step$group, "group1")
         expect_equal(step$fun[[1]](2), 4)
-        expect_equal(step$params[[1]], list(x = 1, y = "step1"))
+        expect_equivalent(step$params[[1]], list(x = 1, y = ~step1))
         expect_equal(step$signature, "(x)")
         expect_equal(step$depends, list(c(y = "step1")))
         expect_equal(step$out, list(NULL))
@@ -37,6 +37,7 @@ describe(".new_step",
         expect_equal(step$locked, FALSE)
         expect_equal(step$meta, list(NULL))
         expect_equal(step$.nodeId, 0)
+        expect_equal(step$.par_indep, list("x"))
     })
 
     it("aligns with the empty pipeline",

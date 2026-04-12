@@ -13,14 +13,14 @@
         time = as.POSIXct(character(0)),
         locked = logical(0),
         meta = list(),
-        .nodeId = integer()
+        .nodeId = integer(),
+        .par_indep = list()     # names of independent parameters
     )
 }
 
 
 .new_step <- function(
-    step, group, fun, params, depends, .nodeId,
-    tags = character(0)
+    step, group, fun, params, depends, .nodeId, tags = character(0)
 ) {
     list(
         step = step,
@@ -35,7 +35,8 @@
         time = Sys.time(),
         locked = FALSE,
         meta = list(NULL),
-        .nodeId = .nodeId
+        .nodeId = .nodeId,
+        .par_indep = list(setdiff(names(params), names(depends)))
     )
 }
 
