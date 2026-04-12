@@ -27,7 +27,7 @@ describe("pip_new",
     it("creates a new pipeline",
     {
         p <- pip_new()
-        expect_true(.pip_is_pipeflow_pip(p))
+        expect_true(.is_pipeflow_pip(p))
     })
 })
 
@@ -99,7 +99,7 @@ describe("pip_add",
         pip_add(p, "s1", \(a = 5) a)
 
         expect_error(pip_add(p, "s2", \(x = ~-2) 2*x))
-        expect_equal(pip_length(p), 1L)
+        expect_equal(length(p), 1L)
     })
 
     it("if add is aborted, pipeline remains unchanged",
@@ -115,7 +115,7 @@ describe("pip_add",
     it("can refer to the pipeline itself via the .self argument",
     {
         p <- pip_new()
-        pip_add(p, "s1", \(x = 1, .self = NULL) pip_length(.self))
+        pip_add(p, "s1", \(x = 1, .self = NULL) length(.self))
         expect_equal(p$pipeline[["params"]][[1]]$.self, p)
     })
 
@@ -164,24 +164,6 @@ describe("pip_has_step",
         expect_error(f(p, NA))
         expect_error(f(p, ""))
         expect_error(f(p, 1))
-    })
-})
-
-
-describe("pip_length",
-{
-    it("returns an integer value",
-    {
-        p <- pip_new()
-        expect_true(is.integer(pip_length(p)))
-    })
-
-    it("returns the expected value",
-    {
-        p <- pip_new()
-        expect_equal(pip_length(p), 0L)
-        pip_add(p, "s1", \(a = 1) a)
-        expect_equal(pip_length(p), 1L)
     })
 })
 
@@ -275,7 +257,7 @@ describe("pip_view",
         pip_add(p, "load", \(x = 1) x, group = "io")
 
         v <- pip_view(p)
-        expect_true(.pip_is_pipeflow_view(v))
+        expect_true(.is_pipeflow_view(v))
         expect_identical(v[["pip"]], p)
     })
 
@@ -366,6 +348,31 @@ describe("pip_view",
 })
 
 
+# ------------------------------------
+# Implementation of generic S3 methods
+# ------------------------------------
+
+describe("length",
+{
+    it("returns an integer value",
+    {
+        p <- pip_new()
+        expect_true(is.integer(length(p)))
+    })
+
+    it("returns the expected value",
+    {
+        p <- pip_new()
+        expect_equal(length(p), 0L)
+        pip_add(p, "s1", \(a = 1) a)
+        pip_add(p, "s2", \(a = 1) a)
+        expect_equal(length(p), 2L)
+
+        v <- pip_view(p, 1)
+        expect_equal(length(v), 1L)
+    })
+})
+
 
 describe("benchmarking",
 {
@@ -404,3 +411,4 @@ describe("benchmarking",
     system.time(b <- chmatch(x,y))             # 16s
     identical(a,b)
 })
+

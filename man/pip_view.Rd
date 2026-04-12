@@ -5,7 +5,7 @@
 \title{Pipeline view}
 \usage{
 pip_view(
-  pip,
+  x,
   i = integer(),
   filter = list(),
   tags = character(),
@@ -14,7 +14,7 @@ pip_view(
 )
 }
 \arguments{
-\item{pip}{A pipeflow pipeline.}
+\item{x}{A pipeflow pipeline.}
 
 \item{i}{Row indices to keep.}
 

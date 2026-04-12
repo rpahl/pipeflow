@@ -1,25 +1,30 @@
 # -------
 # Helpers
 # -------
-
-.pip_get_last_step <- function(x)
+.assert_pip_or_view <- function(x)
 {
-    utils::tail(x[["pipeline"]][["step"]], n = 1)
+    if (!(.is_pipeflow_pip(x) || .is_pipeflow_view(x))) {
+        stop_no_call("x must be a pipeflow pip or view")
+    }
 }
-
-.pip_is_indexed <- function(x)
+.is_pipeflow_view <- function(x)
 {
-    !is.null(data.table::indices(x[["pipeline"]]))
+    inherits(x, "pipeflow_view")
 }
-
-.pip_is_pipeflow_pip <- function(x)
+.is_pipeflow_pip <- function(x)
 {
     inherits(x, "pipeflow_pip")
 }
 
-.pip_is_pipeflow_view <- function(x)
+.pip_data <- function(x)
 {
-    inherits(x, "pipeflow_view")
+    isView <- inherits(x, "pipeflow_view")
+    if (isView) {
+        rows <- x[["rows"]]
+        x[["pip"]][["pipeline"]][rows, ]
+    } else {
+        x[["pipeline"]]
+    }
 }
 
 .pip_filter_nodes <- function(x, nodes)
@@ -30,6 +35,11 @@
 .pip_filter <- function(x, on, values)
 {
     x[["pipeline"]][list(values), on = on]
+}
+
+.pip_is_indexed <- function(x)
+{
+    !is.null(data.table::indices(x[["pipeline"]]))
 }
 
 .pip_reindex <- function(x)
@@ -205,10 +215,10 @@ pip_add <- function(x, step, fun, group = step, tags = character(0))
 
 pip_bind <- function(x, y, fix.names = TRUE, fix.sep = "_")
 {
-    if (!.pip_is_pipeflow_pip(x)) {
+    if (!.is_pipeflow_pip(x)) {
         stop("x must be a pipeflow pip")
     }
-    if (!.pip_is_pipeflow_pip(y)) {
+    if (!.is_pipeflow_pip(y)) {
         stop("y must be a pipeflow pip")
     }
     if (!.is_single(fix.names, "logical")) {
@@ -224,21 +234,12 @@ pip_bind <- function(x, y, fix.names = TRUE, fix.sep = "_")
 
 pip_collect_out <- function(x, grouped = TRUE)
 {
-    isView <- inherits(x, "pipeflow_view")
-    if (!(isView || .pip_is_pipeflow_pip(x))) {
-        stop("x must be a pipeflow pip or view")
-    }
+    .assert_pip_or_view(x)
     if (!.is_single(grouped, "logical")) {
         stop("grouped must be a single logical value")
     }
 
-    dat <- if (isView) {
-        rows <- x[["rows"]]
-        x[["pip"]][["pipeline"]][rows, ]
-    } else {
-        x[["pipeline"]]
-    }
-
+    dat <- .pip_data(x)
     if (nrow(dat) == 0) {
         return(list())
     }
@@ -273,9 +274,10 @@ pip_collect_out <- function(x, grouped = TRUE)
 }
 
 
+
 pip_has_step <- function(x, step)
 {
-    if (!.pip_is_pipeflow_pip(x)) {
+    if (!.is_pipeflow_pip(x)) {
         stop("x must be a pipeflow pip")
     }
 
@@ -294,10 +296,11 @@ pip_has_step <- function(x, step)
     .pip_step_exists(x, step)
 }
 
-pip_length <- function(x)
+pip_params <- function(x)
 {
-    as.integer(nrow(x[["pipeline"]]))
+
 }
+
 
 pip_run <- function(
     x,
@@ -305,7 +308,7 @@ pip_run <- function(
     lgr = pipeflow_lgr,
     progress = NULL
 ) {
-    if (!.pip_is_pipeflow_pip(x)) {
+    if (!.is_pipeflow_pip(x)) {
         stop("x must be a pipeflow pip")
     }
     if (!.is_single(force, "logical")) {
@@ -451,6 +454,26 @@ pip_view <- function(
     class(view) <- "pipeflow_view"
     view
 }
+
+
+# ------------------------------------
+# Implementation of generic S3 methods
+# ------------------------------------
+
+#' @param x A pipeflow pipeline.
+#' @export
+length.pipeflow_pip <- function(x)
+{
+    as.integer(nrow(x[["pipeline"]]))
+}
+
+#' @param x A pipeflow view.
+#' @export
+length.pipeflow_view <- function(x)
+{
+    as.integer(length(x[["rows"]]))
+}
+
 
 #' Print a pipeflow pipeline
 #'
