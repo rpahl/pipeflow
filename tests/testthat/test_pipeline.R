@@ -146,42 +146,6 @@ describe("pip_bind",
 })
 
 
-describe("pip_has_step",
-{
-    it("can be checked if pipeline has a step",
-    {
-        p <- pip_new()
-        expect_false(pip_has_step(p, "s1"))
-        pip_add(p, "s1", \(a = 1) a)
-        expect_true(pip_has_step(p, "s1"))
-    })
-
-    it("errors at bad step argument",
-    {
-        f <- pip_has_step
-        expect_error(f(p, list("not a character string")))
-        expect_error(f(p, c("not", "a", "single", "string")))
-        expect_error(f(p, NA))
-        expect_error(f(p, ""))
-        expect_error(f(p, 1))
-    })
-})
-
-
-describe("pip_run",
-{
-    it("runs all steps of the pipeline",
-    {
-        p <- pip_new()
-        pip_add(p, "s1", \(x = 1:2) x)
-        pip_add(p, "s2", \(x = ~-1) x + 1)
-        pip_add(p, "s3", \(x = ~s2, y = ~s1) x + y)
-        pip_run(p, lgr = NULL)
-        expect_equal(p$pipeline[["out"]], list(1:2, c(2, 3), c(3, 5)))
-    })
-})
-
-
 describe("pip_collect_out",
 {
     it("returns empty list for empty pipeline",
@@ -245,6 +209,98 @@ describe("pip_collect_out",
             pip_collect_out(p, grouped = c(TRUE, FALSE)),
             "grouped must be a single logical value"
         )
+    })
+})
+
+
+describe("pip_get_params",
+{
+    it("returns independent params from a pipeline",
+    {
+        p <- pip_new()
+        data <- data.frame(a = 1:2, b = 3:4)
+
+        pip_add(p, "s1", \(data = data) data)
+        pip_add(p, "s2", \(data = ~s1, x = 1) data[, 2] + x)
+        pip_add(p, "s3", \(y = ~s2) y)
+        pip_add(p, "s4", \(x = 9, y = ~s2) x + y)
+
+        params <- pip_get_params(p)
+
+        expect_named(params, c("data", "x"))
+        expect_equal(params[["data"]], data)
+        expect_equal(params[["x"]], 1)
+    })
+
+    it("returns params from a view subset only",
+    {
+        p <- pip_new()
+        data <- data.frame(a = 1:2, b = 3:4)
+
+        pip_add(p, "s1", \(data = data) data)
+        pip_add(p, "s2", \(data = ~s1, x = 1) data[, 2] + x)
+        pip_add(p, "s3", \(y = ~s2) y)
+        pip_add(p, "s4", \(x = 9, y = ~s2) x + y)
+
+        v <- pip_view(p, filter = list(step = c("s3", "s4")))
+        params <- pip_get_params(v)
+
+        expect_named(params, "x")
+        expect_equal(params[["x"]], 9)
+    })
+
+    it("returns empty list for view without independent params",
+    {
+        p <- pip_new()
+        pip_add(p, "s1", \(x = 1) x)
+        pip_add(p, "s2", \(y = ~s1) y)
+
+        v <- pip_view(p, filter = list(step = "s2"))
+        expect_equal(pip_get_params(v), list())
+    })
+
+    it("signals invalid input",
+    {
+        expect_error(
+            pip_get_params(1),
+            "x must be a pipeflow pip or view"
+        )
+    })
+})
+
+
+describe("pip_has_step",
+{
+    it("can be checked if pipeline has a step",
+    {
+        p <- pip_new()
+        expect_false(pip_has_step(p, "s1"))
+        pip_add(p, "s1", \(a = 1) a)
+        expect_true(pip_has_step(p, "s1"))
+    })
+
+    it("errors at bad step argument",
+    {
+        f <- pip_has_step
+        expect_error(f(p, list("not a character string")))
+        expect_error(f(p, c("not", "a", "single", "string")))
+        expect_error(f(p, NA))
+        expect_error(f(p, ""))
+        expect_error(f(p, 1))
+    })
+})
+
+
+describe("pip_run",
+{
+    it("runs all steps of the pipeline",
+    {
+        p <- pip_new()
+        pip_add(p, "s1", \(x = 1:2) x)
+        pip_add(p, "s2", \(x = ~-1) x + 1)
+        pip_add(p, "s3", \(x = ~s2, y = ~s1) x + y)
+        pip_run(p, lgr = NULL)
+        expect_equal(p$pipeline[["out"]], list(1:2, c(2, 3), c(3, 5)))
     })
 })
 

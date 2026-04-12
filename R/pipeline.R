@@ -202,7 +202,7 @@ pip_add <- function(x, step, fun, group = step, tags = character(0))
         step = step,
         group = group,
         fun = fun,
-        params = params,
+        params = lapply(params, eval),
         depends = depends,
         tags = tags,
         .nodeId = .nodeId
@@ -273,6 +273,29 @@ pip_collect_out <- function(x, grouped = TRUE)
     res
 }
 
+#' Extract independent pipeline parameters
+#'
+#' @param x A pipeflow pip or view
+#' @return Unique list of all independent pipeline parameters
+pip_get_params <- function(x)
+{
+    .assert_pip_or_view(x)
+    dat <- .pip_data(x)
+
+    params <- mapply(
+        par = dat[["params"]], deps = dat[["depends"]],
+        FUN = \(par, deps) {
+            indep <- setdiff(names(par), names(deps))
+            par[indep]
+        },
+        SIMPLIFY = FALSE
+    ) |>
+        Filter(f = \(x) length(x) > 0)
+
+    parNames <- unlist(sapply(params, FUN = names))
+    parValues <- stats::setNames(unlist1(params), parNames)
+    as.list(parValues[!duplicated(names(parValues))])
+}
 
 
 pip_has_step <- function(x, step)
@@ -294,11 +317,6 @@ pip_has_step <- function(x, step)
     }
 
     .pip_step_exists(x, step)
-}
-
-pip_params <- function(x)
-{
-
 }
 
 
