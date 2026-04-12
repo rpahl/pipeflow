@@ -4,9 +4,9 @@
         step = character(0),
         group = character(0),
         fun = list(),
-        fargs = list(),
+        params = list(),
         signature = character(0),
-        refs = list(),
+        depends = list(),
         out = list(),
         tags = list(),
         state = character(0),
@@ -19,16 +19,16 @@
 
 
 .new_step <- function(
-    step, group, fun, fargs, refs, .nodeId,
+    step, group, fun, params, depends, .nodeId,
     tags = character(0)
 ) {
     list(
         step = step,
         group = group,
         fun = list(fun),
-        fargs = list(fargs),
+        params = list(params),
         signature = trimws(substring(deparse(args(fun))[1], 10)),
-        refs = list(refs),
+        depends = list(depends),
         out = list(NULL),
         tags = list(tags),
         state = .step_states[["new"]][["name"]],
@@ -39,20 +39,20 @@
     )
 }
 
-.extract_fun_args = function(fun)
+.extract_fun_params = function(fun)
 {
-    fargs <- formals(fun)
+    params <- formals(fun)
 
-    hasDots <- "..." %in% names(fargs)
+    hasDots <- "..." %in% names(params)
     if (hasDots) {
-        fargs <- fargs[!names(fargs) %in% "..."]
+        params <- params[!names(params) %in% "..."]
     }
 
     # Signal args with no default values
     is_missing_default <- function(x) {
         identical(x, quote(expr = ))
     }
-    undef <- names(Filter(fargs, f = is_missing_default))
+    undef <- names(Filter(params, f = is_missing_default))
     if (length(undef) > 0L) {
         stop_no_call(
             paste0("'", undef, "'", collapse = ", "),
@@ -61,7 +61,7 @@
         )
     }
 
-    as.list(fargs)
+    as.list(params)
 }
 
 
@@ -87,13 +87,13 @@
 }
 
 
-.extract_refs_to_steps = function(
-    fargs,
+.extract_depends = function(
+    params,
     steps,
     toPos = as.integer(length(steps))
 ) {
-    if (!is.list(fargs)) {
-        stop_no_call("fargs must be a list")
+    if (!is.list(params)) {
+        stop_no_call("params must be a list")
     }
     if (!is.character(steps)) {
         stop_no_call("steps must be a character vector")
@@ -109,20 +109,20 @@
     # References to other steps are marked using a formula and can be either
     # referencing earlier steps (e.g. x = ~step1) or using positional indices
     # by pointing backwards a certain number of steps (e.g. x = ~-1)
-    refs <- lapply(fargs, FUN = \(x) trimws(deparse(x))) |>
+    depends <- lapply(params, FUN = \(x) trimws(deparse(x))) |>
         Filter(f = \(x) startsWith(x, "~")) |>
         lapply(\(x) substring(x, 2)) |>
         unlist()
 
-    if (length(refs) == 0) {
+    if (length(depends) == 0) {
         return(character(0))
     }
 
-    iRelPos <- which(refs |> startsWith("-"))
-    stepNumbers <- refs[iRelPos] |> lapply(
+    iRelPos <- which(depends |> startsWith("-"))
+    stepNumbers <- depends[iRelPos] |> lapply(
         FUN = \(x) .rel_pos_to_step_num(abs(as.integer(x)), toPos)
     )
-    refs[iRelPos] <- steps[as.integer(stepNumbers)]
+    depends[iRelPos] <- steps[as.integer(stepNumbers)]
 
-    unlist(refs)
+    unlist(depends)
 }

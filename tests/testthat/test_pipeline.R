@@ -90,7 +90,7 @@ describe("pip_add",
         pip_add(p, "s1", \(a = 5) a)
         pip_add(p, "s2", \(x = ~-1) 2*x)
 
-        expect_equal(p$pipeline$refs[[2]], c(x = "s1"))
+        expect_equal(p$pipeline$depends[[2]], c(x = "s1"))
     })
 
     it("a bad relative step referal is signalled",
@@ -116,7 +116,7 @@ describe("pip_add",
     {
         p <- pip_new()
         pip_add(p, "s1", \(x = 1, .self = NULL) pip_length(.self))
-        expect_equal(p$pipeline[["fargs"]][[1]]$.self, p)
+        expect_equal(p$pipeline[["params"]][[1]]$.self, p)
     })
 
     it("supports functions with wildcard arguments",

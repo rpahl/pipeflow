@@ -45,14 +45,14 @@
 
     dat <- x[["pipeline"]]
     fun <- dat[["fun"]][[i]]
-    args <- dat[["fargs"]][[i]]
-    refs <- dat[["refs"]][[i]]
+    args <- dat[["params"]][[i]]
+    depends <- dat[["depends"]][[i]]
 
     # If calculation depends on results of earlier steps, get them from
     # respective referenced output slots of the pipeline.
-    if (length(refs) > 0) {
-        refsOut <- .pip_filter(x, on = "step", values = refs)[["out"]]
-        args[names(refs)] <- refsOut
+    if (length(depends) > 0) {
+        refsOut <- .pip_filter(x, on = "step", values = depends)[["out"]]
+        args[names(depends)] <- refsOut
     }
 
     step <- dat[["step"]][[i]]
@@ -160,13 +160,13 @@ pip_add <- function(x, step, fun, group = step, tags = character(0))
     }
 
     # Determine and verify potential links to existing steps
-    fargs <- .extract_fun_args(fun)
-    if (".self" %in% names(fargs)) {
-        fargs[[".self"]] <- x
+    params <- .extract_fun_params(fun)
+    if (".self" %in% names(params)) {
+        params[[".self"]] <- x
     }
     steps <- c(x[["pipeline"]][["step"]], step)
-    refs <- .extract_refs_to_steps(fargs = fargs, steps = steps)
-    refNodes <- mget(refs,
+    depends <- .extract_depends(params = params, steps = steps)
+    refNodes <- mget(depends,
         envir = x[[".steps_to_nodes"]],
         ifnotfound = NA_integer_,
         inherits = FALSE
@@ -184,13 +184,18 @@ pip_add <- function(x, step, fun, group = step, tags = character(0))
     .nodeId <- dag_add_node(d)
     for (refNode in refNodes) {
         dag_add_edge(d, from = refNode, to = .nodeId)
-        # TODO: implement dag_add_edges allowing vector args
+        # TODO: implement vectorized dag_add_edges
     }
 
     # Create and append step
     newStep <- .new_step(
-        step = step, group = group, fun = fun, fargs = fargs, refs = refs,
-        .nodeId = .nodeId, tags = tags
+        step = step,
+        group = group,
+        fun = fun,
+        params = params,
+        depends = depends,
+        tags = tags,
+        .nodeId = .nodeId
     )
     x[["pipeline"]] <- data.table::rbindlist(list(x[["pipeline"]], newStep))
     x[[".steps_to_nodes"]][[step]] <- .nodeId
@@ -479,9 +484,9 @@ print.pipeflow_pip <- function(x,
 
     if (identical(cols, "core")) {
         cols <- if (identical(dat[["step"]], dat[["group"]])) {
-            c("step", "signature", "out", "state", "time")
+            c("step", "signature", "out", "state")
         } else {
-            c("step", "group", "signature", "out", "state", "time")
+            c("step", "group", "signature", "out", "state")
         }
     }
     if (identical(cols, "all")) {
