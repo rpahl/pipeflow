@@ -14,7 +14,7 @@
         locked = logical(0),
         meta = list(),
         .nodeId = integer(),
-        .par_indep = list()     # names of independent parameters
+        .indeps = list()     # names of independent parameters
     )
 }
 
@@ -36,24 +36,25 @@
         locked = FALSE,
         meta = list(NULL),
         .nodeId = .nodeId,
-        .par_indep = list(setdiff(names(params), names(depends)))
+        .indeps = list(setdiff(names(params), names(depends)))
     )
 }
 
-.extract_fun_params = function(fun)
+.extract_fun_params <- function(fun)
 {
-    params <- formals(fun)
+    args <- formals(fun)
 
-    hasDots <- "..." %in% names(params)
+    # Remove potential "..." argument
+    hasDots <- "..." %in% names(args)
     if (hasDots) {
-        params <- params[!names(params) %in% "..."]
+        args <- args[!names(args) %in% "..."]
     }
 
-    # Signal args with no default values
+    # First verify that all args have default values
     is_missing_default <- function(x) {
         identical(x, quote(expr = ))
     }
-    undef <- names(Filter(params, f = is_missing_default))
+    undef <- names(Filter(args, f = is_missing_default))
     if (length(undef) > 0L) {
         stop_no_call(
             paste0("'", undef, "'", collapse = ", "),
@@ -62,7 +63,9 @@
         )
     }
 
-    as.list(params)
+    # Make sure default values are returned as resolved values by evaluating
+    # them in the function's environment
+    lapply(args, \(x) eval(x, envir = environment(fun)))
 }
 
 

@@ -37,7 +37,7 @@ describe(".new_step",
         expect_equal(step$locked, FALSE)
         expect_equal(step$meta, list(NULL))
         expect_equal(step$.nodeId, 0)
-        expect_equal(step$.par_indep, list("x"))
+        expect_equal(step$.indeps, list("x"))
     })
 
     it("aligns with the empty pipeline",
@@ -100,9 +100,18 @@ describe(".extract_fun_params",
 
     it("supports formula",
     {
-        expect_equivalent(
+        expect_equal(
             .extract_fun_params(function(x = 1, y = ~foo) x),
             list(x = 1, y = ~foo)
+        )
+    })
+
+    it("works with default values declared outside the function",
+    {
+        default_value <- 1
+        expect_equal(
+            .extract_fun_params(function(x = default_value) x),
+            list(x = 1)
         )
     })
 })
