@@ -27,6 +27,25 @@ describe("Dag creation and properties",
         expect_true(dag_has_edge(d, 0, 2))
     })
 
+    it("can add multiple nodes and edges at once",
+    {
+        d <- dag_new()
+        expect_equal(dag_add_node(d), 0)
+        expect_equal(dag_add_node(d), 1)
+        expect_equal(dag_add_node(d), 2)
+        expect_equal(dag_add_node(d), 3)
+        res <- dag_add_edges(d, c(0, 1), c(1, 2))
+        expect_equal(res, c(TRUE, TRUE))
+        expect_true(dag_has_edge(d, 0, 1))
+        expect_true(dag_has_edge(d, 1, 2))
+
+        expect_warning(
+            res <- dag_add_edges(d, c(2, 3), c(3, 4)),
+            "node id 4 not in DAG - operation ignored"
+        )
+        expect_equal(res, c(TRUE, FALSE))
+    })
+
     it("can be cloned",
     {
         d <- dag_new()

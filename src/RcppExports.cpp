@@ -228,6 +228,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// dag_add_edges
+Rcpp::LogicalVector dag_add_edges(SEXP dp, const Rcpp::IntegerVector& from, const Rcpp::IntegerVector& to);
+RcppExport SEXP _pipeflow_dag_add_edges(SEXP dpSEXP, SEXP fromSEXP, SEXP toSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type from(fromSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type to(toSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_add_edges(dp, from, to));
+    return rcpp_result_gen;
+END_RCPP
+}
 // dag_add_dag
 Rcpp::IntegerVector dag_add_dag(SEXP dp, SEXP other_dp);
 RcppExport SEXP _pipeflow_dag_add_dag(SEXP dpSEXP, SEXP other_dpSEXP) {
@@ -320,6 +333,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_pipeflow_dag_add_node", (DL_FUNC) &_pipeflow_dag_add_node, 1},
     {"_pipeflow_dag_add_node_at", (DL_FUNC) &_pipeflow_dag_add_node_at, 2},
     {"_pipeflow_dag_add_edge", (DL_FUNC) &_pipeflow_dag_add_edge, 3},
+    {"_pipeflow_dag_add_edges", (DL_FUNC) &_pipeflow_dag_add_edges, 3},
     {"_pipeflow_dag_add_dag", (DL_FUNC) &_pipeflow_dag_add_dag, 2},
     {"_pipeflow_dag_remove_node", (DL_FUNC) &_pipeflow_dag_remove_node, 3},
     {"_pipeflow_dag_remove_edge", (DL_FUNC) &_pipeflow_dag_remove_edge, 4},

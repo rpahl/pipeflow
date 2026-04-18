@@ -787,6 +787,31 @@ bool dag_add_edge(SEXP dp, int from, int to)
 }
 
 // [[Rcpp::export]]
+Rcpp::LogicalVector dag_add_edges(
+    SEXP dp,
+    const Rcpp::IntegerVector& from,
+    const Rcpp::IntegerVector& to
+)
+{
+    if (from.size() != to.size()) {
+        Rcpp::stop("`from` and `to` must have identical lengths");
+    }
+
+    Dag* dag = cast_sexp_to_dag_ptr(dp);
+    Rcpp::LogicalVector out(from.size());
+
+    for (R_xlen_t i = 0; i < from.size(); ++i) {
+        out[i] = add_edge(
+            dag,
+            static_cast<nodeId>(from[i]),
+            static_cast<nodeId>(to[i]),
+            false
+        );
+    }
+    return out;
+}
+
+// [[Rcpp::export]]
 Rcpp::IntegerVector dag_add_dag(SEXP dp, SEXP other_dp)
 {
     return as_int_vec(
