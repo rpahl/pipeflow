@@ -14,8 +14,6 @@ given groups are considered.}
 }
 \value{
 list with two data frames, one for nodes and one for edges
-ready to be used with the \code{\link[visNetwork:visNetwork]{visNetwork::visNetwork()}} function of the
-\link[visNetwork]{visNetwork} package.
 }
 \description{
 Get the pipeline as a graph with nodes and edges.

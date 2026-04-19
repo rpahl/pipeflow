@@ -372,8 +372,6 @@ pipe_get_depends_up <- function(pip, step, recursive = TRUE)
 #' @param groups `character` if not `NULL`, only steps belonging to the
 #' given groups are considered.
 #' @return list with two data frames, one for nodes and one for edges
-#' ready to be used with the [visNetwork::visNetwork()] function of the
-#' \link[visNetwork]{visNetwork} package.
 #' @examples
 #' p <- pipe_new("pipe", data = 1:2)
 #' pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
