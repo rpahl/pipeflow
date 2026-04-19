@@ -88,15 +88,6 @@
         value = list(list(out), Sys.time(), .step_states[["done"]][["name"]])
     )
 
-    # TODO: not needed here - we will rather update states when changing
-    # step parameters
-    # .pip_update_downstream(
-    #     x,
-    #     steps = step,
-    #     what = "state",
-    #     value = .step_states[["outdated"]][["name"]]
-    # )
-
     invisible(x)
 }
 
@@ -157,6 +148,16 @@ pip_new <- function(name = "pipe")
     env
 }
 
+#' Add a new step to the pipeline
+#'
+#' @param x A pipeflow pipeline object.
+#' @param step Step name.
+#' @param fun Function to execute for the step.
+#' @param group Step group name.
+#' @param tags Optional character vector of tags belonging to the step.
+#' Can also be set later (see)
+#' @return The updated pipeflow pipeline object.
+#' @export
 pip_add <- function(x, step, fun, group = step, tags = character(0))
 {
     if (pip_has_step(x, step)) {
@@ -231,6 +232,13 @@ pip_bind <- function(x, y, fix.names = TRUE, fix.sep = "_")
 }
 
 
+#' Collect pipeline output
+#'
+#' @param x A pipeflow pip or view
+#' @param grouped Logical indicating if the output should be grouped by step
+#' groups
+#' @return A list of pipeline outputs
+#' @export
 pip_collect_out <- function(x, grouped = TRUE)
 {
     .assert_pip_or_view(x)
@@ -262,9 +270,7 @@ pip_collect_out <- function(x, grouped = TRUE)
 
         # Group output if at least two steps have the same group label
         if (length(idx) > 1L) {
-            grp <- out[idx]
-            names(grp) <- steps[idx]
-            res[[k]] <- grp
+            res[[k]] <- stats::setNames(out[idx], nm = steps[idx])
         } else {
             res[[k]] <- out[[idx]]
         }
@@ -325,10 +331,20 @@ pip_has_step <- function(x, step)
 }
 
 
+#' Run pipeline
+#'
+#' @param x A pipeflow pip
+#' @param lgr A logging function of the form `function(level, msg, ...)`.
+#' To suppress logging, you can set `lgr = NULL`.
+#' @param force Logical indicating if all steps should be forced to run,
+#' regardless of whether they are outdated or not.
+#' @param progress A progress function
+#' @return The updated pipeline
+#' @export
 pip_run <- function(
     x,
-    force = FALSE,
     lgr = pipeflow_lgr,
+    force = FALSE,
     progress = NULL
 ) {
     # TODO: change implementation to work with pip and view
