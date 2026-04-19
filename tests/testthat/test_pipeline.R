@@ -449,14 +449,16 @@ describe("pip_set_params",
 
 describe("pip_view",
 {
-    it("returns a view object",
+    it("returns a view object with the expected structure",
     {
-        p <- pip_new()
+        p <- pip_new("test_pipeline")
         pip_add(p, "load", \(x = 1) x, group = "io")
 
         v <- pip_view(p)
         expect_true(.is_pipeflow_view(v))
+        expect_true("rows" %in% names(v))
         expect_identical(v[["pip"]], p)
+        expect_identical(v[["name"]], "test_pipeline view")
     })
 
     it("can filter by character columns with fixed matching",
@@ -516,6 +518,22 @@ describe("pip_view",
         )
 
         expect_equal(v[["rows"]], 2L)
+    })
+
+    it("can be called on views to further subset rows",
+    {
+        p <- pip_new("test_pipeline")
+        pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
+        pip_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
+        pip_add(p, "s3", \(x = ~-1) x, tags = c("daily", "report"))
+
+        v <- pip_view(p, tags = "daily")
+        expect_equal(v[["rows"]], c(1L, 3L))
+        expect_equal(v[["name"]], "test_pipeline view")
+
+        v2 <- pip_view(v, tags = "report")
+        expect_equal(v2[["rows"]], 3L)
+        expect_equal(v2[["name"]], "test_pipeline view view")
     })
 
     it("signals invalid filter names",

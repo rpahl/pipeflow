@@ -500,9 +500,9 @@ pip_set_params <- function(p, params = list(), warnUnused = FALSE)
 
 #' Pipeline view
 #'
-#' Create a filtered view of a pipeline
+#' Create a filtered view of a pipeline (or view).
 #'
-#' @param x A pipeflow pipeline.
+#' @param x A pipeflow pipeline or view.
 #' @param i Row indices to keep.
 #' @param filter A named list of filters to apply. Each element can be a
 #' character vector specifying the values to keep for the corresponding
@@ -531,19 +531,31 @@ pip_set_params <- function(p, params = list(), warnUnused = FALSE)
 #' pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
 #' pip_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
 #' pip_add(p, "s3", \(x = ~-1) x, tags = c("daily", "report"))
+#' pip_view(p, tags = "daily")
 #'
 #' # Filter by regex
 #' p <- pip_new()
 #' pip_add(p, "load_raw", \(x = 1) x, group = "io")
 #' pip_add(p, "fit_model", \(x = ~-1) x + 1, group = "model")
 #' pip_add(p, "eval_model", \(x = ~fit_model) x, group = "model")
+#' pip_view(p, filter = list(step = "_model$"), fixed = FALSE)
 #'
 #' # Filter using explicit row indices
 #' p <- pip_new()
 #' pip_add(p, "a1", \(x = 1) x, group = "g1")
 #' pip_add(p, "a2", \(x = ~-1) x, group = "g2")
 #' pip_add(p, "a3", \(x = ~-1) x, group = "g2")
+#' pip_view(p, i = c(1L, 2L), filter = list(group = "g2"))
 #'
+#' # Combine views
+#' p <- pip_new()
+#' pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
+#' pip_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
+#' pip_add(p, "s3", \(x = ~-1) x, tags = c("daily", "report"))
+#' v1 <- pip_view(p, tags = "daily")
+#' print(v1)
+#' v2 <- pip_view(v1, tags = "report")
+#' print(v2)
 pip_view <- function(
     x,
     i = integer(),
@@ -553,9 +565,9 @@ pip_view <- function(
     ...
 ) {
     .assert_pip_or_view(x)
-    # TODO: implement for views (currently only works for pipelines)
+    isView <- .is_pipeflow_view(x)
 
-    dat <- x[["pipeline"]]
+    dat <- if (isView) x[["pip"]][["pipeline"]] else x[["pipeline"]]
     keep <- rep(TRUE, nrow(dat))
 
     # Filters
@@ -595,7 +607,14 @@ pip_view <- function(
         rows <- intersect(rows, i)
     }
 
-    view <- list(pip = x, rows = rows)
+    if (isView) {
+        # If x was already a view, we combine the set of rows from both
+        rows <- intersect(rows, x[["rows"]])
+    }
+
+    pip <- if (isView) x[["pip"]] else x
+    name <- sprintf("%s view", x[["name"]])
+    view <- list(pip = pip, name = name, rows = rows)
     class(view) <- "pipeflow_view"
     view
 }
@@ -704,8 +723,7 @@ print.pipeflow_view <- function(x, header = TRUE, ...)
         cat(
             sprintf(
                 "<pipeflow_view> %s (%d of %d step%s)\n---------------\n",
-
-                pip[["name"]], nr, n, ifelse(n == 1, "", "s")
+                x[["name"]], nr, n, ifelse(n == 1, "", "s")
             )
         )
     }
