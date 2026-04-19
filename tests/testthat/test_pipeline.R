@@ -327,27 +327,56 @@ describe("pip_run",
             pip_add("bla_bla", \(bla = "blabla") bla, group = "bla")
     }
 
-    it("runs all steps of the pipeline",
+    describe("standard runs",
     {
-        p <- test_pip()
-        pip_run(p, lgr = NULL)
-        expect_equal(p$pipeline[["out"]], list(1, 2, 2, "blabla"))
+        it("runs all steps of the pipeline and marks them as done",
+        {
+            p <- test_pip()
+            pip_run(p, lgr = NULL)
+            expect_equal(p$pipeline[["out"]], list(1, 2, 2, "blabla"))
+            expect_equal(p$pipeline[["state"]], rep("done", 4))
+        })
+
+        it("marks downstream steps not reached due to abort as outdated",
+        {
+            p <- pip_new() |>
+                pip_add("load_raw", \(x = 1) stop("io error"), group = "io") |>
+                pip_add("fit_model", \(x = ~-1) x + 1, group = "model") |>
+                pip_add("eval_model", \(x = ~fit_model) x, group = "model")
+
+            expect_error(pip_run(p, lgr = NULL), "io error")
+            expect_equal(p$pipeline[["state"]], c("failed", "outdated", "outdated"))
+        })
     })
 
-    it("can run parts of the pipeline via views",
+    describe("running views",
     {
-        p <- test_pip()
-        v <- pip_view(p, filter = list(group = "bla"))
-        pip_run(v, lgr = NULL)
-        expect_equal(p$pipeline[["out"]], list(NULL, NULL, NULL, "blabla"))
-    })
+        it("can run parts of the pipeline via views",
+        {
+            p <- test_pip()
+            v <- pip_view(p, filter = list(group = "bla"))
+            pip_run(v, lgr = NULL)
+            expect_equal(p$pipeline[["out"]], list(NULL, NULL, NULL, "blabla"))
+        })
 
-    it("automatically runs all steps of the view plus upstream dependencies",
-    {
-        p <- test_pip()
-        v <- pip_view(p, filter = list(group = "model"))
-        pip_run(v, lgr = NULL)
-        expect_equal(p$pipeline[["out"]], list(1, 2, 2, NULL))
+        it("runs all steps of the view plus upstream dependencies",
+        {
+            p <- test_pip()
+            v <- pip_view(p, filter = list(group = "model"))
+            pip_run(v, lgr = NULL)
+            expect_equal(p$pipeline[["out"]], list(1, 2, 2, NULL))
+        })
+
+        it("marks downstream steps outside the view as outdated",
+        {
+            p <- test_pip()
+            v <- pip_view(p, filter = list(group = "io"))
+            pip_run(v, lgr = NULL)
+            expect_equal(
+                p$pipeline[["state"]],
+                c("done", "outdated", "outdated", "new")
+            )
+        })
     })
 })
 

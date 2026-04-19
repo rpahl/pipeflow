@@ -10,7 +10,7 @@
 }
 
 
-pipeflow_lgr <- function(level, msg, ...)
+pipeflow_lgr <- function(level, msg)
 {
     cat(level, " [", .formatted_time(), "]: ", msg, "\n", sep = "")
 }

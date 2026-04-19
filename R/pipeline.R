@@ -1,16 +1,28 @@
 # -------
 # Helpers
 # -------
+.assert_logger <- function(lgr)
+{
+    if (!is.function(lgr)) {
+        stop("lgr must be a function")
+    }
+    if (!all(c("level", "msg") %in% names(formals(lgr)))) {
+        stop("lgr must be a function with arguments 'level' and 'msg'")
+    }
+}
+
 .assert_pip_or_view <- function(x)
 {
     if (!(.is_pipeflow_pip(x) || .is_pipeflow_view(x))) {
         stop_no_call("x must be a pipeflow pip or view")
     }
 }
+
 .is_pipeflow_view <- function(x)
 {
     inherits(x, "pipeflow_view")
 }
+
 .is_pipeflow_pip <- function(x)
 {
     inherits(x, "pipeflow_pip")
@@ -37,6 +49,15 @@
     x[["pipeline"]][list(values), on = on]
 }
 
+.pip_get_downstream_nodes <- function(x, steps)
+{
+    start_ids <- mget(steps,
+        envir = x[[".steps_to_nodes"]],
+        inherits = FALSE
+    )
+    dag_get_reachable_nodes_down(x[[".dag"]], as.integer(start_ids))
+}
+
 .pip_is_indexed <- function(x)
 {
     !is.null(data.table::indices(x[["pipeline"]]))
@@ -44,11 +65,18 @@
 
 .pip_reindex <- function(x)
 {
+    if (!.is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
+    }
+    x[["pipeline"]][, .rowId := .I]
     data.table::setindexv(x[["pipeline"]], list("step", ".nodeId"))
 }
 
 .pip_run_row <- function(x, i, lgr)
 {
+    if (!.is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
+    }
     if (!.pip_is_indexed(x)) {
         .pip_reindex(x)
     }
@@ -66,7 +94,6 @@
     }
 
     step <- dat[["step"]][[i]]
-    context <- sprintf("step %i ('%s')", i, step)
 
     out <- withCallingHandlers(
         do.call(fun, args = args),
@@ -75,11 +102,11 @@
                 i = i, j = "state",
                 value = .step_states[["failed"]][["name"]]
             )
-            lgr(level = "error", msg = e$message, context = context)
+            lgr(level = "error", msg = e$message)
             stop_no_call(e$message)
         },
         warning = function(w) {
-            lgr(level = "warn", msg = w$message, context = context)
+            lgr(level = "warn", msg = w$message)
         }
     )
 
@@ -107,11 +134,7 @@
 
 .pip_update_downstream <- function(x, steps, what, value)
 {
-    start_ids <- mget(steps,
-        envir = x[[".steps_to_nodes"]],
-        inherits = FALSE
-    )
-    nodes <- dag_get_reachable_nodes_down(x[[".dag"]], as.integer(start_ids))
+    nodes <- .pip_get_downstream_nodes(x, steps)
     x[["pipeline"]][list(nodes), (what) := value, on = ".nodeId"]
 
     invisible(x)
@@ -137,12 +160,12 @@ pip_new <- function(name = "pipe")
         "name must not be NA"
     }
 
-    env <- new.env(parent = emptyenv())
+    hash_map <- function() new.env(parent = emptyenv())
+    env <- hash_map()
     env[["name"]] <- name
     env[["pipeline"]] <- .empty_pipeline()
     env[[".dag"]] <- dag_new()
-    env[[".steps_to_nodes"]] <- new.env(hash = TRUE, parent = emptyenv())
-    env[[".steps_downstream_nodes"]] <- new.env(hash = TRUE, parent = emptyenv())   # nolint
+    env[[".steps_to_nodes"]] <- hash_map()
 
     structure(env, class = c("pipeflow_pip", "environment"))
     env
@@ -354,53 +377,60 @@ pip_run <- function(
     if (!is.null(progress) && !is.function(progress)) {
         stop("progress must be a function")
     }
-    if (!is.null(lgr) && !is.function(lgr)) {
-        stop("lgr must be a function")
-    }
-    log_info <- if (is.null(lgr)) {
-        function(msg) {}
-    } else {
-        function(msg, ...) lgr(level = "info", msg = msg, ...)
-    }
+    if (is.null(lgr)) lgr <- function(...) {} else .assert_logger(lgr)
+    log_info <- function(msg) lgr(level = "info", msg = msg)
 
-    v <- if (.is_pipeflow_view(x)) x else pip_view(x)
-    dat <- v[["pip"]][["pipeline"]]
-    rowsToRun <- v[["rows"]]
-
-    if (.is_pipeflow_view(x)) {
-        # Add rows of upstream dependencies not covered by the view.
+    isView <- .is_pipeflow_view(x)
+    pip <- if (isView) x[["pip"]] else x
+    dat <- pip[["pipeline"]]
+    rowsToRun <- if (isView) x[["rows"]] else seq_len(nrow(dat))
+    if (isView) {
+        # Add rows of upstream dependencies not yet covered by the view.
         deps <- unique(unlist(dat[["depends"]][rowsToRun]))
         if (length(deps) > 0L) {
             depRows <- which(dat[["step"]] %in% deps)
             rowsToRun <- sort(unique(c(rowsToRun, depRows)))
         }
     }
-    nRows <- length(rowsToRun)
-    name <- v[["pip"]][["name"]]
+    processedSteps <- character()
+    on.exit({
+        # At the end, mark all downstream dependent steps as outdated that
+        # were *not* processed, which can happen in two different ways:
+        # a) when running a view that does not cover the entire pipeline or
+        # b) the run aborted in the middle due to an error
+        processedNodes <- as.integer(.pip_steps_to_nodes(pip, processedSteps))
+        outdatedNodes <- .pip_get_downstream_nodes(pip, processedSteps) |>
+            unlist() |> unique() |> setdiff(processedNodes) # nolint
+        if (length(outdatedNodes) > 0L) {
+            dat[list(outdatedNodes), state := "outdated", on = ".nodeId"]
+        }
+    })
 
-    log_info(sprintf("Start run of %s '%s':", data.class(x), name))
+    log_info(sprintf("Start run of %s '%s':", data.class(x), x[["name"]]))
     for (i in seq_along(rowsToRun)) {
         row <- rowsToRun[[i]]
         step <- dat[["step"]][[row]]
+        processedSteps <- c(processedSteps, step)
         if (!is.null(progress)) {
             progress(value = i, detail = step)
         }
-        info <- sprintf("Step %i/%i %s", i, nRows, step)
+        msg <- sprintf("Step %i/%i %s", i, length(rowsToRun), step)
 
         if (identical(dat[["state"]][[row]], "done") && !force) {
-            log_info(sprintf("%s - skipping done step", info))
+            log_info(sprintf("%s - skipping done step", msg))
             next()
         }
         if (dat[["locked"]][[row]]) {
-            log_info(sprintf("%s - skipping locked step", info))
+            log_info(sprintf("%s - skipping locked step", msg))
             next()
         }
 
-        log_info(info)
-        .pip_run_row(v[["pip"]], i = row, lgr = lgr)
+        log_info(msg)
+        .pip_run_row(pip, i = row, lgr = lgr)
     }
 
-    log_info(sprintf("Finished run of %s '%s':", data.class(x), name))
+
+    log_info(sprintf("Finished run of %s '%s':", data.class(x), x[["name"]]))
     invisible(x)
 }
 
@@ -566,7 +596,12 @@ pip_view <- function(
     .assert_pip_or_view(x)
     isView <- .is_pipeflow_view(x)
 
-    dat <- if (isView) x[["pip"]][["pipeline"]] else x[["pipeline"]]
+    dat <- if (isView) {
+        .pip_reindex(x[["pip"]])
+        x[["pip"]][["pipeline"]]
+    } else {
+        x[["pipeline"]]
+    }
     keep <- rep(TRUE, nrow(dat))
 
     # Filters
@@ -607,8 +642,7 @@ pip_view <- function(
     }
 
     if (isView) {
-        # If x was already a view, we combine the set of rows from both
-        rows <- intersect(rows, x[["rows"]])
+        rows <- dat[[".rowId"]][rows]
     }
 
     pip <- if (isView) x[["pip"]] else x
@@ -678,7 +712,8 @@ print.pipeflow_pip <- function(x,
         }
     }
     if (identical(cols, "all")) {
-        cols <- names(dat)
+        isHidden <- function(name) startsWith(name, ".")
+        cols <- Filter(Negate(isHidden), colnames(dat))
     }
 
     if (header) {
