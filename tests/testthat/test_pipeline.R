@@ -319,14 +319,35 @@ describe("pip_has_step",
 
 describe("pip_run",
 {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("load_raw", \(x = 1) x, group = "io") |>
+            pip_add("fit_model", \(x = ~-1) x + 1, group = "model") |>
+            pip_add("eval_model", \(x = ~fit_model) x, group = "model") |>
+            pip_add("bla_bla", \(bla = "blabla") bla, group = "bla")
+    }
+
     it("runs all steps of the pipeline",
     {
-        p <- pip_new()
-        pip_add(p, "s1", \(x = 1:2) x)
-        pip_add(p, "s2", \(x = ~-1) x + 1)
-        pip_add(p, "s3", \(x = ~s2, y = ~s1) x + y)
+        p <- test_pip()
         pip_run(p, lgr = NULL)
-        expect_equal(p$pipeline[["out"]], list(1:2, c(2, 3), c(3, 5)))
+        expect_equal(p$pipeline[["out"]], list(1, 2, 2, "blabla"))
+    })
+
+    it("can run parts of the pipeline via views",
+    {
+        p <- test_pip()
+        v <- pip_view(p, filter = list(group = "bla"))
+        pip_run(v, lgr = NULL)
+        expect_equal(p$pipeline[["out"]], list(NULL, NULL, NULL, "blabla"))
+    })
+
+    it("automatically runs all steps of the view plus upstream dependencies",
+    {
+        p <- test_pip()
+        v <- pip_view(p, filter = list(group = "model"))
+        pip_run(v, lgr = NULL)
+        expect_equal(p$pipeline[["out"]], list(1, 2, 2, NULL))
     })
 })
 

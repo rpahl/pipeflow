@@ -142,7 +142,7 @@ pip_new <- function(name = "pipe")
     env[["pipeline"]] <- .empty_pipeline()
     env[[".dag"]] <- dag_new()
     env[[".steps_to_nodes"]] <- new.env(hash = TRUE, parent = emptyenv())
-    env[[".steps_downstream_nodes"]] <- new.env(hash = TRUE, parent = emptyenv())
+    env[[".steps_downstream_nodes"]] <- new.env(hash = TRUE, parent = emptyenv())   # nolint
 
     structure(env, class = c("pipeflow_pip", "environment"))
     env
@@ -333,7 +333,7 @@ pip_has_step <- function(x, step)
 
 #' Run pipeline
 #'
-#' @param x A pipeflow pip
+#' @param x A pipeflow pip or view
 #' @param lgr A logging function of the form `function(level, msg, ...)`.
 #' To suppress logging, you can set `lgr = NULL`.
 #' @param force Logical indicating if all steps should be forced to run,
@@ -347,10 +347,7 @@ pip_run <- function(
     force = FALSE,
     progress = NULL
 ) {
-    # TODO: change implementation to work with pip and view
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
+    .assert_pip_or_view(x)
     if (!.is_single(force, "logical")) {
         stop("force must be a single logical value")
     }
@@ -366,32 +363,45 @@ pip_run <- function(
         function(msg, ...) lgr(level = "info", msg = msg, ...)
     }
 
-    dat <- x[["pipeline"]]
-    to <- nrow(dat)
+    v <- if (.is_pipeflow_view(x)) x else pip_view(x)
+    dat <- v[["pip"]][["pipeline"]]
+    rowsToRun <- v[["rows"]]
 
-    log_info(sprintf("Start run of '%s' pipeline:", x[["name"]]))
+    if (.is_pipeflow_view(x)) {
+        # Add rows of upstream dependencies
+        deps <- unique(unlist(dat[["depends"]][rowsToRun]))
+        if (length(deps) > 0L) {
+            depRows <- which(dat[["step"]] %in% deps)
+            rowsToRun <- sort(unique(c(rowsToRun, depRows)))
+        }
+    }
+    nRows <- length(rowsToRun)
+    name <- v[["pip"]][["name"]]
 
-    for (i in seq(from = 1, to = to)) {
-        step <- dat[["step"]][[i]]
+    log_info(sprintf("Start run of %s '%s':", data.class(x), name))
+
+    for (i in seq_along(rowsToRun)) {
+        row <- rowsToRun[[i]]
+        step <- dat[["step"]][[row]]
         if (!is.null(progress)) {
             progress(value = i, detail = step)
         }
-        info <- sprintf("Step %i/%i %s", i, to, step)
+        info <- sprintf("Step %i/%i %s", i, nRows, step)
 
-        if (identical(dat[["state"]][[i]], "done") && !force) {
+        if (identical(dat[["state"]][[row]], "done") && !force) {
             log_info(sprintf("%s - skipping done step", info))
             next()
         }
-        if (dat[["locked"]][[i]]) {
+        if (dat[["locked"]][[row]]) {
             log_info(sprintf("%s - skipping locked step", info))
             next()
         }
 
         log_info(info)
-        .pip_run_row(x, i, lgr)
+        .pip_run_row(v[["pip"]], i = row, lgr = lgr)
     }
 
-    log_info(sprintf("Finished run of '%s' pipeline:", x[["name"]]))
+    log_info(sprintf("Finished run of %s '%s':", data.class(x), name))
     invisible(x)
 }
 
@@ -542,6 +552,9 @@ pip_view <- function(
     fixed = TRUE,
     ...
 ) {
+    .assert_pip_or_view(x)
+    # TODO: implement for views (currently only works for pipelines)
+
     dat <- x[["pipeline"]]
     keep <- rep(TRUE, nrow(dat))
 
