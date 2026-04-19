@@ -191,10 +191,9 @@ pip_add <- function(x, step, fun, group = step, tags = character(0))
 
     # Update DAG
     d <- x[[".dag"]]
-    .nodeId <- dag_add_node(d)
-    for (refNode in refNodes) {
-        dag_add_edge(d, from = refNode, to = .nodeId)
-        # TODO: implement vectorized dag_add_edges
+    .nodeId <- as.integer(dag_add_node(d))
+    if (length(refNodes) > 0) {
+        dag_add_edges_to(d, from = as.integer(refNodes), to = .nodeId)
     }
 
     # Create and append step
