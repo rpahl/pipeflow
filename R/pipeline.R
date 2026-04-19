@@ -592,14 +592,16 @@ pip_view <- function(
 # Implementation of generic S3 methods
 # ------------------------------------
 
-#' @param x A pipeflow pipeline.
+#' Length of a pipeflow pipeline or view
+#' @param x A pipeflow pipeline or view
+#' @rdname S3generics
 #' @export
 length.pipeflow_pip <- function(x)
 {
     as.integer(nrow(x[["pipeline"]]))
 }
 
-#' @param x A pipeflow view.
+#' @rdname S3generics
 #' @export
 length.pipeflow_view <- function(x)
 {

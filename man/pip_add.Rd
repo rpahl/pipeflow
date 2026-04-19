@@ -16,7 +16,7 @@ pip_add(x, step, fun, group = step, tags = character(0))
 \item{group}{Step group name.}
 
 \item{tags}{Optional character vector of tags belonging to the step.
-Can also be set later.}
+Can also be set later (see)}
 }
 \value{
 The updated pipeflow pipeline object.
