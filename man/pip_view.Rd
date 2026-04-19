@@ -14,7 +14,7 @@ pip_view(
 )
 }
 \arguments{
-\item{x}{A pipeflow pipeline.}
+\item{x}{A pipeflow pipeline or view.}
 
 \item{i}{Row indices to keep.}
 
@@ -35,7 +35,7 @@ is \code{FALSE}).}
 A \code{pipeflow_view} object.
 }
 \description{
-Create a filtered view of a pipeline
+Create a filtered view of a pipeline (or view).
 }
 \examples{
 
@@ -52,17 +52,29 @@ p <- pip_new()
 pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
 pip_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
 pip_add(p, "s3", \(x = ~-1) x, tags = c("daily", "report"))
+pip_view(p, tags = "daily")
 
 # Filter by regex
 p <- pip_new()
 pip_add(p, "load_raw", \(x = 1) x, group = "io")
 pip_add(p, "fit_model", \(x = ~-1) x + 1, group = "model")
 pip_add(p, "eval_model", \(x = ~fit_model) x, group = "model")
+pip_view(p, filter = list(step = "_model$"), fixed = FALSE)
 
 # Filter using explicit row indices
 p <- pip_new()
 pip_add(p, "a1", \(x = 1) x, group = "g1")
 pip_add(p, "a2", \(x = ~-1) x, group = "g2")
 pip_add(p, "a3", \(x = ~-1) x, group = "g2")
+pip_view(p, i = c(1L, 2L), filter = list(group = "g2"))
 
+# Combine views
+p <- pip_new()
+pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
+pip_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
+pip_add(p, "s3", \(x = ~-1) x, tags = c("daily", "report"))
+v1 <- pip_view(p, tags = "daily")
+print(v1)
+v2 <- pip_view(v1, tags = "report")
+print(v2)
 }

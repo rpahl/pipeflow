@@ -368,7 +368,7 @@ pip_run <- function(
     rowsToRun <- v[["rows"]]
 
     if (.is_pipeflow_view(x)) {
-        # Add rows of upstream dependencies
+        # Add rows of upstream dependencies not covered by the view.
         deps <- unique(unlist(dat[["depends"]][rowsToRun]))
         if (length(deps) > 0L) {
             depRows <- which(dat[["step"]] %in% deps)
@@ -379,7 +379,6 @@ pip_run <- function(
     name <- v[["pip"]][["name"]]
 
     log_info(sprintf("Start run of %s '%s':", data.class(x), name))
-
     for (i in seq_along(rowsToRun)) {
         row <- rowsToRun[[i]]
         step <- dat[["step"]][[row]]

@@ -7,7 +7,7 @@
 pip_run(x, lgr = pipeflow_lgr, force = FALSE, progress = NULL)
 }
 \arguments{
-\item{x}{A pipeflow pip}
+\item{x}{A pipeflow pip or view}
 
 \item{lgr}{A logging function of the form \verb{function(level, msg, ...)}.
 To suppress logging, you can set \code{lgr = NULL}.}
