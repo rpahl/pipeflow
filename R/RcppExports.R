@@ -81,6 +81,10 @@ dag_add_edges <- function(dp, from, to) {
     .Call(`_pipeflow_dag_add_edges`, dp, from, to)
 }
 
+dag_add_edges_to <- function(dp, from, to) {
+    .Call(`_pipeflow_dag_add_edges_to`, dp, from, to)
+}
+
 dag_add_dag <- function(dp, other_dp) {
     .Call(`_pipeflow_dag_add_dag`, dp, other_dp)
 }

@@ -801,10 +801,29 @@ Rcpp::LogicalVector dag_add_edges(
     Rcpp::LogicalVector out(from.size());
 
     for (R_xlen_t i = 0; i < from.size(); ++i) {
-        out[i] = add_edge(
-            dag,
+        out[i] = add_edge(dag,
             static_cast<nodeId>(from[i]),
             static_cast<nodeId>(to[i]),
+            false
+        );
+    }
+    return out;
+}
+
+// [[Rcpp::export]]
+Rcpp::LogicalVector dag_add_edges_to(
+    SEXP dp,
+    const Rcpp::IntegerVector& from,
+    int to
+)
+{
+    Dag* dag = cast_sexp_to_dag_ptr(dp);
+    Rcpp::LogicalVector out(from.size());
+
+    for (R_xlen_t i = 0; i < from.size(); ++i) {
+        out[i] = add_edge(dag,
+            static_cast<nodeId>(from[i]),
+            static_cast<nodeId>(to),
             false
         );
     }
