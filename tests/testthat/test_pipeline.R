@@ -175,7 +175,88 @@ describe("pip_add",
 
 describe("pip_bind",
 {
-    skip("TODO")
+    test_pip <- function(name = "p") {
+        pip_new(name) |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1)
+    }
+
+    it("signals invalid inputs",
+    {
+        p <- test_pip()
+        expect_error(pip_bind(1, p), "x must be a pipeflow pip")
+        expect_error(pip_bind(p, 1), "y must be a pipeflow pip")
+    })
+
+    it("binds pipelines without mutating inputs",
+    {
+        p1 <- test_pip("left")
+        p2 <- pip_new("right") |>
+            pip_add("t1", \(x = 3) x) |>
+            pip_add("t2", \(x = ~t1) x + 2)
+
+        out <- pip_bind(p1, p2)
+        expect_true(.is_pipeflow_pip(out))
+        expect_equal(out[["name"]], "left-right")
+        expect_equal(out[["pipeline"]][["step"]], c("s1", "s2", "t1", "t2"))
+
+        pip_add(out, "extra", \(x = ~t2) x)
+        expect_false(pip_has_step(p1, "extra"))
+        expect_false(pip_has_step(p2, "extra"))
+    })
+
+    it("auto-renames duplicated step names from second pipeline",
+    {
+        p1 <- test_pip("left")
+        p2 <- test_pip("right")
+
+        out <- pip_bind(p1, p2)
+        steps <- out[["pipeline"]][["step"]]
+        expect_identical(anyDuplicated(steps), 0L)
+        expect_true(all(c("s1", "s2", "s12", "s22") %in% steps))
+
+        dep_new_s2 <- out[["pipeline"]][step == "s22", depends][[1]]
+        expect_equal(unname(dep_new_s2), "s12")
+    })
+
+    it("handles collisions of auto-fixed names",
+    {
+        p1 <- pip_new("left") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s12", \(x = 2) x)
+        p2 <- pip_new("right") |>
+            pip_add("s1", \(x = 3) x)
+
+        out <- pip_bind(p1, p2)
+        expect_true(pip_has_step(out, "s13"))
+    })
+
+    it("rebuilds DAG and keeps dependencies valid in result",
+    {
+        p1 <- test_pip("left")
+        p2 <- test_pip("right")
+        out <- pip_bind(p1, p2)
+
+        nodes <- .pip_get_downstream_nodes(out, "s1")
+        steps <- .pip_filter_nodes(out, nodes)[["step"]]
+        expect_setequal(steps, c("s1", "s2"))
+
+        nodes <- .pip_get_downstream_nodes(out, "s12")
+        steps <- .pip_filter_nodes(out, nodes)[["step"]]
+        expect_setequal(steps, c("s12", "s22"))
+    })
+
+    it("rebinds .self references to the bound pipeline",
+    {
+        p1 <- pip_new("left") |>
+            pip_add("s1", \(x = 1, .self = NULL) .self[["name"]])
+        p2 <- pip_new("right") |>
+            pip_add("t1", \(x = 1, .self = NULL) .self[["name"]])
+
+        out <- pip_bind(p1, p2)
+        expect_identical(out[["pipeline"]][["params"]][[1]]$.self, out)
+        expect_identical(out[["pipeline"]][["params"]][[2]]$.self, out)
+    })
 })
 
 

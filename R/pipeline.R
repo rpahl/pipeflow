@@ -235,12 +235,16 @@ pip_add <- function(x, step, fun, group = step, tags = character(0))
     invisible(x)
 }
 
-# TODO/plan:
-# 1. implement subselection of pipeline (e.g. to get the relevant rows for
-# pip_insert_after/before)
-# 2. implement pip_bind next becaue we may be able to use this to implement
-# pip_insert_after and pip_insert_before
-pip_bind <- function(x, y, fix.names = TRUE, fix.sep = "_")
+#' Bind two pipelines together
+#'
+#' Bind two pipelines together by concatenating their steps. If both pipelines
+#' have steps with the same name, the step names of the second pipeline will be
+#' automatically adapted to avoid name clashes.
+#' @param x A pipeflow pipeline object.
+#' @param y A pipeflow pipeline object.
+#' @return A new pipeflow pipeline object representing the bound pipelines.
+#' @export
+pip_bind <- function(x, y)
 {
     if (!.is_pipeflow_pip(x)) {
         stop("x must be a pipeflow pip")
@@ -248,14 +252,71 @@ pip_bind <- function(x, y, fix.names = TRUE, fix.sep = "_")
     if (!.is_pipeflow_pip(y)) {
         stop("y must be a pipeflow pip")
     }
-    if (!.is_single(fix.names, "logical")) {
-        stop("fix.names must be a single logical value")
-    }
-    if (!.is_single(fix.sep, "character")) {
-        stop("fix.sep must be a single character string")
+
+    out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
+    yy <- pip_clone(y)
+    yyDat <- yy[["pipeline"]]
+    renames <- character(0)
+
+    # Add steps from `y` one by one to `out` and adapt names on collision.
+    for (k in seq_len(nrow(yyDat))) {
+        step <- yyDat[["step"]][[k]]
+        group <- yyDat[["group"]][[k]]
+        tags <- yyDat[["tags"]][[k]]
+        fun <- yyDat[["fun"]][[k]]
+        params <- yyDat[["params"]][[k]]
+        depends <- yyDat[["depends"]][[k]]
+        indeps <- yyDat[[".indeps"]][[k]]
+
+        # Determine final step name in output pipeline.
+        stepOut <- step
+        i <- 2L
+        while (pip_has_step(out, stepOut)) {
+            stepOut <- paste0(step, i)
+            i <- i + 1L
+        }
+        renames[[step]] <- stepOut
+
+        # Recreate defaults from stored params and mapped dependencies.
+        f <- fun
+        fml <- formals(f)
+
+        for (nm in indeps) {
+            if (identical(nm, ".self")) {
+                next
+            }
+            fml[[nm]] <- params[[nm]]
+        }
+
+        if (length(depends) > 0L) {
+            for (arg in names(depends)) {
+                dep <- depends[[arg]]
+                depOut <- if (dep %in% names(renames)) renames[[dep]] else dep
+                fml[[arg]] <- stats::as.formula(paste("~", depOut))
+            }
+        }
+
+        formals(f) <- fml
+
+        pip_add(out, step = stepOut, fun = f, group = group, tags = tags)
+
+        # Preserve runtime metadata/state from source pipeline.
+        iOut <- nrow(out[["pipeline"]])
+        data.table::set(
+            out[["pipeline"]],
+            i = iOut,
+            j = c("out", "time", "state", "locked", "meta"),
+            value = list(
+                list(yyDat[["out"]][[k]]),
+                yyDat[["time"]][[k]],
+                yyDat[["state"]][[k]],
+                yyDat[["locked"]][[k]],
+                list(yyDat[["meta"]][[k]])
+            )
+        )
     }
 
-    stop("to be implemented")
+    out
 }
 
 
