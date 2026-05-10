@@ -325,12 +325,7 @@ pip_bind <- function(x, y)
     # Add steps from `y` one by one to `out` and adapt names on collision.
     for (k in seq_len(nrow(yyDat))) {
         step <- yyDat[["step"]][[k]]
-        group <- yyDat[["group"]][[k]]
-        tags <- yyDat[["tags"]][[k]]
-        fun <- yyDat[["fun"]][[k]]
-        params <- yyDat[["params"]][[k]]
         depends <- yyDat[["depends"]][[k]]
-        indeps <- yyDat[[".indeps"]][[k]]
 
         # Determine final step name in output pipeline.
         stepOut <- step
@@ -341,28 +336,37 @@ pip_bind <- function(x, y)
         }
         renames[[step]] <- stepOut
 
-        # Recreate defaults from stored params and mapped dependencies.
-        f <- fun
-        fml <- formals(f)
-
-        for (nm in indeps) {
-            if (identical(nm, ".self")) {
-                next
-            }
-            fml[[nm]] <- params[[nm]]
-        }
-
+        # Map dependencies to potentially renamed previously added steps.
+        dependsOut <- depends
         if (length(depends) > 0L) {
-            for (arg in names(depends)) {
-                dep <- depends[[arg]]
-                depOut <- if (dep %in% names(renames)) renames[[dep]] else dep
-                fml[[arg]] <- stats::as.formula(paste("~", depOut))
-            }
+            mapped <- unname(vapply(
+                depends,
+                FUN = \(dep) {
+                    if (dep %in% names(renames)) {
+                        renames[[dep]]
+                    } else {
+                        dep
+                    }
+                },
+                FUN.VALUE = character(1)
+            ))
+            dependsOut <- stats::setNames(mapped, names(depends))
         }
 
-        formals(f) <- fml
+        # Build a one-step temporary source and delegate insertion
+        # to pip_add_from.
+        src <- pip_new("tmp")
+        row <- data.table::copy(yyDat[k])
+        row[["step"]][[1]] <- stepOut
+        row[["depends"]][[1]] <- dependsOut
+        row[[".nodeId"]] <- 0L
 
-        pip_add(out, step = stepOut, fun = f, group = group, tags = tags)
+        src[["pipeline"]] <- row
+        src[[".dag"]] <- dag_new()
+        dag_add_node(src[[".dag"]])
+        src[[".steps_to_nodes"]][[stepOut]] <- 0L
+
+        pip_add_from(out, step = stepOut, y = src)
 
         # Preserve runtime metadata/state from source pipeline.
         iOut <- nrow(out[["pipeline"]])
