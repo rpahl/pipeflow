@@ -320,53 +320,28 @@ pip_bind <- function(x, y)
     out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
     yy <- pip_clone(y)
     yyDat <- yy[["pipeline"]]
-    renames <- character(0)
 
-    # Add steps from `y` one by one to `out` and adapt names on collision.
+    # 1) Resolve all name clashes directly on the cloned source pipeline.
+    reserved <- out[["pipeline"]][["step"]]
     for (k in seq_len(nrow(yyDat))) {
         step <- yyDat[["step"]][[k]]
-        depends <- yyDat[["depends"]][[k]]
-
-        # Determine final step name in output pipeline.
-        stepOut <- step
-        i <- 2L
-        while (pip_has_step(out, stepOut)) {
-            stepOut <- paste0(step, i)
-            i <- i + 1L
+        if (step %in% reserved) {
+            to <- step
+            i <- 2L
+            allSteps <- yyDat[["step"]]
+            while (to %in% reserved || to %in% allSteps) {
+                to <- paste0(step, i)
+                i <- i + 1L
+            }
+            pip_rename_step(yy, from = step, to = to)
         }
-        renames[[step]] <- stepOut
+        reserved <- c(reserved, yyDat[["step"]][[k]])
+    }
 
-        # Map dependencies to potentially renamed previously added steps.
-        dependsOut <- depends
-        if (length(depends) > 0L) {
-            mapped <- unname(vapply(
-                depends,
-                FUN = \(dep) {
-                    if (dep %in% names(renames)) {
-                        renames[[dep]]
-                    } else {
-                        dep
-                    }
-                },
-                FUN.VALUE = character(1)
-            ))
-            dependsOut <- stats::setNames(mapped, names(depends))
-        }
-
-        # Build a one-step temporary source and delegate insertion
-        # to pip_add_from.
-        src <- pip_new("tmp")
-        row <- data.table::copy(yyDat[k])
-        row[["step"]][[1]] <- stepOut
-        row[["depends"]][[1]] <- dependsOut
-        row[[".nodeId"]] <- 0L
-
-        src[["pipeline"]] <- row
-        src[[".dag"]] <- dag_new()
-        dag_add_node(src[[".dag"]])
-        src[[".steps_to_nodes"]][[stepOut]] <- 0L
-
-        pip_add_from(out, step = stepOut, y = src)
+    # 2) Add (potentially renamed) steps from y one by one via pip_add_from.
+    for (k in seq_len(nrow(yyDat))) {
+        step <- yyDat[["step"]][[k]]
+        pip_add_from(out, step = step, y = yy)
 
         # Preserve runtime metadata/state from source pipeline.
         iOut <- nrow(out[["pipeline"]])
