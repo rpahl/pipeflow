@@ -260,6 +260,88 @@ describe("pip_bind",
 })
 
 
+describe("pip_add_from",
+{
+    test_source <- function() {
+        pip_new("src") |>
+            pip_add("base", \(x = 2) x, group = "g1") |>
+            pip_add("calc", \(x = ~base, m = 3) x * m,
+                group = "g2",
+                tags = c("reuse", "math")
+            )
+    }
+
+    it("signals invalid inputs",
+    {
+        src <- test_source()
+        trg <- pip_new("target")
+
+        expect_error(pip_add_from(1, "base", src), "x must be a pipeflow pip")
+        expect_error(pip_add_from(trg, "base", 1), "y must be a pipeflow pip")
+        expect_error(pip_add_from(trg, c("a", "b"), src))
+        expect_error(pip_add_from(trg, NA_character_, src))
+        expect_error(pip_add_from(trg, "", src))
+        expect_error(
+            pip_add_from(trg, "unknown", src),
+            "does not exist in source pipeline"
+        )
+    })
+
+    it("adds an independent step preserving group and tags",
+    {
+        src <- test_source()
+        trg <- pip_new("target")
+
+        res <- pip_add_from(trg, "base", src)
+        expect_true(.is_pipeflow_pip(res))
+        expect_true(pip_has_step(trg, "base"))
+
+        grp <- trg[["pipeline"]][step == "base", group][[1]]
+        tgs <- trg[["pipeline"]][step == "base", tags][[1]]
+        expect_equal(grp, "g1")
+        expect_equal(tgs, character(0))
+    })
+
+    it("adds dependent step when dependencies exist in target",
+    {
+        src <- test_source()
+        trg <- pip_new("target") |>
+            pip_add("base", \(x = 5) x)
+
+        pip_add_from(trg, "calc", src)
+        expect_true(pip_has_step(trg, "calc"))
+
+        dep <- trg[["pipeline"]][step == "calc", depends][[1]]
+        expect_equal(unname(dep), "base")
+
+        pip_run(trg, lgr = NULL)
+        out <- trg[["pipeline"]][step == "calc", out][[1]]
+        expect_equal(out, 15)
+    })
+
+    it("signals when copied step depends on missing steps in target",
+    {
+        src <- test_source()
+        trg <- pip_new("target")
+
+        expect_error(
+            pip_add_from(trg, "calc", src),
+            "cannot reference unknown steps: 'base'"
+        )
+    })
+
+    it("rebinds .self to target pipeline through pip_add",
+    {
+        src <- pip_new("src") |>
+            pip_add("self", \(x = 1, .self = NULL) .self[["name"]])
+        trg <- pip_new("target")
+
+        pip_add_from(trg, "self", src)
+        expect_identical(trg[["pipeline"]][["params"]][[1]]$.self, trg)
+    })
+})
+
+
 describe("pip_clone",
 {
     test_pip <- function() {

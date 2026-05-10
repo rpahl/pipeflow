@@ -235,6 +235,70 @@ pip_add <- function(x, step, fun, group = step, tags = character(0))
     invisible(x)
 }
 
+#' Add step from another pipeline
+#'
+#' Add one existing step definition from pipeline `y` to pipeline `x`.
+#' The step is added via [pip_add()] so dependency checks and DAG updates
+#' are applied consistently.
+#'
+#' @param x Target pipeflow pipeline object.
+#' @param step Step name to copy from `y`.
+#' @param y Source pipeflow pipeline object.
+#'
+#' @return The updated target pipeflow pipeline object.
+#' @export
+pip_add_from <- function(x, step, y)
+{
+    if (!.is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
+    }
+    if (!.is_pipeflow_pip(y)) {
+        stop("y must be a pipeflow pip")
+    }
+    if (!.is_single(step, "character")) {
+        stop("step must be a single string")
+    }
+    if (is.na(step)) {
+        stop("step must not be NA")
+    }
+    if (!nzchar(step)) {
+        stop("step must be a non-empty string")
+    }
+
+    if (!pip_has_step(y, step)) {
+        stop("step '", step, "' does not exist in source pipeline")
+    }
+
+    iStep <- match(step, y[["pipeline"]][["step"]])
+    fun <- y[["pipeline"]][["fun"]][[iStep]]
+    group <- y[["pipeline"]][["group"]][[iStep]]
+    tags <- y[["pipeline"]][["tags"]][[iStep]]
+    params <- y[["pipeline"]][["params"]][[iStep]]
+    depends <- y[["pipeline"]][["depends"]][[iStep]]
+    indeps <- y[["pipeline"]][[".indeps"]][[iStep]]
+
+    # Recreate defaults from stored params/dependencies so pip_add can
+    # resolve references and wire DAG updates in the target pipeline.
+    f <- fun
+    fml <- formals(f)
+
+    for (nm in indeps) {
+        if (identical(nm, ".self")) {
+            next
+        }
+        fml[[nm]] <- params[[nm]]
+    }
+
+    if (length(depends) > 0L) {
+        for (arg in names(depends)) {
+            fml[[arg]] <- stats::as.formula(paste("~", depends[[arg]]))
+        }
+    }
+
+    formals(f) <- fml
+    pip_add(x, step = step, fun = f, group = group, tags = tags)
+}
+
 #' Bind two pipelines together
 #'
 #' Bind two pipelines together by concatenating their steps. If both pipelines
