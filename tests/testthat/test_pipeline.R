@@ -29,11 +29,19 @@ describe(".pip_update_downstream",
     it("can update states downstream of multiple nodes",
     {
         p <- test_pip()
-        .pip_update_downstream(p, c("a1", "b1"), what = "state", value = "outdated")
+        .pip_update_downstream(p,
+            steps = c("a1", "b1"),
+            what = "state",
+            value = "outdated"
+        )
         expect_true(all(p$pipeline[["state"]] == "outdated"))
 
         p <- test_pip()
-        .pip_update_downstream(p, c("a1", "b2"), what = "state", value = "outdated")
+        .pip_update_downstream(p,
+            steps = c("a1", "b2"),
+            what = "state",
+            value = "outdated"
+        )
 
         expect_equal(
             p$pipeline[["state"]],
@@ -168,6 +176,77 @@ describe("pip_add",
 describe("pip_bind",
 {
     skip("TODO")
+})
+
+
+describe("pip_clone",
+{
+    test_pip <- function() {
+        pip_new("p1") |>
+            pip_add("s1", \(x = 1, .self = NULL) .self[["name"]]) |>
+            pip_add("s2", \(x = ~s1) x)
+    }
+
+    it("signals invalid inputs",
+    {
+        expect_error(pip_clone(1), "x must be a pipeflow pip")
+        expect_error(
+            pip_clone(pip_new(), name = NA_character_),
+            "name must be a single non-NA string"
+        )
+        expect_error(
+            pip_clone(pip_new(), name = c("a", "b")),
+            "name must be a single non-NA string"
+        )
+    })
+
+    it("returns a pipeflow pipeline copy with same content",
+    {
+        p <- test_pip()
+        p2 <- pip_clone(p)
+
+        expect_true(.is_pipeflow_pip(p2))
+        expect_false(identical(p2, p))
+        expect_equal(p2[["name"]], p[["name"]])
+        expect_equal(p2[["pipeline"]][["step"]], p[["pipeline"]][["step"]])
+        expect_equal(
+            p2[["pipeline"]][["depends"]],
+            p[["pipeline"]][["depends"]]
+        )
+    })
+
+    it("supports overriding the clone name",
+    {
+        p <- test_pip()
+        p2 <- pip_clone(p, name = "copied")
+        expect_equal(p2[["name"]], "copied")
+        expect_equal(p[["name"]], "p1")
+    })
+
+    it("creates an independent copy",
+    {
+        p <- test_pip()
+        p2 <- pip_clone(p)
+
+        p2[["pipeline"]][["state"]][1] <- "done"
+        expect_equal(p[["pipeline"]][["state"]][1], "new")
+
+        pip_add(p2, "s3", \(x = ~s2) x)
+        expect_false(pip_has_step(p, "s3"))
+        expect_true(pip_has_step(p2, "s3"))
+    })
+
+    it("rebinds .self params to the cloned pipeline",
+    {
+        p <- test_pip()
+        p2 <- pip_clone(p)
+
+        expect_identical(p2[["pipeline"]][["params"]][[1]]$.self, p2)
+        expect_identical(p[["pipeline"]][["params"]][[1]]$.self, p)
+
+        pip_run(p2, lgr = NULL)
+        expect_equal(p2[["pipeline"]][["out"]][[1]], "p1")
+    })
 })
 
 
@@ -615,6 +694,114 @@ describe("length",
 
         v <- pip_view(p, 1)
         expect_equal(length(v), 1L)
+    })
+})
+
+describe("extract operator [",
+{
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("a1", \(x = 1) x) |>
+            pip_add("a2", \(x = ~a1) x) |>
+            pip_add("b1", \(x = 1) x) |>
+            pip_add("a3", \(x = ~a1) x) |>
+            pip_add("b2", \(x = ~b1) x)
+    }
+
+    it("returns a pipeline subset including upstream dependencies by row",
+    {
+        p <- test_pip()
+        sub <- p[5L]
+
+        expect_true(.is_pipeflow_pip(sub))
+        expect_equal(sub[["pipeline"]][["step"]], c("b1", "b2"))
+    })
+
+    it("returns a pipeline subset including upstream dependencies by step",
+    {
+        p <- test_pip()
+        sub <- p[c("a2", "b2")]
+
+        expect_equal(sub[["pipeline"]][["step"]], c("a1", "a2", "b1", "b2"))
+    })
+
+    it("returns the full pipeline when i is missing",
+    {
+        p <- test_pip()
+        sub <- p[]
+
+        expect_equal(sub[["pipeline"]][["step"]], p[["pipeline"]][["step"]])
+    })
+
+    it("returns an empty pipeline for empty selectors", {
+        p <- test_pip()
+
+        expect_equal(length(p[integer()]), 0L)
+        expect_equal(length(p[character()]), 0L)
+    })
+
+    it("signals invalid row indices",
+    {
+        p <- test_pip()
+
+        expect_error(p[c(0, 1)], "Invalid row indices in 'i'")
+        expect_error(p[99], "Invalid row indices in 'i'")
+        expect_error(p[c(1, NA)], "row indices in 'i' must not contain NA")
+        expect_error(p[c(1.1, 2)], "must be whole numbers")
+    })
+
+    it("signals invalid step names",
+    {
+        p <- test_pip()
+
+        expect_error(p[c("a1", "")], "must be non-empty strings")
+        expect_error(p[c("a1", NA)], "must not contain NA")
+        expect_error(p[c("a1", "unknown")], "Unknown step names in 'i'")
+    })
+
+    it("returns an independent copy",
+    {
+        p <- test_pip()
+        sub <- p[c("a2")]
+
+        sub[["pipeline"]][["state"]][1] <- "done"
+        expect_equal(p[["pipeline"]][["state"]][1], "new")
+    })
+
+    it("copies DAG edges for the extracted subset",
+    {
+        p <- test_pip()
+        sub <- p[c("a2", "b2")]
+
+        nodes_a1 <- .pip_get_downstream_nodes(sub, "a1")
+        steps_a1 <- .pip_filter_nodes(sub, nodes_a1)[["step"]]
+        expect_setequal(steps_a1, c("a1", "a2"))
+
+        nodes_b1 <- .pip_get_downstream_nodes(sub, "b1")
+        steps_b1 <- .pip_filter_nodes(sub, nodes_b1)[["step"]]
+        expect_setequal(steps_b1, c("b1", "b2"))
+    })
+
+    it("uses an independent DAG copy in the extracted subset",
+    {
+        p <- test_pip()
+        sub <- p[c("a2", "b2")]
+
+        from <- as.integer(.pip_steps_to_nodes(sub, "a2")[[1]])
+        to <- as.integer(.pip_steps_to_nodes(sub, "b1")[[1]])
+        dag_add_edges_to(sub[[".dag"]], from = from, to = to)
+
+        sub_steps <- .pip_filter_nodes(
+            sub,
+            .pip_get_downstream_nodes(sub, "a1")
+        )[["step"]]
+        expect_setequal(sub_steps, c("a1", "a2", "b1", "b2"))
+
+        original_steps <- .pip_filter_nodes(
+            p,
+            .pip_get_downstream_nodes(p, "a1")
+        )[["step"]]
+        expect_setequal(original_steps, c("a1", "a2", "a3"))
     })
 })
 

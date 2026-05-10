@@ -235,7 +235,11 @@ pip_add <- function(x, step, fun, group = step, tags = character(0))
     invisible(x)
 }
 
-
+# TODO/plan:
+# 1. implement subselection of pipeline (e.g. to get the relevant rows for
+# pip_insert_after/before)
+# 2. implement pip_bind next becaue we may be able to use this to implement
+# pip_insert_after and pip_insert_before
 pip_bind <- function(x, y, fix.names = TRUE, fix.sep = "_")
 {
     if (!.is_pipeflow_pip(x)) {
@@ -252,6 +256,51 @@ pip_bind <- function(x, y, fix.names = TRUE, fix.sep = "_")
     }
 
     stop("to be implemented")
+}
+
+
+#' Clone pipeline
+#'
+#' @param x A pipeflow pipeline object.
+#' @param name Optional name for the cloned pipeline. If `NULL`, the original
+#' name is used.
+#'
+#' @return A cloned pipeflow pipeline object.
+#' @export
+pip_clone <- function(x, name = NULL)
+{
+    if (!.is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
+    }
+    if (!is.null(name) && (!.is_single(name, "character") || is.na(name))) {
+        stop("name must be a single non-NA string")
+    }
+
+    newName <- if (is.null(name)) x[["name"]] else name
+    out <- pip_new(name = newName)
+
+    out[[".dag"]] <- dag_clone(x[[".dag"]])
+    dat <- data.table::copy(x[["pipeline"]])
+
+    # Re-point explicit self references to the cloned pipeline
+    for (k in seq_len(nrow(dat))) {
+        pars <- dat[["params"]][[k]]
+        if (".self" %in% names(pars) && identical(pars[[".self"]], x)) {
+            pars[[".self"]] <- out
+            data.table::set(dat, i = k, j = "params", value = list(list(pars)))
+        }
+    }
+
+    out[["pipeline"]] <- dat
+
+    # Clone steps to nodes mapping
+    for (k in seq_len(nrow(dat))) {
+        step <- dat[["step"]][[k]]
+        nodeId <- dat[[".nodeId"]][[k]]
+        out[[".steps_to_nodes"]][[step]] <- nodeId
+    }
+
+    out
 }
 
 
@@ -353,6 +402,24 @@ pip_has_step <- function(x, step)
     .pip_step_exists(x, step)
 }
 
+pip_insert_after <- function(
+    x, afterStep, step, fun, group = step, tags = character(0)
+)
+{
+    stop("not implemented yet")
+}
+
+pip_insert_before <- function(
+    x, beforeStep, step, fun, group = step, tags = character(0)
+)
+{
+    stop("not implemented yet")
+}
+
+pip_replace <- function(x, step, fun, group = step, tags = character(0))
+{
+    stop("not implemented yet")
+}
 
 #' Run pipeline
 #'
@@ -576,7 +643,7 @@ pip_set_params <- function(p, params = list(), warnUnused = FALSE)
 #' pip_add(p, "a3", \(x = ~-1) x, group = "g2")
 #' pip_view(p, i = c(1L, 2L), filter = list(group = "g2"))
 #'
-#' # Combine views
+#' # Chain filters by create view of view
 #' p <- pip_new()
 #' pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
 #' pip_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
@@ -635,7 +702,7 @@ pip_view <- function(
         if (any(i < 1L | i > nrow(dat))) {
             stop(
                 "Invalid row indices in 'i': ",
-                paste(i[i < 1L | i > nrow(dat)], collapse = ", ")
+                toString(i[i < 1L | i > nrow(dat)])
             )
         }
         rows <- intersect(rows, i)
@@ -673,6 +740,114 @@ length.pipeflow_view <- function(x)
     as.integer(length(x[["rows"]]))
 }
 
+#' Extract part of a pipeflow pipeline
+#' @param i integer (row indices) or character vector (step names) of steps to
+#' select
+#' @param ... further arguments passed to \code{data.table::`[.data.table`}
+#' @rdname S3generics
+#' @export
+`[.pipeflow_pip` <- function(x, i, ...)
+{
+    dat <- x[["pipeline"]]
+    n <- nrow(dat)
+
+    # Resolve selected rows from either row indices or step names
+    if (missing(i)) {
+        return(pip_clone(x))
+    }
+
+    if (!(is.numeric(i) || is.character(i))) {
+        stop("i must be either numeric row indices or character step names")
+    }
+
+    # Verify and resolve row selection
+    if (is.character(i)) {
+        if (anyNA(i)) {
+            stop("step names in 'i' must not contain NA")
+        }
+        if (!all(nzchar(i))) {
+            stop("step names in 'i' must be non-empty strings")
+        }
+        stepRows <- match(i, dat[["step"]])
+        if (anyNA(stepRows)) {
+            unknown <- unique(i[is.na(stepRows)])
+            stop("Unknown step names in 'i': ", toString(unknown))
+        }
+        rows <- sort(unique(as.integer(stepRows)))
+    } else {
+        if (anyNA(i)) {
+            stop("row indices in 'i' must not contain NA")
+        }
+        if (!all(is.finite(i)) || !all(i == as.integer(i))) {
+            stop("numeric indices in 'i' must be whole numbers")
+        }
+        rows <- sort(unique(as.integer(i)))
+        bad <- rows[rows < 1L | rows > n]
+        if (length(bad) > 0L) {
+            stop("Invalid row indices in 'i': ", toString(bad))
+        }
+    }
+
+    out <- pip_new(name = x[["name"]])
+    if (length(rows) == 0L) {
+        return(out)
+    }
+
+    # Get all nodes that are reachable from the selected rows via upstream
+    startNodes <- dat[[".nodeId"]][rows]
+    keepNodes <- dag_get_reachable_nodes_up(
+        x[[".dag"]],
+        as.integer(unique(startNodes))
+    )
+    subsetDat <- dat[dat[[".nodeId"]] %in% keepNodes]
+    subsetDat <- data.table::copy(subsetDat)
+
+    # Re-map node ids to a compact sequence and rebuild lookup table
+    oldNodeIds <- subsetDat[[".nodeId"]]
+    newNodeIds <- seq_along(oldNodeIds) - 1L
+    nodeMap <- stats::setNames(newNodeIds, as.character(oldNodeIds))
+    subsetDat[[".nodeId"]] <- as.integer(newNodeIds)
+
+    stepsToNodes <- new.env(parent = emptyenv())
+    for (k in seq_len(nrow(subsetDat))) {
+        stepsToNodes[[subsetDat[["step"]][[k]]]] <- subsetDat[[".nodeId"]][[k]]
+    }
+
+    # Build a DAG that matches the extracted rows
+    d <- dag_new()
+    for (k in seq_len(nrow(subsetDat))) {
+        dag_add_node(d)
+    }
+    for (k in seq_len(nrow(subsetDat))) {
+        deps <- subsetDat[["depends"]][[k]]
+        if (length(deps) == 0L) {
+            next
+        }
+        from <- as.integer(unname(unlist(mget(
+            deps,
+            envir = stepsToNodes,
+            inherits = FALSE
+        ))))
+        to <- as.integer(subsetDat[[".nodeId"]][[k]])
+        dag_add_edges_to(d, from = from, to = to)
+    }
+
+    # Re-point explicit self references to the extracted pipeline copy
+    for (k in seq_len(nrow(subsetDat))) {
+        pars <- subsetDat[["params"]][[k]]
+        if (".self" %in% names(pars) && identical(pars[[".self"]], x)) {
+            pars[[".self"]] <- out
+            subsetDat[["params"]][[k]] <- pars
+        }
+    }
+
+    data.table::setindexv(subsetDat, list("step", ".nodeId"))
+    out[["pipeline"]] <- subsetDat
+    out[[".dag"]] <- d
+    out[[".steps_to_nodes"]] <- stepsToNodes
+
+    out
+}
 
 #' Print a pipeflow pipeline
 #'

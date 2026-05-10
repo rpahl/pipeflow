@@ -68,7 +68,7 @@ pip_add(p, "a2", \(x = ~-1) x, group = "g2")
 pip_add(p, "a3", \(x = ~-1) x, group = "g2")
 pip_view(p, i = c(1L, 2L), filter = list(group = "g2"))
 
-# Combine views
+# Chain filters by create view of view
 p <- pip_new()
 pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
 pip_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
