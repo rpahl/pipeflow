@@ -959,6 +959,89 @@ describe("pip_run",
 })
 
 
+describe("pip_set_fields",
+{
+    test_pip <- function() {
+        pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x, tags = "init") |>
+            pip_add("s2", \(x = ~s1) x + 1) |>
+            pip_add("s3", \(x = ~s2) x + 1)
+    }
+
+    it("signals invalid inputs",
+    {
+        p <- test_pip()
+        expect_error(pip_set_fields(1), "x must be a pipeflow pip or view")
+        expect_error(pip_set_fields(p, tags = 1), "tags must be a character vector")
+        expect_error(pip_set_fields(p, meta = 1), "meta must be a list")
+        expect_error(pip_set_fields(p, lock = NA), "lock must be a single logical value")
+        expect_error(
+            pip_set_fields(p, lock = c(TRUE, FALSE)),
+            "lock must be a single logical value"
+        )
+    })
+
+    it("sets tags, meta and lock for all selected steps",
+    {
+        p <- test_pip()
+        pip_set_fields(
+            p,
+            tags = c("daily", "core"),
+            meta = list(owner = "team", version = 1),
+            lock = TRUE
+        )
+
+        expect_true(all(p[["pipeline"]][["locked"]]))
+        expect_true(all(vapply(
+            p[["pipeline"]][["tags"]],
+            FUN = \(x) identical(x, c("daily", "core")),
+            FUN.VALUE = logical(1)
+        )))
+        expect_true(all(vapply(
+            p[["pipeline"]][["meta"]],
+            FUN = \(x) identical(x, list(owner = "team", version = 1)),
+            FUN.VALUE = logical(1)
+        )))
+    })
+
+    it("updates only rows in a view",
+    {
+        p <- test_pip()
+        v <- pip_view(p, filter = list(step = c("s2", "s3")))
+
+        pip_set_fields(v, tags = "view", meta = list(scope = "view"), lock = TRUE)
+
+        expect_equal(p[["pipeline"]][["tags"]][[1]], "init")
+        expect_equal(p[["pipeline"]][["meta"]][[1]], NULL)
+        expect_false(p[["pipeline"]][["locked"]][[1]])
+
+        expect_equal(p[["pipeline"]][["tags"]][[2]], "view")
+        expect_equal(p[["pipeline"]][["tags"]][[3]], "view")
+        expect_equal(p[["pipeline"]][["meta"]][[2]], list(scope = "view"))
+        expect_equal(p[["pipeline"]][["meta"]][[3]], list(scope = "view"))
+        expect_true(p[["pipeline"]][["locked"]][[2]])
+        expect_true(p[["pipeline"]][["locked"]][[3]])
+    })
+
+    it("does not change locked steps unless unlocking",
+    {
+        p <- test_pip()
+        p[["pipeline"]][["locked"]][[1]] <- TRUE
+        p[["pipeline"]][["tags"]][[1]] <- "keep"
+
+        pip_set_fields(p, tags = "changed")
+        expect_equal(p[["pipeline"]][["tags"]][[1]], "keep")
+        expect_equal(p[["pipeline"]][["tags"]][[2]], "changed")
+
+        pip_set_fields(p, tags = "unlocked", lock = FALSE)
+        expect_false(any(p[["pipeline"]][["locked"]]))
+        expect_equal(p[["pipeline"]][["tags"]][[1]], "unlocked")
+        expect_equal(p[["pipeline"]][["tags"]][[2]], "unlocked")
+        expect_equal(p[["pipeline"]][["tags"]][[3]], "unlocked")
+    })
+})
+
+
 describe("pip_set_params",
 {
     test_pip <- function() {

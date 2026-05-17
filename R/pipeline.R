@@ -937,6 +937,76 @@ pip_run <- function(
 }
 
 
+#' Set pipeline properties
+#'
+#' Sets meta properties for all steps in the pipeline unless `p` is a view,
+#' in which case the properties will only be set for the steps covered by the
+#' view.
+#' @param p A pipeflow pip or view
+#' @param tags Character vector of tags to set for each step.
+#' @param meta List of metadata to set for each step.
+#' @param lock Logical indicating if the steps should be locked. Locked
+#' steps are skipped during pipeline runs and none of their properties can be
+#' changed until they are unlocked again.
+#' @export
+pip_set_fields <- function(
+    p,
+    tags = character(),
+    meta = list(),
+    lock = NULL
+)
+{
+    .assert_pip_or_view(p)
+
+    setTags <- !missing(tags)
+    setMeta <- !missing(meta)
+    setLock <- !missing(lock)
+
+    if (setTags && !is.character(tags)) {
+        stop("tags must be a character vector")
+    }
+    if (setMeta && !is.list(meta)) {
+        stop("meta must be a list")
+    }
+    if (setLock) {
+        if (!.is_single(lock, "logical") || is.na(lock)) {
+            stop("lock must be a single logical value")
+        }
+    }
+
+    isView <- .is_pipeflow_view(p)
+    x <- if (isView) p[["pip"]] else p
+    dat <- x[["pipeline"]]
+    rows <- if (isView) p[["rows"]] else seq_len(nrow(dat))
+
+    if (length(rows) == 0L || !(setTags || setMeta || setLock)) {
+        return(invisible(p))
+    }
+
+    for (i in rows) {
+        isLocked <- isTRUE(dat[["locked"]][[i]])
+        isUnlocking <- setLock && identical(lock, FALSE)
+
+        # Locked steps are immutable unless this call explicitly unlocks them.
+        if (isLocked && !isUnlocking) {
+            next
+        }
+
+        if (setTags) {
+            data.table::set(dat, i = i, j = "tags", value = list(list(tags)))
+        }
+        if (setMeta) {
+            data.table::set(dat, i = i, j = "meta", value = list(list(meta)))
+        }
+        if (setLock) {
+            data.table::set(dat, i = i, j = "locked", value = lock)
+        }
+    }
+
+    invisible(p)
+}
+
+
 #' Set independent pipeline parameters
 #'
 #' Independent parameters are those that are not dependent on any other steps

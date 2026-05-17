@@ -4,15 +4,12 @@
 \alias{pip_set_params}
 \title{Set independent pipeline parameters}
 \usage{
-pip_set_params(p, params = list(), warnUnused = FALSE)
+pip_set_params(p, params = list())
 }
 \arguments{
 \item{p}{A pipeflow pip or view}
 
 \item{params}{list of parameters to set}
-
-\item{warnUnused}{Logical indicating if a warning should be issued for
-unused parameters.}
 }
 \value{
 The updated pipeline
