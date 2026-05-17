@@ -490,6 +490,78 @@ describe("pip_rename_step",
 })
 
 
+describe("pip_replace",
+{
+    test_pip <- function() {
+        pip_new("pipe") |>
+            pip_add("f1", \(x = 1) x) |>
+            pip_add("f2", \(x = 2) x) |>
+            pip_add("f3", \(x = ~f2) x + 1)
+    }
+
+    it("signals invalid inputs",
+    {
+        p <- test_pip()
+
+        expect_error(pip_replace(1, "f1", \(x = 1) x), "x must be a pipeflow pip")
+        expect_error(pip_replace(p, c("f1", "f2"), \(x = 1) x), "step must be a single string")
+        expect_error(pip_replace(p, NA_character_, \(x = 1) x), "step must not be NA")
+        expect_error(pip_replace(p, "", \(x = 1) x), "step must be a non-empty string")
+        expect_error(pip_replace(p, "unknown", \(x = 1) x), "step 'unknown' does not exist")
+        expect_error(pip_replace(p, "f1", 1), "fun must be a function")
+        expect_error(
+            pip_replace(p, "f1", \(x = 1) x, group = ""),
+            "group must be a non-empty valid string"
+        )
+    })
+
+    it("replaces a step in-place while keeping the original order",
+    {
+        p <- test_pip()
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["pipeline"]][step == "f3", out][[1]], 3)
+
+        pip_replace(p, "f2", \(x = 4) x * 2)
+        expect_equal(p[["pipeline"]][["step"]], c("f1", "f2", "f3"))
+
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["pipeline"]][step == "f2", out][[1]], 8)
+        expect_equal(p[["pipeline"]][step == "f3", out][[1]], 9)
+    })
+
+    it("verifies replacement dependencies against earlier steps only",
+    {
+        p <- test_pip()
+
+        expect_error(
+            pip_replace(p, "f2", \(x = ~f3) x),
+            "cannot reference unknown steps: 'f3'"
+        )
+        expect_error(
+            pip_replace(p, "f2", \(x = ~foo) x),
+            "cannot reference unknown steps: 'foo'"
+        )
+    })
+
+    it("marks only downstream dependent steps as outdated",
+    {
+        p <- pip_new("pipe") |>
+            pip_add("a1", \(x = 1) x) |>
+            pip_add("a2", \(x = ~a1) x + 1) |>
+            pip_add("b1", \(x = 10) x) |>
+            pip_add("a3", \(x = ~a2) x + 1)
+
+        pip_run(p, lgr = NULL)
+        pip_replace(p, "a2", \(x = ~a1) x + 2)
+
+        expect_equal(
+            p[["pipeline"]][["state"]],
+            c("done", "new", "done", "outdated")
+        )
+    })
+})
+
+
 describe("pip_clone",
 {
     test_pip <- function() {

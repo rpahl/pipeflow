@@ -594,9 +594,100 @@ pip_has_step <- function(x, step)
 }
 
 
+#' Replace a step in the pipeline
+#'
+#' @param x A pipeflow pipeline object.
+#' @param step Step name.
+#' @param fun Function to execute for the step.
+#' @param group Step group name.
+#' @param tags Optional character vector of tags belonging to the step.
+#' Can also be set later (see TODO: pip_set_tags or something similar).
+#' @return The updated pipeflow pipeline object.
+#' @export
 pip_replace <- function(x, step, fun, group = step, tags = character(0))
 {
-    stop("not implemented yet")
+    if (!.is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
+    }
+    if (!.is_single(step, "character")) {
+        stop("step must be a single string")
+    }
+    if (is.na(step)) {
+        stop("step must not be NA")
+    }
+    if (!nzchar(step)) {
+        stop("step must be a non-empty string")
+    }
+    if (!pip_has_step(x, step)) {
+        stop("step '", step, "' does not exist")
+    }
+    if (!is.function(fun)) {
+        stop("fun must be a function")
+    }
+    if (!.is_single(group, "character") || is.na(group) || !nzchar(group)) {
+        stop("group must be a non-empty valid string")
+    }
+
+    src <- pip_clone(x)
+    if (".rowId" %in% names(src[["pipeline"]])) {
+        data.table::set(src[["pipeline"]], j = ".rowId", value = NULL)
+    }
+    dat <- src[["pipeline"]]
+    n <- nrow(dat)
+    iStep <- match(step, dat[["step"]])
+
+    out <- if (iStep > 1L) {
+        src[seq_len(iStep - 1L)]
+    } else {
+        pip_new(name = src[["name"]])
+    }
+    if (".rowId" %in% names(out[["pipeline"]])) {
+        data.table::set(out[["pipeline"]], j = ".rowId", value = NULL)
+    }
+
+    # Add replacement step at the original position.
+    pip_add(out, step = step, fun = fun, group = group, tags = tags)
+
+    # Re-append subsequent steps and preserve their runtime metadata.
+    if (iStep < n) {
+        tailRows <- seq.int(iStep + 1L, n)
+        for (i in tailRows) {
+            tailStep <- dat[["step"]][[i]]
+            pip_add_from(out, step = tailStep, y = src)
+
+            iOut <- nrow(out[["pipeline"]])
+            data.table::set(
+                out[["pipeline"]],
+                i = iOut,
+                j = c("out", "time", "state", "locked", "meta"),
+                value = list(
+                    list(dat[["out"]][[i]]),
+                    dat[["time"]][[i]],
+                    dat[["state"]][[i]],
+                    dat[["locked"]][[i]],
+                    list(dat[["meta"]][[i]])
+                )
+            )
+        }
+    }
+
+    # Mark downstream dependent steps as outdated, but keep the replaced
+    # step itself as "new".
+    downNodes <- .pip_get_downstream_nodes(out, step)
+    stepNode <- .pip_steps_to_nodes(out, step)[[1]]
+    downNodes <- unique(setdiff(as.integer(unlist(downNodes)), stepNode))
+    if (length(downNodes) > 0L) {
+        out[["pipeline"]][
+            list(downNodes),
+            state := .step_states[["outdated"]][["name"]],
+            on = ".nodeId"
+        ]
+    }
+
+    x[["pipeline"]] <- out[["pipeline"]]
+    x[[".dag"]] <- out[[".dag"]]
+    x[[".steps_to_nodes"]] <- out[[".steps_to_nodes"]]
+    invisible(x)
 }
 
 #' Rename a step in the pipeline
