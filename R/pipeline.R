@@ -594,6 +594,105 @@ pip_has_step <- function(x, step)
 }
 
 
+#' Remove a step from the pipeline
+#'
+#' If other steps depend on the step to be removed, an error is
+#' given and the removal is blocked, unless `recursive` was set to
+#' `TRUE`.
+#' @param x A pipeflow pip
+#' @param step `string` the name of the step to be removed.
+#' @param recursive `logical` if `TRUE` the step is removed together
+#' with all its downstream dependencies.
+#' @return The updated pipeflow pipeline object.
+#' @export
+pip_remove <- function(x, step, recursive = FALSE)
+{
+    if (!.is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
+    }
+    if (!.is_single(step, "character")) {
+        stop("step must be a single string")
+    }
+    if (is.na(step)) {
+        stop("step must not be NA")
+    }
+    if (!pip_has_step(x, step)) {
+        stop("step '", step, "' does not exist")
+    }
+    if (!is.logical(recursive) || length(recursive) != 1L || is.na(recursive)) {
+        stop("recursive must be a single logical value")
+    }
+
+    dat <- x[["pipeline"]]
+    directDeps <- dat[["step"]][
+        vapply(
+            dat[["depends"]],
+            FUN = \(dep) step %in% dep,
+            FUN.VALUE = logical(1)
+        )
+    ]
+
+    if (length(directDeps) > 0L && !recursive) {
+        stepsString <- paste0("'", directDeps, "'", collapse = ", ")
+        stop(
+            "cannot remove step '", step, "' because the following ",
+            "steps depend on it: ",
+            stepsString
+        )
+    }
+
+    stepsToRemove <- step
+    if (recursive) {
+        downNodes <- .pip_get_downstream_nodes(x, step)
+        downNodes <- unique(as.integer(unlist(downNodes)))
+        stepNode <- as.integer(.pip_steps_to_nodes(x, step)[[1]])
+
+        recursiveDeps <- dat[["step"]][
+            dat[[".nodeId"]] %in% setdiff(downNodes, stepNode)
+        ]
+        if (length(recursiveDeps) > 0L) {
+            stepsString <- paste0("'", recursiveDeps, "'", collapse = ", ")
+            message(
+                "Removing step '",
+                step,
+                "' and its downstream dependencies: ",
+                stepsString
+            )
+        }
+
+        stepsToRemove <- dat[["step"]][dat[[".nodeId"]] %in% downNodes]
+    }
+
+    nodesToRemove <- as.integer(unname(unlist(
+        .pip_steps_to_nodes(x, stepsToRemove)
+    )))
+
+    # Remove DAG nodes first to keep node references stable during filtering.
+    for (nid in rev(nodesToRemove)) {
+        ok <- dag_remove_node(x[[".dag"]], nid, force = recursive)
+        if (!ok) {
+            stop("failed to remove node ", nid, " from DAG")
+        }
+    }
+    dag_tidy_up(x[[".dag"]])
+
+    if (".rowId" %in% names(dat)) {
+        data.table::set(dat, j = ".rowId", value = NULL)
+    }
+
+    keep <- !(dat[["step"]] %in% stepsToRemove)
+    x[["pipeline"]] <- dat[keep]
+
+    for (s in stepsToRemove) {
+        if (exists(s, where = x[[".steps_to_nodes"]], inherits = FALSE)) {
+            rm(list = s, envir = x[[".steps_to_nodes"]], inherits = FALSE)
+        }
+    }
+
+    data.table::setindexv(x[["pipeline"]], list("step", ".nodeId"))
+    invisible(x)
+}
+
 #' Replace a step in the pipeline
 #'
 #' @param x A pipeflow pipeline object.

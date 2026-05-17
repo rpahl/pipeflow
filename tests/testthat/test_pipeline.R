@@ -425,6 +425,73 @@ describe("pip_add_from",
 })
 
 
+describe("pip_remove",
+{
+    test_pip <- function() {
+        pip_new("pipe") |>
+            pip_add("f1", \(x = 1) x) |>
+            pip_add("f2", \(x = ~f1) x) |>
+            pip_add("f3", \(x = ~f2) x) |>
+            pip_add("f4", \(x = ~f1) x) |>
+            pip_add("g1", \(x = 9) x)
+    }
+
+    it("signals invalid inputs",
+    {
+        p <- test_pip()
+        expect_error(pip_remove(1, "f1"), "x must be a pipeflow pip")
+        expect_error(pip_remove(p, c("f1", "f2")), "step must be a single string")
+        expect_error(pip_remove(p, NA_character_), "step must not be NA")
+        expect_error(pip_remove(p, "unknown"), "step 'unknown' does not exist")
+        expect_error(
+            pip_remove(p, "f1", recursive = NA),
+            "recursive must be a single logical value"
+        )
+        expect_error(
+            pip_remove(p, "f1", recursive = c(TRUE, FALSE)),
+            "recursive must be a single logical value"
+        )
+    })
+
+    it("removes a leaf step", {
+        p <- test_pip()
+        node <- .pip_steps_to_nodes(p, "g1")[[1]]
+        pip_remove(p, "g1")
+        expect_equal(p[["pipeline"]][["step"]], c("f1", "f2", "f3", "f4"))
+        expect_true(is.na(.pip_steps_to_nodes(p, "g1")[[1]]))
+        expect_false(dag_has_node(p[[".dag"]], as.integer(node)))
+    })
+
+    it("errors when direct downstream dependencies exist", {
+        p <- test_pip()
+        expect_error(
+            pip_remove(p, "f1"),
+            paste(
+                "cannot remove step 'f1' because the following",
+                "steps depend on it: 'f2', 'f4'"
+            )
+        )
+    })
+
+    it("removes step and all downstream dependencies recursively", {
+        p <- test_pip()
+        out <- utils::capture.output(
+            pip_remove(p, "f1", recursive = TRUE),
+            type = "message"
+        )
+
+        expect_equal(p[["pipeline"]][["step"]], "g1")
+        expect_equal(
+            out,
+            paste(
+                "Removing step 'f1' and its downstream dependencies:",
+                "'f2', 'f3', 'f4'"
+            )
+        )
+    })
+})
+
+
 describe("pip_rename_step",
 {
     test_pip <- function() {
