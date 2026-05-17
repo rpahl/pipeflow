@@ -35,7 +35,6 @@ describe(".new_step",
         expect_equal(step$state, "new")
         expect_true(inherits(step$time, "POSIXct"))
         expect_equal(step$locked, FALSE)
-        expect_equal(step$meta, list(NULL))
         expect_equal(step$.nodeId, 0)
         expect_equal(step$.indeps, list("x"))
     })

@@ -12,7 +12,6 @@
         state = character(0),
         time = as.POSIXct(character(0)),
         locked = logical(0),
-        meta = list(),
         .nodeId = integer(),
         .indeps = list()     # names of independent parameters
     )
@@ -34,7 +33,6 @@
         state = .step_states[["new"]][["name"]],
         time = Sys.time(),
         locked = FALSE,
-        meta = list(NULL),
         .nodeId = .nodeId,
         .indeps = list(setdiff(names(params), names(depends)))
     )
