@@ -947,17 +947,12 @@ pip_run <- function(
 #' locked steps are never changed and so their state remains unchanged.
 #' @param p A pipeflow pip or view
 #' @param params list of parameters to set
-#' @param warnUnused Logical indicating if a warning should be issued for
-#' unused parameters.
 #' @return The updated pipeline
 #' @export
-pip_set_params <- function(p, params = list(), warnUnused = FALSE)
+pip_set_params <- function(p, params = list())
 {
     # Input checking
     .assert_pip_or_view(p)
-    if (!.is_single(warnUnused, "logical")) {
-        stop("warnUnused must be a single logical value")
-    }
     if (!is.list(params)) {
         stop("params must be a list")
     }
@@ -978,12 +973,10 @@ pip_set_params <- function(p, params = list(), warnUnused = FALSE)
     considered_rows <- setdiff(rows, which(dat[["locked"]]))
 
     if (length(considered_rows) == 0L) {
-        if (warnUnused) {
-            warning(
-                "Trying to set parameters not defined in the target: ",
-                toString(parNames)
-            )
-        }
+        warning(
+            "Trying to set parameters not defined in the target: ",
+            toString(parNames)
+        )
         return(invisible(p))
     }
 
@@ -992,15 +985,13 @@ pip_set_params <- function(p, params = list(), warnUnused = FALSE)
         FUN = \(indep) intersect(indep, parNames)
     )
 
-    if (warnUnused) {
-        used <- unique(unlist(overlaps))
-        unused <- setdiff(parNames, used)
-        if (length(unused) > 0L) {
-            warning(
-                "Trying to set parameters not defined in the target: ",
-                toString(unused)
-            )
-        }
+    used <- unique(unlist(overlaps))
+    unused <- setdiff(parNames, used)
+    if (length(unused) > 0L) {
+        warning(
+            "Trying to set parameters not defined in the target: ",
+            toString(unused)
+        )
     }
 
     hasOverlap <- lengths(overlaps) > 0

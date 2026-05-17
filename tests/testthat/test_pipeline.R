@@ -965,20 +965,19 @@ describe("pip_set_params",
         pip_new() |>
             pip_add("s1", \(x = 1, data = data.frame(a = 1:2)) x) |>
             pip_add("s2", \(x = ~s1, y = 2) x + y) |>
-            pip_add("s3", \(z = 3) z) |>
+            pip_add("s3", \(x = 1, z = 3) x + z) |>
             pip_add("s4", \(a = ~s1, b = ~s3) a + b)
     }
 
     it("can be used with pip or view",
     {
         p <- test_pip()
-        params <- list(x = 11, y = 22)
 
-        res <- pip_set_params(p, params = params)
+        res <- pip_set_params(p, params = list(x = 11, y = 22))
         expect_true(inherits(res, "pipeflow_pip"))
 
         v <- pip_view(p, filter = list(step = "s2"))
-        res <- pip_set_params(v, params = params)
+        res <- pip_set_params(v, params = list(y = 22))
         expect_true(inherits(res, "pipeflow_view"))
     })
 
@@ -992,19 +991,7 @@ describe("pip_set_params",
         expect_equal(after[[1]][["x"]], 11)
         expect_equal(after[[1]][["data"]], data.frame(b = 3:4))
         expect_equal(after[[2]][["y"]], 2)
-        expect_equal(after[[3]][["z"]], 33)
-    })
-
-    it("sets parameters only within the selected view",
-    {
-        p <- test_pip()
-
-        v <- pip_view(p, filter = list(step = "s3"))
-        pip_set_params(v, params = list(z = 33, x = 11, y = 22))
-        after <- p[["pipeline"]][["params"]]
-
-        expect_equal(after[[1]][["x"]], 1)
-        expect_equal(after[[2]][["y"]], 2)
+        expect_equal(after[[3]][["x"]], 11)
         expect_equal(after[[3]][["z"]], 33)
     })
 
@@ -1017,16 +1004,34 @@ describe("pip_set_params",
         expect_equal(after[[1]][["x"]], 1)
     })
 
-    it("warns for unused parameters when requested",
+    it("warns for unused parameters",
     {
         p <- pip_new()
         pip_add(p, "s1", \(x = 1) x)
 
         expect_warning(
-            pip_set_params(p, params = list(foo = 1), warnUnused = TRUE),
+            pip_set_params(p, params = list(foo = 1)),
             "Trying to set parameters not defined in the target: foo"
         )
     })
+
+    it("sets parameters only within the selected view",
+    {
+        p <- test_pip()
+
+        v <- pip_view(p, filter = list(step = "s3"))
+        expect_warning(
+            pip_set_params(v, params = list(z = 33, x = 11, y = 22)),
+            "Trying to set parameters not defined in the target: y"
+        )
+        after <- p[["pipeline"]][["params"]]
+
+        expect_equal(after[[1]][["x"]], 1)
+        expect_equal(after[[2]][["y"]], 2)
+        expect_equal(after[[3]][["x"]], 11)
+        expect_equal(after[[3]][["z"]], 33)
+    })
+
 
     it("marks changed and dependent downstream steps as 'outdated'",
     {
@@ -1034,7 +1039,7 @@ describe("pip_set_params",
         pip_set_params(p, params = list(x = 5))
         expect_equal(
             p[["pipeline"]][["state"]],
-            c("outdated", "outdated", "new", "outdated")
+            c("outdated", "outdated", "outdated", "outdated")
         )
 
         p <- test_pip()
