@@ -170,6 +170,89 @@ describe("pip_add",
         out <- pip$run()$collect_out()
         expect_equal(out[["mean"]], as.numeric(NA))
     })
+
+    test_pip <- function() {
+        pip_new("pipe") |>
+            pip_add("f1", \(x = 1) x) |>
+            pip_add("f2", \(x = ~f1) x + 1)
+    }
+
+    it("can insert after a step name",
+    {
+        p <- test_pip()
+        pip_add(p, "f3", \(x = ~f1) x + 10, after = "f1")
+
+        expect_equal(p[["pipeline"]][["step"]], c("f1", "f3", "f2"))
+        expect_equal(p[["pipeline"]][["depends"]][[2]], c(x = "f1"))
+        expect_equal(p[["pipeline"]][["depends"]][[3]], c(x = "f1"))
+    })
+
+    it("can insert by numeric index and supports insertion at beginning",
+    {
+        p <- test_pip()
+        pip_add(p, "f0", \(x = 0) x, after = 0)
+
+        expect_equal(p[["pipeline"]][["step"]], c("f0", "f1", "f2"))
+        expect_equal(p[["pipeline"]][["depends"]][[2]], character(0))
+        expect_equal(p[["pipeline"]][["depends"]][[3]], c(x = "f1"))
+    })
+
+    it("uses default insertion position at end",
+    {
+        p <- test_pip()
+        pip_add(p, "f3", \(x = ~f2) x + 1)
+
+        expect_equal(p[["pipeline"]][["step"]], c("f1", "f2", "f3"))
+        expect_equal(p[["pipeline"]][["depends"]][[3]], c(x = "f2"))
+    })
+
+    it("keeps existing step state and output for appended tail steps",
+    {
+        p <- test_pip()
+        p[["pipeline"]][["out"]][[2]] <- 42
+        p[["pipeline"]][["state"]][[2]] <- "done"
+
+        pip_add(p, "f3", \(x = ~f1) x + 10, after = "f1")
+
+        i <- match("f2", p[["pipeline"]][["step"]])
+        expect_equal(p[["pipeline"]][["out"]][[i]], 42)
+        expect_equal(p[["pipeline"]][["state"]][[i]], "done")
+    })
+
+    it("signals invalid insertion position and unknown step reference",
+    {
+        p <- test_pip()
+        expect_error(
+            pip_add(p, "f3", \(x = 1) x, after = "unknown"),
+            "step 'unknown' does not exist"
+        )
+        expect_error(
+            pip_add(p, "f3", \(x = 1) x, after = 3.1),
+            "after index must be a whole number"
+        )
+        expect_error(
+            pip_add(p, "f3", \(x = 1) x, after = -1),
+            "after index must be between 0 and 2"
+        )
+        expect_error(
+            pip_add(p, "f3", \(x = 1) x, after = 3),
+            "after index must be between 0 and 2"
+        )
+        expect_error(
+            pip_add(p, "f3", \(x = ~f2) x, after = "f1"),
+            "cannot reference unknown steps: 'f2'"
+        )
+    })
+
+    it("signals duplicate step names also when inserting at position",
+    {
+        p <- test_pip()
+
+        expect_error(
+            pip_add(p, "f2", \(x = 1) x, after = "f1"),
+            "step 'f2' already exists in the pipeline"
+        )
+    })
 })
 
 

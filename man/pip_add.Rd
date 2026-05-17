@@ -2,9 +2,9 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_add}
 \alias{pip_add}
-\title{Add a new step to the pipeline}
+\title{Add new step to the pipeline}
 \usage{
-pip_add(x, step, fun, group = step, tags = character(0))
+pip_add(x, step, fun, group = step, tags = character(0), after = length(x))
 }
 \arguments{
 \item{x}{A pipeflow pipeline object.}
@@ -16,11 +16,20 @@ pip_add(x, step, fun, group = step, tags = character(0))
 \item{group}{Step group name.}
 
 \item{tags}{Optional character vector of tags belonging to the step.
-Can also be set later (see)}
+Can also be set later (see TODO: pip_set_tags or something similar).}
+
+\item{after}{Optional position after which the new step should be inserted
+(defaults to last position). Can be a step name or an integer index. If
+set to 0, the new step will be inserted at the beginning of the pipeline.}
 }
 \value{
 The updated pipeflow pipeline object.
 }
 \description{
-Add a new step to the pipeline
+Adds a new step to the pipeline, by default at the end.
+If \code{after} was specified, the new step will be inserted after the given
+step or position. Be aware that in contrast to adding a step at the end,
+inserting a step in the middle is a rather expensive operation as it
+requires re-wiring parts of the internal pipeline structure, especially
+if the new step is inserted at an early position.
 }

@@ -28,6 +28,51 @@
     inherits(x, "pipeflow_pip")
 }
 
+.pip_append <- function(x, step, fun, group, tags)
+{
+    # Determine and verify potential links to existing steps
+    params <- .extract_fun_params(fun)
+    if (".self" %in% names(params)) {
+        params[[".self"]] <- x
+    }
+    steps <- c(x[["pipeline"]][["step"]], step)
+    depends <- .extract_depends(params = params, steps = steps)
+    refNodes <- mget(depends,
+        envir = x[[".steps_to_nodes"]],
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    )
+    if (anyNA(refNodes)) {
+        notFound <- Filter(is.na, refNodes)
+        stop_no_call(
+            "while adding step '", step, "' - cannot reference unknown steps: ",
+            paste0("'", names(notFound), "'", collapse = ", ")
+        )
+    }
+
+    # Update DAG
+    d <- x[[".dag"]]
+    .nodeId <- as.integer(dag_add_node(d))
+    if (length(refNodes) > 0) {
+        dag_add_edges_to(d, from = as.integer(refNodes), to = .nodeId)
+    }
+
+    # Create and append step
+    newStep <- .new_step(
+        step = step,
+        group = group,
+        fun = fun,
+        params = lapply(params, eval),
+        depends = depends,
+        tags = tags,
+        .nodeId = .nodeId
+    )
+
+    x[["pipeline"]] <- data.table::rbindlist(list(x[["pipeline"]], newStep))
+    x[[".steps_to_nodes"]][[step]] <- .nodeId
+    x
+}
+
 .pip_data <- function(x)
 {
     isView <- inherits(x, "pipeflow_view")
@@ -171,18 +216,35 @@ pip_new <- function(name = "pipe")
     env
 }
 
-#' Add a new step to the pipeline
+#' Add new step to the pipeline
 #'
+#' Adds a new step to the pipeline, by default at the end.
+#' If `after` was specified, the new step will be inserted after the given
+#' step or position. Be aware that in contrast to adding a step at the end,
+#' inserting a step in the middle is a rather expensive operation as it
+#' requires re-wiring parts of the internal pipeline structure, especially
+#' if the new step is inserted at an early position.
 #' @param x A pipeflow pipeline object.
 #' @param step Step name.
 #' @param fun Function to execute for the step.
 #' @param group Step group name.
 #' @param tags Optional character vector of tags belonging to the step.
-#' Can also be set later (see)
+#' Can also be set later (see TODO: pip_set_tags or something similar).
+#' @param after Optional position after which the new step should be inserted
+#' (defaults to last position). Can be a step name or an integer index. If
+#' set to 0, the new step will be inserted at the beginning of the pipeline.
 #' @return The updated pipeflow pipeline object.
 #' @export
-pip_add <- function(x, step, fun, group = step, tags = character(0))
+pip_add <- function(
+    x, step, fun,
+    group = step,
+    tags = character(0),
+    after = length(x)
+)
 {
+    if (!.is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
+    }
     if (pip_has_step(x, step)) {
         stop("step '", step, "' already exists in the pipeline")
     }
@@ -193,47 +255,72 @@ pip_add <- function(x, step, fun, group = step, tags = character(0))
         stop("group must be a non-empty valid string")
     }
 
-    # Determine and verify potential links to existing steps
-    params <- .extract_fun_params(fun)
-    if (".self" %in% names(params)) {
-        params[[".self"]] <- x
-    }
-    steps <- c(x[["pipeline"]][["step"]], step)
-    depends <- .extract_depends(params = params, steps = steps)
-    refNodes <- mget(depends,
-        envir = x[[".steps_to_nodes"]],
-        ifnotfound = NA_integer_,
-        inherits = FALSE
-    )
-    if (anyNA(refNodes)) {
-        notFound <- Filter(is.na, refNodes)
-        stop_no_call(
-            "while adding step '", step, "' - cannot reference unknown steps: ",
-            paste0("'", names(notFound), "'", collapse = ", ")
-        )
+    n <- length(x)
+
+    if (is.character(after)) {
+        if (!.is_single(after, "character") || is.na(after) || !nzchar(after)) {
+            stop("after must be a non-empty step name or integer index")
+        }
+        if (!pip_has_step(x, after)) {
+            stop("step '", after, "' does not exist")
+        }
+        pos <- match(after, x[["pipeline"]][["step"]])
+    } else if (is.numeric(after)) {
+        if (length(after) != 1 || is.na(after)) {
+            stop("after must be a non-empty step name or integer index")
+        }
+        if (!is.finite(after) || after != as.integer(after)) {
+            stop("after index must be a whole number")
+        }
+        pos <- as.integer(after)
+        if (pos < 0L || pos > n) {
+            stop("after index must be between 0 and ", n)
+        }
+    } else {
+        stop("after must be a non-empty step name or integer index")
     }
 
-    # Update DAG
-    d <- x[[".dag"]]
-    .nodeId <- as.integer(dag_add_node(d))
-    if (length(refNodes) > 0) {
-        dag_add_edges_to(d, from = as.integer(refNodes), to = .nodeId)
+    if (pos == length(x)) {
+        return(.pip_append(
+            x, step = step, fun = fun, group = group, tags = tags
+        ))
     }
 
-    # Create and append step
-    newStep <- .new_step(
-        step = step,
-        group = group,
-        fun = fun,
-        params = lapply(params, eval),
-        depends = depends,
-        tags = tags,
-        .nodeId = .nodeId
-    )
-    x[["pipeline"]] <- data.table::rbindlist(list(x[["pipeline"]], newStep))
-    x[[".steps_to_nodes"]][[step]] <- .nodeId
+    src <- pip_clone(x)
+    dat <- src[["pipeline"]]
+    n <- nrow(dat)
+
+    out <- if (pos > 0L) src[seq_len(pos)] else pip_new(name = src[["name"]])
+    pip_add(out, step = step, fun = fun, group = group, tags = tags)
+
+    if (pos < n) {
+        tailRows <- seq.int(pos + 1L, n)
+        for (i in tailRows) {
+            tailStep <- dat[["step"]][[i]]
+            pip_add_from(out, step = tailStep, y = src)
+
+            iOut <- nrow(out[["pipeline"]])
+            data.table::set(
+                out[["pipeline"]],
+                i = iOut,
+                j = c("out", "time", "state", "locked", "meta"),
+                value = list(
+                    list(dat[["out"]][[i]]),
+                    dat[["time"]][[i]],
+                    dat[["state"]][[i]],
+                    dat[["locked"]][[i]],
+                    list(dat[["meta"]][[i]])
+                )
+            )
+        }
+    }
+
+    x[["pipeline"]] <- out[["pipeline"]]
+    x[[".dag"]] <- out[[".dag"]]
+    x[[".steps_to_nodes"]] <- out[[".steps_to_nodes"]]
     invisible(x)
 }
+
 
 #' Add step from another pipeline
 #'
@@ -506,19 +593,6 @@ pip_has_step <- function(x, step)
     .pip_step_exists(x, step)
 }
 
-pip_insert_after <- function(
-    x, afterStep, step, fun, group = step, tags = character(0)
-)
-{
-    stop("not implemented yet")
-}
-
-pip_insert_before <- function(
-    x, beforeStep, step, fun, group = step, tags = character(0)
-)
-{
-    stop("not implemented yet")
-}
 
 pip_replace <- function(x, step, fun, group = step, tags = character(0))
 {
