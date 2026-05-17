@@ -425,6 +425,71 @@ describe("pip_add_from",
 })
 
 
+describe("pip_rename",
+{
+    test_pip <- function() {
+        pip_new("pipe") |>
+            pip_add("f1", \(a = 1) a) |>
+            pip_add("f2", \(b = ~f1) b) |>
+            pip_add("f3", \(a = ~f1, b = ~f2) a + b)
+    }
+
+    it("signals invalid inputs",
+    {
+        p <- test_pip()
+        expect_error(pip_rename(1, "f1", "first"))
+        expect_error(pip_rename(p, c("f1", "f2"), "first"))
+        expect_error(pip_rename(p, NA_character_, "first"))
+        expect_error(pip_rename(p, "", "first"))
+        expect_error(pip_rename(p, "f1", c("a", "b")))
+        expect_error(pip_rename(p, "f1", NA_character_))
+        expect_error(pip_rename(p, "f1", ""))
+    })
+
+    it("signals missing old step and name clashes",
+    {
+        p <- test_pip()
+        expect_error(
+            pip_rename(p, "unknown", "first"),
+            "step 'unknown' does not exist"
+        )
+        expect_error(
+            pip_rename(p, "f1", "f2"),
+            "step 'f2' already exists"
+        )
+    })
+
+    it("renames step and updates dependencies",
+    {
+        p <- test_pip()
+        pip_rename(p, from = "f1", to = "first")
+
+        expect_equal(p[["pipeline"]][["step"]], c("first", "f2", "f3"))
+        expect_equal(
+            p[["pipeline"]][["depends"]],
+            list(
+                character(0),
+                c(b = "first"),
+                c(a = "first", b = "f2")
+            )
+        )
+    })
+
+    it("keeps DAG and step mapping consistent",
+    {
+        p <- test_pip()
+        pip_rename(p, from = "f1", to = "first")
+
+        expect_true(is.na(.pip_steps_to_nodes(p, "f1")[[1]]))
+        expect_true(!is.na(.pip_steps_to_nodes(p, "first")[[1]]))
+
+        nodes <- .pip_get_downstream_nodes(p, "first")
+        steps <- .pip_filter_nodes(p, nodes)[["step"]]
+        expect_setequal(steps, c("first", "f2", "f3"))
+    })
+})
+
+
 describe("pip_remove",
 {
     test_pip <- function() {
@@ -488,71 +553,6 @@ describe("pip_remove",
                 "'f2', 'f3', 'f4'"
             )
         )
-    })
-})
-
-
-describe("pip_rename_step",
-{
-    test_pip <- function() {
-        pip_new("pipe") |>
-            pip_add("f1", \(a = 1) a) |>
-            pip_add("f2", \(b = ~f1) b) |>
-            pip_add("f3", \(a = ~f1, b = ~f2) a + b)
-    }
-
-    it("signals invalid inputs",
-    {
-        p <- test_pip()
-        expect_error(pip_rename_step(1, "f1", "first"))
-        expect_error(pip_rename_step(p, c("f1", "f2"), "first"))
-        expect_error(pip_rename_step(p, NA_character_, "first"))
-        expect_error(pip_rename_step(p, "", "first"))
-        expect_error(pip_rename_step(p, "f1", c("a", "b")))
-        expect_error(pip_rename_step(p, "f1", NA_character_))
-        expect_error(pip_rename_step(p, "f1", ""))
-    })
-
-    it("signals missing old step and name clashes",
-    {
-        p <- test_pip()
-        expect_error(
-            pip_rename_step(p, "unknown", "first"),
-            "step 'unknown' does not exist"
-        )
-        expect_error(
-            pip_rename_step(p, "f1", "f2"),
-            "step 'f2' already exists"
-        )
-    })
-
-    it("renames step and updates dependencies",
-    {
-        p <- test_pip()
-        pip_rename_step(p, from = "f1", to = "first")
-
-        expect_equal(p[["pipeline"]][["step"]], c("first", "f2", "f3"))
-        expect_equal(
-            p[["pipeline"]][["depends"]],
-            list(
-                character(0),
-                c(b = "first"),
-                c(a = "first", b = "f2")
-            )
-        )
-    })
-
-    it("keeps DAG and step mapping consistent",
-    {
-        p <- test_pip()
-        pip_rename_step(p, from = "f1", to = "first")
-
-        expect_true(is.na(.pip_steps_to_nodes(p, "f1")[[1]]))
-        expect_true(!is.na(.pip_steps_to_nodes(p, "first")[[1]]))
-
-        nodes <- .pip_get_downstream_nodes(p, "first")
-        steps <- .pip_filter_nodes(p, nodes)[["step"]]
-        expect_setequal(steps, c("first", "f2", "f3"))
     })
 })
 

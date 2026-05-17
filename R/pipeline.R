@@ -420,7 +420,7 @@ pip_bind <- function(x, y)
                 to <- paste0(step, i)
                 i <- i + 1L
             }
-            pip_rename_step(yy, from = step, to = to)
+            pip_rename(yy, from = step, to = to)
         }
         reserved <- c(reserved, yyDat[["step"]][[k]])
     }
@@ -693,6 +693,72 @@ pip_remove <- function(x, step, recursive = FALSE)
     invisible(x)
 }
 
+
+#' Rename a step in the pipeline
+#' @param x A pipeflow pip
+#' @param from Existing step name
+#' @param to New step name
+#' @return The updated pipeline
+#' @export
+pip_rename <- function(x, from, to)
+{
+    if (!.is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
+    }
+
+    if (!.is_single(from, "character")) {
+        stop("from must be a single string")
+    }
+    if (is.na(from)) {
+        stop("from must not be NA")
+    }
+    if (!nzchar(from)) {
+        stop("from must be a non-empty string")
+    }
+
+    if (!.is_single(to, "character")) {
+        stop("to must be a single string")
+    }
+    if (is.na(to)) {
+        stop("to must not be NA")
+    }
+    if (!nzchar(to)) {
+        stop("to must be a non-empty string")
+    }
+
+    if (!pip_has_step(x, from)) {
+        stop("step '", from, "' does not exist")
+    }
+    if (pip_has_step(x, to)) {
+        stop("step '", to, "' already exists")
+    }
+
+    dat <- x[["pipeline"]]
+    newSteps <- dat[["step"]]
+    newSteps[newSteps %in% from] <- to
+
+    newDepends <- lapply(
+        dat[["depends"]],
+        FUN = \(dep) {
+            if (length(dep) == 0L) {
+                return(dep)
+            }
+            dep[dep %in% from] <- to
+            dep
+        }
+    )
+    data.table::set(dat, j = "step", value = newSteps)
+    data.table::set(dat, j = "depends", value = newDepends)
+
+    nodeId <- x[[".steps_to_nodes"]][[from]]
+    x[[".steps_to_nodes"]][[to]] <- nodeId
+    rm(list = from, envir = x[[".steps_to_nodes"]], inherits = FALSE)
+
+    data.table::setindexv(dat, list("step", ".nodeId"))
+    invisible(x)
+}
+
+
 #' Replace a step in the pipeline
 #'
 #' @param x A pipeflow pipeline object.
@@ -786,70 +852,6 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0))
     x[["pipeline"]] <- out[["pipeline"]]
     x[[".dag"]] <- out[[".dag"]]
     x[[".steps_to_nodes"]] <- out[[".steps_to_nodes"]]
-    invisible(x)
-}
-
-#' Rename a step in the pipeline
-#' @param x A pipeflow pip
-#' @param from Existing step name
-#' @param to New step name
-#' @return The updated pipeline
-#' @export
-pip_rename_step <- function(x, from, to)
-{
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
-
-    if (!.is_single(from, "character")) {
-        stop("from must be a single string")
-    }
-    if (is.na(from)) {
-        stop("from must not be NA")
-    }
-    if (!nzchar(from)) {
-        stop("from must be a non-empty string")
-    }
-
-    if (!.is_single(to, "character")) {
-        stop("to must be a single string")
-    }
-    if (is.na(to)) {
-        stop("to must not be NA")
-    }
-    if (!nzchar(to)) {
-        stop("to must be a non-empty string")
-    }
-
-    if (!pip_has_step(x, from)) {
-        stop("step '", from, "' does not exist")
-    }
-    if (pip_has_step(x, to)) {
-        stop("step '", to, "' already exists")
-    }
-
-    dat <- x[["pipeline"]]
-    newSteps <- dat[["step"]]
-    newSteps[newSteps %in% from] <- to
-
-    newDepends <- lapply(
-        dat[["depends"]],
-        FUN = \(dep) {
-            if (length(dep) == 0L) {
-                return(dep)
-            }
-            dep[dep %in% from] <- to
-            dep
-        }
-    )
-    data.table::set(dat, j = "step", value = newSteps)
-    data.table::set(dat, j = "depends", value = newDepends)
-
-    nodeId <- x[[".steps_to_nodes"]][[from]]
-    x[[".steps_to_nodes"]][[to]] <- nodeId
-    rm(list = from, envir = x[[".steps_to_nodes"]], inherits = FALSE)
-
-    data.table::setindexv(dat, list("step", ".nodeId"))
     invisible(x)
 }
 
