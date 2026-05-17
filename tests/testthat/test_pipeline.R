@@ -1059,85 +1059,138 @@ describe("pip_set_params",
 })
 
 
-describe("pip_set_props",
-{
-    test_pip <- function() {
-        pip_new("pipe") |>
-            pip_add("s1", \(x = 1) x, tags = "init") |>
-            pip_add("s2", \(x = ~s1) x + 1) |>
-            pip_add("s3", \(x = ~s2) x + 1)
-    }
+tag_lock_test_pip <- function() {
+    pip_new("pipe") |>
+        pip_add("s1", \(x = 1) x, tags = c("init", "daily")) |>
+        pip_add("s2", \(x = ~s1) x + 1, tags = c("daily", "model")) |>
+        pip_add("s3", \(x = ~s2) x + 1, tags = "report")
+}
 
+
+describe("pip_tag",
+{
     it("signals invalid inputs",
     {
-        p <- test_pip()
-        expect_error(pip_set_props(1), "x must be a pipeflow pip or view")
-        expect_error(pip_set_props(p, tags = 1), "tags must be a character vector")
-        expect_error(pip_set_props(p, meta = 1), "meta must be a list")
-        expect_error(pip_set_props(p, lock = NA), "lock must be a single logical value")
-        expect_error(
-            pip_set_props(p, lock = c(TRUE, FALSE)),
-            "lock must be a single logical value"
-        )
+        p <- tag_lock_test_pip()
+        expect_error(pip_tag(1), "x must be a pipeflow pip or view")
+        expect_error(pip_tag(p, tags = 1), "tags must be a character vector")
     })
 
-    it("sets tags, meta and lock for all selected steps",
+    it("adds tags to all selected steps while preserving existing tags",
     {
-        p <- test_pip()
-        pip_set_props(
-            p,
-            tags = c("daily", "core"),
-            meta = list(owner = "team", version = 1),
-            lock = TRUE
-        )
+        p <- tag_lock_test_pip()
+        pip_tag(p, tags = c("daily", "core"))
 
-        expect_true(all(p[["pipeline"]][["locked"]]))
-        expect_true(all(vapply(
-            p[["pipeline"]][["tags"]],
-            FUN = \(x) identical(x, c("daily", "core")),
-            FUN.VALUE = logical(1)
-        )))
-        expect_true(all(vapply(
-            p[["pipeline"]][["meta"]],
-            FUN = \(x) identical(x, list(owner = "team", version = 1)),
-            FUN.VALUE = logical(1)
-        )))
+        expect_equal(p[["pipeline"]][["tags"]][[1]], c("init", "daily", "core"))
+        expect_equal(p[["pipeline"]][["tags"]][[2]], c("daily", "model", "core"))
+        expect_equal(p[["pipeline"]][["tags"]][[3]], c("report", "daily", "core"))
     })
 
-    it("updates only rows in a view",
+    it("updates only rows in a view and skips locked steps",
     {
-        p <- test_pip()
+        p <- tag_lock_test_pip()
+        p[["pipeline"]][["locked"]][[2]] <- TRUE
+        p[["pipeline"]][["tags"]][[2]] <- "keep"
+
         v <- pip_view(p, filter = list(step = c("s2", "s3")))
+        pip_tag(v, tags = "view")
 
-        pip_set_props(v, tags = "view", meta = list(scope = "view"), lock = TRUE)
+        expect_equal(p[["pipeline"]][["tags"]][[1]], c("init", "daily"))
+        expect_equal(p[["pipeline"]][["tags"]][[2]], "keep")
+        expect_equal(p[["pipeline"]][["tags"]][[3]], c("report", "view"))
+    })
+})
+
+
+describe("pip_untag",
+{
+    it("signals invalid inputs",
+    {
+        p <- tag_lock_test_pip()
+        expect_error(pip_untag(1), "x must be a pipeflow pip or view")
+        expect_error(pip_untag(p, tags = 1), "tags must be a character vector")
+    })
+
+    it("removes tags from all selected steps",
+    {
+        p <- tag_lock_test_pip()
+        pip_untag(p, tags = c("daily", "report"))
 
         expect_equal(p[["pipeline"]][["tags"]][[1]], "init")
-        expect_equal(p[["pipeline"]][["meta"]][[1]], NULL)
-        expect_false(p[["pipeline"]][["locked"]][[1]])
+        expect_equal(p[["pipeline"]][["tags"]][[2]], "model")
+        expect_equal(p[["pipeline"]][["tags"]][[3]], character(0))
+    })
 
-        expect_equal(p[["pipeline"]][["tags"]][[2]], "view")
-        expect_equal(p[["pipeline"]][["tags"]][[3]], "view")
-        expect_equal(p[["pipeline"]][["meta"]][[2]], list(scope = "view"))
-        expect_equal(p[["pipeline"]][["meta"]][[3]], list(scope = "view"))
+    it("updates only rows in a view and skips locked steps",
+    {
+        p <- tag_lock_test_pip()
+        p[["pipeline"]][["locked"]][[2]] <- TRUE
+        p[["pipeline"]][["tags"]][[2]] <- c("daily", "model")
+
+        v <- pip_view(p, filter = list(step = c("s2", "s3")))
+        pip_untag(v, tags = "daily")
+
+        expect_equal(p[["pipeline"]][["tags"]][[1]], c("init", "daily"))
+        expect_equal(p[["pipeline"]][["tags"]][[2]], c("daily", "model"))
+        expect_equal(p[["pipeline"]][["tags"]][[3]], "report")
+    })
+})
+
+
+describe("pip_lock",
+{
+    it("signals invalid input",
+    {
+        expect_error(pip_lock(1), "x must be a pipeflow pip or view")
+    })
+
+    it("locks selected steps",
+    {
+        p <- tag_lock_test_pip()
+        pip_lock(p)
+        expect_true(all(p[["pipeline"]][["locked"]]))
+    })
+
+    it("locks only rows covered by a view",
+    {
+        p <- tag_lock_test_pip()
+        v <- pip_view(p, filter = list(step = c("s2", "s3")))
+        pip_lock(v)
+
+        expect_false(p[["pipeline"]][["locked"]][[1]])
         expect_true(p[["pipeline"]][["locked"]][[2]])
         expect_true(p[["pipeline"]][["locked"]][[3]])
     })
+})
 
-    it("does not change locked steps unless unlocking",
+
+describe("pip_unlock",
+{
+    it("signals invalid input",
     {
-        p <- test_pip()
-        p[["pipeline"]][["locked"]][[1]] <- TRUE
-        p[["pipeline"]][["tags"]][[1]] <- "keep"
+        expect_error(pip_unlock(1), "x must be a pipeflow pip or view")
+    })
 
-        pip_set_props(p, tags = "changed")
-        expect_equal(p[["pipeline"]][["tags"]][[1]], "keep")
-        expect_equal(p[["pipeline"]][["tags"]][[2]], "changed")
+    it("unlocks selected steps",
+    {
+        p <- tag_lock_test_pip()
+        p[["pipeline"]][["locked"]] <- rep(TRUE, nrow(p[["pipeline"]]))
 
-        pip_set_props(p, tags = "unlocked", lock = FALSE)
+        pip_unlock(p)
         expect_false(any(p[["pipeline"]][["locked"]]))
-        expect_equal(p[["pipeline"]][["tags"]][[1]], "unlocked")
-        expect_equal(p[["pipeline"]][["tags"]][[2]], "unlocked")
-        expect_equal(p[["pipeline"]][["tags"]][[3]], "unlocked")
+    })
+
+    it("unlocks only rows covered by a view",
+    {
+        p <- tag_lock_test_pip()
+        p[["pipeline"]][["locked"]] <- rep(TRUE, nrow(p[["pipeline"]]))
+
+        v <- pip_view(p, filter = list(step = c("s2", "s3")))
+        pip_unlock(v)
+
+        expect_true(p[["pipeline"]][["locked"]][[1]])
+        expect_false(p[["pipeline"]][["locked"]][[2]])
+        expect_false(p[["pipeline"]][["locked"]][[3]])
     })
 })
 

@@ -216,6 +216,7 @@ pip_new <- function(name = "pipe")
     env
 }
 
+
 #' Add new step to the pipeline
 #'
 #' Adds a new step to the pipeline, by default at the end.
@@ -303,13 +304,12 @@ pip_add <- function(
             data.table::set(
                 out[["pipeline"]],
                 i = iOut,
-                j = c("out", "time", "state", "locked", "meta"),
+                j = c("out", "time", "state", "locked"),
                 value = list(
                     list(dat[["out"]][[i]]),
                     dat[["time"]][[i]],
                     dat[["state"]][[i]],
-                    dat[["locked"]][[i]],
-                    list(dat[["meta"]][[i]])
+                    dat[["locked"]][[i]]
                 )
             )
         }
@@ -430,18 +430,17 @@ pip_bind <- function(x, y)
         step <- yyDat[["step"]][[k]]
         pip_add_from(out, step = step, y = yy)
 
-        # Preserve runtime metadata/state from source pipeline.
+        # Preserve runtime state from source pipeline.
         iOut <- nrow(out[["pipeline"]])
         data.table::set(
             out[["pipeline"]],
             i = iOut,
-            j = c("out", "time", "state", "locked", "meta"),
+            j = c("out", "time", "state", "locked"),
             value = list(
                 list(yyDat[["out"]][[k]]),
                 yyDat[["time"]][[k]],
                 yyDat[["state"]][[k]],
-                yyDat[["locked"]][[k]],
-                list(yyDat[["meta"]][[k]])
+                yyDat[["locked"]][[k]]
             )
         )
     }
@@ -813,7 +812,7 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0))
     # Add replacement step at the original position.
     pip_add(out, step = step, fun = fun, group = group, tags = tags)
 
-    # Re-append subsequent steps and preserve their runtime metadata.
+    # Re-append subsequent steps and preserve their runtime state.
     if (iStep < n) {
         tailRows <- seq.int(iStep + 1L, n)
         for (i in tailRows) {
@@ -824,13 +823,12 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0))
             data.table::set(
                 out[["pipeline"]],
                 i = iOut,
-                j = c("out", "time", "state", "locked", "meta"),
+                j = c("out", "time", "state", "locked"),
                 value = list(
                     list(dat[["out"]][[i]]),
                     dat[["time"]][[i]],
                     dat[["state"]][[i]],
-                    dat[["locked"]][[i]],
-                    list(dat[["meta"]][[i]])
+                    dat[["locked"]][[i]]
                 )
             )
         }
@@ -1020,41 +1018,20 @@ pip_set_params <- function(p, params = list())
 }
 
 
-#' Set step properties
+#' Add tags to steps
 #'
-#' Sets tags, meta information, and lock status for all steps in the pipeline
-#' unless `p` is a view, in which case the properties will only be set for
-#' the steps covered by the view.
-#' @param p A pipeflow pip or view
-#' @param tags Character vector of tags to set for each step.
-#' @param meta List of metadata to set for each step.
-#' @param lock Logical indicating if the steps should be locked. Locked
-#' steps are skipped during pipeline runs and none of their properties can be
-#' changed until they are unlocked again.
+#' Adds tags to existing tags for all steps in the pipeline unless `p` is a
+#' view, in which case tags are only added for steps covered by the view.
+#' Locked steps are skipped and not updated.
+#' @param p A pipeflow pip or view.
+#' @param tags Character vector of tags to add for each selected step.
+#' @return The updated pipeline or view.
 #' @export
-pip_set_props <- function(
-    p,
-    tags = character(),
-    meta = list(),
-    lock = NULL
-)
+pip_tag <- function(p, tags = character())
 {
     .assert_pip_or_view(p)
-
-    setTags <- !missing(tags)
-    setMeta <- !missing(meta)
-    setLock <- !missing(lock)
-
-    if (setTags && !is.character(tags)) {
+    if (!is.character(tags)) {
         stop("tags must be a character vector")
-    }
-    if (setMeta && !is.list(meta)) {
-        stop("meta must be a list")
-    }
-    if (setLock) {
-        if (!.is_single(lock, "logical") || is.na(lock)) {
-            stop("lock must be a single logical value")
-        }
     }
 
     isView <- .is_pipeflow_view(p)
@@ -1062,30 +1039,109 @@ pip_set_props <- function(
     dat <- x[["pipeline"]]
     rows <- if (isView) p[["rows"]] else seq_len(nrow(dat))
 
-    if (length(rows) == 0L || !(setTags || setMeta || setLock)) {
+    if (length(rows) == 0L || length(tags) == 0L) {
         return(invisible(p))
     }
 
     for (i in rows) {
-        isLocked <- isTRUE(dat[["locked"]][[i]])
-        isUnlocking <- setLock && identical(lock, FALSE)
-
-        # Locked steps are immutable unless this call explicitly unlocks them.
-        if (isLocked && !isUnlocking) {
+        if (isTRUE(dat[["locked"]][[i]])) {
             next
         }
 
-        if (setTags) {
-            data.table::set(dat, i = i, j = "tags", value = list(list(tags)))
-        }
-        if (setMeta) {
-            data.table::set(dat, i = i, j = "meta", value = list(list(meta)))
-        }
-        if (setLock) {
-            data.table::set(dat, i = i, j = "locked", value = lock)
-        }
+        oldTags <- dat[["tags"]][[i]]
+        newTags <- unique(c(oldTags, tags))
+        data.table::set(dat, i = i, j = "tags", value = list(list(newTags)))
     }
 
+    invisible(p)
+}
+
+
+#' Remove tags from steps
+#'
+#' Removes tags from existing tags for all steps in the pipeline unless `p`
+#' is a view, in which case tags are only removed for steps covered by the
+#' view. Locked steps are skipped and not updated.
+#' @param p A pipeflow pip or view.
+#' @param tags Character vector of tags to remove for each selected step.
+#' @return The updated pipeline or view.
+#' @export
+pip_untag <- function(p, tags = character())
+{
+    .assert_pip_or_view(p)
+    if (!is.character(tags)) {
+        stop("tags must be a character vector")
+    }
+
+    isView <- .is_pipeflow_view(p)
+    x <- if (isView) p[["pip"]] else p
+    dat <- x[["pipeline"]]
+    rows <- if (isView) p[["rows"]] else seq_len(nrow(dat))
+
+    if (length(rows) == 0L || length(tags) == 0L) {
+        return(invisible(p))
+    }
+
+    for (i in rows) {
+        if (isTRUE(dat[["locked"]][[i]])) {
+            next
+        }
+
+        oldTags <- dat[["tags"]][[i]]
+        newTags <- setdiff(oldTags, tags)
+        data.table::set(dat, i = i, j = "tags", value = list(list(newTags)))
+    }
+
+    invisible(p)
+}
+
+
+#' Lock selected steps
+#'
+#' Locks all selected steps in the pipeline unless `p` is a view, in which
+#' case only steps covered by the view are locked.
+#' @param p A pipeflow pip or view.
+#' @return The updated pipeline or view.
+#' @export
+pip_lock <- function(p)
+{
+    .assert_pip_or_view(p)
+
+    isView <- .is_pipeflow_view(p)
+    x <- if (isView) p[["pip"]] else p
+    dat <- x[["pipeline"]]
+    rows <- if (isView) p[["rows"]] else seq_len(nrow(dat))
+
+    if (length(rows) == 0L) {
+        return(invisible(p))
+    }
+
+    data.table::set(dat, i = rows, j = "locked", value = TRUE)
+    invisible(p)
+}
+
+
+#' Unlock selected steps
+#'
+#' Unlocks all selected steps in the pipeline unless `p` is a view, in which
+#' case only steps covered by the view are unlocked.
+#' @param p A pipeflow pip or view.
+#' @return The updated pipeline or view.
+#' @export
+pip_unlock <- function(p)
+{
+    .assert_pip_or_view(p)
+
+    isView <- .is_pipeflow_view(p)
+    x <- if (isView) p[["pip"]] else p
+    dat <- x[["pipeline"]]
+    rows <- if (isView) p[["rows"]] else seq_len(nrow(dat))
+
+    if (length(rows) == 0L) {
+        return(invisible(p))
+    }
+
+    data.table::set(dat, i = rows, j = "locked", value = FALSE)
     invisible(p)
 }
 
