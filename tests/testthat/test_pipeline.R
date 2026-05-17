@@ -520,11 +520,31 @@ describe("pip_remove",
 
     it("removes a leaf step", {
         p <- test_pip()
-        node <- .pip_steps_to_nodes(p, "g1")[[1]]
+        node <- as.integer(.pip_steps_to_nodes(p, "g1")[[1]])
+        beforeOrder <- dag_get_nodes_order(p[[".dag"]])
+        beforeReach <- .pip_filter_nodes(
+            p,
+            .pip_get_downstream_nodes(p, "f1")
+        )[["step"]]
+
+        expect_true(dag_has_node(p[[".dag"]], node))
+        expect_true(node %in% beforeOrder)
+        expect_setequal(beforeReach, c("f1", "f2", "f3", "f4"))
+
         pip_remove(p, "g1")
+
+        afterOrder <- dag_get_nodes_order(p[[".dag"]])
+        afterReach <- .pip_filter_nodes(
+            p,
+            .pip_get_downstream_nodes(p, "f1")
+        )[["step"]]
+
         expect_equal(p[["pipeline"]][["step"]], c("f1", "f2", "f3", "f4"))
         expect_true(is.na(.pip_steps_to_nodes(p, "g1")[[1]]))
-        expect_false(dag_has_node(p[[".dag"]], as.integer(node)))
+        expect_false(dag_has_node(p[[".dag"]], node))
+        expect_false(node %in% afterOrder)
+        expect_equal(length(afterOrder), length(beforeOrder) - 1L)
+        expect_setequal(afterReach, c("f1", "f2", "f3", "f4"))
     })
 
     it("errors when direct downstream dependencies exist", {
@@ -540,12 +560,41 @@ describe("pip_remove",
 
     it("removes step and all downstream dependencies recursively", {
         p <- test_pip()
+        steps <- c("f1", "f2", "f3", "f4", "g1")
+        nodeMap <- vapply(
+            steps,
+            FUN = \(s) as.integer(.pip_steps_to_nodes(p, s)[[1]]),
+            FUN.VALUE = integer(1)
+        )
+        beforeOrder <- dag_get_nodes_order(p[[".dag"]])
+
+        expect_true(all(vapply(
+            nodeMap,
+            FUN = \(nid) dag_has_node(p[[".dag"]], nid),
+            FUN.VALUE = logical(1)
+        )))
+
         out <- utils::capture.output(
             pip_remove(p, "f1", recursive = TRUE),
             type = "message"
         )
 
+        afterOrder <- dag_get_nodes_order(p[[".dag"]])
+        remainingNode <- as.integer(nodeMap[["g1"]])
+
         expect_equal(p[["pipeline"]][["step"]], "g1")
+        expect_equal(p[["pipeline"]][[".nodeId"]], remainingNode)
+        expect_equal(afterOrder, remainingNode)
+        expect_equal(length(afterOrder), length(beforeOrder) - 4L)
+        expect_true(dag_has_node(p[[".dag"]], remainingNode))
+        expect_false(dag_has_node(p[[".dag"]], as.integer(nodeMap[["f1"]])))
+        expect_false(dag_has_node(p[[".dag"]], as.integer(nodeMap[["f2"]])))
+        expect_false(dag_has_node(p[[".dag"]], as.integer(nodeMap[["f3"]])))
+        expect_false(dag_has_node(p[[".dag"]], as.integer(nodeMap[["f4"]])))
+        expect_equal(
+            .pip_filter_nodes(p, .pip_get_downstream_nodes(p, "g1"))[["step"]],
+            "g1"
+        )
         expect_equal(
             out,
             paste(
