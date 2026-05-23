@@ -177,6 +177,26 @@
     )
 }
 
+.pip_steps_to_rows <- function(x, steps)
+{
+    pip <- if (.is_pipeflow_view(x)) x[["pip"]] else x
+    dat <- pip[["pipeline"]]
+
+    if (anyNA(steps)) {
+        stop("step names must not contain NA", call. = FALSE)
+    }
+    if (!all(nzchar(steps))) {
+        stop("step names must be non-empty strings", call. = FALSE)
+    }
+
+    i <- match(steps, dat[["step"]])
+    if (anyNA(i)) {
+        unknown <- unique(steps[is.na(i)])
+        stop("Unknown step names: ", toString(unknown), call. = FALSE)
+    }
+    as.integer(i)
+}
+
 .pip_update_downstream <- function(x, steps, what, value)
 {
     nodes <- .pip_get_downstream_nodes(x, steps)
@@ -1151,7 +1171,7 @@ pip_unlock <- function(p)
 #' Create a filtered view of a pipeline (or view).
 #'
 #' @param x A pipeflow pipeline or view.
-#' @param i Row indices to keep.
+#' @param i Row indices or step names to keep.
 #' @param filter A named list of filters to apply. Each element can be a
 #' character vector specifying the values to keep for the corresponding
 #' property or, if `fixed` is FALSE, a regular expression. See examples
@@ -1166,40 +1186,34 @@ pip_unlock <- function(p)
 #' @export
 #' @examples
 #'
-#' # Character columns with fixed matching
+#' # Build one pipeline and reuse it across the examples below
 #' p <- pip_new()
-#' pip_add(p, "load", \(x = 1) x, group = "io")
-#' pip_add(p, "fit", \(x = ~-1) x + 1, group = "model")
-#' pip_add(p, "eval", \(x = ~fit) x, group = "model")
-#' pip_run_step(p, "fit")
+#' pip_add(p, "load_raw", \(x = 1) x,
+#'     group = "io", tags = c("core", "daily")
+#' )
+#' pip_add(p, "fit_model", \(x = 2) x + 1,
+#'     group = "model", tags = "model"
+#' )
+#' pip_add(p, "eval_model", \(x = ~fit_model) x,
+#'     group = "model", tags = c("daily", "report")
+#' )
+#'
+#' # Character columns with fixed matching
 #' pip_view(p, filter = list(group = "model", state = "done"))
 #'
 #' # Filter by tags
-#' p <- pip_new()
-#' pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
-#' pip_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
-#' pip_add(p, "s3", \(x = ~-1) x, tags = c("daily", "report"))
 #' pip_view(p, tags = "daily")
 #'
+#' # Filter by explicit row or step indices
+#' pip_view(p, i = c("load_raw", "fit_model"),
+#'     filter = list(group = "model")
+#' )
+#' pip_view(p, i = c(1L, 2L), filter = list(group = "model"))
+#'
 #' # Filter by regex
-#' p <- pip_new()
-#' pip_add(p, "load_raw", \(x = 1) x, group = "io")
-#' pip_add(p, "fit_model", \(x = ~-1) x + 1, group = "model")
-#' pip_add(p, "eval_model", \(x = ~fit_model) x, group = "model")
 #' pip_view(p, filter = list(step = "_model$"), fixed = FALSE)
 #'
-#' # Filter using explicit row indices
-#' p <- pip_new()
-#' pip_add(p, "a1", \(x = 1) x, group = "g1")
-#' pip_add(p, "a2", \(x = ~-1) x, group = "g2")
-#' pip_add(p, "a3", \(x = ~-1) x, group = "g2")
-#' pip_view(p, i = c(1L, 2L), filter = list(group = "g2"))
-#'
 #' # Chain filters by create view of view
-#' p <- pip_new()
-#' pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
-#' pip_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
-#' pip_add(p, "s3", \(x = ~-1) x, tags = c("daily", "report"))
 #' v1 <- pip_view(p, tags = "daily")
 #' print(v1)
 #' v2 <- pip_view(v1, tags = "report")
@@ -1214,13 +1228,11 @@ pip_view <- function(
 ) {
     .assert_pip_or_view(x)
     isView <- .is_pipeflow_view(x)
-
-    dat <- if (isView) {
-        .pip_reindex(x[["pip"]])
-        x[["pip"]][["pipeline"]]
-    } else {
-        x[["pipeline"]]
+    pip <- if (isView) x[["pip"]] else x
+    if (isView) {
+        .pip_reindex(pip)
     }
+    dat <- pip[["pipeline"]]
     keep <- rep(TRUE, nrow(dat))
 
     # Filters
@@ -1251,6 +1263,12 @@ pip_view <- function(
     # Rows
     rows <- which(keep)
     if (length(i) > 0) {
+        if (is.character(i)) {
+            i <- .pip_steps_to_rows(pip, i)
+        }
+        if (!is.numeric(i)) {
+            stop("i must be numeric row indices or character step names")
+        }
         if (any(i < 1L | i > nrow(dat))) {
             stop(
                 "Invalid row indices in 'i': ",
@@ -1264,7 +1282,6 @@ pip_view <- function(
         rows <- dat[[".rowId"]][rows]
     }
 
-    pip <- if (isView) x[["pip"]] else x
     name <- sprintf("%s view", x[["name"]])
     view <- list(pip = pip, name = name, rows = rows)
     class(view) <- "pipeflow_view"
@@ -1295,7 +1312,7 @@ length.pipeflow_view <- function(x)
 #' Extract part of a pipeflow pipeline
 #' @param i integer (row indices) or character vector (step names) of steps to
 #' select
-#' @param ... further arguments passed to \code{data.table::`[.data.table`}
+#' @param ... not used
 #' @rdname S3generics
 #' @export
 `[.pipeflow_pip` <- function(x, i, ...)
@@ -1314,18 +1331,7 @@ length.pipeflow_view <- function(x)
 
     # Verify and resolve row selection
     if (is.character(i)) {
-        if (anyNA(i)) {
-            stop("step names in 'i' must not contain NA")
-        }
-        if (!all(nzchar(i))) {
-            stop("step names in 'i' must be non-empty strings")
-        }
-        stepRows <- match(i, dat[["step"]])
-        if (anyNA(stepRows)) {
-            unknown <- unique(i[is.na(stepRows)])
-            stop("Unknown step names in 'i': ", toString(unknown))
-        }
-        rows <- sort(unique(as.integer(stepRows)))
+        rows <- sort(unique(.pip_steps_to_rows(x, i)))
     } else {
         if (anyNA(i)) {
             stop("row indices in 'i' must not contain NA")
@@ -1400,6 +1406,52 @@ length.pipeflow_view <- function(x)
 
     out
 }
+
+
+#' Extract elements of a pipeflow pipeline
+#' @param i integer (row indices) or character vector (step names) of steps to
+#' select
+#' @param j column names to select
+#' @rdname S3generics
+#' @export
+`[[.pipeflow_pip` <- function(x, i, j, ...)
+{
+    # Keep environment-style extraction for internal bindings, e.g.
+    # x[["pipeline"]], x[[".dag"]], x[[".steps_to_nodes"]].
+    if (missing(j)) {
+        if (missing(i)) {
+            stop("i must be provided")
+        }
+
+        # Internal bindings have priority over step names/column names.
+        # This guarantees p[["name"]] and p[["pipeline"]] behave like
+        # environment access even if steps with those names exist.
+        if (is.character(i) && length(i) == 1L && !is.na(i) &&
+            exists(i, where = x, inherits = FALSE)) {
+            return(get(i, envir = x, inherits = FALSE))
+        }
+
+        # Lightweight fallback: delegate single-argument extraction to the
+        # pipeline data.table column extractor.
+        return(x[["pipeline"]][[i]])
+    }
+
+    col <- x[["pipeline"]][[j]]
+    if (missing(i)) {
+        return(col)
+    }
+
+    if (is.character(i)) {
+        i <- .pip_steps_to_rows(x, i)
+    }
+
+    res <- col[i]
+    if (length(i) == 1) {
+        res <- res[[1]]
+    }
+    res
+}
+
 
 #' Print a pipeflow pipeline
 #'

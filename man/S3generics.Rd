@@ -4,6 +4,7 @@
 \alias{length.pipeflow_pip}
 \alias{length.pipeflow_view}
 \alias{[.pipeflow_pip}
+\alias{[[.pipeflow_pip}
 \title{Length of a pipeflow pipeline or view}
 \usage{
 \method{length}{pipeflow_pip}(x)
@@ -11,6 +12,8 @@
 \method{length}{pipeflow_view}(x)
 
 \method{[}{pipeflow_pip}(x, i, ...)
+
+\method{[[}{pipeflow_pip}(x, i, j, ...)
 }
 \arguments{
 \item{x}{A pipeflow pipeline or view}
@@ -18,10 +21,14 @@
 \item{i}{integer (row indices) or character vector (step names) of steps to
 select}
 
-\item{...}{further arguments passed to \code{data.table::`[.data.table`}}
+\item{...}{not used}
+
+\item{j}{column names to select}
 }
 \description{
 Length of a pipeflow pipeline or view
 
 Extract part of a pipeflow pipeline
+
+Extract elements of a pipeflow pipeline
 }

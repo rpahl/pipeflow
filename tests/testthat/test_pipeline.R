@@ -51,6 +51,58 @@ describe(".pip_update_downstream",
 })
 
 
+describe(".pip_steps_to_rows",
+{
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x) |>
+            pip_add("s3", \(x = ~s2) x)
+    }
+
+    it("maps step names to row positions for pipelines and views",
+    {
+        p <- test_pip()
+        expect_equal(.pip_steps_to_rows(p, c("s3", "s1")), c(3L, 1L))
+
+        v <- pip_view(p, filter = list(step = c("s2", "s3")))
+        expect_equal(.pip_steps_to_rows(v, c("s1", "s3")), c(1L, 3L))
+    })
+
+    it("signals invalid step selectors with default messages",
+    {
+        p <- test_pip()
+
+        expect_error(
+            .pip_steps_to_rows(p, c("s1", "")),
+            "step names must be non-empty strings"
+        )
+        expect_error(
+            .pip_steps_to_rows(p, c("s1", NA_character_)),
+            "step names must not contain NA"
+        )
+        expect_error(
+            .pip_steps_to_rows(p, c("s1", "unknown")),
+            "Unknown step names: unknown"
+        )
+    })
+
+    it("uses simple error messages consistently",
+    {
+        p <- test_pip()
+
+        expect_error(
+            .pip_steps_to_rows(p, c("s1", "")),
+            "step names must be non-empty strings"
+        )
+        expect_error(
+            .pip_steps_to_rows(p, c("s1", "unknown")),
+            "Unknown step names: unknown"
+        )
+    })
+})
+
+
 # ---------------------------
 # Exported pipeline functions
 # ---------------------------
@@ -152,23 +204,14 @@ describe("pip_add",
         expect_equal(p$pipeline[["params"]][[1]]$.self, p)
     })
 
-    it("supports functions with wildcard arguments",
+    it("allows functions with wildcard arguments",
     {
-        skip("move to test for pip_run_step")
-        foo <-\(x, ...) {
-        }
-        v <- c(1, 2, NA, 3, 4)
-        pip <- Pipeline$new("pipe", data = v)
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1, ...) x)
 
-        fargs <- list(x = ~data, na.rm = TRUE)
-        pip$add("mean", fun = foo, fargs = fargs)
-
-        out <- pip$run()$collect_out()
-        expect_equal(out[["mean"]], mean(v, na.rm = TRUE))
-
-        pip$set_params_at_step("mean", list(na.rm = FALSE))
-        out <- pip$run()$collect_out()
-        expect_equal(out[["mean"]], as.numeric(NA))
+        pip_set_params(p, list(x = 2))
+        pip_run(p, lgr = NULL)
+        expect_equal(p$pipeline[["out"]][[1]] , 2)
     })
 
     test_pip <- function() {
@@ -1007,7 +1050,7 @@ describe("pip_set_params",
     it("warns for unused parameters",
     {
         p <- pip_new()
-        pip_add(p, "s1", \(x = 1) x)
+        pip_add(p, "s1", \(x = 1, ...) x)
 
         expect_warning(
             pip_set_params(p, params = list(foo = 1)),
@@ -1268,6 +1311,23 @@ describe("pip_view",
         expect_equal(v[["rows"]], 2L)
     })
 
+    it("can select rows via step names in i",
+    {
+        p <- pip_new()
+        pip_add(p, "a1", \(x = 1) x, group = "g1")
+        pip_add(p, "a2", \(x = ~-1) x, group = "g2")
+        pip_add(p, "a3", \(x = ~-1) x, group = "g2")
+
+        v <- pip_view(p, i = c("a1", "a3"))
+        expect_equal(v[["rows"]], c(1L, 3L))
+
+        v <- pip_view(p,
+            i = c("a1", "a2"),
+            filter = list(group = "g2")
+        )
+        expect_equal(v[["rows"]], 2L)
+    })
+
     it("can be called on views to further subset rows",
     {
         p <- pip_new("test_pipeline")
@@ -1307,6 +1367,25 @@ describe("pip_view",
         expect_error(
             pip_view(p, i = c(2L)),
             "Invalid row indices in 'i'"
+        )
+    })
+
+    it("signals invalid step names in i",
+    {
+        p <- pip_new()
+        pip_add(p, "s1", \(x = 1) x)
+
+        expect_error(
+            pip_view(p, i = c("s1", "")),
+            "step names must be non-empty strings"
+        )
+        expect_error(
+            pip_view(p, i = c("s1", NA_character_)),
+            "step names must not contain NA"
+        )
+        expect_error(
+            pip_view(p, i = "unknown"),
+            "Unknown step names: unknown"
         )
     })
 })
@@ -1396,7 +1475,7 @@ describe("extract operator [",
 
         expect_error(p[c("a1", "")], "must be non-empty strings")
         expect_error(p[c("a1", NA)], "must not contain NA")
-        expect_error(p[c("a1", "unknown")], "Unknown step names in 'i'")
+        expect_error(p[c("a1", "unknown")], "Unknown step names")
     })
 
     it("returns an independent copy",
@@ -1442,6 +1521,108 @@ describe("extract operator [",
             .pip_get_downstream_nodes(p, "a1")
         )[["step"]]
         expect_setequal(original_steps, c("a1", "a2", "a3"))
+    })
+})
+
+
+describe("extract operator [[",
+{
+    test_pip <- function() {
+        pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x, tags = "init") |>
+            pip_add("s2", \(x = ~s1) x + 1)
+    }
+
+    it("keeps environment-style extraction for internal bindings",
+    {
+        p <- test_pip()
+        expect_equal(p[["name"]], "pipe")
+        expect_true(data.table::is.data.table(p[["pipeline"]]))
+        expect_false(is.null(p[[".dag"]]))
+    })
+
+    it("extracts full columns when j is missing",
+    {
+        p <- test_pip()
+        expect_equal(p[["step"]], c("s1", "s2"))
+        expect_equal(p[[1]], c("s1", "s2"))
+        expect_null(p[["unknown"]])
+    })
+
+    it("extracts by row selector and column selector",
+    {
+        p <- test_pip()
+
+        expect_equal(p[[2L, "step"]], "s2")
+        expect_equal(p[["s1", "state"]], "new")
+        expect_equal(p[[c(1L, 2L), "state"]], c("new", "new"))
+        expect_equal(p[[c("s1", "s2"), "step"]], c("s1", "s2"))
+    })
+
+    it("extracts list-columns for single and multiple rows consistently",
+    {
+        p <- test_pip() |> pip_run(lgr = NULL)
+
+        # Single-row extraction returns the row value from the list-column.
+        expect_equal(p[[1L, "tags"]], "init")
+        expect_equal(p[[2L, "tags"]], character(0))
+        expect_equal(p[[1L, "params"]], list(x = 1))
+        expect_named(p[[2L, "params"]], "x")
+        expect_equal(p[[1L, "depends"]], character(0))
+        expect_equal(p[[2L, "depends"]], c(x = "s1"))
+        expect_equal(p[[1L, "out"]], 1)
+        expect_equal(p[[2L, "out"]], 2)
+
+        # Multi-row extraction returns a list of row values.
+        tags <- p[[c(1L, 2L), "tags"]]
+        expect_true(is.list(tags))
+        expect_equal(tags[[1]], "init")
+        expect_equal(tags[[2]], character(0))
+
+        depends <- p[[c("s1", "s2"), "depends"]]
+        expect_true(is.list(depends))
+        expect_equal(depends[[1]], character(0))
+        expect_equal(depends[[2]], c(x = "s1"))
+
+        outs <- p[[c("s1", "s2"), "out"]]
+        expect_true(is.list(outs))
+        expect_equal(outs[[1]], 1)
+        expect_equal(outs[[2]], 2)
+    })
+
+    it(paste(
+        "can distinguish between steps called 'name' and 'pipeline'",
+        "and the internal 'name' and 'pipeline' elements"),
+    {
+        p <- pip_new("pipe") |>
+            pip_add("name", \(x = "hello") x) |>
+            pip_add("pipeline", \(x = ~name, y = "world") paste(x, y))
+
+        expect_equal(p[["name"]], "pipe")
+        expect_equal(p[["pipeline"]], p$pipeline)
+
+        expect_equal(p[["name", "params"]], p[[1, "params"]])
+        expect_equal(p[["pipeline", "params"]], p[[2, "params"]])
+    })
+
+    it("signals invalid row and column selectors",
+    {
+        p <- test_pip()
+
+        expect_equal(p[[c(1, NA), "step"]], c("s1", NA_character_))
+        expect_error(
+            p[[c("s1", ""), "step"]],
+            "step names must be non-empty strings"
+        )
+        expect_error(
+            p[[c("s1", "unknown"), "step"]],
+            "Unknown step names"
+        )
+        expect_null(p[[1, "unknown"]])
+        expect_error(
+            p[[1, c("step", "state")]],
+            "subscript out of bounds"
+        )
     })
 })
 
