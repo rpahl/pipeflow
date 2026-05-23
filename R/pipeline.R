@@ -904,6 +904,8 @@ pip_run <- function(
     pip <- if (isView) x[["pip"]] else x
     dat <- pip[["pipeline"]]
     rowsToRun <- if (isView) x[["rows"]] else seq_len(nrow(dat))
+    rowsRequested <- unique(as.integer(rowsToRun))
+    upstreamRows <- integer(0)
     if (isView) {
         # Add rows of upstream dependencies not yet covered by the view.
         deps <- unique(unlist(dat[["depends"]][rowsToRun]))
@@ -911,6 +913,8 @@ pip_run <- function(
             depRows <- which(dat[["step"]] %in% deps)
             rowsToRun <- sort(unique(c(rowsToRun, depRows)))
         }
+        rowsToRun <- as.integer(rowsToRun)
+        upstreamRows <- setdiff(rowsToRun, rowsRequested)
     }
     processedSteps <- character()
     on.exit({
@@ -934,7 +938,15 @@ pip_run <- function(
         if (!is.null(progress)) {
             progress(value = i, detail = step)
         }
-        msg <- sprintf("Step %i/%i %s", i, length(rowsToRun), step)
+        marker <- ""
+        if (isView) {
+            marker <- if (row %in% rowsRequested) "[view]" else "[upstream]"
+        }
+        msg <- if (isView) {
+            sprintf("Step %i/%i %s %s", i, length(rowsToRun), marker, step)
+        } else {
+            sprintf("Step %i/%i %s", i, length(rowsToRun), step)
+        }
 
         if (identical(dat[["state"]][[row]], "done") && !force) {
             log_info(sprintf("%s - skipping done step", msg))

@@ -998,6 +998,23 @@ describe("pip_run",
                 c("done", "outdated", "outdated", "new")
             )
         })
+
+        it("adds [view]/[upstream] markers to view-run logs",
+        {
+            p <- test_pip()
+            v <- pip_view(p, filter = list(group = "model"))
+
+            logs <- character(0)
+            lgr <- function(level, msg) {
+                logs <<- c(logs, paste(level, msg))
+            }
+
+            pip_run(v, lgr = lgr)
+
+            expect_true(any(grepl("\\[upstream\\] load_raw", logs)))
+            expect_true(any(grepl("\\[view\\] fit_model", logs)))
+            expect_true(any(grepl("\\[view\\] eval_model", logs)))
+        })
     })
 })
 
