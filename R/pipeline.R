@@ -585,6 +585,100 @@ pip_get_params <- function(x)
 }
 
 
+#' Export pipeline graph
+#'
+#' Export a graph representation of a pipeline or view that can be passed to
+#' [visNetwork::visNetwork()].
+#'
+#' @param x A pipeflow pip or view.
+#' @param include_upstream Logical. Only relevant for views. If `TRUE`, add
+#' all upstream dependencies of selected steps.
+#'
+#' @return A named list with two `data.frame`s: `nodes` and `edges`.
+#' @export
+#' @examples
+#' p <- pip_new()
+#' pip_add(p, "load", \(x = 1) x, group = "io")
+#' pip_add(p, "fit", \(x = ~load) x + 1, group = "model")
+#'
+#' graph <- pip_get_graph(p)
+#' graph$nodes
+#' graph$edges
+#'
+#' if (require("visNetwork", quietly = TRUE)) {
+#'     do.call(what = visNetwork::visNetwork, args = graph)
+#' }
+pip_get_graph <- function(x, include_upstream = FALSE)
+{
+    .assert_pip_or_view(x)
+    if (!.is_single(include_upstream, "logical")) {
+        stop("include_upstream must be a single logical value")
+    }
+
+    isView <- .is_pipeflow_view(x)
+    pip <- if (isView) x[["pip"]] else x
+    dat <- pip[["pipeline"]]
+    dag <- pip[[".dag"]]
+
+    rows <- if (isView) as.integer(x[["rows"]]) else seq_len(nrow(dat))
+    rows <- sort(unique(rows))
+
+    if (isView && include_upstream && length(rows) > 0L) {
+        startNodes <- dat[[".nodeId"]][rows]
+        keepNodes <- dag_get_reachable_nodes_up(dag,
+            as.integer(unique(startNodes))
+        )
+        rows <- which(dat[[".nodeId"]] %in% keepNodes)
+        rows <- sort(unique(as.integer(rows)))
+    }
+
+    sub <- dat[rows]
+
+    # Nodes
+    colors <- vapply(sub[["state"]],
+        FUN = \(st) .step_states[[st]][["color"]],
+        FUN.VALUE = character(1)
+    )
+
+    ids <- as.integer(sub[[".nodeId"]])
+    nodes <- data.frame(
+        id = ids,
+        label = sub[["step"]],
+        group = sub[["group"]],
+        shape = rep("box", nrow(sub)),
+        color = colors
+    )
+
+    # Edges
+    reachable <- sapply(ids,
+        FUN = function(id) {
+            dag_get_reachable_nodes_down(dp = dag, start = id) |>
+                setdiff(id) # Exclude self reference
+        }
+    ) |>
+        stats::setNames(ids) |>
+        Filter(f = \(x) length(x) > 0L)
+
+    edges <- if (length(reachable) == 0L) {
+        data.frame(
+            from = integer(0),
+            to = integer(0),
+            arrows = character(0),
+            stringsAsFactors = FALSE
+        )
+    } else {
+        lapply(names(reachable), FUN = \(fromId) {
+            toIds <- reachable[[fromId]]
+            data.frame(from = as.integer(fromId), to = as.integer(toIds))
+        }) |>
+            do.call(what = rbind) |>
+            cbind("arrows" = "to")
+    }
+
+    list(nodes = nodes, edges = edges)
+}
+
+
 #' Check if a step exists in the pipeline
 #'
 #' @param x A pipeflow pip

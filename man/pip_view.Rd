@@ -16,7 +16,7 @@ pip_view(
 \arguments{
 \item{x}{A pipeflow pipeline or view.}
 
-\item{i}{Row indices to keep.}
+\item{i}{Row indices or step names to keep.}
 
 \item{filter}{A named list of filters to apply. Each element can be a
 character vector specifying the values to keep for the corresponding
@@ -39,40 +39,34 @@ Create a filtered view of a pipeline (or view).
 }
 \examples{
 
-# Character columns with fixed matching
+# Build one pipeline and reuse it across the examples below
 p <- pip_new()
-pip_add(p, "load", \(x = 1) x, group = "io")
-pip_add(p, "fit", \(x = ~-1) x + 1, group = "model")
-pip_add(p, "eval", \(x = ~fit) x, group = "model")
-pip_run_step(p, "fit")
+pip_add(p, "load_raw", \(x = 1) x,
+    group = "io", tags = c("core", "daily")
+)
+pip_add(p, "fit_model", \(x = 2) x + 1,
+    group = "model", tags = "model"
+)
+pip_add(p, "eval_model", \(x = ~fit_model) x,
+    group = "model", tags = c("daily", "report")
+)
+
+# Character columns with fixed matching
 pip_view(p, filter = list(group = "model", state = "done"))
 
 # Filter by tags
-p <- pip_new()
-pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
-pip_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
-pip_add(p, "s3", \(x = ~-1) x, tags = c("daily", "report"))
 pip_view(p, tags = "daily")
 
+# Filter by explicit row or step indices
+pip_view(p, i = c("load_raw", "fit_model"),
+    filter = list(group = "model")
+)
+pip_view(p, i = c(1L, 2L), filter = list(group = "model"))
+
 # Filter by regex
-p <- pip_new()
-pip_add(p, "load_raw", \(x = 1) x, group = "io")
-pip_add(p, "fit_model", \(x = ~-1) x + 1, group = "model")
-pip_add(p, "eval_model", \(x = ~fit_model) x, group = "model")
 pip_view(p, filter = list(step = "_model$"), fixed = FALSE)
 
-# Filter using explicit row indices
-p <- pip_new()
-pip_add(p, "a1", \(x = 1) x, group = "g1")
-pip_add(p, "a2", \(x = ~-1) x, group = "g2")
-pip_add(p, "a3", \(x = ~-1) x, group = "g2")
-pip_view(p, i = c(1L, 2L), filter = list(group = "g2"))
-
 # Chain filters by create view of view
-p <- pip_new()
-pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
-pip_add(p, "s2", \(x = ~-1) x + 1, tags = "model")
-pip_add(p, "s3", \(x = ~-1) x, tags = c("daily", "report"))
 v1 <- pip_view(p, tags = "daily")
 print(v1)
 v2 <- pip_view(v1, tags = "report")

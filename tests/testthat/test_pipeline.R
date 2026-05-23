@@ -916,6 +916,81 @@ describe("pip_get_params",
 })
 
 
+describe("pip_get_graph",
+{
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(x = 1) x, group = "io") |>
+            pip_add("s2", \(x = ~s1) x + 1, group = "model") |>
+            pip_add("s3", \(x = ~s1, y = ~s2) x + y, group = "model")
+    }
+
+    map_edge_labels <- function(graph) {
+        idToLabel <- stats::setNames(
+            graph[["nodes"]][["label"]],
+            as.character(graph[["nodes"]][["id"]])
+        )
+        paste0(
+            idToLabel[as.character(graph[["edges"]][["from"]])],
+            "->",
+            idToLabel[as.character(graph[["edges"]][["to"]])]
+        )
+    }
+
+    it("returns visNetwork-compatible nodes and edges for pipelines",
+    {
+        p <- test_pip()
+        p[["pipeline"]][["state"]] <- c("new", "done", "failed")
+
+        g <- pip_get_graph(p)
+
+        expect_named(g, c("nodes", "edges"))
+        expect_s3_class(g[["nodes"]], "data.frame")
+        expect_s3_class(g[["edges"]], "data.frame")
+        expect_equal(
+            names(g[["nodes"]]),
+            c("id", "label", "group", "shape", "color")
+        )
+        expect_equal(names(g[["edges"]]), c("from", "to", "arrows"))
+        expect_true(all(g[["nodes"]][["shape"]] == "box"))
+        expect_true(all(g[["edges"]][["arrows"]] == "to"))
+
+        expectedColors <- vapply(
+            p[["pipeline"]][["state"]],
+            FUN = \(st) .step_states[[st]][["color"]],
+            FUN.VALUE = character(1)
+        )
+        expect_equal(g[["nodes"]][["color"]], unname(expectedColors))
+        expect_setequal(map_edge_labels(g), c("s1->s2", "s1->s3", "s2->s3"))
+    })
+
+    it("supports view-only graph or graph with upstream closure",
+    {
+        p <- test_pip()
+        v <- pip_view(p, i = "s3")
+
+        gView <- pip_get_graph(v, include_upstream = FALSE)
+        expect_equal(gView[["nodes"]][["label"]], "s3")
+        expect_equal(nrow(gView[["edges"]]), 0L)
+
+        gUp <- pip_get_graph(v, include_upstream = TRUE)
+        expect_setequal(gUp[["nodes"]][["label"]], c("s1", "s2", "s3"))
+        expect_setequal(map_edge_labels(gUp), c("s1->s2", "s1->s3", "s2->s3"))
+    })
+
+    it("signals invalid inputs",
+    {
+        p <- test_pip()
+
+        expect_error(pip_get_graph(1), "x must be a pipeflow pip or view")
+        expect_error(
+            pip_get_graph(p, include_upstream = c(TRUE, FALSE)),
+            "include_upstream must be a single logical value"
+        )
+    })
+})
+
+
 describe("pip_has_step",
 {
     it("can be checked if pipeline has a step",
