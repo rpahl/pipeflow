@@ -1112,6 +1112,145 @@ describe("pip_run",
             expect_true(any(grepl("\\[view\\] eval_model", logs)))
         })
     })
+
+    describe("partition-aware execution",
+    {
+        test_pip_partitioned <- function() {
+            pip_new() |>
+                pip_add(
+                    "load",
+                    \(x = data.frame(
+                        grp = c("a", "a", "b", "b"),
+                        value = c(1, 3, 10, 20)
+                    )) x
+                ) |>
+                pip_add(
+                    "split",
+                    \(x = ~load) split(x, f = x$grp),
+                    exec = "split"
+                ) |>
+                pip_add(
+                    "mean_by_grp",
+                    \(x = ~split) mean(x$value)
+                ) |>
+                pip_add(
+                    "plus_one",
+                    \(x = ~mean_by_grp) x + 1
+                ) |>
+                pip_add(
+                    "overall",
+                    \(x = ~plus_one) mean(unlist(x)),
+                    exec = "reduce"
+                )
+        }
+
+        it("maps downstream calls over split output in auto mode",
+        {
+            p <- test_pip_partitioned()
+            pip_run(p, lgr = NULL)
+
+            splitOut <- p$pipeline$out[[2]]
+            meanOut <- p$pipeline$out[[3]]
+            plusOneOut <- p$pipeline$out[[4]]
+
+            expect_true(inherits(splitOut, "pipeflow_partitioned"))
+            expect_true(inherits(meanOut, "pipeflow_partitioned"))
+            expect_true(inherits(plusOneOut, "pipeflow_partitioned"))
+
+            expect_equal(meanOut[["a"]], 2)
+            expect_equal(meanOut[["b"]], 15)
+            expect_equal(plusOneOut[["a"]], 3)
+            expect_equal(plusOneOut[["b"]], 16)
+            expect_equal(p$pipeline$out[[5]], 9.5)
+        })
+
+        it("errors when reduce mode receives only non-partitioned inputs",
+        {
+            p <- pip_new() |>
+                pip_add("load", \(x = 1) x) |>
+                pip_add("sum", \(x = ~load) x + 1, exec = "reduce")
+
+            expect_error(
+                pip_run(p, lgr = NULL),
+                "reduce mode requires at least one partitioned input"
+            )
+        })
+
+        it("maps with two partitioned and one scalar input",
+        {
+            p <- pip_new() |>
+                pip_add(
+                    "left_raw",
+                    \(x = data.frame(
+                        grp = c("a", "a", "b", "b"),
+                        value = c(1, 3, 10, 20)
+                    )) x
+                ) |>
+                pip_add(
+                    "right_raw",
+                    \(x = data.frame(
+                        grp = c("a", "a", "b", "b"),
+                        value = c(2, 4, 6, 8)
+                    )) x
+                ) |>
+                pip_add(
+                    "left_split",
+                    \(x = ~left_raw) split(x, f = x$grp),
+                    exec = "split"
+                ) |>
+                pip_add(
+                    "right_split",
+                    \(x = ~right_raw) split(x, f = x$grp),
+                    exec = "split"
+                ) |>
+                pip_add("offset", \(x = 100) x) |>
+                pip_add(
+                    "combine",
+                    \(a = ~left_split, b = ~right_split, c = ~offset) {
+                        mean(a$value) + mean(b$value) + c
+                    }
+                )
+
+            pip_run(p, lgr = NULL)
+
+            out <- p$pipeline$out[[6]]
+            expect_true(inherits(out, "pipeflow_partitioned"))
+            expect_equal(out[["a"]], 105)
+            expect_equal(out[["b"]], 122)
+        })
+
+        it("includes failing partition key in mapped errors",
+        {
+            p <- pip_new() |>
+                pip_add(
+                    "load",
+                    \(x = data.frame(
+                        grp = c("a", "a", "b", "b"),
+                        value = c(1, 2, 3, 4)
+                    )) x
+                ) |>
+                pip_add(
+                    "split",
+                    \(x = ~load) split(x, f = x$grp),
+                    exec = "split"
+                ) |>
+                pip_add(
+                    "fragile",
+                    \(x = ~split) {
+                        key <- unique(x$grp)
+                        if (identical(key, "b")) {
+                            stop("boom")
+                        }
+                        sum(x$value)
+                    }
+                )
+
+            expect_error(
+                pip_run(p, lgr = NULL),
+                "key 'b': boom"
+            )
+        })
+    })
 })
 
 
@@ -1777,4 +1916,3 @@ describe("benchmarking",
     system.time(b <- chmatch(x,y))             # 16s
     identical(a,b)
 })
-

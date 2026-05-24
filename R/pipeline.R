@@ -1,6 +1,17 @@
 # -------
 # Helpers
 # -------
+.assert_exec_mode <- function(exec)
+{
+    if (!.is_single(exec, "character") || is.na(exec)) {
+        stop("exec must be a single string")
+    }
+    allowed <- c("auto", "split", "reduce", "plain")
+    if (!(exec %in% allowed)) {
+        stop("exec must be one of: ", toString(allowed))
+    }
+}
+
 .assert_logger <- function(lgr)
 {
     if (!is.function(lgr)) {
@@ -18,9 +29,33 @@
     }
 }
 
+.as_pipeflow_partitioned <- function(x)
+{
+    if (!is.list(x)) {
+        stop("split mode requires step output to be a list")
+    }
+
+    nm <- names(x)
+    if (is.null(nm) || anyNA(nm) || any(!nzchar(nm))) {
+        stop("split output must be a named list with non-empty keys")
+    }
+
+    if (anyDuplicated(nm) > 0L) {
+        stop("split output keys must be unique")
+    }
+
+    class(x) <- c(class(x), "pipeflow_partitioned")
+    x
+}
+
 .is_pipeflow_view <- function(x)
 {
     inherits(x, "pipeflow_view")
+}
+
+.is_pipeflow_partitioned <- function(x)
+{
+    inherits(x, "pipeflow_partitioned")
 }
 
 .is_pipeflow_pip <- function(x)
@@ -28,7 +63,65 @@
     inherits(x, "pipeflow_pip")
 }
 
-.pip_append <- function(x, step, fun, group, tags)
+.partition_keys <- function(x)
+{
+    if (!.is_pipeflow_partitioned(x)) {
+        stop("x must be a pipeflow_partitioned object")
+    }
+    names(x)
+}
+
+.pip_execute_step_call <- function(fun, args, exec)
+{
+    partIdx <- which(vapply(args, FUN = .is_pipeflow_partitioned,
+        FUN.VALUE = logical(1)))
+
+    if (identical(exec, "split")) {
+        out <- do.call(fun, args = args)
+        return(.as_pipeflow_partitioned(out))
+    }
+
+    if (identical(exec, "plain") && length(partIdx) > 0L) {
+        stop("plain mode does not accept partitioned inputs")
+    }
+
+    if (identical(exec, "reduce") && length(partIdx) == 0L) {
+        stop("reduce mode requires at least one partitioned input")
+    }
+
+    if (length(partIdx) == 0L || identical(exec, "plain") ||
+        identical(exec, "reduce")) {
+        return(do.call(fun, args = args))
+    }
+
+    # Auto-map over partition keys.
+    keys <- .partition_keys(args[[partIdx[[1]]]])
+    for (k in partIdx[-1]) {
+        kk <- .partition_keys(args[[k]])
+        if (!identical(kk, keys)) {
+            stop("partitioned arguments must share identical keys")
+        }
+    }
+
+    out <- setNames(vector(mode = "list", length = length(keys)), keys)
+    for (key in keys) {
+        keyArgs <- args
+        for (idx in partIdx) {
+            keyArgs[[idx]] <- args[[idx]][[key]]
+        }
+
+        out[[key]] <- tryCatch(
+            expr = do.call(fun, args = keyArgs),
+            error = function(e) {
+                stop_no_call("key '", key, "': ", e$message)
+            }
+        )
+    }
+
+    .as_pipeflow_partitioned(out)
+}
+
+.pip_append <- function(x, step, fun, group, tags, exec = "auto")
 {
     # Determine and verify potential links to existing steps
     params <- .extract_fun_params(fun)
@@ -65,6 +158,7 @@
         params = lapply(params, eval),
         depends = depends,
         tags = tags,
+        execMode = exec,
         .nodeId = .nodeId
     )
 
@@ -130,6 +224,7 @@
     fun <- dat[["fun"]][[i]]
     args <- dat[["params"]][[i]]
     depends <- dat[["depends"]][[i]]
+    execMode <- dat[["execMode"]][[i]]
 
     # If calculation depends on results of earlier steps, get them from
     # respective referenced output slots of the pipeline.
@@ -141,7 +236,7 @@
     step <- dat[["step"]][[i]]
 
     out <- withCallingHandlers(
-        do.call(fun, args = args),
+        .pip_execute_step_call(fun = fun, args = args, exec = execMode),
         error = function(e) {
             data.table::set(dat,
                 i = i, j = "state",
@@ -253,13 +348,24 @@ pip_new <- function(name = "pipe")
 #' @param after Optional position after which the new step should be inserted
 #' (defaults to last position). Can be a step name or an integer index. If
 #' set to 0, the new step will be inserted at the beginning of the pipeline.
+#' @param exec Execution mode for this step. One of "auto", "split",
+#' "reduce" or "plain".
+#' Using execution mode `exec = split`, the output of the step is marked as
+#' partitioned output. In this mode, if the step is referenced by downstream
+#' steps in mode `exec = auto` (the default), the output is automatically
+#' mapped partition-wise during step execution. The `reduce` mode expects
+#' partitioned input and passes it through without mapping, while `plain`
+#' mode only accepts non-partitioned input and always intends to execute
+#' a single call.
+#'
 #' @return The updated pipeflow pipeline object.
 #' @export
 pip_add <- function(
     x, step, fun,
     group = step,
     tags = character(0),
-    after = length(x)
+    after = length(x),
+    exec = "auto"
 )
 {
     if (!.is_pipeflow_pip(x)) {
@@ -274,6 +380,7 @@ pip_add <- function(
     if (!.is_single(group, "character") || is.na(group) || !nzchar(group)) {
         stop("group must be a non-empty valid string")
     }
+    .assert_exec_mode(exec)
 
     n <- length(x)
 
@@ -301,8 +408,8 @@ pip_add <- function(
     }
 
     if (pos == length(x)) {
-        return(.pip_append(
-            x, step = step, fun = fun, group = group, tags = tags
+        return(.pip_append(x,
+            step = step, fun = fun, group = group, tags = tags, exec = exec
         ))
     }
 
@@ -311,7 +418,9 @@ pip_add <- function(
     n <- nrow(dat)
 
     out <- if (pos > 0L) src[seq_len(pos)] else pip_new(name = src[["name"]])
-    pip_add(out, step = step, fun = fun, group = group, tags = tags)
+    pip_add(out,
+        step = step, fun = fun, group = group, tags = tags, exec = exec
+    )
 
     if (pos < n) {
         tailRows <- seq.int(pos + 1L, n)
@@ -379,6 +488,7 @@ pip_add_from <- function(x, step, y)
     fun <- y[["pipeline"]][["fun"]][[iStep]]
     group <- y[["pipeline"]][["group"]][[iStep]]
     tags <- y[["pipeline"]][["tags"]][[iStep]]
+    execMode <- y[["pipeline"]][["execMode"]][[iStep]]
     params <- y[["pipeline"]][["params"]][[iStep]]
     depends <- y[["pipeline"]][["depends"]][[iStep]]
     indeps <- y[["pipeline"]][[".indeps"]][[iStep]]
@@ -402,7 +512,14 @@ pip_add_from <- function(x, step, y)
     }
 
     formals(f) <- fml
-    pip_add(x, step = step, fun = f, group = group, tags = tags)
+    pip_add(
+        x,
+        step = step,
+        fun = f,
+        group = group,
+        tags = tags,
+        exec = execMode
+    )
 }
 
 #' Bind two pipelines together

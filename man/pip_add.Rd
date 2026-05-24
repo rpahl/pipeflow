@@ -4,7 +4,15 @@
 \alias{pip_add}
 \title{Add new step to the pipeline}
 \usage{
-pip_add(x, step, fun, group = step, tags = character(0), after = length(x))
+pip_add(
+  x,
+  step,
+  fun,
+  group = step,
+  tags = character(0),
+  after = length(x),
+  exec = "auto"
+)
 }
 \arguments{
 \item{x}{A pipeflow pipeline object.}
@@ -21,6 +29,16 @@ Can also be set later (see TODO: pip_set_tags or something similar).}
 \item{after}{Optional position after which the new step should be inserted
 (defaults to last position). Can be a step name or an integer index. If
 set to 0, the new step will be inserted at the beginning of the pipeline.}
+
+\item{exec}{Execution mode for this step. One of "auto", "split",
+"reduce" or "plain".
+Using execution mode \code{exec = split}, the output of the step is marked as
+partitioned output. In this mode, if the step is referenced by downstream
+steps in mode \code{exec = auto} (the default), the output is automatically
+mapped partition-wise during step execution. The \code{reduce} mode expects
+partitioned input and passes it through without mapping, while \code{plain}
+mode only accepts non-partitioned input and always intends to execute
+a single call.}
 }
 \value{
 The updated pipeflow pipeline object.
