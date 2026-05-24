@@ -109,10 +109,31 @@ describe(".pip_steps_to_rows",
 
 describe("pip_new",
 {
-    it("creates a new pipeline",
+    it("creates a pipeflow pipeline with expected base structure",
     {
         p <- pip_new()
+
         expect_true(.is_pipeflow_pip(p))
+        expect_true(is.environment(p))
+        expect_equal(p[["name"]], "pipe")
+        expect_true(data.table::is.data.table(p[["pipeline"]]))
+        expect_equal(nrow(p[["pipeline"]]), 0L)
+        expect_true(is.environment(p[[".steps_to_nodes"]]))
+        expect_equal(ls(envir = p[[".steps_to_nodes"]]), character(0))
+        expect_equal(length(dag_get_nodes_order(p[[".dag"]])), 0L)
+    })
+
+    it("supports custom pipeline names",
+    {
+        p <- pip_new("custom")
+        expect_equal(p[["name"]], "custom")
+    })
+
+    it("signals invalid names",
+    {
+        expect_error(pip_new(c("a", "b")), "name must be a single string")
+        expect_error(pip_new(1), "name must be a single string")
+        expect_error(pip_new(NA_character_), "name must not be NA")
     })
 })
 

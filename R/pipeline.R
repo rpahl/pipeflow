@@ -219,10 +219,10 @@
 pip_new <- function(name = "pipe")
 {
     if (!.is_single(name, "character")) {
-        "name must be a single string"
+        stop("name must be a single string")
     }
     if (is.na(name)) {
-        "name must not be NA"
+        stop("name must not be NA")
     }
 
     hash_map <- function() new.env(parent = emptyenv())
@@ -233,7 +233,6 @@ pip_new <- function(name = "pipe")
     env[[".steps_to_nodes"]] <- hash_map()
 
     structure(env, class = c("pipeflow_pip", "environment"))
-    env
 }
 
 
