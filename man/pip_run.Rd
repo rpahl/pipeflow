@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_run}
 \alias{pip_run}
-\title{Run pipeline}
+\title{Run a pipeline}
 \usage{
 pip_run(x, lgr = pipeflow_lgr, force = FALSE, progress = NULL)
 }
@@ -22,7 +22,7 @@ regardless of whether they are outdated or not.}
 The updated pipeline or view, invisibly.
 }
 \description{
-Run pipeline
+Run a pipeline
 }
 \details{
 When \code{x} is a view, requested rows are run together with required

@@ -309,7 +309,7 @@
 # Exported pipeline functions
 # ---------------------------
 
-#' Create a new pipeline object
+#' Create a pipeline
 #'
 #' Creates an empty pipeline with internal storage for steps, dependency graph,
 #' and a step-to-node index.
@@ -341,7 +341,7 @@ pip_new <- function(name = "pipe")
 }
 
 
-#' Add a step to a pipeline
+#' Add a step
 #'
 #' Adds a new step to the pipeline, by default at the end.
 #' If `after` was specified, the new step will be inserted after the given
@@ -466,7 +466,7 @@ pip_add <- function(
 }
 
 
-#' Copy one step definition from another pipeline
+#' Copy a step from another pipeline
 #'
 #' Add one existing step definition from pipeline `y` to pipeline `x`.
 #' The step is added via [pip_add()] so dependency checks and DAG updates
@@ -545,7 +545,7 @@ pip_add_from <- function(x, step, y)
     )
 }
 
-#' Bind two pipelines into one
+#' Bind pipelines
 #'
 #' Bind two pipelines together by concatenating their steps. If both pipelines
 #' have steps with the same name, the step names of the second pipeline will be
@@ -665,7 +665,7 @@ pip_clone <- function(x, name = NULL)
 }
 
 
-#' Collect outputs from pipeline steps
+#' Collect step outputs
 #'
 #' @param x A pipeflow pip or view
 #' @param grouped Logical indicating if the output should be grouped by step
@@ -718,7 +718,7 @@ pip_collect_out <- function(x, grouped = TRUE)
     res
 }
 
-#' Extract independent pipeline parameters
+#' Get independent parameters
 #'
 #' Independent parameters are those that are not dependent on any other steps
 #' in the pipeline.
@@ -749,7 +749,7 @@ pip_get_params <- function(x)
 }
 
 
-#' Build graph data for pipeline visualization
+#' Build pipeline graph data
 #'
 #' Export a graph representation of a pipeline or view that can be passed to
 #' [visNetwork::visNetwork()].
@@ -883,7 +883,7 @@ pip_has_step <- function(x, step)
 }
 
 
-#' Remove a step from the pipeline
+#' Remove a step
 #'
 #' If other steps depend on the step to be removed, an error is
 #' given and the removal is blocked, unless `recursive` was set to
@@ -991,7 +991,7 @@ pip_remove <- function(x, step, recursive = FALSE)
 }
 
 
-#' Rename a step in the pipeline
+#' Rename a step
 #'
 #' Renames the selected step and updates dependency references in downstream
 #' steps.
@@ -1063,7 +1063,7 @@ pip_rename <- function(x, from, to)
 }
 
 
-#' Replace a step in the pipeline
+#' Replace a step
 #'
 #' Replaces one step definition in place while preserving step order. Steps
 #' downstream of the replaced step are marked as outdated.
@@ -1171,7 +1171,7 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0))
 }
 
 
-#' Run pipeline
+#' Run a pipeline
 #'
 #' @param x A pipeflow pip or view
 #' @param lgr A logging function of the form `function(level, msg, ...)`.
@@ -1276,7 +1276,7 @@ pip_run <- function(
 }
 
 
-#' Set independent pipeline parameters
+#' Set independent parameters
 #'
 #' Independent parameters are those that are not dependent on any other steps
 #' in the pipeline.
@@ -1648,24 +1648,25 @@ pip_view <- function(
 #'     pip_add("s2", \(x = ~s1) x + 1)
 #' length(p)
 #' length(pip_view(p, i = "s2"))
-#' @rdname S3generics
+#' @rdname length.pipeflow
 #' @export
 length.pipeflow_pip <- function(x)
 {
     as.integer(nrow(x[["pipeline"]]))
 }
 
-#' @rdname S3generics
+#' @rdname length.pipeflow
 #' @export
 length.pipeflow_view <- function(x)
 {
     as.integer(length(x[["rows"]]))
 }
 
-#' Extract a sub-pipeline
+#' Extract or subset a pipeline
 #'
 #' Returns a new pipeline containing selected steps and all required upstream
 #' dependencies.
+#' @param x A pipeflow pipeline object.
 #' @param i integer (row indices) or character vector (step names) of steps to
 #' select
 #' @param ... not used
@@ -1676,7 +1677,7 @@ length.pipeflow_view <- function(x)
 #'     pip_add("s2", \(x = ~s1) x + 1) |>
 #'     pip_add("s3", \(x = ~s2) x + 1)
 #' p[c("s1", "s2")]
-#' @rdname S3generics
+#' @rdname Extract.pipeflow_pip
 #' @export
 `[.pipeflow_pip` <- function(x, i, ...)
 {
@@ -1783,7 +1784,7 @@ length.pipeflow_view <- function(x)
 #' p <- pip_new() |> pip_add("s1", \(x = 1) x)
 #' p[["pipeline"]]
 #' p[["step"]]
-#' @rdname S3generics
+#' @rdname Extract.pipeflow_pip
 #' @export
 `[[.pipeflow_pip` <- function(x, i, j, ...)
 {
@@ -1824,9 +1825,9 @@ length.pipeflow_view <- function(x)
 }
 
 
-#' Print a pipeflow pipeline
+#' Print pipeflow objects
 #'
-#' @param x A pipeflow pipeline.
+#' @param x A pipeflow pipeline or view.
 #' @param rows Row indices to be printed. If empty, all rows are printed.
 #' @param cols The columns to be printed. Can be either one of
 #' `core` or `all` to print the core or all columns, respectively,
@@ -1894,12 +1895,6 @@ print.pipeflow_pip <- function(x,
 }
 
 
-#' Print a pipeflow view
-#'
-#' @param x A pipeflow view.
-#' @param ... Unused.
-#'
-#' @return Invisibly returns `x`.
 #' @examples
 #' p <- pip_new() |>
 #'     pip_add("s1", \(x = 1) x, group = "io") |>

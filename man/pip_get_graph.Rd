@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_get_graph}
 \alias{pip_get_graph}
-\title{Build graph data for pipeline visualization}
+\title{Build pipeline graph data}
 \usage{
 pip_get_graph(x, include_upstream = FALSE)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_replace}
 \alias{pip_replace}
-\title{Replace a step in the pipeline}
+\title{Replace a step}
 \usage{
 pip_replace(x, step, fun, group = step, tags = character(0))
 }

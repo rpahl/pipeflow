@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_rename}
 \alias{pip_rename}
-\title{Rename a step in the pipeline}
+\title{Rename a step}
 \usage{
 pip_rename(x, from, to)
 }

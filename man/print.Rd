@@ -3,7 +3,7 @@
 \name{print.pipeflow_pip}
 \alias{print.pipeflow_pip}
 \alias{print.pipeflow_view}
-\title{Print a pipeflow pipeline}
+\title{Print pipeflow objects}
 \usage{
 \method{print}{pipeflow_pip}(
   x,
@@ -20,7 +20,7 @@
 \method{print}{pipeflow_view}(x, header = TRUE, ...)
 }
 \arguments{
-\item{x}{A pipeflow view.}
+\item{x}{A pipeflow pipeline or view.}
 
 \item{rows}{Row indices to be printed. If empty, all rows are printed.}
 
@@ -41,17 +41,13 @@ column its storage class (or a self-evident abbreviation thereof).}
 \item{header}{If TRUE, a header with the pipeline name and number
 of steps will be printed.}
 
-\item{...}{Unused.}
+\item{...}{Other arguments passed to \code{print.data.table}}
 }
 \value{
 Invisibly returns \code{x}.
-
-Invisibly returns \code{x}.
 }
 \description{
-Print a pipeflow pipeline
-
-Print a pipeflow view
+Print pipeflow objects
 }
 \examples{
 p <- pip_new() |> pip_add("s1", \(x = 1) x)

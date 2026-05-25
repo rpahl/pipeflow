@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_add}
 \alias{pip_add}
-\title{Add a step to a pipeline}
+\title{Add a step}
 \usage{
 pip_add(
   x,

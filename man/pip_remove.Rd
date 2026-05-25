@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_remove}
 \alias{pip_remove}
-\title{Remove a step from the pipeline}
+\title{Remove a step}
 \usage{
 pip_remove(x, step, recursive = FALSE)
 }

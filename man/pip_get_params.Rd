@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_get_params}
 \alias{pip_get_params}
-\title{Extract independent pipeline parameters}
+\title{Get independent parameters}
 \usage{
 pip_get_params(x)
 }

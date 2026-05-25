@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_new}
 \alias{pip_new}
-\title{Create a new pipeline object}
+\title{Create a pipeline}
 \usage{
 pip_new(name = "pipe")
 }

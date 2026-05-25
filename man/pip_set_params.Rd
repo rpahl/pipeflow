@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_set_params}
 \alias{pip_set_params}
-\title{Set independent pipeline parameters}
+\title{Set independent parameters}
 \usage{
 pip_set_params(p, params = list())
 }

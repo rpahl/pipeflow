@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_bind}
 \alias{pip_bind}
-\title{Bind two pipelines into one}
+\title{Bind pipelines}
 \usage{
 pip_bind(x, y)
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_add_from}
 \alias{pip_add_from}
-\title{Copy one step definition from another pipeline}
+\title{Copy a step from another pipeline}
 \usage{
 pip_add_from(x, step, y)
 }
