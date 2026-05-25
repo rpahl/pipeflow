@@ -17,3 +17,8 @@ Logical indicating if the step exists
 \description{
 Check if a step exists in the pipeline
 }
+\examples{
+p <- pip_new() |> pip_add("s1", \(x = 1) x)
+pip_has_step(p, "s1")
+pip_has_step(p, "s2")
+}

@@ -16,3 +16,8 @@ The updated pipeline or view.
 Locks all selected steps in the pipeline unless \code{p} is a view, in which
 case only steps covered by the view are locked.
 }
+\examples{
+p <- pip_new() |> pip_add("s1", \(x = 1) x)
+pip_lock(p)
+p[["pipeline"]][["locked"]]
+}

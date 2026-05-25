@@ -21,3 +21,11 @@ Add one existing step definition from pipeline \code{y} to pipeline \code{x}.
 The step is added via \code{\link[=pip_add]{pip_add()}} so dependency checks and DAG updates
 are applied consistently.
 }
+\examples{
+src <- pip_new() |>
+    pip_add("s1", \(x = 1) x) |>
+    pip_add("s2", \(x = ~s1) x + 1)
+dst <- pip_new()
+pip_add_from(dst, "s1", src)
+dst
+}

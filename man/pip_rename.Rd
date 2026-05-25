@@ -19,3 +19,8 @@ The updated pipeline
 \description{
 Rename a step in the pipeline
 }
+\examples{
+p <- pip_new() |> pip_add("s1", \(x = 1) x)
+pip_rename(p, from = "s1", to = "load")
+p
+}

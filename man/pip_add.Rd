@@ -24,7 +24,7 @@ pip_add(
 \item{group}{Step group name.}
 
 \item{tags}{Optional character vector of tags belonging to the step.
-Can also be set later (see TODO: pip_set_tags or something similar).}
+Can also be adjusted later using \verb{[pip_tag()]}.}
 
 \item{after}{Optional position after which the new step should be inserted
 (defaults to last position). Can be a step name or an integer index. If
@@ -50,4 +50,10 @@ step or position. Be aware that in contrast to adding a step at the end,
 inserting a step in the middle is a rather expensive operation as it
 requires re-wiring parts of the internal pipeline structure, especially
 if the new step is inserted at an early position.
+}
+\examples{
+p <- pip_new()
+pip_add(p, "load", \(x = 1) x, group = "io")
+pip_add(p, "fit", \(x = ~load) x + 1, group = "model")
+p
 }

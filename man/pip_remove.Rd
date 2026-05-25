@@ -22,3 +22,10 @@ If other steps depend on the step to be removed, an error is
 given and the removal is blocked, unless \code{recursive} was set to
 \code{TRUE}.
 }
+\examples{
+p <- pip_new() |>
+    pip_add("s1", \(x = 1) x) |>
+    pip_add("s2", \(x = ~s1) x + 1)
+pip_remove(p, "s2")
+p
+}

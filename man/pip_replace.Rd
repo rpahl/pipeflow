@@ -16,11 +16,17 @@ pip_replace(x, step, fun, group = step, tags = character(0))
 \item{group}{Step group name.}
 
 \item{tags}{Optional character vector of tags belonging to the step.
-Can also be set later (see TODO: pip_set_tags or something similar).}
+Can also be adjusted later using \verb{[pip_tag()]}.}
 }
 \value{
 The updated pipeflow pipeline object.
 }
 \description{
 Replace a step in the pipeline
+}
+\examples{
+p <- pip_new() |> pip_add("s1", \(x = 1) x)
+pip_replace(p, "s1", \(x = 2) x)
+pip_run(p, lgr = NULL)
+p[["pipeline"]][["out"]][[1]]
 }

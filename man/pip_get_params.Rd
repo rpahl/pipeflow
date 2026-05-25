@@ -16,3 +16,9 @@ Unique list of all independent pipeline parameters
 Independent parameters are those that are not dependent on any other steps
 in the pipeline.
 }
+\examples{
+p <- pip_new() |>
+    pip_add("s1", \(x = 1, y = 2) x + y) |>
+    pip_add("s2", \(x = ~s1, z = 3) x + z)
+pip_get_params(p)
+}

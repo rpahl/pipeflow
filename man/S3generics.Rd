@@ -32,3 +32,18 @@ Extract part of a pipeflow pipeline
 
 Extract elements of a pipeflow pipeline
 }
+\examples{
+p <- pip_new() |>
+    pip_add("s1", \(x = 1) x) |>
+    pip_add("s2", \(x = ~s1) x + 1)
+length(p)
+length(pip_view(p, i = "s2"))
+p <- pip_new() |>
+    pip_add("s1", \(x = 1) x) |>
+    pip_add("s2", \(x = ~s1) x + 1) |>
+    pip_add("s3", \(x = ~s2) x + 1)
+p[c("s1", "s2")]
+p <- pip_new() |> pip_add("s1", \(x = 1) x)
+p[["pipeline"]]
+p[["step"]]
+}

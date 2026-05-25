@@ -24,3 +24,11 @@ state as well as the state of any downstream dependent steps updated to
 "outdated". The only exception is if a step is locked - parameters of
 locked steps are never changed and so their state remains unchanged.
 }
+\examples{
+p <- pip_new() |>
+    pip_add("s1", \(x = 1) x) |>
+    pip_add("s2", \(x = ~s1, y = 2) x + y)
+pip_set_params(p, params = list(x = 5, y = 10))
+pip_run(p, lgr = NULL)
+p[["pipeline"]][["out"]]
+}

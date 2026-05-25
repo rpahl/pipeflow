@@ -18,3 +18,8 @@ A cloned pipeflow pipeline object.
 \description{
 Clone pipeline
 }
+\examples{
+p <- pip_new("pipe") |> pip_add("s1", \(x = 1) x)
+cp <- pip_clone(p, name = "copy")
+cp
+}

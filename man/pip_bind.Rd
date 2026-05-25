@@ -19,3 +19,9 @@ Bind two pipelines together by concatenating their steps. If both pipelines
 have steps with the same name, the step names of the second pipeline will be
 automatically adapted to avoid name clashes.
 }
+\examples{
+x <- pip_new("x") |> pip_add("s1", \(x = 1) x)
+y <- pip_new("y") |> pip_add("s1", \(x = 2) x)
+z <- pip_bind(x, y)
+z
+}

@@ -19,3 +19,8 @@ Removes tags from existing tags for all steps in the pipeline unless \code{p}
 is a view, in which case tags are only removed for steps covered by the
 view. Locked steps are skipped and not updated.
 }
+\examples{
+p <- pip_new() |> pip_add("s1", \(x = 1) x, tags = c("daily", "core"))
+pip_untag(p, tags = "core")
+p[["pipeline"]][["tags"]][[1]]
+}

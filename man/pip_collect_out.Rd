@@ -18,3 +18,10 @@ A list of pipeline outputs
 \description{
 Collect pipeline output
 }
+\examples{
+p <- pip_new() |>
+    pip_add("s1", \(x = 1) x, group = "a") |>
+    pip_add("s2", \(x = ~s1) x + 1, group = "a")
+pip_run(p, lgr = NULL)
+pip_collect_out(p)
+}

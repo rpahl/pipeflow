@@ -15,3 +15,7 @@ A pipeflow pipeline object.
 \description{
 Create new pipeline
 }
+\examples{
+p <- pip_new("demo")
+p
+}
