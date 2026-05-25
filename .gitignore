@@ -50,7 +50,7 @@ po/*~
 ~$*
 
 # rcmdcheck folder
-check
+check*
 
 dev
 
