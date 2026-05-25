@@ -1766,7 +1766,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             pip <- self$pipeline
 
             nodes <- data.frame(
-                "id" = seq_len(self$length()),
+                "id" = seq_along(self$get_step_names()),
                 "label" = self$get_step_names(),
                 "group" = pip[["group"]],
                 "shape" = "box",

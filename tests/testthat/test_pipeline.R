@@ -232,7 +232,7 @@ describe("pip_add",
 
         pip_set_params(p, list(x = 2))
         pip_run(p, lgr = NULL)
-        expect_equal(p$pipeline[["out"]][[1]] , 2)
+        expect_equal(p$pipeline[["out"]][[1]], 2)
     })
 
     test_pip <- function() {
@@ -569,7 +569,10 @@ describe("pip_remove",
     {
         p <- test_pip()
         expect_error(pip_remove(1, "f1"), "x must be a pipeflow pip")
-        expect_error(pip_remove(p, c("f1", "f2")), "step must be a single string")
+        expect_error(
+            pip_remove(p, c("f1", "f2")),
+            "step must be a single string"
+        )
         expect_error(pip_remove(p, NA_character_), "step must not be NA")
         expect_error(pip_remove(p, "unknown"), "step 'unknown' does not exist")
         expect_error(
@@ -683,11 +686,26 @@ describe("pip_replace",
     {
         p <- test_pip()
 
-        expect_error(pip_replace(1, "f1", \(x = 1) x), "x must be a pipeflow pip")
-        expect_error(pip_replace(p, c("f1", "f2"), \(x = 1) x), "step must be a single string")
-        expect_error(pip_replace(p, NA_character_, \(x = 1) x), "step must not be NA")
-        expect_error(pip_replace(p, "", \(x = 1) x), "step must be a non-empty string")
-        expect_error(pip_replace(p, "unknown", \(x = 1) x), "step 'unknown' does not exist")
+        expect_error(
+            pip_replace(1, "f1", \(x = 1) x),
+            "x must be a pipeflow pip"
+        )
+        expect_error(
+            pip_replace(p, c("f1", "f2"), \(x = 1) x),
+            "step must be a single string"
+        )
+        expect_error(
+            pip_replace(p, NA_character_, \(x = 1) x),
+            "step must not be NA"
+        )
+        expect_error(
+            pip_replace(p, "", \(x = 1) x),
+            "step must be a non-empty string"
+        )
+        expect_error(
+            pip_replace(p, "unknown", \(x = 1) x),
+            "step 'unknown' does not exist"
+        )
         expect_error(pip_replace(p, "f1", 1), "fun must be a function")
         expect_error(
             pip_replace(p, "f1", \(x = 1) x, group = ""),
@@ -1064,7 +1082,10 @@ describe("pip_run",
                 pip_add("eval_model", \(x = ~fit_model) x, group = "model")
 
             expect_error(pip_run(p, lgr = NULL), "io error")
-            expect_equal(p$pipeline[["state"]], c("failed", "outdated", "outdated"))
+            expect_equal(
+                p$pipeline[["state"]],
+                c("failed", "outdated", "outdated")
+            )
         })
     })
 
@@ -1379,8 +1400,14 @@ describe("pip_tag",
         pip_tag(p, tags = c("daily", "core"))
 
         expect_equal(p[["pipeline"]][["tags"]][[1]], c("init", "daily", "core"))
-        expect_equal(p[["pipeline"]][["tags"]][[2]], c("daily", "model", "core"))
-        expect_equal(p[["pipeline"]][["tags"]][[3]], c("report", "daily", "core"))
+        expect_equal(
+            p[["pipeline"]][["tags"]][[2]],
+            c("daily", "model", "core")
+        )
+        expect_equal(
+            p[["pipeline"]][["tags"]][[3]],
+            c("report", "daily", "core")
+        )
     })
 
     it("updates only rows in a view and skips locked steps",
@@ -1891,7 +1918,7 @@ describe("benchmarking",
 
     N = 1e3
     u = as.character(as.hexmode(1:10000))
-    y = sample(u,N,replace=TRUE)
+    y = sample(u, N, replace = TRUE)
     x = sample(u, 100)
     system.time(x %in% y)
     system.time(x %chin% y)
@@ -1908,13 +1935,13 @@ describe("benchmarking",
     microbenchmark(x %in% y, x %chin% y, times = 100)
     system.time(a <- x %in% y)               #  4.5s
     system.time(b <- x %chin% y)             #  1.7s
-    identical(a,b)
+    identical(a, b)
 
     # Different example with more unique strings ...
     u = as.character(as.hexmode(1:(N/10)))
-    y = sample(u,N,replace=TRUE)
-    x = sample(u,N,replace=TRUE)
-    system.time(a <- match(x,y))               # 46s
-    system.time(b <- chmatch(x,y))             # 16s
-    identical(a,b)
+    y = sample(u, N, replace = TRUE)
+    x = sample(u, N, replace = TRUE)
+    system.time(a <- match(x, y))               # 46s
+    system.time(b <- chmatch(x, y))             # 16s
+    identical(a, b)
 })
