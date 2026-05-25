@@ -103,7 +103,7 @@
         }
     }
 
-    out <- setNames(vector(mode = "list", length = length(keys)), keys)
+    out <- stats::setNames(vector(mode = "list", length = length(keys)), keys)
     for (key in keys) {
         keyArgs <- args
         for (idx in partIdx) {
@@ -207,7 +207,11 @@
     if (!.is_pipeflow_pip(x)) {
         stop("x must be a pipeflow pip")
     }
-    x[["pipeline"]][, .rowId := .I]
+    data.table::set(
+        x[["pipeline"]],
+        j = ".rowId",
+        value = seq_len(nrow(x[["pipeline"]]))
+    )
     data.table::setindexv(x[["pipeline"]], list("step", ".nodeId"))
 }
 
@@ -820,7 +824,7 @@ pip_get_graph <- function(x, include_upstream = FALSE)
     # Edges
     reachable <- sapply(ids,
         FUN = function(id) {
-            dag_get_reachable_nodes_down(dp = dag, start = id) |>
+            dag_get_reachable_nodes_down(dp = dag, start_ids = id) |>
                 setdiff(id) # Exclude self reference
         }
     ) |>
@@ -1149,11 +1153,15 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0))
     stepNode <- .pip_steps_to_nodes(out, step)[[1]]
     downNodes <- unique(setdiff(as.integer(unlist(downNodes)), stepNode))
     if (length(downNodes) > 0L) {
-        out[["pipeline"]][
-            list(downNodes),
-            state := .step_states[["outdated"]][["name"]],
-            on = ".nodeId"
-        ]
+        rowsDown <- out[["pipeline"]][list(downNodes), which = TRUE, on = ".nodeId"]
+        if (length(rowsDown) > 0L) {
+            data.table::set(
+                out[["pipeline"]],
+                i = rowsDown,
+                j = "state",
+                value = .step_states[["outdated"]][["name"]]
+            )
+        }
     }
 
     x[["pipeline"]] <- out[["pipeline"]]
@@ -1224,7 +1232,10 @@ pip_run <- function(
         outdatedNodes <- .pip_get_downstream_nodes(pip, processedSteps) |>
             unlist() |> unique() |> setdiff(processedNodes) # nolint
         if (length(outdatedNodes) > 0L) {
-            dat[list(outdatedNodes), state := "outdated", on = ".nodeId"]
+            rowsOutdated <- dat[list(outdatedNodes), which = TRUE, on = ".nodeId"]
+            if (length(rowsOutdated) > 0L) {
+                data.table::set(dat, i = rowsOutdated, j = "state", value = "outdated")
+            }
         }
     })
 
