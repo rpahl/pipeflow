@@ -941,8 +941,8 @@ describe("pip_get_graph",
 {
     test_pip <- function() {
         pip_new() |>
-            pip_add("s1", \(x = 1) x, group = "io") |>
-            pip_add("s2", \(x = ~s1) x + 1, group = "model") |>
+            pip_add("s1", \(x = 1) x, group = "io", exec = "split") |>
+            pip_add("s2", \(x = ~s1) x + 1, group = "model", exec = "reduce") |>
             pip_add("s3", \(x = ~s1, y = ~s2) x + y, group = "model")
     }
 
@@ -964,24 +964,26 @@ describe("pip_get_graph",
         p[["pipeline"]][["state"]] <- c("new", "done", "failed")
 
         g <- pip_get_graph(p)
+        nodes <- g[["nodes"]]
+        edges <- g[["edges"]]
 
         expect_named(g, c("nodes", "edges"))
-        expect_s3_class(g[["nodes"]], "data.frame")
-        expect_s3_class(g[["edges"]], "data.frame")
-        expect_equal(
-            names(g[["nodes"]]),
-            c("id", "label", "group", "shape", "color")
-        )
-        expect_equal(names(g[["edges"]]), c("from", "to", "arrows"))
-        expect_true(all(g[["nodes"]][["shape"]] == "box"))
-        expect_true(all(g[["edges"]][["arrows"]] == "to"))
+        expect_s3_class(nodes, "data.frame")
+        expect_s3_class(edges, "data.frame")
+        expect_equal(names(nodes), c("id", "label", "group", "shape", "color"))
+        expect_equal(names(edges), c("from", "to", "arrows"))
+        nodeShape <- stats::setNames(nodes[["shape"]], nodes[["label"]])
+        expect_equal(nodeShape[["s1"]], "star")
+        expect_equal(nodeShape[["s2"]], "dot")
+        expect_equal(nodeShape[["s3"]], "square")
+        expect_true(all(edges[["arrows"]] == "to"))
 
         expectedColors <- vapply(
             p[["pipeline"]][["state"]],
             FUN = \(st) .step_states[[st]][["color"]],
             FUN.VALUE = character(1)
         )
-        expect_equal(g[["nodes"]][["color"]], unname(expectedColors))
+        expect_equal(nodes[["color"]], unname(expectedColors))
         expect_setequal(map_edge_labels(g), c("s1->s2", "s1->s3", "s2->s3"))
     })
 

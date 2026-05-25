@@ -757,11 +757,16 @@ pip_get_graph <- function(x, include_upstream = FALSE)
     )
 
     ids <- as.integer(sub[[".nodeId"]])
+    shape <- rep("square", nrow(sub))
+    if ("execMode" %in% names(sub)) {
+        shape[sub[["execMode"]] %in% "split"] <- "star"
+        shape[sub[["execMode"]] %in% "reduce"] <- "dot"
+    }
     nodes <- data.frame(
         id = ids,
         label = sub[["step"]],
         group = sub[["group"]],
-        shape = rep("box", nrow(sub)),
+        shape = shape,
         color = colors
     )
 
