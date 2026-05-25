@@ -11,7 +11,7 @@ pipe_add(
   params = list(),
   description = "",
   group = step,
-  tags = character()
+  keepOut = FALSE
 )
 }
 \arguments{
@@ -38,9 +38,11 @@ names. By default, this is the name of the step, which comes in
 handy when the pipeline is copy-appended multiple times to keep
 the results of the same function/step grouped at one place.}
 
-\item{tags}{\code{character} Optional tags associated with the step.
-Tags can be used later to select certain parts of a pipeline,
-for example, to collect output from or skip steps of a certain tag.}
+\item{keepOut}{\code{logical} if \code{FALSE} (default) the output of the
+step is not collected when calling \code{\link[=pipe_collect_out]{pipe_collect_out()}} after the pipeline
+run. This option is used to only keep the results that matter
+and skip intermediate results that are not needed. See also
+function \code{\link[=pipe_collect_out]{pipe_collect_out()}} for more details.}
 }
 \value{
 returns the \code{Pipeline} object invisibly
@@ -80,5 +82,5 @@ p <- pipe_new("myPipe", data = data.frame(x = 1:2, y = 3:4))
 pipe_add(p, "prep_x", \(data = ~data) data$x, group = "prep")
 pipe_add(p, "prep_y", \(data = ~data) (data$y)^2, group = "prep")
 pipe_add(p, "sum", \(x = ~prep_x, y = ~prep_y) x + y)
-p |> pipe_run() |> pipe_collect_out()
+p |> pipe_run() |> pipe_collect_out(all = TRUE)
 }

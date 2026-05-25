@@ -24,10 +24,11 @@
 #' names. By default, this is the name of the step, which comes in
 #' handy when the pipeline is copy-appended multiple times to keep
 #' the results of the same function/step grouped at one place.
-#' @param tags `character` Optional tags associated with the step.
-#' Tags can be used later to select certain parts of a pipeline,
-#' for example, to collect output from or skip steps of a certain tag.
-#'
+#' @param keepOut `logical` if `FALSE` (default) the output of the
+#' step is not collected when calling [pipe_collect_out()] after the pipeline
+#' run. This option is used to only keep the results that matter
+#' and skip intermediate results that are not needed. See also
+#' function [pipe_collect_out()] for more details.
 #' @return returns the `Pipeline` object invisibly
 #' @examples
 #' # Add steps with lambda functions
@@ -55,7 +56,7 @@
 #' pipe_add(p, "prep_x", \(data = ~data) data$x, group = "prep")
 #' pipe_add(p, "prep_y", \(data = ~data) (data$y)^2, group = "prep")
 #' pipe_add(p, "sum", \(x = ~prep_x, y = ~prep_y) x + y)
-#' p |> pipe_run() |> pipe_collect_out()
+#' p |> pipe_run() |> pipe_collect_out(all = TRUE)
 #' @export
 pipe_add <- function(
     pip,
@@ -64,7 +65,7 @@ pipe_add <- function(
     params = list(),
     description = "",
     group = step,
-    tags = character()
+    keepOut = FALSE
 ) {
     pip$add(
         step = step,
@@ -72,7 +73,7 @@ pipe_add <- function(
         params = params,
         description = description,
         group = group,
-        tags = tags
+        keepOut = keepOut
     )
 
     if (is.function(fun)) {
@@ -185,25 +186,26 @@ pipe_clone <- function(pip, deep = FALSE)
 }
 
 
-#' @title Collect structured output from entire pipeline
-#' @description Collect outputs produced by the pipeline run.
-#' Only steps that were not skipped contribute results.
-#' The output is grouped by the user-defined group names
-#' (see `group` parameter in function [pipe_add()]), which by default
-#' are identical to the step names, that is, trivial groups of
-#' size 1. Use `groupBy = "state"` to group results by the step's
-#' state instead.
+#' @title Collect output from entire pipeline
+#' @description Collects output afer pipeline run, by default, from all
+#' steps for which `keepOut` was set to `TRUE` when steps were added
+#' (see [pipe_add()]). The output is grouped by the group names (see
+#' `group` parameter in [pipe_add()]),
+#' which by default are set identical to the step names.
 #' @param pip `Pipeline` object
-#' @param groupBy `string` field of pipeline by which to group the
+#' @param groupBy `string` column of pipeline by which to group the
 #' output.
+#' @param all `logical` if `TRUE` all output is collected
+#' regardless of the `keepOut` flag. This can be useful for debugging.
 #' @return `list` containing the output, named after the groups, which,
 #' by default, are the steps.
 #' @examples
 #' p <- pipe_new("pipe", data = 1:2)
 #' pipe_add(p, "step1", \(x = ~data) x + 2)
-#' pipe_add(p, "step2", \(x = ~step1) x + 2)
+#' pipe_add(p, "step2", \(x = ~step1) x + 2, keepOut = TRUE)
 #' pipe_run(p)
 #' pipe_collect_out(p)
+#' pipe_collect_out(p, all = TRUE) |> str()
 #'
 #' # Grouped output
 #' p <- pipe_new("pipe", data = 1:2)
@@ -214,17 +216,17 @@ pipe_clone <- function(pip, deep = FALSE)
 #' p
 #'
 #' pipe_run(p)
-#' pipe_collect_out(p) |> str()
+#' pipe_collect_out(p, all = TRUE) |> str()
 #'
 #' # Grouped by state
 #' pipe_set_params(p, list(y = 5))
 #' p
 #'
-#' pipe_collect_out(p, groupBy = "state") |> str()
+#' pipe_collect_out(p, groupBy = "state", all = TRUE) |> str()
 #' @export
-pipe_collect_out <- function(pip, groupBy = c("group", "state"))
+pipe_collect_out <- function(pip, groupBy = "group", all = FALSE)
 {
-    pip$collect_out(groupBy = groupBy)
+    pip$collect_out(groupBy = groupBy, all = all)
 }
 
 
@@ -372,6 +374,8 @@ pipe_get_depends_up <- function(pip, step, recursive = TRUE)
 #' @param groups `character` if not `NULL`, only steps belonging to the
 #' given groups are considered.
 #' @return list with two data frames, one for nodes and one for edges
+#' ready to be used with the [visNetwork::visNetwork()] function of the
+#' \link[visNetwork]{visNetwork} package.
 #' @examples
 #' p <- pipe_new("pipe", data = 1:2)
 #' pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
@@ -405,7 +409,7 @@ pipe_get_graph <- function(pip, groups = NULL)
 #' @export
 pipe_get_out <- function(pip, step)
 {
-    pip$get_out(step = step)
+    pip$get_out(step)
 }
 
 
@@ -425,6 +429,7 @@ pipe_get_out <- function(pip, step)
 #' * `pipe_get_params_unique`:  list of parameters where each parameter
 #'   is only listed once. The values of the parameters will be the values
 #'   of the first step where the parameters were defined, respectively.
+#' * `get_params_unique_json`: flat unnamed json list of unique parameters
 #' @examples
 #' # pipe_get_params
 #' p <- pipe_new("pipe", data = 1:2)
@@ -447,6 +452,9 @@ pipe_get_out <- function(pip, step)
 #' pipe_get_params_unique(p)
 #' pipe_get_params_unique(p, ignoreHidden = FALSE)
 #'
+#' # get_params_unique_json
+#' pipe_get_params_unique_json(p)
+#' pipe_get_params_unique_json(p, ignoreHidden = FALSE)
 #' @rdname pipe_get_params
 #' @export
 pipe_get_params <- function(pip, ignoreHidden = TRUE)
@@ -471,6 +479,14 @@ pipe_get_params_unique <- function(pip, ignoreHidden = TRUE)
 }
 
 
+#' @rdname pipe_get_params
+#' @export
+pipe_get_params_unique_json <- function(pip, ignoreHidden = TRUE)
+{
+    pip$get_params_unique_json(ignoreHidden = ignoreHidden)
+}
+
+
 #' @title Get step information
 #' @param pip `Pipeline` object
 #' @param step `string` name of step
@@ -478,7 +494,7 @@ pipe_get_params_unique <- function(pip, ignoreHidden = TRUE)
 #' * `pipe_get_step`: `data.table` row containing the step
 #' * `pipe_get_step_names`: `character` vector of step names
 #' * `pipe_get_step_number`: the step number in the pipeline
-#' * `pipe_has_step`: whether step exists
+#' * `pipe_get_step_number`: whether step exists
 #' @examples
 #' p <- pipe_new("pipe", data = 1:2)
 #' pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
@@ -509,19 +525,7 @@ pipe_get_params_unique <- function(pip, ignoreHidden = TRUE)
 #' @export
 pipe_get_step <- function(pip, step)
 {
-    pip$get_step(step = step)
-}
-
-
-#' @title Get specific field of a step
-#' @description Get a specific field/entry of a step
-#' @param pip `Pipeline` object
-#' @param step `string` name of step
-#' @param what `string` name of the pipeline column to return
-#' @return the requested entry at the given step
-pipe_get_step_field <- function(pip, step, what)
-{
-    pip$get_step_field(step = step, what = what)
+    pip$get_step(step)
 }
 
 
@@ -537,7 +541,7 @@ pipe_get_step_names <- function(pip)
 #' @export
 pipe_get_step_number <- function(pip, step)
 {
-    pip$get_step_number(step = step)
+    pip$get_step_number(step)
 }
 
 
@@ -545,7 +549,7 @@ pipe_get_step_number <- function(pip, step)
 #' @export
 pipe_has_step <- function(pip, step)
 {
-    pip$has_step(step = step)
+    pip$has_step(step)
 }
 
 
@@ -604,7 +608,7 @@ pipe_length <- function(pip)
 }
 
 
-#' @title Lock/unlock steps
+#' @title Lock steps
 #' @description Locking a step means that both its parameters and its
 #' output (given it has output) are locked such that neither
 #' setting new pipeline parameters nor future pipeline runs can change
@@ -638,7 +642,7 @@ pipe_length <- function(pip)
 #' @export
 pipe_lock_step <- function(pip, step)
 {
-    pip$lock_step(step = step)
+    pip$lock_step(step)
 }
 
 
@@ -693,7 +697,7 @@ pipe_new <- function(
     data = NULL,
     logger = NULL
 ) {
-    Pipeline$new(name = name, data = data, logger = logger)
+    Pipeline$new(name, data = data, logger = logger)
 }
 
 
@@ -740,7 +744,7 @@ pipe_pop_step <- function(pip)
 #' @export
 pipe_pop_steps_after <- function(pip, step)
 {
-    pip$pop_steps_after(step = step)
+    pip$pop_steps_after(step)
 }
 
 
@@ -749,7 +753,7 @@ pipe_pop_steps_after <- function(pip, step)
 #' @export
 pipe_pop_steps_from <- function(pip, step)
 {
-    pip$pop_steps_from(step = step)
+    pip$pop_steps_from(step)
 }
 
 
@@ -848,19 +852,20 @@ pipe_rename_step <- function(pip, from, to)
 #' names. By default, this is the name of the step, which comes in
 #' handy when the pipeline is copy-appended multiple times to keep
 #' the results of the same function/step grouped at one place.
-#' @param tags `character` Optional tags associated with the step.
-#' Tags can be used later to select certain parts of a pipeline,
-#' for example, to collect output from or skip steps of a certain tag.
-#'
+#' @param keepOut `logical` if `FALSE` (default) the output of the
+#' step is not collected when calling [pipe_collect_out()] after the
+#' pipeline run. This option is used to only keep the results that matter
+#' and skip intermediate results that are not needed. See also
+#' function [pipe_collect_out()] for more details.
 #' @return returns the `Pipeline` object invisibly
 #' @seealso [pipe_add()]
 #' @examples
 #' p <- pipe_new("pipe", data = 1)
 #' pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 #' pipe_add(p, "add2", \(x = ~data, y = 2) x + y)
-#' pipe_add(p, "mult", \(x = 1, y = 2) x * y)
+#' pipe_add(p, "mult", \(x = 1, y = 2) x * y, keepOut = TRUE)
 #' pipe_run(p) |> pipe_collect_out()
-#' pipe_replace_step(p, "mult", \(x = ~add1, y = ~add2) x * y)
+#' pipe_replace_step(p, "mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
 #' pipe_run(p) |> pipe_collect_out()
 #' try(pipe_replace_step(p, "foo", \(x = 1) x))   # step 'foo' does not exist
 #' @export
@@ -871,7 +876,7 @@ pipe_replace_step <- function(
     params = list(),
     description = "",
     group = step,
-    tags = character()
+    keepOut = FALSE
 ) {
     pip$replace_step(
         step = step,
@@ -879,7 +884,7 @@ pipe_replace_step <- function(
         params = params,
         description = description,
         group = group,
-        tags = tags
+        keepOut = keepOut
     )
 
     if (is.function(fun)) {
@@ -923,6 +928,9 @@ pipe_reset <- function(pip)
 #' @param recursive `logical` if `TRUE` and a step returns a new
 #' pipeline, the run of the current pipeline is aborted and the
 #' new pipeline is run recursively.
+#' @param cleanUnkept `logical` if `TRUE` all output that was not
+#' marked to be kept is removed after the pipeline run. This option
+#' can be useful if temporary results require a lot of memory.
 #' @param progress `function` this parameter can be used to provide a
 #' custom progress function of the form `function(value, detail)`,
 #' which will show the progress of the pipeline run for each step,
@@ -936,7 +944,7 @@ pipe_reset <- function(pip)
 #' p <- pipe_new("pipe", data = 1)
 #' pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 #' pipe_add(p, "add2", \(x = ~add1, z = 2) x + z)
-#' pipe_add(p, "final", \(x = ~add1, y = ~add2) x * y)
+#' pipe_add(p, "final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
 #' p |> pipe_run() |> pipe_collect_out()
 
 #' pipe_set_params(p, list(z = 4))  # outdates steps add2 and final
@@ -944,13 +952,16 @@ pipe_reset <- function(pip)
 #'
 #' p |> pipe_run() |> pipe_collect_out()
 #'
+#' pipe_run(p, cleanUnkept = TRUE)
+#' p
+#'
 #' # Recursive pipeline (for advanced users)
 #' p <- pipe_new("pipe", data = 1)
 #' pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 #' pipe_add(p, "new_pipe", \(x = ~add1) {
 #'     p2 <- pipe_new("new_pipe", data = x)
 #'     pipe_add(p2, "add1", \(x = ~data) x + 1)
-#'     pipe_add(p2, "add2", \(x = ~add1) x + 2)
+#'     pipe_add(p2, "add2", \(x = ~add1) x + 2, keepOut = TRUE)
 #'   }
 #' )
 #' p |> pipe_run() |> pipe_collect_out()
@@ -970,12 +981,14 @@ pipe_run <- function(
     pip,
     force = FALSE,
     recursive = TRUE,
+    cleanUnkept = FALSE,
     progress = NULL,
     showLog = TRUE
 ) {
     pip$run(
         force = force,
         recursive = recursive,
+        cleanUnkept = cleanUnkept,
         progress = progress,
         showLog = showLog
     )
@@ -991,6 +1004,9 @@ pipe_run <- function(
 #' steps first.
 #' @param downstream `logical` if `TRUE`, run all depdendent
 #' downstream afterwards.
+#' @param cleanUnkept `logical` if `TRUE` all output that was not
+#' marked to be kept is removed after the pipeline run. This option
+#' can be useful if temporary results require a lot of memory.
 #' @return returns the `Pipeline` object invisibly
 #' @examples
 #' p <- pipe_new("pipe", data = 1)
@@ -1007,12 +1023,14 @@ pipe_run_step <- function(
     pip,
     step,
     upstream = TRUE,
-    downstream = FALSE
+    downstream = FALSE,
+    cleanUnkept = FALSE
 ) {
     pip$run_step(
         step = step,
         upstream = upstream,
-        downstream = downstream
+        downstream = downstream,
+        cleanUnkept = cleanUnkept
     )
 }
 
@@ -1024,7 +1042,7 @@ pipe_run_step <- function(
 #' @return returns the `Pipeline` object invisibly
 #' @examples
 #' p <- pipe_new("pipe", data = 1)
-#' pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
+#' pipe_add(p, "add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
 #' p |> pipe_run() |> pipe_collect_out()
 #'
 #' pipe_set_data(p, 3)
@@ -1033,6 +1051,99 @@ pipe_run_step <- function(
 pipe_set_data <- function(pip, data)
 {
     pip$set_data(data = data)
+}
+
+
+#' @title Split-multiply pipeline by list of data sets
+#' @description This function can be used to apply the pipeline
+#' repeatedly to various data sets. For this, the pipeline split-copies
+#' itself by the list of given data sets. Each sub-pipeline will have
+#' one of the data sets set as input data.
+#' The step names of the sub-pipelines will be the original
+#' step names plus the name of the data set.
+#' @param pip `Pipeline` object
+#' @param dataList `list` of data sets
+#' @param toStep `string` step name marking optional subset of
+#' the pipeline, to which the data split should be applied to.
+#' @param groupBySplit `logical` whether to set step groups according
+#' to data split.
+#' @param sep `string` separator to be used between step name and
+#' data set name when creating the new step names.
+#' @return new combined `Pipeline` with each sub-pipeline having set
+#' one of the data sets.
+#' @examples
+#' # Split by three data sets
+#' dataList <- list(a = 1, b = 2, c = 3)
+#' p <- pipe_new("pipe")
+#' pipe_add(p, "add1", \(x = ~data) x + 1, keepOut = TRUE)
+#' pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+#' pipe_set_data_split(p, dataList)
+#' p
+#'
+#' p |> pipe_run() |> pipe_collect_out() |> str()
+#'
+#' # Don't group output by split
+#' p <- pipe_new("pipe")
+#' pipe_add(p, "add1", \(x = ~data) x + 1, keepOut = TRUE)
+#' pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+#' pipe_set_data_split(p, dataList, groupBySplit = FALSE)
+#' p
+#'
+#' p |> pipe_run() |> pipe_collect_out() |> str()
+#'
+#' # Split up to certain step
+#' p <- pipe_new("pipe")
+#' pipe_add(p, "add1", \(x = ~data) x + 1)
+#' pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y)
+#' pipe_add(p, "average_result", \(x = ~mult) mean(unlist(x)), keepOut = TRUE)
+#' p
+#' pipe_get_depends(p)[["average_result"]]
+#'
+#' pipe_set_data_split(p, dataList, toStep = "mult")
+#' p
+#' pipe_get_depends(p)[["average_result"]]
+#'
+#' p |> pipe_run() |> pipe_collect_out() |> str()
+#' @export
+pipe_set_data_split <- function(
+    pip,
+    dataList,
+    toStep = character(),
+    groupBySplit = TRUE,
+    sep = "."
+) {
+    pip$set_data_split(
+        dataList = dataList,
+        toStep = toStep,
+        groupBySplit = groupBySplit,
+        sep = sep
+    )
+}
+
+
+#' @title Change output flag
+#' @description Change the `keepOut` flag at a given pipeline step,
+#' which determines whether the output of that step is collected
+#' when calling [pipe_collect_out()]` after the pipeline was run.
+#' See column `keepOut` when printing a pipeline to view the status.
+#' @param pip `Pipeline` object
+#' @param step `string` name of step
+#' @param keepOut `logical` whether to keep output of step
+#' @return the `Pipeline` object invisibly
+#' @examples
+#' p <- pipe_new("pipe", data = 1)
+#' pipe_add(p, "add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+#' pipe_add(p, "add2", \(x = ~data, y = 2) x + y)
+#' pipe_add(p, "mult", \(x = ~add1, y = ~add2) x * y)
+#' p |> pipe_run() |> pipe_collect_out()
+#'
+#' pipe_set_keep_out(p, "add1", keepOut = FALSE)
+#' pipe_set_keep_out(p, "mult", keepOut = TRUE)
+#' p |> pipe_run() |> pipe_collect_out()
+#' @export
+pipe_set_keep_out <- function(pip, step, keepOut = TRUE)
+{
+    pip$set_keep_out(step = step, keepOut = keepOut)
 }
 
 
@@ -1105,6 +1216,14 @@ pipe_set_params_at_step <- function(pip, step, params)
 #' pipe_add(p, "f3", \(x = ~f1) x)
 #' pipe_add(p, "f4", \(x = ~f2) x)
 #' pipe_split(p)
+#'
+#' # Example of split by three data sets
+#' dataList <- list(a = 1, b = 2, c = 3)
+#' p <- pipe_new("pipe")
+#' pipe_add(p, "add1", \(x = ~data) x + 1, keepOut = TRUE)
+#' pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+#' pipes <- pipe_set_data_split(p, dataList) |> pipe_split()
+#' pipes
 #' @export
 pipe_split <- function(pip)
 {
@@ -1112,85 +1231,11 @@ pipe_split <- function(pip)
 }
 
 
-#' @title Skip/unskip pipeline group
-#' @description Skips all steps that belong to the specified group.
-#' Works like calling `skip_step` on every step in that group. Skipped
-#' steps are not executed during `run()` and their outputs (if any)
-#' are not considered for `collect_out()`.
-#' @param pip `Pipeline` object
-#' @param group `string` name of the group whose steps should be
-#' skipped.
-#' @return the `Pipeline` object invisibly
-#' @examples
-#' p <- pipe_new("pipe", data = 15) |>
-#'   pipe_add("f1", \(data = ~data, x = 1) data + x) |>
-#'   pipe_add("log2", \(x = ~f1) log2(x), group = "prep") |>
-#'   pipe_add("sqrt", \(x = ~log2) sqrt(x), group = "prep") |>
-#'   pipe_add("final",  \(x = ~sqrt, y = ~f1) x + y)
-#'
-#' p |> pipe_run() |> pipe_collect_out()
-#'
-#' p |> pipe_set_params_at_step("f1", list(x = 5)) |> pipe_skip_group("prep")
-#' p |> pipe_run() |> pipe_collect_out()
-#'
-#' p |> pipe_unskip_group("prep") |> pipe_run() |> pipe_collect_out()
-#' @rdname pipe_skip_unskip_group
-#' @export
-pipe_skip_group <- function(pip, group)
-{
-    pip$skip_group(group = group)
-}
-
-
-#' @title Skip/unskip pipeline step
-#' @description Skipping a step means that it is skipped during a
-#' pipeline run and therefore it's output (if existing) remains
-#' untouched. In addition, it is skipped when collecting output via
-#' `collect_out`, that is, it's output will not be part of the
-#' collected output list.
-#' In contrast to `lock_step`, skipping a step does not "protect" the
-#' step against changing the step's parameters.
-#' @param pip `Pipeline` object
-#' @param step `string` name of step
-#' @return the `Pipeline` object invisibly
-#' @examples
-#' p <- pipe_new("pipe", data = 1) |>
-#'   pipe_add("add1", \(x = 2, data = ~data) x + data) |>
-#'   pipe_add("add2", \(x = 2, data = ~add1) x + data)
-#'
-#' p |> pipe_run() |> pipe_collect_out()
-#'
-#' p |> pipe_set_params(list(x = 3)) |> pipe_skip_step("add1")
-#' p |> pipe_run() |> pipe_collect_out()
-#'
-#' p |> pipe_unskip_step("add1") |> pipe_run() |> pipe_collect_out()
-#' @rdname pipe_skip_unskip_step
-#' @export
-pipe_skip_step <- function(pip, step)
-{
-    pip$skip_step(step = step)
-}
-
-
 #' @rdname pipe_lock_unlock
 #' @export
 pipe_unlock_step <- function(pip, step)
 {
-    pip$unlock_step(step = step)
-}
-
-
-#' @rdname pipe_skip_unskip_group
-#' @export
-pipe_unskip_group <- function(pip, group) {
-    pip$unskip_group(group = group)
-}
-
-
-#' @rdname pipe_skip_unskip_step
-#' @export
-pipe_unskip_step <- function(pip, step) {
-    pip$unskip_step(step = step)
+    pip$unlock_step(step)
 }
 
 # nocov end

@@ -14,11 +14,9 @@
 #' @field pipeline `data.table` the pipeline where each row represents one step.
 #' @author Roman Pahl
 #' @docType class
-#' @importFrom R6 R6Class
 #' @import data.table
 #' @export
-Pipeline = R6::R6Class(     # nolint cyclomatic complexity
-    classname = "Pipeline",
+Pipeline = R6::R6Class("Pipeline", #nolint
     public = list(
         name = NULL,
         pipeline = NULL,
@@ -86,11 +84,21 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             }
 
             self$name <- name
-            self$pipeline <- private$._empty_pipeline()
+            self$pipeline <- data.table::data.table(
+                step = character(0),
+                fun = list(),
+                funcName = character(0),
+                params = list(),
+                depends = list(),
+                out = list(),
+                keepOut = logical(),
+                group = character(0),
+                description = character(0),
+                time = structure(numeric(0), class = c("POSIXct", "POSIXt")),
+                state = character(0)
+            )
 
-            self$add("data", function() data)
-
-            private$.reindex()
+            self$add("data", function() data, keepOut = FALSE)
 
             invisible(self)
         },
@@ -113,10 +121,11 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' names. By default, this is the name of the step, which comes in
         #' handy when the pipeline is copy-appended multiple times to keep
         #' the results of the same function/step grouped at one place.
-        #' @param tags `character` Optional tags associated with the step.
-        #' Tags can be used later to select certain parts of a pipeline,
-        #' for example, to collect output from or skip steps of a certain tag.
-        #'
+        #' @param keepOut `logical` if `FALSE` (default) the output of the
+        #' step is not collected when calling `collect_out` after the pipeline
+        #' run. This option is used to only keep the results that matter
+        #' and skip intermediate results that are not needed. See also
+        #' function `collect_out` for more details.
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' # Add steps with lambda functions
@@ -143,14 +152,14 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' p$add("prep_x", \(data = ~data) data$x, group = "prep")
         #' p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
         #' p$add("sum", \(x = ~prep_x, y = ~prep_y) x + y)
-        #' p$run()$collect_out()
+        #' p$run()$collect_out(all = TRUE)
         add = function(
             step,
             fun,
             params = list(),
             description = "",
             group = step,
-            tags = character(0)
+            keepOut = FALSE
         ) {
             private$.verify_step_does_not_exist(step)
             stopifnot(
@@ -158,7 +167,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 is.list(params),
                 is_string(description),
                 is_string(group) && nzchar(group),
-                is.character(tags)
+                is.logical(keepOut)
             )
 
             if (is.function(fun)) {
@@ -187,17 +196,13 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                         params = list(params),
                         depends = list(deps),
                         out = list(NULL),
-                        tags = list(tags),
+                        keepOut = keepOut,
                         group = group,
                         description = description,
                         time = Sys.time(),
-                        state = "New",
-                        locked = FALSE,
-                        skip = FALSE
+                        state = "New"
                     )
                 )
-
-            private$.reindex()
 
             invisible(self)
         },
@@ -285,7 +290,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             combinedName <- paste0(p1$name, sep, p2$name)
             combinedPipe <- Pipeline$new(combinedName)
             combinedPipe$pipeline <- rbind(p1$pipeline, p2$pipeline)
-            combinedPipe$.__enclos_env__$private$.reindex()
 
             if (outAsIn) {
                 # Replace first step of p2, with the output of last step of p1
@@ -295,7 +299,8 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 combinedPipe$replace_step(
                     step = firstStep2,
                     fun = function(data = ~-1) data,
-                    description = "output of last step of first pipeline"
+                    description = "output of last step of first pipeline",
+                    keepOut = p2$pipeline[["keepOut"]][[1]]
                 )
             }
 
@@ -334,56 +339,59 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             self$pipeline[["step"]] <- add_postfix(steps)
             self$pipeline[["depends"]] <- lapply(deps, add_postfix)
 
-            private$.reindex()
-
             invisible(self)
         },
 
 
-        #' @description Collect outputs produced by the pipeline run.
-        #' Only steps that were not skipped contribute results.
-        #' The output is grouped by the user-defined group names
-        #' (see `group` parameter in function `add()`), which by default
-        #' are identical to the step names, that is, trivial groups of
-        #' size 1. Use `groupBy = "state"` to group results by the step's
-        #' state instead.
-        #' @param groupBy `string` field of pipeline by which to group the
+        #' @description Collect output afer pipeline run, by default, from all
+        #' steps for which `keepOut` was set to `TRUE`. The output is grouped
+        #' by the group names (see `group` parameter in function `add`),
+        #' which by default are set identical to the step names.
+        #' @param groupBy `string` column of pipeline by which to group the
         #' output.
+        #' @param all `logical` if `TRUE` all output is collected
+        #' regardless of the `keepOut` flag. This can be useful for debugging.
         #' @return `list` containing the output, named after the groups, which,
         #' by default, are the steps.
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1:2)
         #' p$add("step1", \(x = ~data) x + 2)
-        #' p$add("step2", \(x = ~step1) x + 2)
+        #' p$add("step2", \(x = ~step1) x + 2, keepOut = TRUE)
         #' p$run()
         #' p$collect_out()
+        #' p$collect_out(all = TRUE) |> str()
         #'
         #' # Grouped output
         #' p <- Pipeline$new("pipe", data = 1:2)
-        # nolint start
         #' p$add("step1", \(x = ~data) x + 2, group = "add")
         #' p$add("step2", \(x = ~step1, y = 2) x + y, group = "add")
         #' p$add("step3", \(x = ~data) x * 3, group = "mult")
         #' p$add("step4", \(x = ~data, y = 2) x * y, group = "mult")
-        # nolint end
         #' p
-        #' p$run()$collect_out() |> str()
+        #' p$run()
+        #' p$collect_out(all = TRUE) |> str()
         #'
         #' # Grouped by state
         #' p$set_params(list(y = 5))
         #' p
-        #' p$collect_out(groupBy = "state") |> str()
-        collect_out = function(groupBy = c("group", "state"))
+        #' p$collect_out(groupBy = "state", all = TRUE) |> str()
+        collect_out = function(groupBy = "group", all = FALSE)
         {
+            # nolint start
             stopifnot(
-                is.character(groupBy)
+                "groupBy must be a single string" = is_string(groupBy),
+                "groupBy column does not exist" = groupBy %in% colnames(self$pipeline),
+                "groupBy column must be character" = is.character(self$pipeline[[groupBy]])
             )
-            groupBy <- match.arg(groupBy)
-            hasField <- groupBy %in% colnames(self$pipeline)
+            # nolint end
 
-            doCollect <- !self$pipeline[["skip"]]
+            keepOut <- if (all) {
+                rep(TRUE, self$length())
+            } else {
+                self$pipeline[["keepOut"]]
+            }
 
-            if (!any(doCollect)) {
+            if (!any(keepOut)) {
                 return(list())
             }
 
@@ -393,7 +401,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 results
             }
 
-            pipeOut <- self$pipeline[doCollect, ]
+            pipeOut <- self$pipeline[keepOut, ]
             result <- list()
 
             groupLabels <- pipeOut[[groupBy]]
@@ -478,7 +486,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             # To respect dependencies, remove steps from last to first
             for (step in rev(steps2remove)) {
                 self$remove_step(step, recursive = recursive)
-                message(sprintf("step '%s' was removed", step))
+                message(gettextf("step '%s' was removed", step))
             }
 
             invisible(self)
@@ -494,11 +502,14 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' p$get_data()
         get_data = function()
         {
-            if (!self$has_step("data")) {
+            steps <- self$get_step_names()
+
+            if (!"data" %in% steps) {
                 stop_no_call("no data step defined")
             }
 
-            self$get_step_field("data", "fun")()
+            pos <- match("data", steps)
+            self$pipeline[["fun"]][[pos]]()
         },
 
         #' @description Get all dependencies defined in the pipeline
@@ -611,7 +622,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' p$get_out("add2")
         get_out = function(step)
         {
-            self$get_step_field(step, "out")
+            self$get_step(step)[["out"]][[1]]
         },
 
         #' @description Set unbound function parameters defined in
@@ -657,23 +668,28 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' p$get_params_at_step("add3")
         get_params_at_step = function(step, ignoreHidden = TRUE)
         {
-            isValue <- function(x) !is.name(x) && !is.call(x)
-            areHidden <- function(x) {
+            isValue = function(x) !is.name(x) && !is.call(x)
+            areHidden = function(x) {
                 startsWith(names(x), ".")
             }
 
             filter_desired_parameters = function(x) {
+
                 if (length(x) == 0) {
                     return(x)
                 }
                 params <- Filter(x, f = isValue)
+
                 if (ignoreHidden) {
-                    params <- params[!areHidden(params)]
+                    params = params[!areHidden(params)]
                 }
                 params
             }
 
-            self$get_step_field(step, "params") |>
+            step <- self$get_step(step)
+
+            step[["params"]] |>
+                unlist1() |>
                 filter_desired_parameters() |>
                 as.list()
         },
@@ -708,6 +724,41 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             paramValues[!duplicated(names(paramValues))]
         },
 
+        #' @description Get all unique function parameters in json format.
+        #' @param ignoreHidden `logical` if TRUE, hidden parameters (i.e. all
+        #' names starting with a dot) are ignored and thus not returned.
+        #' @return `list` flat unnamed json list of unique function parameters
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1:2)
+        #' p$add("add1", \(data = ~data, x = 1) x + data)
+        #' p$add("add2", \(x = 1, y = 2, .z = 3) x + y + .z)
+        #' p$add("mult1", \(x = 1, y = 2, .z = 3, b = ~add2) x * y * b)
+        #' p$get_params_unique_json()
+        #' p$get_params_unique_json(ignoreHidden = FALSE)
+        get_params_unique_json = function(ignoreHidden = TRUE)
+        {
+            params = self$get_params_unique(ignoreHidden)
+
+            param_to_list <- function(p, name) {
+                if (methods::is(p, "Param")) {
+                    p = as.list(attributes(eval(p)))
+                    p[["name"]] = name
+                } else {
+                    p <- list(name = name, value = p)
+                }
+                p
+            }
+
+            mapply(
+                params,
+                name = names(params),
+                FUN = param_to_list,
+                SIMPLIFY = FALSE
+            ) |>
+                stats::setNames(NULL) |>
+                jsonlite::toJSON(auto_unbox = TRUE, pretty = TRUE)
+        },
+
         #' @description Get step of pipeline
         #' @param step `string` name of step
         #' @return `data.table` row containing the step.
@@ -724,30 +775,14 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' try(p$get_step("foo")) # error: step 'foo' does not exist
         get_step = function(step)
         {
-            i <- self$get_step_number(step)
-            self$pipeline[i, ]
-        },
+            private$.verify_step_exists(step)
+            pos <- Position(
+                self$pipeline[["step"]],
+                f = function(x) x == step,
+                nomatch = stop_no_call("step '", step, "' not found")
+            )
 
-        #' @description Get a specific field/entry of a step
-        #' @param step `string` name of step
-        #' @param what `string` name of the pipeline column to return
-        #' @return the requested entry at the given step
-        get_step_field = function(step, what)
-        {
-            stopifnot(is_string(what))
-
-            available <- colnames(self$pipeline)
-            if (!what %in% available) {
-                stop_no_call("'", what, "' is not a field of the pipeline")
-            }
-
-            res <- self$get_step(step)[[what]]
-
-            if (data.class(self$pipeline[[what]]) == "list") {
-               return(res[[1]])
-            }
-
-            res
+            self$pipeline[pos, ]
         },
 
         #' @description Get step names of pipeline
@@ -773,7 +808,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         get_step_number = function(step)
         {
             private$.verify_step_exists(step)
-            private$.idx[[step]]
+            match(step, self$get_step_names())
         },
 
         #' @description Check if pipeline has given step
@@ -791,8 +826,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 is_string(step),
                 nzchar(step)
             )
-
-            !is.na(private$.idx[step])
+            step %in% self$get_step_names()
         },
 
         #' @description Insert step after a certain step
@@ -817,10 +851,9 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 stop_no_call("step '", afterStep, "' does not exist")
             }
 
-            pos <- self$get_step_number(afterStep)
+            pos <- match(afterStep, self$get_step_names())
             pip <- Pipeline$new(name = self$name)
             pip$pipeline <- self$pipeline[seq_len(pos), ]
-            pip$.__enclos_env__$private$.reindex()
             pip$add(step = step, ...)
 
             if (pos < self$length()) {
@@ -831,8 +864,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             }
 
             self$pipeline <- pip$pipeline
-            private$.reindex()
-
             invisible(self)
         },
 
@@ -858,7 +889,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 stop_no_call("step '", beforeStep, "' does not exist")
             }
 
-            pos <- self$get_step_number(beforeStep) - 1
+            pos <- match(beforeStep, self$get_step_names()) - 1
             if (pos == 0) {
                 stop_no_call("cannot insert before first step")
             }
@@ -866,7 +897,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             pip <- Pipeline$new(name = self$name)
 
             pip$pipeline <- self$pipeline[seq_len(pos), ]
-            pip$.__enclos_env__$private$.reindex()
             pip$add(step = step, ...)
 
             pip$pipeline <- rbind(
@@ -875,8 +905,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             )
 
             self$pipeline <- pip$pipeline
-            private$.reindex()
-
             invisible(self)
         },
 
@@ -910,7 +938,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' p$get_out("add1")
         #' p$get_out("add2")
         lock_step = function(step) {
-            private$.set_at_step(step, "locked", TRUE)
+            private$.set_at_step(step, "state", "Locked")
             invisible(self)
         },
 
@@ -928,8 +956,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             lastStepName <- self$get_step_names()[len]
 
             self$pipeline <- self$pipeline[-len, ]
-            private$.reindex()
-
             lastStepName
         },
 
@@ -956,7 +982,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             removedSteps <- self$pipeline[["step"]][numbers2remove]
 
             self$pipeline <- self$pipeline[-numbers2remove, ]
-            private$.reindex()
 
             removedSteps
         },
@@ -979,7 +1004,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             removedStepNames <- self$pipeline[["step"]][numbers2remove]
 
             self$pipeline <- self$pipeline[-numbers2remove, ]
-            private$.reindex()
 
             removedStepNames
         },
@@ -999,7 +1023,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 print(self$pipeline)
             } else {
                 columns2print <- c(
-                    "step", "depends", "out", "group", "state"
+                    "step", "depends", "out", "keepOut", "group", "state"
                 )
                 print(self$pipeline[, columns2print, with = FALSE])
             }
@@ -1054,8 +1078,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
 
             stepNumber <- self$get_step_number(step)
             self$pipeline = self$pipeline[-stepNumber, ]
-            private$.reindex()
-
             invisible(self)
         },
 
@@ -1091,7 +1113,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 target = from,
                 replacement = to
             )
-            private$.reindex()
 
             invisible(self)
         },
@@ -1110,18 +1131,17 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' for example, comes in handy when the pipeline is copy-appended
         #' multiple times to keep the results of the same function/step at one
         #' place.
-        #' @param tags `character` Optional tags associated with the step.
-        #' Tags can be used later to select certain parts of a pipeline,
-        #' for example, to collect output from or skip steps of a certain tag.
-        #'
+        #' @param keepOut `logical` if `FALSE` the output of the function will
+        #' be cleaned at the end of the whole pipeline execution. This option
+        #' is used to only keep the results that matter.
         #' @return the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
         #' p$add("add1", \(x = ~data, y = 1) x + y)
         #' p$add("add2", \(x = ~data, y = 2) x + y)
-        #' p$add("mult", \(x = 1, y = 2) x * y)
+        #' p$add("mult", \(x = 1, y = 2) x * y, keepOut = TRUE)
         #' p$run()$collect_out()
-        #' p$replace_step("mult", \(x = ~add1, y = ~add2) x * y)
+        #' p$replace_step("mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
         #' p$run()$collect_out()
         #' try(p$replace_step("foo", \(x = 1) x))   # step 'foo' does not exist
         replace_step = function(
@@ -1130,7 +1150,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             params = list(),
             description = "",
             group = step,
-            tags = character(0)
+            keepOut = FALSE
         ) {
             private$.verify_step_exists(step)
             stopifnot(
@@ -1138,7 +1158,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 is.list(params),
                 is_string(description),
                 is_string(group) && nzchar(group),
-                is.character(tags)
+                is.logical(keepOut)
             )
 
             if (is.function(fun)) {
@@ -1154,7 +1174,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             # Derive and verify dependencies
             allSteps <- self$get_step_names()
             stepNumber <- self$get_step_number(step)
-            toStep <- allSteps[stepNumber - 1]
+            toStep = allSteps[stepNumber - 1]
 
             deps <- private$.derive_dependencies(
                 params = params,
@@ -1175,18 +1195,15 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 params = list(params),
                 depends = list(deps),
                 out = list(NULL),
-                tags = list(tags),
+                keepOut = keepOut,
                 group = group,
                 description = description,
                 time = Sys.time(),
-                state = "New",
-                locked = FALSE,
-                skip = FALSE
+                state = "New"
             )
 
             self$pipeline[stepNumber, ] <- newStep
             private$.update_states_downstream(step, state = "Outdated")
-            private$.reindex()
 
             invisible(self)
         },
@@ -1215,6 +1232,9 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' @param recursive `logical` if `TRUE` and a step returns a new
         #' pipeline, the run of the current pipeline is aborted and the
         #' new pipeline is run recursively.
+        #' @param cleanUnkept `logical` if `TRUE` all output that was not
+        #' marked to be kept is removed after the pipeline run. This option
+        #' can be useful if temporary results require a lot of memory.
         #' @param progress `function` this parameter can be used to provide a
         #' custom progress function of the form `function(value, detail)`,
         #' which will show the progress of the pipeline run for each step,
@@ -1228,11 +1248,12 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' p <- Pipeline$new("pipe", data = 1)
         #' p$add("add1", \(x = ~data, y = 1) x + y)
         #' p$add("add2", \(x = ~add1, z = 2) x + z)
-        #' p$add("final", \(x = ~add1, y = ~add2) x * y)
+        #' p$add("final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
         #' p$run()$collect_out()
         #' p$set_params(list(z = 4))  # outdates steps add2 and final
         #' p
-        #' p$run()$collect_out() |> str()
+        #' p$run()$collect_out()
+        #' p$run(cleanUnkept = TRUE)  # clean up temporary results
         #' p
         #'
         #' # Recursive pipeline
@@ -1241,10 +1262,10 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' p$add("new_pipe", \(x = ~add1) {
         #'     pp <- Pipeline$new("new_pipe", data = x)
         #'     pp$add("add1", \(x = ~data) x + 1)
-        #'     pp$add("add2", \(x = ~add1) x + 2)
+        #'     pp$add("add2", \(x = ~add1) x + 2, keepOut = TRUE)
         #'     }
         #' )
-        #' p$run(recursive = TRUE)$collect_out() |> str()
+        #' p$run(recursive = TRUE)$collect_out()
         #'
         #' # Run pipeline with progress bar
         #' p <- Pipeline$new("pipe", data = 1)
@@ -1259,13 +1280,14 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         run = function(
             force = FALSE,
             recursive = TRUE,
+            cleanUnkept = FALSE,
             progress = NULL,
             showLog = TRUE
         ) {
             stopifnot(
                 is.logical(force),
                 is.logical(recursive),
-                is.null(progress) || is.function(progress),
+                is.logical(cleanUnkept),
                 is.logical(showLog)
             )
 
@@ -1275,7 +1297,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 }
             }
 
-            sprintf("Start run of '%s' pipeline:", self$name) |> log_info()
+            gettextf("Start run of '%s' pipeline:", self$name) |> log_info()
 
             to <- self$length()
             for (i in seq(from = 1, to = to)) {
@@ -1283,15 +1305,12 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 if (is.function(progress)) {
                     progress(value = i, detail = step)
                 }
-                info <- sprintf("Step %i/%i %s", i, to, step)
+                state <- self$get_step(step)[["state"]]
+                info <- gettextf("Step %i/%i %s", i, to, step)
 
-                state <- tolower(self$get_step_field(step, "state"))
-                isSkipped <- self$get_step_field(step, "skip")
-                isLocked <- self$get_step_field(step, "locked")
-                skipThis <- isLocked || isSkipped || (state == "done" && !force)
-
-                if (skipThis) {
-                    paste0(info, " - skip '", state, "' step") |> log_info()
+                if (state == "Locked" || (state == "Done" && !force)) {
+                    paste0(info, " - skip '", tolower(state), "' step") |>
+                        log_info()
                     next()
                 }
                 log_info(info)
@@ -1313,6 +1332,11 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
 
             log_info("Finished execution of steps.")
 
+            if (cleanUnkept) {
+                log_info("Clean temporary results.")
+                private$.clean_out_not_kept()
+            }
+
             log_info("Done.")
             invisible(self)
         },
@@ -1324,6 +1348,9 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' steps first.
         #' @param downstream `logical` if `TRUE`, run all depdendent
         #' downstream afterwards.
+        #' @param cleanUnkept `logical` if `TRUE` all output that was not
+        #' marked to be kept is removed after the pipeline run. This option
+        #' can be useful if temporary results require a lot of memory.
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
@@ -1336,12 +1363,14 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         run_step = function(
             step,
             upstream = TRUE,
-            downstream = FALSE
+            downstream = FALSE,
+            cleanUnkept = FALSE
         ) {
             private$.verify_step_exists(step)
             stopifnot(
                 is.logical(upstream),
-                is.logical(downstream)
+                is.logical(downstream),
+                is.logical(cleanUnkept)
             )
 
             upstreamSteps <- character(0)
@@ -1364,59 +1393,219 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 steps <- c(steps, downstreamSteps)
             }
 
+            nStep <- length(steps)
+
             log_info <- function(msg, ...) {
                 private$.lg(level = "info", msg = msg, ...)
             }
 
-            nStep <- length(steps)
-            sprintf("Start step run of '%s' pipeline:", self$name) |> log_info()
-            for (s in steps) {
-                state <- tolower(self$get_step_field(s, "state"))
+            gettextf("Start step run of '%s' pipeline:", self$name) |>
+                log_info()
+
+            for (i in seq_along(steps)) {
+                step <- steps[i]
+                state <- self$get_step(step)[["state"]]
                 stream <- ""
-                if (s %in% upstreamSteps) {
+                if (step %in% upstreamSteps) {
                     stream <- " (upstream)"
                 }
-                if (s %in% downstreamSteps) {
+                if (step %in% downstreamSteps) {
                     stream <- " (downstream)"
                 }
+                info <- gettextf("Step %i/%i %s%s",  i, nStep, step, stream)
 
-                iStep <- match(s, steps)
-                info <- sprintf("Step %i/%i %s%s",  iStep, nStep, s, stream)
-
-                isSkipped <- self$get_step_field(s, "skip")
-                isLocked <- self$get_step_field(s, "locked")
-                skipThis <- isLocked || isSkipped
-
-                if (skipThis) {
-                    paste0(info, " - skip '", state, "' step") |> log_info()
+                if (state == "Locked") {
+                    paste0(info, " - skip '", tolower(state), "' step") |>
+                        log_info()
                     next()
                 }
                 log_info(info)
 
-                private$.run_step(s)
+                private$.run_step(step)
             }
 
             log_info("Finished execution of steps.")
+
+            if (cleanUnkept) {
+                log_info("Clean temporary results.")
+                private$.clean_out_not_kept()
+            }
+
             log_info("Done.")
             invisible(self)
         },
 
-        #' @description
-        #' Convenience function to set data in first step of pipeline.
+        #' @description Set data in first step of pipeline.
         #' @param data initial data set
         #' @return returns the `Pipeline` object invisibly
         #' @examples
         #' p <- Pipeline$new("pipe", data = 1)
-        #' p$add("add1", \(x = ~data, y = 1) x + y)
+        #' p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
         #' p$run()$collect_out()
         #' p$set_data(3)
         #' p$run()$collect_out()
         set_data = function(data)
         {
             step <- self$get_step_names()[1]
-            self$replace_step(step = step, fun = function() data)
+            self$replace_step(
+                step = step,
+                fun = function() data,
+                keepOut = FALSE
+            )
         },
 
+        #' @description This function can be used to apply the pipeline
+        #' repeatedly to various data sets. For this, the pipeline split-copies
+        #' itself by the list of given data sets. Each sub-pipeline will have
+        #' one of the data sets set as input data.
+        #' The step names of the sub-pipelines will be the original
+        #' step names plus the name of the data set.
+        #' @param dataList `list` of data sets
+        #' @param toStep `string` step name marking optional subset of
+        #' the pipeline, at which the data split should be applied to.
+        #' @param groupBySplit `logical` whether to set step groups according
+        #' to data split.
+        #' @param sep `string` separator to be used between step name and
+        #' data set name when creating the new step names.
+        #' @return new combined `Pipeline` with each sub-pipeline having set
+        #' one of the data sets.
+        #' @examples
+        #' # Split by three data sets
+        #' dataList <- list(a = 1, b = 2, c = 3)
+        #' p <- Pipeline$new("pipe")
+        #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
+        #' p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+        #' p$set_data_split(dataList)
+        #' p
+        #' p$run()$collect_out() |> str()
+        #'
+        #' # Don't group output by split
+        #' p <- Pipeline$new("pipe")
+        #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
+        #' p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+        #' p$set_data_split(dataList, groupBySplit = FALSE)
+        #' p
+        #' p$run()$collect_out() |> str()
+        #'
+        #' # Split up to certain step
+        #' p <- Pipeline$new("pipe")
+        #' p$add("add1", \(x = ~data) x + 1)
+        #' p$add("mult", \(x = ~data, y = ~add1) x * y)
+        #' p$add("average_result", \(x = ~mult) mean(unlist(x)), keepOut = TRUE)
+        #' p
+        #' p$get_depends()[["average_result"]]
+        #'
+        #' p$set_data_split(dataList, toStep = "mult")
+        #' p
+        #' p$get_depends()[["average_result"]]
+        #'
+        #' p$run()$collect_out()
+        set_data_split = function(
+            dataList,
+            toStep = character(),
+            groupBySplit = TRUE,
+            sep = "."
+        ) {
+            if (length(toStep) == 0) {
+                toStep <- utils::tail(self$get_step_names(), 1)
+            }
+
+            stopifnot(
+                is.list(dataList),
+                is_string(toStep),
+                is.logical(groupBySplit),
+                is_string(sep)
+            )
+            private$.verify_step_exists(toStep)
+            to <- self$get_step_number(toStep)
+            upperSteps <- self$get_step_names()[seq_len(to)]
+
+            dataNames <- names(dataList)
+            if (is.null(dataNames)) {
+                dataNames = as.character(seq_along(dataList))
+            }
+
+            init_new_pipeline_with_data = function(data) {
+                self$clone(deep = TRUE)$set_data(data)
+            }
+
+            # Create new pipeline for each data set
+            pipes <- lapply(dataList, init_new_pipeline_with_data)
+            for (i in seq_along(pipes)) {
+                name <- dataNames[[i]]
+                pipes[[i]]$name <- name
+                pipes[[i]]$pipeline <- pipes[[i]]$pipeline[seq_len(to), ]
+                pipes[[i]]$append_to_step_names(pipes[[i]]$name, sep = sep)
+
+                newGroups <- name
+                if (!groupBySplit) {
+                    oldGroups <- pipes[[i]]$pipeline[["group"]]
+                    newGroups <- paste0(oldGroups, sep, name)
+                }
+                pipes[[i]]$pipeline[["group"]] <- newGroups
+            }
+
+            # Combine pipelines
+            pipeNames <- sapply(pipes, function(x) x$name)
+            combinedName <- paste(self$name, "split")
+            pip <- Pipeline$new(combinedName)
+            combined <- Reduce(
+                c(pip, pipes),
+                f = function(x, y) x$append(y, sep = sep)
+            )
+            combined$remove_step("data")
+
+            # If subset was used for split, append the remaining steps and
+            # update all of the (now changed) upstream dependencies.
+            if (to < self$length()) {
+                remainingPipe <- self$pipeline[(to + 1):self$length(), ]
+                remainingDeps <- remainingPipe[["depends"]]
+                update_if_needed <- function(x) {
+                    needsUpdate <- x %in% upperSteps
+                    if (needsUpdate) paste0(x, sep, pipeNames) else x
+                }
+                updatedDeps <- lapply(
+                    remainingDeps,
+                    function(deps) {
+                        res = lapply(deps, update_if_needed)
+                        if (all(sapply(res, function(x) length(x) == 1))) {
+                            res = unlist(res)   # flatten single deps
+                        }
+                        res
+                    }
+                )
+                remainingPipe[["depends"]] <- updatedDeps
+                combined$pipeline <- rbind(combined$pipeline, remainingPipe)
+            }
+
+            self$pipeline <- combined$pipeline
+            invisible(self)
+        },
+
+        #' @description Change the `keepOut` flag at a given pipeline step,
+        #' which determines whether the output of that step is collected
+        #' when calling `collect_out()` after the pipeline was run.
+        #' @param step `string` name of step
+        #' @param keepOut `logical` whether to keep output of step
+        #' @return the `Pipeline` object invisibly
+        #' @examples
+        #' p <- Pipeline$new("pipe", data = 1)
+        #' p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+        #' p$add("add2", \(x = ~data, y = 2) x + y)
+        #' p$add("mult", \(x = ~add1, y = ~add2) x * y)
+        #' p$run()$collect_out()
+        #' p$set_keep_out("add1", keepOut = FALSE)
+        #' p$set_keep_out("mult", keepOut = TRUE)
+        #' p$collect_out()
+        set_keep_out = function(step, keepOut = TRUE)
+        {
+            stopifnot(
+                is.logical(keepOut)
+            )
+            private$.set_at_step(step, "keepOut", value = keepOut)
+
+            invisible(self)
+        },
 
         #' @description Set parameters in the pipeline. If a parameter occurs
         #' in several steps, the parameter is set commonly in all steps.
@@ -1491,7 +1680,8 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 is.list(params)
             )
 
-            if (self$get_step_field(step, "locked")) {
+            isLocked <- self$get_step(step)[["state"]] == "Locked"
+            if (isLocked) {
                 message(
                     "skipping setting parameters ",
                     paste0(names(params), collapse = ", "),
@@ -1514,15 +1704,29 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             toUpdate <- intersect(names(params), names(current))
             hasUpdate <- length(toUpdate) > 0
 
+            replace_param <- function(old, new) {
+                is <- methods::is
+                if (old |> is("Param") && !(new |> is("Param"))) {
+                    old@value <- new
+                    return(old)
+                }
+                new
+            }
+
             if (hasUpdate) {
                 # Update params
-                current <- self$get_step_field(step, "params")
-                current[toUpdate] <- params[toUpdate]
+                current <- self$get_step(step)[["params"]] |> unlist1()
+                current[toUpdate] <- mapply(
+                    FUN = replace_param,
+                    old = current[toUpdate],
+                    new = params[toUpdate],
+                    SIMPLIFY = FALSE
+                )
                 private$.set_at_step(step, "params", value = current)
 
                 # Update state if applicable
-                state <- tolower(self$get_step_field(step, "state"))
-                if (state == "done") {
+                state <- self$get_step(step)[["state"]]
+                if (state == "Done") {
                     private$.set_at_step(step, "state", "Outdated")
                     private$.update_states_downstream(step, "Outdated")
                 }
@@ -1530,58 +1734,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
 
             invisible(self)
         },
-
-        #' @description Skips all steps that belong to the specified group.
-        #' Works like calling `skip_step` on every step in that group. Skipped
-        #' steps are not executed during `run()` and their outputs (if any)
-        #' are not considered for `collect_out()`.
-        #' @param group `string` name of the group whose steps should be
-        #' skipped.
-        #' @return the `Pipeline` object invisibly
-        #' @examples
-        #' p <- Pipeline$new("pipe", data = 15)
-        #' p$add("f1", \(data = ~data, x = 1) data + x)
-        #' p$add("log2", \(x = ~f1) log2(x), group = "prep")
-        #' p$add("sqrt", \(x = ~log2) sqrt(x), group = "prep")
-        #' p$add("final",  \(x = ~sqrt, y = ~f1) x + y)
-        #' p$run()$collect_out() |> str()
-        #'
-        #' p$set_params_at_step("f1", list(x = 5))$skip_group("prep")
-        #' p$run()$collect_out()
-        #' p$unskip_group("prep")$run()$collect_out() |> str()
-        skip_group = function(group) {
-            steps <- private$.get_steps_in_group(group)
-            lapply(steps, \(step) self$skip_step(step))
-            invisible(self)
-        },
-
-        #' @description Skipping a step means that it is skipped during a
-        #' pipeline run and therefore it's output (if existing) remains
-        #' untouched. In addition, it is skipped when collecting output via
-        #' `collect_out`, that is, it's output will not be part of the
-        #' collected output list.
-        #' In contrast to `lock_step`, skipping a step does not "protect" the
-        #' step against changing the step's parameters.
-        #' @param step `string` name of step
-        #' @return the `Pipeline` object invisibly
-        #' @examples
-        #' p <- Pipeline$new("pipe", data = 1)
-        #' p$add("add1", \(x = 2, data = ~data) x + data)
-        #' p$add("add2", \(x = 2, data = ~add1) x + data)
-        #' p$run()$collect_out() |> str()
-        #'
-        #' p$skip_step("add1")$set_params(list(x = 3))
-        #' p$run()$collect_out() |> str()
-        skip_step = function(step) {
-            isSkipped <- self$get_step_field(step, "skip")
-            if (isSkipped) {
-                message("Step '", step, "' was already skipped - skip ignored")
-            }
-
-            private$.set_at_step(step, "skip", TRUE)
-            invisible(self)
-        },
-
 
         #' @description Splits pipeline into its independent parts.
         #' @return list of `Pipeline` objects
@@ -1593,6 +1745,14 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' p$add("f3", \(x = ~f1) x)
         #' p$add("f4", \(x = ~f2) x)
         #' p$split()
+        #'
+        #' # Example of split by three data sets
+        #' dataList <- list(a = 1, b = 2, c = 3)
+        #' p <- Pipeline$new("pipe")
+        #' p$add("add1", \(x = ~data) x + 1, keepOut = TRUE)
+        #' p$add("mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
+        #' pipes <- p$set_data_split(dataList)$split()
+        #' pipes
         split = function()
         {
             groups <- private$.get_depends_grouped()
@@ -1610,7 +1770,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         },
 
         #' @description Unlock previously locked step. If step was not locked,
-        #' the command is ignored and a message is printed hinting at that.
+        #' the command is ignored.
         #' @param step `string` name of step
         #' @return the `Pipeline` object invisibly
         #' @examples
@@ -1624,64 +1784,17 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
         #' p$set_params(list(x = 3))
         #' p$get_params()
         unlock_step = function(step) {
-            isLocked <- isTRUE(self$get_step_field(step, "locked"))
-            if (isLocked) {
-                private$.set_at_step(step, "locked", FALSE)
-            } else {
-                message("Step '", step, "' was not locked - unlock ignored")
+            state <- self$get_step(step)[["state"]]
+            if (state == "Locked") {
+                private$.set_at_step(step, "state", "Unlocked")
             }
 
-            invisible(self)
-        },
-
-        #' @description Unskips all steps that belong to the specified group.
-        #' Works like calling `unskip_step` on every step in that group.
-        #' @param group `string` name of the group whose steps should be
-        #' unskipped.
-        #' @return the `Pipeline` object invisibly
-        #' @examples
-        #' p <- Pipeline$new("pipe", data = 15)
-        #' p$add("f1", \(data = ~data, x = 1) data + x)
-        #' p$add("log2", \(x = ~f1) log2(x), group = "prep")
-        #' p$add("sqrt", \(x = ~log2) sqrt(x), group = "prep")
-        #' p$add("final",  \(x = ~sqrt, y = ~f1) x + y)
-        #' p$run()$collect_out() |> str()
-        #'
-        #' p$set_params_at_step("f1", list(x = 5))$skip_group("prep")
-        #' p$run()$collect_out() |> str()
-        #' p$unskip_group("prep")$run()$collect_out() |> str()
-        unskip_group = function(group) {
-            steps <- private$.get_steps_in_group(group)
-            lapply(steps, \(step) self$unskip_step(step))
-            invisible(self)
-        },
-
-        #' @description Unskip previously skipped step. If step was not skipped,
-        #' the command is ignored, but a warning is given.
-        #' @param step `string` name of step
-        #' @return the `Pipeline` object invisibly
-        #' @examples
-        #' p <- Pipeline$new("pipe", data = 1)
-        #' p$add("add1", \(x = 2, data = ~data) x + data)
-        #' p$add("add2", \(x = 2, data = ~add1) x + data)
-        #' p$run()$collect_out() |> str()
-        #'
-        #' p$skip_step("add1")$set_params(list(x = 3))
-        #' p$run()$collect_out() |> str()
-        #'
-        #' p$unskip_step("add1")$run()$collect_out() |> str()
-        unskip_step = function(step) {
-            wasSkipped <- self$get_step(step)[["skip"]]
-            private$.set_at_step(step, "skip", FALSE)
-
-            if (!isTRUE(wasSkipped)) {
-                message("Step '", step, "' was not skipped")
-            }
             invisible(self)
         }
     ),
 
     private = list(
+        .lg = NULL, # the logger function
         deep_clone = function(name, value) {
             if (name == "pipeline")
                 return(data.table::copy(value))
@@ -1689,24 +1802,20 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             value
         },
 
-        .idx = numeric(),   # step name to row index mapping
-        .lg = NULL,         # the logger function
-
-        ._empty_pipeline = function() {
-            data.table::data.table(
-                step = character(0),
-                fun = list(),
-                funcName = character(0),
-                params = list(),
-                depends = list(),
-                out = list(),
-                tags = list(),
-                group = character(0),
-                description = character(0),
-                time = as.POSIXct(character(0)),
-                state = character(0),
-                locked = logical(0),
-                skip = logical(0)
+        .clean_out_not_kept = function()
+        {
+            areNotKept <- !self$pipeline[["keepOut"]]
+            data.table::set(
+                self$pipeline,
+                i = which(areNotKept),
+                j = "out",
+                value = list(list(NULL))
+            )
+            data.table::set(
+                self$pipeline,
+                i = which(areNotKept),
+                j = "state",
+                value = "Outdated"
             )
         },
 
@@ -1766,7 +1875,7 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             pip <- self$pipeline
 
             nodes <- data.frame(
-                "id" = seq_along(self$get_step_names()),
+                "id" = seq_len(self$length()),
                 "label" = self$get_step_names(),
                 "group" = pip[["group"]],
                 "shape" = "box",
@@ -1778,10 +1887,12 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             nodes[["color"]][pip[["state"]] == "Done"] <- "lightgreen"
             nodes[["color"]][pip[["state"]] == "Outdated"] <- "orange"
             nodes[["color"]][pip[["state"]] == "Failed"] <- "red"
+            nodes[["color"]][pip[["state"]] == "Locked"] <- "grey"
             areDataNodes <- nodes[, "label"] |> startsWith("data")
             if (any(areDataNodes)) {
                 nodes[areDataNodes, "shape"] <- "database"
             }
+            nodes[["shape"]][pip[["keepOut"]]] <- "circle"
 
             if (!is.null(groups)) {
                 stopifnot(
@@ -1908,63 +2019,27 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 is.logical(recursive)
             )
 
-            if (length(depends) == 0) {
-                return(character())
-            }
+            result <- depends |>
+                Filter(f = function(x) step %in% unlist(x)) |>
+                names()
 
-            # Build reverse adjacency lookup (dep -> steps that depend on it)
-            rev_adj <- list()
-            dn <- names(depends)
-            for (i in seq_along(depends)) {
-                s  <- dn[[i]]
-                ds <- private$.normalize_depvec(depends[[i]])
-                if (!length(ds)) next
-                for (d in ds) {
-                    key <- d
-                    rev_adj[[key]] <- c(rev_adj[[key]], s)
-                }
-            }
-
-            key <- as.character(step)
-            if (!recursive) {
-                return(
-                    unique(
-                        rev_adj[[key]] %||% character()
+            if (recursive) {
+                result <- c(
+                    result,
+                    sapply(
+                        result,
+                        FUN = private$.get_downstream_depends,
+                        depends = depends,
+                        recursive = TRUE
                     )
                 )
             }
 
-            # BFS from immediate children outwards
-            q <- rev_adj[[key]] %||% character()
-            head <- 1L
-            seen <- new.env(parent = emptyenv(), hash = TRUE)
-            out  <- character()
-
-            while (head <= length(q)) {
-                s <- q[[head]]
-                head <- head + 1L
-                if (!exists(s, envir = seen, inherits = FALSE)) {
-                    assign(s, TRUE, envir = seen)
-                    out <- c(out, s)
-                    nbrs <- rev_adj[[s]] %||% character()
-                    if (length(nbrs)) q <- c(q, nbrs)
-                }
-            }
-
-            out
+            unique(unlist(result)) |> as.character()
         },
 
         .get_last_step = function() {
             self$get_step_names() |> utils::tail(1)
-        },
-
-        .get_steps_in_group = function(group) {
-            stopifnot(is_string(group), nzchar(group))
-            groups <- self$pipeline[["group"]]
-            if (!(group %in% groups)) {
-                stop("group '", group, "' does not exist", call. = FALSE)
-            }
-            self$pipeline[["step"]][groups == group]
         },
 
         .get_upstream_depends = function(
@@ -1982,42 +2057,21 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 return(character())
             }
 
-            if (!recursive) {
-                return(
-                    unique(
-                        private$.normalize_depvec(
-                            depends[[step]] %||% character()
-                        )
+            result <- unlist(depends[[step]]) |> as.character()
+
+            if (recursive) {
+                result <- c(
+                    result,
+                    sapply(
+                        result,
+                        FUN = private$.get_upstream_depends,
+                        depends = depends,
+                        recursive = TRUE
                     )
                 )
             }
 
-            # BFS from immediate parents outward
-            q <- private$.normalize_depvec(depends[[step]] %||% character())
-            head <- 1L
-            seen <- new.env(parent = emptyenv(), hash = TRUE)
-            out  <- character()
-
-            while (head <= length(q)) {
-                s <- as.character(q[[head]])
-                head <- head + 1L
-                if (!exists(s, envir = seen, inherits = FALSE)) {
-                    assign(s, TRUE, envir = seen)
-                    out <- c(out, s)
-                    next_up <- private$.normalize_depvec(
-                        depends[[s]] %||% character()
-                    )
-                    if (length(next_up)) q <- c(q, next_up)
-                }
-            }
-
-            out
-        },
-
-        .normalize_depvec = function(x) {
-            if (is.null(x) || length(x) == 0) return(character())
-            if (is.list(x)) return(unlist(x, use.names = FALSE))
-            as.character(x)
+            unique(unlist(result)) |> as.character()
         },
 
         .prepare_and_verify_params = function(
@@ -2038,11 +2092,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
             params <- lapply(params, eval)
 
             params
-        },
-
-        .reindex = function() {
-            private$.idx <- seq_len(nrow(self$pipeline))
-            names(private$.idx) <- self$pipeline[["step"]]
         },
 
         .relative_dependency_to_index = function(
@@ -2099,8 +2148,16 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 args[names(depdendentOut)] <- depdendentOut
             }
 
+            # If arg is encapsulated in a Param object, get the value
+            args <- lapply(
+                args,
+                FUN = function(arg) {
+                    if (methods::is(arg, "Param")) arg@value else arg
+                }
+            )
+
             iStep <- self$get_step_number(step)
-            context <- sprintf("Step %i ('%s')", iStep, step)
+            context <- gettextf("Step %i ('%s')", iStep, step)
 
             res <- withCallingHandlers(
                 do.call(fun, args = args),
@@ -2146,10 +2203,6 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 stopifnot(data.class(value) == class)
                 self$pipeline[[field]][i] <- value
             }
-
-            if (field == "step") {
-                private$.reindex()
-            }
         },
 
         .update_states_downstream = function(step, state)
@@ -2159,8 +2212,8 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
 
             deps <- self$get_depends_down(step, recursive = TRUE)
             for (dep in deps) {
-                isLocked <- self$get_step_field(dep, "locked")
-                if (!isLocked) {
+                current <- self$get_step(dep)[["state"]]
+                if (current != "Locked") {
                     private$.set_at_step(dep, "state", value = state)
                 }
             }
@@ -2178,8 +2231,10 @@ Pipeline = R6::R6Class(     # nolint cyclomatic complexity
                 is_string(toStep)
             )
 
-            toIndex <- self$get_step_number(toStep)
+            private$.verify_step_exists(toStep)
+
             allSteps <- self$get_step_names()
+            toIndex <- match(toStep, allSteps)
             consideredSteps <- allSteps[seq_len(toIndex)]
 
             if (!(dep %in% consideredSteps)) {

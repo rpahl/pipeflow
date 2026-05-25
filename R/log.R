@@ -16,7 +16,6 @@ pipeflow_lgr <- function(level, msg)
 }
 
 
-#' @importFrom R6 R6Class
 LogLayoutJson <- R6::R6Class(
     "LogLayoutJson",
     inherit = lgr::LayoutJson,
@@ -53,7 +52,6 @@ LogLayoutJson <- R6::R6Class(
 #' @param layout Layout name, which at this point can be either 'text' or
 #' 'json'.
 #' @return invisibly returns a `Logger` object
-#' @importFrom lgr get_logger
 #' @export
 #' @examples
 #' p <- Pipeline$new("pipe", data = 1:2)

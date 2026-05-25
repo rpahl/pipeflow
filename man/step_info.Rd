@@ -25,7 +25,7 @@ pipe_has_step(pip, step)
 \item \code{pipe_get_step}: \code{data.table} row containing the step
 \item \code{pipe_get_step_names}: \code{character} vector of step names
 \item \code{pipe_get_step_number}: the step number in the pipeline
-\item \code{pipe_has_step}: whether step exists
+\item \code{pipe_get_step_number}: whether step exists
 }
 }
 \description{
