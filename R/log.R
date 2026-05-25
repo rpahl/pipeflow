@@ -4,6 +4,7 @@
     format(
         time,
         usetz = TRUE,
+        tz = "UTC",
         format = "%Y-%m-%d %H:%M:%OS",
         digits = 3
     )
