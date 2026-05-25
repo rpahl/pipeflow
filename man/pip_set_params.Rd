@@ -9,10 +9,10 @@ pip_set_params(p, params = list())
 \arguments{
 \item{p}{A pipeflow pip or view}
 
-\item{params}{list of parameters to set}
+\item{params}{Named list of parameters to set.}
 }
 \value{
-The updated pipeline
+The updated pipeline or view, invisibly.
 }
 \description{
 Independent parameters are those that are not dependent on any other steps

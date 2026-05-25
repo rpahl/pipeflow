@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_add}
 \alias{pip_add}
-\title{Add new step to the pipeline}
+\title{Add a step to a pipeline}
 \usage{
 pip_add(
   x,
@@ -17,11 +17,12 @@ pip_add(
 \arguments{
 \item{x}{A pipeflow pipeline object.}
 
-\item{step}{Step name.}
+\item{step}{Unique step name.}
 
-\item{fun}{Function to execute for the step.}
+\item{fun}{Function to execute for the step. Default values that are
+formulas like \code{~other_step} are treated as dependencies.}
 
-\item{group}{Step group name.}
+\item{group}{Step group label used for printing and grouped output.}
 
 \item{tags}{Optional character vector of tags belonging to the step.
 Can also be adjusted later using \verb{[pip_tag()]}.}
@@ -41,7 +42,7 @@ mode only accepts non-partitioned input and always intends to execute
 a single call.}
 }
 \value{
-The updated pipeflow pipeline object.
+The updated pipeline, invisibly.
 }
 \description{
 Adds a new step to the pipeline, by default at the end.

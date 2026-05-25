@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_has_step}
 \alias{pip_has_step}
-\title{Check if a step exists in the pipeline}
+\title{Check whether a step exists}
 \usage{
 pip_has_step(x, step)
 }
@@ -15,7 +15,7 @@ pip_has_step(x, step)
 Logical indicating if the step exists
 }
 \description{
-Check if a step exists in the pipeline
+Check whether a step exists
 }
 \examples{
 p <- pip_new() |> pip_add("s1", \(x = 1) x)

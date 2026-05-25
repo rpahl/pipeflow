@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_add_from}
 \alias{pip_add_from}
-\title{Add step from another pipeline}
+\title{Copy one step definition from another pipeline}
 \usage{
 pip_add_from(x, step, y)
 }
@@ -14,7 +14,7 @@ pip_add_from(x, step, y)
 \item{y}{Source pipeflow pipeline object.}
 }
 \value{
-The updated target pipeflow pipeline object.
+The updated target pipeline, invisibly.
 }
 \description{
 Add one existing step definition from pipeline \code{y} to pipeline \code{x}.

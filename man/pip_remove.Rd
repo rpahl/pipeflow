@@ -15,12 +15,14 @@ pip_remove(x, step, recursive = FALSE)
 with all its downstream dependencies.}
 }
 \value{
-The updated pipeflow pipeline object.
+The updated pipeline, invisibly.
 }
 \description{
 If other steps depend on the step to be removed, an error is
 given and the removal is blocked, unless \code{recursive} was set to
 \code{TRUE}.
+In recursive mode, the selected step and all downstream dependent steps are
+removed together.
 }
 \examples{
 p <- pip_new() |>

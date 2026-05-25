@@ -19,10 +19,11 @@ pip_replace(x, step, fun, group = step, tags = character(0))
 Can also be adjusted later using \verb{[pip_tag()]}.}
 }
 \value{
-The updated pipeflow pipeline object.
+The updated pipeline, invisibly.
 }
 \description{
-Replace a step in the pipeline
+Replaces one step definition in place while preserving step order. Steps
+downstream of the replaced step are marked as outdated.
 }
 \examples{
 p <- pip_new() |> pip_add("s1", \(x = 1) x)

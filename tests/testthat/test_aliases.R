@@ -2295,10 +2295,7 @@ describe("pipe_run",
                 fun =\(data = 10) {
                     pip <- pipe_new("2nd pipe", data = data) |>
                         pipe_add("step1", \(x = ~data) x) |>
-                        pipe_add("step2", \(x = ~step1) {
-                            print(x)
-                            2 * x
-                        }, keepOut = TRUE)
+                        pipe_add("step2", \(x = ~step1) 2 * x, keepOut = TRUE)
                 }
             )
 

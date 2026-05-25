@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_untag}
 \alias{pip_untag}
-\title{Remove tags from steps}
+\title{Remove tags from selected steps}
 \usage{
 pip_untag(p, tags = character())
 }
@@ -12,7 +12,7 @@ pip_untag(p, tags = character())
 \item{tags}{Character vector of tags to remove for each selected step.}
 }
 \value{
-The updated pipeline or view.
+The updated pipeline or view, invisibly.
 }
 \description{
 Removes tags from existing tags for all steps in the pipeline unless \code{p}

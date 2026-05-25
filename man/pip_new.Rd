@@ -2,18 +2,19 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_new}
 \alias{pip_new}
-\title{Create new pipeline}
+\title{Create a new pipeline object}
 \usage{
 pip_new(name = "pipe")
 }
 \arguments{
-\item{name}{Pipeline name.}
+\item{name}{Single name used for printing and for derived view names.}
 }
 \value{
 A pipeflow pipeline object.
 }
 \description{
-Create new pipeline
+Creates an empty pipeline with internal storage for steps, dependency graph,
+and a step-to-node index.
 }
 \examples{
 p <- pip_new("demo")

@@ -305,9 +305,12 @@
 # Exported pipeline functions
 # ---------------------------
 
-#' Create new pipeline
+#' Create a new pipeline object
 #'
-#' @param name Pipeline name.
+#' Creates an empty pipeline with internal storage for steps, dependency graph,
+#' and a step-to-node index.
+#'
+#' @param name Single name used for printing and for derived view names.
 #'
 #' @return A pipeflow pipeline object.
 #' @examples
@@ -334,7 +337,7 @@ pip_new <- function(name = "pipe")
 }
 
 
-#' Add new step to the pipeline
+#' Add a step to a pipeline
 #'
 #' Adds a new step to the pipeline, by default at the end.
 #' If `after` was specified, the new step will be inserted after the given
@@ -343,9 +346,10 @@ pip_new <- function(name = "pipe")
 #' requires re-wiring parts of the internal pipeline structure, especially
 #' if the new step is inserted at an early position.
 #' @param x A pipeflow pipeline object.
-#' @param step Step name.
-#' @param fun Function to execute for the step.
-#' @param group Step group name.
+#' @param step Unique step name.
+#' @param fun Function to execute for the step. Default values that are
+#' formulas like `~other_step` are treated as dependencies.
+#' @param group Step group label used for printing and grouped output.
 #' @param tags Optional character vector of tags belonging to the step.
 #' Can also be adjusted later using `[pip_tag()]`.
 #' @param after Optional position after which the new step should be inserted
@@ -361,7 +365,7 @@ pip_new <- function(name = "pipe")
 #' mode only accepts non-partitioned input and always intends to execute
 #' a single call.
 #'
-#' @return The updated pipeflow pipeline object.
+#' @return The updated pipeline, invisibly.
 #' @examples
 #' p <- pip_new()
 #' pip_add(p, "load", \(x = 1) x, group = "io")
@@ -458,7 +462,7 @@ pip_add <- function(
 }
 
 
-#' Add step from another pipeline
+#' Copy one step definition from another pipeline
 #'
 #' Add one existing step definition from pipeline `y` to pipeline `x`.
 #' The step is added via [pip_add()] so dependency checks and DAG updates
@@ -468,7 +472,7 @@ pip_add <- function(
 #' @param step Step name to copy from `y`.
 #' @param y Source pipeflow pipeline object.
 #'
-#' @return The updated target pipeflow pipeline object.
+#' @return The updated target pipeline, invisibly.
 #' @examples
 #' src <- pip_new() |>
 #'     pip_add("s1", \(x = 1) x) |>
@@ -537,7 +541,7 @@ pip_add_from <- function(x, step, y)
     )
 }
 
-#' Bind two pipelines together
+#' Bind two pipelines into one
 #'
 #' Bind two pipelines together by concatenating their steps. If both pipelines
 #' have steps with the same name, the step names of the second pipeline will be
@@ -605,7 +609,10 @@ pip_bind <- function(x, y)
 }
 
 
-#' Clone pipeline
+#' Clone a pipeline
+#'
+#' Creates an independent copy of the pipeline, including step table and DAG.
+#' Explicit `.self` parameters are rebound to the cloned object.
 #'
 #' @param x A pipeflow pipeline object.
 #' @param name Optional name for the cloned pipeline. If `NULL`, the original
@@ -654,12 +661,13 @@ pip_clone <- function(x, name = NULL)
 }
 
 
-#' Collect pipeline output
+#' Collect outputs from pipeline steps
 #'
 #' @param x A pipeflow pip or view
 #' @param grouped Logical indicating if the output should be grouped by step
 #' groups
-#' @return A list of pipeline outputs
+#' @return A named list of outputs. If `grouped = TRUE`, groups with more than
+#' one step are returned as nested named lists.
 #' @examples
 #' p <- pip_new() |>
 #'     pip_add("s1", \(x = 1) x, group = "a") |>
@@ -706,12 +714,13 @@ pip_collect_out <- function(x, grouped = TRUE)
     res
 }
 
-#' Extract all independent pipeline parameters
+#' Extract independent pipeline parameters
 #'
 #' Independent parameters are those that are not dependent on any other steps
 #' in the pipeline.
 #' @param x A pipeflow pip or view
-#' @return Unique list of all independent pipeline parameters
+#' @return Named list of unique independent parameters. If the same parameter
+#' name appears multiple times, the first occurrence in pipeline order is kept.
 #' @examples
 #' p <- pip_new() |>
 #'     pip_add("s1", \(x = 1, y = 2) x + y) |>
@@ -736,10 +745,13 @@ pip_get_params <- function(x)
 }
 
 
-#' Export pipeline graph
+#' Build graph data for pipeline visualization
 #'
 #' Export a graph representation of a pipeline or view that can be passed to
 #' [visNetwork::visNetwork()].
+#'
+#' Node shape reflects execution mode (`square` for `auto`/`plain`, `star`
+#' for `split`, `dot` for `reduce`).
 #'
 #' @param x A pipeflow pip or view.
 #' @param include_upstream Logical. Only relevant for views. If `TRUE`, add
@@ -835,7 +847,7 @@ pip_get_graph <- function(x, include_upstream = FALSE)
 }
 
 
-#' Check if a step exists in the pipeline
+#' Check whether a step exists
 #'
 #' @param x A pipeflow pip
 #' @param step A step name
@@ -872,11 +884,13 @@ pip_has_step <- function(x, step)
 #' If other steps depend on the step to be removed, an error is
 #' given and the removal is blocked, unless `recursive` was set to
 #' `TRUE`.
+#' In recursive mode, the selected step and all downstream dependent steps are
+#' removed together.
 #' @param x A pipeflow pip
 #' @param step `string` the name of the step to be removed.
 #' @param recursive `logical` if `TRUE` the step is removed together
 #' with all its downstream dependencies.
-#' @return The updated pipeflow pipeline object.
+#' @return The updated pipeline, invisibly.
 #' @examples
 #' p <- pip_new() |>
 #'     pip_add("s1", \(x = 1) x) |>
@@ -974,10 +988,13 @@ pip_remove <- function(x, step, recursive = FALSE)
 
 
 #' Rename a step in the pipeline
+#'
+#' Renames the selected step and updates dependency references in downstream
+#' steps.
 #' @param x A pipeflow pip
 #' @param from Existing step name
 #' @param to New step name
-#' @return The updated pipeline
+#' @return The updated pipeline, invisibly.
 #' @examples
 #' p <- pip_new() |> pip_add("s1", \(x = 1) x)
 #' pip_rename(p, from = "s1", to = "load")
@@ -1044,13 +1061,16 @@ pip_rename <- function(x, from, to)
 
 #' Replace a step in the pipeline
 #'
+#' Replaces one step definition in place while preserving step order. Steps
+#' downstream of the replaced step are marked as outdated.
+#'
 #' @param x A pipeflow pipeline object.
 #' @param step Step name.
 #' @param fun Function to execute for the step.
 #' @param group Step group name.
 #' @param tags Optional character vector of tags belonging to the step.
 #' Can also be adjusted later using `[pip_tag()]`.
-#' @return The updated pipeflow pipeline object.
+#' @return The updated pipeline, invisibly.
 #' @examples
 #' p <- pip_new() |> pip_add("s1", \(x = 1) x)
 #' pip_replace(p, "s1", \(x = 2) x)
@@ -1150,8 +1170,11 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0))
 #' To suppress logging, you can set `lgr = NULL`.
 #' @param force Logical indicating if all steps should be forced to run,
 #' regardless of whether they are outdated or not.
-#' @param progress A progress function
-#' @return The updated pipeline
+#' @param progress Optional callback of the form
+#' `function(value, detail)` called before each step.
+#' @return The updated pipeline or view, invisibly.
+#' @details When `x` is a view, requested rows are run together with required
+#' upstream dependencies.
 #' @examples
 #' p <- pip_new() |>
 #'     pip_add("s1", \(x = 1) x) |>
@@ -1251,8 +1274,8 @@ pip_run <- function(
 #' "outdated". The only exception is if a step is locked - parameters of
 #' locked steps are never changed and so their state remains unchanged.
 #' @param p A pipeflow pip or view
-#' @param params list of parameters to set
-#' @return The updated pipeline
+#' @param params Named list of parameters to set.
+#' @return The updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |>
 #'     pip_add("s1", \(x = 1) x) |>
@@ -1332,14 +1355,14 @@ pip_set_params <- function(p, params = list())
 }
 
 
-#' Add tags to steps
+#' Add tags to selected steps
 #'
 #' Adds tags to existing tags for all steps in the pipeline unless `p` is a
 #' view, in which case tags are only added for steps covered by the view.
 #' Locked steps are skipped and not updated.
 #' @param p A pipeflow pip or view.
 #' @param tags Character vector of tags to add for each selected step.
-#' @return The updated pipeline or view.
+#' @return The updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |> pip_add("s1", \(x = 1) x)
 #' pip_tag(p, tags = c("daily", "core"))
@@ -1375,14 +1398,14 @@ pip_tag <- function(p, tags = character())
 }
 
 
-#' Remove tags from steps
+#' Remove tags from selected steps
 #'
 #' Removes tags from existing tags for all steps in the pipeline unless `p`
 #' is a view, in which case tags are only removed for steps covered by the
 #' view. Locked steps are skipped and not updated.
 #' @param p A pipeflow pip or view.
 #' @param tags Character vector of tags to remove for each selected step.
-#' @return The updated pipeline or view.
+#' @return The updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |> pip_add("s1", \(x = 1) x, tags = c("daily", "core"))
 #' pip_untag(p, tags = "core")
@@ -1418,12 +1441,12 @@ pip_untag <- function(p, tags = character())
 }
 
 
-#' Lock selected steps
+#' Lock selected steps against updates
 #'
 #' Locks all selected steps in the pipeline unless `p` is a view, in which
 #' case only steps covered by the view are locked.
 #' @param p A pipeflow pip or view.
-#' @return The updated pipeline or view.
+#' @return The updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |> pip_add("s1", \(x = 1) x)
 #' pip_lock(p)
@@ -1452,7 +1475,7 @@ pip_lock <- function(p)
 #' Unlocks all selected steps in the pipeline unless `p` is a view, in which
 #' case only steps covered by the view are unlocked.
 #' @param p A pipeflow pip or view.
-#' @return The updated pipeline or view.
+#' @return The updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |> pip_add("s1", \(x = 1) x)
 #' pip_lock(p)
@@ -1477,18 +1500,19 @@ pip_unlock <- function(p)
 }
 
 
-#' Pipeline view
+#' Create a pipeline view
 #'
 #' Create a filtered view of a pipeline (or view).
+#' A view stores selected row indices and references the original pipeline.
 #'
 #' @param x A pipeflow pipeline or view.
-#' @param i Row indices or step names to keep.
+#' @param i Optional row indices or step names to keep.
 #' @param filter A named list of filters to apply. Each element can be a
 #' character vector specifying the values to keep for the corresponding
 #' property or, if `fixed` is FALSE, a regular expression. See examples
 #' for usage.
 #' @param tags Tag filter (character). Keeps steps with any matching tag.
-#' @param fixed If TRUE, any values in `filter` are treated as fixed strings,
+#' @param fixed If TRUE, values in `filter` are treated as fixed strings,
 #' otherwise they are treated as regular expressions.
 #' @param ... further args passed to `grepl` (only in effect when `fixed`
 #' is `FALSE`).
@@ -1606,6 +1630,7 @@ pip_view <- function(
 
 #' Length of a pipeflow pipeline or view
 #' @param x A pipeflow pipeline or view
+#' @return Number of steps as an integer.
 #' @examples
 #' p <- pip_new() |>
 #'     pip_add("s1", \(x = 1) x) |>
@@ -1626,10 +1651,14 @@ length.pipeflow_view <- function(x)
     as.integer(length(x[["rows"]]))
 }
 
-#' Extract part of a pipeflow pipeline
+#' Extract a sub-pipeline
+#'
+#' Returns a new pipeline containing selected steps and all required upstream
+#' dependencies.
 #' @param i integer (row indices) or character vector (step names) of steps to
 #' select
 #' @param ... not used
+#' @return A new pipeflow pipeline object.
 #' @examples
 #' p <- pip_new() |>
 #'     pip_add("s1", \(x = 1) x) |>
@@ -1731,10 +1760,14 @@ length.pipeflow_view <- function(x)
 }
 
 
-#' Extract elements of a pipeflow pipeline
+#' Extract bindings, columns, or row-level values from a pipeline
+#'
+#' With one index (`i`), internal environment bindings are preferred.
+#' With two indices (`i`, `j`), values are extracted from the step table.
 #' @param i integer (row indices) or character vector (step names) of steps to
 #' select
 #' @param j column names to select
+#' @return Extracted value(s), depending on `i` and `j`.
 #' @examples
 #' p <- pip_new() |> pip_add("s1", \(x = 1) x)
 #' p[["pipeline"]]
@@ -1796,6 +1829,7 @@ length.pipeflow_view <- function(x)
 #' @param header If TRUE, a header with the pipeline name and number
 #' of steps will be printed.
 #' @param ...  Other arguments passed to `print.data.table`
+#' @return Invisibly returns `x`.
 #' @examples
 #' p <- pip_new() |> pip_add("s1", \(x = 1) x)
 #' print(p)

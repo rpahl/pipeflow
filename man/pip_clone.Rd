@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_clone}
 \alias{pip_clone}
-\title{Clone pipeline}
+\title{Clone a pipeline}
 \usage{
 pip_clone(x, name = NULL)
 }
@@ -16,7 +16,8 @@ name is used.}
 A cloned pipeflow pipeline object.
 }
 \description{
-Clone pipeline
+Creates an independent copy of the pipeline, including step table and DAG.
+Explicit \code{.self} parameters are rebound to the cloned object.
 }
 \examples{
 p <- pip_new("pipe") |> pip_add("s1", \(x = 1) x)

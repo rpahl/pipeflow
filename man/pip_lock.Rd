@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_lock}
 \alias{pip_lock}
-\title{Lock selected steps}
+\title{Lock selected steps against updates}
 \usage{
 pip_lock(p)
 }
@@ -10,7 +10,7 @@ pip_lock(p)
 \item{p}{A pipeflow pip or view.}
 }
 \value{
-The updated pipeline or view.
+The updated pipeline or view, invisibly.
 }
 \description{
 Locks all selected steps in the pipeline unless \code{p} is a view, in which

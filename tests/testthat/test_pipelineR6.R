@@ -2256,10 +2256,7 @@ describe("run",
                 fun =\(data = 10) {
                     pip <- Pipeline$new("2nd pipe", data = data)$
                         add("step1", \(x = ~data) x)$
-                        add("step2", \(x = ~step1) {
-                            print(x)
-                            2 * x
-                        }, keepOut = TRUE)
+                        add("step2", \(x = ~step1) 2 * x, keepOut = TRUE)
                 }
             )
 
@@ -2338,6 +2335,9 @@ describe("run",
 
     test_that("logs warning without interrupting the run",
     {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
+
         pip <- Pipeline$new("pipe", data = 1)$
             add("f1", \(x = 2) x)$
             add("f2", \(x = ~f1) {
@@ -2361,6 +2361,9 @@ describe("run",
 
     test_that("logs error and stops at failed step",
     {
+        lgr::unsuspend_logging()
+        on.exit(lgr::suspend_logging())
+
         pip <- Pipeline$new("pipe", data = 1)$
             add("f1", \(x = 2) x)$
             add("f2", \(x = ~f1) {

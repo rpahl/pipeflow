@@ -25,12 +25,19 @@ select}
 
 \item{j}{column names to select}
 }
+\value{
+Number of steps as an integer.
+
+A new pipeflow pipeline object.
+
+Extracted value(s), depending on \code{i} and \code{j}.
+}
 \description{
-Length of a pipeflow pipeline or view
+Returns a new pipeline containing selected steps and all required upstream
+dependencies.
 
-Extract part of a pipeflow pipeline
-
-Extract elements of a pipeflow pipeline
+With one index (\code{i}), internal environment bindings are preferred.
+With two indices (\code{i}, \code{j}), values are extracted from the step table.
 }
 \examples{
 p <- pip_new() |>

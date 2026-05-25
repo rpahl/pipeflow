@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_get_params}
 \alias{pip_get_params}
-\title{Extract all independent pipeline parameters}
+\title{Extract independent pipeline parameters}
 \usage{
 pip_get_params(x)
 }
@@ -10,7 +10,8 @@ pip_get_params(x)
 \item{x}{A pipeflow pip or view}
 }
 \value{
-Unique list of all independent pipeline parameters
+Named list of unique independent parameters. If the same parameter
+name appears multiple times, the first occurrence in pipeline order is kept.
 }
 \description{
 Independent parameters are those that are not dependent on any other steps

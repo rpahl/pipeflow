@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_view}
 \alias{pip_view}
-\title{Pipeline view}
+\title{Create a pipeline view}
 \usage{
 pip_view(
   x,
@@ -16,7 +16,7 @@ pip_view(
 \arguments{
 \item{x}{A pipeflow pipeline or view.}
 
-\item{i}{Row indices or step names to keep.}
+\item{i}{Optional row indices or step names to keep.}
 
 \item{filter}{A named list of filters to apply. Each element can be a
 character vector specifying the values to keep for the corresponding
@@ -25,7 +25,7 @@ for usage.}
 
 \item{tags}{Tag filter (character). Keeps steps with any matching tag.}
 
-\item{fixed}{If TRUE, any values in \code{filter} are treated as fixed strings,
+\item{fixed}{If TRUE, values in \code{filter} are treated as fixed strings,
 otherwise they are treated as regular expressions.}
 
 \item{...}{further args passed to \code{grepl} (only in effect when \code{fixed}
@@ -36,6 +36,7 @@ A \code{pipeflow_view} object.
 }
 \description{
 Create a filtered view of a pipeline (or view).
+A view stores selected row indices and references the original pipeline.
 }
 \examples{
 

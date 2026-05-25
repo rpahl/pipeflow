@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_collect_out}
 \alias{pip_collect_out}
-\title{Collect pipeline output}
+\title{Collect outputs from pipeline steps}
 \usage{
 pip_collect_out(x, grouped = TRUE)
 }
@@ -13,10 +13,11 @@ pip_collect_out(x, grouped = TRUE)
 groups}
 }
 \value{
-A list of pipeline outputs
+A named list of outputs. If \code{grouped = TRUE}, groups with more than
+one step are returned as nested named lists.
 }
 \description{
-Collect pipeline output
+Collect outputs from pipeline steps
 }
 \examples{
 p <- pip_new() |>

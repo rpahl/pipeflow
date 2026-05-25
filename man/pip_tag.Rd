@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_tag}
 \alias{pip_tag}
-\title{Add tags to steps}
+\title{Add tags to selected steps}
 \usage{
 pip_tag(p, tags = character())
 }
@@ -12,7 +12,7 @@ pip_tag(p, tags = character())
 \item{tags}{Character vector of tags to add for each selected step.}
 }
 \value{
-The updated pipeline or view.
+The updated pipeline or view, invisibly.
 }
 \description{
 Adds tags to existing tags for all steps in the pipeline unless \code{p} is a

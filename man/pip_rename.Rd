@@ -14,10 +14,11 @@ pip_rename(x, from, to)
 \item{to}{New step name}
 }
 \value{
-The updated pipeline
+The updated pipeline, invisibly.
 }
 \description{
-Rename a step in the pipeline
+Renames the selected step and updates dependency references in downstream
+steps.
 }
 \examples{
 p <- pip_new() |> pip_add("s1", \(x = 1) x)

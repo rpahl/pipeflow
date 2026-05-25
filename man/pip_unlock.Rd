@@ -10,7 +10,7 @@ pip_unlock(p)
 \item{p}{A pipeflow pip or view.}
 }
 \value{
-The updated pipeline or view.
+The updated pipeline or view, invisibly.
 }
 \description{
 Unlocks all selected steps in the pipeline unless \code{p} is a view, in which

@@ -45,6 +45,8 @@ of steps will be printed.}
 }
 \value{
 Invisibly returns \code{x}.
+
+Invisibly returns \code{x}.
 }
 \description{
 Print a pipeflow pipeline

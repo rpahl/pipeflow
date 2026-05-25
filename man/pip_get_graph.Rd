@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_get_graph}
 \alias{pip_get_graph}
-\title{Export pipeline graph}
+\title{Build graph data for pipeline visualization}
 \usage{
 pip_get_graph(x, include_upstream = FALSE)
 }
@@ -18,6 +18,10 @@ A named list with two \code{data.frame}s: \code{nodes} and \code{edges}.
 \description{
 Export a graph representation of a pipeline or view that can be passed to
 \code{\link[visNetwork:visNetwork]{visNetwork::visNetwork()}}.
+}
+\details{
+Node shape reflects execution mode (\code{square} for \code{auto}/\code{plain}, \code{star}
+for \code{split}, \code{dot} for \code{reduce}).
 }
 \examples{
 p <- pip_new()

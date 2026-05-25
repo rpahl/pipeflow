@@ -15,13 +15,18 @@ To suppress logging, you can set \code{lgr = NULL}.}
 \item{force}{Logical indicating if all steps should be forced to run,
 regardless of whether they are outdated or not.}
 
-\item{progress}{A progress function}
+\item{progress}{Optional callback of the form
+\verb{function(value, detail)} called before each step.}
 }
 \value{
-The updated pipeline
+The updated pipeline or view, invisibly.
 }
 \description{
 Run pipeline
+}
+\details{
+When \code{x} is a view, requested rows are run together with required
+upstream dependencies.
 }
 \examples{
 p <- pip_new() |>
