@@ -17,6 +17,10 @@ returns the copied \code{Pipeline} object
 \description{
 Creates a copy of a pipeline object.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_clone]{pip_clone()}} instead.
+}
+
 \examples{
 p1 <- pipe_new("pipe")
 pipe_add(p1, "step1", \(x = 1) x)

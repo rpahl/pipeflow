@@ -15,6 +15,10 @@ pipe_length(pip)
 \description{
 Length of the pipeline
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=length]{length()}} instead.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1:2)
 pipe_add(p, "f1", \(x = 1) x)

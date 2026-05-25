@@ -26,6 +26,10 @@ steps for which \code{keepOut} was set to \code{TRUE} when steps were added
 \code{group} parameter in \code{\link[=pipe_add]{pipe_add()}}),
 which by default are set identical to the step names.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_collect_out]{pip_collect_out()}} instead.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1:2)
 pipe_add(p, "step1", \(x = ~data) x + 2)

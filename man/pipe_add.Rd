@@ -56,6 +56,10 @@ defined for the pipeline. One useful feature is that function
 parameters can refer to results of earlier pipeline steps using the
 syntax \code{x = ~earlier_step_name} - see the Examples for more details.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_add]{pip_add()}} instead.
+}
+
 \examples{
 # Add steps with lambda functions
 p <- pipe_new("myPipe", data = 1)

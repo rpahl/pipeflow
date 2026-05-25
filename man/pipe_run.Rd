@@ -42,6 +42,10 @@ returns the \code{Pipeline} object invisibly
 \description{
 Runs all new and/or outdated pipeline steps.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_run]{pip_run()}} instead.
+}
+
 \examples{
 # Simple pipeline
 p <- pipe_new("pipe", data = 1)

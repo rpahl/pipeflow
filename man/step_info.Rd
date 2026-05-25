@@ -31,6 +31,16 @@ pipe_has_step(pip, step)
 \description{
 Get step information
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+
+ Deprecated. Legacy API. Use \code{\link[=pip_has_step]{pip_has_step()}} instead.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1:2)
 pipe_add(p, "add1", \(data = ~data, x = 1) x + data)

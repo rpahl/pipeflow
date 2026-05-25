@@ -2,8 +2,13 @@
 
 # pipeflow 0.2.3.9005
 
-* refactor: deprecate `keepOut` field and introduce `tags` field
+* deprecate legacy `pipe_*` API in favor of the new `pip_*` API
+* deprecate legacy `Pipeline` R6 interface (`Pipeline$new()`)
 
+
+# pipeflow 0.2.3.9005
+
+* refactor: deprecate `keepOut` field and introduce `tags` field
 
 # pipeflow 0.2.3.9004
 

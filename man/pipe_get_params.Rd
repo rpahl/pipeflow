@@ -39,6 +39,16 @@ Retrieves unbound function parameters defined in
 the pipeline where 'unbound' means parameters that are not linked
 to other steps.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_get_params]{pip_get_params()}} instead.
+
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+}
+
 \examples{
 # pipe_get_params
 p <- pipe_new("pipe", data = 1:2)

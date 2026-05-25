@@ -29,6 +29,10 @@ clashes with respect to step names and dependencies, that is, if
 needed, it will automatically adapt step names and dependencies to
 make sure they are unique in the merged pipeline.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_bind]{pip_bind()}} instead.
+}
+
 \examples{
 # Append pipeline
 p1 <- pipe_new("pipe1")

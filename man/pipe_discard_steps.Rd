@@ -26,6 +26,10 @@ the \code{Pipeline} object invisibly
 \description{
 Discard all steps that match a given \code{pattern}.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1:2)
 pipe_add(p, "add1", \(x = ~data) x + 1)

@@ -42,6 +42,14 @@ given step, by default descending recursively.
 }
 }
 
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+}
+
 \examples{
 # pipe_get_depends
 p <- pipe_new("pipe", data = 1:2)

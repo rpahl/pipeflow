@@ -37,6 +37,10 @@ returns the \code{Pipeline} object invisibly
 A new pipeline is always initialized with one 'data' step,
 which basically is a function returning the data.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} instead.
+}
+
 \examples{
 data <- data.frame(x = 1:2, y = 3:4)
 p <- pipe_new("myPipe", data = data)

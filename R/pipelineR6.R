@@ -1,5 +1,6 @@
 
 #' @title Pipeline Class
+#' @section Lifecycle: Deprecated. Legacy R6 interface. Use [pip_new()] and pip_* functions.
 #'
 #' @description This class implements an analysis pipeline. A pipeline consists
 #' of a sequence of analysis steps, which can be added one by one. Each added
@@ -61,6 +62,26 @@ Pipeline = R6::R6Class("Pipeline", #nolint
             data = NULL,
             logger = NULL
         ) {
+            topCall <- paste(deparse(sys.calls()[[1L]]), collapse = "")
+            calledDirectly <- grepl("Pipeline\\$new\\s*\\(", topCall)
+            if (
+                calledDirectly &&
+                !isTRUE(getOption("pipeflow.suppress_pipeline_new_deprecation")) &&
+                !identical(Sys.getenv("_R_CHECK_PACKAGE_NAME_"), "pipeflow") &&
+                !identical(Sys.getenv("TESTTHAT"), "true")
+            ) {
+                .Deprecated(
+                    new = "pip_new",
+                    package = "pipeflow",
+                    msg = paste0(
+                        "The legacy 'Pipeline' R6 interface is deprecated and ",
+                        "will be removed in a future release. Please migrate ",
+                        "to the new 'pip_*' API."
+                    ),
+                    old = "Pipeline$new"
+                )
+            }
+
             if (!is_string(name)) {
                 stop_no_call("name must be a string")
             }

@@ -34,6 +34,10 @@ returns the \code{Pipeline} object invisibly
 Run given pipeline step possibly together with
 upstream and/or downstream dependencies.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_run]{pip_run()}} instead.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1)
 pipe_add(p, "add1", \(x = ~data, y = 1) x + y)

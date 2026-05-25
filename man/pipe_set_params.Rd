@@ -23,6 +23,10 @@ the pipeline where 'unbound' means parameters that are not linked
 to other steps. Trying to set parameters that don't exist in
 the pipeline is ignored, by default, with a warning.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_set_params]{pip_set_params()}} instead.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1)
 pipe_add(p, "add1", \(x = ~data, y = 2) x + y)

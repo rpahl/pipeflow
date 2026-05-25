@@ -50,6 +50,10 @@ returns the \code{Pipeline} object invisibly
 \description{
 Replaces an existing pipeline step.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_replace]{pip_replace()}} instead.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1)
 pipe_add(p, "add1", \(x = ~data, y = 1) x + y)

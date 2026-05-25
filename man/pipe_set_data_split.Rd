@@ -38,6 +38,10 @@ one of the data sets set as input data.
 The step names of the sub-pipelines will be the original
 step names plus the name of the data set.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+}
+
 \examples{
 # Split by three data sets
 dataList <- list(a = 1, b = 2, c = 3)

@@ -21,6 +21,10 @@ Change the \code{keepOut} flag at a given pipeline step,
 which determines whether the output of that step is collected
 when calling \code{\link[=pipe_collect_out]{pipe_collect_out()}}\verb{after the pipeline was run. See column}keepOut` when printing a pipeline to view the status.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1)
 pipe_add(p, "add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
