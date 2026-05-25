@@ -2,6 +2,7 @@
 % Please edit documentation in R/pipeline.R
 \name{print.pipeflow_pip}
 \alias{print.pipeflow_pip}
+\alias{print.pipeflow_view}
 \title{Print a pipeflow pipeline}
 \usage{
 \method{print}{pipeflow_pip}(
@@ -15,9 +16,11 @@
   header = TRUE,
   ...
 )
+
+\method{print}{pipeflow_view}(x, header = TRUE, ...)
 }
 \arguments{
-\item{x}{A pipeflow pipeline.}
+\item{x}{A pipeflow view.}
 
 \item{rows}{Row indices to be printed. If empty, all rows are printed.}
 
@@ -38,8 +41,13 @@ column its storage class (or a self-evident abbreviation thereof).}
 \item{header}{If TRUE, a header with the pipeline name and number
 of steps will be printed.}
 
-\item{...}{Other arguments passed to \code{print.data.table}}
+\item{...}{Unused.}
+}
+\value{
+Invisibly returns \code{x}.
 }
 \description{
 Print a pipeflow pipeline
+
+Print a pipeflow view
 }

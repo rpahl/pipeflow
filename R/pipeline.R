@@ -1696,6 +1696,7 @@ length.pipeflow_view <- function(x)
 #' @param header If TRUE, a header with the pipeline name and number
 #' of steps will be printed.
 #' @param ...  Other arguments passed to `print.data.table`
+#' @rdname print
 #' @export
 print.pipeflow_pip <- function(x,
     rows = integer(),
@@ -1751,6 +1752,7 @@ print.pipeflow_pip <- function(x,
 #' @param ... Unused.
 #'
 #' @return Invisibly returns `x`.
+#' @rdname print
 #' @export
 print.pipeflow_view <- function(x, header = TRUE, ...)
 {

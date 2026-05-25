@@ -15,6 +15,8 @@
 #' @author Roman Pahl
 #' @docType class
 #' @import data.table
+#' @importFrom R6 R6Class
+#' @importFrom utils tail
 #' @export
 Pipeline = R6::R6Class("Pipeline", #nolint
     public = list(
