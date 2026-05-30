@@ -270,6 +270,14 @@ describe("pip_add",
         expect_equal(p[["pipeline"]][["depends"]][[3]], c(x = "f2"))
     })
 
+    it("returns invisibly also for default append path",
+    {
+        p <- test_pip()
+        expect_invisible(
+            pip_add(p, "f3", \(x = ~f2) x + 1)
+        )
+    })
+
     it("keeps existing step state and output for appended tail steps",
     {
         p <- test_pip()

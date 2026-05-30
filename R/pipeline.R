@@ -424,9 +424,10 @@ pip_add <- function(
     }
 
     if (pos == length(x)) {
-        return(.pip_append(x,
+        .pip_append(x,
             step = step, fun = fun, group = group, tags = tags, exec = exec
-        ))
+        )
+        return(invisible(x))
     }
 
     src <- pip_clone(x)
