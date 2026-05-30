@@ -1945,3 +1945,41 @@ describe("benchmarking",
     system.time(b <- chmatch(x, y))             # 16s
     identical(a, b)
 })
+
+
+describe("print.pipeflow_pip",
+{
+    get_print_header <- function(x, ...) {
+        out <- capture.output(print(x, ...))
+        iHeader <- which(grepl("^\\s*step\\b", out))[1]
+        trimws(out[[iHeader]]) |> strsplit("\\s+") |> unlist()
+    }
+
+    it("shows step/depends/out/state by default when group equals step",
+    {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1)
+
+        header <- get_print_header(p)
+
+        expect_equal(header, c("step", "depends", "out", "state"))
+    })
+
+    it("shows group column by default when at least one group differs",
+    {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe")
+        pip_add(p, "s1", \(x = 1) x)
+        pip_add(p, "s2", \(x = ~s1) x + 1, group = "model")
+
+        header <- get_print_header(p)
+
+        expect_equal(header, c("step", "group", "depends", "out", "state"))
+    })
+})

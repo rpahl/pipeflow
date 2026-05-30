@@ -1862,9 +1862,9 @@ print.pipeflow_pip <- function(x,
 
     if (identical(cols, "core")) {
         cols <- if (identical(dat[["step"]], dat[["group"]])) {
-            c("step", "signature", "out", "state")
+            c("step", "depends", "out", "state")
         } else {
-            c("step", "group", "signature", "out", "state")
+            c("step", "group", "depends", "out", "state")
         }
     }
     if (identical(cols, "all")) {
