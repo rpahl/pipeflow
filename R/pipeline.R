@@ -821,17 +821,29 @@ pip_get_graph <- function(x, include_upstream = FALSE)
         color = colors
     )
 
-    # Edges
-    reachable <- sapply(ids,
-        FUN = function(id) {
-            dag_get_reachable_nodes_down(dp = dag, start_ids = id) |>
-                setdiff(id) # Exclude self reference
+    # Edges from direct dependencies only (no transitive links).
+    stepToId <- stats::setNames(ids, sub[["step"]])
+    edgeRows <- lapply(seq_len(nrow(sub)), FUN = \(k) {
+        depSteps <- unname(sub[["depends"]][[k]])
+        if (length(depSteps) == 0L) {
+            return(NULL)
         }
-    ) |>
-        stats::setNames(ids) |>
-        Filter(f = \(x) length(x) > 0L)
 
-    edges <- if (length(reachable) == 0L) {
+        fromIds <- as.integer(stepToId[depSteps])
+        fromIds <- fromIds[!is.na(fromIds)]
+        if (length(fromIds) == 0L) {
+            return(NULL)
+        }
+
+        data.frame(
+            from = fromIds,
+            to = rep.int(ids[[k]], length(fromIds)),
+            stringsAsFactors = FALSE
+        )
+    })
+    edgeRows <- Filter(f = Negate(is.null), x = edgeRows)
+
+    edges <- if (length(edgeRows) == 0L) {
         data.frame(
             from = integer(0),
             to = integer(0),
@@ -839,12 +851,9 @@ pip_get_graph <- function(x, include_upstream = FALSE)
             stringsAsFactors = FALSE
         )
     } else {
-        lapply(names(reachable), FUN = \(fromId) {
-            toIds <- reachable[[fromId]]
-            data.frame(from = as.integer(fromId), to = as.integer(toIds))
-        }) |>
-            do.call(what = rbind) |>
-            cbind("arrows" = "to")
+        edges <- do.call(what = rbind, args = edgeRows)
+        edges <- unique(edges)
+        cbind(edges, "arrows" = "to")
     }
 
     list(nodes = nodes, edges = edges)
@@ -1874,7 +1883,7 @@ print.pipeflow_pip <- function(x,
 
     if (header) {
         cat(sprintf(
-            "<pipeflow_pip> %s (%d step%s)\n---------------\n",
+            "<pipeflow_pip> %s (%d step%s)\n-----------------------------\n",
             x[["name"]], n, ifelse(n == 1, "", "s")
         ))
     }

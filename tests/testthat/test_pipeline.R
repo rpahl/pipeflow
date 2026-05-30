@@ -961,7 +961,7 @@ describe("pip_get_graph",
         pip_new() |>
             pip_add("s1", \(x = 1) x, group = "io", exec = "split") |>
             pip_add("s2", \(x = ~s1) x + 1, group = "model", exec = "reduce") |>
-            pip_add("s3", \(x = ~s1, y = ~s2) x + y, group = "model")
+            pip_add("s3", \(x = ~s2) x + 2, group = "model")
     }
 
     map_edge_labels <- function(graph) {
@@ -1002,7 +1002,7 @@ describe("pip_get_graph",
             FUN.VALUE = character(1)
         )
         expect_equal(nodes[["color"]], unname(expectedColors))
-        expect_setequal(map_edge_labels(g), c("s1->s2", "s1->s3", "s2->s3"))
+        expect_setequal(map_edge_labels(g), c("s1->s2", "s2->s3"))
     })
 
     it("supports view-only graph or graph with upstream closure",
@@ -1016,7 +1016,7 @@ describe("pip_get_graph",
 
         gUp <- pip_get_graph(v, include_upstream = TRUE)
         expect_setequal(gUp[["nodes"]][["label"]], c("s1", "s2", "s3"))
-        expect_setequal(map_edge_labels(gUp), c("s1->s2", "s1->s3", "s2->s3"))
+        expect_setequal(map_edge_labels(gUp), c("s1->s2", "s2->s3"))
     })
 
     it("signals invalid inputs",
