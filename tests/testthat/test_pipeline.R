@@ -278,6 +278,33 @@ describe("pip_add",
         )
     })
 
+    it("can append a step after pipeline was run",
+    {
+        p <- test_pip()
+        pip_run(p, lgr = NULL)
+
+        expect_invisible(
+            pip_add(p, "f3", \(x = ~f2) x + 1)
+        )
+
+        expect_equal(p[["pipeline"]][["step"]], c("f1", "f2", "f3"))
+        expect_equal(p[["pipeline"]][["depends"]][[3]], c(x = "f2"))
+    })
+
+    it("can insert a step after pipeline was run",
+    {
+        p <- test_pip()
+        pip_run(p, lgr = NULL)
+
+        expect_invisible(
+            pip_add(p, "f3", \(x = ~f1) x + 10, after = "f1")
+        )
+
+        expect_equal(p[["pipeline"]][["step"]], c("f1", "f3", "f2"))
+        expect_equal(p[["pipeline"]][["depends"]][[2]], c(x = "f1"))
+        expect_equal(p[["pipeline"]][["depends"]][[3]], c(x = "f1"))
+    })
+
     it("keeps existing step state and output for appended tail steps",
     {
         p <- test_pip()

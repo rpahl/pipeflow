@@ -207,11 +207,6 @@
     if (!.is_pipeflow_pip(x)) {
         stop("x must be a pipeflow pip")
     }
-    data.table::set(
-        x[["pipeline"]],
-        j = ".rowId",
-        value = seq_len(nrow(x[["pipeline"]]))
-    )
     data.table::setindexv(x[["pipeline"]], list("step", ".nodeId"))
 }
 
@@ -983,10 +978,6 @@ pip_remove <- function(x, step, recursive = FALSE)
     }
     dag_tidy_up(x[[".dag"]])
 
-    if (".rowId" %in% names(dat)) {
-        data.table::set(dat, j = ".rowId", value = NULL)
-    }
-
     keep <- !(dat[["step"]] %in% stepsToRemove)
     x[["pipeline"]] <- dat[keep]
 
@@ -1116,9 +1107,6 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0))
     }
 
     src <- pip_clone(x)
-    if (".rowId" %in% names(src[["pipeline"]])) {
-        data.table::set(src[["pipeline"]], j = ".rowId", value = NULL)
-    }
     dat <- src[["pipeline"]]
     n <- nrow(dat)
     iStep <- match(step, dat[["step"]])
@@ -1127,9 +1115,6 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0))
         src[seq_len(iStep - 1L)]
     } else {
         pip_new(name = src[["name"]])
-    }
-    if (".rowId" %in% names(out[["pipeline"]])) {
-        data.table::set(out[["pipeline"]], j = ".rowId", value = NULL)
     }
 
     # Add replacement step at the original position.
@@ -1585,14 +1570,16 @@ pip_view <- function(
     .assert_pip_or_view(x)
     isView <- .is_pipeflow_view(x)
     pip <- if (isView) x[["pip"]] else x
-    if (isView) {
-        .pip_reindex(pip)
-    }
     dat <- pip[["pipeline"]]
-    keep <- rep(TRUE, nrow(dat))
+
+    # For view-of-view, filter only within parent view rows and map local
+    # matches back to absolute row indices of the underlying pipeline.
+    parent_rows <- if (isView) as.integer(x[["rows"]]) else seq_len(nrow(dat))
+    sub <- dat[parent_rows]
+    keep <- rep(TRUE, nrow(sub))
 
     # Filters
-    availFilters <- names(which(sapply(dat, is.character)))
+    availFilters <- names(which(sapply(sub, is.character)))
     for (name in names(filter)) {
         if (!(name %in% availFilters)) {
             stop(sprintf(
@@ -1601,15 +1588,15 @@ pip_view <- function(
             ))
         }
         if (fixed) {
-            keep <- keep & (dat[[name]] %in% filter[[name]])
+            keep <- keep & (sub[[name]] %in% filter[[name]])
         } else {
-            keep <- keep & grepl(pattern = filter[[name]], x = dat[[name]], ...)
+            keep <- keep & grepl(pattern = filter[[name]], x = sub[[name]], ...)
         }
     }
 
     # Tags
     if (length(tags) > 0) {
-        hasTag <- vapply(dat[["tags"]],
+        hasTag <- vapply(sub[["tags"]],
             FUN = \(x) any(x %in% tags),
             FUN.VALUE = logical(1)
         )
@@ -1617,7 +1604,7 @@ pip_view <- function(
     }
 
     # Rows
-    rows <- which(keep)
+    rows <- parent_rows[which(keep)]
     if (length(i) > 0) {
         if (is.character(i)) {
             i <- .pip_steps_to_rows(pip, i)
@@ -1631,11 +1618,7 @@ pip_view <- function(
                 toString(i[i < 1L | i > nrow(dat)])
             )
         }
-        rows <- intersect(rows, i)
-    }
-
-    if (isView) {
-        rows <- dat[[".rowId"]][rows]
+        rows <- intersect(rows, as.integer(i))
     }
 
     name <- sprintf("%s view", x[["name"]])
