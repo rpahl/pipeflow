@@ -1234,7 +1234,7 @@ pip_run <- function(
         }
     })
 
-    log_info(sprintf("Start run of %s '%s':", data.class(x), x[["name"]]))
+    log_info(sprintf("Start run of %s '%s'", data.class(x), x[["name"]]))
     for (i in seq_along(rowsToRun)) {
         row <- rowsToRun[[i]]
         step <- dat[["step"]][[row]]
@@ -1266,7 +1266,7 @@ pip_run <- function(
     }
 
 
-    log_info(sprintf("Finished run of %s '%s':", data.class(x), x[["name"]]))
+    log_info(sprintf("Finished run of %s '%s'", data.class(x), x[["name"]]))
     invisible(x)
 }
 
