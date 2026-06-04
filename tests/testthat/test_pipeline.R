@@ -2046,3 +2046,43 @@ describe("print.pipeflow_pip",
         expect_equal(header, c("step", "depends", "out", "state", "tags"))
     })
 })
+
+
+describe("print.pipeflow_view",
+{
+    get_view_header <- function(x, ...) {
+        out <- capture.output(print(x, ...))
+        iHeader <- which(grepl("^\\s*step\\b", out))[1]
+        trimws(out[[iHeader]]) |> strsplit("\\s+") |> unlist()
+    }
+
+    it("prints a view header and uses the pipeline column layout",
+    {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x, group = "io") |>
+            pip_add("s2", \(x = ~s1) x + 1, group = "model")
+
+        v <- pip_view(p, filter = list(group = "model"))
+        out <- capture.output(print(v))
+
+        expect_true(any(grepl("<pipeflow_view>", out)))
+        expect_equal(get_view_header(v), c("step", "group", "depends", "out", "state"))
+    })
+
+    it("prints the tags column last for tagged views",
+    {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x, tags = "core") |>
+            pip_add("s2", \(x = ~s1) x + 1)
+
+        v <- pip_view(p, tags = "core")
+
+        expect_equal(get_view_header(v), c("step", "depends", "out", "state", "tags"))
+    })
+})

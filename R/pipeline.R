@@ -1926,6 +1926,10 @@ print.pipeflow_view <- function(x, header = TRUE, ...)
         line <- paste(rep("-", nchar(title)), collapse = "")
         cat(title, line, sep = "\n")
     }
+
+    if (length(rows) == 0L) {
+        return(invisible(x))
+    }
     print(pip, rows = rows, header = FALSE, row.names = FALSE, ...)
     invisible(x)
 }
