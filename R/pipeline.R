@@ -804,7 +804,7 @@ pip_get_graph <- function(x, include_upstream = FALSE)
     )
 
     ids <- as.integer(sub[[".nodeId"]])
-    shape <- rep("square", nrow(sub))
+    shape <- rep("hexagon", nrow(sub))
     if ("execMode" %in% names(sub)) {
         shape[sub[["execMode"]] %in% "split"] <- "star"
         shape[sub[["execMode"]] %in% "reduce"] <- "dot"
@@ -1854,10 +1854,14 @@ print.pipeflow_pip <- function(x,
     n <- nrow(dat)
 
     if (identical(cols, "core")) {
-        cols <- if (identical(dat[["step"]], dat[["group"]])) {
-            c("step", "depends", "out", "state")
-        } else {
-            c("step", "group", "depends", "out", "state")
+        cols <- c("step", "depends", "out", "state")
+        hasOtherGrous <- !identical(dat[["step"]], dat[["group"]])
+        if (hasOtherGrous) {
+            cols <- append(cols, "group", after = 1L)
+        }
+        has_tags <- any(lengths(dat[["tags"]]) > 0L)
+        if (has_tags) {
+            cols <- append(cols, "tags")
         }
     }
     if (identical(cols, "all")) {
@@ -1866,10 +1870,12 @@ print.pipeflow_pip <- function(x,
     }
 
     if (header) {
-        cat(sprintf(
-            "<pipeflow_pip> %s (%d step%s)\n-----------------------------\n",
+        title <- sprintf(
+            "<pipeflow_pip> %s (%d step%s)",
             x[["name"]], n, ifelse(n == 1, "", "s")
-        ))
+        )
+        line <- paste(rep("-", nchar(title)), collapse = "")
+        cat(title, line, sep = "\n")
     }
 
     if (length(rows) == 0) {

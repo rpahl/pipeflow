@@ -1028,7 +1028,7 @@ describe("pip_get_graph",
         nodeShape <- stats::setNames(nodes[["shape"]], nodes[["label"]])
         expect_equal(nodeShape[["s1"]], "star")
         expect_equal(nodeShape[["s2"]], "dot")
-        expect_equal(nodeShape[["s3"]], "square")
+        expect_equal(nodeShape[["s3"]], "hexagon")
         expect_true(all(edges[["arrows"]] == "to"))
 
         expectedColors <- vapply(
@@ -2016,5 +2016,19 @@ describe("print.pipeflow_pip",
         header <- get_print_header(p)
 
         expect_equal(header, c("step", "group", "depends", "out", "state"))
+    })
+
+    it("prints the tags column last when any step defines tags",
+    {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x, tags = "core") |>
+            pip_add("s2", \(x = ~s1) x + 1)
+
+        header <- get_print_header(p)
+
+        expect_equal(header, c("step", "depends", "out", "state", "tags"))
     })
 })
