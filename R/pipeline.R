@@ -438,7 +438,7 @@ pip_add <- function(
         tailRows <- seq.int(pos + 1L, n)
         for (i in tailRows) {
             tailStep <- dat[["step"]][[i]]
-            pip_add_from(out, step = tailStep, y = src)
+            pip_add_from(out, y = src, step = tailStep)
 
             iOut <- nrow(out[["pipeline"]])
             data.table::set(
@@ -469,8 +469,8 @@ pip_add <- function(
 #' are applied consistently.
 #'
 #' @param x Target pipeflow pipeline object.
-#' @param step Step name to copy from `y`.
 #' @param y Source pipeflow pipeline object.
+#' @param step Step name to copy from `y`.
 #'
 #' @return The updated target pipeline, invisibly.
 #' @examples
@@ -478,10 +478,10 @@ pip_add <- function(
 #'     pip_add("s1", \(x = 1) x) |>
 #'     pip_add("s2", \(x = ~s1) x + 1)
 #' dst <- pip_new()
-#' pip_add_from(dst, "s1", src)
+#' pip_add_from(dst, src, "s1")
 #' dst
 #' @export
-pip_add_from <- function(x, step, y)
+pip_add_from <- function(x, y, step)
 {
     if (!.is_pipeflow_pip(x)) {
         stop("x must be a pipeflow pip")
@@ -588,7 +588,7 @@ pip_bind <- function(x, y)
     # 2) Add (potentially renamed) steps from y one by one via pip_add_from.
     for (k in seq_len(nrow(yyDat))) {
         step <- yyDat[["step"]][[k]]
-        pip_add_from(out, step = step, y = yy)
+        pip_add_from(out, y = yy, step = step)
 
         # Preserve runtime state from source pipeline.
         iOut <- nrow(out[["pipeline"]])
@@ -1125,7 +1125,7 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0))
         tailRows <- seq.int(iStep + 1L, n)
         for (i in tailRows) {
             tailStep <- dat[["step"]][[i]]
-            pip_add_from(out, step = tailStep, y = src)
+            pip_add_from(out, y = src, step = tailStep)
 
             iOut <- nrow(out[["pipeline"]])
             data.table::set(

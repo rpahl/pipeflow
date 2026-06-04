@@ -460,11 +460,11 @@ describe("pip_add_from",
 
         expect_error(pip_add_from(1, "base", src), "x must be a pipeflow pip")
         expect_error(pip_add_from(trg, "base", 1), "y must be a pipeflow pip")
-        expect_error(pip_add_from(trg, c("a", "b"), src))
-        expect_error(pip_add_from(trg, NA_character_, src))
-        expect_error(pip_add_from(trg, "", src))
+        expect_error(pip_add_from(trg, src, c("a", "b")))
+        expect_error(pip_add_from(trg, src, NA_character_))
+        expect_error(pip_add_from(trg, src, ""))
         expect_error(
-            pip_add_from(trg, "unknown", src),
+            pip_add_from(trg, src, "unknown"),
             "does not exist in source pipeline"
         )
     })
@@ -474,7 +474,7 @@ describe("pip_add_from",
         src <- test_source()
         trg <- pip_new("target")
 
-        res <- pip_add_from(trg, "base", src)
+        res <- pip_add_from(trg, src, "base")
         expect_true(.is_pipeflow_pip(res))
         expect_true(pip_has_step(trg, "base"))
 
@@ -490,7 +490,7 @@ describe("pip_add_from",
         trg <- pip_new("target") |>
             pip_add("base", \(x = 5) x)
 
-        pip_add_from(trg, "calc", src)
+        pip_add_from(trg, src, "calc")
         expect_true(pip_has_step(trg, "calc"))
 
         dep <- trg[["pipeline"]][step == "calc", depends][[1]]
@@ -507,7 +507,7 @@ describe("pip_add_from",
         trg <- pip_new("target")
 
         expect_error(
-            pip_add_from(trg, "calc", src),
+            pip_add_from(trg, src, "calc"),
             "cannot reference unknown steps: 'base'"
         )
     })
@@ -518,7 +518,7 @@ describe("pip_add_from",
             pip_add("self", \(x = 1, .self = NULL) .self[["name"]])
         trg <- pip_new("target")
 
-        pip_add_from(trg, "self", src)
+        pip_add_from(trg, src, "self")
         expect_identical(trg[["pipeline"]][["params"]][[1]]$.self, trg)
     })
 })
