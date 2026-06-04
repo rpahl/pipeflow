@@ -212,7 +212,7 @@ Let's see the pipeline again.
 pip
 ```
 
-When you are trying to remove a step, `pipeflow` by default checks if
+When you are trying to remove a step, {pipeflow} by default checks if
 the step is used by any other step, and raises an error if removing the
 step would violate the integrity of the pipeline.
 

@@ -153,7 +153,7 @@ do.call(visNetwork, args = pip_get_graph(pip)) |>
 
 ```{r, echo = FALSE}
 library(visNetwork)
-do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100))) |>
+do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100, width = 600))) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
@@ -174,7 +174,7 @@ pip |> pip_add("another_step",
 )
 ```
 
-`pipeflow` immediately signals an error and the pipeline remains unchanged.
+{pipeflow} immediately signals an error and the pipeline remains unchanged.
 
 ```{r}
 pip
@@ -198,7 +198,7 @@ pip
 
 ```{r, echo = FALSE}
 library(visNetwork)
-do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100))) |>
+do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100, width = 600))) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
@@ -259,7 +259,7 @@ pip
 
 ```{r, echo = FALSE}
 library(visNetwork)
-do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100))) |>
+do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100, width = 600))) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
