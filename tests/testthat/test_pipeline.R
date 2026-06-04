@@ -1568,7 +1568,7 @@ describe("pip_view",
         expect_identical(v[["name"]], "test_pipeline view")
     })
 
-    it("can filter by character columns with fixed matching",
+    it("can filter by columns with fixed matching",
     {
         p <- pip_new()
         pip_add(p, "load", \(x = 1) x, group = "io")
@@ -1582,6 +1582,21 @@ describe("pip_view",
         )
 
         expect_equal(v[["rows"]], 2L)
+    })
+
+    it("can filter by depends column with multiple entries",
+    {
+        p <- pip_new()
+        pip_add(p, "load", \(x = 1) x, group = "io")
+        pip_add(p, "fit", \(x = ~-1) x + 1, group = "model")
+        pip_add(p, "eval", \(x = ~load, y = ~fit) x, group = "model")
+
+        v <- pip_view(
+            p,
+            filter = list(depends = "fit", group = "model")
+        )
+        v
+        expect_equal(v[["rows"]], 3L)
     })
 
     it("can filter by tags",
@@ -1598,16 +1613,15 @@ describe("pip_view",
     it("can filter by regex when fixed is FALSE",
     {
         p <- pip_new()
-        pip_add(p, "load_raw", \(x = 1) x, group = "io")
-        pip_add(p, "fit_model", \(x = ~-1) x + 1, group = "model")
-        pip_add(p, "eval_model", \(x = ~fit_model) x, group = "model")
+        pip_add(p, "data", \(x = 1) x)
+        pip_add(p, "fit_model", \(x = ~-1) x + 1)
+        pip_add(p, "eval_model", \(x = ~data, y = ~fit_model) x)
 
         v <- pip_view(
             p,
             filter = list(step = "_model$"),
             fixed = FALSE
         )
-
         expect_equal(v[["rows"]], c(2L, 3L))
     })
 

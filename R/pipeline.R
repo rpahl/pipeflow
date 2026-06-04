@@ -338,17 +338,20 @@ pip_new <- function(name = "pipe")
 
 #' Add a step
 #'
-#' Adds a new step to the pipeline, by default at the end.
-#' If `after` was specified, the new step will be inserted after the given
-#' step or position. Be aware that in contrast to adding a step at the end,
-#' inserting a step in the middle is a rather expensive operation as it
-#' requires re-wiring parts of the internal pipeline structure, especially
-#' if the new step is inserted at an early position.
+#' This functions forms the core of pipeline construction. It adds a new step
+#' to the pipeline and automatically updates the internal DAG and step-to-node
+#' index. Further, it verifies that all dependencies referenced by the new step
+#' exist and are properly linked in the DAG.
+#'
 #' @param x A pipeflow pipeline object.
 #' @param step Unique step name.
-#' @param fun Function to execute for the step. Default values that are
-#' formulas like `~other_step` are treated as dependencies.
-#' @param group Step group label used for printing and grouped output.
+#' @param fun Function to execute for the step. Each function parameter must
+#' have a default value. Default values that are simple constants are resolved
+#' immediately. Default values that are formulas like `~other_step` are
+#' treated as dependencies to those steps and resolved to the respective output
+#' values at runtime once the step is executed.
+#' @param group Optional character label used for grouping output collections -
+#' see also `[pip_collect_out()]`.
 #' @param tags Optional character vector of tags belonging to the step.
 #' Can also be adjusted later using `[pip_tag()]`.
 #' @param after Optional position after which the new step should be inserted
@@ -363,6 +366,12 @@ pip_new <- function(name = "pipe")
 #' partitioned input and passes it through without mapping, while `plain`
 #' mode only accepts non-partitioned input and always intends to execute
 #' a single call.
+#' @details
+#' If `after` was specified, the new step will be inserted after the given
+#' step or position. Be aware that in contrast to adding a step at the end,
+#' inserting a step in the middle is a rather expensive operation as it
+#' requires re-wiring parts of the internal pipeline structure, especially
+#' if the new step is inserted at an early position.
 #'
 #' @return The updated pipeline, invisibly.
 #' @examples
@@ -1527,7 +1536,6 @@ pip_unlock <- function(p)
 #' @export
 #' @examples
 #'
-#' # Build one pipeline and reuse it across the examples below
 #' p <- pip_new()
 #' pip_add(p, "load_raw", \(x = 1) x,
 #'     group = "io", tags = c("core", "daily")
@@ -1579,19 +1587,20 @@ pip_view <- function(
     keep <- rep(TRUE, nrow(sub))
 
     # Filters
-    availFilters <- names(which(sapply(sub, is.character)))
+    validFilters <- c("step", "depends", "group", "state", "execMode")
     for (name in names(filter)) {
-        if (!(name %in% availFilters)) {
+        if (!(name %in% validFilters)) {
             stop(sprintf(
                 "Invalid filter name: '%s' - can be one of: %s",
-                name, paste(availFilters, collapse = ", ")
+                name, paste(validFilters, collapse = ", ")
             ))
         }
-        if (fixed) {
-            keep <- keep & (sub[[name]] %in% filter[[name]])
+        hasMatch <- if (fixed) {
+            sapply(sub[[name]], \(e) any(e %in% filter[[name]]))
         } else {
-            keep <- keep & grepl(pattern = filter[[name]], x = sub[[name]], ...)
+            sapply(sub[[name]], \(e) any(grepl(filter[[name]], x = e, ...)))
         }
+        keep <- keep & hasMatch
     }
 
     # Tags
@@ -1910,12 +1919,12 @@ print.pipeflow_view <- function(x, header = TRUE, ...)
     n <- nrow(pip[["pipeline"]])
 
     if (header) {
-        cat(
-            sprintf(
-                "<pipeflow_view> %s (%d of %d step%s)\n---------------\n",
-                x[["name"]], nr, n, ifelse(n == 1, "", "s")
-            )
+        title <- sprintf(
+            "<pipeflow_view> %s (%d of %d step%s)",
+            x[["name"]], nr, n, ifelse(n == 1, "", "s")
         )
+        line <- paste(rep("-", nchar(title)), collapse = "")
+        cat(title, line, sep = "\n")
     }
     print(pip, rows = rows, header = FALSE, row.names = FALSE, ...)
     invisible(x)
