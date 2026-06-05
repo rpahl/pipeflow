@@ -13,8 +13,6 @@ vignette: >
 ---
 
 ```{r knitr-setup, include = FALSE}
-library(pipeflow)
-
 knitr::opts_chunk$set(
   comment = "#",
   prompt = FALSE,
@@ -24,23 +22,28 @@ knitr::opts_chunk$set(
 )
 
 old <- options(width = 100L)
-library(ggplot2)
 ```
 
 ### Existing pipeline
 
 ```{r define-pipeline, include = FALSE, echo = FALSE}
-pip <- pip_new("my-pip")
+library(pipeflow)
+pip <- pip_new("my-pip") |>
 
-pip |> pip_add("data", function(data = airquality[1:10, ]) data) |>
+    pip_add(
+        "data",
+        function(data = airquality[1:10, ]) data
+    ) |>
 
-    pip_add("data_prep",
+    pip_add(
+        "data_prep",
         function(x = ~data) {
             replace(x, "Temp.Celsius", (x[, "Temp"] - 32) * 5/9)
         }
     ) |>
 
-    pip_add("model_fit",
+    pip_add(
+        "model_fit",
         function(
             data = ~data_prep,
             xVar = "Temp.Celsius"
@@ -49,7 +52,8 @@ pip |> pip_add("data", function(data = airquality[1:10, ]) data) |>
         }
     ) |>
 
-    pip_add("model_plot",
+    pip_add(
+        "model_plot",
         function(
             model = ~model_fit,
             data = ~data_prep,
@@ -66,8 +70,7 @@ pip |> pip_add("data", function(data = airquality[1:10, ]) data) |>
         }
     )
 
-pip_set_params(
-    pip,
+pip |> pip_set_params(
     list(
         xVar = "Solar.R",
         xLab = "Solar radiation in Langleys",
@@ -99,7 +102,8 @@ Let's say we want to insert a new step after the `data_prep` step
 that standardizes the y-variable.
 
 ```{r insert-step}
-pip |> pip_add("standardize",
+pip |> pip_add(
+    "standardize",
     function(
         data = ~data_prep,
         yVar = "Ozone"

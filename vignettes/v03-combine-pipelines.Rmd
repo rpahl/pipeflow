@@ -13,8 +13,6 @@ vignette: >
 ---
 
 ```{r knitr-setup, include = FALSE}
-library(pipeflow)
-
 knitr::opts_chunk$set(
   comment = "#",
   prompt = FALSE,
@@ -26,9 +24,10 @@ knitr::opts_chunk$set(
 old <- options(width = 100L)
 ```
 
-The possibility to combine pipelines basically allows to modularize the pipeline
-creation process. This is especially useful when you have a set of pipelines that are
-used in different contexts and you want to avoid code duplication.
+The possibility to combine pipelines basically allows to modularize the
+pipeline creation process. This is especially useful when you have a set of
+pipelines that are used in different contexts and you want to avoid code
+duplication.
 
 ### Two pipelines
 
@@ -37,17 +36,22 @@ the modeling.
 
 Data preprocessing pipeline:
 ```{r define-prepocessing-pipeline}
+library(pipeflow)
+
 pip1 <- pip_new("preprocessing") |>
+
     pip_add(
         "data",
         function(data = airquality) data
     ) |>
+
     pip_add(
         "data_prep",
         function(data = ~data) {
             replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5/9)
         }
     ) |>
+
     pip_add(
         "standardize",
         function(
@@ -67,10 +71,12 @@ pip1
 Modelling pipeline:
 ```{r define-modeling-pipeline}
 pip2 <- pip_new("modeling") |>
+
     pip_add(
         "data",
         function(data = airquality) data
     ) |>
+
     pip_add(
         "fit",
         function(
@@ -81,6 +87,7 @@ pip2 <- pip_new("modeling") |>
             lm(paste(yVar, "~", xVar), data = data)
         }
     ) |>
+
     pip_add(
         "plot",
         function(
@@ -145,10 +152,10 @@ pipeline, we have to use the output of the first pipeline as input of
 the second pipeline, that is, we want to use the output of the
 `standardize` step as the data parameter input in the `data2` step.
 To achieve this, we apply the `replace` function as described earlier
-in the vignette [modify the pipeline](v02-modify-pipeline.html): 
+in the vignette [modify the pipeline](v02-modify-pipeline.html):
 
 ```{r}
-pip_replace(pip, "data2", function(data = ~standardize) data)
+pip |> pip_replace("data2", function(data = ~standardize) data)
 
 pip
 ```
@@ -161,13 +168,13 @@ do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100, width = 700)
 
 #### Relative indexing
 
-Since the name of the re-routed step might not always be known^[A typical 
-example would be appending several pipelines in a programmatic context.], 
-the {pipeflow} package also provides a relative position indexing mechanism, 
+Since the name of the re-routed step might not always be known^[A typical
+example would be appending several pipelines in a programmatic context.],
+the {pipeflow} package also provides a relative position indexing mechanism,
 which allows to rewrite the above command as follows:
 
 ```{r}
-pip_replace(pip, "data2", function(data = ~-1) data)
+pip |> pip_replace("data2", function(data = ~-1) data)
 
 pip
 ```
@@ -190,7 +197,7 @@ pip[["plot", "out"]]
 ```
 
 As we can see, the plot shows the linear model fit of the standardized data.
-We can now go ahead and for example change the x-variable of the model and rerun 
+We can now go ahead and for example change the x-variable of the model and rerun
 the pipeline.
 
 ```{r}
@@ -213,8 +220,8 @@ pip[["plot", "out"]]
 
 ### Step cherry-picking
 
-Another way to re-use steps from other pipelines is by cherry-picking, for
-example:
+Another way to re-use steps from other pipelines is by cherry-picking,
+which can be done via `pip_add_from`, for example:
 
 ```{r cherry-pick}
 pip <- pip_new("cherry-picked-from-1-and-2") |>
@@ -226,9 +233,11 @@ pip <- pip_new("cherry-picked-from-1-and-2") |>
 
 pip
 ```
-In this instance, however, the cherry-pick approach was not all that useful,
-because in contrast to the `pip_bind` command, which renamed `data` to `data2`,
-the `fit` and `plot` step will still refer to the initial `data` step.
+
+Note that here the cherry-pick approach is not all that useful,
+because in contrast to the `pip_bind` command,
+which renames `data` to `data2`, the cherry-picked `fit` and `plot` steps
+still refer to the initial `data` step.
 
 ```{r, echo = FALSE}
 library(visNetwork)
@@ -236,14 +245,14 @@ do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 250, width = 700)
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
-In other scenarios, however, this can be exactly what is desired.
+In other scenarios, however, this might be exactly what you want.
 
 Generally, when creating these pipelines, there will be a lot of steps calculating
-intermediate results and only a few steps contain the final results that we are
-interested in (e.g. the `plot` output the above example).
-To see how {pipeflow} allows to conveniently tag, collect and possibly group 
-the output of those final results, 
-see the next vignette [Collecting output](v04-collect-output.html).
+intermediate results and only a few steps contain the final output we are
+interested in (see e.g. the `plot` output in the above example).
+To see how {pipeflow} allows to conveniently tag, collect and possibly group
+those final outputs,
+see the next vignette [Collecting and filtering output](v04-collect-output.html).
 
 ```{r, include = FALSE}
 options(old)

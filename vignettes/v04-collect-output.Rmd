@@ -1,20 +1,18 @@
 ---
-title: "Collecting output"
+title: "Collecting and filtering output"
 output:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 4
 description: >
-  Shows how to collect and group pipeline output.
+  Shows how to collect, filter, and group pipeline output.
 vignette: >
-  %\VignetteIndexEntry{Collecting output}
+  %\VignetteIndexEntry{Collecting and filtering output}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r knitr-setup, include = FALSE}
-require(pipeflow)
-
 knitr::opts_chunk$set(
   comment = "#",
   prompt = FALSE,
@@ -24,48 +22,84 @@ knitr::opts_chunk$set(
 )
 
 old <- options(width = 100L)
-library(ggplot2)
 ```
 
-Generally, one should keep pipeline steps as simple as possible, basically following the
-principle *"one step, one task"*. This means that usually a lot of pipeline steps are
-used to calculate intermediate results and only a few steps contain the final results
-that we are interested in. This vignette shows how to conveniently collect and possibly
-group the output of those final steps.
+Generally speaking, one should keep pipeline steps as simple as possible,
+basically following the
+principle *"one step, one task"*. Splitting up analysis steps into multiple functions
+naturally can be hard to manage, but since {pipeflow} manages all function and parameter dependencies for you, this is not a problem.
+Following this principle, usually a lot of pipeline steps will carry intermediate results
+and only a few steps will contain the final output we are interested in.
+This vignette shows how to conveniently tag, collect, and possibly group those final
+outputs.
 
-### Flag output steps
+### Group and tag definitions
 
-Output steps are flagged by settting the `keepOut` argument to `TRUE` when adding a step to the pipeline. In the following example, we will want to keep the output of the steps
-`data_summary`, `model_summary`, and `model_plot`.
+The {pipeflow} package is developed with the goal in mind to provide a fast,
+lightweight, and flexible framework that does not force users into a specific
+workflow.
+However, two features for managing pipeline output seemed to appear so
+frequently in practice that they found their way as core features into the
+package:
+
+* groups to define related output steps, and
+* tags to mark steps and enable to filter them for output collection.
+
+Both **group** and **tag** properties can be already set during the pipeline
+creation. Let's illustrate this with an example.
 
 ```{r pipeline-with-output}
 library(pipeflow)
-library(ggplot2)
 
-pip <- pipe_new(
-        "my-pipeline",
-        data = airquality
+pip <- pip_new("my-pip") |>
+
+    pip_add("data",
+        function(data = airquality) data
     ) |>
 
-    pipe_add(
-        "data_prep",
-        function(data = ~data) {
+    pip_add("data_prep",
+        function(
+            data = ~data
+        ) {
             replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5/9)
-        }
+        },
+        group = "Data",                # <- set 'Data' group
+        tags = "data"                  # <- set 'data' tag
     ) |>
 
-    pipe_add(
+    pip_add(
         "data_summary",
         function(
             data = ~data_prep,
             xVar = "Temp.Celsius",
             yVar = "Ozone"
         ) {
-            data[, c(xVar, yVar)]
-        }
+            format(summary(data[, c(xVar, yVar)])) |>
+              as.data.frame(row.names = NA)
+
+        },
+        group = "Data",                # <- set 'Data' group
+        tags = c("data", "summary")    # <- set 'data' and 'summary' tags
     ) |>
 
-    pipe_add(
+    pip_add(
+        "data_plot",
+        function(
+            data = ~data_prep,
+            xVar = "Temp.Celsius",
+            yVar = "Ozone"
+        ) {
+            require(ggplot2, quietly = TRUE)
+            ggplot(data) +
+                geom_point(aes(.data[[xVar]], .data[[yVar]])) +
+                labs(title = "Data")
+
+        },
+        group = "Data",                # <- set 'Data' group
+        tags = c("data", "plot")       # <- set 'data' and 'plot' tags
+    ) |>
+
+    pip_add(
         "model_fit",
         function(
             data = ~data_prep,
@@ -73,154 +107,185 @@ pip <- pipe_new(
             yVar = "Ozone"
         ) {
             lm(paste(yVar, "~", xVar), data = data)
-        }
+        },
+        group = "Model",               # <- set 'Model' group
+        tags = c("model", "fit")       # <- set 'model' and 'fit' tags
     ) |>
 
-    pipe_add(
+    pip_add(
         "model_summary",
         function(
             fit = ~model_fit
         ) {
-            summary(fit)
-        }
+            summary(fit) |> coefficients() |> as.data.frame()
+        },
+        group = "Model",               # <- set 'Model' group
+        tags = c("model", "summary")   # <- set 'model' and 'summary' tags
     ) |>
 
-    pipe_add(
+    pip_add(
         "model_plot",
         function(
             model = ~model_fit,
-            data = ~data_prep,
+            data_plot = ~data_plot,
             xVar = "Temp.Celsius",
-            yVar = "Ozone",
-            title = "Linear model fit"
+            yVar = "Ozone"
         ) {
             coeffs <- coefficients(model)
-            ggplot(data) +
-                geom_point(aes(.data[[xVar]], .data[["Ozone"]])) +
+            data_plot +
                 geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
-                labs(title = title)
-        }
+                labs(title = "Linear model fit")
+        },
+        group = "Model",               # <- set 'Model' group
+        tags = c("model", "plot")      # <- set 'model' and 'plot' tags
     )
 ```
 
-Looking at the pipeline, we see that the steps `data_summary`, `model-summary`, and
-`model_plot` have been flagged accordingly (see column `keepOut`).
+Looking at the pipeline, we can see that in contrast to the examples
+of the previous vignettes, two new columns `group` and `tags` have been
+added to the overview.
 
 ```{r}
 pip
 ```
 
-
-Now let's run and collect the output of the flagged steps using the `collect_out` method, which returns a list with the output of the flagged steps.
+Before showing how to make use of the defined groups and tags, let's run the
+pipeline and inspect the output inidividually as we did in the previous
+vignettes.
 
 ```{r}
-pip$run()
+pip_run(pip)
 
-out <- pip$collect_out()
-
-names(out)
+pip
 ```
 
-As expected, the output list contains the output of the flagged steps.
+```{r, message = FALSE, warning = FALSE}
+pip[["data_plot", "out"]]
+```
+
+```{r, message = FALSE, warning = FALSE}
+pip[["model_plot", "out"]]
+```
+
+
+### Grouped output
+
+The default {pipeflow} way of gobbling up all output is to call
+`pip_collect_out()` on the pipeline, which returns a list with all
+the output.
 
 ```{r}
+out <- pip_collect_out(pip)
+
 str(out, max.level = 1)
 ```
 
-### Grouping output steps
-
-Often certain output steps are related and should be grouped together. This can be
-achieved conveniently by setting the `group` argument when adding a step to the
-pipeline. Let's illustrate this by slightly modifying the previous example.
-
-```{r pipeline-with-grouped-output}
-pip <- Pipeline$new("my-pipeline", data = airquality) |>
-
-    pipe_add(
-        "data_prep",
-        function(data = ~data) {
-            replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5/9)
-        }
-    ) |>
-
-    pipe_add(
-        "used_data",
-        function(
-            data = ~data_prep,
-            xVar = "Temp.Celsius",
-            yVar = "Ozone"
-        ) {
-            data[, c(xVar, yVar)]
-        },
-        group = "Data"                 # <- define 'Data' group here
-    ) |>
-
-    pipe_add(
-        "model_fit",
-        function(
-            data = ~data_prep,
-            xVar = "Temp.Celsius",
-            yVar = "Ozone"
-        ) {
-            lm(paste(yVar, "~", xVar), data = data)
-        }
-    ) |>
-
-    pipe_add(
-        "model_summary",
-        function(
-            fit = ~model_fit
-        ) {
-            summary(fit)
-        },
-        group = "Model"                # <- define 'Model' group here
-    ) |>
-
-    pipe_add(
-        "model_plot",
-        function(
-            model = ~model_fit,
-            data = ~data_prep,
-            xVar = "Temp.Celsius",
-            yVar = "Ozone",
-            title = "Linear model fit"
-        ) {
-            coeffs <- coefficients(model)
-            ggplot(data) +
-                geom_point(aes(.data[[xVar]], .data[["Ozone"]])) +
-                geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
-                labs(title = title)
-        },
-        group = "Model"                # <- define 'Model' group here
-    )
-```
-
-
-Looking at the pipeline, the defined groups are shown in the `group` column.
+But, as we can see, the output has been grouped into sublists defined by the
+`group` properties set earlier. The `Data` and `Model` sublists contain the
+output of the respective steps.
 
 ```{r}
-pip
+names(out[["Data"]])
+
+names(out[["Model"]])
 ```
 
-As you see, by default, the group is identical to the step name, that is, each step
-represents the trivial case of a one-sized group. Again, we run the pipeline and
-collect the output.
+To ignore the defined groups and collect all output step-wise into a single
+flat list, we set `grouped = FALSE` when calling `pip_collect_out()`.
 
 ```{r}
-pip$run()
-
-out <- pip$collect_out()
+out <- pip_collect_out(pip, grouped = FALSE)
 
 names(out)
 ```
 
-As we can see, the output related to the modelling has been grouped into one sublist
-named `Model`.
+
+### Filtered output using tags
+
+To collect only the output of steps with a specific tag, we use
+`pip_view()`, which is {pipeflow}'s general-purpose function for filtering
+pipelines and then call `pip_collect_out()` on the filtered pipeline.
+To collect only the plots, for example, we can filter by the `plot` tag.
 
 ```{r}
-str(out, max.level = 2)
+pip_view(pip, tags = "plot")
 ```
 
+```{r, message = FALSE, warning = FALSE}
+pip |>
+    pip_view(tags = "plot") |>
+    pip_collect_out() |>
+    gridExtra::grid.arrange(grobs = _, nrow = 2)
+```
+
+Next, we collect all summaries.
+
+```{r, message = FALSE, warning = FALSE}
+summaries <- pip |>
+    pip_view(tags = "summary") |>
+    pip_collect_out()
+```
+
+```{r}
+summaries[["Data"]]
+```
+
+```{r}
+summaries[["Model"]]
+```
+
+### More on views
+
+To make the example a bit more interesting, we first update some parameters.
+
+```{r}
+pip_set_params(pip, params = list(xVar = "Solar.R", yVar = "Wind"))
+
+pip
+```
+
+{pipeflow} views provide a variety of filtering options. In the previous
+section, the filtering was done based on tags, but you can also filter
+based on other properties, for example, all steps that depend on the
+`model_fit` step:
+
+```{r}
+pip |> pip_view(filter = list(depends = "model_fit", state = "outdated"))
+```
+
+or using regex-based filtering, for example, to filter all outdated steps
+starting with `data`:
+
+```{r}
+pip |> pip_view(filter = list(step = "^data", state = "outdated"), fixed = FALSE)
+```
+
+Views can also be chained together:
+
+```{r}
+v <- pip |> pip_view(filter = list(state = "outdated"))
+v
+
+v2 <- v |> pip_view(tags = "plot")
+v2
+```
+
+Last but not least, views can be run as pipelines themselves, which allows to
+conveniently re-run only the filtered steps, while {pipeflow} ensures that
+any upstream dependencies are run first if needed.
+
+```{r}
+v2 |> pip_run()
+```
+
+Having a closer look at the run log, you'll see which steps were re-run as
+part of the `[view]` and which were re-run as `[upstream]` dependencies.
+Since all views work by reference on the given pipeline, the original pipeline
+is now up-to-date for the filtered steps.
+
+```{r}
+pip
+```
 
 ```{r, include = FALSE}
 options(old)

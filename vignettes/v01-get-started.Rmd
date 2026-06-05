@@ -13,8 +13,6 @@ vignette: >
 ---
 
 ```{r knitr-setup, include = FALSE}
-library(pipeflow)
-
 knitr::opts_chunk$set(
   comment = "#",
   prompt = FALSE,
@@ -52,6 +50,8 @@ with the name "my-pipeline" and add a `data` step that provides the input
 dataset.
 
 ```{r define-pipeline}
+library(pipeflow)
+
 pip <- pip_new("my-pip")
 
 pip <- pip_add(pip,
@@ -84,7 +84,8 @@ tilde (~) operator, that is, `~data` in this case.
 Since `pip_add` works "by reference", we can add the step as follows:
 
 ```{r define-data-prep-step}
-pip |> pip_add("data_prep",
+pip |> pip_add(
+    "data_prep",
     function(x = ~data) {
         replace(x, "Temp.Celsius", (x[, "Temp"] - 32) * 5/9)
     }
@@ -100,7 +101,8 @@ parameter `xVar`, which is used to specify the variable that is used as
 predictor in the linear model.
 
 ```{r}
-pip |> pip_add("model_fit",
+pip |> pip_add(
+    "model_fit",
     function(
         data = ~data_prep,
         xVar = "Temp.Celsius"
@@ -118,7 +120,8 @@ parameter and a parameter `title`, which is used as the title
 of the plot.
 
 ```{r}
-pip |> pip_add("model_plot",
+pip |> pip_add(
+    "model_plot",
     function(
         model = ~model_fit,
         data = ~data_prep,
@@ -167,7 +170,8 @@ definition time. To see this, let's try to add another step that is referring
 to a non-existent step `foo` as its input.
 
 ```{r try-add-bad-step, error = TRUE}
-pip |> pip_add("another_step",
+pip |> pip_add(
+    "another_step",
     function(data = ~foo) {
         data
     }
