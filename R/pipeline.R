@@ -158,7 +158,7 @@
         params = lapply(params, eval),
         depends = depends,
         tags = tags,
-        execMode = exec,
+        exec = exec,
         .nodeId = .nodeId
     )
 
@@ -223,7 +223,7 @@
     fun <- dat[["fun"]][[i]]
     args <- dat[["params"]][[i]]
     depends <- dat[["depends"]][[i]]
-    execMode <- dat[["execMode"]][[i]]
+    exec <- dat[["exec"]][[i]]
 
     # If calculation depends on results of earlier steps, get them from
     # respective referenced output slots of the pipeline.
@@ -235,7 +235,7 @@
     step <- dat[["step"]][[i]]
 
     out <- withCallingHandlers(
-        .pip_execute_step_call(fun = fun, args = args, exec = execMode),
+        .pip_execute_step_call(fun = fun, args = args, exec = exec),
         error = function(e) {
             data.table::set(dat,
                 i = i, j = "state",
@@ -516,7 +516,7 @@ pip_add_from <- function(x, y, step)
     fun <- y[["pipeline"]][["fun"]][[iStep]]
     group <- y[["pipeline"]][["group"]][[iStep]]
     tags <- y[["pipeline"]][["tags"]][[iStep]]
-    execMode <- y[["pipeline"]][["execMode"]][[iStep]]
+    exec <- y[["pipeline"]][["exec"]][[iStep]]
     params <- y[["pipeline"]][["params"]][[iStep]]
     depends <- y[["pipeline"]][["depends"]][[iStep]]
     indeps <- y[["pipeline"]][[".indeps"]][[iStep]]
@@ -546,7 +546,7 @@ pip_add_from <- function(x, y, step)
         fun = f,
         group = group,
         tags = tags,
-        exec = execMode
+        exec = exec
     )
 }
 
@@ -814,9 +814,9 @@ pip_get_graph <- function(x, include_upstream = FALSE)
 
     ids <- as.integer(sub[[".nodeId"]])
     shape <- rep("hexagon", nrow(sub))
-    if ("execMode" %in% names(sub)) {
-        shape[sub[["execMode"]] %in% "split"] <- "star"
-        shape[sub[["execMode"]] %in% "reduce"] <- "dot"
+    if ("exec" %in% names(sub)) {
+        shape[sub[["exec"]] %in% "split"] <- "star"
+        shape[sub[["exec"]] %in% "reduce"] <- "dot"
     }
     nodes <- data.frame(
         id = ids,
@@ -1587,7 +1587,7 @@ pip_view <- function(
     keep <- rep(TRUE, nrow(sub))
 
     # Filters
-    validFilters <- c("step", "depends", "group", "state", "execMode")
+    validFilters <- c("step", "depends", "group", "state", "exec")
     for (name in names(filter)) {
         if (!(name %in% validFilters)) {
             stop(sprintf(
@@ -1871,6 +1871,10 @@ print.pipeflow_pip <- function(x,
         has_tags <- any(lengths(dat[["tags"]]) > 0L)
         if (has_tags) {
             cols <- append(cols, "tags")
+        }
+        has_non_auto_exec <- any(dat[["exec"]] != "auto")
+        if (has_non_auto_exec) {
+            cols <- append(cols, "exec")
         }
     }
     if (identical(cols, "all")) {

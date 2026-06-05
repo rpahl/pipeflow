@@ -12,7 +12,7 @@
         tags = list(),
         time = as.POSIXct(character(0)),
         locked = logical(0),
-        execMode = character(0),
+        exec = character(0),
         .nodeId = integer(),
         .indeps = list()     # names of independent parameters
     )
@@ -22,7 +22,7 @@
 .new_step <- function(
     step, group, fun, params, depends, .nodeId,
     tags = character(0),
-    execMode = "auto"
+    exec = "auto"
 ) {
     list(
         step = step,
@@ -36,7 +36,7 @@
         tags = list(tags),
         time = Sys.time(),
         locked = FALSE,
-        execMode = execMode,
+        exec = exec,
         .nodeId = .nodeId,
         .indeps = list(setdiff(names(params), names(depends)))
     )

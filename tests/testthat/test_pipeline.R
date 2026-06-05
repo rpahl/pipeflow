@@ -2045,6 +2045,23 @@ describe("print.pipeflow_pip",
 
         expect_equal(header, c("step", "depends", "out", "state", "tags"))
     })
+
+    it("prints the exec column last when any step defines non-auto exec",
+    {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x, tags = "core") |>
+            pip_add("s2", \(x = ~s1) x + 1, exec = "split")
+
+        header <- get_print_header(p)
+
+        expect_equal(
+            header,
+            c("step", "depends", "out", "state", "tags", "exec")
+        )
+    })
 })
 
 
@@ -2069,7 +2086,10 @@ describe("print.pipeflow_view",
         out <- capture.output(print(v))
 
         expect_true(any(grepl("<pipeflow_view>", out)))
-        expect_equal(get_view_header(v), c("step", "group", "depends", "out", "state"))
+        expect_equal(
+            get_view_header(v),
+            c("step", "group", "depends", "out", "state")
+        )
     })
 
     it("prints the tags column last for tagged views",
@@ -2083,6 +2103,26 @@ describe("print.pipeflow_view",
 
         v <- pip_view(p, tags = "core")
 
-        expect_equal(get_view_header(v), c("step", "depends", "out", "state", "tags"))
+        expect_equal(
+            get_view_header(v),
+            c("step", "depends", "out", "state", "tags")
+        )
+    })
+
+    it("prints the exec column last when any step defines non-auto exec",
+    {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x, exec = "split", tags = "core") |>
+            pip_add("s2", \(x = ~s1) x + 1)
+
+        v <- pip_view(p, tags = "core")
+
+        expect_equal(
+            get_view_header(v),
+            c("step", "depends", "out", "state", "tags", "exec")
+        )
     })
 })
