@@ -1342,8 +1342,7 @@ describe("pip_run",
         it(paste(
             "supports modifying the pipeline at runtime and",
             "continues with the updated version"
-        ),
-        {
+        ), {
             pip <- pip_new("my-pipeline") |>
                 pip_add("init", function(xInit = 0) xInit) |>
                 pip_add("f1", function(x = ~init) x + 1) |>
@@ -1351,7 +1350,8 @@ describe("pip_run",
                     "f2",
                     function(x = ~f1, .self = NULL) {
                         if (x > 10) {
-                            .self |> pip_replace("f3", function(x = ~f1) x * 2)
+                            .self |> pip_replace("f3", function(x = ~f1) x * 3)
+                            return(x / 2)
                         }
                         x + 2
                     }
@@ -1362,8 +1362,149 @@ describe("pip_run",
             expect_equal(pip[["out"]], list(0, 1, 3, 6))
 
             pip |> pip_set_params(list(xInit = 15)) |> pip_run(lgr = NULL)
+            expect_equal(pip[["out"]], list(15, 16, 16 / 2, 16 * 3))
+            expect_equal(
+                body(pip[["f3", "fun"]]),
+                body(function(x = ~f1) x * 3)
+            )
+        })
 
-            expect_equal(pip[["out"]], list(15, 16, 16 + 2, 16 * 2))
+        it(paste(
+            "supports modifying the pipeline at runtime by",
+            "a step that was replaced"
+        ), {
+            pip <- pip_new("my-pipeline") |>
+                pip_add("init", function(xInit = 0) xInit) |>
+                pip_add("f1", function(x = ~init) x + 1) |>
+                pip_add("f2", function(x = ~f1) x + 2) |>
+                pip_add("f3", function(x = ~f2) x + 3)
+
+                pip |> pip_replace(
+                    "f2",
+                    function(x = ~f1, .self = NULL)
+                    {
+                        if (x > 10) {
+                            .self |> pip_replace("f3", function(x = ~f1) x * 3)
+                            return(x / 2)
+                        }
+                        x + 2
+                    }
+                )
+
+            pip_run(pip, lgr = NULL)
+            expect_equal(pip[["out"]], list(0, 1, 3, 6))
+
+            pip |> pip_set_params(list(xInit = 15)) |> pip_run(lgr = NULL)
+            expect_equal(pip[["out"]], list(15, 16, 16 / 2, 16 * 3))
+            expect_equal(
+                body(pip[["f3", "fun"]]),
+                body(function(x = ~f1) x * 3)
+            )
+        })
+
+        it(paste(
+            "keeps .self rebound correctly for downstream steps",
+            "that were copied during replacement"
+        ), {
+            pip <- pip_new("my-pipeline") |>
+                pip_add("init", function(xInit = 0) xInit) |>
+                pip_add("f1", function(x = ~init) x + 1) |>
+                pip_add("f2", function(x = ~f1) x + 2) |>
+                pip_add(
+                    "f3",
+                    function(x = ~f2, .self = NULL) {
+                        if (x > 10) {
+                            .self |>
+                                pip_replace("f4", function(x = ~f1) x * 4)
+                        }
+                        x + 3
+                    }
+                ) |>
+                pip_add("f4", function(x = ~f3) x + 4)
+
+            pip |> pip_replace("f2", function(x = ~f1) x + 10)
+
+            pip_run(pip, lgr = NULL)
+            expect_equal(pip[["out"]], list(0, 1, 11, 14, 4))
+            expect_equal(
+                body(pip[["f4", "fun"]]),
+                body(function(x = ~f1) x * 4)
+            )
+        })
+
+        it(paste(
+            "persists runtime self-modifications across runs",
+            "without losing .self routing"
+        ), {
+            pip <- pip_new("my-pipeline") |>
+                pip_add("init", function(xInit = 0) xInit) |>
+                pip_add("f1", function(x = ~init) x + 1) |>
+                pip_add(
+                    "f2",
+                    function(x = ~f1, .self = NULL) {
+                        if (x > 10) {
+                            .self |> pip_replace("f3", function(x = ~f1) x * 3)
+                            return(x / 2)
+                        }
+                        x + 2
+                    }
+                ) |>
+                pip_add("f3", function(x = ~f2) x + 3)
+
+            pip |> pip_set_params(list(xInit = 15)) |> pip_run(lgr = NULL)
+            expect_equal(pip[["out"]], list(15, 16, 8, 48))
+            expect_equal(
+                body(pip[["f3", "fun"]]),
+                body(function(x = ~f1) x * 3)
+            )
+
+            pip |> pip_set_params(list(xInit = 20)) |> pip_run(lgr = NULL)
+            expect_equal(pip[["out"]], list(20, 21, 10.5, 63))
+            expect_equal(
+                body(pip[["f3", "fun"]]),
+                body(function(x = ~f1) x * 3)
+            )
+        })
+
+        it(paste(
+            "applies runtime replacements when running only a view",
+            "and updates steps outside the view"
+        ), {
+            pip <- pip_new("my-pipeline") |>
+                pip_add("init", function(xInit = 0) xInit) |>
+                pip_add("f1", function(x = ~init) x + 1) |>
+                pip_add(
+                    "f2",
+                    function(x = ~f1, .self = NULL) {
+                        if (x > 10) {
+                            .self |> pip_replace("f3", function(x = ~f1) x * 3)
+                            return(x / 2)
+                        }
+                        x + 2
+                    }
+                ) |>
+                pip_add("f3", function(x = ~f2) x + 3) |>
+                pip_add("f4", function(x = ~f3) x + 1)
+
+            pip_run(pip, lgr = NULL)
+            expect_equal(pip[["out"]], list(0, 1, 3, 6, 7))
+
+            pip |> pip_set_params(list(xInit = 15))
+            v <- pip_view(pip, i = c("f1", "f2"))
+            pip_run(v, lgr = NULL, force = TRUE)
+
+            expect_equal(pip[["out"]], list(15, 16, 8, NULL, 7))
+            expect_equal(
+                body(pip[["f3", "fun"]]),
+                body(function(x = ~f1) x * 3)
+            )
+            expect_equal(
+                pip[["pipeline"]][step == "f4", state][[1]],
+                "outdated"
+            )
+
+            pip_run(pip, lgr = NULL)
+            expect_equal(pip[["out"]], list(15, 16, 8, 48, 49))
         })
     })
 })

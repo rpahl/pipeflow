@@ -1177,7 +1177,24 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0))
         }
     }
 
-    x[["pipeline"]] <- out[["pipeline"]]
+    # Rebind any explicit .self references from the temporary clone back to
+    # the actual pipeline object that is being mutated at runtime.
+    datOut <- out[["pipeline"]]
+    for (k in seq_len(nrow(datOut))) {
+        pars <- datOut[["params"]][[k]]
+        selfRef <- pars[[".self"]]
+        if (".self" %in% names(pars) &&
+            inherits(selfRef, "pipeflow_pip") &&
+            !identical(selfRef, x)
+        ) {
+            pars[[".self"]] <- x
+            data.table::set(datOut,
+                i = k, j = "params", value = list(list(pars))
+            )
+        }
+    }
+
+    x[["pipeline"]] <- datOut
     x[[".dag"]] <- out[[".dag"]]
     x[[".steps_to_nodes"]] <- out[[".steps_to_nodes"]]
     invisible(x)
