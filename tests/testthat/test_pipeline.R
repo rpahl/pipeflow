@@ -1508,7 +1508,7 @@ describe("pip_run",
         })
     })
 
-    it("can insert and remove steps at runtime",
+    it("inserts and removes steps at runtime as expected",
     {
         pip <- pip_new("my-pipeline") |>
             pip_add("init", function(xInit = 0) xInit) |>
@@ -1533,26 +1533,81 @@ describe("pip_run",
                             function(x = ~f2b) x + 30
                         ) |>
                         pip_remove("f2")
-
-                        return(.self)
                     }
-
                     x + 2
                 }
             ) |>
             pip_add("f3", function(x = ~f2) x + 3)
 
+        pip_set_params(pip, list(xInit = 11))
+        pip_run(pip, lgr = NULL)
+        expect_equal(pip[["step"]], c("init", "f1", "f2a", "f2b", "f3"))
+        expect_equal(pip[["state"]], c("done", "done", "new", "done", "new"))
+        expect_equal(pip[["out"]], list(11, 12, NULL, NULL + 22, NULL))
+
+        pip_set_params(pip, list(xInit = 11))
+        pip_run(pip, lgr = NULL)
+
+        expect_equal(pip[["out"]], list(11, 12, 33, 55, 85))
+    })
+
+
+    it("inserts and removes steps at runtime with returned pip as expected",
+    {
+        test_pip <- function() {
+            pip_new("my-pipeline") |>
+                pip_add("init", function(xInit = 0) xInit) |>
+                pip_add("f1", function(x = ~init) x + 1) |>
+                pip_add(
+                    "f2",
+                    function(x = ~f1, .self = NULL)
+                    {
+                        if (x > 10) {
+                            .self |> pip_add(
+                                "f2a",
+                                function(x = ~f1) x + 21,
+                                after = "f1",
+                            ) |>
+                            pip_add(
+                                "f2b",
+                                function(x = ~f2a) x + 22,
+                                after = "f2a"
+                            ) |>
+                            pip_replace(
+                                "f3",
+                                function(x = ~f2b) x + 30
+                            ) |>
+                            pip_remove("f2")
+
+                            return(.self)
+                        }
+
+                        x + 2
+                    }
+                ) |>
+                pip_add("f3", function(x = ~f2) x + 3)
+        }
+
+        pip1 <- test_pip()
+        pip_set_params(pip1, list(xInit = 11)) |> pip_run()
+
+        expect_equal(pip1[["step"]], c("init", "f1", "f2a", "f2b", "f3"))
+        expect_equal(pip1[["state"]], c("done", "done", "new", "new", "new"))
+        expect_equal(pip1[["out"]], list(11, 12, NULL, NULL, NULL))
+        pip_run(pip1, lgr = NULL)
+
+        expect_equal(pip1[["state"]], rep("done", 5))
+        expect_equal(pip1[["out"]], list(11, 12, 33, 55, 85))
+
+        pip2 <- test_pip()
         expect_no_error(
-            pip_set_params(pip, list(xInit = 11)) |>
+            pip_set_params(pip2, list(xInit = 11)) |>
                 pip_run(lgr = NULL, recursive = TRUE)
         )
 
-        expect_equal(
-            pip[["pipeline"]][["step"]],
-            c("init", "f1", "f2a", "f2b", "f3")
-        )
-        expect_equal(pip[["pipeline"]][["out"]], list(11, 12, 33, 55, 85))
-        expect_true(all(pip[["pipeline"]][["state"]] == "done"))
+        expect_equal(pip2[["step"]], c("init", "f1", "f2a", "f2b", "f3"))
+        expect_equal(pip2[["state"]], rep("done", 5))
+        expect_equal(pip2[["out"]], list(11, 12, 33, 55, 85))
     })
 
     it("can restart a run from the start when a step returns a pipeline",

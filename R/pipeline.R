@@ -1339,33 +1339,40 @@ pip_run <- function(
         log_info(msg)
         res <- .pip_run_row(pip, i = row, lgr = lgr)
 
-        if (.is_pipeflow_pip(res) && recursive) {
-            current_depth <- as.integer(x[[".recursive_depth"]])
-            max_depth <- getOption("pipeflow_max_recursive_depth", 10L)
-            if (is.na(max_depth) || max_depth < 0L) {
-                max_depth <- 10L
-            }
+        if (.is_pipeflow_pip(res)) {
+            if (recursive) {
+                current_depth <- as.integer(x[[".recursive_depth"]])
+                max_depth <- getOption("pipeflow_max_recursive_depth", 10L)
+                if (is.na(max_depth) || max_depth < 0L) {
+                    max_depth <- 10L
+                }
 
-            if (current_depth >= max_depth) {
-                sprintf(paste(
-                    "Maximum recursive pipeline restarts exceeded (%i).",
-                    "Set options(pipeflow_max_recursive_depth = <n>) to",
-                    "increase the limit."),
-                    max_depth
-                ) |> stop(call. = FALSE)
-            }
+                if (current_depth >= max_depth) {
+                    sprintf(paste(
+                        "Maximum recursive pipeline restarts exceeded (%i).",
+                        "Set options(pipeflow_max_recursive_depth = <n>) to",
+                        "increase the limit."),
+                        max_depth
+                    ) |> stop(call. = FALSE)
+                }
 
-            res[[".recursive_depth"]] <- current_depth + 1L
+                res[[".recursive_depth"]] <- current_depth + 1L
+
+                log_info(
+                    "Abort pipeline execution and restart on returned pipeline."
+                )
+                pip_run(
+                    x = res,
+                    lgr = lgr,
+                    force = TRUE,
+                    progress = progress,
+                    recursive = TRUE
+                )
+                return(invisible(res))
+            }
 
             log_info(
-                "Abort pipeline execution and restart on returned pipeline."
-            )
-            pip_run(
-                x = res,
-                lgr = lgr,
-                force = TRUE,
-                progress = progress,
-                recursive = TRUE
+                "Abort pipeline execution on returned pipeline."
             )
             return(invisible(res))
         }
