@@ -289,6 +289,20 @@
     )
 }
 
+.pip_get_recursive_depth <- function(x)
+{
+    if (!.is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
+    }
+
+    depth <- x[[".recursive_depth"]]
+    if (is.null(depth)) {
+        return(0L)
+    }
+
+    as.integer(depth)
+}
+
 .pip_steps_to_rows <- function(x, steps)
 {
     pip <- if (.is_pipeflow_view(x)) x[["pip"]] else x
@@ -349,6 +363,7 @@ pip_new <- function(name = "pipe")
     env[["pipeline"]] <- .empty_pipeline()
     env[[".dag"]] <- dag_new()
     env[[".steps_to_nodes"]] <- hash_map()
+    env[[".recursive_depth"]] <- 0L
 
     structure(env, class = c("pipeflow_pip", "environment"))
 }
@@ -1325,7 +1340,26 @@ pip_run <- function(
         res <- .pip_run_row(pip, i = row, lgr = lgr)
 
         if (.is_pipeflow_pip(res) && recursive) {
-            log_info("Abort pipeline execution and restart on returned pipeline.")
+            current_depth <- as.integer(x[[".recursive_depth"]])
+            max_depth <- getOption("pipeflow_max_recursive_depth", 10L)
+            if (is.na(max_depth) || max_depth < 0L) {
+                max_depth <- 10L
+            }
+
+            if (current_depth >= max_depth) {
+                sprintf(paste(
+                    "Maximum recursive pipeline restarts exceeded (%i).",
+                    "Set options(pipeflow_max_recursive_depth = <n>) to",
+                    "increase the limit."),
+                    max_depth
+                ) |> stop(call. = FALSE)
+            }
+
+            res[[".recursive_depth"]] <- current_depth + 1L
+
+            log_info(
+                "Abort pipeline execution and restart on returned pipeline."
+            )
             pip_run(
                 x = res,
                 lgr = lgr,

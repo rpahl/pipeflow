@@ -1576,6 +1576,21 @@ describe("pip_run",
         expect_equal(count, 2L)
         expect_equal(pip[["pipeline"]][["out"]], list(1))
     })
+
+    it("stops recursive restarts after the configured limit",
+    {
+        old <- getOption("pipeflow_max_recursive_depth")
+        options(pipeflow_max_recursive_depth = 1L)
+        on.exit(options(pipeflow_max_recursive_depth = old), add = TRUE)
+
+        pip <- pip_new("loop-demo") |>
+            pip_add("step1", function(x = 1, .self = NULL) .self)
+
+        expect_error(
+            pip_run(pip, lgr = NULL, recursive = TRUE),
+            "Maximum recursive pipeline restarts exceeded"
+        )
+    })
 })
 
 
