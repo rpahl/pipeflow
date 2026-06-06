@@ -190,10 +190,21 @@
 
 .pip_get_downstream_nodes <- function(x, steps)
 {
-    start_ids <- mget(steps,
+    known <- intersect(steps, names(x[[".steps_to_nodes"]]))
+    if (length(known) == 0L) {
+        return(integer(0))
+    }
+
+    start_ids <- mget(known,
         envir = x[[".steps_to_nodes"]],
+        ifnotfound = NA_integer_,
         inherits = FALSE
     )
+    start_ids <- start_ids[!is.na(start_ids)]
+    if (length(start_ids) == 0L) {
+        return(integer(0))
+    }
+
     dag_get_reachable_nodes_down(x[[".dag"]], as.integer(start_ids))
 }
 
@@ -249,16 +260,19 @@
         }
     )
 
-    # Re-read the current pipeline table after step execution to ensure that
-    # any potential changes to the pipeline structure (e.g. via self-modifying
-    # steps) are properly reflected in the update of the current step's state.
+    # Re-read after execution so runtime structural changes are reflected. We
+    # update by step name, so if the current step removed itself we simply
+    # skip the update instead of writing into a shifted row.
     dat <- x[["pipeline"]]
-    data.table::set(dat,
-        i = i, j = c("out", "time", "state"),
-        value = list(list(out), Sys.time(), .step_states[["done"]][["name"]])
-    )
+    rowNow <- match(step, dat[["step"]])
+    if (!is.na(rowNow)) {
+        data.table::set(dat,
+            i = rowNow, j = c("out", "time", "state"),
+            value = list(list(out), Sys.time(), .step_states[["done"]][["name"]])
+        )
+    }
 
-    invisible(x)
+    out
 }
 
 .pip_step_exists <- function(x, step)
@@ -1210,6 +1224,9 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0))
 #' regardless of whether they are outdated or not.
 #' @param progress Optional callback of the form
 #' `function(value, detail)` called before each step.
+#' @param recursive Logical indicating whether a step return value of class
+#' `pipeflow_pip` should abort the current run and recursively continue with
+#' that returned pipeline.
 #' @return The updated pipeline or view, invisibly.
 #' @details When `x` is a view, requested rows are run together with required
 #' upstream dependencies.
@@ -1224,16 +1241,24 @@ pip_run <- function(
     x,
     lgr = pipeflow_lgr,
     force = FALSE,
-    progress = NULL
+    progress = NULL,
+    recursive = FALSE
 ) {
     .assert_pip_or_view(x)
     if (!.is_single(force, "logical")) {
         stop("force must be a single logical value")
     }
+    if (!.is_single(recursive, "logical")) {
+        stop("recursive must be a single logical value")
+    }
     if (!is.null(progress) && !is.function(progress)) {
         stop("progress must be a function")
     }
-    if (is.null(lgr)) lgr <- function(...) {} else .assert_logger(lgr)
+    if (is.null(lgr)) {
+        lgr <- function(level, msg, ...) {}
+    } else {
+        .assert_logger(lgr)
+    }
     log_info <- function(msg) lgr(level = "info", msg = msg)
 
     isView <- .is_pipeflow_view(x)
@@ -1297,9 +1322,20 @@ pip_run <- function(
         }
 
         log_info(msg)
-        .pip_run_row(pip, i = row, lgr = lgr)
-    }
+        res <- .pip_run_row(pip, i = row, lgr = lgr)
 
+        if (.is_pipeflow_pip(res) && recursive) {
+            log_info("Abort pipeline execution and restart on returned pipeline.")
+            pip_run(
+                x = res,
+                lgr = lgr,
+                force = TRUE,
+                progress = progress,
+                recursive = TRUE
+            )
+            return(invisible(res))
+        }
+    }
 
     log_info(sprintf("Finished run of %s '%s'", data.class(x), x[["name"]]))
     invisible(x)

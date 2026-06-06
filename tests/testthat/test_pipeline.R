@@ -1507,6 +1507,75 @@ describe("pip_run",
             expect_equal(pip[["out"]], list(15, 16, 8, 48, 49))
         })
     })
+
+    it("can insert and remove steps at runtime",
+    {
+        pip <- pip_new("my-pipeline") |>
+            pip_add("init", function(xInit = 0) xInit) |>
+            pip_add("f1", function(x = ~init) x + 1) |>
+            pip_add(
+                "f2",
+                function(x = ~f1, .self = NULL)
+                {
+                    if (x > 10) {
+                        .self |> pip_add(
+                            "f2a",
+                            function(x = ~f1) x + 21,
+                            after = "f1",
+                        ) |>
+                        pip_add(
+                            "f2b",
+                            function(x = ~f2a) x + 22,
+                            after = "f2a"
+                        ) |>
+                        pip_replace(
+                            "f3",
+                            function(x = ~f2b) x + 30
+                        ) |>
+                        pip_remove("f2")
+
+                        return(.self)
+                    }
+
+                    x + 2
+                }
+            ) |>
+            pip_add("f3", function(x = ~f2) x + 3)
+
+        expect_no_error(
+            pip_set_params(pip, list(xInit = 11)) |>
+                pip_run(lgr = NULL, recursive = TRUE)
+        )
+
+        expect_equal(
+            pip[["pipeline"]][["step"]],
+            c("init", "f1", "f2a", "f2b", "f3")
+        )
+        expect_equal(pip[["pipeline"]][["out"]], list(11, 12, 33, 55, 85))
+        expect_true(all(pip[["pipeline"]][["state"]] == "done"))
+    })
+
+    it("can restart a run from the start when a step returns a pipeline",
+    {
+        count <- 0L
+
+        pip <- pip_new("restart-demo") |>
+            pip_add(
+                "step1",
+                function(x = 1, .self = NULL) {
+                    count <<- count + 1L
+                    if (count == 1L) {
+                        return(.self)
+                    }
+                    x
+                }
+            )
+
+        pip_run(pip, lgr = NULL, recursive = TRUE)
+
+        expect_equal(count, 2L)
+        expect_equal(pip[["pipeline"]][["out"]], list(1))
+    })
 })
 
 
