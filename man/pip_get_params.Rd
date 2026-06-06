@@ -19,7 +19,7 @@ in the pipeline.
 }
 \examples{
 p <- pip_new() |>
-    pip_add("s1", \(x = 1, y = 2) x + y) |>
-    pip_add("s2", \(x = ~s1, z = 3) x + z)
+  pip_add("s1", \(x = 1, y = 2) x + y) |>
+  pip_add("s2", \(x = ~s1, z = 3) x + z)
 pip_get_params(p)
 }

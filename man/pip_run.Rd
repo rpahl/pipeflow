@@ -40,8 +40,8 @@ upstream dependencies.
 }
 \examples{
 p <- pip_new() |>
-    pip_add("s1", \(x = 1) x) |>
-    pip_add("s2", \(x = ~s1) x + 1)
+  pip_add("s1", \(x = 1) x) |>
+  pip_add("s2", \(x = ~s1) x + 1)
 pip_run(p, lgr = NULL)
 p[["pipeline"]][["out"]]
 }

@@ -17,7 +17,8 @@ Splits pipeline into its independent parts. This can be useful,
 for example, to split-up the pipeline in order to run each part in parallel.
 }
 \section{Lifecycle}{
- Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
 }
 
 \examples{

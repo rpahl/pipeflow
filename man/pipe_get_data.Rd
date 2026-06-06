@@ -17,7 +17,8 @@ the first step of the pipeline
 Get the data set for the pipeline
 }
 \section{Lifecycle}{
- Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
 }
 
 \examples{

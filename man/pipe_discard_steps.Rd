@@ -27,7 +27,8 @@ the \code{Pipeline} object invisibly
 Discard all steps that match a given \code{pattern}.
 }
 \section{Lifecycle}{
- Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
 }
 
 \examples{

@@ -44,7 +44,9 @@ which basically is a function returning the data.
 \examples{
 data <- data.frame(x = 1:2, y = 3:4)
 p <- pipe_new("myPipe", data = data)
-p |> pipe_run() |> pipe_get_out("data")
+p |>
+  pipe_run() |>
+  pipe_get_out("data")
 
 # Setting data later
 p <- pipe_new("myPipe")
@@ -52,12 +54,16 @@ pipe_get_data(p)
 
 p <- pipe_set_data(p, data)
 pipe_get_data(p)
-p |> pipe_run() |> pipe_get_out("data")
+p |>
+  pipe_run() |>
+  pipe_get_out("data")
 
 # Initialize with custom logger
 my_logger <- function(level, msg, ...) {
-   cat(level, msg, "\n")
+  cat(level, msg, "\n")
 }
 p <- pipe_new("myPipe", data = data, logger = my_logger)
-p |> pipe_run() |> pipe_get_out("data")
+p |>
+  pipe_run() |>
+  pipe_get_out("data")
 }

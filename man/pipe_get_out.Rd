@@ -18,7 +18,8 @@ the output at the given step.
 Get output of given step
 }
 \section{Lifecycle}{
- Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
 }
 
 \examples{

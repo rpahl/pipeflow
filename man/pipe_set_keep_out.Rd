@@ -22,7 +22,8 @@ which determines whether the output of that step is collected
 when calling \code{\link[=pipe_collect_out]{pipe_collect_out()}}\verb{after the pipeline was run. See column}keepOut` when printing a pipeline to view the status.
 }
 \section{Lifecycle}{
- Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
 }
 
 \examples{
@@ -30,9 +31,13 @@ p <- pipe_new("pipe", data = 1)
 pipe_add(p, "add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
 pipe_add(p, "add2", \(x = ~data, y = 2) x + y)
 pipe_add(p, "mult", \(x = ~add1, y = ~add2) x * y)
-p |> pipe_run() |> pipe_collect_out()
+p |>
+  pipe_run() |>
+  pipe_collect_out()
 
 pipe_set_keep_out(p, "add1", keepOut = FALSE)
 pipe_set_keep_out(p, "mult", keepOut = TRUE)
-p |> pipe_run() |> pipe_collect_out()
+p |>
+  pipe_run() |>
+  pipe_collect_out()
 }

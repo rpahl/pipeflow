@@ -55,8 +55,8 @@ library(pipeflow)
 pip <- pip_new("my-pip")
 
 pip <- pip_add(pip,
-    step = "data",
-    fun = function(data = airquality) data
+  step = "data",
+  fun = function(data = airquality) data
 )
 ```
 
@@ -85,10 +85,10 @@ Since `pip_add` works "by reference", we can add the step as follows:
 
 ```{r define-data-prep-step}
 pip |> pip_add(
-    "data_prep",
-    function(x = ~data) {
-        replace(x, "Temp.Celsius", (x[, "Temp"] - 32) * 5/9)
-    }
+  "data_prep",
+  function(x = ~data) {
+    replace(x, "Temp.Celsius", (x[, "Temp"] - 32) * 5 / 9)
+  }
 )
 ```
 
@@ -102,13 +102,11 @@ predictor in the linear model.
 
 ```{r}
 pip |> pip_add(
-    "model_fit",
-    function(
-        data = ~data_prep,
-        xVar = "Temp.Celsius"
-    ) {
-        lm(paste("Ozone ~", xVar), data = data)
-    }
+  "model_fit",
+  function(data = ~data_prep,
+           xVar = "Temp.Celsius") {
+    lm(paste("Ozone ~", xVar), data = data)
+  }
 )
 pip
 ```
@@ -121,21 +119,19 @@ of the plot.
 
 ```{r}
 pip |> pip_add(
-    "model_plot",
-    function(
-        model = ~model_fit,
-        data = ~data_prep,
-        xVar = "Temp.Celsius",
-        xLab = "Temperature in degrees Celsius",
-        title = "Linear model fit"
-    ) {
-        require(ggplot2, quietly = TRUE)
-        coeffs <- coefficients(model)
-        ggplot(data) +
-            geom_point(aes(.data[[xVar]], .data[["Ozone"]])) +
-            geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
-            labs(title = title, x = xLab)
-    }
+  "model_plot",
+  function(model = ~model_fit,
+           data = ~data_prep,
+           xVar = "Temp.Celsius",
+           xLab = "Temperature in degrees Celsius",
+           title = "Linear model fit") {
+    require(ggplot2, quietly = TRUE)
+    coeffs <- coefficients(model)
+    ggplot(data) +
+      geom_point(aes(.data[[xVar]], .data[["Ozone"]])) +
+      geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
+      labs(title = title, x = xLab)
+  }
 )
 pip
 ```
@@ -151,13 +147,16 @@ that can be feed directly to `visNetwork::visNetwork()`.
 ```{r, eval = FALSE}
 library(visNetwork)
 do.call(visNetwork, args = pip_get_graph(pip)) |>
-    visHierarchicalLayout(direction = "LR")
+  visHierarchicalLayout(direction = "LR")
 ```
 
 ```{r, echo = FALSE}
 library(visNetwork)
-do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100, width = 600))) |>
-    visHierarchicalLayout(direction = "LR")
+do.call(
+  visNetwork,
+  args = c(pip_get_graph(pip), list(height = 100, width = 600))
+) |>
+  visHierarchicalLayout(direction = "LR")
 ```
 
 Here, the pipeline is visualized as a directed acyclic graph (DAG) where
@@ -171,10 +170,10 @@ to a non-existent step `foo` as its input.
 
 ```{r try-add-bad-step, error = TRUE}
 pip |> pip_add(
-    "another_step",
-    function(data = ~foo) {
-        data
-    }
+  "another_step",
+  function(data = ~foo) {
+    data
+  }
 )
 ```
 
@@ -201,8 +200,11 @@ pip
 ```
 
 ```{r, echo = FALSE}
-do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100, width = 600))) |>
-    visHierarchicalLayout(direction = "LR")
+do.call(
+  visNetwork,
+  args = c(pip_get_graph(pip), list(height = 100, width = 600))
+) |>
+  visHierarchicalLayout(direction = "LR")
 ```
 
 We can see that the `state` of all steps have been changed from `new` to `done`,
@@ -247,7 +249,8 @@ and `model_plot` step].
 To change any independent parameter, we simply call `pip_set_params()`:
 
 ```{r set-xVar}
-pip |> pip_set_params(list(xVar = "Solar.R", xLab = "Solar radiation in Langleys"))
+pip |>
+  pip_set_params(list(xVar = "Solar.R", xLab = "Solar radiation in Langleys"))
 
 pip_get_params(pip) |> str()
 ```
@@ -262,8 +265,11 @@ pip
 
 ```{r, echo = FALSE}
 library(visNetwork)
-do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100, width = 600))) |>
-    visHierarchicalLayout(direction = "LR")
+do.call(
+  visNetwork,
+  args = c(pip_get_graph(pip), list(height = 100, width = 600))
+) |>
+  visHierarchicalLayout(direction = "LR")
 ```
 
 We can see that the `model_fit` and `model_plot` steps are now in state

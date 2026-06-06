@@ -23,8 +23,8 @@ are applied consistently.
 }
 \examples{
 src <- pip_new() |>
-    pip_add("s1", \(x = 1) x) |>
-    pip_add("s2", \(x = ~s1) x + 1)
+  pip_add("s1", \(x = 1) x) |>
+  pip_add("s2", \(x = ~s1) x + 1)
 dst <- pip_new()
 pip_add_from(dst, src, "s1")
 dst

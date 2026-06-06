@@ -33,6 +33,6 @@ graph$nodes
 graph$edges
 
 if (require("visNetwork", quietly = TRUE)) {
-    do.call(what = visNetwork::visNetwork, args = graph)
+  do.call(what = visNetwork::visNetwork, args = graph)
 }
 }

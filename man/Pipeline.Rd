@@ -16,7 +16,8 @@ Different pipelines can be bound together while preserving all dependencies
 within each pipeline.
 }
 \section{Lifecycle}{
- Deprecated. Legacy R6 interface. Use \code{\link[=pip_new]{pip_new()}} and pip_* functions.
+ Deprecated. Legacy R6 interface. Use \code{\link[=pip_new]{pip_new()}}
+and pip_* functions.
 }
 
 \examples{

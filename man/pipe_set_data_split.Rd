@@ -39,7 +39,8 @@ The step names of the sub-pipelines will be the original
 step names plus the name of the data set.
 }
 \section{Lifecycle}{
- Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and related pip_* functions.
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
 }
 
 \examples{
@@ -51,7 +52,10 @@ pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
 pipe_set_data_split(p, dataList)
 p
 
-p |> pipe_run() |> pipe_collect_out() |> str()
+p |>
+  pipe_run() |>
+  pipe_collect_out() |>
+  str()
 
 # Don't group output by split
 p <- pipe_new("pipe")
@@ -60,7 +64,10 @@ pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
 pipe_set_data_split(p, dataList, groupBySplit = FALSE)
 p
 
-p |> pipe_run() |> pipe_collect_out() |> str()
+p |>
+  pipe_run() |>
+  pipe_collect_out() |>
+  str()
 
 # Split up to certain step
 p <- pipe_new("pipe")
@@ -74,5 +81,8 @@ pipe_set_data_split(p, dataList, toStep = "mult")
 p
 pipe_get_depends(p)[["average_result"]]
 
-p |> pipe_run() |> pipe_collect_out() |> str()
+p |>
+  pipe_run() |>
+  pipe_collect_out() |>
+  str()
 }

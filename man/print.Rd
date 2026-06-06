@@ -53,8 +53,8 @@ Print pipeflow objects
 p <- pip_new() |> pip_add("s1", \(x = 1) x)
 print(p)
 p <- pip_new() |>
-    pip_add("s1", \(x = 1) x, group = "io") |>
-    pip_add("s2", \(x = ~s1) x + 1, group = "model")
+  pip_add("s1", \(x = 1) x, group = "io") |>
+  pip_add("s2", \(x = ~s1) x + 1, group = "model")
 v <- pip_view(p, filter = list(group = "model"))
 print(v)
 }

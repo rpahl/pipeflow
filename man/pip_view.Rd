@@ -42,13 +42,13 @@ A view stores selected row indices and references the original pipeline.
 
 p <- pip_new()
 pip_add(p, "load_raw", \(x = 1) x,
-    group = "io", tags = c("core", "daily")
+  group = "io", tags = c("core", "daily")
 )
 pip_add(p, "fit_model", \(x = 2) x + 1,
-    group = "model", tags = "model"
+  group = "model", tags = "model"
 )
 pip_add(p, "eval_model", \(x = ~fit_model) x,
-    group = "model", tags = c("daily", "report")
+  group = "model", tags = c("daily", "report")
 )
 
 # Character columns with fixed matching
@@ -58,8 +58,9 @@ pip_view(p, filter = list(group = "model", state = "done"))
 pip_view(p, tags = "daily")
 
 # Filter by explicit row or step indices
-pip_view(p, i = c("load_raw", "fit_model"),
-    filter = list(group = "model")
+pip_view(p,
+  i = c("load_raw", "fit_model"),
+  filter = list(group = "model")
 )
 pip_view(p, i = c(1L, 2L), filter = list(group = "model"))
 

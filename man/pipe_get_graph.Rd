@@ -33,6 +33,6 @@ graph <- pipe_get_graph(p)
 graph
 
 if (require("visNetwork", quietly = TRUE)) {
-    do.call(visNetwork, args = graph)
+  do.call(visNetwork, args = graph)
 }
 }

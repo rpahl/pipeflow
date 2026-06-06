@@ -20,8 +20,8 @@ Length of a pipeflow pipeline or view
 }
 \examples{
 p <- pip_new() |>
-    pip_add("s1", \(x = 1) x) |>
-    pip_add("s2", \(x = ~s1) x + 1)
+  pip_add("s1", \(x = 1) x) |>
+  pip_add("s2", \(x = ~s1) x + 1)
 length(p)
 length(pip_view(p, i = "s2"))
 }

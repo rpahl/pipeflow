@@ -52,7 +52,9 @@ p <- pipe_new("pipe", data = 1)
 pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 pipe_add(p, "add2", \(x = ~add1, z = 2) x + z)
 pipe_add(p, "final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
-p |> pipe_run() |> pipe_collect_out()
+p |>
+  pipe_run() |>
+  pipe_collect_out()
 pipe_set_params(p, list(z = 4))  # outdates steps add2 and final
 p
 

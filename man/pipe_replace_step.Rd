@@ -62,7 +62,7 @@ pipe_add(p, "mult", \(x = 1, y = 2) x * y, keepOut = TRUE)
 pipe_run(p) |> pipe_collect_out()
 pipe_replace_step(p, "mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
 pipe_run(p) |> pipe_collect_out()
-try(pipe_replace_step(p, "foo", \(x = 1) x))   # step 'foo' does not exist
+try(pipe_replace_step(p, "foo", \(x = 1) x)) # step 'foo' does not exist
 }
 \seealso{
 \code{\link[=pipe_add]{pipe_add()}}

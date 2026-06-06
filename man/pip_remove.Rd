@@ -26,8 +26,8 @@ removed together.
 }
 \examples{
 p <- pip_new() |>
-    pip_add("s1", \(x = 1) x) |>
-    pip_add("s2", \(x = ~s1) x + 1)
+  pip_add("s1", \(x = 1) x) |>
+  pip_add("s2", \(x = ~s1) x + 1)
 pip_remove(p, "s2")
 p
 }
