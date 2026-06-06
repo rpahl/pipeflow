@@ -1,4 +1,27 @@
 
+test_that("deprecated alias warnings are shown only once per session",
+{
+    old_warned <- getOption("pipeflow_deprecation_warned", NULL)
+    old_testthat <- Sys.getenv("TESTTHAT", unset = NA)
+    on.exit({
+        options(pipeflow_deprecation_warned = old_warned)
+        if (is.na(old_testthat)) {
+            Sys.unsetenv("TESTTHAT")
+        } else {
+            Sys.setenv(TESTTHAT = old_testthat)
+        }
+    }, add = TRUE)
+
+    options(pipeflow_deprecation_warned = NULL)
+    Sys.setenv(TESTTHAT = "")
+
+    pip <- pipe_new("pipe", data = 1)
+
+    expect_warning(pipe_add(pip, "step1", \(x = 1) x), "deprecated")
+    expect_warning(pipe_add(pip, "step2", \(x = 1) x), NA)
+})
+
+
 test_that("an alias function is defined for each member function
     with the correct body",
 {

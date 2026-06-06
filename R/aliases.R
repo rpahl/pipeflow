@@ -10,6 +10,21 @@
     if (.pipeflow_in_check_or_test()) {
         return(invisible(NULL))
     }
+
+    args <- list(...)
+    key <- paste(
+        paste(names(args), vapply(args, function(x) {
+            paste(as.character(x), collapse = "|")
+        }, character(1)), sep = "="),
+        collapse = ";"
+    )
+
+    warned <- getOption("pipeflow_deprecation_warned", character())
+    if (key %in% warned) {
+        return(invisible(NULL))
+    }
+
+    options(pipeflow_deprecation_warned = unique(c(warned, key)))
     .Deprecated(...)
 }
 
