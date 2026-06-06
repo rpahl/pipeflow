@@ -40,7 +40,6 @@ A view stores selected row indices and references the original pipeline.
 }
 \examples{
 
-# Build one pipeline and reuse it across the examples below
 p <- pip_new()
 pip_add(p, "load_raw", \(x = 1) x,
     group = "io", tags = c("core", "daily")

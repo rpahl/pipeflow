@@ -19,10 +19,14 @@ pip_add(
 
 \item{step}{Unique step name.}
 
-\item{fun}{Function to execute for the step. Default values that are
-formulas like \code{~other_step} are treated as dependencies.}
+\item{fun}{Function to execute for the step. Each function parameter must
+have a default value. Default values that are simple constants are resolved
+immediately. Default values that are formulas like \code{~other_step} are
+treated as dependencies to those steps and resolved to the respective output
+values at runtime once the step is executed.}
 
-\item{group}{Step group label used for printing and grouped output.}
+\item{group}{Optional character label used for grouping output collections -
+see also \verb{[pip_collect_out()]}.}
 
 \item{tags}{Optional character vector of tags belonging to the step.
 Can also be adjusted later using \verb{[pip_tag()]}.}
@@ -34,18 +38,29 @@ set to 0, the new step will be inserted at the beginning of the pipeline.}
 \item{exec}{Execution mode for this step. One of "auto", "split",
 "reduce" or "plain".
 Using execution mode \code{exec = split}, the output of the step is marked as
-partitioned output. In this mode, if the step is referenced by downstream
-steps in mode \code{exec = auto} (the default), the output is automatically
-mapped partition-wise during step execution. The \code{reduce} mode expects
+partitioned output. In this mode, any step that depends on the split step
+(directly or indirectly) will have its output automatically mapped
+partition-wise during step execution. The \code{reduce} mode expects
 partitioned input and passes it through without mapping, while \code{plain}
 mode only accepts non-partitioned input and always intends to execute
-a single call.}
+a single call. In summary:
+\itemize{
+\item auto: map if partitioned input appears, otherwise single call
+\item split: single call, then mark output as partitioned
+\item reduce: single call, but only valid with partitioned input
+\item plain: single call, only valid with non-partitioned input
+}}
 }
 \value{
 The updated pipeline, invisibly.
 }
 \description{
-Adds a new step to the pipeline, by default at the end.
+This functions forms the core of pipeline construction. It adds a new step
+to the pipeline and automatically updates the internal DAG and step-to-node
+index. Further, it verifies that all dependencies referenced by the new step
+exist and are properly linked in the DAG.
+}
+\details{
 If \code{after} was specified, the new step will be inserted after the given
 step or position. Be aware that in contrast to adding a step at the end,
 inserting a step in the middle is a rather expensive operation as it

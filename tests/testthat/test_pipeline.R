@@ -1234,6 +1234,33 @@ describe("pip_run",
             )
         })
 
+        it("errors when plain mode receives partitioned input",
+        {
+            p <- pip_new() |>
+                pip_add(
+                    "load",
+                    \(x = data.frame(
+                        grp = c("a", "a", "b", "b"),
+                        value = c(1, 3, 10, 20)
+                    )) x
+                ) |>
+                pip_add(
+                    "split",
+                    \(x = ~load) split(x, f = x$grp),
+                    exec = "split"
+                ) |>
+                pip_add(
+                    "strict",
+                    \(x = ~split) mean(unlist(x)),
+                    exec = "plain"
+                )
+
+            expect_error(
+                pip_run(p, lgr = NULL),
+                "plain mode does not accept partitioned inputs"
+            )
+        })
+
         it("maps with two partitioned and one scalar input",
         {
             p <- pip_new() |>

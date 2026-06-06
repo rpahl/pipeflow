@@ -360,12 +360,17 @@ pip_new <- function(name = "pipe")
 #' @param exec Execution mode for this step. One of "auto", "split",
 #' "reduce" or "plain".
 #' Using execution mode `exec = split`, the output of the step is marked as
-#' partitioned output. In this mode, if the step is referenced by downstream
-#' steps in mode `exec = auto` (the default), the output is automatically
-#' mapped partition-wise during step execution. The `reduce` mode expects
+#' partitioned output. In this mode, any step that depends on the split step
+#' (directly or indirectly) will have its output automatically mapped
+#' partition-wise during step execution. The `reduce` mode expects
 #' partitioned input and passes it through without mapping, while `plain`
 #' mode only accepts non-partitioned input and always intends to execute
-#' a single call.
+#' a single call. In summary:
+#' * auto: map if partitioned input appears, otherwise single call
+#' * split: single call, then mark output as partitioned
+#' * reduce: single call, but only valid with partitioned input
+#' * plain: single call, only valid with non-partitioned input
+#'
 #' @details
 #' If `after` was specified, the new step will be inserted after the given
 #' step or position. Be aware that in contrast to adding a step at the end,

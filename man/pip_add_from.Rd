@@ -4,14 +4,14 @@
 \alias{pip_add_from}
 \title{Copy a step from another pipeline}
 \usage{
-pip_add_from(x, step, y)
+pip_add_from(x, y, step)
 }
 \arguments{
 \item{x}{Target pipeflow pipeline object.}
 
-\item{step}{Step name to copy from \code{y}.}
-
 \item{y}{Source pipeflow pipeline object.}
+
+\item{step}{Step name to copy from \code{y}.}
 }
 \value{
 The updated target pipeline, invisibly.
@@ -26,6 +26,6 @@ src <- pip_new() |>
     pip_add("s1", \(x = 1) x) |>
     pip_add("s2", \(x = ~s1) x + 1)
 dst <- pip_new()
-pip_add_from(dst, "s1", src)
+pip_add_from(dst, src, "s1")
 dst
 }
