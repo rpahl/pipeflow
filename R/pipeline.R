@@ -249,6 +249,10 @@
         }
     )
 
+    # Re-read the current pipeline table after step execution to ensure that
+    # any potential changes to the pipeline structure (e.g. via self-modifying
+    # steps) are properly reflected in the update of the current step's state.
+    dat <- x[["pipeline"]]
     data.table::set(dat,
         i = i, j = c("out", "time", "state"),
         value = list(list(out), Sys.time(), .step_states[["done"]][["name"]])

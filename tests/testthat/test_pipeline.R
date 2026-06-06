@@ -1336,6 +1336,36 @@ describe("pip_run",
             )
         })
     })
+
+    describe("can be run with dynamic pipeline modifications",
+    {
+        it(paste(
+            "supports modifying the pipeline at runtime and",
+            "continues with the updated version"
+        ),
+        {
+            pip <- pip_new("my-pipeline") |>
+                pip_add("init", function(xInit = 0) xInit) |>
+                pip_add("f1", function(x = ~init) x + 1) |>
+                pip_add(
+                    "f2",
+                    function(x = ~f1, .self = NULL) {
+                        if (x > 10) {
+                            .self |> pip_replace("f3", function(x = ~f1) x * 2)
+                        }
+                        x + 2
+                    }
+                ) |>
+                pip_add("f3", function(x = ~f2) x + 3)
+
+            pip_run(pip, lgr = NULL)
+            expect_equal(pip[["out"]], list(0, 1, 3, 6))
+
+            pip |> pip_set_params(list(xInit = 15)) |> pip_run(lgr = NULL)
+
+            expect_equal(pip[["out"]], list(15, 16, 16 + 2, 16 * 2))
+        })
+    })
 })
 
 
