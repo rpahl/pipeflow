@@ -161,7 +161,6 @@ pip
 ```
 
 ```{r, echo = FALSE}
-library(visNetwork)
 do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100, width = 700))) |>
     visHierarchicalLayout(direction = "LR")
 ```

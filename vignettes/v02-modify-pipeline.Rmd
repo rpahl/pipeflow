@@ -187,7 +187,6 @@ pip
 ```
 
 ```{r, echo = FALSE, eval = nzchar(Sys.getenv("IN_PKGDOWN"))}
-library(visNetwork)
 do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100))) |>
     visHierarchicalLayout(direction = "LR")
 ```
