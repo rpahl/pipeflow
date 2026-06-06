@@ -15,6 +15,7 @@ test_that("deprecated alias warnings are shown only once per session",
     options(pipeflow_deprecation_warned = NULL)
     Sys.setenv(TESTTHAT = "")
 
+    expect_warning(pipe_new("pipe", data = 1), "deprecated")
     pip <- pipe_new("pipe", data = 1)
 
     expect_warning(pipe_add(pip, "step1", \(x = 1) x), "deprecated")
@@ -2397,8 +2398,7 @@ describe("pipe_run",
 
     test_that("logs warning without interrupting the run",
     {
-        lgr::unsuspend_logging()
-        on.exit(lgr::suspend_logging())
+        lgr::with_logging({
 
         pip <- pipe_new("pipe", data = 1) |>
             pipe_add("f1", \(x = 2) x) |>
@@ -2419,12 +2419,12 @@ describe("pipe_run",
 
         wasRunTillEnd <- pipe_get_out(pip, "f3") == 2
         expect_true(wasRunTillEnd)
+        })
     })
 
     test_that("logs error and stops at failed step",
     {
-        lgr::unsuspend_logging()
-        on.exit(lgr::suspend_logging())
+        lgr::with_logging({
 
         pip <- pipe_new("pipe", data = 1) |>
             pipe_add("f1", \(x = 2) x) |>
@@ -2445,6 +2445,7 @@ describe("pipe_run",
 
         wasRunTillEnd <- isTRUE(pipe_get_out(pip, "f3") == 2)
         expect_false(wasRunTillEnd)
+        })
     })
 
     test_that("can show progress",
@@ -2614,8 +2615,7 @@ describe("pipe_run_step",
 
     test_that("up- and downstream steps are marked in log",
     {
-        lgr::unsuspend_logging()
-        on.exit(lgr::suspend_logging())
+        lgr::with_logging({
 
         pip <- pipe_new("pipe") |>
             pipe_add("A", \(a = 1) a) |>
@@ -2633,6 +2633,7 @@ describe("pipe_run_step",
         expect_true(logOut[2] |> contains("Step 1/3 A (upstream)"))
         expect_true(logOut[3] |> contains("Step 2/3 B"))
         expect_true(logOut[4] |> contains("Step 3/3 C (downstream)"))
+        })
     })
 
     test_that(

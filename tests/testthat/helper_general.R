@@ -1,3 +1,7 @@
+if (identical(Sys.getenv("TESTTHAT"), "true")) {
+    lgr::suspend_logging()
+}
+
 expect_equivalent = function(...) {
     testthat::expect_equal(..., ignore_attr = TRUE)
 }
@@ -12,10 +16,4 @@ expect_no_error = function(...) {
 
 expect_no_warning = function(...) {
     testthat::expect_warning(..., regexp = NA)
-}
-
-if (FALSE) {
-    # This is a dummy code block to ensure that packages are added
-    # to the DESCRIPTION file using attachment::att_amend_desc().
-    require(visNetwork)
 }

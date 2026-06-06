@@ -38,6 +38,9 @@ describe(".formatted_time",
 
 describe("set_log_layout",
 {
+    lgr::unsuspend_logging()
+    on.exit(lgr::suspend_logging())
+
     it("signals undefined layout",
     {
         expect_error(
@@ -48,7 +51,7 @@ describe("set_log_layout",
 
     describe("text layout",
     {
-        lg <- lgr::get_logger(.this_package_name())
+        lg <- lgr::get_logger("test-logger")
 
         it("returns a string with the message at the end",
         {

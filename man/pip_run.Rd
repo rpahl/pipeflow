@@ -4,7 +4,13 @@
 \alias{pip_run}
 \title{Run a pipeline}
 \usage{
-pip_run(x, lgr = pipeflow_lgr, force = FALSE, progress = NULL)
+pip_run(
+  x,
+  lgr = pipeflow_lgr,
+  force = FALSE,
+  progress = NULL,
+  recursive = FALSE
+)
 }
 \arguments{
 \item{x}{A pipeflow pip or view}
@@ -17,6 +23,10 @@ regardless of whether they are outdated or not.}
 
 \item{progress}{Optional callback of the form
 \verb{function(value, detail)} called before each step.}
+
+\item{recursive}{Logical indicating whether a step return value of class
+\code{pipeflow_pip} should abort the current run and recursively continue with
+that returned pipeline.}
 }
 \value{
 The updated pipeline or view, invisibly.

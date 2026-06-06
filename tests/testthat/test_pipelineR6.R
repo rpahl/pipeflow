@@ -2335,8 +2335,7 @@ describe("run",
 
     test_that("logs warning without interrupting the run",
     {
-        lgr::unsuspend_logging()
-        on.exit(lgr::suspend_logging())
+        lgr::with_logging({
 
         pip <- Pipeline$new("pipe", data = 1)$
             add("f1", \(x = 2) x)$
@@ -2357,12 +2356,12 @@ describe("run",
 
         wasRunTillEnd <- pip$get_out("f3") == 2
         expect_true(wasRunTillEnd)
+        })
     })
 
     test_that("logs error and stops at failed step",
     {
-        lgr::unsuspend_logging()
-        on.exit(lgr::suspend_logging())
+        lgr::with_logging({
 
         pip <- Pipeline$new("pipe", data = 1)$
             add("f1", \(x = 2) x)$
@@ -2383,6 +2382,7 @@ describe("run",
 
         wasRunTillEnd <- isTRUE(pip$get_out("f3") == 2)
         expect_false(wasRunTillEnd)
+        })
     })
 
     test_that("can show progress",
@@ -2547,8 +2547,7 @@ describe("run_step",
 
     test_that("up- and downstream steps are marked in log",
     {
-        lgr::unsuspend_logging()
-        on.exit(lgr::suspend_logging())
+        lgr::with_logging({
 
         pip <- Pipeline$new("pipe")$
             add("A", \(a = 1) a)$
@@ -2566,6 +2565,7 @@ describe("run_step",
         expect_true(logOut[2] |> contains("Step 1/3 A (upstream)"))
         expect_true(logOut[3] |> contains("Step 2/3 B"))
         expect_true(logOut[4] |> contains("Step 3/3 C (downstream)"))
+        })
     })
 
     test_that(
@@ -3336,8 +3336,7 @@ describe("pipeline logging",
 
     test_that("each step is logged with its name",
     {
-        lgr::unsuspend_logging()
-        on.exit(lgr::suspend_logging())
+        lgr::with_logging({
 
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1")$
@@ -3350,13 +3349,13 @@ describe("pipeline logging",
 
         expect_equal(step1[["message"]], "Step 1/2 data")
         expect_equal(step2[["message"]], "Step 2/2 f1")
+        })
     })
 
     test_that(
         "upon warning during run, both context and warn msg are logged",
     {
-        lgr::unsuspend_logging()
-        on.exit(lgr::suspend_logging())
+        lgr::with_logging({
 
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1")$
@@ -3373,14 +3372,14 @@ describe("pipeline logging",
 
         expect_equal(warnings[["message"]], "this is a warning")
         expect_equal(warnings[["context"]], "Step 3 ('f2')")
+        })
     })
 
 
     test_that(
         "upon error during run, both context and error msg are logged",
     {
-        lgr::unsuspend_logging()
-        on.exit(lgr::suspend_logging())
+        lgr::with_logging({
 
         dat <- data.frame(a = 1:2, b = 1:2)
         pip <- Pipeline$new("pipe1")$
@@ -3396,6 +3395,7 @@ describe("pipeline logging",
 
         expect_equal(last[["message"]], "this is an error")
         expect_equal(last[["context"]], "Step 3 ('f2')")
+        })
     })
 })
 
@@ -4425,8 +4425,7 @@ describe("private methods",
 
         test_that("if error, the failing step is given in the log",
         {
-            lgr::unsuspend_logging()
-            on.exit(lgr::suspend_logging())
+        lgr::with_logging({
 
             pip <- Pipeline$new("pipe")$
                 add("A", \(a = 1) stop("something went wrong"))
@@ -4484,6 +4483,7 @@ describe("private methods",
 
             expect_equal(f(step = "A"), 2)
             expect_equal(f(step = "B"), 2)
+        })
         })
     })
 

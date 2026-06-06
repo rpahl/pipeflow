@@ -1589,7 +1589,7 @@ describe("pip_run",
         }
 
         pip1 <- test_pip()
-        pip_set_params(pip1, list(xInit = 11)) |> pip_run()
+        pip_set_params(pip1, list(xInit = 11)) |> pip_run(lgr = NULL)
 
         expect_equal(pip1[["step"]], c("init", "f1", "f2a", "f2b", "f3"))
         expect_equal(pip1[["state"]], c("done", "done", "new", "new", "new"))
