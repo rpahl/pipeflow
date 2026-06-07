@@ -83,8 +83,8 @@ p <- pip_new("analysis") |>
     group = "model", tags = "report"
   )
 
-pip_run(p, lgr = NULL)
-pip_collect_out(p)
+pip_run(p)
+p
 
 # Filter by tag using pip_view — keeps steps with any matching tag
 pip_view(p, tags = "daily")
@@ -102,7 +102,7 @@ q <- pip_new("split-demo") |>
     exec = "reduce"
   )
 
-pip_run(q, lgr = NULL)
+pip_run(q)
 q[["stats", "out"]]   # partitioned list — one summary per species
 q[["combine", "out"]] # combined table
 }

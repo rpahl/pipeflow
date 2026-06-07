@@ -25,10 +25,9 @@ a <- pip_new("a") |>
   pip_add("fit", \(x = ~prep) x + 10)
 
 # "prep" exists in both pipelines; the one from b gets a numeric suffix
-b <- pip_new("b") |>
-  pip_add("prep", \(x = 5) x * 3)
+b <- pip_new("b") |> pip_add("prep", \(x = 5) x * 3)
 
-z <- pip_bind(a, b)
-z[["step"]] # "prep", "fit", "prep2" (conflict resolved)
-length(z) # 3 steps total
+ab <- pip_bind(a, b)
+ab[["step"]] # "prep", "fit", "prep2" (step name conflict auto-resolved)
+ab
 }

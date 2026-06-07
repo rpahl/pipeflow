@@ -28,10 +28,12 @@ p <- pip_new() |>
 pip_run(p)
 
 # grouped = TRUE (default): steps sharing a group become a nested list
-out <- pip_collect_out(p)
-out$io # list(load = 1, clean = 2)  — two steps, so nested
-out$model # 4  — single step, returned directly (not wrapped)
+pip_collect_out(p)
 
 # grouped = FALSE: flat named list with one entry per step
 pip_collect_out(p, grouped = FALSE)
+
+# Combine with pip_view to collect output from a specific group
+pip_view(p, filter = list(group = "io")) |> pip_collect_out()
+pip_view(p, filter = list(group = "model")) |> pip_collect_out()
 }

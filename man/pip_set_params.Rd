@@ -33,8 +33,8 @@ pip_get_params(p) # list(n = 10, factor = 0.5)
 
 # Updating params marks affected steps (and their dependents) outdated
 pip_set_params(p, params = list(n = 5, factor = 2.0))
-p[["pipeline"]][["state"]] # "outdated", "outdated"
+p
 
-pip_run(p, lgr = NULL)
-pip_collect_out(p, grouped = FALSE)
+pip_run(p)
+p
 }

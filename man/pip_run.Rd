@@ -46,7 +46,7 @@ p <- pip_new() |>
   pip_add("total", \(x = ~square) sum(x))
 
 pip_run(p)
-pip_collect_out(p, grouped = FALSE)
+p
 
 # Already-done steps are skipped on a second run
 pip_run(p) # all steps skipped
@@ -55,10 +55,14 @@ pip_run(p) # all steps skipped
 pip_run(p, lgr = NULL)
 
 # force = TRUE re-executes every step regardless of state
-pip_run(p, lgr = NULL, force = TRUE)
+pip_run(p, force = TRUE)
 
 # Run only a subset of steps via a view;
 # upstream dependencies are automatically included
 v <- pip_view(p, i = "total")
-pip_run(v, lgr = NULL)
+pip_run(v)
+}
+\seealso{
+\code{vignette("v06-self-modify-pipeline", package = "pipeflow")}
+for an advanced example of recursive/dynamic pipelines.
 }

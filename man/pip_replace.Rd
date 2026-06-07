@@ -28,15 +28,16 @@ re-run on the next \code{\link[=pip_run]{pip_run()}}.
 }
 \examples{
 p <- pip_new() |>
-  pip_add("load", \(n = 5) seq_len(n)) |>
-  pip_add("double", \(x = ~load) x * 2)
+    pip_add("load", \(n = 5) seq_len(n)) |>
+    pip_add("double", \(x = ~load) x * 2)
 pip_run(p)
+p
 
 # Replace "load" — downstream steps are automatically marked "outdated"
 pip_replace(p, "load", \(n = 3) seq_len(n))
-p[["pipeline"]][["state"]] # "new", "outdated"
+p
 
 # Re-run to bring everything up to date
 pip_run(p)
-pip_collect_out(p, grouped = FALSE)
+p
 }

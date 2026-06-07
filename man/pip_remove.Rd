@@ -20,9 +20,8 @@ The updated pipeline, invisibly.
 \description{
 If other steps depend on the step to be removed, an error is
 given and the removal is blocked, unless \code{recursive} was set to
-\code{TRUE}.
-In recursive mode, the selected step and all downstream dependent steps are
-removed together.
+\code{TRUE}. In recursive mode, the selected step and all downstream
+dependent steps are removed together.
 }
 \examples{
 p <- pip_new() |>
@@ -32,12 +31,12 @@ p <- pip_new() |>
 
 # Removing a leaf step (nothing depends on it) works directly
 pip_remove(p, "model")
-p[["pipeline"]][["step"]] # "load", "transform"
+p                        # "load", "transform"
 
 # Trying to remove a step that others depend on raises an error:
 # pip_remove(p, "load")  # Error!
 
 # recursive = TRUE removes the step and all its downstream dependents
 pip_remove(p, "load", recursive = TRUE)
-p[["pipeline"]][["step"]] # character(0) — pipeline is now empty
+p                        # pipeline is now empty
 }

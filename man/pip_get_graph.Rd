@@ -20,8 +20,12 @@ Builds graph data (nodes and edges) describing the pipeline's step
 structure, suitable for visualisation with \code{\link[visNetwork:visNetwork]{visNetwork::visNetwork()}}.
 }
 \details{
-Node shapes reflect execution mode: hexagon for \code{auto}/\code{plain}, star for
-\code{split}, dot for \code{reduce}.
+Node shapes reflect execution mode:
+\itemize{
+\item \code{auto}/\code{plain}: \code{hexagon}
+\item \code{reduce}: \code{dot}
+\item \code{split}: \code{star}
+}
 }
 \examples{
 p <- pip_new()

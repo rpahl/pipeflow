@@ -432,8 +432,8 @@ pip_new <- function(name = "pipe") {
 #'     group = "model", tags = "report"
 #'   )
 #'
-#' pip_run(p, lgr = NULL)
-#' pip_collect_out(p)
+#' pip_run(p)
+#' p
 #'
 #' # Filter by tag using pip_view — keeps steps with any matching tag
 #' pip_view(p, tags = "daily")
@@ -451,7 +451,7 @@ pip_new <- function(name = "pipe") {
 #'     exec = "reduce"
 #'   )
 #'
-#' pip_run(q, lgr = NULL)
+#' pip_run(q)
 #' q[["stats", "out"]]   # partitioned list — one summary per species
 #' q[["combine", "out"]] # combined table
 #' @export
@@ -654,12 +654,11 @@ pip_add_from <- function(x, y, step) {
 #'   pip_add("fit", \(x = ~prep) x + 10)
 #'
 #' # "prep" exists in both pipelines; the one from b gets a numeric suffix
-#' b <- pip_new("b") |>
-#'   pip_add("prep", \(x = 5) x * 3)
+#' b <- pip_new("b") |> pip_add("prep", \(x = 5) x * 3)
 #'
-#' z <- pip_bind(a, b)
-#' z[["step"]] # "prep", "fit", "prep2" (conflict resolved)
-#' length(z) # 3 steps total
+#' ab <- pip_bind(a, b)
+#' ab[["step"]] # "prep", "fit", "prep2" (step name conflict auto-resolved)
+#' ab
 #' @export
 pip_bind <- function(x, y) {
     if (!.is_pipeflow_pip(x)) {
@@ -716,12 +715,12 @@ pip_bind <- function(x, y) {
 
 #' Clone a pipeline
 #'
-#' Creates an independent copy of the pipeline. Changes to the clone do not
-#' affect the original, and vice versa.
+#' Creates an independent copy of the pipeline. Changes to the cloned
+#' pipeline do not affect the original pipeline, and vice versa.
 #'
 #' @param x A pipeflow pipeline object.
-#' @param name Optional name for the cloned pipeline. If `NULL`, the original
-#' name is used.
+#' @param name Optional name for the cloned pipeline. If `NULL`, the
+#' original name is used.
 #'
 #' @return A cloned pipeflow pipeline object.
 #' @examples
@@ -733,9 +732,11 @@ pip_bind <- function(x, y) {
 #' cp <- pip_clone(p, name = "copy")
 #' pip_add(cp, "s3", \(x = ~s2) x * 10)
 #'
-#' length(cp) # 3 — clone has the new step
-#' length(p) # 2 — original is unchanged
-#' cp[["pipeline"]][["step"]]
+#' # As a result, the clone has the new step ...
+#' cp
+#'
+#' # ... while the original is left unchanged
+#' p
 #' @export
 pip_clone <- function(x, name = NULL) {
     if (!.is_pipeflow_pip(x)) {
@@ -790,12 +791,14 @@ pip_clone <- function(x, name = NULL) {
 #' pip_run(p)
 #'
 #' # grouped = TRUE (default): steps sharing a group become a nested list
-#' out <- pip_collect_out(p)
-#' out$io # list(load = 1, clean = 2)  — two steps, so nested
-#' out$model # 4  — single step, returned directly (not wrapped)
+#' pip_collect_out(p)
 #'
 #' # grouped = FALSE: flat named list with one entry per step
 #' pip_collect_out(p, grouped = FALSE)
+#'
+#' # Combine with pip_view to collect output from a specific group
+#' pip_view(p, filter = list(group = "io")) |> pip_collect_out()
+#' pip_view(p, filter = list(group = "model")) |> pip_collect_out()
 #' @export
 pip_collect_out <- function(x, grouped = TRUE) {
     .assert_pip_or_view(x)
@@ -857,8 +860,7 @@ pip_collect_out <- function(x, grouped = TRUE) {
 #'
 #' # Useful as a guide for pip_set_params()
 #' pip_set_params(p, params = list(n = 20, lambda = 0.5))
-#' pip_run(p)
-#' pip_collect_out(p, grouped = FALSE)
+#' pip_run(p) |> pip_collect_out()
 #' @export
 pip_get_params <- function(x) {
     .assert_pip_or_view(x)
@@ -884,8 +886,10 @@ pip_get_params <- function(x) {
 #' structure, suitable for visualisation with [visNetwork::visNetwork()].
 #'
 #' @details
-#' Node shapes reflect execution mode: hexagon for `auto`/`plain`, star for
-#' `split`, dot for `reduce`.
+#' Node shapes reflect execution mode:
+#' * `auto`/`plain`: `hexagon`
+#' * `reduce`: `dot`
+#' * `split`: `star`
 #'
 #' @param x A pipeflow pip or view.
 #' @param include_upstream Logical. Only relevant for views. If `TRUE`, add
@@ -1035,9 +1039,9 @@ pip_has_step <- function(x, step) {
 #'
 #' If other steps depend on the step to be removed, an error is
 #' given and the removal is blocked, unless `recursive` was set to
-#' `TRUE`.
-#' In recursive mode, the selected step and all downstream dependent steps are
-#' removed together.
+#' `TRUE`. In recursive mode, the selected step and all downstream
+#' dependent steps are removed together.
+#'
 #' @param x A pipeflow pip
 #' @param step `string` the name of the step to be removed.
 #' @param recursive `logical` if `TRUE` the step is removed together
@@ -1051,14 +1055,14 @@ pip_has_step <- function(x, step) {
 #'
 #' # Removing a leaf step (nothing depends on it) works directly
 #' pip_remove(p, "model")
-#' p[["pipeline"]][["step"]] # "load", "transform"
+#' p                        # "load", "transform"
 #'
 #' # Trying to remove a step that others depend on raises an error:
 #' # pip_remove(p, "load")  # Error!
 #'
 #' # recursive = TRUE removes the step and all its downstream dependents
 #' pip_remove(p, "load", recursive = TRUE)
-#' p[["pipeline"]][["step"]] # character(0) — pipeline is now empty
+#' p                        # pipeline is now empty
 #' @export
 pip_remove <- function(x, step, recursive = FALSE) {
     if (!.is_pipeflow_pip(x)) {
@@ -1148,8 +1152,8 @@ pip_remove <- function(x, step, recursive = FALSE) {
 
 #' Rename a step
 #'
-#' Renames the selected step and updates dependency references in downstream
-#' steps.
+#' Renames the selected step and updates dependency references in
+#' downstream steps.
 #' @param x A pipeflow pip
 #' @param from Existing step name
 #' @param to New step name
@@ -1157,12 +1161,14 @@ pip_remove <- function(x, step, recursive = FALSE) {
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("s1", \(x = 1) x) |>
-#'   pip_add("s2", \(x = ~s1) x + 1) # "s2" depends on "s1"
+#'   pip_add("s2", \(x = ~s1) x + 1)           # "s2" depends on "s1"
 #'
 #' # Downstream dependency references are updated automatically
 #' pip_rename(p, from = "s1", to = "load_data")
-#' p[["pipeline"]][["step"]] # "load_data", "s2"
-#' p[["pipeline"]][["depends"]][[2]] # "load_data" (was "s1")
+#' p
+#'
+#' #' # Trying to rename to an existing step name raises an error:
+#' try(pip_rename(p, "load_data", to = "s2"))  # step 's2' already exists!
 #' @export
 pip_rename <- function(x, from, to) {
     if (!.is_pipeflow_pip(x)) {
@@ -1237,17 +1243,18 @@ pip_rename <- function(x, from, to) {
 #' @return The updated pipeline, invisibly.
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("load", \(n = 5) seq_len(n)) |>
-#'   pip_add("double", \(x = ~load) x * 2)
+#'     pip_add("load", \(n = 5) seq_len(n)) |>
+#'     pip_add("double", \(x = ~load) x * 2)
 #' pip_run(p)
+#' p
 #'
 #' # Replace "load" — downstream steps are automatically marked "outdated"
 #' pip_replace(p, "load", \(n = 3) seq_len(n))
-#' p[["pipeline"]][["state"]] # "new", "outdated"
+#' p
 #'
 #' # Re-run to bring everything up to date
 #' pip_run(p)
-#' pip_collect_out(p, grouped = FALSE)
+#' p
 #' @export
 pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
     if (!.is_pipeflow_pip(x)) {
@@ -1376,6 +1383,8 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
 #' @return The updated pipeline or view, invisibly.
 #' @details When `x` is a view, requested rows are run together with required
 #' upstream dependencies.
+#' @seealso `vignette("v06-self-modify-pipeline", package = "pipeflow")`
+#'   for an advanced example of recursive/dynamic pipelines.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(n = 3) seq_len(n)) |>
@@ -1383,7 +1392,7 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
 #'   pip_add("total", \(x = ~square) sum(x))
 #'
 #' pip_run(p)
-#' pip_collect_out(p, grouped = FALSE)
+#' p
 #'
 #' # Already-done steps are skipped on a second run
 #' pip_run(p) # all steps skipped
@@ -1392,12 +1401,12 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
 #' pip_run(p, lgr = NULL)
 #'
 #' # force = TRUE re-executes every step regardless of state
-#' pip_run(p, lgr = NULL, force = TRUE)
+#' pip_run(p, force = TRUE)
 #'
 #' # Run only a subset of steps via a view;
 #' # upstream dependencies are automatically included
 #' v <- pip_view(p, i = "total")
-#' pip_run(v, lgr = NULL)
+#' pip_run(v)
 #' @export
 pip_run <- function(
     x,
@@ -1564,10 +1573,10 @@ pip_run <- function(
 #'
 #' # Updating params marks affected steps (and their dependents) outdated
 #' pip_set_params(p, params = list(n = 5, factor = 2.0))
-#' p[["pipeline"]][["state"]] # "outdated", "outdated"
+#' p
 #'
-#' pip_run(p, lgr = NULL)
-#' pip_collect_out(p, grouped = FALSE)
+#' pip_run(p)
+#' p
 #' @export
 pip_set_params <- function(p, params = list()) {
     # Input checking

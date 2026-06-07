@@ -9,15 +9,15 @@ pip_clone(x, name = NULL)
 \arguments{
 \item{x}{A pipeflow pipeline object.}
 
-\item{name}{Optional name for the cloned pipeline. If \code{NULL}, the original
-name is used.}
+\item{name}{Optional name for the cloned pipeline. If \code{NULL}, the
+original name is used.}
 }
 \value{
 A cloned pipeflow pipeline object.
 }
 \description{
-Creates an independent copy of the pipeline. Changes to the clone do not
-affect the original, and vice versa.
+Creates an independent copy of the pipeline. Changes to the cloned
+pipeline do not affect the original pipeline, and vice versa.
 }
 \examples{
 p <- pip_new("original") |>
@@ -28,7 +28,9 @@ p <- pip_new("original") |>
 cp <- pip_clone(p, name = "copy")
 pip_add(cp, "s3", \(x = ~s2) x * 10)
 
-length(cp) # 3 — clone has the new step
-length(p) # 2 — original is unchanged
-cp[["pipeline"]][["step"]]
+# As a result, the clone has the new step ...
+cp
+
+# ... while the original is left unchanged
+p
 }
