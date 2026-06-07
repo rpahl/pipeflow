@@ -71,3 +71,4 @@ add1[["fun"]]
 
 try(p$get_step("foo")) # error: step 'foo' does not exist
 }
+\keyword{internal}

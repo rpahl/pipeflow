@@ -36,3 +36,4 @@ try(
   pipe_set_params_at_step(p, step = "add1", params = list(foo = 3))
 )
 }
+\keyword{internal}

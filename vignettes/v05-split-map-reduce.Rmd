@@ -1,5 +1,5 @@
 ---
-title: "Advanced: Split, Map, and Reduce with pipeflow"
+title: "Split, map, and reduce"
 output:
   rmarkdown::html_vignette:
     toc: true
@@ -8,7 +8,7 @@ description: >
   Shows how to split data, apply the pipeline to each subset, and then
   reduce the results back into a combined output.
 vignette: >
-  %\VignetteIndexEntry{Advanced: Split, Map, and Reduce with pipeflow}
+  %\VignetteIndexEntry{Split, map, and reduce}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

@@ -26,3 +26,4 @@ pipe_add(p, "f2", \(y = 1) y)
 p
 pipe_length(p)
 }
+\keyword{internal}

@@ -43,3 +43,4 @@ suppressWarnings(
 )
 pipe_set_params(p, list(foo = 3), warnUndefined = FALSE)
 }
+\keyword{internal}

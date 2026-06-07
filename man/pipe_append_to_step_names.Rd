@@ -34,3 +34,4 @@ p
 pipe_append_to_step_names(p, "foo", sep = "__")
 p
 }
+\keyword{internal}

@@ -92,3 +92,4 @@ p |>
   pipe_run() |>
   pipe_collect_out(all = TRUE)
 }
+\keyword{internal}

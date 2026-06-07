@@ -57,3 +57,4 @@ p
 # Trying to discard non-existent steps is just ignored
 pipe_discard_steps(p, "non-existent")
 }
+\keyword{internal}

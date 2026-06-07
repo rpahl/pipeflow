@@ -78,3 +78,4 @@ pipe_add(p, "mult4", \(x = ~add2) x * 4)
 pipe_get_depends_up(p, "mult4")
 pipe_get_depends_up(p, "mult4", recursive = FALSE)
 }
+\keyword{internal}

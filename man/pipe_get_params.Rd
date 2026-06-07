@@ -78,3 +78,4 @@ pipe_get_params_unique(p, ignoreHidden = FALSE)
 pipe_get_params_unique_json(p)
 pipe_get_params_unique_json(p, ignoreHidden = FALSE)
 }
+\keyword{internal}

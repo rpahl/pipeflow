@@ -36,7 +36,13 @@
 ^CHANGELOG\.md$
 ^Meta$
 
+# Formatter config
+^\.styler$
+^[.]?air[.]toml$
+
+# Generated artefacts
+^README\.html$
+
 # Misc artifacts
 ^workflows\.zip$
 ^logo/logo.xcf$
-^[.]?air[.]toml$

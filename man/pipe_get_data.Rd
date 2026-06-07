@@ -27,3 +27,4 @@ pipe_get_data(p)
 pipe_set_data(p, 3:4)
 pipe_get_data(p)
 }
+\keyword{internal}

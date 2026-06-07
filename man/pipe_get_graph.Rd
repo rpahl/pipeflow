@@ -36,3 +36,4 @@ if (require("visNetwork", quietly = TRUE)) {
   do.call(visNetwork, args = graph)
 }
 }
+\keyword{internal}

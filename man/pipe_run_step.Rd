@@ -49,3 +49,4 @@ pipe_run_step(p, "add2", downstream = TRUE)
 
 pipe_run_step(p, "mult", upstream = TRUE)
 }
+\keyword{internal}

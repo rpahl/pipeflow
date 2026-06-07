@@ -41,3 +41,4 @@ p |>
   pipe_run() |>
   pipe_collect_out()
 }
+\keyword{internal}

@@ -75,12 +75,12 @@ below:
   pipelines](https://rpahl.github.io/pipeflow/articles/v02-modify-pipeline.html)
 - [Combining
   pipelines](https://rpahl.github.io/pipeflow/articles/v03-combine-pipelines.html)
-- [Collecting
+- [Collecting and filtering
   output](https://rpahl.github.io/pipeflow/articles/v04-collect-output.html)
 
 ### Advanced topics
 
-- [How to use pipeflow with split data
-  sets](https://rpahl.github.io/pipeflow/articles/v05-split-map-reduce.html)
-- [How pipelines can modify themselves at
-  runtime](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
+- [Split, map, and
+  reduce](https://rpahl.github.io/pipeflow/articles/v05-split-map-reduce.html)
+- [Recursive
+  self-modification](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)

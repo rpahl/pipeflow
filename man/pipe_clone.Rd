@@ -29,3 +29,4 @@ pipe_add(p2, "step2", \(y = 1) y)
 p1
 p2
 }
+\keyword{internal}

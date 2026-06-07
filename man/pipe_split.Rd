@@ -38,3 +38,4 @@ pipe_add(p, "mult", \(x = ~data, y = ~add1) x * y, keepOut = TRUE)
 pipes <- pipe_set_data_split(p, dataList) |> pipe_split()
 pipes
 }
+\keyword{internal}

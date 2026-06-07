@@ -86,3 +86,4 @@ p |>
   pipe_collect_out() |>
   str()
 }
+\keyword{internal}

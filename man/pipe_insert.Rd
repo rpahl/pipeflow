@@ -54,3 +54,4 @@ p
 pipe_insert_before(p, "f2", step = "before_f2", \(x = ~f1) 2 * x)
 p
 }
+\keyword{internal}

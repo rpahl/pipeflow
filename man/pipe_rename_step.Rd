@@ -35,3 +35,4 @@ try(pipe_rename_step(p, from = "add1", to = "add2"))
 pipe_rename_step(p, from = "add1", to = "first_add")
 p
 }
+\keyword{internal}

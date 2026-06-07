@@ -33,3 +33,4 @@ pipe_get_out(p, "add2")
 \seealso{
 \code{\link[=pipe_collect_out]{pipe_collect_out()}} to collect output of multiple steps.
 }
+\keyword{internal}

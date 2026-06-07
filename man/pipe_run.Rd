@@ -85,3 +85,4 @@ fprogress <- function(value, detail) {
 }
 pipe_run(p, progress = fprogress, showLog = FALSE)
 }
+\keyword{internal}

@@ -67,3 +67,4 @@ p |>
   pipe_run() |>
   pipe_get_out("data")
 }
+\keyword{internal}

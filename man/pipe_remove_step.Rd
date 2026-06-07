@@ -40,3 +40,4 @@ try(pipe_remove_step(p, "add1"))
 pipe_remove_step(p, "add1", recursive = TRUE)
 p
 }
+\keyword{internal}

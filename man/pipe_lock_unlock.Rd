@@ -52,3 +52,4 @@ pipe_set_params(p, list(x = 3))
 pipe_run(p)
 pipe_get_out(p, "add1")
 }
+\keyword{internal}

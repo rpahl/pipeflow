@@ -33,3 +33,4 @@ pipe_print(p, verbose = TRUE)
 print(p)
 print(p, verbose = TRUE)
 }
+\keyword{internal}

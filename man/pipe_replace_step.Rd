@@ -67,3 +67,4 @@ try(pipe_replace_step(p, "foo", \(x = 1) x)) # step 'foo' does not exist
 \seealso{
 \code{\link[=pipe_add]{pipe_add()}}
 }
+\keyword{internal}

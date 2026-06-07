@@ -1,4 +1,5 @@
 #' @title Pipeline Class
+#' @keywords internal
 #' @section Lifecycle: Deprecated. Legacy R6 interface. Use [pip_new()]
 #' and pip_* functions.
 #'

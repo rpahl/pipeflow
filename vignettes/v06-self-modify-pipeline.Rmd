@@ -1,5 +1,5 @@
 ---
-title: "Advanced: Recursive self-modification at runtime"
+title: "Recursive self-modification"
 output:
   rmarkdown::html_vignette:
     toc: true
@@ -11,7 +11,7 @@ description: >
   a pipeline run.
 
 vignette: >
-  %\VignetteIndexEntry{Advanced: Recursive self-modification at runtime}
+  %\VignetteIndexEntry{Recursive self-modification}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

@@ -55,3 +55,4 @@ p
 
 pipe_collect_out(p, groupBy = "state", all = TRUE) |> str()
 }
+\keyword{internal}
