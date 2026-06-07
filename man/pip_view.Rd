@@ -35,41 +35,48 @@ is \code{FALSE}).}
 A \code{pipeflow_view} object.
 }
 \description{
-Create a filtered view of a pipeline (or view).
-A view stores selected row indices and references the original pipeline.
+Creates a filtered view showing only a selected subset of steps.
+A view references the underlying pipeline without copying it, so
+operations like \code{\link[=pip_run]{pip_run()}} and \code{\link[=pip_set_params]{pip_set_params()}} applied to a view
+affect only the selected steps.
 }
 \examples{
 
 p <- pip_new()
-pip_add(p, "load_raw", \(x = 1) x,
-  group = "io", tags = c("core", "daily")
+pip_add(p, "load_raw",  \(x = 1) x,
+  group = "io",    tags = c("core", "daily")
 )
-pip_add(p, "fit_model", \(x = 2) x + 1,
+pip_add(p, "fit_model",  \(x = 2) x + 1,
   group = "model", tags = "model"
 )
 pip_add(p, "eval_model", \(x = ~fit_model) x,
   group = "model", tags = c("daily", "report")
 )
 
-# Character columns with fixed matching
-pip_view(p, filter = list(group = "model", state = "done"))
+# Filter by a fixed column value (one or more groups)
+pip_view(p, filter = list(group = "model"))
 
-# Filter by tags
+# Combine filters: group AND state
+pip_view(p, filter = list(group = "model", state = "new"))
+
+# Filter by tag — keeps steps that have *any* of the given tags
 pip_view(p, tags = "daily")
 
-# Filter by explicit row or step indices
+# Combine explicit step selection with a filter (intersection)
 pip_view(p,
-  i = c("load_raw", "fit_model"),
+  i      = c("load_raw", "fit_model"),
   filter = list(group = "model")
 )
+
+# Select by integer row indices
 pip_view(p, i = c(1L, 2L), filter = list(group = "model"))
 
-# Filter by regex
+# Use a regex pattern to match step names
 pip_view(p, filter = list(step = "_model$"), fixed = FALSE)
 
-# Chain filters by create view of view
+# Views are composable: create a view-of-view for progressive narrowing
 v1 <- pip_view(p, tags = "daily")
-print(v1)
+print(v1)  # load_raw, eval_model
 v2 <- pip_view(v1, tags = "report")
-print(v2)
+print(v2)  # eval_model only
 }

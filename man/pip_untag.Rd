@@ -20,7 +20,12 @@ is a view, in which case tags are only removed for steps covered by the
 view. Locked steps are skipped and not updated.
 }
 \examples{
-p <- pip_new() |> pip_add("s1", \(x = 1) x, tags = c("daily", "core"))
-pip_untag(p, tags = "core")
-p[["pipeline"]][["tags"]][[1]]
+p <- pip_new() |>
+  pip_add("load", \(x = 1) x, tags = c("daily", "core")) |>
+  pip_add("fit",  \(x = ~load) x + 1, tags = c("daily", "model"))
+
+# Remove "daily" from all steps
+pip_untag(p, tags = "daily")
+# "load" retains "core"; "fit" retains "model"
+p[["pipeline"]][["tags"]]
 }

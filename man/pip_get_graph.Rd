@@ -16,21 +16,26 @@ all upstream dependencies of selected steps.}
 A named list with two \code{data.frame}s: \code{nodes} and \code{edges}.
 }
 \description{
-Export a graph representation of a pipeline or view that can be passed to
-\code{\link[visNetwork:visNetwork]{visNetwork::visNetwork()}}.
+Builds graph data (nodes and edges) describing the pipeline's step
+structure, suitable for visualisation with \code{\link[visNetwork:visNetwork]{visNetwork::visNetwork()}}.
 }
 \details{
-Node shape reflects execution mode (\code{square} for \code{auto}/\code{plain}, \code{star}
-for \code{split}, \code{dot} for \code{reduce}).
+Node shapes reflect execution mode: hexagon for \code{auto}/\code{plain}, star for
+\code{split}, dot for \code{reduce}.
 }
 \examples{
 p <- pip_new()
-pip_add(p, "load", \(x = 1) x, group = "io")
-pip_add(p, "fit", \(x = ~load) x + 1, group = "model")
+pip_add(p, "load",  \(x = 1) x,       group = "io")
+pip_add(p, "clean", \(x = ~load) x + 1, group = "io")
+pip_add(p, "fit",   \(x = ~clean) x * 2, group = "model")
 
 graph <- pip_get_graph(p)
-graph$nodes
-graph$edges
+graph$nodes  # data.frame: id, label, group, shape, color
+graph$edges  # data.frame: from, to, arrows
+
+# For a view, include_upstream = TRUE adds upstream deps to the graph
+v <- pip_view(p, i = "fit")
+pip_get_graph(v, include_upstream = TRUE)
 
 if (require("visNetwork", quietly = TRUE)) {
   do.call(what = visNetwork::visNetwork, args = graph)

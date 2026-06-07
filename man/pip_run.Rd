@@ -24,15 +24,16 @@ regardless of whether they are outdated or not.}
 \item{progress}{Optional callback of the form
 \verb{function(value, detail)} called before each step.}
 
-\item{recursive}{Logical indicating whether a step return value of class
-\code{pipeflow_pip} should abort the current run and recursively continue with
-that returned pipeline.}
+\item{recursive}{If \code{TRUE} and a step returns a pipeline object, the
+current run is aborted and continues from the returned pipeline. Useful
+for dynamic or self-modifying pipelines.}
 }
 \value{
 The updated pipeline or view, invisibly.
 }
 \description{
-Run a pipeline
+Executes all pending steps in order. Steps already in state \code{"done"} are
+skipped unless \code{force = TRUE}.
 }
 \details{
 When \code{x} is a view, requested rows are run together with required
@@ -40,8 +41,22 @@ upstream dependencies.
 }
 \examples{
 p <- pip_new() |>
-  pip_add("s1", \(x = 1) x) |>
-  pip_add("s2", \(x = ~s1) x + 1)
+  pip_add("load",  \(n = 3) seq_len(n)) |>
+  pip_add("square", \(x = ~load) x^2) |>
+  pip_add("total",  \(x = ~square) sum(x))
+
+# lgr = NULL suppresses log output
 pip_run(p, lgr = NULL)
-p[["pipeline"]][["out"]]
+pip_collect_out(p, grouped = FALSE)
+
+# Already-done steps are skipped on a second run
+pip_run(p, lgr = NULL)          # all steps skipped
+
+# force = TRUE re-executes every step regardless of state
+pip_run(p, lgr = NULL, force = TRUE)
+
+# Run only a subset of steps via a view;
+# upstream dependencies are automatically included
+v <- pip_view(p, i = "total")
+pip_run(v, lgr = NULL)
 }

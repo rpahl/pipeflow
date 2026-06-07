@@ -26,8 +26,18 @@ removed together.
 }
 \examples{
 p <- pip_new() |>
-  pip_add("s1", \(x = 1) x) |>
-  pip_add("s2", \(x = ~s1) x + 1)
-pip_remove(p, "s2")
-p
+  pip_add("load",      \(x = 1) x) |>
+  pip_add("transform", \(x = ~load) x * 2) |>
+  pip_add("model",     \(x = ~transform) x + 10)
+
+# Removing a leaf step (nothing depends on it) works directly
+pip_remove(p, "model")
+p[["pipeline"]][["step"]]  # "load", "transform"
+
+# Trying to remove a step that others depend on raises an error:
+# pip_remove(p, "load")  # Error!
+
+# recursive = TRUE removes the step and all its downstream dependents
+pip_remove(p, "load", recursive = TRUE)
+p[["pipeline"]][["step"]]  # character(0) — pipeline is now empty
 }

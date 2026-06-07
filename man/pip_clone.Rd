@@ -16,11 +16,19 @@ name is used.}
 A cloned pipeflow pipeline object.
 }
 \description{
-Creates an independent copy of the pipeline, including step table and DAG.
-Explicit \code{.self} parameters are rebound to the cloned object.
+Creates an independent copy of the pipeline. Changes to the clone do not
+affect the original, and vice versa.
 }
 \examples{
-p <- pip_new("pipe") |> pip_add("s1", \(x = 1) x)
+p <- pip_new("original") |>
+  pip_add("s1", \(x = 1) x) |>
+  pip_add("s2", \(x = ~s1) x + 1)
+
+# Clone produces a fully independent copy
 cp <- pip_clone(p, name = "copy")
-cp
+pip_add(cp, "s3", \(x = ~s2) x * 10)
+
+length(cp)  # 3 — clone has the new step
+length(p)   # 2 — original is unchanged
+cp[["pipeline"]][["step"]]
 }

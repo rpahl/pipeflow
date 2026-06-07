@@ -10,16 +10,26 @@ pip_get_params(x)
 \item{x}{A pipeflow pip or view}
 }
 \value{
-Named list of unique independent parameters. If the same parameter
-name appears multiple times, the first occurrence in pipeline order is kept.
+Named list of tunable parameter values. If the same parameter
+name appears in multiple steps, the first occurrence in pipeline order
+is returned.
 }
 \description{
-Independent parameters are those that are not dependent on any other steps
-in the pipeline.
+Returns the current default values of all tunable (non-dependency)
+parameters across the pipeline. These are the parameters that can be
+updated via \code{\link[=pip_set_params]{pip_set_params()}}. Parameters wired to another step's output
+via \code{~step_name} are excluded.
 }
 \examples{
 p <- pip_new() |>
-  pip_add("s1", \(x = 1, y = 2) x + y) |>
-  pip_add("s2", \(x = ~s1, z = 3) x + z)
-pip_get_params(p)
+  pip_add("load",  \(n = 100, seed = 42) seq_len(n)) |>
+  pip_add("model", \(x = ~load, lambda = 0.1) x * lambda)
+
+# ~load is a dependency — only non-dependency params are returned
+pip_get_params(p)  # list(n = 100, seed = 42, lambda = 0.1)
+
+# Useful as a guide for pip_set_params()
+pip_set_params(p, params = list(n = 20, lambda = 0.5))
+pip_run(p, lgr = NULL)
+pip_collect_out(p, grouped = FALSE)
 }

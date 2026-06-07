@@ -55,10 +55,10 @@ a single call. In summary:
 The updated pipeline, invisibly.
 }
 \description{
-This functions forms the core of pipeline construction. It adds a new step
-to the pipeline and automatically updates the internal DAG and step-to-node
-index. Further, it verifies that all dependencies referenced by the new step
-exist and are properly linked in the DAG.
+Adds a named step to the pipeline. Each step is a function whose parameters
+either hold constant defaults or reference the output of a prior step using
+formula notation (\code{~step_name}). Dependencies are validated when the step
+is added.
 }
 \details{
 If \code{after} was specified, the new step will be inserted after the given
@@ -68,8 +68,27 @@ requires re-wiring parts of the internal pipeline structure, especially
 if the new step is inserted at an early position.
 }
 \examples{
-p <- pip_new()
-pip_add(p, "load", \(x = 1) x, group = "io")
-pip_add(p, "fit", \(x = ~load) x + 1, group = "model")
-p
+p <- pip_new("demo")
+
+# Constant defaults become independent parameters (adjustable later)
+pip_add(p, "load", \(n = 5) seq_len(n), group = "io", tags = "raw")
+
+# Use ~step_name to declare a dependency on another step's output;
+# "square" will automatically receive the output of "load" at runtime
+pip_add(p, "square", \(x = ~load) x^2,
+  group = "transform", tags = c("core", "daily")
+)
+
+# after = 0 inserts a step at the very beginning of the pipeline
+pip_add(p, "init", \(msg = "starting") message(msg),
+  after = 0L, exec = "plain"
+)
+
+# Insert between two existing steps by giving a step name to `after`
+pip_add(p, "scale", \(x = ~load, factor = 2) x * factor,
+  after = "load"
+)
+
+pip_run(p, lgr = NULL)
+pip_collect_out(p, grouped = FALSE)
 }

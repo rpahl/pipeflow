@@ -17,15 +17,20 @@ pip_add_from(x, y, step)
 The updated target pipeline, invisibly.
 }
 \description{
-Add one existing step definition from pipeline \code{y} to pipeline \code{x}.
-The step is added via \code{\link[=pip_add]{pip_add()}} so dependency checks and DAG updates
-are applied consistently.
+Copies one step from pipeline \code{y} into pipeline \code{x}, preserving its
+function, parameters, group, tags, and dependency links.
 }
 \examples{
-src <- pip_new() |>
-  pip_add("s1", \(x = 1) x) |>
-  pip_add("s2", \(x = ~s1) x + 1)
-dst <- pip_new()
-pip_add_from(dst, src, "s1")
-dst
+# Build a source pipeline with reusable steps
+src <- pip_new("source") |>
+  pip_add("load", \(n = 3) seq_len(n)) |>
+  pip_add("square", \(x = ~load) x^2)
+
+# Copy steps into a new pipeline one at a time.
+# The dependency of "square" on "load" is re-established automatically.
+dst <- pip_new("target")
+pip_add_from(dst, src, "load")
+pip_add_from(dst, src, "square")
+pip_run(dst, lgr = NULL)
+pip_collect_out(dst, grouped = FALSE)
 }

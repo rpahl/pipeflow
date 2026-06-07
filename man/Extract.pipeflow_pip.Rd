@@ -28,16 +28,39 @@ Extracted value(s), depending on \code{i} and \code{j}.
 Returns a new pipeline containing selected steps and all required upstream
 dependencies.
 
-With one index (\code{i}), internal environment bindings are preferred.
-With two indices (\code{i}, \code{j}), values are extracted from the step table.
+Extracts values from a pipeline using one or two indices.
+With a single string name, named fields such as \code{"pipeline"} or \code{"name"}
+are returned first; anything else returns the matching step-table column.
+With two indices (\code{row}, \code{column}), a single cell is extracted.
 }
 \examples{
 p <- pip_new() |>
-  pip_add("s1", \(x = 1) x) |>
-  pip_add("s2", \(x = ~s1) x + 1) |>
-  pip_add("s3", \(x = ~s2) x + 1)
-p[c("s1", "s2")]
-p <- pip_new() |> pip_add("s1", \(x = 1) x)
-p[["pipeline"]]
+  pip_add("load",   \(n = 5) seq_len(n)) |>
+  pip_add("square", \(x = ~load) x^2) |>
+  pip_add("total",  \(x = ~square) sum(x))
+
+# Select by step name — upstream deps are pulled in automatically.
+# Selecting only "total" still includes "load" and "square".
+sub <- p["total"]
+sub[["pipeline"]][["step"]]   # "load", "square", "total"
+
+# Select a subset of steps by name vector
+p[c("load", "square")][["pipeline"]][["step"]]  # "load", "square"
+
+# Select by integer row index
+p[1:2][["pipeline"]][["step"]]  # "load", "square"
+p <- pip_new() |>
+  pip_add("load", \(x = 1) x) |>
+  pip_add("fit",  \(x = ~load) x + 1)
+
+# Access internal objects by name
+p[["pipeline"]]  # the full step table
+p[["name"]]      # "pipe"
+
+# Shorthand column access (equivalent to p[["pipeline"]][["step"]])
 p[["step"]]
+
+# Two-index form: p[[row, column]] extracts a single cell
+p[["fit", "depends"]]  # "load"
+p[[2, "state"]]        # state of the second step
 }

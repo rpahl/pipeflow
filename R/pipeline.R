@@ -318,15 +318,22 @@
 
 #' Create a pipeline
 #'
-#' Creates an empty pipeline with internal storage for steps, dependency graph,
-#' and a step-to-node index.
+#' Creates a new, empty pipeline. Add steps with [pip_add()] and execute
+#' them with [pip_run()].
 #'
 #' @param name Single name used for printing and for derived view names.
 #'
 #' @return A pipeflow pipeline object.
 #' @examples
-#' p <- pip_new("demo")
-#' p
+#' # Create a named pipeline
+#' p <- pip_new("my_analysis")
+#' p[["name"]]  # "my_analysis"
+#'
+#' # Build a simple two-step pipeline and run it
+#' pip_add(p, "load", \(n = 5) seq_len(n))
+#' pip_add(p, "double", \(x = ~load) x * 2)  # ~load wires a dependency
+#' pip_run(p, lgr = NULL)
+#' p[["pipeline"]][["out"]]  # list of outputs, one per step
 #' @export
 pip_new <- function(name = "pipe") {
   if (!.is_single(name, "character")) {
@@ -350,10 +357,10 @@ pip_new <- function(name = "pipe") {
 
 #' Add a step
 #'
-#' This functions forms the core of pipeline construction. It adds a new step
-#' to the pipeline and automatically updates the internal DAG and step-to-node
-#' index. Further, it verifies that all dependencies referenced by the new step
-#' exist and are properly linked in the DAG.
+#' Adds a named step to the pipeline. Each step is a function whose parameters
+#' either hold constant defaults or reference the output of a prior step using
+#' formula notation (`~step_name`). Dependencies are validated when the step
+#' is added.
 #'
 #' @param x A pipeflow pipeline object.
 #' @param step Unique step name.
@@ -392,10 +399,29 @@ pip_new <- function(name = "pipe") {
 #'
 #' @return The updated pipeline, invisibly.
 #' @examples
-#' p <- pip_new()
-#' pip_add(p, "load", \(x = 1) x, group = "io")
-#' pip_add(p, "fit", \(x = ~load) x + 1, group = "model")
-#' p
+#' p <- pip_new("demo")
+#'
+#' # Constant defaults become independent parameters (adjustable later)
+#' pip_add(p, "load", \(n = 5) seq_len(n), group = "io", tags = "raw")
+#'
+#' # Use ~step_name to declare a dependency on another step's output;
+#' # "square" will automatically receive the output of "load" at runtime
+#' pip_add(p, "square", \(x = ~load) x^2,
+#'   group = "transform", tags = c("core", "daily")
+#' )
+#'
+#' # after = 0 inserts a step at the very beginning of the pipeline
+#' pip_add(p, "init", \(msg = "starting") message(msg),
+#'   after = 0L, exec = "plain"
+#' )
+#'
+#' # Insert between two existing steps by giving a step name to `after`
+#' pip_add(p, "scale", \(x = ~load, factor = 2) x * factor,
+#'   after = "load"
+#' )
+#'
+#' pip_run(p, lgr = NULL)
+#' pip_collect_out(p, grouped = FALSE)
 #' @export
 pip_add <- function(
   x, step, fun,
@@ -489,9 +515,8 @@ pip_add <- function(
 
 #' Copy a step from another pipeline
 #'
-#' Add one existing step definition from pipeline `y` to pipeline `x`.
-#' The step is added via [pip_add()] so dependency checks and DAG updates
-#' are applied consistently.
+#' Copies one step from pipeline `y` into pipeline `x`, preserving its
+#' function, parameters, group, tags, and dependency links.
 #'
 #' @param x Target pipeflow pipeline object.
 #' @param y Source pipeflow pipeline object.
@@ -499,12 +524,18 @@ pip_add <- function(
 #'
 #' @return The updated target pipeline, invisibly.
 #' @examples
-#' src <- pip_new() |>
-#'   pip_add("s1", \(x = 1) x) |>
-#'   pip_add("s2", \(x = ~s1) x + 1)
-#' dst <- pip_new()
-#' pip_add_from(dst, src, "s1")
-#' dst
+#' # Build a source pipeline with reusable steps
+#' src <- pip_new("source") |>
+#'   pip_add("load", \(n = 3) seq_len(n)) |>
+#'   pip_add("square", \(x = ~load) x^2)
+#'
+#' # Copy steps into a new pipeline one at a time.
+#' # The dependency of "square" on "load" is re-established automatically.
+#' dst <- pip_new("target")
+#' pip_add_from(dst, src, "load")
+#' pip_add_from(dst, src, "square")
+#' pip_run(dst, lgr = NULL)
+#' pip_collect_out(dst, grouped = FALSE)
 #' @export
 pip_add_from <- function(x, y, step) {
   if (!.is_pipeflow_pip(x)) {
@@ -574,10 +605,17 @@ pip_add_from <- function(x, y, step) {
 #' @param y A pipeflow pipeline object.
 #' @return A new pipeflow pipeline object representing the bound pipelines.
 #' @examples
-#' x <- pip_new("x") |> pip_add("s1", \(x = 1) x)
-#' y <- pip_new("y") |> pip_add("s1", \(x = 2) x)
-#' z <- pip_bind(x, y)
-#' z
+#' a <- pip_new("a") |>
+#'   pip_add("prep", \(x = 1) x * 2) |>
+#'   pip_add("fit", \(x = ~prep) x + 10)
+#'
+#' # "prep" exists in both pipelines; the one from b gets a numeric suffix
+#' b <- pip_new("b") |>
+#'   pip_add("prep", \(x = 5) x * 3)
+#'
+#' z <- pip_bind(a, b)
+#' z[["pipeline"]][["step"]]  # "prep", "fit", "prep2" (conflict resolved)
+#' length(z)  # 3 steps total
 #' @export
 pip_bind <- function(x, y) {
   if (!.is_pipeflow_pip(x)) {
@@ -634,8 +672,8 @@ pip_bind <- function(x, y) {
 
 #' Clone a pipeline
 #'
-#' Creates an independent copy of the pipeline, including step table and DAG.
-#' Explicit `.self` parameters are rebound to the cloned object.
+#' Creates an independent copy of the pipeline. Changes to the clone do not
+#' affect the original, and vice versa.
 #'
 #' @param x A pipeflow pipeline object.
 #' @param name Optional name for the cloned pipeline. If `NULL`, the original
@@ -643,9 +681,17 @@ pip_bind <- function(x, y) {
 #'
 #' @return A cloned pipeflow pipeline object.
 #' @examples
-#' p <- pip_new("pipe") |> pip_add("s1", \(x = 1) x)
+#' p <- pip_new("original") |>
+#'   pip_add("s1", \(x = 1) x) |>
+#'   pip_add("s2", \(x = ~s1) x + 1)
+#'
+#' # Clone produces a fully independent copy
 #' cp <- pip_clone(p, name = "copy")
-#' cp
+#' pip_add(cp, "s3", \(x = ~s2) x * 10)
+#'
+#' length(cp)  # 3 — clone has the new step
+#' length(p)   # 2 — original is unchanged
+#' cp[["pipeline"]][["step"]]
 #' @export
 pip_clone <- function(x, name = NULL) {
   if (!.is_pipeflow_pip(x)) {
@@ -685,6 +731,8 @@ pip_clone <- function(x, name = NULL) {
 
 #' Collect step outputs
 #'
+#' Returns the outputs of all pipeline steps as a named list, optionally
+#' grouped by step group label.
 #' @param x A pipeflow pip or view
 #' @param grouped Logical indicating if the output should be grouped by step
 #' groups
@@ -692,10 +740,18 @@ pip_clone <- function(x, name = NULL) {
 #' one step are returned as nested named lists.
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("s1", \(x = 1) x, group = "a") |>
-#'   pip_add("s2", \(x = ~s1) x + 1, group = "a")
+#'   pip_add("load",  \(x = 1) x,       group = "io") |>
+#'   pip_add("clean", \(x = ~load) x + 1, group = "io") |>
+#'   pip_add("model", \(x = ~clean) x * 2, group = "model")
 #' pip_run(p, lgr = NULL)
-#' pip_collect_out(p)
+#'
+#' # grouped = TRUE (default): steps sharing a group become a nested list
+#' out <- pip_collect_out(p)
+#' out$io     # list(load = 1, clean = 2)  — two steps, so nested
+#' out$model  # 4  — single step, returned directly (not wrapped)
+#'
+#' # grouped = FALSE: flat named list with one entry per step
+#' pip_collect_out(p, grouped = FALSE)
 #' @export
 pip_collect_out <- function(x, grouped = TRUE) {
   .assert_pip_or_view(x)
@@ -737,16 +793,26 @@ pip_collect_out <- function(x, grouped = TRUE) {
 
 #' Get independent parameters
 #'
-#' Independent parameters are those that are not dependent on any other steps
-#' in the pipeline.
+#' Returns the current default values of all tunable (non-dependency)
+#' parameters across the pipeline. These are the parameters that can be
+#' updated via [pip_set_params()]. Parameters wired to another step's output
+#' via `~step_name` are excluded.
 #' @param x A pipeflow pip or view
-#' @return Named list of unique independent parameters. If the same parameter
-#' name appears multiple times, the first occurrence in pipeline order is kept.
+#' @return Named list of tunable parameter values. If the same parameter
+#' name appears in multiple steps, the first occurrence in pipeline order
+#' is returned.
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("s1", \(x = 1, y = 2) x + y) |>
-#'   pip_add("s2", \(x = ~s1, z = 3) x + z)
-#' pip_get_params(p)
+#'   pip_add("load",  \(n = 100, seed = 42) seq_len(n)) |>
+#'   pip_add("model", \(x = ~load, lambda = 0.1) x * lambda)
+#'
+#' # ~load is a dependency — only non-dependency params are returned
+#' pip_get_params(p)  # list(n = 100, seed = 42, lambda = 0.1)
+#'
+#' # Useful as a guide for pip_set_params()
+#' pip_set_params(p, params = list(n = 20, lambda = 0.5))
+#' pip_run(p, lgr = NULL)
+#' pip_collect_out(p, grouped = FALSE)
 #' @export
 pip_get_params <- function(x) {
   .assert_pip_or_view(x)
@@ -767,11 +833,12 @@ pip_get_params <- function(x) {
 
 #' Build pipeline graph data
 #'
-#' Export a graph representation of a pipeline or view that can be passed to
-#' [visNetwork::visNetwork()].
+#' Builds graph data (nodes and edges) describing the pipeline's step
+#' structure, suitable for visualisation with [visNetwork::visNetwork()].
 #'
-#' Node shape reflects execution mode (`square` for `auto`/`plain`, `star`
-#' for `split`, `dot` for `reduce`).
+#' @details
+#' Node shapes reflect execution mode: hexagon for `auto`/`plain`, star for
+#' `split`, dot for `reduce`.
 #'
 #' @param x A pipeflow pip or view.
 #' @param include_upstream Logical. Only relevant for views. If `TRUE`, add
@@ -781,12 +848,17 @@ pip_get_params <- function(x) {
 #' @export
 #' @examples
 #' p <- pip_new()
-#' pip_add(p, "load", \(x = 1) x, group = "io")
-#' pip_add(p, "fit", \(x = ~load) x + 1, group = "model")
+#' pip_add(p, "load",  \(x = 1) x,       group = "io")
+#' pip_add(p, "clean", \(x = ~load) x + 1, group = "io")
+#' pip_add(p, "fit",   \(x = ~clean) x * 2, group = "model")
 #'
 #' graph <- pip_get_graph(p)
-#' graph$nodes
-#' graph$edges
+#' graph$nodes  # data.frame: id, label, group, shape, color
+#' graph$edges  # data.frame: from, to, arrows
+#'
+#' # For a view, include_upstream = TRUE adds upstream deps to the graph
+#' v <- pip_view(p, i = "fit")
+#' pip_get_graph(v, include_upstream = TRUE)
 #'
 #' if (require("visNetwork", quietly = TRUE)) {
 #'   do.call(what = visNetwork::visNetwork, args = graph)
@@ -882,9 +954,13 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
 #' @param step A step name
 #' @return Logical indicating if the step exists
 #' @examples
-#' p <- pip_new() |> pip_add("s1", \(x = 1) x)
-#' pip_has_step(p, "s1")
-#' pip_has_step(p, "s2")
+#' p <- pip_new() |>
+#'   pip_add("load", \(x = 1) x) |>
+#'   pip_add("fit",  \(x = ~load) x + 1)
+#'
+#' pip_has_step(p, "load")     # TRUE
+#' pip_has_step(p, "fit")      # TRUE
+#' pip_has_step(p, "predict")  # FALSE — step not yet added
 #' @export
 pip_has_step <- function(x, step) {
   if (!.is_pipeflow_pip(x)) {
@@ -921,10 +997,20 @@ pip_has_step <- function(x, step) {
 #' @return The updated pipeline, invisibly.
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("s1", \(x = 1) x) |>
-#'   pip_add("s2", \(x = ~s1) x + 1)
-#' pip_remove(p, "s2")
-#' p
+#'   pip_add("load",      \(x = 1) x) |>
+#'   pip_add("transform", \(x = ~load) x * 2) |>
+#'   pip_add("model",     \(x = ~transform) x + 10)
+#'
+#' # Removing a leaf step (nothing depends on it) works directly
+#' pip_remove(p, "model")
+#' p[["pipeline"]][["step"]]  # "load", "transform"
+#'
+#' # Trying to remove a step that others depend on raises an error:
+#' # pip_remove(p, "load")  # Error!
+#'
+#' # recursive = TRUE removes the step and all its downstream dependents
+#' pip_remove(p, "load", recursive = TRUE)
+#' p[["pipeline"]][["step"]]  # character(0) — pipeline is now empty
 #' @export
 pip_remove <- function(x, step, recursive = FALSE) {
   if (!.is_pipeflow_pip(x)) {
@@ -1019,9 +1105,14 @@ pip_remove <- function(x, step, recursive = FALSE) {
 #' @param to New step name
 #' @return The updated pipeline, invisibly.
 #' @examples
-#' p <- pip_new() |> pip_add("s1", \(x = 1) x)
-#' pip_rename(p, from = "s1", to = "load")
-#' p
+#' p <- pip_new() |>
+#'   pip_add("s1", \(x = 1) x) |>
+#'   pip_add("s2", \(x = ~s1) x + 1)  # "s2" depends on "s1"
+#'
+#' # Downstream dependency references are updated automatically
+#' pip_rename(p, from = "s1", to = "load_data")
+#' p[["pipeline"]][["step"]]           # "load_data", "s2"
+#' p[["pipeline"]][["depends"]][[2]]   # "load_data" (was "s1")
 #' @export
 pip_rename <- function(x, from, to) {
   if (!.is_pipeflow_pip(x)) {
@@ -1083,8 +1174,9 @@ pip_rename <- function(x, from, to) {
 
 #' Replace a step
 #'
-#' Replaces one step definition in place while preserving step order. Steps
-#' downstream of the replaced step are marked as outdated.
+#' Replaces a step's function while keeping it in the same position in the
+#' pipeline. Downstream steps are automatically marked as outdated and will
+#' re-run on the next [pip_run()].
 #'
 #' @param x A pipeflow pipeline object.
 #' @param step Step name.
@@ -1094,10 +1186,18 @@ pip_rename <- function(x, from, to) {
 #' Can also be adjusted later using `[pip_tag()]`.
 #' @return The updated pipeline, invisibly.
 #' @examples
-#' p <- pip_new() |> pip_add("s1", \(x = 1) x)
-#' pip_replace(p, "s1", \(x = 2) x)
+#' p <- pip_new() |>
+#'   pip_add("load",   \(n = 5) seq_len(n)) |>
+#'   pip_add("double", \(x = ~load) x * 2)
 #' pip_run(p, lgr = NULL)
-#' p[["pipeline"]][["out"]][[1]]
+#'
+#' # Replace "load" — downstream steps are automatically marked "outdated"
+#' pip_replace(p, "load", \(n = 3) seq_len(n))
+#' p[["pipeline"]][["state"]]  # "new", "outdated"
+#'
+#' # Re-run to bring everything up to date
+#' pip_run(p, lgr = NULL)
+#' pip_collect_out(p, grouped = FALSE)
 #' @export
 pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
   if (!.is_pipeflow_pip(x)) {
@@ -1201,6 +1301,9 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
 
 #' Run a pipeline
 #'
+#' Executes all pending steps in order. Steps already in state `"done"` are
+#' skipped unless `force = TRUE`.
+#'
 #' @param x A pipeflow pip or view
 #' @param lgr A logging function of the form `function(level, msg, ...)`.
 #' To suppress logging, you can set `lgr = NULL`.
@@ -1208,18 +1311,32 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
 #' regardless of whether they are outdated or not.
 #' @param progress Optional callback of the form
 #' `function(value, detail)` called before each step.
-#' @param recursive Logical indicating whether a step return value of class
-#' `pipeflow_pip` should abort the current run and recursively continue with
-#' that returned pipeline.
+#' @param recursive If `TRUE` and a step returns a pipeline object, the
+#' current run is aborted and continues from the returned pipeline. Useful
+#' for dynamic or self-modifying pipelines.
 #' @return The updated pipeline or view, invisibly.
 #' @details When `x` is a view, requested rows are run together with required
 #' upstream dependencies.
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("s1", \(x = 1) x) |>
-#'   pip_add("s2", \(x = ~s1) x + 1)
+#'   pip_add("load",  \(n = 3) seq_len(n)) |>
+#'   pip_add("square", \(x = ~load) x^2) |>
+#'   pip_add("total",  \(x = ~square) sum(x))
+#'
+#' # lgr = NULL suppresses log output
 #' pip_run(p, lgr = NULL)
-#' p[["pipeline"]][["out"]]
+#' pip_collect_out(p, grouped = FALSE)
+#'
+#' # Already-done steps are skipped on a second run
+#' pip_run(p, lgr = NULL)          # all steps skipped
+#'
+#' # force = TRUE re-executes every step regardless of state
+#' pip_run(p, lgr = NULL, force = TRUE)
+#'
+#' # Run only a subset of steps via a view;
+#' # upstream dependencies are automatically included
+#' v <- pip_view(p, i = "total")
+#' pip_run(v, lgr = NULL)
 #' @export
 pip_run <- function(
   x,
@@ -1358,22 +1475,28 @@ pip_run <- function(
 
 #' Set independent parameters
 #'
-#' Independent parameters are those that are not dependent on any other steps
-#' in the pipeline.
-#' @details Each step for which one or more parameters are set will have its
-#' state as well as the state of any downstream dependent steps updated to
-#' "outdated". The only exception is if a step is locked - parameters of
-#' locked steps are never changed and so their state remains unchanged.
+#' Updates the default values of tunable parameters across the pipeline.
+#' Affected steps and their downstream dependents are automatically marked
+#' as outdated.
+#' @details Parameters of locked steps are never changed and their state
+#' remains unchanged.
 #' @param p A pipeflow pip or view
 #' @param params Named list of parameters to set.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("s1", \(x = 1) x) |>
-#'   pip_add("s2", \(x = ~s1, y = 2) x + y)
-#' pip_set_params(p, params = list(x = 5, y = 10))
+#'   pip_add("load",  \(n = 10) seq_len(n)) |>
+#'   pip_add("scale", \(x = ~load, factor = 0.5) x * factor)
+#'
+#' # See all adjustable parameters before running
+#' pip_get_params(p)  # list(n = 10, factor = 0.5)
+#'
+#' # Updating params marks affected steps (and their dependents) outdated
+#' pip_set_params(p, params = list(n = 5, factor = 2.0))
+#' p[["pipeline"]][["state"]]  # "outdated", "outdated"
+#'
 #' pip_run(p, lgr = NULL)
-#' p[["pipeline"]][["out"]]
+#' pip_collect_out(p, grouped = FALSE)
 #' @export
 pip_set_params <- function(p, params = list()) {
   # Input checking
@@ -1455,9 +1578,18 @@ pip_set_params <- function(p, params = list()) {
 #' @param tags Character vector of tags to add for each selected step.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
-#' p <- pip_new() |> pip_add("s1", \(x = 1) x)
+#' p <- pip_new() |>
+#'   pip_add("load", \(x = 1) x) |>
+#'   pip_add("fit",  \(x = ~load) x + 1)
+#'
+#' # Tag every step in the pipeline at once
 #' pip_tag(p, tags = c("daily", "core"))
-#' p[["pipeline"]][["tags"]][[1]]
+#' p[["pipeline"]][["tags"]]  # both steps have c("daily", "core")
+#'
+#' # Add an extra tag to only one step via a view
+#' v <- pip_view(p, i = "fit")
+#' pip_tag(v, tags = "model")
+#' p[["pipeline"]][["tags"]]  # "fit" also has "model"
 #' @export
 pip_tag <- function(p, tags = character()) {
   .assert_pip_or_view(p)
@@ -1497,9 +1629,14 @@ pip_tag <- function(p, tags = character()) {
 #' @param tags Character vector of tags to remove for each selected step.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
-#' p <- pip_new() |> pip_add("s1", \(x = 1) x, tags = c("daily", "core"))
-#' pip_untag(p, tags = "core")
-#' p[["pipeline"]][["tags"]][[1]]
+#' p <- pip_new() |>
+#'   pip_add("load", \(x = 1) x, tags = c("daily", "core")) |>
+#'   pip_add("fit",  \(x = ~load) x + 1, tags = c("daily", "model"))
+#'
+#' # Remove "daily" from all steps
+#' pip_untag(p, tags = "daily")
+#' # "load" retains "core"; "fit" retains "model"
+#' p[["pipeline"]][["tags"]]
 #' @export
 pip_untag <- function(p, tags = character()) {
   .assert_pip_or_view(p)
@@ -1537,9 +1674,21 @@ pip_untag <- function(p, tags = character()) {
 #' @param p A pipeflow pip or view.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
-#' p <- pip_new() |> pip_add("s1", \(x = 1) x)
-#' pip_lock(p)
-#' p[["pipeline"]][["locked"]]
+#' p <- pip_new() |>
+#'   pip_add("load", \(x = 10) x) |>
+#'   pip_add("fit",  \(x = ~load) x * 2)
+#' pip_run(p, lgr = NULL)
+#'
+#' # Lock only "load" via a view so it won't be re-executed or overwritten
+#' pip_lock(pip_view(p, i = "load"))
+#' p[["pipeline"]][["locked"]]  # TRUE, FALSE
+#'
+#' # Locked steps are silently skipped during pip_run()
+#' pip_run(p, lgr = NULL, force = TRUE)
+#' p[["pipeline"]][["out"]][[1]]  # still 10 — locked, not re-executed
+#'
+#' pip_unlock(p)
+#' p[["pipeline"]][["locked"]]  # FALSE, FALSE
 #' @export
 pip_lock <- function(p) {
   .assert_pip_or_view(p)
@@ -1565,10 +1714,16 @@ pip_lock <- function(p) {
 #' @param p A pipeflow pip or view.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
-#' p <- pip_new() |> pip_add("s1", \(x = 1) x)
+#' p <- pip_new() |>
+#'   pip_add("load", \(x = 1) x) |>
+#'   pip_add("fit",  \(x = ~load) x * 2)
+#'
+#' # Lock all steps, then unlock to restore normal execution
 #' pip_lock(p)
+#' p[["pipeline"]][["locked"]]  # TRUE, TRUE
+#'
 #' pip_unlock(p)
-#' p[["pipeline"]][["locked"]]
+#' p[["pipeline"]][["locked"]]  # FALSE, FALSE
 #' @export
 pip_unlock <- function(p) {
   .assert_pip_or_view(p)
@@ -1589,8 +1744,10 @@ pip_unlock <- function(p) {
 
 #' Create a pipeline view
 #'
-#' Create a filtered view of a pipeline (or view).
-#' A view stores selected row indices and references the original pipeline.
+#' Creates a filtered view showing only a selected subset of steps.
+#' A view references the underlying pipeline without copying it, so
+#' operations like [pip_run()] and [pip_set_params()] applied to a view
+#' affect only the selected steps.
 #'
 #' @param x A pipeflow pipeline or view.
 #' @param i Optional row indices or step names to keep.
@@ -1609,37 +1766,42 @@ pip_unlock <- function(p) {
 #' @examples
 #'
 #' p <- pip_new()
-#' pip_add(p, "load_raw", \(x = 1) x,
-#'   group = "io", tags = c("core", "daily")
+#' pip_add(p, "load_raw",  \(x = 1) x,
+#'   group = "io",    tags = c("core", "daily")
 #' )
-#' pip_add(p, "fit_model", \(x = 2) x + 1,
+#' pip_add(p, "fit_model",  \(x = 2) x + 1,
 #'   group = "model", tags = "model"
 #' )
 #' pip_add(p, "eval_model", \(x = ~fit_model) x,
 #'   group = "model", tags = c("daily", "report")
 #' )
 #'
-#' # Character columns with fixed matching
-#' pip_view(p, filter = list(group = "model", state = "done"))
+#' # Filter by a fixed column value (one or more groups)
+#' pip_view(p, filter = list(group = "model"))
 #'
-#' # Filter by tags
+#' # Combine filters: group AND state
+#' pip_view(p, filter = list(group = "model", state = "new"))
+#'
+#' # Filter by tag — keeps steps that have *any* of the given tags
 #' pip_view(p, tags = "daily")
 #'
-#' # Filter by explicit row or step indices
+#' # Combine explicit step selection with a filter (intersection)
 #' pip_view(p,
-#'   i = c("load_raw", "fit_model"),
+#'   i      = c("load_raw", "fit_model"),
 #'   filter = list(group = "model")
 #' )
+#'
+#' # Select by integer row indices
 #' pip_view(p, i = c(1L, 2L), filter = list(group = "model"))
 #'
-#' # Filter by regex
+#' # Use a regex pattern to match step names
 #' pip_view(p, filter = list(step = "_model$"), fixed = FALSE)
 #'
-#' # Chain filters by create view of view
+#' # Views are composable: create a view-of-view for progressive narrowing
 #' v1 <- pip_view(p, tags = "daily")
-#' print(v1)
+#' print(v1)  # load_raw, eval_model
 #' v2 <- pip_view(v1, tags = "report")
-#' print(v2)
+#' print(v2)  # eval_model only
 pip_view <- function(
   x,
   i = integer(),
@@ -1720,9 +1882,13 @@ pip_view <- function(
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("s1", \(x = 1) x) |>
-#'   pip_add("s2", \(x = ~s1) x + 1)
-#' length(p)
-#' length(pip_view(p, i = "s2"))
+#'   pip_add("s2", \(x = ~s1) x + 1) |>
+#'   pip_add("s3", \(x = ~s2) x * 2)
+#' length(p)    # 3 — total steps in the pipeline
+#'
+#' # A view reports only the number of selected (visible) steps
+#' v <- pip_view(p, i = c("s2", "s3"))
+#' length(v)    # 2
 #' @rdname length.pipeflow
 #' @export
 length.pipeflow_pip <- function(x) {
@@ -1746,10 +1912,20 @@ length.pipeflow_view <- function(x) {
 #' @return A new pipeflow pipeline object.
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("s1", \(x = 1) x) |>
-#'   pip_add("s2", \(x = ~s1) x + 1) |>
-#'   pip_add("s3", \(x = ~s2) x + 1)
-#' p[c("s1", "s2")]
+#'   pip_add("load",   \(n = 5) seq_len(n)) |>
+#'   pip_add("square", \(x = ~load) x^2) |>
+#'   pip_add("total",  \(x = ~square) sum(x))
+#'
+#' # Select by step name — upstream deps are pulled in automatically.
+#' # Selecting only "total" still includes "load" and "square".
+#' sub <- p["total"]
+#' sub[["pipeline"]][["step"]]   # "load", "square", "total"
+#'
+#' # Select a subset of steps by name vector
+#' p[c("load", "square")][["pipeline"]][["step"]]  # "load", "square"
+#'
+#' # Select by integer row index
+#' p[1:2][["pipeline"]][["step"]]  # "load", "square"
 #' @rdname Extract.pipeflow_pip
 #' @export
 `[.pipeflow_pip` <- function(x, i, ...) {
@@ -1846,16 +2022,29 @@ length.pipeflow_view <- function(x) {
 
 #' Extract bindings, columns, or row-level values from a pipeline
 #'
-#' With one index (`i`), internal environment bindings are preferred.
-#' With two indices (`i`, `j`), values are extracted from the step table.
+#' Extracts values from a pipeline using one or two indices.
+#' With a single string name, named fields such as `"pipeline"` or `"name"`
+#' are returned first; anything else returns the matching step-table column.
+#' With two indices (`row`, `column`), a single cell is extracted.
 #' @param i integer (row indices) or character vector (step names) of steps to
 #' select
 #' @param j column names to select
 #' @return Extracted value(s), depending on `i` and `j`.
 #' @examples
-#' p <- pip_new() |> pip_add("s1", \(x = 1) x)
-#' p[["pipeline"]]
+#' p <- pip_new() |>
+#'   pip_add("load", \(x = 1) x) |>
+#'   pip_add("fit",  \(x = ~load) x + 1)
+#'
+#' # Access internal objects by name
+#' p[["pipeline"]]  # the full step table
+#' p[["name"]]      # "pipe"
+#'
+#' # Shorthand column access (equivalent to p[["pipeline"]][["step"]])
 #' p[["step"]]
+#'
+#' # Two-index form: p[[row, column]] extracts a single cell
+#' p[["fit", "depends"]]  # "load"
+#' p[[2, "state"]]        # state of the second step
 #' @rdname Extract.pipeflow_pip
 #' @export
 `[[.pipeflow_pip` <- function(x, i, j, ...) {
@@ -1914,8 +2103,14 @@ length.pipeflow_view <- function(x) {
 #' @param ...  Other arguments passed to `print.data.table`
 #' @return Invisibly returns `x`.
 #' @examples
-#' p <- pip_new() |> pip_add("s1", \(x = 1) x)
-#' print(p)
+#' p <- pip_new("demo") |>
+#'   pip_add("load",   \(n = 5) seq_len(n), group = "io",   tags = "raw") |>
+#'   pip_add("square", \(x = ~load) x^2,   group = "compute") |>
+#'   pip_add("total",  \(x = ~square) sum(x), group = "compute")
+#'
+#' print(p)              # core columns: step, group, depends, tags, out, state
+#' print(p, cols = "all")  # all non-hidden columns
+#' print(p, rows = 2:3)    # print only steps 2 and 3
 #' @rdname print
 #' @export
 print.pipeflow_pip <- function(
@@ -1981,8 +2176,10 @@ print.pipeflow_pip <- function(
 #' p <- pip_new() |>
 #'   pip_add("s1", \(x = 1) x, group = "io") |>
 #'   pip_add("s2", \(x = ~s1) x + 1, group = "model")
+#'
+#' # A view header shows how many steps are selected out of the total
 #' v <- pip_view(p, filter = list(group = "model"))
-#' print(v)
+#' print(v)  # "<pipeflow_view> pipe view (1 of 2 steps)"
 #' @rdname print
 #' @export
 print.pipeflow_view <- function(x, header = TRUE, ...) {

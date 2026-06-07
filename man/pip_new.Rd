@@ -13,10 +13,17 @@ pip_new(name = "pipe")
 A pipeflow pipeline object.
 }
 \description{
-Creates an empty pipeline with internal storage for steps, dependency graph,
-and a step-to-node index.
+Creates a new, empty pipeline. Add steps with \code{\link[=pip_add]{pip_add()}} and execute
+them with \code{\link[=pip_run]{pip_run()}}.
 }
 \examples{
-p <- pip_new("demo")
-p
+# Create a named pipeline
+p <- pip_new("my_analysis")
+p[["name"]]  # "my_analysis"
+
+# Build a simple two-step pipeline and run it
+pip_add(p, "load", \(n = 5) seq_len(n))
+pip_add(p, "double", \(x = ~load) x * 2)  # ~load wires a dependency
+pip_run(p, lgr = NULL)
+p[["pipeline"]][["out"]]  # list of outputs, one per step
 }

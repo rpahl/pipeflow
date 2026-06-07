@@ -20,8 +20,15 @@ have steps with the same name, the step names of the second pipeline will be
 automatically adapted to avoid name clashes.
 }
 \examples{
-x <- pip_new("x") |> pip_add("s1", \(x = 1) x)
-y <- pip_new("y") |> pip_add("s1", \(x = 2) x)
-z <- pip_bind(x, y)
-z
+a <- pip_new("a") |>
+  pip_add("prep", \(x = 1) x * 2) |>
+  pip_add("fit", \(x = ~prep) x + 10)
+
+# "prep" exists in both pipelines; the one from b gets a numeric suffix
+b <- pip_new("b") |>
+  pip_add("prep", \(x = 5) x * 3)
+
+z <- pip_bind(a, b)
+z[["pipeline"]][["step"]]  # "prep", "fit", "prep2" (conflict resolved)
+length(z)  # 3 steps total
 }

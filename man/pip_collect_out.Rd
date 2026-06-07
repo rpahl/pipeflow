@@ -17,12 +17,21 @@ A named list of outputs. If \code{grouped = TRUE}, groups with more than
 one step are returned as nested named lists.
 }
 \description{
-Collect step outputs
+Returns the outputs of all pipeline steps as a named list, optionally
+grouped by step group label.
 }
 \examples{
 p <- pip_new() |>
-  pip_add("s1", \(x = 1) x, group = "a") |>
-  pip_add("s2", \(x = ~s1) x + 1, group = "a")
+  pip_add("load",  \(x = 1) x,       group = "io") |>
+  pip_add("clean", \(x = ~load) x + 1, group = "io") |>
+  pip_add("model", \(x = ~clean) x * 2, group = "model")
 pip_run(p, lgr = NULL)
-pip_collect_out(p)
+
+# grouped = TRUE (default): steps sharing a group become a nested list
+out <- pip_collect_out(p)
+out$io     # list(load = 1, clean = 2)  — two steps, so nested
+out$model  # 4  — single step, returned directly (not wrapped)
+
+# grouped = FALSE: flat named list with one entry per step
+pip_collect_out(p, grouped = FALSE)
 }

@@ -17,8 +17,14 @@ Unlocks all selected steps in the pipeline unless \code{p} is a view, in which
 case only steps covered by the view are unlocked.
 }
 \examples{
-p <- pip_new() |> pip_add("s1", \(x = 1) x)
+p <- pip_new() |>
+  pip_add("load", \(x = 1) x) |>
+  pip_add("fit",  \(x = ~load) x * 2)
+
+# Lock all steps, then unlock to restore normal execution
 pip_lock(p)
+p[["pipeline"]][["locked"]]  # TRUE, TRUE
+
 pip_unlock(p)
-p[["pipeline"]][["locked"]]
+p[["pipeline"]][["locked"]]  # FALSE, FALSE
 }

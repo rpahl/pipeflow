@@ -18,7 +18,11 @@ Logical indicating if the step exists
 Check whether a step exists
 }
 \examples{
-p <- pip_new() |> pip_add("s1", \(x = 1) x)
-pip_has_step(p, "s1")
-pip_has_step(p, "s2")
+p <- pip_new() |>
+  pip_add("load", \(x = 1) x) |>
+  pip_add("fit",  \(x = ~load) x + 1)
+
+pip_has_step(p, "load")     # TRUE
+pip_has_step(p, "fit")      # TRUE
+pip_has_step(p, "predict")  # FALSE — step not yet added
 }

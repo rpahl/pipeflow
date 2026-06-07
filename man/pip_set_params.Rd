@@ -15,20 +15,26 @@ pip_set_params(p, params = list())
 The updated pipeline or view, invisibly.
 }
 \description{
-Independent parameters are those that are not dependent on any other steps
-in the pipeline.
+Updates the default values of tunable parameters across the pipeline.
+Affected steps and their downstream dependents are automatically marked
+as outdated.
 }
 \details{
-Each step for which one or more parameters are set will have its
-state as well as the state of any downstream dependent steps updated to
-"outdated". The only exception is if a step is locked - parameters of
-locked steps are never changed and so their state remains unchanged.
+Parameters of locked steps are never changed and their state
+remains unchanged.
 }
 \examples{
 p <- pip_new() |>
-  pip_add("s1", \(x = 1) x) |>
-  pip_add("s2", \(x = ~s1, y = 2) x + y)
-pip_set_params(p, params = list(x = 5, y = 10))
+  pip_add("load",  \(n = 10) seq_len(n)) |>
+  pip_add("scale", \(x = ~load, factor = 0.5) x * factor)
+
+# See all adjustable parameters before running
+pip_get_params(p)  # list(n = 10, factor = 0.5)
+
+# Updating params marks affected steps (and their dependents) outdated
+pip_set_params(p, params = list(n = 5, factor = 2.0))
+p[["pipeline"]][["state"]]  # "outdated", "outdated"
+
 pip_run(p, lgr = NULL)
-p[["pipeline"]][["out"]]
+pip_collect_out(p, grouped = FALSE)
 }

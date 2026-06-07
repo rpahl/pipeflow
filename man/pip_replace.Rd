@@ -22,12 +22,21 @@ Can also be adjusted later using \verb{[pip_tag()]}.}
 The updated pipeline, invisibly.
 }
 \description{
-Replaces one step definition in place while preserving step order. Steps
-downstream of the replaced step are marked as outdated.
+Replaces a step's function while keeping it in the same position in the
+pipeline. Downstream steps are automatically marked as outdated and will
+re-run on the next \code{\link[=pip_run]{pip_run()}}.
 }
 \examples{
-p <- pip_new() |> pip_add("s1", \(x = 1) x)
-pip_replace(p, "s1", \(x = 2) x)
+p <- pip_new() |>
+  pip_add("load",   \(n = 5) seq_len(n)) |>
+  pip_add("double", \(x = ~load) x * 2)
 pip_run(p, lgr = NULL)
-p[["pipeline"]][["out"]][[1]]
+
+# Replace "load" — downstream steps are automatically marked "outdated"
+pip_replace(p, "load", \(n = 3) seq_len(n))
+p[["pipeline"]][["state"]]  # "new", "outdated"
+
+# Re-run to bring everything up to date
+pip_run(p, lgr = NULL)
+pip_collect_out(p, grouped = FALSE)
 }
