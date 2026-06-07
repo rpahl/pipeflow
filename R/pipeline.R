@@ -417,27 +417,43 @@ pip_new <- function(name = "pipe") {
 #'
 #' @return The updated pipeline, invisibly.
 #' @examples
-#' p <- pip_new("demo")
+#' # --- Groups, tags, and view filtering ---
+#' p <- pip_new("analysis") |>
+#'   pip_add("load", \(n = 5) seq_len(n),
+#'     group = "io", tags = "raw"
+#'   ) |>
+#'   pip_add("clean", \(x = ~load) x * 2,
+#'     group = "io", tags = "process"
+#'   ) |>
+#'   pip_add("fit", \(x = ~clean) sum(x),
+#'     group = "model", tags = c("core", "daily")
+#'   ) |>
+#'   pip_add("report", \(x = ~fit) paste("result:", x),
+#'     group = "model", tags = "report"
+#'   )
 #'
-#' # Constant defaults become independent parameters (adjustable later)
-#' pip_add(p, "load", \(n = 5) seq_len(n), group = "io", tags = "raw")
-#'
-#' # Use ~step_name to declare a dependency on another step's output;
-#' # "square" will automatically receive the output of "load" at runtime
-#' pip_add(p, "square", \(x = ~load) x^2,
-#'   group = "math",
-#'   tags = c("core", "daily")
-#' )
-#'
-#' # Insert between two existing steps by giving a step name to `after`
-#' pip_add(p, "scale", \(x = ~load, factor = 2) x * factor,
-#'   group = "math",
-#'   after = "load",
-#' )
-#'
-#' p
-#' pip_run(p)
+#' pip_run(p, lgr = NULL)
 #' pip_collect_out(p)
+#'
+#' # Filter by tag using pip_view — keeps steps with any matching tag
+#' pip_view(p, tags = "daily")
+#' pip_view(p, tags = "core")
+#' pip_view(p, tags = c("raw", "report"))
+#'
+#' # --- Split / reduce execution modes ---
+#' q <- pip_new("split-demo") |>
+#'   pip_add("data", \(x = iris) x) |>
+#'   pip_add("split", \(x = ~data) split(x, x$Species),
+#'     exec = "split"
+#'   ) |>
+#'   pip_add("stats", \(x = ~split) summary(x)) |>
+#'   pip_add("combine", \(x = ~stats) do.call(rbind, x),
+#'     exec = "reduce"
+#'   )
+#'
+#' pip_run(q, lgr = NULL)
+#' q[["stats", "out"]]   # partitioned list — one summary per species
+#' q[["combine", "out"]] # combined table
 #' @export
 pip_add <- function(
     x,
@@ -563,7 +579,7 @@ pip_add <- function(
 #' pip_add_from(dst, src, "load")
 #' pip_add_from(dst, src, "square")
 #' pip_run(dst)
-#' pip_collect_out(dst, grouped = FALSE)
+#' pip_collect_out(dst)
 #' @export
 pip_add_from <- function(x, y, step) {
     if (!.is_pipeflow_pip(x)) {
