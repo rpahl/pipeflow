@@ -1,6 +1,7 @@
 test_that("deprecated alias warnings are shown only once per session", {
     old_warned <- getOption("pipeflow_deprecation_warned", NULL)
     old_testthat <- Sys.getenv("TESTTHAT", unset = NA)
+    old_rcheck <- Sys.getenv("_R_CHECK_PACKAGE_NAME_", unset = NA)
     on.exit(
         {
             options(pipeflow_deprecation_warned = old_warned)
@@ -9,12 +10,18 @@ test_that("deprecated alias warnings are shown only once per session", {
             } else {
                 Sys.setenv(TESTTHAT = old_testthat)
             }
+            if (is.na(old_rcheck)) {
+                Sys.unsetenv("_R_CHECK_PACKAGE_NAME_")
+            } else {
+                Sys.setenv(`_R_CHECK_PACKAGE_NAME_` = old_rcheck)
+            }
         },
         add = TRUE
     )
 
     options(pipeflow_deprecation_warned = NULL)
     Sys.setenv(TESTTHAT = "")
+    Sys.unsetenv("_R_CHECK_PACKAGE_NAME_")
 
     expect_warning(pipe_new("pipe", data = 1), "deprecated")
     pip <- pipe_new("pipe", data = 1)

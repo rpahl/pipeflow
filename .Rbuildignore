@@ -46,3 +46,4 @@
 # Misc artifacts
 ^workflows\.zip$
 ^logo/logo.xcf$
+^LICENSE\.md$
