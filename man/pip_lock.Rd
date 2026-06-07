@@ -19,17 +19,17 @@ case only steps covered by the view are locked.
 \examples{
 p <- pip_new() |>
   pip_add("load", \(x = 10) x) |>
-  pip_add("fit",  \(x = ~load) x * 2)
+  pip_add("fit", \(x = ~load) x * 2)
 pip_run(p, lgr = NULL)
 
 # Lock only "load" via a view so it won't be re-executed or overwritten
 pip_lock(pip_view(p, i = "load"))
-p[["pipeline"]][["locked"]]  # TRUE, FALSE
+p[["pipeline"]][["locked"]] # TRUE, FALSE
 
 # Locked steps are silently skipped during pip_run()
 pip_run(p, lgr = NULL, force = TRUE)
-p[["pipeline"]][["out"]][[1]]  # still 10 — locked, not re-executed
+p[["pipeline"]][["out"]][[1]] # still 10 — locked, not re-executed
 
 pip_unlock(p)
-p[["pipeline"]][["locked"]]  # FALSE, FALSE
+p[["pipeline"]][["locked"]] # FALSE, FALSE
 }

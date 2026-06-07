@@ -19,12 +19,12 @@ case only steps covered by the view are unlocked.
 \examples{
 p <- pip_new() |>
   pip_add("load", \(x = 1) x) |>
-  pip_add("fit",  \(x = ~load) x * 2)
+  pip_add("fit", \(x = ~load) x * 2)
 
 # Lock all steps, then unlock to restore normal execution
 pip_lock(p)
-p[["pipeline"]][["locked"]]  # TRUE, TRUE
+p[["pipeline"]][["locked"]] # TRUE, TRUE
 
 pip_unlock(p)
-p[["pipeline"]][["locked"]]  # FALSE, FALSE
+p[["pipeline"]][["locked"]] # FALSE, FALSE
 }

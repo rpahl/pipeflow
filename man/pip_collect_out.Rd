@@ -22,15 +22,15 @@ grouped by step group label.
 }
 \examples{
 p <- pip_new() |>
-  pip_add("load",  \(x = 1) x,       group = "io") |>
+  pip_add("load", \(x = 1) x, group = "io") |>
   pip_add("clean", \(x = ~load) x + 1, group = "io") |>
   pip_add("model", \(x = ~clean) x * 2, group = "model")
-pip_run(p, lgr = NULL)
+pip_run(p)
 
 # grouped = TRUE (default): steps sharing a group become a nested list
 out <- pip_collect_out(p)
-out$io     # list(load = 1, clean = 2)  — two steps, so nested
-out$model  # 4  — single step, returned directly (not wrapped)
+out$io # list(load = 1, clean = 2)  — two steps, so nested
+out$model # 4  — single step, returned directly (not wrapped)
 
 # grouped = FALSE: flat named list with one entry per step
 pip_collect_out(p, grouped = FALSE)

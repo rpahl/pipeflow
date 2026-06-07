@@ -28,7 +28,7 @@ p <- pip_new("original") |>
 cp <- pip_clone(p, name = "copy")
 pip_add(cp, "s3", \(x = ~s2) x * 10)
 
-length(cp)  # 3 — clone has the new step
-length(p)   # 2 — original is unchanged
+length(cp) # 3 — clone has the new step
+length(p) # 2 — original is unchanged
 cp[["pipeline"]][["step"]]
 }

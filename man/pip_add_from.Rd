@@ -31,6 +31,6 @@ src <- pip_new("source") |>
 dst <- pip_new("target")
 pip_add_from(dst, src, "load")
 pip_add_from(dst, src, "square")
-pip_run(dst, lgr = NULL)
+pip_run(dst)
 pip_collect_out(dst, grouped = FALSE)
 }

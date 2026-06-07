@@ -25,13 +25,13 @@ Node shapes reflect execution mode: hexagon for \code{auto}/\code{plain}, star f
 }
 \examples{
 p <- pip_new()
-pip_add(p, "load",  \(x = 1) x,       group = "io")
+pip_add(p, "load", \(x = 1) x, group = "io")
 pip_add(p, "clean", \(x = ~load) x + 1, group = "io")
-pip_add(p, "fit",   \(x = ~clean) x * 2, group = "model")
+pip_add(p, "fit", \(x = ~clean) x * 2, group = "model")
 
 graph <- pip_get_graph(p)
-graph$nodes  # data.frame: id, label, group, shape, color
-graph$edges  # data.frame: from, to, arrows
+graph$nodes # data.frame: id, label, group, shape, color
+graph$edges # data.frame: from, to, arrows
 
 # For a view, include_upstream = TRUE adds upstream deps to the graph
 v <- pip_view(p, i = "fit")

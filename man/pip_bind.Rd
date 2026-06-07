@@ -29,6 +29,6 @@ b <- pip_new("b") |>
   pip_add("prep", \(x = 5) x * 3)
 
 z <- pip_bind(a, b)
-z[["pipeline"]][["step"]]  # "prep", "fit", "prep2" (conflict resolved)
-length(z)  # 3 steps total
+z[["step"]] # "prep", "fit", "prep2" (conflict resolved)
+length(z) # 3 steps total
 }

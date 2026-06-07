@@ -76,19 +76,17 @@ pip_add(p, "load", \(n = 5) seq_len(n), group = "io", tags = "raw")
 # Use ~step_name to declare a dependency on another step's output;
 # "square" will automatically receive the output of "load" at runtime
 pip_add(p, "square", \(x = ~load) x^2,
-  group = "transform", tags = c("core", "daily")
-)
-
-# after = 0 inserts a step at the very beginning of the pipeline
-pip_add(p, "init", \(msg = "starting") message(msg),
-  after = 0L, exec = "plain"
+  group = "math",
+  tags = c("core", "daily")
 )
 
 # Insert between two existing steps by giving a step name to `after`
 pip_add(p, "scale", \(x = ~load, factor = 2) x * factor,
-  after = "load"
+  group = "math",
+  after = "load",
 )
 
-pip_run(p, lgr = NULL)
-pip_collect_out(p, grouped = FALSE)
+p
+pip_run(p)
+pip_collect_out(p)
 }

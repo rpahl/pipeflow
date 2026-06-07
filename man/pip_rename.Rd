@@ -23,10 +23,10 @@ steps.
 \examples{
 p <- pip_new() |>
   pip_add("s1", \(x = 1) x) |>
-  pip_add("s2", \(x = ~s1) x + 1)  # "s2" depends on "s1"
+  pip_add("s2", \(x = ~s1) x + 1) # "s2" depends on "s1"
 
 # Downstream dependency references are updated automatically
 pip_rename(p, from = "s1", to = "load_data")
-p[["pipeline"]][["step"]]           # "load_data", "s2"
-p[["pipeline"]][["depends"]][[2]]   # "load_data" (was "s1")
+p[["pipeline"]][["step"]] # "load_data", "s2"
+p[["pipeline"]][["depends"]][[2]] # "load_data" (was "s1")
 }

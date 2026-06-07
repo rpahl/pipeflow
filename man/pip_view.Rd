@@ -43,10 +43,10 @@ affect only the selected steps.
 \examples{
 
 p <- pip_new()
-pip_add(p, "load_raw",  \(x = 1) x,
-  group = "io",    tags = c("core", "daily")
+pip_add(p, "load_raw", \(x = 1) x,
+  group = "io", tags = c("core", "daily")
 )
-pip_add(p, "fit_model",  \(x = 2) x + 1,
+pip_add(p, "fit_model", \(x = 2) x + 1,
   group = "model", tags = "model"
 )
 pip_add(p, "eval_model", \(x = ~fit_model) x,
@@ -76,7 +76,7 @@ pip_view(p, filter = list(step = "_model$"), fixed = FALSE)
 
 # Views are composable: create a view-of-view for progressive narrowing
 v1 <- pip_view(p, tags = "daily")
-print(v1)  # load_raw, eval_model
+print(v1) # load_raw, eval_model
 v2 <- pip_view(v1, tags = "report")
-print(v2)  # eval_model only
+print(v2) # eval_model only
 }

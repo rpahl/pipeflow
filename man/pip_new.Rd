@@ -19,11 +19,12 @@ them with \code{\link[=pip_run]{pip_run()}}.
 \examples{
 # Create a named pipeline
 p <- pip_new("my_analysis")
-p[["name"]]  # "my_analysis"
+p[["name"]] # "my_analysis"
 
-# Build a simple two-step pipeline and run it
+# Build a simple pipeline and run it
 pip_add(p, "load", \(n = 5) seq_len(n))
-pip_add(p, "double", \(x = ~load) x * 2)  # ~load wires a dependency
-pip_run(p, lgr = NULL)
-p[["pipeline"]][["out"]]  # list of outputs, one per step
+pip_add(p, "double", \(x = ~load) x * 2) # x depends on load's output
+p
+pip_run(p)
+p[["out"]] # list of outputs, one per step
 }

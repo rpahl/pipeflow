@@ -41,16 +41,18 @@ upstream dependencies.
 }
 \examples{
 p <- pip_new() |>
-  pip_add("load",  \(n = 3) seq_len(n)) |>
+  pip_add("load", \(n = 3) seq_len(n)) |>
   pip_add("square", \(x = ~load) x^2) |>
-  pip_add("total",  \(x = ~square) sum(x))
+  pip_add("total", \(x = ~square) sum(x))
 
-# lgr = NULL suppresses log output
-pip_run(p, lgr = NULL)
+pip_run(p)
 pip_collect_out(p, grouped = FALSE)
 
 # Already-done steps are skipped on a second run
-pip_run(p, lgr = NULL)          # all steps skipped
+pip_run(p) # all steps skipped
+
+# lgr = NULL suppresses log output
+pip_run(p, lgr = NULL)
 
 # force = TRUE re-executes every step regardless of state
 pip_run(p, lgr = NULL, force = TRUE)

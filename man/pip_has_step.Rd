@@ -20,9 +20,9 @@ Check whether a step exists
 \examples{
 p <- pip_new() |>
   pip_add("load", \(x = 1) x) |>
-  pip_add("fit",  \(x = ~load) x + 1)
+  pip_add("fit", \(x = ~load) x + 1)
 
-pip_has_step(p, "load")     # TRUE
-pip_has_step(p, "fit")      # TRUE
-pip_has_step(p, "predict")  # FALSE — step not yet added
+pip_has_step(p, "load") # TRUE
+pip_has_step(p, "fit") # TRUE
+pip_has_step(p, "predict") # FALSE — step not yet added
 }

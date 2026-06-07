@@ -25,15 +25,15 @@ remains unchanged.
 }
 \examples{
 p <- pip_new() |>
-  pip_add("load",  \(n = 10) seq_len(n)) |>
+  pip_add("load", \(n = 10) seq_len(n)) |>
   pip_add("scale", \(x = ~load, factor = 0.5) x * factor)
 
 # See all adjustable parameters before running
-pip_get_params(p)  # list(n = 10, factor = 0.5)
+pip_get_params(p) # list(n = 10, factor = 0.5)
 
 # Updating params marks affected steps (and their dependents) outdated
 pip_set_params(p, params = list(n = 5, factor = 2.0))
-p[["pipeline"]][["state"]]  # "outdated", "outdated"
+p[["pipeline"]][["state"]] # "outdated", "outdated"
 
 pip_run(p, lgr = NULL)
 pip_collect_out(p, grouped = FALSE)
