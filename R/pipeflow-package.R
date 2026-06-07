@@ -13,14 +13,12 @@
 .step_states[["failed"]] <- c(name = "failed", color = "#ff4c4cff")
 
 
-.this_package_name <- function()
-{
+.this_package_name <- function() {
     methods::getPackageName()
 }
 
 
-.this_package_path <- function(...)
-{
+.this_package_path <- function(...) {
     system.file(package = .this_package_name()) |>
         file.path(...) |>
         normalizePath(winslash = "/", mustWork = FALSE)

@@ -1,4 +1,3 @@
-
 .empty_pipeline <- function() {
     data.table::data.table(
         step = character(0),
@@ -14,13 +13,18 @@
         locked = logical(0),
         exec = character(0),
         .nodeId = integer(),
-        .indeps = list()     # names of independent parameters
+        .indeps = list() # names of independent parameters
     )
 }
 
 
 .new_step <- function(
-    step, group, fun, params, depends, .nodeId,
+    step,
+    group,
+    fun,
+    params,
+    depends,
+    .nodeId,
     tags = character(0),
     exec = "auto"
 ) {
@@ -42,8 +46,7 @@
     )
 }
 
-.extract_fun_params <- function(fun)
-{
+.extract_fun_params <- function(fun) {
     args <- formals(fun)
 
     # Remove potential "..." argument
@@ -71,8 +74,7 @@
 }
 
 
-.rel_pos_to_step_num <- function(relPos, startPos)
-{
+.rel_pos_to_step_num <- function(relPos, startPos) {
     if (!is.integer(relPos)) {
         stop("relPos must be an integer")
     }
@@ -105,7 +107,7 @@
         stop_no_call("steps must be a character vector")
     }
 
-    if(!is.integer(toPos)) {
+    if (!is.integer(toPos)) {
         stop_no_call("toPos must be an integer")
     }
     if (toPos > length(steps)) {
@@ -125,9 +127,10 @@
     }
 
     iRelPos <- which(depends |> startsWith("-"))
-    stepNumbers <- depends[iRelPos] |> lapply(
-        FUN = \(x) .rel_pos_to_step_num(abs(as.integer(x)), toPos)
-    )
+    stepNumbers <- depends[iRelPos] |>
+        lapply(
+            FUN = \(x) .rel_pos_to_step_num(abs(as.integer(x)), toPos)
+        )
     depends[iRelPos] <- steps[as.integer(stepNumbers)]
 
     unlist(depends)

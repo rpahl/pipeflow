@@ -1,17 +1,12 @@
-
-describe(".this_package_name",
-{
-    it("returns the expected package name",
-    {
+describe(".this_package_name", {
+    it("returns the expected package name", {
         expect_equal(.this_package_name(), "pipeflow")
     })
 })
 
 
-describe(".this_package_path",
-{
-    it("constructs the package path as expected",
-    {
+describe(".this_package_path", {
+    it("constructs the package path as expected", {
         dir <- system.file(package = .this_package_name())
 
         res <- .this_package_path("some", "path")

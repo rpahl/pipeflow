@@ -20,11 +20,11 @@ vignette: >
 require(pipeflow)
 
 knitr::opts_chunk$set(
-  comment = "#",
-  prompt = FALSE,
-  tidy = FALSE,
-  cache = FALSE,
-  collapse = TRUE
+    comment = "#",
+    prompt = FALSE,
+    tidy = FALSE,
+    cache = FALSE,
+    collapse = TRUE
 )
 
 old <- options(width = 100L)
@@ -54,33 +54,33 @@ residuals.
 library(pipeflow)
 
 pip <- pip_new("my-pipeline") |>
-
     pip_add(
         "data",
         function(data = NULL) data
     ) |>
-
     pip_add(
         "fit",
-        function(data = ~data, xVar = "x", yVar = "y")
-        {
+        function(
+            data = ~data,
+            xVar = "x",
+            yVar = "y"
+        ) {
             lm(paste(yVar, "~", xVar), data = data)
         }
     ) |>
-
     pip_add(
         "residual_shapiro_p_value",
-        function(fit = ~fit)
-        {
+        function(fit = ~fit) {
             residuals <- residuals(fit)
             shapiro.test(residuals)$p.value
         }
     ) |>
-
     pip_add(
         "plot",
-        function(fit = ~fit, pointColor = "black")
-        {
+        function(
+            fit = ~fit,
+            pointColor = "black"
+        ) {
             require(ggplot2, quietly = TRUE)
             data <- data.frame(
                 fitted = predict(fit),
@@ -150,7 +150,9 @@ For example, we could run the pipeline a second time as follows:
 
 ```{r, fig.alt = "residual-plot"}
 if (pip[["residual_shapiro_p_value", "out"]] < 0.05) {
-    pip |> pip_set_params(list(pointColor = "red")) |> pip_run()
+    pip |>
+        pip_set_params(list(pointColor = "red")) |>
+        pip_run()
 }
 
 pip[["plot", "out"]]
@@ -229,8 +231,10 @@ runtime based on the interim result passed into `f2`.
 ```{r}
 pip |> pip_replace(
     "f2",
-    function(x = ~f1, .self = NULL)
-    {
+    function(
+        x = ~f1,
+        .self = NULL
+    ) {
         if (x > 10) {
             .self |> pip_replace("f3", function(x = ~f1) x * 3)
             return(x / 2)
@@ -248,7 +252,9 @@ the input.
 To see this, let's try it with an input of 15.
 
 ```{r}
-pip |> pip_set_params(list(xInit = 15)) |> pip_run()
+pip |>
+    pip_set_params(list(xInit = 15)) |>
+    pip_run()
 
 pip
 ```
@@ -273,26 +279,29 @@ pip <- pip_new("my-pipeline") |>
     pip_add("f1", function(x = ~init) x + 1) |>
     pip_add(
         "f2",
-        function(x = ~f1, .self = NULL)
-        {
+        function(
+            x = ~f1,
+            .self = NULL
+        ) {
             if (x > 10) {
-                .self |> pip_add(
-                    "f2a",
-                    function(x = ~f1) x + 21,
-                    after = "f1",
-                ) |>
-                pip_add(
-                    "f2b",
-                    function(x = ~f2a) x + 22,
-                    after = "f2a"
-                ) |>
-                pip_replace(
-                    "f3",
-                    function(x = ~f2b) {
-                        x + 30
-                    }
-                ) |>
-                pip_remove("f2")
+                .self |>
+                    pip_add(
+                        "f2a",
+                        function(x = ~f1) x + 21,
+                        after = "f1",
+                    ) |>
+                    pip_add(
+                        "f2b",
+                        function(x = ~f2a) x + 22,
+                        after = "f2a"
+                    ) |>
+                    pip_replace(
+                        "f3",
+                        function(x = ~f2b) {
+                            x + 30
+                        }
+                    ) |>
+                    pip_remove("f2")
             }
             x + 2
         }
@@ -315,7 +324,9 @@ pip
 Next, we set the initial value to 11 to trigger the changes.
 
 ```{r}
-pip |> pip_set_params(list(xInit = 11)) |> pip_run()
+pip |>
+    pip_set_params(list(xInit = 11)) |>
+    pip_run()
 
 pip
 ```
@@ -329,7 +340,9 @@ So to have the true results, we need to re-init the parameter
 and need to re-run the pipeline.
 
 ```{r}
-pip |> pip_set_params(list(xInit = 11)) |> pip_run()
+pip |>
+    pip_set_params(list(xInit = 11)) |>
+    pip_run()
 
 pip
 ```
@@ -349,27 +362,30 @@ pip <- pip_new("my-pipeline") |>
     pip_add("f1", function(x = ~init) x + 1) |>
     pip_add(
         "f2",
-        function(x = ~f1, .self = NULL)
-        {
+        function(
+            x = ~f1,
+            .self = NULL
+        ) {
             if (x > 10) {
-                .self |> pip_add(
-                    "f2a",
-                    function(x = ~f1) x + 21,
-                    after = "f1",
-                ) |>
-                pip_add(
-                    "f2b",
-                    function(x = ~f2a) x + 22,
-                    after = "f2a"
-                ) |>
-                pip_replace(
-                    "f3",
-                    function(x = ~f2b) {
-                        x + 30
-                    }
-                ) |>
-                pip_remove("f2")
-                return(.self)       # <-- return modified pipeline
+                .self |>
+                    pip_add(
+                        "f2a",
+                        function(x = ~f1) x + 21,
+                        after = "f1",
+                    ) |>
+                    pip_add(
+                        "f2b",
+                        function(x = ~f2a) x + 22,
+                        after = "f2a"
+                    ) |>
+                    pip_replace(
+                        "f3",
+                        function(x = ~f2b) {
+                            x + 30
+                        }
+                    ) |>
+                    pip_remove("f2")
+                return(.self) # <-- return modified pipeline
             }
             x + 2
         }
@@ -381,7 +397,9 @@ Then let's run the pipeline again while also setting the `recursive`
 argument to `TRUE` and have a closer look at the log.
 
 ```{r}
-pip |> pip_set_params(list(xInit = 11)) |> pip_run(recursive = TRUE)
+pip |>
+    pip_set_params(list(xInit = 11)) |>
+    pip_run(recursive = TRUE)
 ```
 
 As you can see, the run is now automatically aborted right after

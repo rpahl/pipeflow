@@ -1,8 +1,8 @@
-
 # -----
 # Param
 # -----
-methods::setClass("Param",
+methods::setClass(
+    "Param",
     contains = "VIRTUAL",
     slots = c(
         name = "character",
@@ -15,9 +15,7 @@ methods::setClass("Param",
     )
 )
 
-methods::setValidity("Param",
-function(object)
-{
+methods::setValidity("Param", function(object) {
     stopifnot(
         is_string(object@name),
         !is.na(object@name),
@@ -31,76 +29,77 @@ function(object)
     TRUE
 })
 
-methods::setMethod("initialize", "Param",
-function(
-    .Object,
-    name,
-    value,
-    advanced = FALSE,
-    label = name,
-    description = "",
-    source = "internal",
-    domain = "",
-    ...
-) {
-    .Object@name <- name
-    .Object@value <- value
-    .Object@advanced <- advanced
-    .Object@label <- label
-    .Object@description <- description
-    .Object@source <- source
-    .Object@domain <- domain
+methods::setMethod(
+    "initialize",
+    "Param",
+    function(
+        .Object,
+        name,
+        value,
+        advanced = FALSE,
+        label = name,
+        description = "",
+        source = "internal",
+        domain = "",
+        ...
+    ) {
+        .Object@name <- name
+        .Object@value <- value
+        .Object@advanced <- advanced
+        .Object@label <- label
+        .Object@description <- description
+        .Object@source <- source
+        .Object@domain <- domain
 
-    methods::validObject(.Object)
-    .Object
-})
-
+        methods::validObject(.Object)
+        .Object
+    }
+)
 
 
 # ------------
 # BooleanParam
 # ------------
-methods::setClass("BooleanParam",
+methods::setClass(
+    "BooleanParam",
     slots = c(value = "logical"),
     contains = "Param"
 )
 
-methods::setValidity("BooleanParam",
-function(object)
-{
+methods::setValidity("BooleanParam", function(object) {
     stopifnot(
         length(object@value) <= 1
     )
     TRUE
 })
 
-methods::setMethod("initialize", "BooleanParam",
-function(.Object, name, value = TRUE, ...)
-{
-    value <- if (is.null(value)) {
-        as.logical(NA)
-    } else {
-        as.logical(value)
-    }
+methods::setMethod(
+    "initialize",
+    "BooleanParam",
+    function(.Object, name, value = TRUE, ...) {
+        value <- if (is.null(value)) {
+            as.logical(NA)
+        } else {
+            as.logical(value)
+        }
 
-    methods::callNextMethod(.Object, name = name, value = value, ...)
-})
+        methods::callNextMethod(.Object, name = name, value = value, ...)
+    }
+)
 
 BooleanParam <- function(...) methods::new("BooleanParam", ...)
-
 
 
 # ----------------
 # CategoricalParam
 # ----------------
-methods::setClass("CategoricalParam",
+methods::setClass(
+    "CategoricalParam",
     slots = c(value = "character", choices = "character"),
     contains = "Param"
 )
 
-methods::setValidity("CategoricalParam",
-function(object)
-{
+methods::setValidity("CategoricalParam", function(object) {
     stopifnot(
         is_string(object@value),
         is.character(object@choices),
@@ -110,89 +109,93 @@ function(object)
     TRUE
 })
 
-methods::setMethod("initialize", "CategoricalParam",
-function(
-    .Object,
-    name,
-    value = as.character(NA),
-    choices = as.character(NA),
-    ...
-) {
-    value <- if (is.null(value)) {
-        as.character(NA)
-    } else {
-        as.character(value)
+methods::setMethod(
+    "initialize",
+    "CategoricalParam",
+    function(
+        .Object,
+        name,
+        value = as.character(NA),
+        choices = as.character(NA),
+        ...
+    ) {
+        value <- if (is.null(value)) {
+            as.character(NA)
+        } else {
+            as.character(value)
+        }
+
+        .Object@choices <- choices
+
+        .Object <- methods::callNextMethod(
+            .Object,
+            name = name,
+            value = value,
+            ...
+        )
+        .Object
     }
-
-    .Object@choices <- choices
-
-    .Object <- methods::callNextMethod(.Object, name = name, value = value, ...)
-    .Object
-})
+)
 
 CategoricalParam <- function(...) methods::new("CategoricalParam", ...)
-
 
 
 # --------------
 # DataframeParam
 # --------------
-methods::setClass("DataframeParam",
+methods::setClass(
+    "DataframeParam",
     slots = c(value = "data.frame"),
     contains = "Param"
 )
 
-methods::setValidity("DataframeParam",
-function(object)
-{
+methods::setValidity("DataframeParam", function(object) {
     TRUE
 })
 
-methods::setMethod("initialize", "DataframeParam",
-function(.Object, name, value = data.frame(), ...)
-{
-    value <- as.data.frame(value)
+methods::setMethod(
+    "initialize",
+    "DataframeParam",
+    function(.Object, name, value = data.frame(), ...) {
+        value <- as.data.frame(value)
 
-    methods::callNextMethod(.Object, name = name, value = value, ...)
-})
+        methods::callNextMethod(.Object, name = name, value = value, ...)
+    }
+)
 
 DataframeParam <- function(...) methods::new("DataframeParam", ...)
-
 
 
 # ---------
 # ListParam
 # ---------
-methods::setClass("ListParam",
-    slots = c(value = "list"),
-    contains = "Param"
-)
+methods::setClass("ListParam", slots = c(value = "list"), contains = "Param")
 
-methods::setValidity("ListParam",
-function(object)
-{
+methods::setValidity("ListParam", function(object) {
     stopifnot(is.list(object@value) || is.null(object@value))
     TRUE
 })
 
-methods::setMethod("initialize", "ListParam",
-function(.Object, name, value = list(), ...)
-{
-    if (length(value) == 0 || (length(value) == 1 && is.na(value))) {
-        value = list()
-    }
+methods::setMethod(
+    "initialize",
+    "ListParam",
+    function(.Object, name, value = list(), ...) {
+        if (length(value) == 0 || (length(value) == 1 && is.na(value))) {
+            value = list()
+        }
 
-    methods::callNextMethod(.Object, name = name, value = value, ...)
-})
+        methods::callNextMethod(.Object, name = name, value = value, ...)
+    }
+)
 
 ListParam <- function(...) methods::new("ListParam", ...)
-
 
 
 # ------------
 # NumericParam
 # ------------
-methods::setClass("NumericParam",
+methods::setClass(
+    "NumericParam",
     slots = c(
         value = "numeric",
         min = "numeric",
@@ -201,9 +204,7 @@ methods::setClass("NumericParam",
     contains = "Param"
 )
 
-methods::setValidity("NumericParam",
-function(object)
-{
+methods::setValidity("NumericParam", function(object) {
     stopifnot(
         is_number(object@value),
         is_number(object@min),
@@ -221,35 +222,43 @@ function(object)
     TRUE
 })
 
-methods::setMethod("initialize", "NumericParam",
-function(
-    .Object,
-    name,
-    value = as.numeric(NA),
-    min = -Inf,
-    max = Inf,
-    ...
-) {
-    value = if (is.null(value)) {
-        as.numeric(NA)
-    } else {
-        as.numeric(value)
-    }
+methods::setMethod(
+    "initialize",
+    "NumericParam",
+    function(
+        .Object,
+        name,
+        value = as.numeric(NA),
+        min = -Inf,
+        max = Inf,
+        ...
+    ) {
+        value = if (is.null(value)) {
+            as.numeric(NA)
+        } else {
+            as.numeric(value)
+        }
 
-    .Object@min <- min
-    .Object@max <- max
-    .Object = methods::callNextMethod(.Object, name = name, value = value, ...)
-    .Object
-})
+        .Object@min <- min
+        .Object@max <- max
+        .Object = methods::callNextMethod(
+            .Object,
+            name = name,
+            value = value,
+            ...
+        )
+        .Object
+    }
+)
 
 NumericParam <- function(...) methods::new("NumericParam", ...)
-
 
 
 # ------------
 # NumericRangeParam
 # ------------
-methods::setClass("NumericRangeParam",
+methods::setClass(
+    "NumericRangeParam",
     slots = c(
         value = "numeric",
         min = "numeric",
@@ -260,10 +269,7 @@ methods::setClass("NumericRangeParam",
     contains = "Param"
 )
 
-methods::setValidity("NumericRangeParam",
-function(object)
-{
-
+methods::setValidity("NumericRangeParam", function(object) {
     stopifnot(
         all(sapply(object@value, is_number)),
         is_number(object@min),
@@ -283,68 +289,74 @@ function(object)
     TRUE
 })
 
-methods::setMethod("initialize", "NumericRangeParam",
-function(
-    .Object,
-    name,
-    value = as.numeric(c(NA, NA)),
-    min = -Inf,
-    max = Inf,
-    step = Inf,
-    reversed = FALSE,
-    ...
-) {
-    value = if (any(is.null(value))) {
-        as.numeric(c(NA, NA))
-    } else {
-        as.numeric(value)
-    }
+methods::setMethod(
+    "initialize",
+    "NumericRangeParam",
+    function(
+        .Object,
+        name,
+        value = as.numeric(c(NA, NA)),
+        min = -Inf,
+        max = Inf,
+        step = Inf,
+        reversed = FALSE,
+        ...
+    ) {
+        value = if (any(is.null(value))) {
+            as.numeric(c(NA, NA))
+        } else {
+            as.numeric(value)
+        }
 
-    .Object@min <- min
-    .Object@max <- max
-    .Object@step <- step
-    .Object@reversed <- reversed
-    .Object = methods::callNextMethod(.Object, name = name, value = value, ...)
-    .Object
-})
+        .Object@min <- min
+        .Object@max <- max
+        .Object@step <- step
+        .Object@reversed <- reversed
+        .Object = methods::callNextMethod(
+            .Object,
+            name = name,
+            value = value,
+            ...
+        )
+        .Object
+    }
+)
 
 NumericRangeParam <- function(...) methods::new("NumericRangeParam", ...)
-
 
 
 # -----------
 # StringParam
 # -----------
-methods::setClass("StringParam",
+methods::setClass(
+    "StringParam",
     slots = c(value = "character"),
     contains = "Param"
 )
 
-methods::setValidity("StringParam",
-function(object)
-{
+methods::setValidity("StringParam", function(object) {
     stopifnot(is_string(object@value))
     TRUE
 })
 
-methods::setMethod("initialize", "StringParam",
-function(.Object, name, value = as.character(NA), ...)
-{
-    value = if (is.null(value))
-        as.character(NA)
-    else as.character(value)
+methods::setMethod(
+    "initialize",
+    "StringParam",
+    function(.Object, name, value = as.character(NA), ...) {
+        value = if (is.null(value)) {
+            as.character(NA)
+        } else {
+            as.character(value)
+        }
 
-    methods::callNextMethod(.Object, name = name, value = value, ...)
-})
+        methods::callNextMethod(.Object, name = name, value = value, ...)
+    }
+)
 
 StringParam <- function(...) methods::new("StringParam", ...)
 
 
-
-
-
-param_list_to_json = function(x)
-{
+param_list_to_json = function(x) {
     params <- lapply(x, function(p) as.list(attributes(eval(p))))
 
     # Set call arg names as param names and clean to have unnamed json elements
@@ -357,8 +369,7 @@ param_list_to_json = function(x)
 }
 
 
-param_list_from_json <- function(x)
-{
+param_list_from_json <- function(x) {
     stopifnot(inherits(x, "json"))
 
     dat = jsonlite::fromJSON(x)

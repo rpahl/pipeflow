@@ -17,11 +17,11 @@ vignette: >
 require(pipeflow)
 
 knitr::opts_chunk$set(
-  comment = "#",
-  prompt = FALSE,
-  tidy = FALSE,
-  cache = FALSE,
-  collapse = TRUE
+    comment = "#",
+    prompt = FALSE,
+    tidy = FALSE,
+    cache = FALSE,
+    collapse = TRUE
 )
 
 old <- options(width = 100L)
@@ -45,24 +45,26 @@ fits a linear model and outputs the model coefficients.
 library(pipeflow)
 
 pip <- pip_new("my-pipeline") |>
-  pip_add(
-    "data",
-    function(data = NULL) data
-  ) |>
-  pip_add(
-    "fit",
-    function(data = ~data,
-             xVar = "x",
-             yVar = "y") {
-      lm(paste(yVar, "~", xVar), data = data)
-    }
-  ) |>
-  pip_add(
-    "coefs",
-    function(fit = ~fit) {
-      coefficients(fit)
-    }
-  )
+    pip_add(
+        "data",
+        function(data = NULL) data
+    ) |>
+    pip_add(
+        "fit",
+        function(
+            data = ~data,
+            xVar = "x",
+            yVar = "y"
+        ) {
+            lm(paste(yVar, "~", xVar), data = data)
+        }
+    ) |>
+    pip_add(
+        "coefs",
+        function(fit = ~fit) {
+            coefficients(fit)
+        }
+    )
 ```
 
 So our pipeline looks like this:
@@ -83,9 +85,9 @@ First, we apply the pipeline to the whole data set.
 
 ```{r}
 pip |> pip_set_params(list(
-  data = iris,
-  xVar = "Sepal.Length",
-  yVar = "Sepal.Width"
+    data = iris,
+    xVar = "Sepal.Length",
+    yVar = "Sepal.Width"
 ))
 
 pip_run(pip)
@@ -106,9 +108,9 @@ for each subset. For example:
 
 ```{r}
 run_pipeline_helper <- function(data) {
-  pip |> pip_set_params(list(data = data))
-  pip_run(pip)
-  pip[["coefs", "out"]]
+    pip |> pip_set_params(list(data = data))
+    pip_run(pip)
+    pip[["coefs", "out"]]
 }
 
 results <- lapply(split(iris, iris$Species), FUN = run_pipeline_helper)
@@ -133,32 +135,36 @@ that splits the data set and set its execution mode to `split`.
 
 ```{r}
 pip <- pip_new("my-split-pip") |>
-  pip_add(
-    "data",
-    function(data = NULL) data
-  ) |>
-  pip_add(
-    "split_data",
-    function(data = ~data,
-             byVar = "by") {
-      split(data, f = data[[byVar]])
-    },
-    exec = "split" # <-- set execution mode to "split"
-  ) |>
-  pip_add(
-    "fit",
-    function(data = ~split_data,
-             xVar = "x",
-             yVar = "y") {
-      lm(paste(yVar, "~", xVar), data = data)
-    }
-  ) |>
-  pip_add(
-    "coefs",
-    function(fit = ~fit) {
-      coefficients(fit)
-    }
-  )
+    pip_add(
+        "data",
+        function(data = NULL) data
+    ) |>
+    pip_add(
+        "split_data",
+        function(
+            data = ~data,
+            byVar = "by"
+        ) {
+            split(data, f = data[[byVar]])
+        },
+        exec = "split" # <-- set execution mode to "split"
+    ) |>
+    pip_add(
+        "fit",
+        function(
+            data = ~split_data,
+            xVar = "x",
+            yVar = "y"
+        ) {
+            lm(paste(yVar, "~", xVar), data = data)
+        }
+    ) |>
+    pip_add(
+        "coefs",
+        function(fit = ~fit) {
+            coefficients(fit)
+        }
+    )
 ```
 
 ```{r}
@@ -177,10 +183,10 @@ do.call(visNetwork, args = pip_get_graph(pip))
 ```{r, echo = FALSE}
 library(visNetwork)
 do.call(
-  visNetwork,
-  args = c(pip_get_graph(pip), list(height = 100, width = 500))
+    visNetwork,
+    args = c(pip_get_graph(pip), list(height = 100, width = 500))
 ) |>
-  visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
 Now what does this execution mode actually do? It basically tells the pipeline
@@ -196,10 +202,10 @@ Let's see this in action by running the pipeline.
 
 ```{r}
 pip |> pip_set_params(list(
-  data = iris,
-  xVar = "Sepal.Length",
-  yVar = "Sepal.Width",
-  byVar = "Species"
+    data = iris,
+    xVar = "Sepal.Length",
+    yVar = "Sepal.Width",
+    byVar = "Species"
 ))
 
 pip_run(pip)
@@ -238,11 +244,11 @@ Let's for this matter extend our pipeline by one step at the end.
 
 ```{r}
 pip |> pip_add(
-  "combine_coefs",
-  function(coefs = ~coefs) {
-    do.call(rbind, coefs)
-  },
-  exec = "reduce" # <-- set execution mode to "reduce"
+    "combine_coefs",
+    function(coefs = ~coefs) {
+        do.call(rbind, coefs)
+    },
+    exec = "reduce" # <-- set execution mode to "reduce"
 )
 ```
 
@@ -259,10 +265,10 @@ do.call(visNetwork, args = pip_get_graph(pip))
 
 ```{r, echo = FALSE}
 do.call(
-  visNetwork,
-  args = c(pip_get_graph(pip), list(height = 100, width = 650))
+    visNetwork,
+    args = c(pip_get_graph(pip), list(height = 100, width = 650))
 ) |>
-  visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
 If we now run the pipeline, we see that the output of the `combine_coefs` step is

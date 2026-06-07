@@ -1,8 +1,5 @@
-
-describe(".empty_pipeline",
-{
-    it("returns an empty data.table",
-    {
+describe(".empty_pipeline", {
+    it("returns an empty data.table", {
         dt <- .empty_pipeline()
         expect_true(data.table::is.data.table(dt))
         expect_equal(nrow(dt), 0)
@@ -10,8 +7,7 @@ describe(".empty_pipeline",
 })
 
 
-describe(".new_step",
-{
+describe(".new_step", {
     step <- .new_step(
         step = "step2",
         group = "group1",
@@ -22,8 +18,7 @@ describe(".new_step",
         .nodeId = 0
     )
 
-    it("contains the expected elements",
-    {
+    it("contains the expected elements", {
         expect_equal(step$step, "step2")
         expect_equal(step$group, "group1")
         expect_equal(step$fun[[1]](2), 4)
@@ -39,31 +34,26 @@ describe(".new_step",
         expect_equal(step$.indeps, list("x"))
     })
 
-    it("aligns with the empty pipeline",
-    {
+    it("aligns with the empty pipeline", {
         expect_equal(names(step), names(.empty_pipeline()))
     })
 
-    it("can be appended to the empty pipeline",
-    {
+    it("can be appended to the empty pipeline", {
         dt <- data.table::rbindlist(list(.empty_pipeline(), step))
         expect_equal(nrow(dt), 1)
     })
 })
 
 
-describe(".extract_fun_params",
-{
-    it("returns TRUE if function has no args",
-    {
+describe(".extract_fun_params", {
+    it("returns TRUE if function has no args", {
         expect_equal(
             .extract_fun_params(function() 1),
             list()
         )
     })
 
-    it("returns default values for function arguments",
-    {
+    it("returns default values for function arguments", {
         expect_equal(
             .extract_fun_params(function(x = 1) x),
             list(x = 1)
@@ -74,8 +64,7 @@ describe(".extract_fun_params",
         )
     })
 
-    it("signals parameters with no default values",
-    {
+    it("signals parameters with no default values", {
         expect_error(
             .extract_fun_params(function(x, y = 1) x + y),
             "'x' has no default value",
@@ -89,24 +78,21 @@ describe(".extract_fun_params",
         )
     })
 
-    it("supports ...",
-    {
+    it("supports ...", {
         expect_equal(
             .extract_fun_params(function(x = 1, ...) x),
             list(x = 1)
         )
     })
 
-    it("supports formula",
-    {
+    it("supports formula", {
         expect_equal(
             .extract_fun_params(function(x = 1, y = ~foo) x),
             list(x = 1, y = ~foo)
         )
     })
 
-    it("works with default values declared outside the function",
-    {
+    it("works with default values declared outside the function", {
         default_value <- 1
         expect_equal(
             .extract_fun_params(function(x = default_value) x),
@@ -116,28 +102,24 @@ describe(".extract_fun_params",
 })
 
 
-describe(".extract_depends",
-{
+describe(".extract_depends", {
     steps <- c("s1", "s2", "s3")
 
-    it("returns an empty character vector if no params are defined",
-    {
+    it("returns an empty character vector if no params are defined", {
         expect_equal(
             .extract_depends(list(), steps),
             character(0)
         )
     })
 
-    it("returns an empty character vector if no dependencies are defined",
-    {
+    it("returns an empty character vector if no dependencies are defined", {
         expect_equal(
             .extract_depends(list(a = 1), steps),
             character(0)
         )
     })
 
-    it("extracts all dependencies defined via step name",
-    {
+    it("extracts all dependencies defined via step name", {
         expect_equal(
             .extract_depends(list(a = ~s1, b = 2), steps),
             c(a = "s1")
@@ -148,59 +130,53 @@ describe(".extract_depends",
         )
     })
 
-    it("extracts all dependencies defined relative",
-    {
+    it("extracts all dependencies defined relative", {
         expect_equal(
-            .extract_depends(list(x = ~-1), steps = c("f1", "f2")),
+            .extract_depends(list(x = ~ -1), steps = c("f1", "f2")),
             c(x = "f1")
         )
         expect_equal(
-            .extract_depends(list(a = ~-1, b = 2), steps),
+            .extract_depends(list(a = ~ -1, b = 2), steps),
             c(a = "s2")
         )
         expect_equal(
-            .extract_depends(list(a = ~-2, b = ~-1), steps),
+            .extract_depends(list(a = ~ -2, b = ~ -1), steps),
             c(a = "s1", b = "s2")
         )
     })
 
-    it("signals bad steps input",
-    {
+    it("signals bad steps input", {
         expect_error(
-            .extract_depends(list(a = ~-1), character(0)),
+            .extract_depends(list(a = ~ -1), character(0)),
             "startPos must be at least 1"
         )
     })
-    it("signals relative index out of bound",
-    {
+    it("signals relative index out of bound", {
         expect_error(
-            .extract_depends(list(a = ~-1), "s1"),
+            .extract_depends(list(a = ~ -1), "s1"),
             "relative index -1 points outside pipeline"
         )
         expect_error(
-            .extract_depends(list(a = ~-4), steps),
+            .extract_depends(list(a = ~ -4), steps),
             "relative index -4 points outside pipeline"
         )
     })
 
-    it("extracts all dependencies if defined both ways",
-    {
+    it("extracts all dependencies if defined both ways", {
         expect_equal(
-            .extract_depends(list(a = ~-1, b = ~s1, c = 3), steps),
+            .extract_depends(list(a = ~ -1, b = ~s1, c = 3), steps),
             c(a = "s2", b = "s1")
         )
     })
 
-    it("signals toPos exceeding number of steps",
-    {
+    it("signals toPos exceeding number of steps", {
         expect_error(
             .extract_depends(list(), steps, 4L),
             "toPos exceeds number of steps"
         )
     })
 
-    it("signals bad arg types",
-    {
+    it("signals bad arg types", {
         f <- .extract_depends
         expect_error(
             f("not a list", steps),

@@ -1,37 +1,45 @@
 #' @noRd
 .pipeflow_in_check_or_test <- function() {
-  identical(Sys.getenv("_R_CHECK_PACKAGE_NAME_"), "pipeflow") ||
-    identical(Sys.getenv("TESTTHAT"), "true")
+    identical(Sys.getenv("_R_CHECK_PACKAGE_NAME_"), "pipeflow") ||
+        identical(Sys.getenv("TESTTHAT"), "true")
 }
 
 
 #' @noRd
 .pipeflow_deprecate <- function(...) {
-  if (.pipeflow_in_check_or_test()) {
-    return(invisible(NULL))
-  }
+    if (.pipeflow_in_check_or_test()) {
+        return(invisible(NULL))
+    }
 
-  args <- list(...)
-  key <- paste(
-    paste(names(args), vapply(args, function(x) {
-      paste(as.character(x), collapse = "|")
-    }, character(1)), sep = "="),
-    collapse = ";"
-  )
+    args <- list(...)
+    key <- paste(
+        paste(
+            names(args),
+            vapply(
+                args,
+                function(x) {
+                    paste(as.character(x), collapse = "|")
+                },
+                character(1)
+            ),
+            sep = "="
+        ),
+        collapse = ";"
+    )
 
-  warned <- getOption("pipeflow_deprecation_warned", character())
-  if (key %in% warned) {
-    return(invisible(NULL))
-  }
+    warned <- getOption("pipeflow_deprecation_warned", character())
+    if (key %in% warned) {
+        return(invisible(NULL))
+    }
 
-  options(pipeflow_deprecation_warned = unique(c(warned, key)))
-  .Deprecated(...)
+    options(pipeflow_deprecation_warned = unique(c(warned, key)))
+    .Deprecated(...)
 }
 
 
 .legacy_pipe_msg <- paste0(
-  "The legacy 'pipe_*' API is deprecated and will be removed in a ",
-  "future release. Please migrate to the new 'pip_*' API."
+    "The legacy 'pipe_*' API is deprecated and will be removed in a ",
+    "future release. Please migrate to the new 'pip_*' API."
 )
 
 #' @title Add pipeline step
@@ -99,35 +107,35 @@
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_add()] instead.
 #' @export
 pipe_add <- function(
-  pip,
-  step,
-  fun,
-  params = list(),
-  description = "",
-  group = step,
-  keepOut = FALSE
+    pip,
+    step,
+    fun,
+    params = list(),
+    description = "",
+    group = step,
+    keepOut = FALSE
 ) {
-  .pipeflow_deprecate(
-    new = "pip_add",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$add(
-    step = step,
-    fun = fun,
-    params = params,
-    description = description,
-    group = group,
-    keepOut = keepOut
-  )
+    .pipeflow_deprecate(
+        new = "pip_add",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$add(
+        step = step,
+        fun = fun,
+        params = params,
+        description = description,
+        group = group,
+        keepOut = keepOut
+    )
 
-  if (is.function(fun)) {
-    funcName <- as.character(substitute(fun))[[1]]
-    index <- match(step, pip$get_step_names())
-    pip$pipeline[index, "funcName"] <- funcName
-  }
+    if (is.function(fun)) {
+        funcName <- as.character(substitute(fun))[[1]]
+        index <- match(step, pip$get_step_names())
+        pip$pipeline[index, "funcName"] <- funcName
+    }
 
-  invisible(pip)
+    invisible(pip)
 }
 
 
@@ -177,23 +185,23 @@ pipe_add <- function(
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_bind()] instead.
 #' @export
 pipe_append <- function(
-  pip,
-  p,
-  outAsIn = FALSE,
-  tryAutofixNames = TRUE,
-  sep = "."
+    pip,
+    p,
+    outAsIn = FALSE,
+    tryAutofixNames = TRUE,
+    sep = "."
 ) {
-  .pipeflow_deprecate(
-    new = "pip_bind",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$append(
-    p = p,
-    outAsIn = outAsIn,
-    tryAutofixNames = tryAutofixNames,
-    sep = sep
-  )
+    .pipeflow_deprecate(
+        new = "pip_bind",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$append(
+        p = p,
+        outAsIn = outAsIn,
+        tryAutofixNames = tryAutofixNames,
+        sep = sep
+    )
 }
 
 
@@ -216,12 +224,12 @@ pipe_append <- function(
 #' related pip_* functions.
 #' @export
 pipe_append_to_step_names <- function(
-  pip,
-  postfix,
-  sep = "."
+    pip,
+    postfix,
+    sep = "."
 ) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$append_to_step_names(postfix = postfix, sep = sep)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$append_to_step_names(postfix = postfix, sep = sep)
 }
 
 
@@ -240,12 +248,12 @@ pipe_append_to_step_names <- function(
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_clone()] instead.
 #' @export
 pipe_clone <- function(pip, deep = FALSE) {
-  .pipeflow_deprecate(
-    new = "pip_clone",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$clone(deep = deep)
+    .pipeflow_deprecate(
+        new = "pip_clone",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$clone(deep = deep)
 }
 
 
@@ -289,12 +297,12 @@ pipe_clone <- function(pip, deep = FALSE) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_collect_out()] instead.
 #' @export
 pipe_collect_out <- function(pip, groupBy = "group", all = FALSE) {
-  .pipeflow_deprecate(
-    new = "pip_collect_out",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$collect_out(groupBy = groupBy, all = all)
+    .pipeflow_deprecate(
+        new = "pip_collect_out",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$collect_out(groupBy = groupBy, all = all)
 }
 
 
@@ -338,19 +346,19 @@ pipe_collect_out <- function(pip, groupBy = "group", all = FALSE) {
 #' related pip_* functions.
 #' @export
 pipe_discard_steps <- function(
-  pip,
-  pattern,
-  recursive = FALSE,
-  fixed = TRUE,
-  ...
-) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$discard_steps(
-    pattern = pattern,
-    recursive = recursive,
-    fixed = fixed,
+    pip,
+    pattern,
+    recursive = FALSE,
+    fixed = TRUE,
     ...
-  )
+) {
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$discard_steps(
+        pattern = pattern,
+        recursive = recursive,
+        fixed = fixed,
+        ...
+    )
 }
 
 
@@ -368,8 +376,8 @@ pipe_discard_steps <- function(
 #' related pip_* functions.
 #' @export
 pipe_get_data <- function(pip) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$get_data()
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$get_data()
 }
 
 
@@ -415,8 +423,8 @@ pipe_get_data <- function(pip) {
 #' related pip_* functions.
 #' @export
 pipe_get_depends <- function(pip) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$get_depends()
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$get_depends()
 }
 
 
@@ -429,8 +437,8 @@ pipe_get_depends <- function(pip) {
 #' related pip_* functions.
 #' @export
 pipe_get_depends_down <- function(pip, step, recursive = TRUE) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$get_depends_down(step = step, recursive = recursive)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$get_depends_down(step = step, recursive = recursive)
 }
 
 
@@ -442,8 +450,8 @@ pipe_get_depends_down <- function(pip, step, recursive = TRUE) {
 #' related pip_* functions.
 #' @export
 pipe_get_depends_up <- function(pip, step, recursive = TRUE) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$get_depends_up(step = step, recursive = recursive)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$get_depends_up(step = step, recursive = recursive)
 }
 
 
@@ -469,12 +477,12 @@ pipe_get_depends_up <- function(pip, step, recursive = TRUE) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_get_graph()] instead.
 #' @export
 pipe_get_graph <- function(pip, groups = NULL) {
-  .pipeflow_deprecate(
-    new = "pip_get_graph",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$get_graph(groups = groups)
+    .pipeflow_deprecate(
+        new = "pip_get_graph",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$get_graph(groups = groups)
 }
 
 
@@ -494,8 +502,8 @@ pipe_get_graph <- function(pip, groups = NULL) {
 #' related pip_* functions.
 #' @export
 pipe_get_out <- function(pip, step) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$get_out(step)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$get_out(step)
 }
 
 
@@ -545,12 +553,12 @@ pipe_get_out <- function(pip, step) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_get_params()] instead.
 #' @export
 pipe_get_params <- function(pip, ignoreHidden = TRUE) {
-  .pipeflow_deprecate(
-    new = "pip_get_params",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$get_params(ignoreHidden = ignoreHidden)
+    .pipeflow_deprecate(
+        new = "pip_get_params",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$get_params(ignoreHidden = ignoreHidden)
 }
 
 
@@ -559,8 +567,8 @@ pipe_get_params <- function(pip, ignoreHidden = TRUE) {
 #' related pip_* functions.
 #' @export
 pipe_get_params_at_step <- function(pip, step, ignoreHidden = TRUE) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$get_params_at_step(step = step, ignoreHidden = ignoreHidden)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$get_params_at_step(step = step, ignoreHidden = ignoreHidden)
 }
 
 
@@ -569,8 +577,8 @@ pipe_get_params_at_step <- function(pip, step, ignoreHidden = TRUE) {
 #' related pip_* functions.
 #' @export
 pipe_get_params_unique <- function(pip, ignoreHidden = TRUE) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$get_params_unique(ignoreHidden = ignoreHidden)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$get_params_unique(ignoreHidden = ignoreHidden)
 }
 
 
@@ -579,8 +587,8 @@ pipe_get_params_unique <- function(pip, ignoreHidden = TRUE) {
 #' related pip_* functions.
 #' @export
 pipe_get_params_unique_json <- function(pip, ignoreHidden = TRUE) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$get_params_unique_json(ignoreHidden = ignoreHidden)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$get_params_unique_json(ignoreHidden = ignoreHidden)
 }
 
 
@@ -623,8 +631,8 @@ pipe_get_params_unique_json <- function(pip, ignoreHidden = TRUE) {
 #' related pip_* functions.
 #' @export
 pipe_get_step <- function(pip, step) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$get_step(step)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$get_step(step)
 }
 
 
@@ -633,8 +641,8 @@ pipe_get_step <- function(pip, step) {
 #' related pip_* functions.
 #' @export
 pipe_get_step_names <- function(pip) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$get_step_names()
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$get_step_names()
 }
 
 
@@ -643,8 +651,8 @@ pipe_get_step_names <- function(pip) {
 #' related pip_* functions.
 #' @export
 pipe_get_step_number <- function(pip, step) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$get_step_number(step)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$get_step_number(step)
 }
 
 
@@ -652,12 +660,12 @@ pipe_get_step_number <- function(pip, step) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_has_step()] instead.
 #' @export
 pipe_has_step <- function(pip, step) {
-  .pipeflow_deprecate(
-    new = "pip_has_step",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$has_step(step)
+    .pipeflow_deprecate(
+        new = "pip_has_step",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$has_step(step)
 }
 
 
@@ -688,8 +696,8 @@ pipe_has_step <- function(pip, step) {
 #' related pip_* functions.
 #' @export
 pipe_insert_after <- function(pip, afterStep, step, ...) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$insert_after(afterStep = afterStep, step = step, ...)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$insert_after(afterStep = afterStep, step = step, ...)
 }
 
 
@@ -699,8 +707,8 @@ pipe_insert_after <- function(pip, afterStep, step, ...) {
 #' related pip_* functions.
 #' @export
 pipe_insert_before <- function(pip, beforeStep, step, ...) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$insert_before(beforeStep = beforeStep, step = step, ...)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$insert_before(beforeStep = beforeStep, step = step, ...)
 }
 
 
@@ -716,12 +724,12 @@ pipe_insert_before <- function(pip, beforeStep, step, ...) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [length()] instead.
 #' @export
 pipe_length <- function(pip) {
-  .pipeflow_deprecate(
-    new = "length",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$length()
+    .pipeflow_deprecate(
+        new = "length",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$length()
 }
 
 
@@ -759,12 +767,12 @@ pipe_length <- function(pip) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_lock()] instead.
 #' @export
 pipe_lock_step <- function(pip, step) {
-  .pipeflow_deprecate(
-    new = "pip_lock",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$lock_step(step)
+    .pipeflow_deprecate(
+        new = "pip_lock",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$lock_step(step)
 }
 
 
@@ -822,18 +830,18 @@ pipe_lock_step <- function(pip, step) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_new()] instead.
 #' @export
 pipe_new <- function(
-  name,
-  data = NULL,
-  logger = NULL
+    name,
+    data = NULL,
+    logger = NULL
 ) {
-  .pipeflow_deprecate(
-    new = "pip_new",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  oldDeprecOpt <- options(pipeflow.suppress_pipeline_new_deprecation = TRUE)
-  on.exit(options(oldDeprecOpt), add = TRUE)
-  Pipeline$new(name, data = data, logger = logger)
+    .pipeflow_deprecate(
+        new = "pip_new",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    oldDeprecOpt <- options(pipeflow.suppress_pipeline_new_deprecation = TRUE)
+    on.exit(options(oldDeprecOpt), add = TRUE)
+    Pipeline$new(name, data = data, logger = logger)
 }
 
 
@@ -872,8 +880,8 @@ pipe_new <- function(
 #' related pip_* functions.
 #' @export
 pipe_pop_step <- function(pip) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$pop_step()
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$pop_step()
 }
 
 
@@ -883,8 +891,8 @@ pipe_pop_step <- function(pip) {
 #' related pip_* functions.
 #' @export
 pipe_pop_steps_after <- function(pip, step) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$pop_steps_after(step)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$pop_steps_after(step)
 }
 
 
@@ -894,8 +902,8 @@ pipe_pop_steps_after <- function(pip, step) {
 #' related pip_* functions.
 #' @export
 pipe_pop_steps_from <- function(pip, step) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$pop_steps_from(step)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$pop_steps_from(step)
 }
 
 
@@ -918,12 +926,12 @@ pipe_pop_steps_from <- function(pip, step) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [print()] instead.
 #' @export
 pipe_print <- function(pip, verbose = FALSE) {
-  .pipeflow_deprecate(
-    new = "print",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$print(verbose = verbose)
+    .pipeflow_deprecate(
+        new = "print",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$print(verbose = verbose)
 }
 
 
@@ -952,12 +960,12 @@ pipe_print <- function(pip, verbose = FALSE) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_remove()] instead.
 #' @export
 pipe_remove_step <- function(pip, step, recursive = FALSE) {
-  .pipeflow_deprecate(
-    new = "pip_remove",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$remove_step(step = step, recursive = recursive)
+    .pipeflow_deprecate(
+        new = "pip_remove",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$remove_step(step = step, recursive = recursive)
 }
 
 
@@ -981,12 +989,12 @@ pipe_remove_step <- function(pip, step, recursive = FALSE) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_rename()] instead.
 #' @export
 pipe_rename_step <- function(pip, from, to) {
-  .pipeflow_deprecate(
-    new = "pip_rename",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$rename_step(from = from, to = to)
+    .pipeflow_deprecate(
+        new = "pip_rename",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$rename_step(from = from, to = to)
 }
 
 
@@ -1028,36 +1036,35 @@ pipe_rename_step <- function(pip, from, to) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_replace()] instead.
 #' @export
 pipe_replace_step <- function(
-  pip,
-  step,
-  fun,
-  params = list(),
-  description = "",
-  group = step,
-  keepOut = FALSE
+    pip,
+    step,
+    fun,
+    params = list(),
+    description = "",
+    group = step,
+    keepOut = FALSE
 ) {
-  .pipeflow_deprecate(
-    new = "pip_replace",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$replace_step(
-    step = step,
-    fun = fun,
-    params = params,
-    description = description,
-    group = group,
-    keepOut = keepOut
-  )
+    .pipeflow_deprecate(
+        new = "pip_replace",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$replace_step(
+        step = step,
+        fun = fun,
+        params = params,
+        description = description,
+        group = group,
+        keepOut = keepOut
+    )
 
-  if (is.function(fun)) {
-    funcName <- as.character(substitute(fun))[[1]]
-    index <- match(step, pip$get_step_names())
-    pip$pipeline[index, "funcName"] <- funcName
-  }
+    if (is.function(fun)) {
+        funcName <- as.character(substitute(fun))[[1]]
+        index <- match(step, pip$get_step_names())
+        pip$pipeline[index, "funcName"] <- funcName
+    }
 
-
-  invisible(pip)
+    invisible(pip)
 }
 
 
@@ -1080,8 +1087,8 @@ pipe_replace_step <- function(
 #' related pip_* functions.
 #' @export
 pipe_reset <- function(pip) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$reset()
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$reset()
 }
 
 
@@ -1146,25 +1153,25 @@ pipe_reset <- function(pip) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_run()] instead.
 #' @export
 pipe_run <- function(
-  pip,
-  force = FALSE,
-  recursive = TRUE,
-  cleanUnkept = FALSE,
-  progress = NULL,
-  showLog = TRUE
+    pip,
+    force = FALSE,
+    recursive = TRUE,
+    cleanUnkept = FALSE,
+    progress = NULL,
+    showLog = TRUE
 ) {
-  .pipeflow_deprecate(
-    new = "pip_run",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$run(
-    force = force,
-    recursive = recursive,
-    cleanUnkept = cleanUnkept,
-    progress = progress,
-    showLog = showLog
-  )
+    .pipeflow_deprecate(
+        new = "pip_run",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$run(
+        force = force,
+        recursive = recursive,
+        cleanUnkept = cleanUnkept,
+        progress = progress,
+        showLog = showLog
+    )
 }
 
 
@@ -1194,23 +1201,23 @@ pipe_run <- function(
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_run()] instead.
 #' @export
 pipe_run_step <- function(
-  pip,
-  step,
-  upstream = TRUE,
-  downstream = FALSE,
-  cleanUnkept = FALSE
+    pip,
+    step,
+    upstream = TRUE,
+    downstream = FALSE,
+    cleanUnkept = FALSE
 ) {
-  .pipeflow_deprecate(
-    new = "pip_run",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$run_step(
-    step = step,
-    upstream = upstream,
-    downstream = downstream,
-    cleanUnkept = cleanUnkept
-  )
+    .pipeflow_deprecate(
+        new = "pip_run",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$run_step(
+        step = step,
+        upstream = upstream,
+        downstream = downstream,
+        cleanUnkept = cleanUnkept
+    )
 }
 
 
@@ -1234,8 +1241,8 @@ pipe_run_step <- function(
 #' related pip_* functions.
 #' @export
 pipe_set_data <- function(pip, data) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$set_data(data = data)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$set_data(data = data)
 }
 
 
@@ -1302,19 +1309,19 @@ pipe_set_data <- function(pip, data) {
 #' related pip_* functions.
 #' @export
 pipe_set_data_split <- function(
-  pip,
-  dataList,
-  toStep = character(),
-  groupBySplit = TRUE,
-  sep = "."
+    pip,
+    dataList,
+    toStep = character(),
+    groupBySplit = TRUE,
+    sep = "."
 ) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$set_data_split(
-    dataList = dataList,
-    toStep = toStep,
-    groupBySplit = groupBySplit,
-    sep = sep
-  )
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$set_data_split(
+        dataList = dataList,
+        toStep = toStep,
+        groupBySplit = groupBySplit,
+        sep = sep
+    )
 }
 
 
@@ -1345,8 +1352,8 @@ pipe_set_data_split <- function(
 #' related pip_* functions.
 #' @export
 pipe_set_keep_out <- function(pip, step, keepOut = TRUE) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$set_keep_out(step = step, keepOut = keepOut)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$set_keep_out(step = step, keepOut = keepOut)
 }
 
 
@@ -1378,12 +1385,12 @@ pipe_set_keep_out <- function(pip, step, keepOut = TRUE) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_set_params()] instead.
 #' @export
 pipe_set_params <- function(pip, params, warnUndefined = TRUE) {
-  .pipeflow_deprecate(
-    new = "pip_set_params",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$set_params(params = params, warnUndefined = warnUndefined)
+    .pipeflow_deprecate(
+        new = "pip_set_params",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$set_params(params = params, warnUndefined = warnUndefined)
 }
 
 
@@ -1408,8 +1415,8 @@ pipe_set_params <- function(pip, params, warnUndefined = TRUE) {
 #' related pip_* functions.
 #' @export
 pipe_set_params_at_step <- function(pip, step, params) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$set_params_at_step(step = step, params = params)
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$set_params_at_step(step = step, params = params)
 }
 
 
@@ -1438,8 +1445,8 @@ pipe_set_params_at_step <- function(pip, step, params) {
 #' related pip_* functions.
 #' @export
 pipe_split <- function(pip) {
-  .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
-  pip$split()
+    .pipeflow_deprecate(package = "pipeflow", msg = .legacy_pipe_msg)
+    pip$split()
 }
 
 
@@ -1447,12 +1454,12 @@ pipe_split <- function(pip) {
 #' @section Lifecycle: Deprecated. Legacy API. Use [pip_unlock()] instead.
 #' @export
 pipe_unlock_step <- function(pip, step) {
-  .pipeflow_deprecate(
-    new = "pip_unlock",
-    package = "pipeflow",
-    msg = .legacy_pipe_msg
-  )
-  pip$unlock_step(step)
+    .pipeflow_deprecate(
+        new = "pip_unlock",
+        package = "pipeflow",
+        msg = .legacy_pipe_msg
+    )
+    pip$unlock_step(step)
 }
 
 # nocov end

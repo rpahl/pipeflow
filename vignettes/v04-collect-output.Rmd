@@ -14,11 +14,11 @@ vignette: >
 
 ```{r knitr-setup, include = FALSE}
 knitr::opts_chunk$set(
-  comment = "#",
-  prompt = FALSE,
-  tidy = FALSE,
-  cache = FALSE,
-  collapse = TRUE
+    comment = "#",
+    prompt = FALSE,
+    tidy = FALSE,
+    cache = FALSE,
+    collapse = TRUE
 )
 
 old <- options(width = 100L)
@@ -52,75 +52,83 @@ creation. Let's illustrate this with an example.
 library(pipeflow)
 
 pip <- pip_new("my-pip") |>
-  pip_add(
-    "data",
-    function(data = airquality) data
-  ) |>
-  pip_add("data_prep",
-    function(data = ~data) {
-      replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5 / 9)
-    },
-    group = "Data", # <- set 'Data' group
-    tags = "data" # <- set 'data' tag
-  ) |>
-  pip_add(
-    "data_summary",
-    function(data = ~data_prep,
-             xVar = "Temp.Celsius",
-             yVar = "Ozone") {
-      format(summary(data[, c(xVar, yVar)])) |>
-        as.data.frame(row.names = NA)
-    },
-    group = "Data", # <- set 'Data' group
-    tags = c("data", "summary") # <- set 'data' and 'summary' tags
-  ) |>
-  pip_add(
-    "data_plot",
-    function(data = ~data_prep,
-             xVar = "Temp.Celsius",
-             yVar = "Ozone") {
-      require(ggplot2, quietly = TRUE)
-      ggplot(data) +
-        geom_point(aes(.data[[xVar]], .data[[yVar]])) +
-        labs(title = "Data")
-    },
-    group = "Data", # <- set 'Data' group
-    tags = c("data", "plot") # <- set 'data' and 'plot' tags
-  ) |>
-  pip_add(
-    "model_fit",
-    function(data = ~data_prep,
-             xVar = "Temp.Celsius",
-             yVar = "Ozone") {
-      lm(paste(yVar, "~", xVar), data = data)
-    },
-    group = "Model", # <- set 'Model' group
-    tags = c("model", "fit") # <- set 'model' and 'fit' tags
-  ) |>
-  pip_add(
-    "model_summary",
-    function(fit = ~model_fit) {
-      summary(fit) |>
-        coefficients() |>
-        as.data.frame()
-    },
-    group = "Model", # <- set 'Model' group
-    tags = c("model", "summary") # <- set 'model' and 'summary' tags
-  ) |>
-  pip_add(
-    "model_plot",
-    function(model = ~model_fit,
-             data_plot = ~data_plot,
-             xVar = "Temp.Celsius",
-             yVar = "Ozone") {
-      coeffs <- coefficients(model)
-      data_plot +
-        geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
-        labs(title = "Linear model fit")
-    },
-    group = "Model", # <- set 'Model' group
-    tags = c("model", "plot") # <- set 'model' and 'plot' tags
-  )
+    pip_add(
+        "data",
+        function(data = airquality) data
+    ) |>
+    pip_add("data_prep",
+        function(data = ~data) {
+            replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5 / 9)
+        },
+        group = "Data", # <- set 'Data' group
+        tags = "data" # <- set 'data' tag
+    ) |>
+    pip_add(
+        "data_summary",
+        function(
+            data = ~data_prep,
+            xVar = "Temp.Celsius",
+            yVar = "Ozone"
+        ) {
+            format(summary(data[, c(xVar, yVar)])) |>
+                as.data.frame(row.names = NA)
+        },
+        group = "Data", # <- set 'Data' group
+        tags = c("data", "summary") # <- set 'data' and 'summary' tags
+    ) |>
+    pip_add(
+        "data_plot",
+        function(
+            data = ~data_prep,
+            xVar = "Temp.Celsius",
+            yVar = "Ozone"
+        ) {
+            require(ggplot2, quietly = TRUE)
+            ggplot(data) +
+                geom_point(aes(.data[[xVar]], .data[[yVar]])) +
+                labs(title = "Data")
+        },
+        group = "Data", # <- set 'Data' group
+        tags = c("data", "plot") # <- set 'data' and 'plot' tags
+    ) |>
+    pip_add(
+        "model_fit",
+        function(
+            data = ~data_prep,
+            xVar = "Temp.Celsius",
+            yVar = "Ozone"
+        ) {
+            lm(paste(yVar, "~", xVar), data = data)
+        },
+        group = "Model", # <- set 'Model' group
+        tags = c("model", "fit") # <- set 'model' and 'fit' tags
+    ) |>
+    pip_add(
+        "model_summary",
+        function(fit = ~model_fit) {
+            summary(fit) |>
+                coefficients() |>
+                as.data.frame()
+        },
+        group = "Model", # <- set 'Model' group
+        tags = c("model", "summary") # <- set 'model' and 'summary' tags
+    ) |>
+    pip_add(
+        "model_plot",
+        function(
+            model = ~model_fit,
+            data_plot = ~data_plot,
+            xVar = "Temp.Celsius",
+            yVar = "Ozone"
+        ) {
+            coeffs <- coefficients(model)
+            data_plot +
+                geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
+                labs(title = "Linear model fit")
+        },
+        group = "Model", # <- set 'Model' group
+        tags = c("model", "plot") # <- set 'model' and 'plot' tags
+    )
 ```
 
 Looking at the pipeline, we can see that in contrast to the examples
@@ -195,17 +203,17 @@ pip_view(pip, tags = "plot")
 
 ```{r, message = FALSE, warning = FALSE}
 pip |>
-  pip_view(tags = "plot") |>
-  pip_collect_out() |>
-  gridExtra::grid.arrange(grobs = _, nrow = 2)
+    pip_view(tags = "plot") |>
+    pip_collect_out() |>
+    gridExtra::grid.arrange(grobs = _, nrow = 2)
 ```
 
 Next, we collect all summaries.
 
 ```{r, message = FALSE, warning = FALSE}
 summaries <- pip |>
-  pip_view(tags = "summary") |>
-  pip_collect_out()
+    pip_view(tags = "summary") |>
+    pip_collect_out()
 ```
 
 ```{r}
@@ -240,7 +248,7 @@ starting with `data`:
 
 ```{r}
 pip |>
-  pip_view(filter = list(step = "^data", state = "outdated"), fixed = FALSE)
+    pip_view(filter = list(step = "^data", state = "outdated"), fixed = FALSE)
 ```
 
 Views can also be chained together:

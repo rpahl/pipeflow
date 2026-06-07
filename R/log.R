@@ -1,6 +1,4 @@
-
-.formatted_time <- function(time = Sys.time())
-{
+.formatted_time <- function(time = Sys.time()) {
     format(
         time,
         usetz = TRUE,
@@ -11,8 +9,7 @@
 }
 
 
-pipeflow_lgr <- function(level, msg)
-{
+pipeflow_lgr <- function(level, msg) {
     cat(level, " [", .formatted_time(), "]: ", msg, "\n", sep = "")
 }
 
@@ -66,8 +63,7 @@ LogLayoutJson <- R6::R6Class(
 #'
 #' set_log_layout("text")
 #' p$run()
-set_log_layout <- function(layout = c("text", "json"))
-{
+set_log_layout <- function(layout = c("text", "json")) {
     selected_layout <- switch(
         layout[1],
         "text" = lgr::LayoutFormat$new(),

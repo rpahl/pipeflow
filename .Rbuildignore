@@ -39,3 +39,4 @@
 # Misc artifacts
 ^workflows\.zip$
 ^logo/logo.xcf$
+^[.]?air[.]toml$

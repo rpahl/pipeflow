@@ -1,8 +1,5 @@
-
-describe("Dag creation and properties",
-{
-    it("can add nodes and edges",
-    {
+describe("Dag creation and properties", {
+    it("can add nodes and edges", {
         d <- dag_new()
         expect_equal(dag_size(d), 0)
         expect_false(dag_has_node(d, 0))
@@ -27,8 +24,7 @@ describe("Dag creation and properties",
         expect_true(dag_has_edge(d, 0, 2))
     })
 
-    it("can add multiple pairs of edges at once",
-    {
+    it("can add multiple pairs of edges at once", {
         d <- dag_new()
         expect_equal(dag_add_node(d), 0)
         expect_equal(dag_add_node(d), 1)
@@ -46,8 +42,7 @@ describe("Dag creation and properties",
         expect_equal(res, c(TRUE, FALSE))
     })
 
-    it("can add multiple edges to one node at once",
-    {
+    it("can add multiple edges to one node at once", {
         d <- dag_new()
         expect_equal(dag_add_node(d), 0)
         expect_equal(dag_add_node(d), 1)
@@ -65,8 +60,7 @@ describe("Dag creation and properties",
         expect_equal(res, c(FALSE, TRUE))
     })
 
-    it("can be cloned",
-    {
+    it("can be cloned", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -81,8 +75,7 @@ describe("Dag creation and properties",
         expect_false(dag_has_node(d_clone, 2))
     })
 
-    it("can inspect the min and max node id",
-    {
+    it("can inspect the min and max node id", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -96,8 +89,7 @@ describe("Dag creation and properties",
         expect_equal(dag_get_min_id(d), 1)
     })
 
-    it("can insert node in between",
-    {
+    it("can insert node in between", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -114,8 +106,7 @@ describe("Dag creation and properties",
         expect_equal(dag_get_nodes_order(d), c(0, 3, 1, 2))
     })
 
-    it("warns if edge existence check refers to non-existent nodes",
-    {
+    it("warns if edge existence check refers to non-existent nodes", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -126,8 +117,7 @@ describe("Dag creation and properties",
         )
     })
 
-    it("prevents adding edges from or to non-existent nodes",
-    {
+    it("prevents adding edges from or to non-existent nodes", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -141,8 +131,7 @@ describe("Dag creation and properties",
         )
     })
 
-    it("prevents re-adding existing edges",
-    {
+    it("prevents re-adding existing edges", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -154,10 +143,8 @@ describe("Dag creation and properties",
     })
 })
 
-describe("add dag",
-{
-    it("can add one dag to another",
-    {
+describe("add dag", {
+    it("can add one dag to another", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -182,8 +169,7 @@ describe("add dag",
         expect_equal(dag_get_incoming(d, 3), 2)
     })
 
-    it("can add snake to diamond graph",
-    {
+    it("can add snake to diamond graph", {
         d <- create_diamond_dag()
         n <- dag_size(d)
         s <- create_snake_dag()
@@ -197,10 +183,8 @@ describe("add dag",
     })
 })
 
-describe("node removal",
-{
-    it("unconnected nodes can always be removed",
-    {
+describe("node removal", {
+    it("unconnected nodes can always be removed", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -224,8 +208,7 @@ describe("node removal",
         expect_equal(dag_get_nodes_order(d), numeric())
     })
 
-    it("connected nodes can be removed directly if they have no outgoing edges",
-    {
+    it("removes connected nodes directly if they have no outgoing edges", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -241,9 +224,7 @@ describe("node removal",
         expect_false(dag_is_tidy(d))
     })
 
-
-    it("signals if removal would leave downstream nodes dangling",
-    {
+    it("signals if removal would leave downstream nodes dangling", {
         # Diamond
         d <- create_diamond_dag()
         expect_true(dag_is_tidy(d))
@@ -272,8 +253,7 @@ describe("node removal",
             expect_warning("would leave downstream node 2 dangling")
     })
 
-    it("can enforce removal of nodes resulting in dangling nodes",
-    {
+    it("can enforce removal of nodes resulting in dangling nodes", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -291,10 +271,8 @@ describe("node removal",
     })
 })
 
-describe("edge removal",
-{
-    it("connected nodes can be removed directly if not dangling afterwards",
-    {
+describe("edge removal", {
+    it("connected nodes can be removed directly if not dangling afterwards", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -310,8 +288,7 @@ describe("edge removal",
         expect_false(dag_has_edge(d, 0, 2))
     })
 
-    it("can enforce removal of edges resulting in dangling nodes",
-    {
+    it("can enforce removal of edges resulting in dangling nodes", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -327,10 +304,8 @@ describe("edge removal",
 })
 
 
-describe("reachable nodes",
-{
-    it("can determine reachable nodes up- and downstream",
-    {
+describe("reachable nodes", {
+    it("can determine reachable nodes up- and downstream", {
         d <- dag_new()
         dag_add_node(d)
         dag_add_node(d)
@@ -361,8 +336,7 @@ describe("reachable nodes",
         expect_equal(dag_get_reachable_nodes_up(d, 3), c(3, 2, 1, 0))
     })
 
-    it("correctly determines reachable nodes if nodes were inserted",
-    {
+    it("correctly determines reachable nodes if nodes were inserted", {
         d <- create_snake_dag()
         expect_equal(dag_get_reachable_nodes_down(d, 0), c(0, 3, 1, 2))
         expect_equal(dag_get_reachable_nodes_down(d, 3), c(3, 1, 2))
@@ -375,8 +349,7 @@ describe("reachable nodes",
         expect_equal(dag_get_reachable_nodes_up(d, 2), c(2, 1, 3, 0))
     })
 
-    it("can determine reachable nodes even if graph is not tidy after removal",
-    {
+    it("determines reachable nodes even if graph is not tidy after removal", {
         d <- create_diamond_dag()
         expect_true(dag_is_tidy(d))
         expect_equal(dag_get_nodes_order(d), 0:3)
@@ -393,8 +366,7 @@ describe("reachable nodes",
         expect_equal(dag_get_nodes_order(d), c(0, 2, 3))
     })
 
-    it("trying to reach non-existent nodes gives warning",
-    {
+    it("trying to reach non-existent nodes gives warning", {
         d <- dag_new()
         dag_add_node(d)
         expect_warning(
@@ -409,8 +381,7 @@ describe("reachable nodes",
 })
 
 
-describe("dag rebuild",
-{
+describe("dag rebuild", {
     # Tree
     d <- create_bin_tree_dag()
     nord <- dag_get_nodes_order(d)
@@ -427,18 +398,15 @@ describe("dag rebuild",
 })
 
 
-describe("dag shift",
-{
-    it("works with empty DAG",
-    {
+describe("dag shift", {
+    it("works with empty DAG", {
         d <- dag_new()
         expect_equal(dag_size(d), 0)
         expect_no_error(dag_shift(d, 10))
         expect_equal(dag_size(d), 0)
     })
 
-    it("correctly shifts node IDs and edges of bin snake example",
-    {
+    it("correctly shifts node IDs and edges of bin snake example", {
         d <- create_snake_dag()
         expect_true(dag_has_edge(d, 0, 3))
         expect_true(dag_has_edge(d, 0, 1))
@@ -455,8 +423,7 @@ describe("dag shift",
         expect_true(dag_has_edge(d, 13, 12))
     })
 
-    it("correctly shifts node IDs and edges of bin tree",
-    {
+    it("correctly shifts node IDs and edges of bin tree", {
         d <- create_bin_tree_dag()
         out0 <- dag_get_outgoing(d, 0)
         in0 <- dag_get_incoming(d, 0)

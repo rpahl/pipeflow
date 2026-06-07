@@ -14,11 +14,11 @@ vignette: >
 
 ```{r knitr-setup, include = FALSE}
 knitr::opts_chunk$set(
-  comment = "#",
-  prompt = FALSE,
-  tidy = FALSE,
-  cache = FALSE,
-  collapse = TRUE
+    comment = "#",
+    prompt = FALSE,
+    tidy = FALSE,
+    cache = FALSE,
+    collapse = TRUE
 )
 
 old <- options(width = 100L)
@@ -39,24 +39,26 @@ Data preprocessing pipeline:
 library(pipeflow)
 
 pip1 <- pip_new("preprocessing") |>
-  pip_add(
-    "data",
-    function(data = airquality) data
-  ) |>
-  pip_add(
-    "data_prep",
-    function(data = ~data) {
-      replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5 / 9)
-    }
-  ) |>
-  pip_add(
-    "standardize",
-    function(data = ~data_prep,
-             yVar = "Ozone") {
-      data[, yVar] <- scale(data[, yVar])
-      data
-    }
-  )
+    pip_add(
+        "data",
+        function(data = airquality) data
+    ) |>
+    pip_add(
+        "data_prep",
+        function(data = ~data) {
+            replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5 / 9)
+        }
+    ) |>
+    pip_add(
+        "standardize",
+        function(
+            data = ~data_prep,
+            yVar = "Ozone"
+        ) {
+            data[, yVar] <- scale(data[, yVar])
+            data
+        }
+    )
 ```
 
 ```{r}
@@ -66,33 +68,37 @@ pip1
 Modelling pipeline:
 ```{r define-modeling-pipeline}
 pip2 <- pip_new("modeling") |>
-  pip_add(
-    "data",
-    function(data = airquality) data
-  ) |>
-  pip_add(
-    "fit",
-    function(data = ~data,
-             xVar = "Temp",
-             yVar = "Ozone") {
-      lm(paste(yVar, "~", xVar), data = data)
-    }
-  ) |>
-  pip_add(
-    "plot",
-    function(model = ~fit,
-             data = ~data,
-             xVar = "Temp",
-             yVar = "Ozone",
-             title = "Linear model fit") {
-      require(ggplot2, quietly = TRUE)
-      coeffs <- coefficients(model)
-      ggplot(data) +
-        geom_point(aes(.data[[xVar]], .data[[yVar]])) +
-        geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
-        labs(title = title)
-    }
-  )
+    pip_add(
+        "data",
+        function(data = airquality) data
+    ) |>
+    pip_add(
+        "fit",
+        function(
+            data = ~data,
+            xVar = "Temp",
+            yVar = "Ozone"
+        ) {
+            lm(paste(yVar, "~", xVar), data = data)
+        }
+    ) |>
+    pip_add(
+        "plot",
+        function(
+            model = ~fit,
+            data = ~data,
+            xVar = "Temp",
+            yVar = "Ozone",
+            title = "Linear model fit"
+        ) {
+            require(ggplot2, quietly = TRUE)
+            coeffs <- coefficients(model)
+            ggplot(data) +
+                geom_point(aes(.data[[xVar]], .data[[yVar]])) +
+                geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
+                labs(title = title)
+        }
+    )
 ```
 
 
@@ -126,16 +132,16 @@ Now, as can be also seen from the graphical representation of the pipeline,
 ```{r, eval = FALSE}
 library(visNetwork)
 do.call(visNetwork, args = pip_get_graph(pip)) |>
-  visHierarchicalLayout(direction = "LR")
+    visHierarchicalLayout(direction = "LR")
 ```
 
 ```{r, echo = FALSE}
 library(visNetwork)
 do.call(
-  visNetwork,
-  args = c(pip_get_graph(pip), list(height = 250, width = 500))
+    visNetwork,
+    args = c(pip_get_graph(pip), list(height = 250, width = 500))
 ) |>
-  visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
 the two pipelines are not yet connected. To make actual use of the combined
@@ -153,10 +159,10 @@ pip
 
 ```{r, echo = FALSE}
 do.call(
-  visNetwork,
-  args = c(pip_get_graph(pip), list(height = 100, width = 700))
+    visNetwork,
+    args = c(pip_get_graph(pip), list(height = 100, width = 700))
 ) |>
-  visHierarchicalLayout(direction = "LR")
+    visHierarchicalLayout(direction = "LR")
 ```
 
 #### Relative indexing
@@ -200,10 +206,10 @@ pip_set_params(pip, params = list(xVar = "Temp.Celsius"))
 ```{r, echo = FALSE}
 library(visNetwork)
 do.call(
-  visNetwork,
-  args = c(pip_get_graph(pip), list(height = 100, width = 700))
+    visNetwork,
+    args = c(pip_get_graph(pip), list(height = 100, width = 700))
 ) |>
-  visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
 ```{r}
@@ -221,11 +227,11 @@ which can be done via `pip_add_from`, for example:
 
 ```{r cherry-pick}
 pip <- pip_new("cherry-picked-from-1-and-2") |>
-  pip_add_from(pip1, "data") |>
-  pip_add_from(pip1, "data_prep") |>
-  pip_add_from(pip1, "standardize") |>
-  pip_add_from(pip2, "fit") |>
-  pip_add_from(pip2, "plot")
+    pip_add_from(pip1, "data") |>
+    pip_add_from(pip1, "data_prep") |>
+    pip_add_from(pip1, "standardize") |>
+    pip_add_from(pip2, "fit") |>
+    pip_add_from(pip2, "plot")
 
 pip
 ```
@@ -238,10 +244,10 @@ still refer to the initial `data` step.
 ```{r, echo = FALSE}
 library(visNetwork)
 do.call(
-  visNetwork,
-  args = c(pip_get_graph(pip), list(height = 250, width = 700))
+    visNetwork,
+    args = c(pip_get_graph(pip), list(height = 250, width = 700))
 ) |>
-  visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
 In other scenarios, however, this might be exactly what you want.

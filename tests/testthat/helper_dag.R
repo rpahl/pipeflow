@@ -1,6 +1,4 @@
-
-create_diamond_dag <- function()
-{
+create_diamond_dag <- function() {
     d <- dag_new()
     dag_add_node(d)
     dag_add_node(d)
@@ -18,8 +16,7 @@ create_diamond_dag <- function()
     d
 }
 
-create_snake_dag <- function()
-{
+create_snake_dag <- function() {
     d <- dag_new()
     dag_add_node(d)
     dag_add_node(d)
@@ -40,8 +37,7 @@ create_snake_dag <- function()
     d
 }
 
-create_bin_tree_dag <- function()
-{
+create_bin_tree_dag <- function() {
     d <- dag_new()
     dag_add_node(d)
     dag_add_node(d)

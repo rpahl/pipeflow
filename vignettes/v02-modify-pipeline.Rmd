@@ -14,11 +14,11 @@ vignette: >
 
 ```{r knitr-setup, include = FALSE}
 knitr::opts_chunk$set(
-  comment = "#",
-  prompt = FALSE,
-  tidy = FALSE,
-  cache = FALSE,
-  collapse = TRUE
+    comment = "#",
+    prompt = FALSE,
+    tidy = FALSE,
+    cache = FALSE,
+    collapse = TRUE
 )
 
 old <- options(width = 100L)
@@ -29,19 +29,16 @@ old <- options(width = 100L)
 ```{r define-pipeline, include = FALSE, echo = FALSE}
 library(pipeflow)
 pip <- pip_new("my-pip") |>
-
     pip_add(
         "data",
         function(data = airquality[1:10, ]) data
     ) |>
-
     pip_add(
         "data_prep",
         function(x = ~data) {
-            replace(x, "Temp.Celsius", (x[, "Temp"] - 32) * 5/9)
+            replace(x, "Temp.Celsius", (x[, "Temp"] - 32) * 5 / 9)
         }
     ) |>
-
     pip_add(
         "model_fit",
         function(
@@ -51,7 +48,6 @@ pip <- pip_new("my-pip") |>
             lm(paste("Ozone ~", xVar), data = data)
         }
     ) |>
-
     pip_add(
         "model_plot",
         function(
@@ -148,11 +144,12 @@ such that it refers to the `standardize` step. Also instead of
 a fixed y-variable in the model, let's pass it as a parameter.
 
 ```{r replace-model-fit-step}
-pip |> pip_replace("model_fit",
+pip |> pip_replace(
+    "model_fit",
     function(
-        data = ~standardize,        # <- changed data reference
+        data = ~standardize, # <- changed data reference
         xVar = "Temp.Celsius",
-        yVar = "Ozone"              # <- new y-variable
+        yVar = "Ozone" # <- new y-variable
     ) {
         lm(paste(yVar, "~", xVar), data = data)
     }
@@ -163,12 +160,13 @@ pip |> pip_replace("model_fit",
 The `model_plot` step needs to be updated in a similar way.
 
 ```{r replace-model-plot-step}
-pip |> pip_replace("model_plot",
+pip |> pip_replace(
+    "model_plot",
     function(
         model = ~model_fit,
-        data = ~standardize,         # <- changed data reference
+        data = ~standardize, # <- changed data reference
         xVar = "Temp.Celsius",
-        yVar = "Ozone",              # <- new y-variable
+        yVar = "Ozone", # <- new y-variable
         title = "Linear model fit"
     ) {
         coeffs <- coefficients(model)
