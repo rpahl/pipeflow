@@ -1620,7 +1620,7 @@ describe("pip_run", {
 
         expect_error(
             pip_run(pip, lgr = NULL, recursive = TRUE),
-            "Maximum recursive pipeline restarts exceeded"
+            "Maximum recursive restarts exceeded"
         )
     })
 })

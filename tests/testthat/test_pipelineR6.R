@@ -4327,11 +4327,16 @@ describe("private methods", {
             expect_true(f(fun, "funcName"))
         })
 
-        test_that("if not defined with default values, params can be
-            passed in addition", {
-            fun <- \(x, y) x + y
-            expect_true(f(fun, "funcName", params = list(x = 1, y = 2)))
-        })
+        test_that(
+            paste(
+                "if not defined with default values, params can be",
+                "passed in addition"
+            ),
+            {
+                fun <- \(x, y) x + y
+                expect_true(f(fun, "funcName", params = list(x = 1, y = 2)))
+            }
+        )
 
         test_that("signals parameters with no default values", {
             fun <- \(x, y, z = 1) x + y
