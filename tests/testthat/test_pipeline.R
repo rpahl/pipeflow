@@ -921,6 +921,43 @@ describe("pip_collect_out",
         expect_equal(out[["model"]], list(s2 = "o2", s3 = "o3"))
     })
 
+    it("grouped output works if an output is NULL",
+    {
+        p <- pip_new("test") |>
+            pip_add("s1", \(x = NULL) x) |>
+            pip_add("s2", \(x = 3) x, group = "g2") |>
+            pip_add("s3", \(x = ~s2, factor = 2) x * factor) |>
+            pip_add("s4", \(x = ~s2) x^2, group = "g4")
+
+        out <- pip_collect_out(p)
+        expect_equal(out, list(s1 = NULL, g2 = NULL, s3 = NULL, g4 = NULL))
+
+        out <- pip_collect_out(p, grouped = FALSE)
+        expect_equal(out, list(s1 = NULL, s2 = NULL, s3 = NULL, s4 = NULL))
+
+        pip_run(p, lgr = NULL)
+        out <- pip_collect_out(p)
+        expect_equal(out, list(s1 = NULL, g2 = 3, s3 = 2 * 3, g4 = 3^2))
+
+        out <- pip_collect_out(p, grouped = FALSE)
+        expect_equal(out, list(s1 = NULL, s2 = 3, s3 = 2 * 3, s4 = 3^2))
+    })
+
+    it("returns same for grouped = TRUE/FALSE, if no group was defined",
+    {
+        p <- pip_new("test") |>
+            pip_add("s1", \(x = NULL) x) |>
+            pip_add("s2", \(x = 3) x) |>
+            pip_add("s3", \(x = ~s2, factor = 2) x * factor) |>
+            pip_add("s4", \(x = ~s2) x^2)
+
+        expect_equal(p[["step"]], p[["group"]])
+        expect_equal(
+            pip_collect_out(p, grouped = TRUE),
+            pip_collect_out(p, grouped = FALSE)
+        )
+    })
+
     it("signals invalid arguments",
     {
         p <- pip_new()
@@ -2348,7 +2385,7 @@ describe("print.pipeflow_pip",
 
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(x = ~s1) x + 1)
+            pip_add("s2", \(x = ~s1) x + 1, group = "s2")
 
         header <- get_print_header(p)
 
@@ -2376,7 +2413,7 @@ describe("print.pipeflow_pip",
 
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x, tags = "core") |>
-            pip_add("s2", \(x = ~s1) x + 1)
+            pip_add("s2", \(x = ~s1) x + 1, group = "s2")
 
         header <- get_print_header(p)
 
@@ -2390,7 +2427,7 @@ describe("print.pipeflow_pip",
 
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x, tags = "core") |>
-            pip_add("s2", \(x = ~s1) x + 1, exec = "split")
+            pip_add("s2", \(x = ~s1) x + 1, group = "s2", exec = "split")
 
         header <- get_print_header(p)
 
@@ -2436,7 +2473,7 @@ describe("print.pipeflow_view",
 
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x, tags = "core") |>
-            pip_add("s2", \(x = ~s1) x + 1)
+            pip_add("s2", \(x = ~s1) x + 1, group = "s2")
 
         v <- pip_view(p, tags = "core")
 
@@ -2453,7 +2490,7 @@ describe("print.pipeflow_view",
 
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x, exec = "split", tags = "core") |>
-            pip_add("s2", \(x = ~s1) x + 1)
+            pip_add("s2", \(x = ~s1) x + 1, group = "s2")
 
         v <- pip_view(p, tags = "core")
 

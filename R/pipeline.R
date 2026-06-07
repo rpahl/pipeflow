@@ -329,7 +329,7 @@
 #' p <- pip_new("my_analysis")
 #' p[["name"]]  # "my_analysis"
 #'
-#' # Build a simple two-step pipeline and run it
+#' # Build a simple pipeline and run it
 #' pip_add(p, "load", \(n = 5) seq_len(n))
 #' pip_add(p, "double", \(x = ~load) x * 2)  # x depends on load's output
 #' p
@@ -400,26 +400,27 @@ pip_new <- function(name = "pipe") {
 #'
 #' @return The updated pipeline, invisibly.
 #' @examples
-# p <- pip_new("demo")
-
-# # Constant defaults become independent parameters (adjustable later)
-# pip_add(p, "load", \(n = 5) seq_len(n), group = "io", tags = "raw")
-
-# # Use ~step_name to declare a dependency on another step's output;
-# # "square" will automatically receive the output of "load" at runtime
-# pip_add(p, "square", \(x = ~load) x^2,
-#     group = "trans", tags = c("core", "daily")
-# )
-
-# # Insert between two existing steps by giving a step name to `after`
-# pip_add(p, "scale", \(x = ~load, factor = 2) x * factor, after = "load")
-
-# # after = 0 inserts a step at the very beginning of the pipeline
-# pip_add(p, "init", \(x = NULL) x, after = 0L)
-
-# p
-# pip_run(p)
-# pip_collect_out(p)
+#' p <- pip_new("demo")
+#'
+#' # Constant defaults become independent parameters (adjustable later)
+#' pip_add(p, "load", \(n = 5) seq_len(n), group = "io", tags = "raw")
+#'
+#' # Use ~step_name to declare a dependency on another step's output;
+#' # "square" will automatically receive the output of "load" at runtime
+#' pip_add(p, "square", \(x = ~load) x^2,
+#'     group = "math",
+#'     tags = c("core", "daily")
+#' )
+#'
+#' # Insert between two existing steps by giving a step name to `after`
+#' pip_add(p, "scale", \(x = ~load, factor = 2) x * factor,
+#'     group = "math",
+#'     after = "load",
+#' )
+#'
+#' p
+#' pip_run(p)
+#' pip_collect_out(p)
 #' @export
 pip_add <- function(
   x, step, fun,
@@ -783,7 +784,8 @@ pip_collect_out <- function(x, grouped = TRUE) {
     if (length(idx) > 1L) {
       res[[k]] <- stats::setNames(out[idx], nm = steps[idx])
     } else {
-      res[[k]] <- out[[idx]]
+      # Preserve NULL outputs — slice assignment keeps named NULL entries
+      res[k] <- list(out[[idx]])
     }
   }
   res
