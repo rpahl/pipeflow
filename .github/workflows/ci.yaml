@@ -13,6 +13,7 @@ env:
   TZ: UTC
   LANG: C.UTF-8
   R_KEEP_PKG_SOURCE: yes
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 
 jobs:
@@ -106,7 +107,7 @@ jobs:
           _R_CHECK_LIMIT_CORES_: FALSE   # allow more than 2 cores
 
       - name: Publish Linux Test Results
-        if: always() && startsWith(matrix.os, 'ubuntu')
+        if: always() && startsWith(matrix.os, 'ubuntu') && hashFiles('check/*.Rcheck/tests/testthat/*.xml') != ''
         uses: EnricoMi/publish-unit-test-result-action@2ceeed2b8f26e15b06c3846719f75354febd9e7b  # v2
         with:
           files: check/*.Rcheck/tests/testthat/*.xml
