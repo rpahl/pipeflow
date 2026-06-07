@@ -331,9 +331,10 @@
 #'
 #' # Build a simple two-step pipeline and run it
 #' pip_add(p, "load", \(n = 5) seq_len(n))
-#' pip_add(p, "double", \(x = ~load) x * 2)  # ~load wires a dependency
-#' pip_run(p, lgr = NULL)
-#' p[["pipeline"]][["out"]]  # list of outputs, one per step
+#' pip_add(p, "double", \(x = ~load) x * 2)  # x depends on load's output
+#' p
+#' pip_run(p)
+#' p[["out"]]  # list of outputs, one per step
 #' @export
 pip_new <- function(name = "pipe") {
   if (!.is_single(name, "character")) {
@@ -399,29 +400,26 @@ pip_new <- function(name = "pipe") {
 #'
 #' @return The updated pipeline, invisibly.
 #' @examples
-#' p <- pip_new("demo")
-#'
-#' # Constant defaults become independent parameters (adjustable later)
-#' pip_add(p, "load", \(n = 5) seq_len(n), group = "io", tags = "raw")
-#'
-#' # Use ~step_name to declare a dependency on another step's output;
-#' # "square" will automatically receive the output of "load" at runtime
-#' pip_add(p, "square", \(x = ~load) x^2,
-#'   group = "transform", tags = c("core", "daily")
-#' )
-#'
-#' # after = 0 inserts a step at the very beginning of the pipeline
-#' pip_add(p, "init", \(msg = "starting") message(msg),
-#'   after = 0L, exec = "plain"
-#' )
-#'
-#' # Insert between two existing steps by giving a step name to `after`
-#' pip_add(p, "scale", \(x = ~load, factor = 2) x * factor,
-#'   after = "load"
-#' )
-#'
-#' pip_run(p, lgr = NULL)
-#' pip_collect_out(p, grouped = FALSE)
+# p <- pip_new("demo")
+
+# # Constant defaults become independent parameters (adjustable later)
+# pip_add(p, "load", \(n = 5) seq_len(n), group = "io", tags = "raw")
+
+# # Use ~step_name to declare a dependency on another step's output;
+# # "square" will automatically receive the output of "load" at runtime
+# pip_add(p, "square", \(x = ~load) x^2,
+#     group = "trans", tags = c("core", "daily")
+# )
+
+# # Insert between two existing steps by giving a step name to `after`
+# pip_add(p, "scale", \(x = ~load, factor = 2) x * factor, after = "load")
+
+# # after = 0 inserts a step at the very beginning of the pipeline
+# pip_add(p, "init", \(x = NULL) x, after = 0L)
+
+# p
+# pip_run(p)
+# pip_collect_out(p)
 #' @export
 pip_add <- function(
   x, step, fun,
@@ -534,7 +532,7 @@ pip_add <- function(
 #' dst <- pip_new("target")
 #' pip_add_from(dst, src, "load")
 #' pip_add_from(dst, src, "square")
-#' pip_run(dst, lgr = NULL)
+#' pip_run(dst)
 #' pip_collect_out(dst, grouped = FALSE)
 #' @export
 pip_add_from <- function(x, y, step) {
@@ -614,7 +612,7 @@ pip_add_from <- function(x, y, step) {
 #'   pip_add("prep", \(x = 5) x * 3)
 #'
 #' z <- pip_bind(a, b)
-#' z[["pipeline"]][["step"]]  # "prep", "fit", "prep2" (conflict resolved)
+#' z[["step"]]  # "prep", "fit", "prep2" (conflict resolved)
 #' length(z)  # 3 steps total
 #' @export
 pip_bind <- function(x, y) {
@@ -743,7 +741,7 @@ pip_clone <- function(x, name = NULL) {
 #'   pip_add("load",  \(x = 1) x,       group = "io") |>
 #'   pip_add("clean", \(x = ~load) x + 1, group = "io") |>
 #'   pip_add("model", \(x = ~clean) x * 2, group = "model")
-#' pip_run(p, lgr = NULL)
+#' pip_run(p)
 #'
 #' # grouped = TRUE (default): steps sharing a group become a nested list
 #' out <- pip_collect_out(p)
@@ -811,7 +809,7 @@ pip_collect_out <- function(x, grouped = TRUE) {
 #'
 #' # Useful as a guide for pip_set_params()
 #' pip_set_params(p, params = list(n = 20, lambda = 0.5))
-#' pip_run(p, lgr = NULL)
+#' pip_run(p)
 #' pip_collect_out(p, grouped = FALSE)
 #' @export
 pip_get_params <- function(x) {
@@ -1189,14 +1187,14 @@ pip_rename <- function(x, from, to) {
 #' p <- pip_new() |>
 #'   pip_add("load",   \(n = 5) seq_len(n)) |>
 #'   pip_add("double", \(x = ~load) x * 2)
-#' pip_run(p, lgr = NULL)
+#' pip_run(p)
 #'
 #' # Replace "load" — downstream steps are automatically marked "outdated"
 #' pip_replace(p, "load", \(n = 3) seq_len(n))
 #' p[["pipeline"]][["state"]]  # "new", "outdated"
 #'
 #' # Re-run to bring everything up to date
-#' pip_run(p, lgr = NULL)
+#' pip_run(p)
 #' pip_collect_out(p, grouped = FALSE)
 #' @export
 pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
@@ -1323,12 +1321,14 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
 #'   pip_add("square", \(x = ~load) x^2) |>
 #'   pip_add("total",  \(x = ~square) sum(x))
 #'
-#' # lgr = NULL suppresses log output
-#' pip_run(p, lgr = NULL)
+#' pip_run(p)
 #' pip_collect_out(p, grouped = FALSE)
 #'
 #' # Already-done steps are skipped on a second run
-#' pip_run(p, lgr = NULL)          # all steps skipped
+#' pip_run(p)          # all steps skipped
+#'
+#' # lgr = NULL suppresses log output
+#' pip_run(p, lgr = NULL)
 #'
 #' # force = TRUE re-executes every step regardless of state
 #' pip_run(p, lgr = NULL, force = TRUE)
