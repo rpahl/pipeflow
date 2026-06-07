@@ -1,7 +1,7 @@
 # Copilot Instructions
 
 ## Code and Naming Conventions
-- Use native pipe |>, line length ≤80 and indent of 2 or 4 spaces.
+- Use native pipe |>, line length ≤80 and indent of 4 spaces.
 - Document all functions with roxygen2 headers. The header should end
   with an @noRd tag unless they are @export ed.
 - Maintain consistent mod_/utils_/app_ file naming.
