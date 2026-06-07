@@ -328,6 +328,27 @@
     invisible(x)
 }
 
+.rebind_self <- function(dat, x) {
+    for (k in seq_len(nrow(dat))) {
+        pars <- dat[["params"]][[k]]
+        if (
+            ".self" %in%
+                names(pars) &&
+                inherits(pars[[".self"]], "pipeflow_pip") &&
+                !identical(pars[[".self"]], x)
+        ) {
+            pars[[".self"]] <- x
+            data.table::set(
+                dat,
+                i = k,
+                j = "params",
+                value = list(list(pars))
+            )
+        }
+    }
+    dat
+}
+
 
 # ---------------------------
 # Exported pipeline functions
@@ -503,7 +524,7 @@ pip_add <- function(
         stop("after must be a non-empty step name or integer index")
     }
 
-    if (pos == length(x)) {
+    if (pos == n) {
         .pip_append(
             x,
             step = step,
@@ -1104,7 +1125,7 @@ pip_remove <- function(x, step, recursive = FALSE) {
     stepsToRemove <- step
     if (recursive) {
         downNodes <- .pip_get_downstream_nodes(x, step)
-        downNodes <- unique(as.integer(unlist(downNodes)))
+        downNodes <- as.integer(downNodes)
         stepNode <- as.integer(.pip_steps_to_nodes(x, step)[[1]])
 
         recursiveDeps <- dat[["step"]][
@@ -1338,25 +1359,7 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
 
     # Rebind any explicit .self references from the temporary clone back to
     # the actual pipeline object that is being mutated at runtime.
-    datOut <- out[["pipeline"]]
-    for (k in seq_len(nrow(datOut))) {
-        pars <- datOut[["params"]][[k]]
-        selfRef <- pars[[".self"]]
-        if (
-            ".self" %in%
-                names(pars) &&
-                inherits(selfRef, "pipeflow_pip") &&
-                !identical(selfRef, x)
-        ) {
-            pars[[".self"]] <- x
-            data.table::set(
-                datOut,
-                i = k,
-                j = "params",
-                value = list(list(pars))
-            )
-        }
-    }
+    datOut <- .rebind_self(out[["pipeline"]], x)
 
     x[["pipeline"]] <- datOut
     x[[".dag"]] <- out[[".dag"]]
@@ -1624,19 +1627,20 @@ pip_set_params <- function(p, params = list()) {
 
     hasOverlap <- lengths(overlaps) > 0
     if (any(hasOverlap)) {
-        # Set new parameters at all steps that are affected
-        set <- data.table::set
         changedRows <- considered_rows[hasOverlap]
-        Map(
-            f = \(i, ov) {
-                rowPars <- dat[["params"]][[i]]
-                rowPars[ov] <- params[ov]
-                set(dat, i = i, j = "params", value = list(list(rowPars)))
-                set(dat, i = i, j = "state", value = "outdated")
-            },
-            i = changedRows,
-            ov = overlaps[hasOverlap]
-        )
+        for (j in seq_along(changedRows)) {
+            i <- changedRows[[j]]
+            ov <- overlaps[hasOverlap][[j]]
+            rowPars <- dat[["params"]][[i]]
+            rowPars[ov] <- params[ov]
+            data.table::set(
+                dat,
+                i = i,
+                j = "params",
+                value = list(list(rowPars))
+            )
+            data.table::set(dat, i = i, j = "state", value = "outdated")
+        }
 
         # Update states of changed steps and their downstream steps
         steps <- dat[["step"]][changedRows]
