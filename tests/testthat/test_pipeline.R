@@ -325,6 +325,32 @@ describe("pip_add", {
     })
 })
 
+describe("pip_add exec modes", {
+    it("signals invalid exec modes", {
+        p <- pip_new()
+        expect_error(
+            pip_add(p, "s1", \(x = 1) x, exec = "invalid"),
+            "exec must be one of: auto, split, reduce, plain"
+        )
+        expect_error(
+            pip_add(p, "s1", \(x = 1) x, exec = NA_character_),
+            "exec must be a single string"
+        )
+        expect_error(
+            pip_add(p, "s1", \(x = 1) x, exec = c("auto", "split")),
+            "exec must be a single string"
+        )
+    })
+
+    it("accepts all valid exec modes", {
+        for (mode in c("auto", "split", "reduce", "plain")) {
+            p <- pip_new()
+            expect_no_error(pip_add(p, "s1", \(x = 1) x, exec = mode))
+            expect_equal(p[["pipeline"]][["exec"]][[1]], mode)
+        }
+    })
+})
+
 
 describe("pip_bind", {
     test_pip <- function(name = "p") {
@@ -403,6 +429,61 @@ describe("pip_bind", {
         expect_identical(out[["pipeline"]][["params"]][[1]]$.self, out)
         expect_identical(out[["pipeline"]][["params"]][[2]]$.self, out)
     })
+
+    it("preserves runtime state from both source pipelines", {
+        p1 <- test_pip("left")
+        data.table::set(
+            p1[["pipeline"]],
+            i = 1L,
+            j = "out",
+            value = list(10)
+        )
+        data.table::set(
+            p1[["pipeline"]],
+            i = 1L,
+            j = "state",
+            value = "done"
+        )
+        data.table::set(
+            p1[["pipeline"]],
+            i = 1L,
+            j = "locked",
+            value = TRUE
+        )
+
+        p2 <- pip_new("right") |>
+            pip_add("t1", \(x = 3) x) |>
+            pip_add("t2", \(x = ~t1) x + 2)
+
+        data.table::set(
+            p2[["pipeline"]],
+            j = "out",
+            value = list(7, 9)
+        )
+        data.table::set(
+            p2[["pipeline"]],
+            j = "state",
+            value = c("done", "outdated")
+        )
+        data.table::set(
+            p2[["pipeline"]],
+            j = "locked",
+            value = c(FALSE, TRUE)
+        )
+
+        out <- pip_bind(p1, p2)
+        actualOut <- out[["pipeline"]][["out"]]
+        expectedOut <- list(10, NULL, 7, 9)
+        expect_equal(actualOut, expectedOut)
+        expect_equal(
+            out[["pipeline"]][["state"]],
+            c("done", "new", "done", "outdated")
+        )
+        expect_equal(
+            out[["pipeline"]][["locked"]],
+            c(TRUE, FALSE, FALSE, TRUE)
+        )
+    })
 })
 
 
@@ -480,6 +561,24 @@ describe("pip_add_from", {
 
         pip_add_from(trg, src, "self")
         expect_identical(trg[["pipeline"]][["params"]][[1]]$.self, trg)
+    })
+
+    it("preserves tags and exec mode from source step", {
+        src <- pip_new("src") |>
+            pip_add(
+                "calc",
+                \(x = 1) x,
+                tags = c("math", "core"),
+                exec = "split"
+            )
+        trg <- pip_new("target")
+
+        pip_add_from(trg, src, "calc")
+        expect_equal(
+            trg[["pipeline"]][step == "calc", tags][[1]],
+            c("math", "core")
+        )
+        expect_equal(trg[["pipeline"]][step == "calc", exec][[1]], "split")
     })
 })
 
@@ -740,6 +839,24 @@ describe("pip_replace", {
             c("done", "new", "done", "outdated")
         )
     })
+
+    it("updates group and tags on replaced step", {
+        p <- pip_new("pipe") |>
+            pip_add("a1", \(x = 1) x) |>
+            pip_add("a2", \(x = ~a1) x + 1)
+
+        pip_replace(
+            p,
+            "a2",
+            \(x = ~a1) x + 10,
+            group = "new_group",
+            tags = c("updated", "core")
+        )
+
+        i <- match("a2", p[["pipeline"]][["step"]])
+        expect_equal(p[["pipeline"]][["group"]][[i]], "new_group")
+        expect_equal(p[["pipeline"]][["tags"]][[i]], c("updated", "core"))
+    })
 })
 
 
@@ -804,6 +921,15 @@ describe("pip_clone", {
 
         pip_run(p2, lgr = NULL)
         expect_equal(p2[["pipeline"]][["out"]][[1]], "p1")
+    })
+
+    it("clones an empty pipeline", {
+        p <- pip_new()
+        p2 <- pip_clone(p)
+
+        expect_equal(length(p2), 0L)
+        expect_equal(p2[["name"]], p[["name"]])
+        expect_false(identical(p2, p))
     })
 })
 
@@ -1025,6 +1151,13 @@ describe("pip_get_graph", {
             pip_get_graph(p, include_upstream = c(TRUE, FALSE)),
             "include_upstream must be a single logical value"
         )
+    })
+
+    it("returns empty nodes and edges for empty pipeline", {
+        g <- pip_get_graph(pip_new())
+        expect_equal(nrow(g[["nodes"]]), 0L)
+        expect_equal(nrow(g[["edges"]]), 0L)
+        expect_named(g, c("nodes", "edges"))
     })
 })
 
@@ -1623,6 +1756,62 @@ describe("pip_run", {
             "Maximum recursive restarts exceeded"
         )
     })
+
+    it("force = TRUE re-executes all steps regardless of state", {
+        p <- test_pip()
+        pip_run(p, lgr = NULL)
+
+        p[["pipeline"]][["out"]] <- list(99, 99, 99, 99)
+        pip_run(p, lgr = NULL, force = TRUE)
+
+        expect_equal(p[["pipeline"]][["out"]], list(1, 2, 2, "blabla"))
+        expect_equal(p[["pipeline"]][["state"]], rep("done", 4))
+    })
+
+    it("calls the progress callback before each step", {
+        p <- test_pip()
+        calls <- character(0)
+
+        progress <- function(value, detail) {
+            calls <<- c(calls, detail)
+        }
+
+        pip_run(p, lgr = NULL, progress = progress)
+        expect_equal(calls, c("load_raw", "fit_model", "eval_model", "bla_bla"))
+    })
+
+    it("skips locked steps during run", {
+        p <- test_pip()
+        p[["pipeline"]][["locked"]][[2]] <- TRUE
+
+        pip_run(p, lgr = NULL)
+        expect_equal(
+            p[["pipeline"]][["state"]],
+            c("done", "new", "done", "done")
+        )
+        expect_equal(p[["pipeline"]][["out"]], list(1, NULL, NULL, "blabla"))
+    })
+
+    it("skips locked steps even with force = TRUE", {
+        p <- test_pip()
+        p[["pipeline"]][["locked"]][[2]] <- TRUE
+        p[["pipeline"]][["out"]][[2]] <- 99
+
+        pip_run(p, lgr = NULL, force = TRUE)
+        expect_equal(p[["pipeline"]][["out"]][[2]], 99)
+    })
+
+    it("aborts run if pipeline is returned but recursive = FALSE", {
+        pip <- pip_new("abort-demo") |>
+            pip_add("step1", function(x = 1, .self = NULL) .self) |>
+            pip_add("step2", \(x = ~step1) x + 1)
+
+        res <- pip_run(pip, lgr = NULL, recursive = FALSE)
+        expect_true(.is_pipeflow_pip(res))
+        expect_equal(pip[["pipeline"]][["step"]], c("step1", "step2"))
+        expect_true(.is_pipeflow_pip(pip[["pipeline"]][["out"]][[1]]))
+        expect_null(pip[["pipeline"]][["out"]][[2]])
+    })
 })
 
 
@@ -1713,6 +1902,28 @@ describe("pip_set_params", {
         expect_equal(
             p[["pipeline"]][["state"]],
             c("new", "new", "outdated", "outdated")
+        )
+    })
+
+    it("no-ops on empty params list", {
+        p <- test_pip()
+        pip_set_params(p, params = list())
+        expect_equal(p[["pipeline"]][["state"]], rep("new", 4))
+    })
+
+    it("signals unnamed params", {
+        p <- test_pip()
+        expect_error(
+            pip_set_params(p, params = list(1, 2)),
+            "All parameters must be named"
+        )
+    })
+
+    it("signals non-list params", {
+        p <- test_pip()
+        expect_error(
+            pip_set_params(p, params = c(a = 1, b = 2)),
+            "params must be a list"
         )
     })
 })
