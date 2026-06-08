@@ -20,6 +20,11 @@ returns the \code{Pipeline} object invisibly
 Appends string to all step names and takes care
 of updating step dependencies accordingly.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
+}
+
 \examples{
 p <- pipe_new("pipe")
 pipe_add(p, "step1", \(x = 1) x)
@@ -29,3 +34,4 @@ p
 pipe_append_to_step_names(p, "foo", sep = "__")
 p
 }
+\keyword{internal}

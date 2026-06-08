@@ -20,6 +20,10 @@ ready to be used with the \code{\link[visNetwork:visNetwork]{visNetwork::visNetw
 \description{
 Get the pipeline as a graph with nodes and edges.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_get_graph]{pip_get_graph()}} instead.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1:2)
 pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
@@ -29,6 +33,7 @@ graph <- pipe_get_graph(p)
 graph
 
 if (require("visNetwork", quietly = TRUE)) {
-    do.call(visNetwork, args = graph)
+  do.call(visNetwork, args = graph)
 }
 }
+\keyword{internal}

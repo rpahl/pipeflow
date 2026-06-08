@@ -16,9 +16,15 @@ the first step of the pipeline
 \description{
 Get the data set for the pipeline
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1:2)
 pipe_get_data(p)
 pipe_set_data(p, 3:4)
 pipe_get_data(p)
 }
+\keyword{internal}

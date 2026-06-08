@@ -18,6 +18,10 @@ the \code{Pipeline} object invisibly
 \description{
 Print the pipeline as a table
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=print]{print()}} instead.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1:2)
 p$add("f1", \(x = 1) x)
@@ -29,3 +33,4 @@ pipe_print(p, verbose = TRUE)
 print(p)
 print(p, verbose = TRUE)
 }
+\keyword{internal}

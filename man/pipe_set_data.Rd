@@ -17,11 +17,21 @@ returns the \code{Pipeline} object invisibly
 \description{
 Set data in first step of pipeline.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1)
-pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
-p |> pipe_run() |> pipe_collect_out()
+pipe_add(p, "add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
+p |>
+  pipe_run() |>
+  pipe_collect_out()
 
 pipe_set_data(p, 3)
-p |> pipe_run() |> pipe_collect_out()
+p |>
+  pipe_run() |>
+  pipe_collect_out()
 }
+\keyword{internal}

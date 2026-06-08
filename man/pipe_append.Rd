@@ -29,6 +29,10 @@ clashes with respect to step names and dependencies, that is, if
 needed, it will automatically adapt step names and dependencies to
 make sure they are unique in the merged pipeline.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_bind]{pip_bind()}} instead.
+}
+
 \examples{
 # Append pipeline
 p1 <- pipe_new("pipe1")
@@ -40,7 +44,9 @@ p1 |> pipe_append(p2)
 # Append pipeline with potential name clashes
 p3 <- pipe_new("pipe3")
 pipe_add(p3, "step1", \(z = 1) z)
-p1 |> pipe_append(p2) |> pipe_append(p3)
+p1 |>
+  pipe_append(p2) |>
+  pipe_append(p3)
 
 # Use output of first pipeline as input for second pipeline
 p1 <- pipe_new("pipe1", data = 8)
@@ -49,9 +55,12 @@ pipe_add(p1, "square", \(x = ~data) x^2)
 pipe_add(p2, "log2", \(x = ~data) log2(x))
 
 p12 <- p1 |> pipe_append(p2, outAsIn = TRUE)
-p12 |> pipe_run() |> pipe_get_out("log2")
+p12 |>
+  pipe_run() |>
+  pipe_get_out("log2")
 p12
 
 # Custom name separator for adapted step names
 p1 |> pipe_append(p2, sep = "___")
 }
+\keyword{internal}

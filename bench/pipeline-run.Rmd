@@ -8,12 +8,9 @@ output:
 
 ```{r libs, include = FALSE}
 requireNamespace("devtools")
-requireNamespace("ggplot2")
 requireNamespace("microbenchmark")
-requireNamespace("lgr")
 
 devtools::load_all("../")
-lgr::suspend_logging()
 ```
 
 ```{r knitr-setup, include = FALSE}
@@ -34,14 +31,13 @@ Package version: pipeflow `r as.character(packageVersion("pipeflow"))`
 
 ```{r pipe-generator, include = FALSE}
 create_linear_pipeline <- function(n = 100) {
-    void_logger <- function(level, msg, ...) {}
-    pip <- Pipeline$new("counter-test", data = 0, logger = void_logger)
+    pip <- pip_new("counter-test") |> pip_add("data", \(data = 0) data)
 
     # Add steps 1 to n where each step links to the prior step
     sapply(seq_len(n), function(i) {
-        pip$add(step = as.character(i), function(data = ~-1) data + 1)
+        pip_add(pip, step = as.character(i), fun = \(data = ~-1) data + 1)
     })
-    pip$add("output", function(data = ~-1) data)
+    pip_add(pip, "output", \(data = ~-1) data)
     pip
 }
 ```
@@ -50,8 +46,9 @@ create_linear_pipeline <- function(n = 100) {
 # Verify pipeline
 n <- 10
 pip <- create_linear_pipeline(n = n)
-pip$run()
-stopifnot(pip$get_out("output") == n)
+pip_run(pip)
+lastOut <- pip$pipeline[["out"]] |> tail(1) |> unlist()
+stopifnot(lastOut == n)
 ```
 
 
@@ -61,11 +58,11 @@ pips <- lapply(nn, create_linear_pipeline) |> setNames(nn)
 unit <- "ms"
 
 bm <- microbenchmark::microbenchmark(
-    control = list(order="inorder"),
+    control = list(order = "inorder"),
     times = 10,
-    "n = 32" = pips[["32"]]$set_data(0)$run(),
-    "n = 64" = pips[["64"]]$set_data(0)$run(),
-    "n = 128" = pips[["128"]]$set_data(0)$run()
+    "n = 32" = pip_run(pips[["32"]], force = TRUE, lgr = NULL),
+    "n = 64" = pip_run(pips[["64"]], force = TRUE, lgr = NULL),
+    "n = 128" = pip_run(pips[["128"]], force = TRUE, lgr = NULL)
 )
 ```
 
@@ -83,8 +80,4 @@ knitr::kable(tab, digits = 0)
 
 ```{r session-info}
 sessionInfo()
-```
-
-```{r, include=FALSE}
-lgr::unsuspend_logging()
 ```

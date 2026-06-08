@@ -13,20 +13,21 @@ env:
   TZ: UTC
   LANG: C.UTF-8
   R_KEEP_PKG_SOURCE: yes
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 
 jobs:
   lint:
     name: Lint (lintr)
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       security-events: write   # if uploading SARIF
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6
 
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@929c772977a3a13c8733b363bf5a2f685c25dd91  # v2.9
         with:
           r-version: renv          # R version from renv.lock
           Ncpus: 6
@@ -80,7 +81,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6
         with:
           lfs: true
 
@@ -95,28 +96,26 @@ jobs:
             check_dir = "check"
           )
         env:
-          TESTTHAT_CPUS: 6
           _R_CHECK_LIMIT_CORES_: FALSE   # allow more than 2 cores
 
       - name: R CMD check against current CRAN
-        uses: r-lib/actions/check-r-package@v2
+        uses: r-lib/actions/check-r-package@929c772977a3a13c8733b363bf5a2f685c25dd91  # v2.9
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual")'
         env:
-          TESTTHAT_CPUS: 6
           _R_CHECK_LIMIT_CORES_: FALSE   # allow more than 2 cores
 
       - name: Publish Linux Test Results
-        if: always() && startsWith(matrix.os, 'ubuntu')
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always() && startsWith(matrix.os, 'ubuntu') && hashFiles('check/*.Rcheck/tests/testthat/*.xml') != ''
+        uses: EnricoMi/publish-unit-test-result-action@283dea176069279a9076e77b548668a8e4f0c31b  # v2.9
         with:
           files: check/*.Rcheck/tests/testthat/*.xml
           deduplicate_classes_by_file_name: true
 
       - name: Upload R CMD check artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: r-cmd-check-${{ matrix.os }}
           path: check
@@ -128,7 +127,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6
         with:
           lfs: true
 
@@ -160,7 +159,7 @@ jobs:
 
       - name: Upload coverage workspace on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: coverage-test-failures
           path: ${{ runner.temp }}/package

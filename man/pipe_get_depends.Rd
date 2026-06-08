@@ -42,6 +42,17 @@ given step, by default descending recursively.
 }
 }
 
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
+
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
+
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
+}
+
 \examples{
 # pipe_get_depends
 p <- pipe_new("pipe", data = 1:2)
@@ -67,3 +78,4 @@ pipe_add(p, "mult4", \(x = ~add2) x * 4)
 pipe_get_depends_up(p, "mult4")
 pipe_get_depends_up(p, "mult4", recursive = FALSE)
 }
+\keyword{internal}

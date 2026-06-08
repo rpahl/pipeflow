@@ -4,7 +4,14 @@
 \alias{pipe_run}
 \title{Run pipeline}
 \usage{
-pipe_run(pip, force = FALSE, recursive = TRUE, progress = NULL, showLog = TRUE)
+pipe_run(
+  pip,
+  force = FALSE,
+  recursive = TRUE,
+  cleanUnkept = FALSE,
+  progress = NULL,
+  showLog = TRUE
+)
 }
 \arguments{
 \item{pip}{\code{Pipeline} object}
@@ -15,6 +22,10 @@ whether they are outdated or not.}
 \item{recursive}{\code{logical} if \code{TRUE} and a step returns a new
 pipeline, the run of the current pipeline is aborted and the
 new pipeline is run recursively.}
+
+\item{cleanUnkept}{\code{logical} if \code{TRUE} all output that was not
+marked to be kept is removed after the pipeline run. This option
+can be useful if temporary results require a lot of memory.}
 
 \item{progress}{\code{function} this parameter can be used to provide a
 custom progress function of the form \verb{function(value, detail)},
@@ -31,17 +42,26 @@ returns the \code{Pipeline} object invisibly
 \description{
 Runs all new and/or outdated pipeline steps.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_run]{pip_run()}} instead.
+}
+
 \examples{
 # Simple pipeline
 p <- pipe_new("pipe", data = 1)
 pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 pipe_add(p, "add2", \(x = ~add1, z = 2) x + z)
-pipe_add(p, "final", \(x = ~add1, y = ~add2) x * y)
-p |> pipe_run() |> pipe_collect_out()
+pipe_add(p, "final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
+p |>
+  pipe_run() |>
+  pipe_collect_out()
 pipe_set_params(p, list(z = 4))  # outdates steps add2 and final
 p
 
 p |> pipe_run() |> pipe_collect_out()
+
+pipe_run(p, cleanUnkept = TRUE)
+p
 
 # Recursive pipeline (for advanced users)
 p <- pipe_new("pipe", data = 1)
@@ -49,7 +69,7 @@ pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 pipe_add(p, "new_pipe", \(x = ~add1) {
     p2 <- pipe_new("new_pipe", data = x)
     pipe_add(p2, "add1", \(x = ~data) x + 1)
-    pipe_add(p2, "add2", \(x = ~add1) x + 2)
+    pipe_add(p2, "add2", \(x = ~add1) x + 2, keepOut = TRUE)
   }
 )
 p |> pipe_run() |> pipe_collect_out()
@@ -65,3 +85,4 @@ fprogress <- function(value, detail) {
 }
 pipe_run(p, progress = fprogress, showLog = FALSE)
 }
+\keyword{internal}

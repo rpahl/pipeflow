@@ -22,6 +22,10 @@ Can be used to remove any given step.
 If other steps depend on the step to be removed, an error is
 given and the removal is blocked, unless \code{recursive} was set to \code{TRUE}.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_remove]{pip_remove()}} instead.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1:2)
 pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
@@ -36,3 +40,4 @@ try(pipe_remove_step(p, "add1"))
 pipe_remove_step(p, "add1", recursive = TRUE)
 p
 }
+\keyword{internal}

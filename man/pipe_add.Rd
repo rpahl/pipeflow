@@ -11,7 +11,7 @@ pipe_add(
   params = list(),
   description = "",
   group = step,
-  tags = character()
+  keepOut = FALSE
 )
 }
 \arguments{
@@ -38,9 +38,11 @@ names. By default, this is the name of the step, which comes in
 handy when the pipeline is copy-appended multiple times to keep
 the results of the same function/step grouped at one place.}
 
-\item{tags}{\code{character} Optional tags associated with the step.
-Tags can be used later to select certain parts of a pipeline,
-for example, to collect output from or skip steps of a certain tag.}
+\item{keepOut}{\code{logical} if \code{FALSE} (default) the output of the
+step is not collected when calling \code{\link[=pipe_collect_out]{pipe_collect_out()}} after the pipeline
+run. This option is used to only keep the results that matter
+and skip intermediate results that are not needed. See also
+function \code{\link[=pipe_collect_out]{pipe_collect_out()}} for more details.}
 }
 \value{
 returns the \code{Pipeline} object invisibly
@@ -54,10 +56,14 @@ defined for the pipeline. One useful feature is that function
 parameters can refer to results of earlier pipeline steps using the
 syntax \code{x = ~earlier_step_name} - see the Examples for more details.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_add]{pip_add()}} instead.
+}
+
 \examples{
 # Add steps with lambda functions
 p <- pipe_new("myPipe", data = 1)
-pipe_add(p, "s1", \(x = ~data) 2*x)  # use input data
+pipe_add(p, "s1", \(x = ~data) 2 * x) # use input data
 pipe_add(p, "s2", \(x = ~data, y = ~s1) x * y)
 try(pipe_add(p, "s2", \(z = 3) 3)) # error: step 's2' exists already
 try(pipe_add(p, "s3", \(z = ~foo) 3)) # dependency 'foo' not found
@@ -65,13 +71,15 @@ p
 
 # Add step with existing function
 p <- pipe_new("myPipe", data = c(1, 2, NA, 3, 4))
-try(pipe_add(p, "calc_mean", mean))  # default value for x is missing
+try(pipe_add(p, "calc_mean", mean)) # default value for x is missing
 pipe_add(p, "calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
-p |> pipe_run() |> pipe_get_out("calc_mean")
+p |>
+  pipe_run() |>
+  pipe_get_out("calc_mean")
 
 # Step description
 p <- pipe_new("myPipe", data = 1:10)
-pipe_add(p, "s1", \(x = ~data) 2*x, description = "multiply by 2")
+pipe_add(p, "s1", \(x = ~data) 2 * x, description = "multiply by 2")
 print(p, verbose = TRUE) # print all columns including description
 
 
@@ -80,5 +88,8 @@ p <- pipe_new("myPipe", data = data.frame(x = 1:2, y = 3:4))
 pipe_add(p, "prep_x", \(data = ~data) data$x, group = "prep")
 pipe_add(p, "prep_y", \(data = ~data) (data$y)^2, group = "prep")
 pipe_add(p, "sum", \(x = ~prep_x, y = ~prep_y) x + y)
-p |> pipe_run() |> pipe_collect_out()
+p |>
+  pipe_run() |>
+  pipe_collect_out(all = TRUE)
 }
+\keyword{internal}

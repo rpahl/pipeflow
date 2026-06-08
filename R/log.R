@@ -1,21 +1,19 @@
-
-.get_formatted_time <- function(time = Sys.time())
-{
-    local <- time
-    gmt <- strptime(
-        as.POSIXlt(time, tz = "GMT"),
-        format = "%Y-%m-%d %H:%M:%S"
+.formatted_time <- function(time = Sys.time()) {
+    format(
+        time,
+        usetz = TRUE,
+        tz = "UTC",
+        format = "%Y-%m-%d %H:%M:%OS",
+        digits = 3
     )
-    hours_diff <- round(as.numeric(difftime(local, gmt, units = "hours")))
-
-    sign_str <- if (sign(hours_diff) > 0) "+" else "-"
-    number_str <- paste0(toString(abs(hours_diff)), ":00")
-
-    paste0(format(local, format = "%Y-%m-%dT%H:%M:%S"), sign_str, number_str)
 }
 
 
-#' @importFrom R6 R6Class
+pipeflow_lgr <- function(level, msg) {
+    cat(level, " [", .formatted_time(), "]: ", msg, "\n", sep = "")
+}
+
+
 LogLayoutJson <- R6::R6Class(
     "LogLayoutJson",
     inherit = lgr::LayoutJson,
@@ -24,7 +22,7 @@ LogLayoutJson <- R6::R6Class(
             default_fields <- list(
                 "application" = event$logger,
                 "level" = unname(event$level_name),
-                "time" = .get_formatted_time(event$timestamp),
+                "time" = .formatted_time(event$timestamp),
                 "message" = event$msg
             )
 
@@ -52,7 +50,6 @@ LogLayoutJson <- R6::R6Class(
 #' @param layout Layout name, which at this point can be either 'text' or
 #' 'json'.
 #' @return invisibly returns a `Logger` object
-#' @importFrom lgr get_logger
 #' @export
 #' @examples
 #' p <- Pipeline$new("pipe", data = 1:2)
@@ -66,8 +63,7 @@ LogLayoutJson <- R6::R6Class(
 #'
 #' set_log_layout("text")
 #' p$run()
-set_log_layout <- function(layout = c("text", "json"))
-{
+set_log_layout <- function(layout = c("text", "json")) {
     selected_layout <- switch(
         layout[1],
         "text" = lgr::LayoutFormat$new(),

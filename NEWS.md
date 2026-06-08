@@ -2,12 +2,17 @@
 
 # pipeflow 0.2.3.9005
 
-* refactor: deprecate `keepOut` field and introduce `tags` field
+* deprecate legacy `pipe_*` API in favor of the new `pip_*` API
+* deprecate legacy `Pipeline` R6 interface (`Pipeline$new()`)
 
+
+# pipeflow 0.2.3.9005
+
+* refactor: deprecate `keepOut` field and introduce `tags` field
 
 # pipeflow 0.2.3.9004
 
-* deprecate `all` parameter in `pipe_collect_out()` 
+* deprecate `all` parameter in `pipe_collect_out()`
 * deprecate `pipe_set_data_split()` and `pipe_set_keep_out()`
 * add new functions to skip and unskip pipeline steps and groups: `pipe_skip_step()`, `pipe_unskip_step()`, `pipe_skip_group()`, and `pipe_unskip_group()`.
 * add new function, `pipe_get_step_field()` to retrieve a specific field of a pipeline step
@@ -38,8 +43,6 @@
 
 - Same as previous version.
 
-
-# pipeflow (development version)
 
 # pipeflow 0.2.3
 

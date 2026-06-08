@@ -12,8 +12,8 @@ coverage](https://codecov.io/gh/rpahl/pipeflow/branch/main/graph/badge.svg)](htt
 status](https://github.com/rpahl/pipeflow/workflows/R-CMD-check/badge.svg)](https://github.com/rpahl/pipeflow/actions)
 [![Test
 coverage](https://github.com/rpahl/pipeflow/workflows/test-coverage/badge.svg)](https://github.com/rpahl/pipeflow/actions)
-[![Linter
-status](https://github.com/rpahl/pipeflow/workflows/lint/badge.svg)](https://github.com/rpahl/pipeflow/actions)
+[![CI
+status](https://github.com/rpahl/pipeflow/actions/workflows/ci.yaml/badge.svg)](https://github.com/rpahl/pipeflow/actions/workflows/ci.yaml)
 <!-- [![CRAN checks](https://badges.cranchecks.info/summary/pipeflow.svg)](https://cran.r-project.org/web/checks/check_results_pipeflow.html) -->
 [![Downloads per
 month](https://cranlogs.r-pkg.org/badges/last-month/pipeflow)](https://cran.r-project.org/package=pipeflow)
@@ -29,18 +29,18 @@ status](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https:/
 # pipeflow <img src="man/figures/logo.png" alt="logo" align="right" width="163" height="121"/>
 
 A lightweight yet powerful framework for building robust data analysis
-pipelines. With `pipeflow`, you initialize a pipeline with your dataset
+pipelines. With {pipeflow}, you initialize a pipeline with your dataset
 and construct workflows step by step simply by adding R functions. You
 can modify, remove, or insert steps and parameters at any stage, while
-`pipeflow` ensures the pipeline’s integrity.
+{pipeflow} ensures the pipeline’s integrity.
 
-Thanks to its intuitive interface, using `pipeflow` quickly pays off in
+Thanks to its intuitive interface, using {pipeflow} quickly pays off in
 the beginning while in the long run will help you to keep a clear and
 structured overview of your project.
 
 <img src="man/figures/cartoon.png" alt="cartoon" align="right" width="330"/>
 
-### Why use `pipeflow`
+### Why use {pipeflow}
 
 - Easy to learn yet suited for growingly complex workflows
 - Automatically manages function and parameter dependencies
@@ -75,12 +75,12 @@ below:
   pipelines](https://rpahl.github.io/pipeflow/articles/v02-modify-pipeline.html)
 - [Combining
   pipelines](https://rpahl.github.io/pipeflow/articles/v03-combine-pipelines.html)
-- [Collecting
+- [Collecting and filtering
   output](https://rpahl.github.io/pipeflow/articles/v04-collect-output.html)
 
 ### Advanced topics
 
-- [How to use pipeflow with split data
-  sets](https://rpahl.github.io/pipeflow/articles/v05-split-and-combine.html)
-- [How pipelines can modify themselves at
-  runtime](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
+- [Split, map, and
+  reduce](https://rpahl.github.io/pipeflow/articles/v05-split-map-reduce.html)
+- [Recursive
+  self-modification](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)

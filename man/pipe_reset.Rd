@@ -17,6 +17,11 @@ Resets the pipeline to the state before it was run.
 This means that all output is removed and the state of all steps
 is reset to 'New'.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1:2)
 pipe_add(p, "f1", \(x = 1) x)
@@ -27,3 +32,4 @@ p
 pipe_reset(p)
 p
 }
+\keyword{internal}

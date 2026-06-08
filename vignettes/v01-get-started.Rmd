@@ -13,14 +13,12 @@ vignette: >
 ---
 
 ```{r knitr-setup, include = FALSE}
-require(pipeflow)
-
 knitr::opts_chunk$set(
-  comment = "#",
-  prompt = FALSE,
-  tidy = FALSE,
-  cache = FALSE,
-  collapse = TRUE
+    comment = "#",
+    prompt = FALSE,
+    tidy = FALSE,
+    cache = FALSE,
+    collapse = TRUE
 )
 
 old <- options(width = 100L)
@@ -41,68 +39,69 @@ Our goal is to create an analysis pipeline that performs the following steps:
 * plot the data and the model fit.
 
 In the following, we'll show how to define and run the pipeline, how to inspect
-the output of specifics steps, and finally how to re-run the pipeline with
+the output of specific steps, and finally how to re-run the pipeline with
 different parameter settings, which is one of the selling points of using
 such a pipeline.
 
-### Define the pipeline
+### Pipeline building
 
 For easier understanding, we go step by step. First, we create a new pipeline
-with the name "my-pipeline" and the airquality dataset as input data.
+with the name "my-pipeline" and add a `data` step that provides the input
+dataset.
 
 ```{r define-pipeline}
 library(pipeflow)
-library(ggplot2)
 
-pip <- Pipeline$new("my-pipeline", data = airquality)
+pip <- pip_new("my-pip")
+
+pip <- pip_add(pip,
+    step = "data",
+    fun = function(data = airquality) data
+)
 ```
 
-Let's view the pipeline in it's table form after initialization.
+For each step to add, at minimum we specify the name of the step and a function
+that defines what is computed in that step. Let's take a first look at the
+pipeline.
+
 ```{r show-initial-pipeline}
 pip
 ```
 
-Here, each step is represented by one row in the table where the
-`step` column lists the name of the step and the `state` column shows the
-current state of the step. For now, don't worry about the other columns -
-they are explained later.
-
-As you can see, the data is always the first step in the pipeline and
-initially it is in state `New`, which means the pipeline has not been run
-yet.
+Here, each step is represented by one row in the table as denoted in the first
+column. The `depends` column lists the dependencies of a step, which is empty
+for the `data` step since it does not depend on any other step (more on
+dependencies later). The `out` column will eventually contain the output of the
+step, which is currently `NULL` since we haven't run the pipeline yet, and
+the `state` column shows the current, which initially is `new` for all steps.
 
 Next, we add a step called `data_prep`, which consists of a function that
 takes the output of the `data` step as its first argument, adds a new column
 and returns the modified data as its output. To refer to the output of an
 earlier pipeline step, we just write the name of the step preceded with the
-tilde (~) operator.
+tilde (~) operator, that is, `~data` in this case.
+
+Since `pip_add` works "by reference", we can add the step as follows:
 
 ```{r define-data-prep-step}
-pip$add(
+pip |> pip_add(
     "data_prep",
-    function(data = ~data) {
-        replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5/9)
+    function(x = ~data) {
+        replace(x, "Temp.Celsius", (x[, "Temp"] - 32) * 5 / 9)
     }
 )
 ```
 
+So, a second step called `data_prep` was added and it depends on the `data`
+step as now visible in column `depends`.
 
-Again, let's inspect the pipeline.
-```{r show-pipeline-after-data-prep-was-added}
-pip
-```
-
-A second step called `data_prep` was added and it depends on the `data`
-step as can be seen in column `depends`, which will list all dependencies of
-a step.
-
-Next, we add a step called `model_fit`, which fits a linear model to the
+Next, we want to add a step called `model_fit` that fits a linear model to the
 data. The function takes the output of the `data_prep` and defines a
 parameter `xVar`, which is used to specify the variable that is used as
 predictor in the linear model.
 
 ```{r}
-pip$add(
+pip |> pip_add(
     "model_fit",
     function(
         data = ~data_prep,
@@ -111,63 +110,70 @@ pip$add(
         lm(paste("Ozone ~", xVar), data = data)
     }
 )
+pip
 ```
 
 Lastly, we add a step called `model_plot`, which plots the data and the
 linear model fit. The function uses the output from both the
-`model_fit` and the `data_prep` step. It also defines the `xVar`
+`model_fit` and `data_prep` step. It also defines the `xVar`
 parameter and a parameter `title`, which is used as the title
 of the plot.
 
 ```{r}
-pip$add(
+pip |> pip_add(
     "model_plot",
     function(
         model = ~model_fit,
         data = ~data_prep,
         xVar = "Temp.Celsius",
+        xLab = "Temperature in degrees Celsius",
         title = "Linear model fit"
     ) {
+        require(ggplot2, quietly = TRUE)
         coeffs <- coefficients(model)
         ggplot(data) +
             geom_point(aes(.data[[xVar]], .data[["Ozone"]])) +
             geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
-            labs(title = title)
+            labs(title = title, x = xLab)
     }
 )
-```
-
-This completes our pipeline, which now looks as follows:
-```{r show-completed-pipeline}
 pip
 ```
 
 In the last line, we see that the `model_plot` step depends on both
 the `model_fit` and `data_prep` step.
-To visualize a pipeline, we can use the `get_graph()` method, which returns
-a list of arguments that can be passed to the `visNetwork` function from the
-`visNetwork` package.
+
+In addition to the tabular output, {pipeflow} also provides a graphical
+representation that is compatible with the `visNetwork` package.
+In particular, the `pip_get_graph()` function returns a list of arguments
+that can be feed directly to `visNetwork::visNetwork()`.
 
 ```{r, eval = FALSE}
 library(visNetwork)
-do.call(visNetwork, args = pip$get_graph()) |>
+do.call(visNetwork, args = pip_get_graph(pip)) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
 ```{r, echo = FALSE}
 library(visNetwork)
-do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
+do.call(
+    visNetwork,
+    args = c(pip_get_graph(pip), list(height = 100, width = 600))
+) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
+Here, the pipeline is visualized as a directed acyclic graph (DAG) where
+the nodes represent the steps and the edges represent the dependencies.
+
 ### Pipeline integrity
 
-A key feature of `pipeflow` is that the integrity of a pipeline is verified at
+A key feature of {pipeflow} is that the integrity of a pipeline is verified at
 definition time. To see this, let's try to add another step that is referring
-to a step that does not exist:
+to a non-existent step `foo` as its input.
 
 ```{r try-add-bad-step, error = TRUE}
-pip$add(
+pip |> pip_add(
     "another_step",
     function(data = ~foo) {
         data
@@ -175,20 +181,20 @@ pip$add(
 )
 ```
 
-`pipeflow` immediately signals an error and the pipeline remains unchanged:
+{pipeflow} immediately signals an error and the pipeline remains unchanged.
 
 ```{r}
 pip
 ```
 
 
-### Run the pipeline and inspect the output
+### Pipeline run and output
 
-To run the pipeline, we simply call the `run()` method on the pipeline,
-which will produce the following output:
+To run the pipeline, we simply call `pip_run()`,
+which produces the following output:
 
 ```{r run-pipeline}
-pip$run()
+pip_run(pip)
 ```
 
 Let's inspect the pipeline again.
@@ -198,47 +204,64 @@ pip
 ```
 
 ```{r, echo = FALSE}
-library(visNetwork)
-do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
+do.call(
+    visNetwork,
+    args = c(pip_get_graph(pip), list(height = 100, width = 600))
+) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
-We can see that the `state` of all steps have been changed from `New` to `Done`,
+We can see that the `state` of all steps have been changed from `new` to `done`,
 which graphically is represented by the color change from blue to green.
 
-In addition, the output was added in the `out` column. We can inspect the
-output of a specific step by calling the `get_out()` method on the pipeline.
+In addition, the output was added in the `out` column. To access a specific
+entry of the pipeline, we just select the row (aka step) and column of
+pipeline table via the `[[` operator. For example, to inspect the `out`put
+of the `model_fit` and `model_plot` steps, we do:
 
 ```{r inspect-lm, message = FALSE}
-pip$get_out("model_fit")
+pip[["model_fit", "out"]]
 ```
 
 ```{r inspect-plot, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
-pip$get_out("model_plot")
+pip[["model_plot", "out"]]
 ```
 
 
-### Change parameters of the pipeline
+### Pipeline parameters
 
-Any parameter of the pipeline that is *not* bound to a specific step
-(i.e. is not defined with the tilde (~) operator) can be
-changed by calling the `set_params()` method on the pipeline. Let's first
-list all unbound parameters:
+Even for a moderately complex analysis consisting of, say, 15 to 20 different
+functions, keeping track of all the different analysis parameters can quickly
+get out of hand.
+
+As we will see, with {pipeflow} this becomes much easier, since the pipeline
+itself keeps track of all parameters and their values. Let's first inspect the
+parameters of the above defined pipeline using the `pip_get_params()` function.
 
 ```{r inspect-params}
-pip$get_params()
+pip_get_params(pip) |> str()
 ```
 
-Now let's assume we want to change the `xVar` in the entire pipeline to
-`"Solar.R"`. We can do this simply as follows:
+It returns a list of all *independent* parameters (here `data`, `xVar`, and `title`).
+By *independent* we mean that these parameters don't depend
+on other steps (i.e. steps defined with the `~` operator). This is important as you
+never want to mess with parameters defined in terms of other steps.
+
+Furthermore, each parameter is only listed once, even if it is used in multiple
+steps^[For example, the `xVar` parameter is used in both the `model_fit`
+and `model_plot` step].
+To change any independent parameter, we simply call `pip_set_params()`:
 
 ```{r set-xVar}
-pip$set_params(list(xVar = "Solar.R"))
-pip$get_params()
+pip |>
+    pip_set_params(list(xVar = "Solar.R", xLab = "Solar radiation in Langleys"))
+
+pip_get_params(pip) |> str()
 ```
 
-Changing the parameters of the pipeline at least has an effect on all
-steps that depend on the changed parameter.
+{pipeflow} automatically propagates the parameter change to all steps that use the
+respective parameter. In addition, it will recognize which steps are affected by
+the parameter change and mark them as `outdated`.
 
 ```{r show-pipeline-with-outdated-step}
 pip
@@ -246,58 +269,72 @@ pip
 
 ```{r, echo = FALSE}
 library(visNetwork)
-do.call(visNetwork, args = c(pip$get_graph(), list(height = 100))) |>
+do.call(
+    visNetwork,
+    args = c(pip_get_graph(pip), list(height = 100, width = 600))
+) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
 We can see that the `model_fit` and `model_plot` steps are now in state
-`Outdated` (graphically indicated by the orange color), which means that they
-need to be rerun. We can do this by
-calling the `run()` method on the pipeline again.
+`outdated` (graphically indicated by the orange color).
+To update the results, we just run the pipeline again.
 
 ```{r run-pipeline-again}
-pip$run()
+pip_run(pip)
 ```
-
 
 The outdated steps were re-run as expected and the output was
-updated accordingly.
+updated accordingly now showing the new x-variable `Solar.R`.
 
 ```{r inspect-plot-again, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
-pip$get_out("model_plot")
+pip[["model_plot", "out"]]
 ```
 
-To just change the title of the plot, obviously only the `model_plot` step
+A closer look at the run log shows that the pipeline skipped the first
+two steps and ran only the steps that were outdated, which basically
+can be thought of caching or
+mimicking the behavior of `make` in software development.
+That is, {pipeflow} always keeps track of which steps are outdated and
+only re-runs those steps and their downstream dependencies,
+which can be a huge time saver for larger pipelines^[
+    Another use case is backend computation in interactive shiny applications,
+    where users change parameters dynamically and want quick updates.
+].
+
+Let's visit some more examples of parameter changes and their effects on
+the pipeline. To just change the title of the plot, only the `model_plot` step
 needs to be rerun.
 
 ```{r set-title}
-pip$set_params(list(title = "Some new title"))
+pip |> pip_set_params(list(title = "Some new title"))
 pip
 ```
 
 ```{r inspect-plot-after-title-change, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
-pip$run()$get_out("model_plot")
+pip_run(pip)
+pip[["model_plot", "out"]]
 ```
 
-If instead we were to change the input data, since all steps depend on it,
-we expect all steps to be rerun.
+Once we change the input data parameter from the `data` step,
+since all other steps depend on it, we expect all steps to be rerun.
 
 ```{r}
-pip$set_data(airquality[1:10, ])
+small_airquality <- airquality[1:10, ]
+pip |> pip_set_params(list(data = small_airquality))
 pip
 ```
 
 ```{r inspect-plot-after-data-change, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
-pip$run()$get_out("model_plot")
+pip_run(pip)
+pip[["model_plot", "out"]]
 ```
 
-### Try setting non-existing parameters
-
-Last but not least let's see what happens if we are trying to set parameters that don't exist
+Last but not least let's try to set parameters that don't exist
 in the pipeline, which mostly happens due to accidental misspells.
 
 ```{r set-unknown-parameters, warning = TRUE}
-pip$set_params(list(titel = "misspelled variable name", foo = "my foo"))
+pip |> pip_set_params(list(titel = "misspelled variable name", foo = "my foo"))
 ```
 
 As you see, a warning is given to the user hinting at the respective parameter names,

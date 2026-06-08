@@ -3,7 +3,7 @@
 \name{pipe_lock_step}
 \alias{pipe_lock_step}
 \alias{pipe_unlock_step}
-\title{Lock/unlock steps}
+\title{Lock steps}
 \usage{
 pipe_lock_step(pip, step)
 
@@ -24,6 +24,12 @@ setting new pipeline parameters nor future pipeline runs can change
 the current parameter and output content. To unlock a locked step,
 use \code{\link[=pipe_unlock_step]{pipe_unlock_step()}}.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_lock]{pip_lock()}} instead.
+
+ Deprecated. Legacy API. Use \code{\link[=pip_unlock]{pip_unlock()}} instead.
+}
+
 \examples{
 # pipe_lock_step
 p <- pipe_new("pipe", data = 1)
@@ -46,3 +52,4 @@ pipe_set_params(p, list(x = 3))
 pipe_run(p)
 pipe_get_out(p, "add1")
 }
+\keyword{internal}

@@ -21,6 +21,11 @@ Set unbound function parameters defined at given pipeline
 step where 'unbound' means parameters that are not linked to other
 steps. If one or more parameters don't exist, an error is given.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_new]{pip_new()}} and
+related pip_* functions.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1)
 pipe_add(p, "add1", \(x = ~data, y = 2, z = 3) x + y)
@@ -31,3 +36,4 @@ try(
   pipe_set_params_at_step(p, step = "add1", params = list(foo = 3))
 )
 }
+\keyword{internal}

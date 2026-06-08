@@ -4,7 +4,13 @@
 \alias{pipe_run_step}
 \title{Run specific step}
 \usage{
-pipe_run_step(pip, step, upstream = TRUE, downstream = FALSE)
+pipe_run_step(
+  pip,
+  step,
+  upstream = TRUE,
+  downstream = FALSE,
+  cleanUnkept = FALSE
+)
 }
 \arguments{
 \item{pip}{\code{Pipeline} object}
@@ -16,6 +22,10 @@ steps first.}
 
 \item{downstream}{\code{logical} if \code{TRUE}, run all depdendent
 downstream afterwards.}
+
+\item{cleanUnkept}{\code{logical} if \code{TRUE} all output that was not
+marked to be kept is removed after the pipeline run. This option
+can be useful if temporary results require a lot of memory.}
 }
 \value{
 returns the \code{Pipeline} object invisibly
@@ -24,6 +34,10 @@ returns the \code{Pipeline} object invisibly
 Run given pipeline step possibly together with
 upstream and/or downstream dependencies.
 }
+\section{Lifecycle}{
+ Deprecated. Legacy API. Use \code{\link[=pip_run]{pip_run()}} instead.
+}
+
 \examples{
 p <- pipe_new("pipe", data = 1)
 pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
@@ -35,3 +49,4 @@ pipe_run_step(p, "add2", downstream = TRUE)
 
 pipe_run_step(p, "mult", upstream = TRUE)
 }
+\keyword{internal}
