@@ -1,0 +1,360 @@
+---
+title: "pipeflow vs targets benchmark"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+  md_document:
+    variant: gfm
+    preserve_yaml: true
+params:
+    nrep: 30
+---
+
+```{r knitr-setup, include = FALSE}
+knitr::opts_chunk$set(
+    comment = "#",
+    prompt = FALSE,
+    tidy = FALSE,
+    cache = FALSE,
+    collapse = TRUE
+)
+
+nrep <- params$nrep
+old <- options(width = 100L)
+```
+
+```{r libs, include = FALSE}
+devtools::load_all()
+library(microbenchmark)
+library(targets)
+suppressPackageStartupMessages({
+    library(readr)
+    library(dplyr)
+    library(ggplot2)
+})
+```
+
+
+Package: pipeflow `r packageVersion("pipeflow")`, targets `r packageVersion("targets")`
+
+## 1. Walkthrough example
+
+Based on https://books.ropensci.org/targets/walkthrough.html
+
+```{r helpers}
+# General helpers
+create_data_csv <- function(data = airquality, file = "data.csv") {
+    utils::write.csv(data, file)
+}
+elapsed_time <- function(expr) {
+    system.time(expr, gcFirst = FALSE)[["elapsed"]]
+}
+
+
+# Helper functions used in both pipelines
+get_data <- function(file) {
+    utils::read.csv(file) |> stats::na.omit()
+}
+
+fit_model <- function(data) {
+    lm(Ozone ~ Temp, data) |> coefficients()
+}
+
+plot_model <- function(model, data) {
+    ggplot(data) +
+        geom_point(aes(x = Temp, y = Ozone)) +
+        geom_abline(intercept = model[1], slope = model[2])
+}
+```
+
+
+### pipeflow pipeline
+
+```{r pipeflow-walkthrough-run}
+tar_dir({
+    # Setup data and pipeline
+    create_data_csv(file = "data.csv")
+    p <- pip_new("walkthrough") |>
+        pip_add("data",  \(file = "data.csv") get_data(file)) |>
+        pip_add("model", \(data = ~data) fit_model(data)) |>
+        pip_add("plot",  \(model = ~model, data = ~data) plot_model(model, data))
+
+
+    message("\nProof of principle full run (no skips)")
+    pip_run(p)
+    p_r <- replicate(nrep, elapsed_time(pip_run(p, lgr = NULL, force = TRUE)))
+
+    message("\nProof of principle skipped run")
+    pip_run(p)
+    p_s <- replicate(nrep, elapsed_time(pip_run(p, lgr = NULL)))
+})
+```
+
+### targets pipeline
+
+```{r targets-walkthrough-run}
+tar_make_here <- function(reporter = "silent") {
+    tar_make(callr_function = NULL, reporter = reporter)
+}
+
+tar_dir({
+    # Setup data and pipeline
+    create_data_csv(file = "data.csv")
+    tar_script({
+        list(
+            tar_target(file, "data.csv", format = "file"),
+            tar_target(data, get_data(file)),
+            tar_target(model, fit_model(data)),
+            tar_target(plot, plot_model(model, data))
+        )
+    }, ask = FALSE)
+
+    message("\nProof of principle full run (no skips)")
+    tar_make_here(reporter = "timestamp")
+    tar_r <- replicate(nrep, {
+        tar_destroy(ask = FALSE)
+        elapsed_time(tar_make_here(reporter = "silent"))
+    })
+
+    message("\nProof of principle skipped run")
+    tar_make_here(reporter = "timestamp")
+    tar_s <- replicate(nrep, {
+        elapsed_time(tar_make_here(reporter = "silent"))
+    })
+})
+```
+
+### Runtimes
+
+```{r walkthrough-runtime-table, echo = FALSE}
+times <- list(p_r, p_s, tar_r, tar_s)
+title <- sprintf("Walkthrough (4 steps) — %d iterations", nrep)
+
+df <- data.frame(
+    "Package"     = c("pipeflow","pipeflow","targets","targets"),
+    "Operation"   = c("full run","skipped run","full run","skipped run"),
+    "Median (ms)" = sapply(times, median) * 1000,
+    "Mean (ms)"   = sapply(times, mean) * 1000,
+    check.names = FALSE
+)
+
+knitr::kable(df, digits = 3, caption = title)
+```
+
+```{r walkthrough-runtime-plot, echo = FALSE, fig.width = 7, fig.height = 4}
+data <- data.frame(
+    "Package" = c("pipeflow", "targets") |> rep(each = 2 * nrep),
+    "Operation" = c("full run", "skipped run") |> rep(each = nrep),
+    "Time" = c(p_r, p_s, tar_r, tar_s) * 1000
+)
+
+ggplot(data, aes(x = Operation, y = Time, fill = Package)) +
+    geom_violin(trim = FALSE, alpha = 0.6) +
+    stat_summary(
+        fun = median,
+        geom = "crossbar",
+        width = 0.3,
+        position = position_dodge(0.9)
+    ) +
+    labs(y = "Time (ms)", x = NULL, title = title) +
+    theme_bw()
+```
+
+## 2. Long linear pipeline (N sequential steps)
+
+Each step depends on the output of the previous step: `s0 -> s1 -> s2 -> ... -> sN`.
+
+```{r linear-helpers}
+# Shared helpers for the linear pipeline — used by both pipeflow and targets
+linear_s0   <- function() 0
+linear_succ <- function(x) x + 1
+```
+
+```{r linear-pipeflow}
+create_linear_pip <- function(n) {
+  pip <- pip_new("linear") |> pip_add("s0", linear_s0)
+  for (i in seq_len(n))
+    pip_add(pip, paste0("s", i), \(x = ~ -1) linear_succ(x))
+  pip
+}
+
+# Verify
+p <- create_linear_pip(5)
+pip_run(p)
+stopifnot(p[["s10", "out"]] == 5)
+```
+
+```{r linear-targets}
+create_linear_tar <- function(n) {
+  targets <- c("  tar_target(s0, linear_s0())")
+  for (i in seq_len(n))
+    targets <- c(targets, sprintf("  tar_target(s%s, linear_succ(s%s))", i, i - 1))
+  writeLines(c("library(targets)", "list(", paste(targets, collapse = ",\n"), ")"), "_targets.R")
+}
+
+# Verify
+tar_dir({
+  create_linear_tar(5)
+  tar_make_here(reporter = "silent")
+  stopifnot(tar_read(s5) == 5)
+})
+```
+
+### Benchmark
+
+```{r linear-benchmark, results='asis', echo = FALSE}
+sizes <- c(16, 32, 64, 128)
+
+# Pipeflow pipelines (built once, run repeatedly with force)
+pips_pf <- lapply(sizes, create_linear_pip) |>
+  stats::setNames(paste0("pf_n=", sizes))
+
+# Run pipeflow benchmarks
+mb_pf <- microbenchmark(
+  control = list(order = "inorder"), times = nrep,
+  "pf n=16"  = pip_run(pips_pf[["pf_n=16"]],  force = TRUE),
+  "pf n=32"  = pip_run(pips_pf[["pf_n=32"]],  force = TRUE),
+  "pf n=64"  = pip_run(pips_pf[["pf_n=64"]],  force = TRUE),
+  "pf n=128" = pip_run(pips_pf[["pf_n=128"]], force = TRUE)
+)
+
+# Run targets benchmarks — fresh tar_dir per iteration
+mb_tar <- microbenchmark(
+  control = list(order = "inorder"), times = nrep,
+  "tar n=16"  = tar_dir({ create_linear_tar(16);  tar_make_here() }),
+  "tar n=32"  = tar_dir({ create_linear_tar(32);  tar_make_here() }),
+  "tar n=64"  = tar_dir({ create_linear_tar(64);  tar_make_here() }),
+  "tar n=128" = tar_dir({ create_linear_tar(128); tar_make_here() })
+)
+
+tab_pf  <- summary(mb_pf,  unit = "ms")[, c("expr", "median", "mean")]
+tab_tar <- summary(mb_tar, unit = "ms")[, c("expr", "median", "mean")]
+
+tab_pf[["us/step"]]  <- round(tab_pf[["median"]]  / sizes * 1000, 1)
+tab_tar[["us/step"]] <- round(tab_tar[["median"]]  / sizes * 1000, 1)
+
+tab <- rbind(tab_pf, tab_tar)
+knitr::kable(tab, digits = 1)
+```
+
+```{r linear-plot, echo = FALSE, fig.width = 7, fig.height = 4}
+d_pf  <- cbind(as.data.frame(mb_pf),  package = "pipeflow")
+d_tar <- cbind(as.data.frame(mb_tar), package = "targets")
+
+d_all <- rbind(d_pf, d_tar)
+d_all$n <- as.numeric(gsub("[^0-9]", "", d_all$expr))
+
+title <- sprintf("Linear pipeline — %d iterations", nrep)
+ggplot(d_all, aes(x = factor(n), y = time / 1e6, fill = package)) +
+  geom_violin(trim = FALSE, alpha = 0.6, scale = "width") +
+  labs(y = "Time (ms)", x = "Number of steps", title = title) +
+  theme_bw()
+```
+
+## 3. DAG with branching (fan-out: N parallel branches → 1 sink)
+
+Source feeds N parallel branches, all converging on a single sink step.
+
+```{r dag-helpers}
+# Shared helpers for the fan-out DAG — used by both pipeflow and targets
+dag_source <- function() 1
+dag_branch <- function(x) x + 1
+dag_sink   <- function(...) sum(...)
+```
+
+```{r dag-pipeflow}
+make_branch_pip <- function(n) {
+  pip <- pip_new("dag") |> pip_add("source", dag_source)
+  for (i in seq_len(n))
+    pip_add(pip, paste0("b", i), \(x = ~source) dag_branch(x))
+
+  sink_args <- paste(sprintf("x%s = ~b%s", seq_len(n), seq_len(n)), collapse = ", ")
+  sink_call <- paste(paste0("x", seq_len(n)), collapse = ", ")
+  eval(parse(text = sprintf(
+    "pip_add(pip, 'sink', function(%s) { dag_sink(%s) })", sink_args, sink_call
+  )))
+  invisible(pip)
+}
+
+p4 <- make_branch_pip(4); pip_run(p4)
+stopifnot(p4[["sink", "out"]] == 8)
+```
+
+```{r dag-targets}
+make_branch_tar <- function(n) {
+  targets <- c("  tar_target(source, dag_source())")
+  for (i in seq_len(n))
+    targets <- c(targets, sprintf("  tar_target(b%s, dag_branch(source))", i))
+  sink_vars <- paste(paste0("b", seq_len(n)), collapse = ", ")
+  targets <- c(targets, sprintf("  tar_target(sink, dag_sink(%s))", sink_vars))
+  writeLines(c("library(targets)", "list(", paste(targets, collapse = ",\n"), ")"), "_targets.R")
+}
+
+# Verify
+tar_dir({
+  make_branch_tar(4)
+  tar_make_here()
+  stopifnot(tar_read(sink) == 8)
+})
+```
+
+### Benchmark
+
+```{r dag-benchmark, results='asis', echo = FALSE}
+br_sizes <- c(16, 32, 64, 128)
+
+pips_pf <- lapply(br_sizes, make_branch_pip) |>
+  stats::setNames(paste0("pf_br=", br_sizes))
+
+mb_pf <- microbenchmark(
+  control = list(order = "inorder"), times = 10,
+  "pf br=16"  = pip_run(pips_pf[["pf_br=16"]],  force = TRUE),
+  "pf br=32"  = pip_run(pips_pf[["pf_br=32"]],  force = TRUE),
+  "pf br=64"  = pip_run(pips_pf[["pf_br=64"]],  force = TRUE),
+  "pf br=128" = pip_run(pips_pf[["pf_br=128"]], force = TRUE)
+)
+
+mb_tar <- microbenchmark(
+  control = list(order = "inorder"), times = 10,
+  "tar br=16"  = tar_dir({ make_branch_tar(16);  tar_make_here() }),
+  "tar br=32"  = tar_dir({ make_branch_tar(32);  tar_make_here() }),
+  "tar br=64"  = tar_dir({ make_branch_tar(64);  tar_make_here() }),
+  "tar br=128" = tar_dir({ make_branch_tar(128); tar_make_here() })
+)
+
+tab_pf  <- summary(mb_pf,  unit = "ms")[, c("expr", "median", "mean")]
+tab_tar <- summary(mb_tar, unit = "ms")[, c("expr", "median", "mean")]
+
+tab_pf[["us/node"]]  <- round(tab_pf[["median"]]  / (br_sizes + 2) * 1000, 1)
+tab_tar[["us/node"]] <- round(tab_tar[["median"]]  / (br_sizes + 2) * 1000, 1)
+
+tab <- rbind(tab_pf, tab_tar)
+knitr::kable(tab, digits = 1)
+```
+
+```{r dag-plot, echo = FALSE, fig.width = 7, fig.height = 4}
+d_pf  <- cbind(as.data.frame(mb_pf),  package = "pipeflow")
+d_tar <- cbind(as.data.frame(mb_tar), package = "targets")
+
+d_all <- rbind(d_pf, d_tar)
+d_all$n <- as.numeric(gsub("[^0-9]", "", d_all$expr))
+
+title <- sprintf("Fan-out DAG — %d iterations", nrep)
+ggplot(d_all, aes(x = factor(n), y = time / 1e6, fill = package)) +
+  geom_violin(trim = FALSE, alpha = 0.6, scale = "width") +
+  labs(y = "Time (ms)", x = "Number of branches", title = title) +
+  theme_bw()
+```
+
+
+## Session info
+
+```{r session-info}
+sessionInfo()
+```
+
+```{r, include = FALSE}
+options(old)
+```
