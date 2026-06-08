@@ -152,86 +152,95 @@ ggplot(data, aes(x = Operation, y = Time, fill = Package)) +
 ## 2. Long linear pipeline (N sequential steps)
 
 Each step depends on the output of the previous step: `s0 -> s1 -> s2 -> ... -> sN`.
+We don't care about the actual computations here, just the overhead of managing
+the pipeline structure and skipping logic as the number of steps increases.
 
-```{r linear-helpers}
-# Shared helpers used by both pipeflow and targets for step definitions
-linear_s0   <- function() 0
-linear_succ <- function(x) x + 1
-```
+### pipeflow pipeline
 
 ```{r linear-pipeflow}
 create_linear_pip <- function(n) {
-    pip <- pip_new("linear") |> pip_add("s0", linear_s0)
+    pip <- pip_new("linear") |> pip_add("s0", \(init = 0) init)
+
+    # Add steps 1 to n where each step links to the prior step
     for (i in seq_len(n)) {
-        pip_add(pip, paste0("s", i), \(x = ~ -1) linear_succ(x))
+        pip_add(pip, step = paste0("s", i), \(x = ~ -1) x + 1)
     }
     pip
 }
 
 # Verify
-p <- create_linear_pip(5)
+p <- create_linear_pip(3)
 pip_run(p)
-stopifnot(p[["s5", "out"]] == 5)
+stopifnot(p[["s3", "out"]] == 3)
 ```
 
 ```{r linear-targets}
 create_linear_tar <- function(n) {
-    targets <- c("  tar_target(s0, linear_s0())")
-    for (i in seq_len(n)) {
-        targets <- c(targets, sprintf("  tar_target(s%s, linear_succ(s%s))", i, i - 1))
-    }
-    writeLines(c("library(targets)", "list(", paste(targets, collapse = ",\n"), ")"), "_targets.R")
+    init <- tar_target(s0, 0)
+    rest <- lapply(
+        seq_len(n),
+        FUN = \(i) tar_target_raw(
+            sprintf("s%d", i),
+            call("+", as.symbol(sprintf("s%d", i - 1)), 1)
+        )
+    )
+    c(list(init), rest)
 }
 
 # Verify
 tar_dir({
-  create_linear_tar(5)
-  tar_make_here(reporter = "silent")
-  stopifnot(tar_read(s5) == 5)
+    tar_script(create_linear_tar(3), ask = FALSE)
+    tar_make_here(reporter = "timestamp")
+    stopifnot(tar_read(s3) == 3)
 })
 ```
 
 ### Benchmark
 
 ```{r linear-benchmark, echo = FALSE}
-sizes <- c(16, 32, 64, 128)
-silent_run <- function(x) pip_run(x, lgr = NULL, force = TRUE)
+pipeline_sizes <- c(16, 32, 64, 128)
 
-# Pipeflow pipelines (built once, run repeatedly with force)
-pips_pf <- lapply(sizes, create_linear_pip) |>
-  stats::setNames(paste0("pf_n=", sizes))
+# ---- pipeflow: build once, time only forced re-runs ----
+pips_pf <- lapply(pipeline_sizes, create_linear_pip) |>
+    stats::setNames(paste0("pf_n=", pipeline_sizes))
 
-# Run pipeflow benchmarks
-mb_pf <- microbenchmark(
-  control = list(order = "inorder"), times = nrep,
-  "pf n=16"  = silent_run(pips_pf[["pf_n=16"]]),
-  "pf n=32"  = silent_run(pips_pf[["pf_n=32"]]),
-  "pf n=64"  = silent_run(pips_pf[["pf_n=64"]]),
-  "pf n=128" = silent_run(pips_pf[["pf_n=128"]])
-)
+pf_times <- lapply(pips_pf, function(p) {
+    replicate(nrep, elapsed_time(pip_run(p, lgr = NULL, force = TRUE)))
+})
 
-# Run targets benchmarks — fresh tar_dir per iteration
-mb_tar <- microbenchmark(
-  control = list(order = "inorder"), times = nrep,
-  "tar n=16"  = tar_dir({ create_linear_tar(16);  tar_make_here() }),
-  "tar n=32"  = tar_dir({ create_linear_tar(32);  tar_make_here() }),
-  "tar n=64"  = tar_dir({ create_linear_tar(64);  tar_make_here() }),
-  "tar n=128" = tar_dir({ create_linear_tar(128); tar_make_here() })
-)
+
+# ---- targets: fresh tar_dir each iteration, only tar_make is timed ----
+tar_times <- lapply(pipeline_sizes, function(n) {
+    replicate(nrep, {
+        tar_dir({
+            tar_script(create_linear_tar(n), ask = FALSE)
+            elapsed_time(tar_make(callr_function = NULL, reporter = "silent"))
+        })
+    })
+})
 ```
 
 ```{r linear-plot, echo = FALSE, fig.width = 7, fig.height = 4}
-d_pf  <- cbind(as.data.frame(mb_pf),  package = "pipeflow")
-d_tar <- cbind(as.data.frame(mb_tar), package = "targets")
+
+# Reshape into a single data.frame for plotting
+pf_df <- do.call(rbind, lapply(seq_along(pf_times), function(i) {
+    data.frame(expr = names(pf_times)[i], time = pf_times[[i]])
+}))
+tar_df <- do.call(rbind, lapply(seq_along(tar_times), function(i) {
+    data.frame(expr = paste0("tar n=", pipeline_sizes[i]), time = tar_times[[i]])
+}))
+
+d_pf  <- cbind(pf_df,  package = "pipeflow")
+d_tar <- cbind(tar_df, package = "targets")
 
 d_all <- rbind(d_pf, d_tar)
 d_all$n <- as.numeric(gsub("[^0-9]", "", d_all$expr))
 
 title <- sprintf("Linear pipeline — %d iterations", nrep)
-ggplot(d_all, aes(x = factor(n), y = time / 1e6, fill = package)) +
-  geom_violin(trim = FALSE, alpha = 0.6, scale = "width") +
-  labs(y = "Time (ms)", x = "Number of steps", title = title) +
-  theme_bw()
+ggplot(d_all, aes(x = factor(n), y = time * 1000, fill = package)) +
+    geom_violin(trim = FALSE, alpha = 0.6, scale = "width") +
+    labs(y = "Time (ms)", x = "Number of steps", title = title) +
+    theme_bw()
 ```
 
 ## 3. DAG with branching (fan-out: N parallel branches → 1 sink)
@@ -285,17 +294,17 @@ tar_dir({
 
 ```{r dag-benchmark, echo = FALSE}
 br_sizes <- c(16, 32, 64, 128)
-silent_run <- function(x) pip_run(x, lgr = NULL, force = TRUE)
+forced_run <- function(x) pip_run(x, lgr = NULL, force = TRUE)
 
 pips_pf <- lapply(br_sizes, make_branch_pip) |>
   stats::setNames(paste0("pf_br=", br_sizes))
 
 mb_pf <- microbenchmark(
   control = list(order = "inorder"), times = 10,
-  "pf br=16"  = silent_run(pips_pf[["pf_br=16"]]),
-  "pf br=32"  = silent_run(pips_pf[["pf_br=32"]]),
-  "pf br=64"  = silent_run(pips_pf[["pf_br=64"]]),
-  "pf br=128" = silent_run(pips_pf[["pf_br=128"]])
+  "pf br=16"  = forced_run(pips_pf[["pf_br=16"]]),
+  "pf br=32"  = forced_run(pips_pf[["pf_br=32"]]),
+  "pf br=64"  = forced_run(pips_pf[["pf_br=64"]]),
+  "pf br=128" = forced_run(pips_pf[["pf_br=128"]])
 )
 
 mb_tar <- microbenchmark(
