@@ -51,28 +51,9 @@ structured overview of your project.
 ### {pipeflow} vs {targets}
 
 [{targets}](https://docs.ropensci.org/targets/) is the most widely used
-pipeline toolkit in the R ecosystem and the de-facto standard for
-heavy-duty reproducible workflows. The table below contrasts the two
-packages to help you decide which one fits your project.
-
-| Feature | **targets** | **pipeflow** |
-|----|----|----|
-| Paradigm | Declarative — define the full DAG upfront in a `_targets.R` script, then execute | Interactive — incrementally build the pipeline with `pip_add()` as you code |
-| Execution | `tar_make()` runs in a **fresh R process** | `pip_run()` runs in the **current R session** |
-| Dependencies | Heavy (~20+ packages: `tarchetypes`, `crew`, `qs`, etc.) | Minimal (`data.table`) |
-| Learning curve | Steep — requires understanding `_targets.R` conventions, storage formats, cue rules | Shallow — R-native API with few concepts |
-| Skip up-to-date steps | ✅ Hash-based invalidation of code and data | ✅ State-based (`done` / `outdated`) |
-| Modify pipeline at runtime | ❌ Must edit `_targets.R` and re-run | ✅ `pip_remove()`, `pip_rename()`, `pip_replace()`, insert with `after =` |
-| Parameter management | ❌ No unified parameter view across targets | ✅ `pip_get_params()` / `pip_set_params()` — one call updates all steps |
-| Split / map / reduce | Requires target factories (`tarchetypes`) or branching | ✅ Built-in `exec = "split"` / `"auto"` / `"reduce"` |
-| Dynamic branching | ✅ Comprehensive via `tarchetypes` | ✅ Auto-mapping over partition keys (`exec = "auto"`) |
-| Views / tag filtering | ❌ | ✅ `pip_view()` — filter steps by tags, groups, or index |
-| Pipeline composition | ❌ | ✅ `pip_bind()` two pipelines, `pip_add_from()` copy individual steps |
-| Self-modifying pipelines | ❌ | ✅ `pip_run(recursive = TRUE)` — steps can return modified pipelines |
-| Distributed computing | ✅ `crew` for HPC and cloud workers | ❌ (by design — stays lightweight and single-machine) |
-| Cloud storage | ✅ AWS, GCS | ❌ |
-| File tracking | ✅ File targets with `format = "file"` | ❌ |
-| Step locking | ❌ | ✅ `pip_lock()` / `pip_unlock()` — protect steps from accidental modification |
+pipeline toolkit in the R ecosystem. For a detailed comparison and
+benchmark results, see the [vs targets
+vignette](https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html).
 
 In short, **{targets}** is the tool of choice for large-scale, formally
 reproducible projects that may run on distributed infrastructure.
