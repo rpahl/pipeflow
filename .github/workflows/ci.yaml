@@ -25,9 +25,9 @@ jobs:
       security-events: write   # if uploading SARIF
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6
 
-      - uses: r-lib/actions/setup-r@a51a8012b0aab7c32ef9d19bf54da93f3254335e  # v2
+      - uses: r-lib/actions/setup-r@929c772977a3a13c8733b363bf5a2f685c25dd91  # v2.9
         with:
           r-version: renv          # R version from renv.lock
           Ncpus: 6
@@ -81,7 +81,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6
         with:
           lfs: true
 
@@ -99,7 +99,7 @@ jobs:
           _R_CHECK_LIMIT_CORES_: FALSE   # allow more than 2 cores
 
       - name: R CMD check against current CRAN
-        uses: r-lib/actions/check-r-package@a51a8012b0aab7c32ef9d19bf54da93f3254335e  # v2
+        uses: r-lib/actions/check-r-package@929c772977a3a13c8733b363bf5a2f685c25dd91  # v2.9
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual")'
@@ -108,14 +108,14 @@ jobs:
 
       - name: Publish Linux Test Results
         if: always() && startsWith(matrix.os, 'ubuntu') && hashFiles('check/*.Rcheck/tests/testthat/*.xml') != ''
-        uses: EnricoMi/publish-unit-test-result-action@2ceeed2b8f26e15b06c3846719f75354febd9e7b  # v2
+        uses: EnricoMi/publish-unit-test-result-action@283dea176069279a9076e77b548668a8e4f0c31b  # v2.9
         with:
           files: check/*.Rcheck/tests/testthat/*.xml
           deduplicate_classes_by_file_name: true
 
       - name: Upload R CMD check artifacts on failure
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: r-cmd-check-${{ matrix.os }}
           path: check
@@ -127,7 +127,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0  # v6
         with:
           lfs: true
 
@@ -159,7 +159,7 @@ jobs:
 
       - name: Upload coverage workspace on failure
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: coverage-test-failures
           path: ${{ runner.temp }}/package
