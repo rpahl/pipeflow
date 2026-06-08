@@ -9,7 +9,7 @@ output:
     variant: gfm
     preserve_yaml: true
 params:
-    nrep: 10
+    nrep: 30
 ---
 
 ```{r knitr-setup, include = FALSE}
@@ -274,17 +274,24 @@ stopifnot(p4[["sink", "out"]] == 8)
 
 ```{r dag-targets}
 make_branch_tar <- function(n) {
-  targets <- c("  tar_target(source, dag_source())")
-  for (i in seq_len(n))
-    targets <- c(targets, sprintf("  tar_target(b%s, dag_branch(source))", i))
-  sink_vars <- paste(paste0("b", seq_len(n)), collapse = ", ")
-  targets <- c(targets, sprintf("  tar_target(sink, dag_sink(%s))", sink_vars))
-  writeLines(c("library(targets)", "list(", paste(targets, collapse = ",\n"), ")"), "_targets.R")
+  source <- tar_target(source, dag_source())
+  branches <- lapply(
+    seq_len(n),
+    FUN = \(i) tar_target_raw(
+      sprintf("b%d", i),
+      call("dag_branch", as.symbol("source"))
+    )
+  )
+  sink <- tar_target_raw(
+    "sink",
+    as.call(c(as.symbol("dag_sink"), lapply(paste0("b", seq_len(n)), as.symbol)))
+  )
+  c(list(source), branches, list(sink))
 }
 
 # Verify
 tar_dir({
-  make_branch_tar(4)
+  tar_script(make_branch_tar(4), ask = FALSE)
   tar_make_here()
   stopifnot(tar_read(sink) == 8)
 })
@@ -294,48 +301,48 @@ tar_dir({
 
 ```{r dag-benchmark, echo = FALSE}
 br_sizes <- c(16, 32, 64, 128)
-forced_run <- function(x) pip_run(x, lgr = NULL, force = TRUE)
 
+# ---- pipeflow: build once, time only forced re-runs ----
 pips_pf <- lapply(br_sizes, make_branch_pip) |>
   stats::setNames(paste0("pf_br=", br_sizes))
 
-mb_pf <- microbenchmark(
-  control = list(order = "inorder"), times = 10,
-  "pf br=16"  = forced_run(pips_pf[["pf_br=16"]]),
-  "pf br=32"  = forced_run(pips_pf[["pf_br=32"]]),
-  "pf br=64"  = forced_run(pips_pf[["pf_br=64"]]),
-  "pf br=128" = forced_run(pips_pf[["pf_br=128"]])
-)
+pf_times <- lapply(pips_pf, function(p) {
+  replicate(nrep, elapsed_time(pip_run(p, lgr = NULL, force = TRUE)))
+})
 
-mb_tar <- microbenchmark(
-  control = list(order = "inorder"), times = 10,
-  "tar br=16"  = tar_dir({ make_branch_tar(16);  tar_make_here() }),
-  "tar br=32"  = tar_dir({ make_branch_tar(32);  tar_make_here() }),
-  "tar br=64"  = tar_dir({ make_branch_tar(64);  tar_make_here() }),
-  "tar br=128" = tar_dir({ make_branch_tar(128); tar_make_here() })
-)
+# ---- targets: fresh tar_dir each iteration, only tar_make is timed ----
+tar_times <- lapply(br_sizes, function(n) {
+  replicate(nrep, {
+    tar_dir({
+      tar_script(make_branch_tar(n), ask = FALSE)
+      elapsed_time(tar_make(callr_function = NULL, reporter = "silent"))
+    })
+  })
+})
+
+# Reshape into data.frames for plotting
+pf_df <- do.call(rbind, lapply(seq_along(pf_times), function(i) {
+  data.frame(expr = names(pf_times)[i], time = pf_times[[i]])
+}))
+tar_df <- do.call(rbind, lapply(seq_along(tar_times), function(i) {
+  data.frame(expr = paste0("tar br=", br_sizes[i]), time = tar_times[[i]])
+}))
+
+d_pf  <- cbind(pf_df,  package = "pipeflow")
+d_tar <- cbind(tar_df, package = "targets")
 ```
 
 ```{r dag-plot, echo = FALSE, fig.width = 7, fig.height = 4}
-d_pf  <- cbind(as.data.frame(mb_pf),  package = "pipeflow")
-d_tar <- cbind(as.data.frame(mb_tar), package = "targets")
-
 d_all <- rbind(d_pf, d_tar)
 d_all$n <- as.numeric(gsub("[^0-9]", "", d_all$expr))
 
 title <- sprintf("Fan-out DAG — %d iterations", nrep)
-ggplot(d_all, aes(x = factor(n), y = time / 1e6, fill = package)) +
+ggplot(d_all, aes(x = factor(n), y = time * 1000, fill = package)) +
   geom_violin(trim = FALSE, alpha = 0.6, scale = "width") +
   labs(y = "Time (ms)", x = "Number of branches", title = title) +
   theme_bw()
 ```
 
-
-## Session info
-
-```{r session-info}
-sessionInfo()
-```
 
 ```{r, include = FALSE}
 options(old)
