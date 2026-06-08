@@ -9,7 +9,7 @@ output:
     variant: gfm
     preserve_yaml: true
 params:
-    nrep: 30
+    nrep: 10
 ---
 
 ```{r knitr-setup, include = FALSE}
@@ -53,7 +53,7 @@ elapsed_time <- function(expr) {
 }
 
 
-# Helper functions used in both pipelines
+# Shared helpers used by both pipeflow and targets for step definitions
 get_data <- function(file) {
     utils::read.csv(file) |> stats::na.omit()
 }
@@ -128,22 +128,9 @@ tar_dir({
 
 ### Runtimes
 
-```{r walkthrough-runtime-table, echo = FALSE}
-times <- list(p_r, p_s, tar_r, tar_s)
+```{r walkthrough-runtime-plot, echo = FALSE, fig.width = 7, fig.height = 4}
 title <- sprintf("Walkthrough (4 steps) — %d iterations", nrep)
 
-df <- data.frame(
-    "Package"     = c("pipeflow","pipeflow","targets","targets"),
-    "Operation"   = c("full run","skipped run","full run","skipped run"),
-    "Median (ms)" = sapply(times, median) * 1000,
-    "Mean (ms)"   = sapply(times, mean) * 1000,
-    check.names = FALSE
-)
-
-knitr::kable(df, digits = 3, caption = title)
-```
-
-```{r walkthrough-runtime-plot, echo = FALSE, fig.width = 7, fig.height = 4}
 data <- data.frame(
     "Package" = c("pipeflow", "targets") |> rep(each = 2 * nrep),
     "Operation" = c("full run", "skipped run") |> rep(each = nrep),
@@ -167,31 +154,33 @@ ggplot(data, aes(x = Operation, y = Time, fill = Package)) +
 Each step depends on the output of the previous step: `s0 -> s1 -> s2 -> ... -> sN`.
 
 ```{r linear-helpers}
-# Shared helpers for the linear pipeline — used by both pipeflow and targets
+# Shared helpers used by both pipeflow and targets for step definitions
 linear_s0   <- function() 0
 linear_succ <- function(x) x + 1
 ```
 
 ```{r linear-pipeflow}
 create_linear_pip <- function(n) {
-  pip <- pip_new("linear") |> pip_add("s0", linear_s0)
-  for (i in seq_len(n))
-    pip_add(pip, paste0("s", i), \(x = ~ -1) linear_succ(x))
-  pip
+    pip <- pip_new("linear") |> pip_add("s0", linear_s0)
+    for (i in seq_len(n)) {
+        pip_add(pip, paste0("s", i), \(x = ~ -1) linear_succ(x))
+    }
+    pip
 }
 
 # Verify
 p <- create_linear_pip(5)
 pip_run(p)
-stopifnot(p[["s10", "out"]] == 5)
+stopifnot(p[["s5", "out"]] == 5)
 ```
 
 ```{r linear-targets}
 create_linear_tar <- function(n) {
-  targets <- c("  tar_target(s0, linear_s0())")
-  for (i in seq_len(n))
-    targets <- c(targets, sprintf("  tar_target(s%s, linear_succ(s%s))", i, i - 1))
-  writeLines(c("library(targets)", "list(", paste(targets, collapse = ",\n"), ")"), "_targets.R")
+    targets <- c("  tar_target(s0, linear_s0())")
+    for (i in seq_len(n)) {
+        targets <- c(targets, sprintf("  tar_target(s%s, linear_succ(s%s))", i, i - 1))
+    }
+    writeLines(c("library(targets)", "list(", paste(targets, collapse = ",\n"), ")"), "_targets.R")
 }
 
 # Verify
@@ -204,8 +193,9 @@ tar_dir({
 
 ### Benchmark
 
-```{r linear-benchmark, results='asis', echo = FALSE}
+```{r linear-benchmark, echo = FALSE}
 sizes <- c(16, 32, 64, 128)
+silent_run <- function(x) pip_run(x, lgr = NULL, force = TRUE)
 
 # Pipeflow pipelines (built once, run repeatedly with force)
 pips_pf <- lapply(sizes, create_linear_pip) |>
@@ -214,10 +204,10 @@ pips_pf <- lapply(sizes, create_linear_pip) |>
 # Run pipeflow benchmarks
 mb_pf <- microbenchmark(
   control = list(order = "inorder"), times = nrep,
-  "pf n=16"  = pip_run(pips_pf[["pf_n=16"]],  force = TRUE),
-  "pf n=32"  = pip_run(pips_pf[["pf_n=32"]],  force = TRUE),
-  "pf n=64"  = pip_run(pips_pf[["pf_n=64"]],  force = TRUE),
-  "pf n=128" = pip_run(pips_pf[["pf_n=128"]], force = TRUE)
+  "pf n=16"  = silent_run(pips_pf[["pf_n=16"]]),
+  "pf n=32"  = silent_run(pips_pf[["pf_n=32"]]),
+  "pf n=64"  = silent_run(pips_pf[["pf_n=64"]]),
+  "pf n=128" = silent_run(pips_pf[["pf_n=128"]])
 )
 
 # Run targets benchmarks — fresh tar_dir per iteration
@@ -228,15 +218,6 @@ mb_tar <- microbenchmark(
   "tar n=64"  = tar_dir({ create_linear_tar(64);  tar_make_here() }),
   "tar n=128" = tar_dir({ create_linear_tar(128); tar_make_here() })
 )
-
-tab_pf  <- summary(mb_pf,  unit = "ms")[, c("expr", "median", "mean")]
-tab_tar <- summary(mb_tar, unit = "ms")[, c("expr", "median", "mean")]
-
-tab_pf[["us/step"]]  <- round(tab_pf[["median"]]  / sizes * 1000, 1)
-tab_tar[["us/step"]] <- round(tab_tar[["median"]]  / sizes * 1000, 1)
-
-tab <- rbind(tab_pf, tab_tar)
-knitr::kable(tab, digits = 1)
 ```
 
 ```{r linear-plot, echo = FALSE, fig.width = 7, fig.height = 4}
@@ -302,18 +283,19 @@ tar_dir({
 
 ### Benchmark
 
-```{r dag-benchmark, results='asis', echo = FALSE}
+```{r dag-benchmark, echo = FALSE}
 br_sizes <- c(16, 32, 64, 128)
+silent_run <- function(x) pip_run(x, lgr = NULL, force = TRUE)
 
 pips_pf <- lapply(br_sizes, make_branch_pip) |>
   stats::setNames(paste0("pf_br=", br_sizes))
 
 mb_pf <- microbenchmark(
   control = list(order = "inorder"), times = 10,
-  "pf br=16"  = pip_run(pips_pf[["pf_br=16"]],  force = TRUE),
-  "pf br=32"  = pip_run(pips_pf[["pf_br=32"]],  force = TRUE),
-  "pf br=64"  = pip_run(pips_pf[["pf_br=64"]],  force = TRUE),
-  "pf br=128" = pip_run(pips_pf[["pf_br=128"]], force = TRUE)
+  "pf br=16"  = silent_run(pips_pf[["pf_br=16"]]),
+  "pf br=32"  = silent_run(pips_pf[["pf_br=32"]]),
+  "pf br=64"  = silent_run(pips_pf[["pf_br=64"]]),
+  "pf br=128" = silent_run(pips_pf[["pf_br=128"]])
 )
 
 mb_tar <- microbenchmark(
@@ -323,15 +305,6 @@ mb_tar <- microbenchmark(
   "tar br=64"  = tar_dir({ make_branch_tar(64);  tar_make_here() }),
   "tar br=128" = tar_dir({ make_branch_tar(128); tar_make_here() })
 )
-
-tab_pf  <- summary(mb_pf,  unit = "ms")[, c("expr", "median", "mean")]
-tab_tar <- summary(mb_tar, unit = "ms")[, c("expr", "median", "mean")]
-
-tab_pf[["us/node"]]  <- round(tab_pf[["median"]]  / (br_sizes + 2) * 1000, 1)
-tab_tar[["us/node"]] <- round(tab_tar[["median"]]  / (br_sizes + 2) * 1000, 1)
-
-tab <- rbind(tab_pf, tab_tar)
-knitr::kable(tab, digits = 1)
 ```
 
 ```{r dag-plot, echo = FALSE, fig.width = 7, fig.height = 4}
