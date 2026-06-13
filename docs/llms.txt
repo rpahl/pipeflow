@@ -14,25 +14,11 @@ structured overview of your project.
 
 ### Why use {pipeflow}
 
-- Easy to learn yet suited for growingly complex workflows
-- Automatically manages function and parameter dependencies
-- Promotes structured and modular code
-- Facilitates reusability and collaboration
-- Simplifies error handling and debugging
-
-### {pipeflow} vs {targets}
-
-[{targets}](https://docs.ropensci.org/targets/) is the most widely used
-pipeline toolkit in the R ecosystem. For a detailed comparison and
-benchmark results, see the [vs targets
-vignette](https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html).
-
-In short, **{targets}** is the tool of choice for large-scale, formally
-reproducible projects that may run on distributed infrastructure.
-**{pipeflow}** is designed for interactive development, rapid parameter
-exploration, and projects where you want to modify the pipeline
-structure as your analysis evolves — all while keeping a shallow
-learning curve and minimal dependencies.
+- Simple and intuitive API
+- Pipeline structure verified at definition time
+- Filtered pipeline views
+- View and manage parameters across all steps
+- Fast execution with minimal overhead
 
 ### Installation
 
@@ -50,6 +36,36 @@ devtools::install_github("rpahl/pipeflow")
 ``` r
 
 library(pipeflow)
+
+p <- pip_new("demo") |>
+    pip_add("numbers", \(n = 5) seq_len(n)) |>
+    pip_add("squared", \(x = ~numbers) x^2) |>
+    pip_add("total",   \(x = ~squared) sum(x))
+
+p
+# <pipeflow_pip> demo (3 steps)
+# -----------------------------
+#       step depends    out state
+# 1: numbers         [NULL]   new
+# 2: squared numbers [NULL]   new
+# 3:   total squared [NULL]   new
+
+pip_run(p)
+# info [2026-06-13 16:57:37.295 UTC]: Start run of pipeflow_pip 'demo'
+# info [2026-06-13 16:57:37.296 UTC]: Step 1/3 numbers
+# info [2026-06-13 16:57:37.297 UTC]: Step 2/3 squared
+# info [2026-06-13 16:57:37.299 UTC]: Step 3/3 total
+# info [2026-06-13 16:57:37.301 UTC]: Finished run of pipeflow_pip 'demo'
+
+pip_collect_out(p)
+# $numbers
+# [1] 1 2 3 4 5
+# 
+# $squared
+# [1]  1  4  9 16 25
+# 
+# $total
+# [1] 55
 ```
 
 ### Getting Started

@@ -5,7 +5,6 @@ output: github_document
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 ```{r, include = FALSE}
-require(pipeflow)
 require(badger)
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -52,24 +51,11 @@ structured overview of your project.
 
 ### Why use {pipeflow}
 
-* Easy to learn yet suited for growingly complex workflows
-* Automatically manages function and parameter dependencies
-* Promotes structured and modular code
-* Facilitates reusability and collaboration
-* Simplifies error handling and debugging
-
-### {pipeflow} vs {targets}
-
-[{targets}](https://docs.ropensci.org/targets/) is the most widely used pipeline
-toolkit in the R ecosystem. For a detailed comparison and benchmark results,
-see the [vs targets vignette](https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html).
-
-In short, **{targets}** is the tool of choice for large-scale, formally
-reproducible projects that may run on distributed infrastructure.
-**{pipeflow}** is designed for interactive development, rapid parameter
-exploration, and projects where you want to modify the pipeline structure
-as your analysis evolves — all while keeping a shallow learning curve and
-minimal dependencies.
+* Simple and intuitive API
+* Pipeline structure verified at definition time
+* Filtered pipeline views
+* View and manage parameters across all steps
+* Fast execution with minimal overhead
 
 ### Installation
 
@@ -84,8 +70,19 @@ devtools::install_github("rpahl/pipeflow")
 
 ### Usage
 
-```{r}
+```{r usage}
 library(pipeflow)
+
+p <- pip_new("demo") |>
+    pip_add("numbers", \(n = 5) seq_len(n)) |>
+    pip_add("squared", \(x = ~numbers) x^2) |>
+    pip_add("total",   \(x = ~squared) sum(x))
+
+p
+
+pip_run(p)
+
+pip_collect_out(p)
 ```
 
 ### Getting Started
@@ -102,6 +99,7 @@ It is recommended to read the vignettes in the order they are listed below:
 
 * [Split, map, and reduce](https://rpahl.github.io/pipeflow/articles/v05-split-map-reduce.html)
 * [Recursive self-modification](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
+* [pipeflow vs targets](https://rpahl.github.io/pipeflow/articles/articles/v07-vs-targets.html)
 
 
 ```{r, include = FALSE}

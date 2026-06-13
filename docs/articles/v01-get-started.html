@@ -65,7 +65,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
-    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul>
 </li>
       </ul>
@@ -275,12 +275,12 @@ unchanged.</p>
 produces the following output:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-13 15:08:50.721 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
-<span><span class="co"># info [2026-06-13 15:08:50.722 UTC]: Step 1/4 data</span></span>
-<span><span class="co"># info [2026-06-13 15:08:50.723 UTC]: Step 2/4 data_prep</span></span>
-<span><span class="co"># info [2026-06-13 15:08:50.726 UTC]: Step 3/4 model_fit</span></span>
-<span><span class="co"># info [2026-06-13 15:08:50.729 UTC]: Step 4/4 model_plot</span></span>
-<span><span class="co"># info [2026-06-13 15:08:51.208 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-13 17:22:43.841 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-13 17:22:43.841 UTC]: Step 1/4 data</span></span>
+<span><span class="co"># info [2026-06-13 17:22:43.843 UTC]: Step 2/4 data_prep</span></span>
+<span><span class="co"># info [2026-06-13 17:22:43.845 UTC]: Step 3/4 model_fit</span></span>
+<span><span class="co"># info [2026-06-13 17:22:43.848 UTC]: Step 4/4 model_plot</span></span>
+<span><span class="co"># info [2026-06-13 17:22:44.299 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
 <p>Let’s inspect the pipeline again.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
@@ -382,12 +382,12 @@ steps are affected by the parameter change and mark them as
 just run the pipeline again.</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-13 15:08:52.422 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
-<span><span class="co"># info [2026-06-13 15:08:52.423 UTC]: Step 1/4 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 15:08:52.423 UTC]: Step 2/4 data_prep - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 15:08:52.423 UTC]: Step 3/4 model_fit</span></span>
-<span><span class="co"># info [2026-06-13 15:08:52.428 UTC]: Step 4/4 model_plot</span></span>
-<span><span class="co"># info [2026-06-13 15:08:52.448 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-13 17:22:45.267 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-13 17:22:45.268 UTC]: Step 1/4 data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-13 17:22:45.268 UTC]: Step 2/4 data_prep - skipping done step</span></span>
+<span><span class="co"># info [2026-06-13 17:22:45.268 UTC]: Step 3/4 model_fit</span></span>
+<span><span class="co"># info [2026-06-13 17:22:45.272 UTC]: Step 4/4 model_plot</span></span>
+<span><span class="co"># info [2026-06-13 17:22:45.290 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
 <p>The outdated steps were re-run as expected and the output was updated
 accordingly now showing the new x-variable <code>Solar.R</code>.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
@@ -417,12 +417,12 @@ on the pipeline. To just change the title of the plot, only the
 <span><span class="co"># 4: model_plot model_fit,data_prep   &lt;ggplot2::ggplot&gt; outdated</span></span></code></pre></div>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-13 15:08:52.879 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
-<span><span class="co"># info [2026-06-13 15:08:52.879 UTC]: Step 1/4 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 15:08:52.879 UTC]: Step 2/4 data_prep - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 15:08:52.879 UTC]: Step 3/4 model_fit - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 15:08:52.879 UTC]: Step 4/4 model_plot</span></span>
-<span><span class="co"># info [2026-06-13 15:08:52.890 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-13 17:22:45.715 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-13 17:22:45.715 UTC]: Step 1/4 data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-13 17:22:45.715 UTC]: Step 2/4 data_prep - skipping done step</span></span>
+<span><span class="co"># info [2026-06-13 17:22:45.715 UTC]: Step 3/4 model_fit - skipping done step</span></span>
+<span><span class="co"># info [2026-06-13 17:22:45.715 UTC]: Step 4/4 model_plot</span></span>
+<span><span class="co"># info [2026-06-13 17:22:45.726 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span>
 <span><span class="va">pip</span><span class="op">[[</span><span class="st">"model_plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
 <p><img src="v01-get-started_files/figure-html/inspect-plot-after-title-change-1.png" class="r-plt" alt="model-plot" width="700"></p>
 <p>Once we change the input data parameter from the <code>data</code>
@@ -441,12 +441,12 @@ rerun.</p>
 <span><span class="co"># 4: model_plot model_fit,data_prep   &lt;ggplot2::ggplot&gt; outdated</span></span></code></pre></div>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-13 15:08:53.231 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
-<span><span class="co"># info [2026-06-13 15:08:53.231 UTC]: Step 1/4 data</span></span>
-<span><span class="co"># info [2026-06-13 15:08:53.232 UTC]: Step 2/4 data_prep</span></span>
-<span><span class="co"># info [2026-06-13 15:08:53.236 UTC]: Step 3/4 model_fit</span></span>
-<span><span class="co"># info [2026-06-13 15:08:53.238 UTC]: Step 4/4 model_plot</span></span>
-<span><span class="co"># info [2026-06-13 15:08:53.248 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-13 17:22:46.070 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-13 17:22:46.070 UTC]: Step 1/4 data</span></span>
+<span><span class="co"># info [2026-06-13 17:22:46.072 UTC]: Step 2/4 data_prep</span></span>
+<span><span class="co"># info [2026-06-13 17:22:46.077 UTC]: Step 3/4 model_fit</span></span>
+<span><span class="co"># info [2026-06-13 17:22:46.079 UTC]: Step 4/4 model_plot</span></span>
+<span><span class="co"># info [2026-06-13 17:22:46.089 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span>
 <span><span class="va">pip</span><span class="op">[[</span><span class="st">"model_plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
 <p><img src="v01-get-started_files/figure-html/inspect-plot-after-data-change-1.png" class="r-plt" alt="model-plot" width="700"></p>
 <p>Last but not least let’s try to set parameters that don’t exist in

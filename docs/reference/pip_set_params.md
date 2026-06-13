@@ -55,10 +55,10 @@ p
 #> 2: scale    load [NULL] outdated
 
 pip_run(p)
-#> info [2026-06-13 15:08:37.338 UTC]: Start run of pipeflow_pip 'pipe'
-#> info [2026-06-13 15:08:37.338 UTC]: Step 1/2 load
-#> info [2026-06-13 15:08:37.339 UTC]: Step 2/2 scale
-#> info [2026-06-13 15:08:37.340 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-06-13 17:22:31.066 UTC]: Start run of pipeflow_pip 'pipe'
+#> info [2026-06-13 17:22:31.066 UTC]: Step 1/2 load
+#> info [2026-06-13 17:22:31.067 UTC]: Step 2/2 scale
+#> info [2026-06-13 17:22:31.068 UTC]: Finished run of pipeflow_pip 'pipe'
 p
 #> <pipeflow_pip> pipe (2 steps)
 #> -----------------------------

@@ -111,11 +111,11 @@ p |>
   pipe_get_out("calc_mean")
 #> Warning: The legacy 'pipe_*' API is deprecated and will be removed in a future release. Please migrate to the new 'pip_*' API.
 #> Warning: The legacy 'pipe_*' API is deprecated and will be removed in a future release. Please migrate to the new 'pip_*' API.
-#> INFO  [2026-06-13 17:08:17.229] Start run of 'myPipe' pipeline:
-#> INFO  [2026-06-13 17:08:17.230] Step 1/2 data
-#> INFO  [2026-06-13 17:08:17.232] Step 2/2 calc_mean
-#> INFO  [2026-06-13 17:08:17.234] Finished execution of steps.
-#> INFO  [2026-06-13 17:08:17.235] Done.
+#> INFO  [2026-06-13 19:22:08.387] Start run of 'myPipe' pipeline:
+#> INFO  [2026-06-13 19:22:08.389] Step 1/2 data
+#> INFO  [2026-06-13 19:22:08.391] Step 2/2 calc_mean
+#> INFO  [2026-06-13 19:22:08.392] Finished execution of steps.
+#> INFO  [2026-06-13 19:22:08.393] Done.
 #> [1] 2.5
 
 # Step description
@@ -128,8 +128,8 @@ print(p, verbose = TRUE) # print all columns including description
 #> 2:     s1 <function[1]> function <list[1]>    data [NULL]   FALSE     s1
 #>      description                time  state
 #>           <char>              <POSc> <char>
-#> 1:               2026-06-13 17:08:17    New
-#> 2: multiply by 2 2026-06-13 17:08:17    New
+#> 1:               2026-06-13 19:22:08    New
+#> 2: multiply by 2 2026-06-13 19:22:08    New
 
 
 # Group output
@@ -141,13 +141,13 @@ p |>
   pipe_run() |>
   pipe_collect_out(all = TRUE)
 #> Warning: The legacy 'pipe_*' API is deprecated and will be removed in a future release. Please migrate to the new 'pip_*' API.
-#> INFO  [2026-06-13 17:08:17.251] Start run of 'myPipe' pipeline:
-#> INFO  [2026-06-13 17:08:17.252] Step 1/4 data
-#> INFO  [2026-06-13 17:08:17.255] Step 2/4 prep_x
-#> INFO  [2026-06-13 17:08:17.257] Step 3/4 prep_y
-#> INFO  [2026-06-13 17:08:17.260] Step 4/4 sum
-#> INFO  [2026-06-13 17:08:17.261] Finished execution of steps.
-#> INFO  [2026-06-13 17:08:17.261] Done.
+#> INFO  [2026-06-13 19:22:08.411] Start run of 'myPipe' pipeline:
+#> INFO  [2026-06-13 19:22:08.412] Step 1/4 data
+#> INFO  [2026-06-13 19:22:08.415] Step 2/4 prep_x
+#> INFO  [2026-06-13 19:22:08.417] Step 3/4 prep_y
+#> INFO  [2026-06-13 19:22:08.423] Step 4/4 sum
+#> INFO  [2026-06-13 19:22:08.425] Finished execution of steps.
+#> INFO  [2026-06-13 19:22:08.426] Done.
 #> $data
 #>   x y
 #> 1 1 3

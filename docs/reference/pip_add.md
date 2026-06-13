@@ -83,12 +83,12 @@ p <- pip_new("analysis") |>
   pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
 
 pip_run(p)
-#> info [2026-06-13 15:08:32.092 UTC]: Start run of pipeflow_pip 'analysis'
-#> info [2026-06-13 15:08:32.092 UTC]: Step 1/4 load
-#> info [2026-06-13 15:08:32.093 UTC]: Step 2/4 clean
-#> info [2026-06-13 15:08:32.096 UTC]: Step 3/4 fit
-#> info [2026-06-13 15:08:32.098 UTC]: Step 4/4 report
-#> info [2026-06-13 15:08:32.099 UTC]: Finished run of pipeflow_pip 'analysis'
+#> info [2026-06-13 17:22:24.978 UTC]: Start run of pipeflow_pip 'analysis'
+#> info [2026-06-13 17:22:24.979 UTC]: Step 1/4 load
+#> info [2026-06-13 17:22:24.980 UTC]: Step 2/4 clean
+#> info [2026-06-13 17:22:24.982 UTC]: Step 3/4 fit
+#> info [2026-06-13 17:22:24.984 UTC]: Step 4/4 report
+#> info [2026-06-13 17:22:24.985 UTC]: Finished run of pipeflow_pip 'analysis'
 p
 #> <pipeflow_pip> analysis (4 steps)
 #> ---------------------------------
@@ -128,12 +128,12 @@ q <- pip_new("split-demo") |>
   )
 
 pip_run(q)
-#> info [2026-06-13 15:08:32.115 UTC]: Start run of pipeflow_pip 'split-demo'
-#> info [2026-06-13 15:08:32.115 UTC]: Step 1/4 data
-#> info [2026-06-13 15:08:32.116 UTC]: Step 2/4 split
-#> info [2026-06-13 15:08:32.118 UTC]: Step 3/4 stats
-#> info [2026-06-13 15:08:32.123 UTC]: Step 4/4 combine
-#> info [2026-06-13 15:08:32.125 UTC]: Finished run of pipeflow_pip 'split-demo'
+#> info [2026-06-13 17:22:25.001 UTC]: Start run of pipeflow_pip 'split-demo'
+#> info [2026-06-13 17:22:25.001 UTC]: Step 1/4 data
+#> info [2026-06-13 17:22:25.001 UTC]: Step 2/4 split
+#> info [2026-06-13 17:22:25.003 UTC]: Step 3/4 stats
+#> info [2026-06-13 17:22:25.008 UTC]: Step 4/4 combine
+#> info [2026-06-13 17:22:25.010 UTC]: Finished run of pipeflow_pip 'split-demo'
 q[["stats", "out"]]   # partitioned list — one summary per species
 #> $setosa
 #>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   

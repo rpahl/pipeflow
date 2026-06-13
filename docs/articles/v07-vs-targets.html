@@ -65,7 +65,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
-    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul>
 </li>
       </ul>
@@ -89,7 +89,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>pipeflow vs targets</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/v07-vs-targets.Rmd"><code>vignettes/v07-vs-targets.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/articles/v07-vs-targets.Rmd"><code>vignettes/articles/v07-vs-targets.Rmd</code></a></small>
       <div class="d-none name"><code>v07-vs-targets.Rmd</code></div>
     </div>
 
@@ -134,84 +134,91 @@ session</strong>
 </td>
 </tr>
 <tr class="odd">
-<td>Dependencies</td>
-<td>Heavy (~20+ packages: <code>tarchetypes</code>, <code>crew</code>,
-<code>qs</code>, etc.)</td>
-<td>Minimal (<code>data.table</code>)</td>
+<td>Persistent storage</td>
+<td>✅ Output stored to disk (<code>_targets/objects/</code>), survives
+R restarts, handles data larger than RAM</td>
+<td>❌ In-memory only, lost when R session ends</td>
 </tr>
 <tr class="even">
-<td>Learning curve</td>
-<td>Steep — requires understanding <code>_targets.R</code> conventions,
-storage formats, cue rules</td>
-<td>Shallow — R-native API with few concepts</td>
-</tr>
-<tr class="odd">
 <td>Skip up-to-date steps</td>
 <td>✅ Hash-based invalidation of code and data</td>
 <td>✅ State-based (<code>done</code> / <code>outdated</code>)</td>
 </tr>
+<tr class="odd">
+<td>Metadata &amp; provenance</td>
+<td>✅ <code>tar_meta()</code> records runtime, size, errors per
+target</td>
+<td>❌ No per-step provenance metadata</td>
+</tr>
 <tr class="even">
+<td>Dependency validation</td>
+<td>✅ <code>tar_validate()</code> for pre-flight checks (opt-in)</td>
+<td>✅ On <code><a href="../reference/pip_add.html">pip_add()</a></code>, <code><a href="../reference/pip_replace.html">pip_replace()</a></code>,
+<code><a href="../reference/pip_remove.html">pip_remove()</a></code> — fails fast on broken references</td>
+</tr>
+<tr class="odd">
 <td>Modify pipeline at runtime</td>
 <td>❌ Must edit <code>_targets.R</code> and re-run</td>
 <td>✅ <code><a href="../reference/pip_remove.html">pip_remove()</a></code>, <code><a href="../reference/pip_rename.html">pip_rename()</a></code>,
 <code><a href="../reference/pip_replace.html">pip_replace()</a></code>, insert with <code>after =</code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Parameter management</td>
 <td>❌ No unified parameter view across targets</td>
 <td>✅ <code><a href="../reference/pip_get_params.html">pip_get_params()</a></code> / <code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> —
 one call updates all steps</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Split / map / reduce</td>
-<td>Requires target factories (<code>tarchetypes</code>) or
-branching</td>
+<td>✅ <code>pattern = map()</code> / <code>cross()</code> built-in,
+<code>tarchetypes</code> for advanced patterns</td>
 <td>✅ Built-in <code>exec = "split"</code> / <code>"auto"</code> /
 <code>"reduce"</code>
 </td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Dynamic branching</td>
 <td>✅ Comprehensive via <code>tarchetypes</code>
 </td>
 <td>✅ Auto-mapping over partition keys
 (<code>exec = "auto"</code>)</td>
 </tr>
-<tr class="even">
-<td>Views / tag filtering</td>
-<td>❌</td>
-<td>✅ <code><a href="../reference/pip_view.html">pip_view()</a></code> — filter steps by tags, or index</td>
-</tr>
 <tr class="odd">
+<td>Views / tag filtering</td>
+<td>
+<code>tar_described_as()</code> selects by description tags</td>
+<td>✅ <code><a href="../reference/pip_view.html">pip_view()</a></code> — filter steps by tags or index</td>
+</tr>
+<tr class="even">
 <td>Pipeline composition</td>
 <td>❌</td>
 <td>✅ <code><a href="../reference/pip_bind.html">pip_bind()</a></code> two pipelines,
 <code><a href="../reference/pip_add_from.html">pip_add_from()</a></code> copy individual steps</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Self-modifying pipelines</td>
 <td>❌</td>
 <td>✅ <code>pip_run(recursive = TRUE)</code> — steps can return
 modified pipelines</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Distributed computing</td>
 <td>✅ <code>crew</code> for HPC and cloud workers</td>
-<td>❌ (by design — stays lightweight and single-machine)</td>
+<td>❌</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Cloud storage</td>
 <td>✅ AWS, GCS</td>
 <td>❌</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>File tracking</td>
 <td>✅ File targets with <code>format = "file"</code>
 </td>
 <td>❌</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Step locking</td>
 <td>❌</td>
 <td>✅ <code><a href="../reference/pip_lock.html">pip_lock()</a></code> / <code><a href="../reference/pip_unlock.html">pip_unlock()</a></code> — protect
@@ -220,21 +227,50 @@ steps from accidental modification</td>
 </tbody>
 </table>
 <p>In short, <strong>{targets}</strong> is the tool of choice for
-large-scale, formally reproducible projects that may run on distributed
-infrastructure. <strong>{pipeflow}</strong> is designed for interactive
-development, rapid parameter exploration, and projects where you want to
-modify the pipeline structure as your analysis evolves — all while
-keeping a shallow learning curve and minimal dependencies.</p>
+large-scale reproducible projects: it persists results to disk, captures
+provenance with <code>tar_meta()</code>, and scales to distributed
+infrastructure via <code>crew</code>. <strong>{pipeflow}</strong>
+prioritises speed and interactivity — sub-millisecond skipped-step
+checks, in-session pipeline modification, and low response times make it
+well suited as a Shiny backend or for rapid parameter exploration during
+analysis.</p>
+</div>
+<div class="section level2">
+<h2 id="benchmarks">Benchmarks<a class="anchor" aria-label="anchor" href="#benchmarks"></a>
+</h2>
 <p>The benchmarks below provide a quantitative comparison on three
 pipeline topologies. All timings are measured with
 <code><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time()</a></code> across 30 iterations per scenario.</p>
 <p>Package versions: pipeflow 0.2.3.9005, targets 1.12.0.</p>
-</div>
-<div class="section level2">
-<h2 id="walkthrough-example">Walkthrough example<a class="anchor" aria-label="anchor" href="#walkthrough-example"></a>
-</h2>
-<p>Based on the <a href="https://books.ropensci.org/targets/walkthrough.html" class="external-link">{targets}
-walkthrough</a>.</p>
+<p>The three scenarios were chosen to isolate different aspects of
+pipeline overhead:</p>
+<ul>
+<li>
+<strong>Walkthrough</strong> — a minimal 4-step pipeline mimicking a
+typical exploratory workflow. This measures startup cost and skip-check
+overhead in the simplest realistic case.</li>
+<li>
+<strong>Long linear pipeline</strong> — a chain of N steps
+(<code>s0 -&gt; s1 -&gt; ... -&gt; sN</code>). This isolates per-step
+bookkeeping cost as the pipeline grows to 128 steps.</li>
+<li>
+<strong>Fan-out DAG</strong> — a single source feeds N parallel
+branches that converge on one sink. This tests how each package handles
+wide dependency structures.</li>
+</ul>
+<p>For targets, each iteration uses a fresh <code>tar_dir()</code> and
+<code>tar_script()</code> to ensure fair timing of end-to-end pipeline
+execution. For pipeflow, pipelines are built once and timed with
+<code>force = TRUE</code> to measure the cost of a full re-run.</p>
+<div class="section level3">
+<h3 id="walkthrough-example">Walkthrough example<a class="anchor" aria-label="anchor" href="#walkthrough-example"></a>
+</h3>
+<p>A minimal four-step pipeline based on the <a href="https://books.ropensci.org/targets/walkthrough.html" class="external-link">{targets}
+walkthrough</a> — read CSV data, fit a linear model, and produce a plot.
+We measure both the first full run (all steps executed) and the
+subsequent skipped run (all steps already up to date). Full runs with
+targets include a <code>tar_destroy()</code> between iterations so each
+is a true cold start.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">create_data_csv</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="va">airquality</span>, <span class="va">file</span> <span class="op">=</span> <span class="st">"data.csv"</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="fu">utils</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">file</span><span class="op">)</span></span>
@@ -253,9 +289,9 @@ walkthrough</a>.</p>
 <span>        <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Temp</span>, y <span class="op">=</span> <span class="va">Ozone</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>        <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_abline</a></span><span class="op">(</span>intercept <span class="op">=</span> <span class="va">model</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, slope <span class="op">=</span> <span class="va">model</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="pipeflow-pipeline">pipeflow pipeline<a class="anchor" aria-label="anchor" href="#pipeflow-pipeline"></a>
-</h3>
+<div class="section level4">
+<h4 id="pipeflow-pipeline">pipeflow pipeline<a class="anchor" aria-label="anchor" href="#pipeflow-pipeline"></a>
+</h4>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">tar_dir</span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="fu">create_data_csv</span><span class="op">(</span>file <span class="op">=</span> <span class="st">"data.csv"</span><span class="op">)</span></span>
@@ -274,22 +310,22 @@ walkthrough</a>.</p>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span><span class="co"># </span></span>
 <span><span class="co"># Proof of principle full run (no skips)</span></span>
-<span><span class="co"># info [2026-06-13 15:09:58.590 UTC]: Start run of pipeflow_pip 'walkthrough'</span></span>
-<span><span class="co"># info [2026-06-13 15:09:58.590 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-06-13 15:09:58.595 UTC]: Step 2/3 model</span></span>
-<span><span class="co"># info [2026-06-13 15:09:58.600 UTC]: Step 3/3 plot</span></span>
-<span><span class="co"># info [2026-06-13 15:09:58.629 UTC]: Finished run of pipeflow_pip 'walkthrough'</span></span>
+<span><span class="co"># info [2026-06-13 17:23:53.961 UTC]: Start run of pipeflow_pip 'walkthrough'</span></span>
+<span><span class="co"># info [2026-06-13 17:23:53.961 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-06-13 17:23:53.965 UTC]: Step 2/3 model</span></span>
+<span><span class="co"># info [2026-06-13 17:23:53.970 UTC]: Step 3/3 plot</span></span>
+<span><span class="co"># info [2026-06-13 17:23:53.997 UTC]: Finished run of pipeflow_pip 'walkthrough'</span></span>
 <span><span class="co"># </span></span>
 <span><span class="co"># Proof of principle skipped run</span></span>
-<span><span class="co"># info [2026-06-13 15:09:59.051 UTC]: Start run of pipeflow_pip 'walkthrough'</span></span>
-<span><span class="co"># info [2026-06-13 15:09:59.051 UTC]: Step 1/3 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 15:09:59.051 UTC]: Step 2/3 model - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 15:09:59.051 UTC]: Step 3/3 plot - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 15:09:59.051 UTC]: Finished run of pipeflow_pip 'walkthrough'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-13 17:23:54.418 UTC]: Start run of pipeflow_pip 'walkthrough'</span></span>
+<span><span class="co"># info [2026-06-13 17:23:54.418 UTC]: Step 1/3 data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-13 17:23:54.419 UTC]: Step 2/3 model - skipping done step</span></span>
+<span><span class="co"># info [2026-06-13 17:23:54.419 UTC]: Step 3/3 plot - skipping done step</span></span>
+<span><span class="co"># info [2026-06-13 17:23:54.419 UTC]: Finished run of pipeflow_pip 'walkthrough'</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="targets-pipeline">targets pipeline<a class="anchor" aria-label="anchor" href="#targets-pipeline"></a>
-</h3>
+<div class="section level4">
+<h4 id="targets-pipeline">targets pipeline<a class="anchor" aria-label="anchor" href="#targets-pipeline"></a>
+</h4>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tar_make_here</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">reporter</span> <span class="op">=</span> <span class="st">"silent"</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="fu">tar_make</span><span class="op">(</span>callr_function <span class="op">=</span> <span class="cn">NULL</span>, reporter <span class="op">=</span> <span class="va">reporter</span><span class="op">)</span></span>
@@ -321,36 +357,37 @@ walkthrough</a>.</p>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span><span class="co"># </span></span>
 <span><span class="co"># Proof of principle full run (no skips)</span></span>
-<span><span class="co"># 2026-06-13 17:09:59.21 dispatched target file</span></span>
-<span><span class="co"># 2026-06-13 17:09:59.22 completed target file [0ms, 3.87 kB]</span></span>
-<span><span class="co"># 2026-06-13 17:09:59.23 dispatched target data</span></span>
-<span><span class="co"># 2026-06-13 17:09:59.25 completed target data [0ms, 1.38 kB]</span></span>
-<span><span class="co"># 2026-06-13 17:09:59.27 dispatched target model</span></span>
-<span><span class="co"># 2026-06-13 17:09:59.28 completed target model [0ms, 111 B]</span></span>
-<span><span class="co"># 2026-06-13 17:09:59.28 dispatched target plot</span></span>
-<span><span class="co"># 2026-06-13 17:09:59.33 completed target plot [20ms, 114.10 kB]</span></span>
-<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-13 17:09:59.34 ended pipeline [191ms, 4 completed, 0 skipped]</span></span>
+<span><span class="co"># 2026-06-13 19:23:54.57 dispatched target file</span></span>
+<span><span class="co"># 2026-06-13 19:23:54.58 completed target file [0ms, 3.87 kB]</span></span>
+<span><span class="co"># 2026-06-13 19:23:54.58 dispatched target data</span></span>
+<span><span class="co"># 2026-06-13 19:23:54.60 completed target data [0ms, 1.38 kB]</span></span>
+<span><span class="co"># 2026-06-13 19:23:54.62 dispatched target model</span></span>
+<span><span class="co"># 2026-06-13 19:23:54.63 completed target model [0ms, 111 B]</span></span>
+<span><span class="co"># 2026-06-13 19:23:54.63 dispatched target plot</span></span>
+<span><span class="co"># 2026-06-13 19:23:54.68 completed target plot [0ms, 114.10 kB]</span></span>
+<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-13 19:23:54.69 ended pipeline [170ms, 4 completed, 0 skipped]</span></span>
 <span><span class="co"># </span></span>
 <span><span class="co"># Proof of principle skipped run</span></span>
-<span><span class="co"># 2026-06-13 17:10:28.64 skipped 1 targets</span></span>
-<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-13 17:10:28.65 skipped pipeline [31ms, 4 skipped]</span></span></code></pre></div>
+<span><span class="co"># 2026-06-13 19:24:27.26 skipped 1 targets</span></span>
+<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-13 19:24:27.27 skipped pipeline [81ms, 4 skipped]</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="runtimes">Runtimes<a class="anchor" aria-label="anchor" href="#runtimes"></a>
-</h3>
+<div class="section level4">
+<h4 id="runtimes">Runtimes<a class="anchor" aria-label="anchor" href="#runtimes"></a>
+</h4>
 <p><img src="v07-vs-targets_files/figure-html/walkthrough-runtime-plot-1.png" class="r-plt" alt="" width="672"></p>
 </div>
 </div>
-<div class="section level2">
-<h2 id="long-linear-pipeline">Long linear pipeline<a class="anchor" aria-label="anchor" href="#long-linear-pipeline"></a>
-</h2>
+<div class="section level3">
+<h3 id="long-linear-pipeline">Long linear pipeline<a class="anchor" aria-label="anchor" href="#long-linear-pipeline"></a>
+</h3>
 <p>Each step depends on the output of the previous step:
 <code>s0 -&gt; s1 -&gt; s2 -&gt; ... -&gt; sN</code>. This measures the
 overhead of managing the pipeline structure and skipping logic as the
-number of steps increases.</p>
-<div class="section level3">
-<h3 id="pipeflow-pipeline-1">pipeflow pipeline<a class="anchor" aria-label="anchor" href="#pipeflow-pipeline-1"></a>
-</h3>
+number of steps increases. We benchmark at 16, 32, 64, and 128 steps to
+show how the per-step cost scales.</p>
+<div class="section level4">
+<h4 id="pipeflow-pipeline-1">pipeflow pipeline<a class="anchor" aria-label="anchor" href="#pipeflow-pipeline-1"></a>
+</h4>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">create_linear_pip</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"linear"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"s0"</span>, \<span class="op">(</span><span class="va">init</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="va">init</span><span class="op">)</span></span>
@@ -364,17 +401,17 @@ number of steps increases.</p>
 <span><span class="co"># Verify</span></span>
 <span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu">create_linear_pip</span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-13 15:10:30.520 UTC]: Start run of pipeflow_pip 'linear'</span></span>
-<span><span class="co"># info [2026-06-13 15:10:30.520 UTC]: Step 1/4 s0</span></span>
-<span><span class="co"># info [2026-06-13 15:10:30.521 UTC]: Step 2/4 s1</span></span>
-<span><span class="co"># info [2026-06-13 15:10:30.525 UTC]: Step 3/4 s2</span></span>
-<span><span class="co"># info [2026-06-13 15:10:30.528 UTC]: Step 4/4 s3</span></span>
-<span><span class="co"># info [2026-06-13 15:10:30.531 UTC]: Finished run of pipeflow_pip 'linear'</span></span>
+<span><span class="co"># info [2026-06-13 17:24:29.395 UTC]: Start run of pipeflow_pip 'linear'</span></span>
+<span><span class="co"># info [2026-06-13 17:24:29.396 UTC]: Step 1/4 s0</span></span>
+<span><span class="co"># info [2026-06-13 17:24:29.396 UTC]: Step 2/4 s1</span></span>
+<span><span class="co"># info [2026-06-13 17:24:29.398 UTC]: Step 3/4 s2</span></span>
+<span><span class="co"># info [2026-06-13 17:24:29.400 UTC]: Step 4/4 s3</span></span>
+<span><span class="co"># info [2026-06-13 17:24:29.401 UTC]: Finished run of pipeflow_pip 'linear'</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">p</span><span class="op">[[</span><span class="st">"s3"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="targets-pipeline-1">targets pipeline<a class="anchor" aria-label="anchor" href="#targets-pipeline-1"></a>
-</h3>
+<div class="section level4">
+<h4 id="targets-pipeline-1">targets pipeline<a class="anchor" aria-label="anchor" href="#targets-pipeline-1"></a>
+</h4>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">create_linear_tar</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">init</span> <span class="op">&lt;-</span> <span class="fu">tar_target</span><span class="op">(</span><span class="va">s0</span>, <span class="fl">0</span><span class="op">)</span></span>
@@ -394,35 +431,38 @@ number of steps increases.</p>
 <span>    <span class="fu">tar_make_here</span><span class="op">(</span>reporter <span class="op">=</span> <span class="st">"timestamp"</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu">tar_read</span><span class="op">(</span><span class="va">s3</span><span class="op">)</span> <span class="op">==</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
-<span><span class="co"># 2026-06-13 17:10:30.64 dispatched target s0</span></span>
-<span><span class="co"># 2026-06-13 17:10:30.64 completed target s0 [0ms, 49 B]</span></span>
-<span><span class="co"># 2026-06-13 17:10:30.64 dispatched target s1</span></span>
-<span><span class="co"># 2026-06-13 17:10:30.65 completed target s1 [0ms, 51 B]</span></span>
-<span><span class="co"># 2026-06-13 17:10:30.65 dispatched target s2</span></span>
-<span><span class="co"># 2026-06-13 17:10:30.66 completed target s2 [0ms, 50 B]</span></span>
-<span><span class="co"># 2026-06-13 17:10:30.66 dispatched target s3</span></span>
-<span><span class="co"># 2026-06-13 17:10:30.66 completed target s3 [0ms, 51 B]</span></span>
-<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-13 17:10:30.67 ended pipeline [61ms, 4 completed, 0 skipped]</span></span>
+<span><span class="co"># 2026-06-13 19:24:29.50 dispatched target s0</span></span>
+<span><span class="co"># 2026-06-13 19:24:29.50 completed target s0 [0ms, 49 B]</span></span>
+<span><span class="co"># 2026-06-13 19:24:29.50 dispatched target s1</span></span>
+<span><span class="co"># 2026-06-13 19:24:29.51 completed target s1 [0ms, 51 B]</span></span>
+<span><span class="co"># 2026-06-13 19:24:29.51 dispatched target s2</span></span>
+<span><span class="co"># 2026-06-13 19:24:29.52 completed target s2 [0ms, 50 B]</span></span>
+<span><span class="co"># 2026-06-13 19:24:29.52 dispatched target s3</span></span>
+<span><span class="co"># 2026-06-13 19:24:29.52 completed target s3 [0ms, 51 B]</span></span>
+<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-13 19:24:29.53 ended pipeline [61ms, 4 completed, 0 skipped]</span></span>
 <span><span class="co"># </span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="benchmark">Benchmark<a class="anchor" aria-label="anchor" href="#benchmark"></a>
-</h3>
+<div class="section level4">
+<h4 id="runtimes-1">Runtimes<a class="anchor" aria-label="anchor" href="#runtimes-1"></a>
+</h4>
 <p><img src="v07-vs-targets_files/figure-html/linear-plot-1.png" class="r-plt" alt="" width="672"></p>
 </div>
 </div>
-<div class="section level2">
-<h2 id="dag-with-branching">DAG with branching<a class="anchor" aria-label="anchor" href="#dag-with-branching"></a>
-</h2>
+<div class="section level3">
+<h3 id="dag-with-branching">DAG with branching<a class="anchor" aria-label="anchor" href="#dag-with-branching"></a>
+</h3>
 <p>A source feeds N parallel branches, all converging on a single sink
-step. This tests scalability with fan-out structures.</p>
+step. This tests scalability with fan-out structures and how each
+package handles wide dependency graphs — from 16 up to 128 parallel
+branches. Unlike the linear pipeline, all branches can potentially run
+independently once the source completes.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dag_source</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fl">1</span></span>
 <span><span class="va">dag_branch</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span></span>
 <span><span class="va">dag_sink</span>   <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="pipeflow-pipeline-2">pipeflow pipeline<a class="anchor" aria-label="anchor" href="#pipeflow-pipeline-2"></a>
-</h3>
+<div class="section level4">
+<h4 id="pipeflow-pipeline-2">pipeflow pipeline<a class="anchor" aria-label="anchor" href="#pipeflow-pipeline-2"></a>
+</h4>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">make_branch_pip</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"dag"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"source"</span>, <span class="va">dag_source</span><span class="op">)</span></span>
@@ -442,19 +482,19 @@ step. This tests scalability with fan-out structures.</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">p4</span> <span class="op">&lt;-</span> <span class="fu">make_branch_pip</span><span class="op">(</span><span class="fl">4</span><span class="op">)</span>; <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p4</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-13 15:11:33.901 UTC]: Start run of pipeflow_pip 'dag'</span></span>
-<span><span class="co"># info [2026-06-13 15:11:33.901 UTC]: Step 1/6 source</span></span>
-<span><span class="co"># info [2026-06-13 15:11:33.902 UTC]: Step 2/6 b1</span></span>
-<span><span class="co"># info [2026-06-13 15:11:33.903 UTC]: Step 3/6 b2</span></span>
-<span><span class="co"># info [2026-06-13 15:11:33.906 UTC]: Step 4/6 b3</span></span>
-<span><span class="co"># info [2026-06-13 15:11:33.907 UTC]: Step 5/6 b4</span></span>
-<span><span class="co"># info [2026-06-13 15:11:33.909 UTC]: Step 6/6 sink</span></span>
-<span><span class="co"># info [2026-06-13 15:11:33.911 UTC]: Finished run of pipeflow_pip 'dag'</span></span>
+<span><span class="co"># info [2026-06-13 17:25:35.708 UTC]: Start run of pipeflow_pip 'dag'</span></span>
+<span><span class="co"># info [2026-06-13 17:25:35.708 UTC]: Step 1/6 source</span></span>
+<span><span class="co"># info [2026-06-13 17:25:35.708 UTC]: Step 2/6 b1</span></span>
+<span><span class="co"># info [2026-06-13 17:25:35.710 UTC]: Step 3/6 b2</span></span>
+<span><span class="co"># info [2026-06-13 17:25:35.712 UTC]: Step 4/6 b3</span></span>
+<span><span class="co"># info [2026-06-13 17:25:35.714 UTC]: Step 5/6 b4</span></span>
+<span><span class="co"># info [2026-06-13 17:25:35.715 UTC]: Step 6/6 sink</span></span>
+<span><span class="co"># info [2026-06-13 17:25:35.717 UTC]: Finished run of pipeflow_pip 'dag'</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">p4</span><span class="op">[[</span><span class="st">"sink"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="targets-pipeline-2">targets pipeline<a class="anchor" aria-label="anchor" href="#targets-pipeline-2"></a>
-</h3>
+<div class="section level4">
+<h4 id="targets-pipeline-2">targets pipeline<a class="anchor" aria-label="anchor" href="#targets-pipeline-2"></a>
+</h4>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">make_branch_tar</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">source</span> <span class="op">&lt;-</span> <span class="fu">tar_target</span><span class="op">(</span><span class="va">source</span>, <span class="fu">dag_source</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
@@ -478,14 +518,29 @@ step. This tests scalability with fan-out structures.</p>
 <span><span class="co"># Verify</span></span>
 <span><span class="fu">tar_dir</span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="fu">tar_script</span><span class="op">(</span><span class="fu">make_branch_tar</span><span class="op">(</span><span class="fl">4</span><span class="op">)</span>, ask <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span>    <span class="fu">tar_make_here</span><span class="op">(</span><span class="op">)</span></span>
+<span>    <span class="fu">tar_make_here</span><span class="op">(</span>reporter <span class="op">=</span> <span class="st">"timestamp"</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu">tar_read</span><span class="op">(</span><span class="va">sink</span><span class="op">)</span> <span class="op">==</span> <span class="fl">8</span><span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="co"># 2026-06-13 19:25:35.81 dispatched target source</span></span>
+<span><span class="co"># 2026-06-13 19:25:35.82 completed target source [0ms, 51 B]</span></span>
+<span><span class="co"># 2026-06-13 19:25:35.82 dispatched target b1</span></span>
+<span><span class="co"># 2026-06-13 19:25:35.83 completed target b1 [0ms, 50 B]</span></span>
+<span><span class="co"># 2026-06-13 19:25:35.83 dispatched target b2</span></span>
+<span><span class="co"># 2026-06-13 19:25:35.83 completed target b2 [10ms, 50 B]</span></span>
+<span><span class="co"># 2026-06-13 19:25:35.83 dispatched target b3</span></span>
+<span><span class="co"># 2026-06-13 19:25:35.84 completed target b3 [0ms, 50 B]</span></span>
+<span><span class="co"># 2026-06-13 19:25:35.84 dispatched target b4</span></span>
+<span><span class="co"># 2026-06-13 19:25:35.85 completed target b4 [0ms, 50 B]</span></span>
+<span><span class="co"># 2026-06-13 19:25:35.85 dispatched target sink</span></span>
+<span><span class="co"># 2026-06-13 19:25:35.86 completed target sink [0ms, 51 B]</span></span>
+<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-13 19:25:35.86 ended pipeline [71ms, 6 completed, 0 skipped]</span></span>
+<span><span class="co"># </span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="benchmark-1">Benchmark<a class="anchor" aria-label="anchor" href="#benchmark-1"></a>
-</h3>
+<div class="section level4">
+<h4 id="runtimes-2">Runtimes<a class="anchor" aria-label="anchor" href="#runtimes-2"></a>
+</h4>
 <p><img src="v07-vs-targets_files/figure-html/dag-plot-1.png" class="r-plt" alt="" width="672"></p>
+</div>
 </div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

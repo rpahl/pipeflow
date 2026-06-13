@@ -39,10 +39,10 @@ p
 #> 1:   load         [NULL]   new
 #> 2: double    load [NULL]   new
 pip_run(p)
-#> info [2026-06-13 15:08:35.300 UTC]: Start run of pipeflow_pip 'my_analysis'
-#> info [2026-06-13 15:08:35.300 UTC]: Step 1/2 load
-#> info [2026-06-13 15:08:35.301 UTC]: Step 2/2 double
-#> info [2026-06-13 15:08:35.302 UTC]: Finished run of pipeflow_pip 'my_analysis'
+#> info [2026-06-13 17:22:29.124 UTC]: Start run of pipeflow_pip 'my_analysis'
+#> info [2026-06-13 17:22:29.124 UTC]: Step 1/2 load
+#> info [2026-06-13 17:22:29.125 UTC]: Step 2/2 double
+#> info [2026-06-13 17:22:29.127 UTC]: Finished run of pipeflow_pip 'my_analysis'
 p[["out"]] # list of outputs, one per step
 #> [[1]]
 #> [1] 1 2 3 4 5

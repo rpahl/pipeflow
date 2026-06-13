@@ -120,15 +120,15 @@ inspect the output individually as we did in the previous vignettes.
 ``` r
 
 pip_run(pip)
-# info [2026-06-13 15:09:25.650 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-13 15:09:25.650 UTC]: Step 1/7 data
-# info [2026-06-13 15:09:25.651 UTC]: Step 2/7 data_prep
-# info [2026-06-13 15:09:25.653 UTC]: Step 3/7 data_summary
-# info [2026-06-13 15:09:25.657 UTC]: Step 4/7 data_plot
-# info [2026-06-13 15:09:26.298 UTC]: Step 5/7 model_fit
-# info [2026-06-13 15:09:26.302 UTC]: Step 6/7 model_summary
-# info [2026-06-13 15:09:26.304 UTC]: Step 7/7 model_plot
-# info [2026-06-13 15:09:26.311 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-13 17:23:19.012 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-13 17:23:19.013 UTC]: Step 1/7 data
+# info [2026-06-13 17:23:19.014 UTC]: Step 2/7 data_prep
+# info [2026-06-13 17:23:19.017 UTC]: Step 3/7 data_summary
+# info [2026-06-13 17:23:19.020 UTC]: Step 4/7 data_plot
+# info [2026-06-13 17:23:19.678 UTC]: Step 5/7 model_fit
+# info [2026-06-13 17:23:19.682 UTC]: Step 6/7 model_summary
+# info [2026-06-13 17:23:19.685 UTC]: Step 7/7 model_plot
+# info [2026-06-13 17:23:19.692 UTC]: Finished run of pipeflow_pip 'my-pip'
 
 pip
 # <pipeflow_pip> my-pip (7 steps)
@@ -199,7 +199,7 @@ pip |>
     gridExtra::grid.arrange(grobs = _, nrow = 2)
 ```
 
-![](v04-collect-output_files/figure-html/unnamed-chunk-7-1.png)
+![](v04-collect-output_files/figure-html/grouped-plots-1.png)
 
 ### Grouped output via views
 
@@ -305,12 +305,12 @@ ensures that any upstream dependencies are run first if needed.
 ``` r
 
 v2 |> pip_run()
-# info [2026-06-13 15:09:27.843 UTC]: Start run of pipeflow_view 'my-pip view view'
-# info [2026-06-13 15:09:27.843 UTC]: Step 1/4 [upstream] data_prep - skipping done step
-# info [2026-06-13 15:09:27.843 UTC]: Step 2/4 [view] data_plot
-# info [2026-06-13 15:09:27.854 UTC]: Step 3/4 [upstream] model_fit
-# info [2026-06-13 15:09:27.858 UTC]: Step 4/4 [view] model_plot
-# info [2026-06-13 15:09:27.866 UTC]: Finished run of pipeflow_view 'my-pip view view'
+# info [2026-06-13 17:23:21.281 UTC]: Start run of pipeflow_view 'my-pip view view'
+# info [2026-06-13 17:23:21.281 UTC]: Step 1/4 [upstream] data_prep - skipping done step
+# info [2026-06-13 17:23:21.281 UTC]: Step 2/4 [view] data_plot
+# info [2026-06-13 17:23:21.291 UTC]: Step 3/4 [upstream] model_fit
+# info [2026-06-13 17:23:21.296 UTC]: Step 4/4 [view] model_plot
+# info [2026-06-13 17:23:21.304 UTC]: Finished run of pipeflow_view 'my-pip view view'
 ```
 
 Having a closer look at the run log, you’ll see which steps were re-run

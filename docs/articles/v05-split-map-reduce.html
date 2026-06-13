@@ -65,7 +65,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
-    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul>
 </li>
       </ul>
@@ -163,11 +163,11 @@ fits a linear model and outputs the model coefficients.</p>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.443 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.443 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.445 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.449 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.451 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-13 17:23:30.778 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.778 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.780 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.784 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.785 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"coefs"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co">#  (Intercept) Sepal.Length </span></span>
@@ -188,21 +188,21 @@ for each subset. For example:</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">iris</span>, <span class="va">iris</span><span class="op">$</span><span class="va">Species</span><span class="op">)</span>, FUN <span class="op">=</span> <span class="va">run_pipeline_helper</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.575 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.576 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.577 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.580 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.583 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.586 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.586 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.587 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.589 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.590 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.593 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.593 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.594 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.596 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.597 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-13 17:23:30.904 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.905 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.906 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.909 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.911 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.915 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.915 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.915 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.917 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.919 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.922 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.922 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.923 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.925 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-06-13 17:23:30.926 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span></span>
 <span><span class="co"># $setosa</span></span>
@@ -297,12 +297,12 @@ step.</p>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.999 UTC]: Start run of pipeflow_pip 'my-split-pip'</span></span>
-<span><span class="co"># info [2026-06-13 15:09:36.999 UTC]: Step 1/4 data</span></span>
-<span><span class="co"># info [2026-06-13 15:09:37.000 UTC]: Step 2/4 split_data</span></span>
-<span><span class="co"># info [2026-06-13 15:09:37.002 UTC]: Step 3/4 fit</span></span>
-<span><span class="co"># info [2026-06-13 15:09:37.005 UTC]: Step 4/4 coefs</span></span>
-<span><span class="co"># info [2026-06-13 15:09:37.006 UTC]: Finished run of pipeflow_pip 'my-split-pip'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-13 17:23:31.323 UTC]: Start run of pipeflow_pip 'my-split-pip'</span></span>
+<span><span class="co"># info [2026-06-13 17:23:31.323 UTC]: Step 1/4 data</span></span>
+<span><span class="co"># info [2026-06-13 17:23:31.324 UTC]: Step 2/4 split_data</span></span>
+<span><span class="co"># info [2026-06-13 17:23:31.325 UTC]: Step 3/4 fit</span></span>
+<span><span class="co"># info [2026-06-13 17:23:31.329 UTC]: Step 4/4 coefs</span></span>
+<span><span class="co"># info [2026-06-13 17:23:31.330 UTC]: Finished run of pipeflow_pip 'my-split-pip'</span></span></code></pre></div>
 <p>Looking at the pipeline overview, we see that the
 <code>out</code>puts following the <code>split_data</code> steps are now
 all lists of results.</p>
@@ -377,13 +377,13 @@ represented by a circle.</p>
 <code>combine_coefs</code> step is a combined table of coefficients.</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-13 15:09:37.391 UTC]: Start run of pipeflow_pip 'my-split-pip'</span></span>
-<span><span class="co"># info [2026-06-13 15:09:37.391 UTC]: Step 1/5 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 15:09:37.391 UTC]: Step 2/5 split_data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 15:09:37.391 UTC]: Step 3/5 fit - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 15:09:37.392 UTC]: Step 4/5 coefs - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 15:09:37.392 UTC]: Step 5/5 combine_coefs</span></span>
-<span><span class="co"># info [2026-06-13 15:09:37.394 UTC]: Finished run of pipeflow_pip 'my-split-pip'</span></span>
+<span><span class="co"># info [2026-06-13 17:23:31.723 UTC]: Start run of pipeflow_pip 'my-split-pip'</span></span>
+<span><span class="co"># info [2026-06-13 17:23:31.723 UTC]: Step 1/5 data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-13 17:23:31.723 UTC]: Step 2/5 split_data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-13 17:23:31.723 UTC]: Step 3/5 fit - skipping done step</span></span>
+<span><span class="co"># info [2026-06-13 17:23:31.723 UTC]: Step 4/5 coefs - skipping done step</span></span>
+<span><span class="co"># info [2026-06-13 17:23:31.724 UTC]: Step 5/5 combine_coefs</span></span>
+<span><span class="co"># info [2026-06-13 17:23:31.725 UTC]: Finished run of pipeflow_pip 'my-split-pip'</span></span>
 <span></span>
 <span><span class="va">pip</span><span class="op">[[</span><span class="st">"combine_coefs"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co">#            (Intercept) Sepal.Length</span></span>

@@ -41,10 +41,10 @@ dst <- pip_new("target")
 pip_add_from(dst, src, "load")
 pip_add_from(dst, src, "square")
 pip_run(dst)
-#> info [2026-06-13 15:08:32.639 UTC]: Start run of pipeflow_pip 'target'
-#> info [2026-06-13 15:08:32.639 UTC]: Step 1/2 load
-#> info [2026-06-13 15:08:32.640 UTC]: Step 2/2 square
-#> info [2026-06-13 15:08:32.641 UTC]: Finished run of pipeflow_pip 'target'
+#> info [2026-06-13 17:22:25.492 UTC]: Start run of pipeflow_pip 'target'
+#> info [2026-06-13 17:22:25.492 UTC]: Step 1/2 load
+#> info [2026-06-13 17:22:25.492 UTC]: Step 2/2 square
+#> info [2026-06-13 17:22:25.494 UTC]: Finished run of pipeflow_pip 'target'
 pip_collect_out(dst)
 #> $load
 #> [1] 1 2 3

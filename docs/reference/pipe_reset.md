@@ -32,12 +32,12 @@ p <- pipe_new("pipe", data = 1:2)
 pipe_add(p, "f1", \(x = 1) x)
 pipe_add(p, "f2", \(y = 1) y)
 pipe_run(p, )
-#> INFO  [2026-06-13 17:08:26.886] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-13 17:08:26.888] Step 1/3 data
-#> INFO  [2026-06-13 17:08:26.893] Step 2/3 f1
-#> INFO  [2026-06-13 17:08:26.897] Step 3/3 f2
-#> INFO  [2026-06-13 17:08:26.902] Finished execution of steps.
-#> INFO  [2026-06-13 17:08:26.904] Done.
+#> INFO  [2026-06-13 19:22:18.567] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 19:22:18.568] Step 1/3 data
+#> INFO  [2026-06-13 19:22:18.570] Step 2/3 f1
+#> INFO  [2026-06-13 19:22:18.572] Step 3/3 f2
+#> INFO  [2026-06-13 19:22:18.574] Finished execution of steps.
+#> INFO  [2026-06-13 19:22:18.574] Done.
 p
 #>      step depends    out keepOut  group  state
 #>    <char>  <list> <list>  <lgcl> <char> <char>

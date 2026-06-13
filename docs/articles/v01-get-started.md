@@ -210,12 +210,12 @@ which produces the following output:
 ``` r
 
 pip_run(pip)
-# info [2026-06-13 15:08:50.721 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-13 15:08:50.722 UTC]: Step 1/4 data
-# info [2026-06-13 15:08:50.723 UTC]: Step 2/4 data_prep
-# info [2026-06-13 15:08:50.726 UTC]: Step 3/4 model_fit
-# info [2026-06-13 15:08:50.729 UTC]: Step 4/4 model_plot
-# info [2026-06-13 15:08:51.208 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-13 17:22:43.841 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-13 17:22:43.841 UTC]: Step 1/4 data
+# info [2026-06-13 17:22:43.843 UTC]: Step 2/4 data_prep
+# info [2026-06-13 17:22:43.845 UTC]: Step 3/4 model_fit
+# info [2026-06-13 17:22:43.848 UTC]: Step 4/4 model_plot
+# info [2026-06-13 17:22:44.299 UTC]: Finished run of pipeflow_pip 'my-pip'
 ```
 
 Let’s inspect the pipeline again.
@@ -340,12 +340,12 @@ results, we just run the pipeline again.
 ``` r
 
 pip_run(pip)
-# info [2026-06-13 15:08:52.422 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-13 15:08:52.423 UTC]: Step 1/4 data - skipping done step
-# info [2026-06-13 15:08:52.423 UTC]: Step 2/4 data_prep - skipping done step
-# info [2026-06-13 15:08:52.423 UTC]: Step 3/4 model_fit
-# info [2026-06-13 15:08:52.428 UTC]: Step 4/4 model_plot
-# info [2026-06-13 15:08:52.448 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-13 17:22:45.267 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-13 17:22:45.268 UTC]: Step 1/4 data - skipping done step
+# info [2026-06-13 17:22:45.268 UTC]: Step 2/4 data_prep - skipping done step
+# info [2026-06-13 17:22:45.268 UTC]: Step 3/4 model_fit
+# info [2026-06-13 17:22:45.272 UTC]: Step 4/4 model_plot
+# info [2026-06-13 17:22:45.290 UTC]: Finished run of pipeflow_pip 'my-pip'
 ```
 
 The outdated steps were re-run as expected and the output was updated
@@ -385,12 +385,12 @@ pip
 ``` r
 
 pip_run(pip)
-# info [2026-06-13 15:08:52.879 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-13 15:08:52.879 UTC]: Step 1/4 data - skipping done step
-# info [2026-06-13 15:08:52.879 UTC]: Step 2/4 data_prep - skipping done step
-# info [2026-06-13 15:08:52.879 UTC]: Step 3/4 model_fit - skipping done step
-# info [2026-06-13 15:08:52.879 UTC]: Step 4/4 model_plot
-# info [2026-06-13 15:08:52.890 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-13 17:22:45.715 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-13 17:22:45.715 UTC]: Step 1/4 data - skipping done step
+# info [2026-06-13 17:22:45.715 UTC]: Step 2/4 data_prep - skipping done step
+# info [2026-06-13 17:22:45.715 UTC]: Step 3/4 model_fit - skipping done step
+# info [2026-06-13 17:22:45.715 UTC]: Step 4/4 model_plot
+# info [2026-06-13 17:22:45.726 UTC]: Finished run of pipeflow_pip 'my-pip'
 pip[["model_plot", "out"]]
 ```
 
@@ -416,12 +416,12 @@ pip
 ``` r
 
 pip_run(pip)
-# info [2026-06-13 15:08:53.231 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-13 15:08:53.231 UTC]: Step 1/4 data
-# info [2026-06-13 15:08:53.232 UTC]: Step 2/4 data_prep
-# info [2026-06-13 15:08:53.236 UTC]: Step 3/4 model_fit
-# info [2026-06-13 15:08:53.238 UTC]: Step 4/4 model_plot
-# info [2026-06-13 15:08:53.248 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-13 17:22:46.070 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-13 17:22:46.070 UTC]: Step 1/4 data
+# info [2026-06-13 17:22:46.072 UTC]: Step 2/4 data_prep
+# info [2026-06-13 17:22:46.077 UTC]: Step 3/4 model_fit
+# info [2026-06-13 17:22:46.079 UTC]: Step 4/4 model_plot
+# info [2026-06-13 17:22:46.089 UTC]: Finished run of pipeflow_pip 'my-pip'
 pip[["model_plot", "out"]]
 ```
 

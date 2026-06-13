@@ -44,7 +44,7 @@ via ~step_name are excluded."><meta property="og:image" content="https://github.
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
-    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -110,10 +110,10 @@ is returned.</p>
 <span class="r-in"><span><span class="co"># Useful as a guide for pip_set_params()</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">20</span>, lambda <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="pip_collect_out.html">pip_collect_out</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-13 15:08:34.305 UTC]: Start run of pipeflow_pip 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-13 15:08:34.305 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-13 15:08:34.306 UTC]: Step 2/2 model</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-13 15:08:34.307 UTC]: Finished run of pipeflow_pip 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-13 17:22:27.689 UTC]: Start run of pipeflow_pip 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-13 17:22:27.690 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-13 17:22:27.690 UTC]: Step 2/2 model</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-13 17:22:27.692 UTC]: Finished run of pipeflow_pip 'pipe'</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $load</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

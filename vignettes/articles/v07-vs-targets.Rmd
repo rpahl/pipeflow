@@ -6,10 +6,6 @@ output:
     toc_depth: 4
 description: >
   A detailed comparison and benchmark between pipeflow and targets.
-vignette: >
-  %\VignetteIndexEntry{pipeflow vs targets}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
 params:
   nrep: 30
 ---
@@ -38,7 +34,7 @@ elapsed_time <- function(expr) {
 nrep <- params$nrep
 ```
 
-# Overview
+## Overview
 
 [{targets}](https://docs.ropensci.org/targets/) is the most widely used
 pipeline toolkit in the R ecosystem and the de-facto standard for heavy-duty
@@ -52,6 +48,7 @@ you decide which one fits your project.
 | Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ❌ In-memory only, lost when R session ends |
 | Skip up-to-date steps | ✅ Hash-based invalidation of code and data | ✅ State-based (`done` / `outdated`) |
 | Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | ❌ No per-step provenance metadata |
+| Dependency validation | ✅ `tar_validate()` for pre-flight checks (opt-in) | ✅ On `pip_add()`, `pip_replace()`, `pip_remove()` — fails fast on broken references |
 | Modify pipeline at runtime | ❌ Must edit `_targets.R` and re-run | ✅ `pip_remove()`, `pip_rename()`, `pip_replace()`, insert with `after =` |
 | Parameter management | ❌ No unified parameter view across targets | ✅ `pip_get_params()` / `pip_set_params()` — one call updates all steps |
 | Split / map / reduce | ✅ `pattern = map()` / `cross()` built-in, `tarchetypes` for advanced patterns | ✅ Built-in `exec = "split"` / `"auto"` / `"reduce"` |
@@ -72,6 +69,9 @@ skipped-step checks, in-session pipeline modification, and low response
 times make it well suited as a Shiny backend or for rapid parameter
 exploration during analysis.
 
+
+## Benchmarks
+
 The benchmarks below provide a quantitative comparison on three pipeline
 topologies. All timings are measured with `system.time()` across
 `r nrep` iterations per scenario.
@@ -79,10 +79,32 @@ topologies. All timings are measured with `system.time()` across
 Package versions: pipeflow `r packageVersion("pipeflow")`,
 targets `r packageVersion("targets")`.
 
-# Walkthrough example
+The three scenarios were chosen to isolate different aspects of pipeline
+overhead:
 
-Based on the
-[{targets} walkthrough](https://books.ropensci.org/targets/walkthrough.html).
+- **Walkthrough** — a minimal 4-step pipeline mimicking a typical
+  exploratory workflow. This measures startup cost and skip-check
+  overhead in the simplest realistic case.
+- **Long linear pipeline** — a chain of N steps (`s0 -> s1 -> ... -> sN`).
+  This isolates per-step bookkeeping cost as the pipeline grows to 128
+  steps.
+- **Fan-out DAG** — a single source feeds N parallel branches that
+  converge on one sink. This tests how each package handles wide
+  dependency structures.
+
+For targets, each iteration uses a fresh `tar_dir()` and `tar_script()`
+to ensure fair timing of end-to-end pipeline execution. For pipeflow,
+pipelines are built once and timed with `force = TRUE` to measure the
+cost of a full re-run.
+
+### Walkthrough example
+
+A minimal four-step pipeline based on the
+[{targets} walkthrough](https://books.ropensci.org/targets/walkthrough.html)
+— read CSV data, fit a linear model, and produce a plot. We measure both
+the first full run (all steps executed) and the subsequent skipped run
+(all steps already up to date). Full runs with targets include a
+`tar_destroy()` between iterations so each is a true cold start.
 
 ```{r helpers}
 create_data_csv <- function(data = airquality, file = "data.csv") {
@@ -104,7 +126,7 @@ plot_model <- function(model, data) {
 }
 ```
 
-## pipeflow pipeline
+#### pipeflow pipeline
 
 ```{r pipeflow-walkthrough-run}
 tar_dir({
@@ -124,7 +146,7 @@ tar_dir({
 })
 ```
 
-## targets pipeline
+#### targets pipeline
 
 ```{r targets-walkthrough-run}
 tar_make_here <- function(reporter = "silent") {
@@ -157,7 +179,7 @@ tar_dir({
 })
 ```
 
-## Runtimes
+#### Runtimes
 
 ```{r walkthrough-runtime-plot, echo = FALSE, fig.width = 7, fig.height = 4}
 title <- sprintf("Walkthrough (4 steps) — %d iterations", nrep)
@@ -180,14 +202,15 @@ ggplot(data, aes(x = Operation, y = Time, fill = Package)) +
     theme_bw()
 ```
 
-# Long linear pipeline
+### Long linear pipeline
 
 Each step depends on the output of the previous step:
 `s0 -> s1 -> s2 -> ... -> sN`. This measures the overhead of managing
 the pipeline structure and skipping logic as the number of steps
-increases.
+increases. We benchmark at 16, 32, 64, and 128 steps to show how the
+per-step cost scales.
 
-## pipeflow pipeline
+#### pipeflow pipeline
 
 ```{r linear-pipeflow}
 create_linear_pip <- function(n) {
@@ -205,7 +228,7 @@ pip_run(p)
 stopifnot(p[["s3", "out"]] == 3)
 ```
 
-## targets pipeline
+#### targets pipeline
 
 ```{r linear-targets}
 create_linear_tar <- function(n) {
@@ -228,7 +251,7 @@ tar_dir({
 })
 ```
 
-## Benchmark
+#### Runtimes
 
 ```{r linear-benchmark, echo = FALSE}
 pipeline_sizes <- c(16, 32, 64, 128)
@@ -274,10 +297,13 @@ ggplot(d_all, aes(x = factor(n), y = time * 1000, fill = package)) +
     theme_bw()
 ```
 
-# DAG with branching
+### DAG with branching
 
 A source feeds N parallel branches, all converging on a single sink
-step. This tests scalability with fan-out structures.
+step. This tests scalability with fan-out structures and how each
+package handles wide dependency graphs — from 16 up to 128 parallel
+branches. Unlike the linear pipeline, all branches can potentially run
+independently once the source completes.
 
 ```{r dag-helpers}
 dag_source <- function() 1
@@ -285,7 +311,7 @@ dag_branch <- function(x) x + 1
 dag_sink   <- function(...) sum(...)
 ```
 
-## pipeflow pipeline
+#### pipeflow pipeline
 
 ```{r dag-pipeflow}
 make_branch_pip <- function(n) {
@@ -309,7 +335,7 @@ p4 <- make_branch_pip(4); pip_run(p4)
 stopifnot(p4[["sink", "out"]] == 8)
 ```
 
-## targets pipeline
+#### targets pipeline
 
 ```{r dag-targets}
 make_branch_tar <- function(n) {
@@ -339,7 +365,7 @@ tar_dir({
 })
 ```
 
-## Benchmark
+#### Runtimes
 
 ```{r dag-benchmark, echo = FALSE}
 br_sizes <- c(16, 32, 64, 128)

@@ -63,7 +63,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
-    <li><a class="dropdown-item" href="articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><a class="dropdown-item" href="articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul>
 </li>
       </ul>
@@ -93,18 +93,12 @@
 <h3 id="why-use-pipeflow">Why use {pipeflow}<a class="anchor" aria-label="anchor" href="#why-use-pipeflow"></a>
 </h3>
 <ul>
-<li>Easy to learn yet suited for growingly complex workflows</li>
-<li>Automatically manages function and parameter dependencies</li>
-<li>Promotes structured and modular code</li>
-<li>Facilitates reusability and collaboration</li>
-<li>Simplifies error handling and debugging</li>
+<li>Simple and intuitive API</li>
+<li>Pipeline structure verified at definition time</li>
+<li>Filtered pipeline views</li>
+<li>View and manage parameters across all steps</li>
+<li>Fast execution with minimal overhead</li>
 </ul>
-</div>
-<div class="section level3">
-<h3 id="pipeflow-vs-targets">{pipeflow} vs {targets}<a class="anchor" aria-label="anchor" href="#pipeflow-vs-targets"></a>
-</h3>
-<p><a href="https://docs.ropensci.org/targets/" class="external-link">{targets}</a> is the most widely used pipeline toolkit in the R ecosystem. For a detailed comparison and benchmark results, see the <a href="https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html" class="external-link">vs targets vignette</a>.</p>
-<p>In short, <strong>{targets}</strong> is the tool of choice for large-scale, formally reproducible projects that may run on distributed infrastructure. <strong>{pipeflow}</strong> is designed for interactive development, rapid parameter exploration, and projects where you want to modify the pipeline structure as your analysis evolves — all while keeping a shallow learning curve and minimal dependencies.</p>
 </div>
 <div class="section level3">
 <h3 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -120,7 +114,37 @@
 <h3 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
 </h3>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpahl.github.io/pipeflow/" class="external-link">pipeflow</a></span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpahl.github.io/pipeflow/" class="external-link">pipeflow</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"demo"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"numbers"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"squared"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">numbers</span><span class="op">)</span> <span class="va">x</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"total"</span>,   \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">squared</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">p</span></span>
+<span><span class="co"># &lt;pipeflow_pip&gt; demo (3 steps)</span></span>
+<span><span class="co"># -----------------------------</span></span>
+<span><span class="co">#       step depends    out state</span></span>
+<span><span class="co"># 1: numbers         [NULL]   new</span></span>
+<span><span class="co"># 2: squared numbers [NULL]   new</span></span>
+<span><span class="co"># 3:   total squared [NULL]   new</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
+<span><span class="co"># info [2026-06-13 16:57:37.295 UTC]: Start run of pipeflow_pip 'demo'</span></span>
+<span><span class="co"># info [2026-06-13 16:57:37.296 UTC]: Step 1/3 numbers</span></span>
+<span><span class="co"># info [2026-06-13 16:57:37.297 UTC]: Step 2/3 squared</span></span>
+<span><span class="co"># info [2026-06-13 16:57:37.299 UTC]: Step 3/3 total</span></span>
+<span><span class="co"># info [2026-06-13 16:57:37.301 UTC]: Finished run of pipeflow_pip 'demo'</span></span>
+<span></span>
+<span><span class="fu"><a href="reference/pip_collect_out.html">pip_collect_out</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
+<span><span class="co"># $numbers</span></span>
+<span><span class="co"># [1] 1 2 3 4 5</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $squared</span></span>
+<span><span class="co"># [1]  1  4  9 16 25</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $total</span></span>
+<span><span class="co"># [1] 55</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="getting-started">Getting Started<a class="anchor" aria-label="anchor" href="#getting-started"></a>

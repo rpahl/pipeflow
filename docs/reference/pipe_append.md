@@ -88,13 +88,13 @@ p12 <- p1 |> pipe_append(p2, outAsIn = TRUE)
 p12 |>
   pipe_run() |>
   pipe_get_out("log2")
-#> INFO  [2026-06-13 17:08:17.820] Start run of 'pipe1.pipe2' pipeline:
-#> INFO  [2026-06-13 17:08:17.823] Step 1/4 data
-#> INFO  [2026-06-13 17:08:17.828] Step 2/4 square
-#> INFO  [2026-06-13 17:08:17.832] Step 3/4 data.pipe2
-#> INFO  [2026-06-13 17:08:17.835] Step 4/4 log2
-#> INFO  [2026-06-13 17:08:17.836] Finished execution of steps.
-#> INFO  [2026-06-13 17:08:17.837] Done.
+#> INFO  [2026-06-13 19:22:09.033] Start run of 'pipe1.pipe2' pipeline:
+#> INFO  [2026-06-13 19:22:09.034] Step 1/4 data
+#> INFO  [2026-06-13 19:22:09.037] Step 2/4 square
+#> INFO  [2026-06-13 19:22:09.040] Step 3/4 data.pipe2
+#> INFO  [2026-06-13 19:22:09.043] Step 4/4 log2
+#> INFO  [2026-06-13 19:22:09.045] Finished execution of steps.
+#> INFO  [2026-06-13 19:22:09.045] Done.
 #> [1] 6
 p12
 #>          step    depends    out keepOut      group  state
