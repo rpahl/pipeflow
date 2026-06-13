@@ -118,7 +118,7 @@
     .as_pipeflow_partitioned(out)
 }
 
-.pip_append <- function(x, step, fun, group, tags, exec = "auto") {
+.pip_append <- function(x, step, fun, tags, exec = "auto") {
     # Determine and verify potential links to existing steps
     params <- .extract_fun_params(fun)
     if (".self" %in% names(params)) {
@@ -152,7 +152,6 @@
     # Create and append step
     newStep <- .new_step(
         step = step,
-        group = group,
         fun = fun,
         params = lapply(params, eval),
         depends = depends,
@@ -408,8 +407,6 @@ pip_new <- function(name = "pipe") {
 #' immediately. Default values that are formulas like `~other_step` are
 #' treated as dependencies to those steps and resolved to the respective output
 #' values at runtime once the step is executed.
-#' @param group Optional character label used for grouping output collections -
-#' see also `[pip_collect_out()]`.
 #' @param tags Optional character vector of tags belonging to the step.
 #' Can also be adjusted later using `[pip_tag()]`.
 #' @param after Optional position after which the new step should be inserted
@@ -438,20 +435,12 @@ pip_new <- function(name = "pipe") {
 #'
 #' @return The updated pipeline, invisibly.
 #' @examples
-#' # --- Groups, tags, and view filtering ---
+#' # --- Tags, and view filtering ---
 #' p <- pip_new("analysis") |>
-#'   pip_add("load", \(n = 5) seq_len(n),
-#'     group = "io", tags = "raw"
-#'   ) |>
-#'   pip_add("clean", \(x = ~load) x * 2,
-#'     group = "io", tags = "process"
-#'   ) |>
-#'   pip_add("fit", \(x = ~clean) sum(x),
-#'     group = "model", tags = c("core", "daily")
-#'   ) |>
-#'   pip_add("report", \(x = ~fit) paste("result:", x),
-#'     group = "model", tags = "report"
-#'   )
+#'   pip_add("load", \(n = 5) seq_len(n), tags = c("io", "raw")) |>
+#'   pip_add("clean", \(x = ~load) x * 2, tags = c("io", "process")) |>
+#'   pip_add("fit", \(x = ~clean) sum(x), tags = c("model", "core", "daily")) |>
+#'   pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
 #'
 #' pip_run(p)
 #' p
@@ -480,7 +469,6 @@ pip_add <- function(
     x,
     step,
     fun,
-    group = step,
     tags = character(0),
     after = length(x),
     exec = "auto"
@@ -493,9 +481,6 @@ pip_add <- function(
     }
     if (!is.function(fun)) {
         stop("fun must be a function")
-    }
-    if (!.is_single(group, "character") || is.na(group) || !nzchar(group)) {
-        stop("group must be a non-empty valid string")
     }
     .assert_exec_mode(exec)
 
@@ -529,7 +514,6 @@ pip_add <- function(
             x,
             step = step,
             fun = fun,
-            group = group,
             tags = tags,
             exec = exec
         )
@@ -545,7 +529,6 @@ pip_add <- function(
         out,
         step = step,
         fun = fun,
-        group = group,
         tags = tags,
         exec = exec
     )
@@ -581,7 +564,7 @@ pip_add <- function(
 #' Copy a step from another pipeline
 #'
 #' Copies one step from pipeline `y` into pipeline `x`, preserving its
-#' function, parameters, group, tags, and dependency links.
+#' function, parameters, tags, and dependency links.
 #'
 #' @param x Target pipeflow pipeline object.
 #' @param y Source pipeflow pipeline object.
@@ -625,7 +608,6 @@ pip_add_from <- function(x, y, step) {
 
     iStep <- match(step, y[["pipeline"]][["step"]])
     fun <- y[["pipeline"]][["fun"]][[iStep]]
-    group <- y[["pipeline"]][["group"]][[iStep]]
     tags <- y[["pipeline"]][["tags"]][[iStep]]
     exec <- y[["pipeline"]][["exec"]][[iStep]]
     params <- y[["pipeline"]][["params"]][[iStep]]
@@ -651,14 +633,7 @@ pip_add_from <- function(x, y, step) {
     }
 
     formals(f) <- fml
-    pip_add(
-        x,
-        step = step,
-        fun = f,
-        group = group,
-        tags = tags,
-        exec = exec
-    )
+    pip_add(x, step = step, fun = f, tags = tags, exec = exec)
 }
 
 #' Bind pipelines
@@ -797,34 +772,40 @@ pip_clone <- function(x, name = NULL) {
 
 #' Collect step outputs
 #'
-#' Returns the outputs of all pipeline steps as a named list, optionally
-#' grouped by step group label.
-#' @param x A pipeflow pip or view
-#' @param grouped Logical indicating if the output should be grouped by step
-#' groups
-#' @return A named list of outputs. If `grouped = TRUE`, groups with more than
-#' one step are returned as nested named lists.
+#' Returns the outputs of all pipeline steps as a named list. By default the
+#' result is a flat named list keyed by step name. When `by = "tags"` is set,
+#' the outputs are grouped by their tags: steps tagged with the same tag
+#' value are nested under that tag as a named sub-list.
+#' @param x A pipeflow pip or view.
+#' @param by Grouping mode. `NULL` (default) returns a flat step-name-to-output
+#' list. The value `"tags"` groups outputs by the steps' tag values, where
+#' each distinct tag becomes a top-level entry and steps that share the same
+#' tag are nested under it.
+#' @return A named list of outputs. With `by = NULL` the names are step names.
+#' With `by = "tags"` the names are tag values, each containing either a
+#' single value (if only one step has the tag) or a named sub-list of step
+#' outputs (if multiple steps share the tag).
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("load", \(x = 1) x, group = "io") |>
-#'   pip_add("clean", \(x = ~load) x + 1, group = "io") |>
-#'   pip_add("model", \(x = ~clean) x * 2, group = "model")
+#'   pip_add("load", \(x = 1) x, tags = "io") |>
+#'   pip_add("clean", \(x = ~load) x + 1, tags = "io") |>
+#'   pip_add("model", \(x = ~clean) x * 2, tags = "model")
 #' pip_run(p)
 #'
-#' # grouped = TRUE (default): steps sharing a group become a nested list
+#' # by = NULL (default): flat named list with one entry per step
 #' pip_collect_out(p)
 #'
-#' # grouped = FALSE: flat named list with one entry per step
-#' pip_collect_out(p, grouped = FALSE)
+#' # by = "tags": steps sharing the same tag are nested
+#' pip_collect_out(p, by = "tags")
 #'
-#' # Combine with pip_view to collect output from a specific group
-#' pip_view(p, filter = list(group = "io")) |> pip_collect_out()
-#' pip_view(p, filter = list(group = "model")) |> pip_collect_out()
+#' # Combine with pip_view to collect output for specific tags
+#' pip_view(p, tags = "io") |> pip_collect_out()
+#' pip_view(p, tags = "model") |> pip_collect_out()
 #' @export
-pip_collect_out <- function(x, grouped = TRUE) {
+pip_collect_out <- function(x, by = NULL) {
     .assert_pip_or_view(x)
-    if (!.is_single(grouped, "logical")) {
-        stop("grouped must be a single logical value")
+    if (!is.null(by) && !identical(by, "tags")) {
+        stop("'by' must be NULL or \"tags\"")
     }
 
     dat <- .pip_data(x)
@@ -834,31 +815,33 @@ pip_collect_out <- function(x, grouped = TRUE) {
 
     steps <- dat[["step"]]
     out <- dat[["out"]]
+    res <- stats::setNames(out, steps)
 
-    # Straight-forward step-by-step output
-    if (!grouped) {
-        return(stats::setNames(out, steps))
+    if (is.null(by)) {
+        return(res)
     }
 
-    # Grouped output
-    groups <- dat[["group"]]
-    groupLabels <- unique(groups)
-    res <- vector(mode = "list", length = length(groupLabels))
-    names(res) <- groupLabels
-    for (k in seq_along(groupLabels)) {
-        lab <- groupLabels[[k]]
-        idx <- which(groups == lab)
+    tags_col <- dat[["tags"]]
+    all_tags <- sort(unique(unlist(tags_col)))
 
-        # Group output if at least two steps have the same group label
+    grouped <- vector("list", length(all_tags))
+    names(grouped) <- all_tags
+
+    for (t in all_tags) {
+        idx <- which(vapply(tags_col, \(x) t %in% x, logical(1)))
         if (length(idx) > 1L) {
-            res[[k]] <- stats::setNames(out[idx], nm = steps[idx])
+            grouped[[t]] <- res[idx]
         } else {
-            # Preserve NULL outputs — slice assignment keeps named NULL entries
-            res[k] <- list(out[[idx]])
+            grouped[t] <- res[idx]
         }
     }
 
-    res
+    untagged <- which(lengths(tags_col) == 0L)
+    if (length(untagged) > 0L) {
+        grouped <- c(grouped, res[untagged])
+    }
+
+    grouped
 }
 
 #' Get independent parameters
@@ -920,12 +903,12 @@ pip_get_params <- function(x) {
 #' @export
 #' @examples
 #' p <- pip_new()
-#' pip_add(p, "load", \(x = 1) x, group = "io")
-#' pip_add(p, "clean", \(x = ~load) x + 1, group = "io")
-#' pip_add(p, "fit", \(x = ~clean) x * 2, group = "model")
+#' pip_add(p, "load", \(x = 1) x, tags = "io")
+#' pip_add(p, "clean", \(x = ~load) x + 1, tags = "io")
+#' pip_add(p, "fit", \(x = ~clean) x * 2, tags = "model")
 #'
 #' graph <- pip_get_graph(p)
-#' graph$nodes # data.frame: id, label, group, shape, color
+#' graph$nodes # data.frame: id, label, shape, color
 #' graph$edges # data.frame: from, to, arrows
 #'
 #' # For a view, include_upstream = TRUE adds upstream deps to the graph
@@ -977,7 +960,6 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
     nodes <- data.frame(
         id = ids,
         label = sub[["step"]],
-        group = sub[["group"]],
         shape = shape,
         color = colors
     )
@@ -1258,7 +1240,6 @@ pip_rename <- function(x, from, to) {
 #' @param x A pipeflow pipeline object.
 #' @param step Step name.
 #' @param fun Function to execute for the step.
-#' @param group Step group name.
 #' @param tags Optional character vector of tags belonging to the step.
 #' Can also be adjusted later using `[pip_tag()]`.
 #' @return The updated pipeline, invisibly.
@@ -1277,7 +1258,7 @@ pip_rename <- function(x, from, to) {
 #' pip_run(p)
 #' p
 #' @export
-pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
+pip_replace <- function(x, step, fun, tags = character(0)) {
     if (!.is_pipeflow_pip(x)) {
         stop("x must be a pipeflow pip")
     }
@@ -1296,9 +1277,6 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
     if (!is.function(fun)) {
         stop("fun must be a function")
     }
-    if (!.is_single(group, "character") || is.na(group) || !nzchar(group)) {
-        stop("group must be a non-empty valid string")
-    }
 
     src <- pip_clone(x)
     dat <- src[["pipeline"]]
@@ -1312,7 +1290,7 @@ pip_replace <- function(x, step, fun, group = step, tags = character(0)) {
     }
 
     # Add replacement step at the original position.
-    pip_add(out, step = step, fun = fun, group = group, tags = tags)
+    pip_add(out, step = step, fun = fun, tags = tags)
 
     # Re-append subsequent steps and preserve their runtime state.
     if (iStep < n) {
@@ -1854,20 +1832,20 @@ pip_unlock <- function(p) {
 #'
 #' p <- pip_new()
 #' pip_add(p, "load_raw", \(x = 1) x,
-#'   group = "io", tags = c("core", "daily")
+#'   tags = c("io", "core", "daily")
 #' )
 #' pip_add(p, "fit_model", \(x = 2) x + 1,
-#'   group = "model", tags = "model"
+#'   tags = c("model")
 #' )
 #' pip_add(p, "eval_model", \(x = ~fit_model) x,
-#'   group = "model", tags = c("daily", "report")
+#'   tags = c("model", "daily", "report")
 #' )
 #'
-#' # Filter by a fixed column value (one or more groups)
-#' pip_view(p, filter = list(group = "model"))
+#' # Filter by a fixed column value (one or more states)
+#' pip_view(p, filter = list(state = "new"))
 #'
-#' # Combine filters: group AND state
-#' pip_view(p, filter = list(group = "model", state = "new"))
+#' # Combine filters: step pattern AND state
+#' pip_view(p, filter = list(step = "model", state = "new"))
 #'
 #' # Filter by tag — keeps steps that have *any* of the given tags
 #' pip_view(p, tags = "daily")
@@ -1875,11 +1853,11 @@ pip_unlock <- function(p) {
 #' # Combine explicit step selection with a filter (intersection)
 #' pip_view(p,
 #'   i      = c("load_raw", "fit_model"),
-#'   filter = list(group = "model")
+#'   filter = list(state = "new")
 #' )
 #'
 #' # Select by integer row indices
-#' pip_view(p, i = c(1L, 2L), filter = list(group = "model"))
+#' pip_view(p, i = c(1L, 2L), filter = list(state = "new"))
 #'
 #' # Use a regex pattern to match step names
 #' pip_view(p, filter = list(step = "_model$"), fixed = FALSE)
@@ -1909,7 +1887,7 @@ pip_view <- function(
     keep <- rep(TRUE, nrow(sub))
 
     # Filters
-    validFilters <- c("step", "depends", "group", "state", "exec")
+    validFilters <- c("step", "depends", "state", "exec")
     for (name in names(filter)) {
         if (!(name %in% validFilters)) {
             stop(sprintf(
@@ -2197,11 +2175,11 @@ length.pipeflow_view <- function(x) {
 #' @return Invisibly returns `x`.
 #' @examples
 #' p <- pip_new("demo") |>
-#'   pip_add("load", \(n = 5) seq_len(n), group = "io", tags = "raw") |>
-#'   pip_add("square", \(x = ~load) x^2, group = "compute") |>
-#'   pip_add("total", \(x = ~square) sum(x), group = "compute")
+#'   pip_add("load", \(n = 5) seq_len(n), tags = c("io", "raw")) |>
+#'   pip_add("square", \(x = ~load) x^2, tags = "compute") |>
+#'   pip_add("total", \(x = ~square) sum(x), tags = "compute")
 #'
-#' print(p) # core columns: step, group, depends, tags, out, state
+#' print(p) # core columns: step, depends, tags, out, state
 #' print(p, cols = "all") # all non-hidden columns
 #' print(p, rows = 2:3) # print only steps 2 and 3
 #' @rdname print
@@ -2222,10 +2200,6 @@ print.pipeflow_pip <- function(
 
     if (identical(cols, "core")) {
         cols <- c("step", "depends", "out", "state")
-        hasOtherGrous <- !identical(dat[["step"]], dat[["group"]])
-        if (hasOtherGrous) {
-            cols <- append(cols, "group", after = 1L)
-        }
         has_tags <- any(lengths(dat[["tags"]]) > 0L)
         if (has_tags) {
             cols <- append(cols, "tags")
@@ -2270,11 +2244,11 @@ print.pipeflow_pip <- function(
 
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("s1", \(x = 1) x, group = "io") |>
-#'   pip_add("s2", \(x = ~s1) x + 1, group = "model")
+#'   pip_add("s1", \(x = 1) x, tags = "io") |>
+#'   pip_add("s2", \(x = ~s1) x + 1, tags = "model")
 #'
 #' # A view header shows how many steps are selected out of the total
-#' v <- pip_view(p, filter = list(group = "model"))
+#' v <- pip_view(p, tags = "model")
 #' print(v) # "<pipeflow_view> pipe view (1 of 2 steps)"
 #' @rdname print
 #' @export
