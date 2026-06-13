@@ -44,20 +44,20 @@ affect only the selected steps.
 
 p <- pip_new()
 pip_add(p, "load_raw", \(x = 1) x,
-  group = "io", tags = c("core", "daily")
+  tags = c("io", "core", "daily")
 )
 pip_add(p, "fit_model", \(x = 2) x + 1,
-  group = "model", tags = "model"
+  tags = c("model")
 )
 pip_add(p, "eval_model", \(x = ~fit_model) x,
-  group = "model", tags = c("daily", "report")
+  tags = c("model", "daily", "report")
 )
 
-# Filter by a fixed column value (one or more groups)
-pip_view(p, filter = list(group = "model"))
+# Filter by a fixed column value (one or more states)
+pip_view(p, filter = list(state = "new"))
 
-# Combine filters: group AND state
-pip_view(p, filter = list(group = "model", state = "new"))
+# Combine filters: step pattern AND state
+pip_view(p, filter = list(step = "model", state = "new"))
 
 # Filter by tag — keeps steps that have *any* of the given tags
 pip_view(p, tags = "daily")
@@ -65,11 +65,11 @@ pip_view(p, tags = "daily")
 # Combine explicit step selection with a filter (intersection)
 pip_view(p,
   i      = c("load_raw", "fit_model"),
-  filter = list(group = "model")
+  filter = list(state = "new")
 )
 
 # Select by integer row indices
-pip_view(p, i = c(1L, 2L), filter = list(group = "model"))
+pip_view(p, i = c(1L, 2L), filter = list(state = "new"))
 
 # Use a regex pattern to match step names
 pip_view(p, filter = list(step = "_model$"), fixed = FALSE)

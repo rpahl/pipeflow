@@ -914,7 +914,7 @@ describe("pip_collect_out", {
         expect_equal(pip_collect_out(p), list())
     })
 
-    it("returns named flat list by default (by = NULL)", {
+    it("returns named flat list", {
         p <- pip_new()
         pip_add(p, "s1", \(x = 1) x, tags = "data")
         pip_add(p, "s2", \(x = ~ -1) x + 1, tags = "model")
@@ -926,37 +926,6 @@ describe("pip_collect_out", {
         expect_equal(unname(out), list(10, 20))
     })
 
-    it("groups outputs by tags when by = 'tags'", {
-        p <- pip_new()
-        pip_add(p, "s1", \(x = 1) x, tags = "data")
-        pip_add(p, "s2", \(x = ~ -1) x + 1, tags = "model")
-        pip_add(p, "s3", \(x = ~ -1) x + 1, tags = "model")
-        pip_add(p, "s4", \(x = ~ -1) x + 1, tags = "final")
-
-        p[["pipeline"]][["out"]] <- list("o1", "o2", "o3", "o4")
-
-        out <- pip_collect_out(p, by = "tags")
-
-        expect_equal(names(out), c("data", "final", "model"))
-        expect_equal(out[["data"]], "o1")
-        expect_equal(out[["model"]], list(s2 = "o2", s3 = "o3"))
-        expect_equal(out[["final"]], "o4")
-    })
-
-    it("lists step under multiple groups if it has multiple tags", {
-        p <- pip_new()
-        pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
-        pip_add(p, "s2", \(x = 2) x, tags = "core")
-
-        p[["pipeline"]][["out"]] <- list("o1", "o2")
-
-        out <- pip_collect_out(p, by = "tags")
-
-        expect_equal(names(out), c("core", "daily"))
-        expect_equal(out[["core"]], list(s1 = "o1", s2 = "o2"))
-        expect_equal(out[["daily"]], "o1")
-    })
-
     it("works on pipeline views", {
         p <- pip_new()
         pip_add(p, "s1", \(x = 1) x, tags = "data")
@@ -966,75 +935,30 @@ describe("pip_collect_out", {
         p[["pipeline"]][["out"]] <- list("o1", "o2", "o3")
 
         v <- pip_view(p, tags = "model")
-        out <- pip_collect_out(v, by = "tags")
+        out <- pip_collect_out(v)
 
-        expect_equal(names(out), "model")
-        expect_equal(out[["model"]], list(s2 = "o2", s3 = "o3"))
+        expect_equal(names(out), c("s2", "s3"))
+        expect_equal(unname(out), list("o2", "o3"))
     })
 
-    it("tag-grouped output works if an output is NULL", {
+    it("preserves NULL outputs", {
         p <- pip_new("test") |>
             pip_add("s1", \(x = NULL) x) |>
             pip_add("s2", \(x = 3) x, tags = "g2") |>
             pip_add("s3", \(x = ~s2, factor = 2) x * factor) |>
             pip_add("s4", \(x = ~s2) x^2, tags = "g4")
 
-        out <- pip_collect_out(p, by = "tags")
-        expect_equal(
-            names(out),
-            c("g2", "g4", "s1", "s3")
-        )
-        expect_equal(out[["g2"]], NULL)
-        expect_equal(out[["g4"]], NULL)
-        expect_equal(out[["s1"]], NULL)
-        expect_equal(out[["s3"]], NULL)
-
         out <- pip_collect_out(p)
         expect_equal(out, list(s1 = NULL, s2 = NULL, s3 = NULL, s4 = NULL))
 
         pip_run(p, lgr = NULL)
-        out <- pip_collect_out(p, by = "tags")
-        expect_equal(out[["g2"]], 3)
-        expect_equal(out[["g4"]], 3^2)
-        expect_equal(out[["s1"]], NULL)
-        expect_equal(out[["s3"]], 2 * 3)
-
         out <- pip_collect_out(p)
         expect_equal(out, list(s1 = NULL, s2 = 3, s3 = 2 * 3, s4 = 3^2))
-    })
-
-    it("returns flat list by = NULL when no tags are defined", {
-        p <- pip_new("test") |>
-            pip_add("s1", \(x = NULL) x) |>
-            pip_add("s2", \(x = 3) x) |>
-            pip_add("s3", \(x = ~s2, factor = 2) x * factor) |>
-            pip_add("s4", \(x = ~s2) x^2)
-
-        out <- pip_collect_out(p)
-        expect_equal(names(out), c("s1", "s2", "s3", "s4"))
-        expect_equal(unname(out), list(NULL, NULL, NULL, NULL))
-    })
-
-    it("by = 'tags' with no tags returns untagged steps as flat entries", {
-        p <- pip_new("test") |>
-            pip_add("s1", \(x = NULL) x) |>
-            pip_add("s2", \(x = 3) x) |>
-            pip_add("s3", \(x = ~s2, factor = 2) x * factor) |>
-            pip_add("s4", \(x = ~s2) x^2)
-
-        out <- pip_collect_out(p, by = "tags")
-        expect_equal(names(out), c("s1", "s2", "s3", "s4"))
-        expect_equal(unname(out), list(NULL, NULL, NULL, NULL))
     })
 
     it("signals invalid arguments", {
         p <- pip_new()
         expect_error(pip_collect_out(1), "x must be a pipeflow pip or view")
-        expect_error(
-            pip_collect_out(p, by = "foo"),
-            "'by' must be NULL or \"tags\"",
-            fixed = TRUE
-        )
     })
 })
 

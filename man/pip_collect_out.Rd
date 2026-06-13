@@ -4,36 +4,33 @@
 \alias{pip_collect_out}
 \title{Collect step outputs}
 \usage{
-pip_collect_out(x, grouped = TRUE)
+pip_collect_out(x)
 }
 \arguments{
-\item{x}{A pipeflow pip or view}
-
-\item{grouped}{Logical indicating if the output should be grouped by step
-groups}
+\item{x}{A pipeflow pip or view.}
 }
 \value{
-A named list of outputs. If \code{grouped = TRUE}, groups with more than
-one step are returned as nested named lists.
+A named list of outputs, one element per step.
 }
 \description{
-Returns the outputs of all pipeline steps as a named list, optionally
-grouped by step group label.
+Returns the outputs of all pipeline steps as a flat named list keyed by
+step name. Use \code{\link[=pip_view]{pip_view()}} to narrow the selection before collecting,
+and compose calls if grouped output is needed.
 }
 \examples{
 p <- pip_new() |>
-  pip_add("load", \(x = 1) x, group = "io") |>
-  pip_add("clean", \(x = ~load) x + 1, group = "io") |>
-  pip_add("model", \(x = ~clean) x * 2, group = "model")
+  pip_add("load", \(x = 1) x, tags = "io") |>
+  pip_add("clean", \(x = ~load) x + 1, tags = "io") |>
+  pip_add("model", \(x = ~clean) x * 2, tags = "model")
 pip_run(p)
 
-# grouped = TRUE (default): steps sharing a group become a nested list
+# Flat named list with one entry per step
 pip_collect_out(p)
 
-# grouped = FALSE: flat named list with one entry per step
-pip_collect_out(p, grouped = FALSE)
-
-# Combine with pip_view to collect output from a specific group
-pip_view(p, filter = list(group = "io")) |> pip_collect_out()
-pip_view(p, filter = list(group = "model")) |> pip_collect_out()
+# Combine with pip_view to collect output for specific tags
+grouped <- list(
+  io = pip_view(p, tags = "io") |> pip_collect_out(),
+  model = pip_view(p, tags = "model") |> pip_collect_out()
+)
+grouped
 }

@@ -772,19 +772,11 @@ pip_clone <- function(x, name = NULL) {
 
 #' Collect step outputs
 #'
-#' Returns the outputs of all pipeline steps as a named list. By default the
-#' result is a flat named list keyed by step name. When `by = "tags"` is set,
-#' the outputs are grouped by their tags: steps tagged with the same tag
-#' value are nested under that tag as a named sub-list.
+#' Returns the outputs of all pipeline steps as a flat named list keyed by
+#' step name. Use [pip_view()] to narrow the selection before collecting,
+#' and compose calls if grouped output is needed.
 #' @param x A pipeflow pip or view.
-#' @param by Grouping mode. `NULL` (default) returns a flat step-name-to-output
-#' list. The value `"tags"` groups outputs by the steps' tag values, where
-#' each distinct tag becomes a top-level entry and steps that share the same
-#' tag are nested under it.
-#' @return A named list of outputs. With `by = NULL` the names are step names.
-#' With `by = "tags"` the names are tag values, each containing either a
-#' single value (if only one step has the tag) or a named sub-list of step
-#' outputs (if multiple steps share the tag).
+#' @return A named list of outputs, one element per step.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(x = 1) x, tags = "io") |>
@@ -792,56 +784,23 @@ pip_clone <- function(x, name = NULL) {
 #'   pip_add("model", \(x = ~clean) x * 2, tags = "model")
 #' pip_run(p)
 #'
-#' # by = NULL (default): flat named list with one entry per step
+#' # Flat named list with one entry per step
 #' pip_collect_out(p)
 #'
-#' # by = "tags": steps sharing the same tag are nested
-#' pip_collect_out(p, by = "tags")
-#'
 #' # Combine with pip_view to collect output for specific tags
-#' pip_view(p, tags = "io") |> pip_collect_out()
-#' pip_view(p, tags = "model") |> pip_collect_out()
+#' grouped <- list(
+#'   io = pip_view(p, tags = "io") |> pip_collect_out(),
+#'   model = pip_view(p, tags = "model") |> pip_collect_out()
+#' )
+#' grouped
 #' @export
-pip_collect_out <- function(x, by = NULL) {
+pip_collect_out <- function(x) {
     .assert_pip_or_view(x)
-    if (!is.null(by) && !identical(by, "tags")) {
-        stop("'by' must be NULL or \"tags\"")
-    }
-
     dat <- .pip_data(x)
     if (nrow(dat) == 0) {
         return(list())
     }
-
-    steps <- dat[["step"]]
-    out <- dat[["out"]]
-    res <- stats::setNames(out, steps)
-
-    if (is.null(by)) {
-        return(res)
-    }
-
-    tags_col <- dat[["tags"]]
-    all_tags <- sort(unique(unlist(tags_col)))
-
-    grouped <- vector("list", length(all_tags))
-    names(grouped) <- all_tags
-
-    for (t in all_tags) {
-        idx <- which(vapply(tags_col, \(x) t %in% x, logical(1)))
-        if (length(idx) > 1L) {
-            grouped[[t]] <- res[idx]
-        } else {
-            grouped[t] <- res[idx]
-        }
-    }
-
-    untagged <- which(lengths(tags_col) == 0L)
-    if (length(untagged) > 0L) {
-        grouped <- c(grouped, res[untagged])
-    }
-
-    grouped
+    stats::setNames(dat[["out"]], dat[["step"]])
 }
 
 #' Get independent parameters
