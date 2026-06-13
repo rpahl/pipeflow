@@ -148,13 +148,13 @@ output.
 
 pip_set_params(pip, params = list(xVar = "Solar.R", yVar = "Wind"))
 pip_run(pip)
-# info [2026-06-07 15:34:31.523 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-07 15:34:31.524 UTC]: Step 1/5 data - skipping done step
-# info [2026-06-07 15:34:31.524 UTC]: Step 2/5 data_prep - skipping done step
-# info [2026-06-07 15:34:31.524 UTC]: Step 3/5 standardize
-# info [2026-06-07 15:34:31.526 UTC]: Step 4/5 model_fit
-# info [2026-06-07 15:34:31.529 UTC]: Step 5/5 model_plot
-# info [2026-06-07 15:34:31.540 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-13 15:09:04.642 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-13 15:09:04.643 UTC]: Step 1/5 data - skipping done step
+# info [2026-06-13 15:09:04.643 UTC]: Step 2/5 data_prep - skipping done step
+# info [2026-06-13 15:09:04.643 UTC]: Step 3/5 standardize
+# info [2026-06-13 15:09:04.645 UTC]: Step 4/5 model_fit
+# info [2026-06-13 15:09:04.648 UTC]: Step 5/5 model_plot
+# info [2026-06-13 15:09:04.657 UTC]: Finished run of pipeflow_pip 'my-pip'
 ```
 
 ``` r

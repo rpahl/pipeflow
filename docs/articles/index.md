@@ -20,7 +20,7 @@
 - [Collecting and filtering
   output](https://github.com/rpahl/pipeflow/articles/v04-collect-output.md):
 
-  Shows how to collect, filter, and group pipeline output.
+  Shows how to tag, filter, and collect pipeline output.
 
 - [Split, map, and
   reduce](https://github.com/rpahl/pipeflow/articles/v05-split-map-reduce.md):
@@ -35,3 +35,8 @@
   which, for example, allows for changing pipeline parameters based on
   intermediate results or even dynamically modify the pipeline’s own
   structure during a pipeline run.
+
+- [pipeflow vs
+  targets](https://github.com/rpahl/pipeflow/articles/v07-vs-targets.md):
+
+  A detailed comparison and benchmark between pipeflow and targets.

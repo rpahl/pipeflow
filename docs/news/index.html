@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9005</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9006</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -54,6 +55,27 @@
       <small>Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/NEWS.md"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.2.3.9006" id="pipeflow-0239006">pipeflow 0.2.3.9006<a class="anchor" aria-label="anchor" href="#pipeflow-0239006"></a></h2>
+<ul><li>
+<strong>C++ DAG engine</strong> (<code>src/dag.cpp</code>, 882 lines): All graph operations (node/edge add/remove, topological ordering, reachability queries) now run at C++ speed via Rcpp external pointers and <code>.Call</code> interface. This eliminates the R object overhead for dependency resolution.</li>
+<li>
+<strong>New and improved <code>pip_*</code> API</strong>: Functional API replacing the R6 <code>Pipeline</code> class — <code><a href="../reference/pip_new.html">pip_new()</a></code>, <code><a href="../reference/pip_add.html">pip_add()</a></code>, <code><a href="../reference/pip_run.html">pip_run()</a></code>, <code><a href="../reference/pip_replace.html">pip_replace()</a></code>, <code><a href="../reference/pip_clone.html">pip_clone()</a></code>, <code><a href="../reference/pip_bind.html">pip_bind()</a></code>, etc.</li>
+<li>
+<strong>Execution modes</strong> (<code>auto</code>/<code>split</code>/<code>reduce</code>/<code>plain</code>): Native support for map-reduce style workflows where steps can split output into named partitions and downstream steps auto-map over them.</li>
+<li>
+<strong>Backward compatibility</strong>: Legacy <code>pipe_*</code> functions and <code>Pipeline</code> R6 class preserved as deprecated aliases (<code>R/aliases.R</code>, <code>R/pipelineR6.R</code>).</li>
+<li>
+<code><a href="../reference/pip_view.html">pip_view()</a></code> — create filtered pipeline views (by dependencies, tags)</li>
+<li>
+<code><a href="../reference/pip_tag.html">pip_tag()</a></code> / <code><a href="../reference/pip_untag.html">pip_untag()</a></code>
+</li>
+<li>
+<code>[[</code> extract operator for pipelines</li>
+<li>Comprehensive revision of all vignettes to match new API</li>
+<li>MIT license, updated CI workflows, dependabot config, kilo.json, lintr/styler config</li>
+<li>Extensive test suite (~10K+ lines) covering C++ DAG, pip_* API, aliases, execution modes, and recursive runs</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.3.9005" id="pipeflow-0239005">pipeflow 0.2.3.9005<a class="anchor" aria-label="anchor" href="#pipeflow-0239005"></a></h2>
 <ul><li>deprecate legacy <code>pipe_*</code> API in favor of the new <code>pip_*</code> API</li>

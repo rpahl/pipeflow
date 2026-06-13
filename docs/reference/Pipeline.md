@@ -1780,11 +1780,11 @@ p
 p <- Pipeline$new("myPipe", data = c(1, 2, NA, 3, 4))
 p$add("calc_mean", mean, params = list(x = ~data, na.rm = TRUE))
 p$run()$get_out("calc_mean")
-#> INFO  [2026-06-07 17:33:47.779] Start run of 'myPipe' pipeline:
-#> INFO  [2026-06-07 17:33:47.811] Step 1/2 data
-#> INFO  [2026-06-07 17:33:47.819] Step 2/2 calc_mean
-#> INFO  [2026-06-07 17:33:47.839] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:47.840] Done.
+#> INFO  [2026-06-13 17:08:09.384] Start run of 'myPipe' pipeline:
+#> INFO  [2026-06-13 17:08:09.416] Step 1/2 data
+#> INFO  [2026-06-13 17:08:09.424] Step 2/2 calc_mean
+#> INFO  [2026-06-13 17:08:09.445] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:09.445] Done.
 #> [1] 2.5
 
 # Step description
@@ -1802,8 +1802,8 @@ print(p, verbose = TRUE) # print all columns
 #> 2:     s1 <function[1]> function <list[1]>    data [NULL]   FALSE     s1
 #>      description                time  state
 #>           <char>              <POSc> <char>
-#> 1:               2026-06-07 17:33:47    New
-#> 2: multiply by 2 2026-06-07 17:33:47    New
+#> 1:               2026-06-13 17:08:09    New
+#> 2: multiply by 2 2026-06-13 17:08:09    New
 
 # Group output
 p <- Pipeline$new("myPipe", data = data.frame(x = 1:5, y = 1:5))
@@ -1811,13 +1811,13 @@ p$add("prep_x", \(data = ~data) data$x, group = "prep")
 p$add("prep_y", \(data = ~data) (data$y)^2, group = "prep")
 p$add("sum", \(x = ~prep_x, y = ~prep_y) x + y)
 p$run()$collect_out(all = TRUE)
-#> INFO  [2026-06-07 17:33:47.858] Start run of 'myPipe' pipeline:
-#> INFO  [2026-06-07 17:33:47.859] Step 1/4 data
-#> INFO  [2026-06-07 17:33:47.862] Step 2/4 prep_x
-#> INFO  [2026-06-07 17:33:47.864] Step 3/4 prep_y
-#> INFO  [2026-06-07 17:33:47.866] Step 4/4 sum
-#> INFO  [2026-06-07 17:33:47.867] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:47.868] Done.
+#> INFO  [2026-06-13 17:08:09.460] Start run of 'myPipe' pipeline:
+#> INFO  [2026-06-13 17:08:09.462] Step 1/4 data
+#> INFO  [2026-06-13 17:08:09.465] Step 2/4 prep_x
+#> INFO  [2026-06-13 17:08:09.467] Step 3/4 prep_y
+#> INFO  [2026-06-13 17:08:09.469] Step 4/4 sum
+#> INFO  [2026-06-13 17:08:09.471] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:09.471] Done.
 #> $data
 #>   x y
 #> 1 1 1
@@ -1876,13 +1876,13 @@ p2$add("log2", \(x = ~data) log2(x))
 
 p12 <- p1$append(p2, outAsIn = TRUE)
 p12$run()$get_out("log2")
-#> INFO  [2026-06-07 17:33:48.015] Start run of 'pipe1.pipe2' pipeline:
-#> INFO  [2026-06-07 17:33:48.017] Step 1/4 data
-#> INFO  [2026-06-07 17:33:48.019] Step 2/4 square
-#> INFO  [2026-06-07 17:33:48.022] Step 3/4 data.pipe2
-#> INFO  [2026-06-07 17:33:48.024] Step 4/4 log2
-#> INFO  [2026-06-07 17:33:48.025] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.026] Done.
+#> INFO  [2026-06-13 17:08:09.628] Start run of 'pipe1.pipe2' pipeline:
+#> INFO  [2026-06-13 17:08:09.629] Step 1/4 data
+#> INFO  [2026-06-13 17:08:09.633] Step 2/4 square
+#> INFO  [2026-06-13 17:08:09.635] Step 3/4 data.pipe2
+#> INFO  [2026-06-13 17:08:09.638] Step 4/4 log2
+#> INFO  [2026-06-13 17:08:09.639] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:09.640] Done.
 #> [1] 6
 p12
 #>          step    depends    out keepOut      group  state
@@ -1931,12 +1931,12 @@ p <- Pipeline$new("pipe", data = 1:2)
 p$add("step1", \(x = ~data) x + 2)
 p$add("step2", \(x = ~step1) x + 2, keepOut = TRUE)
 p$run()
-#> INFO  [2026-06-07 17:33:48.049] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.053] Step 1/3 data
-#> INFO  [2026-06-07 17:33:48.057] Step 2/3 step1
-#> INFO  [2026-06-07 17:33:48.059] Step 3/3 step2
-#> INFO  [2026-06-07 17:33:48.061] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.061] Done.
+#> INFO  [2026-06-13 17:08:09.663] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:09.664] Step 1/3 data
+#> INFO  [2026-06-13 17:08:09.667] Step 2/3 step1
+#> INFO  [2026-06-13 17:08:09.669] Step 3/3 step2
+#> INFO  [2026-06-13 17:08:09.670] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:09.671] Done.
 p$collect_out()
 #> $step2
 #> [1] 5 6
@@ -1962,14 +1962,14 @@ p
 #> 4:  step3    data [NULL]   FALSE   mult    New
 #> 5:  step4    data [NULL]   FALSE   mult    New
 p$run()
-#> INFO  [2026-06-07 17:33:48.089] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.090] Step 1/5 data
-#> INFO  [2026-06-07 17:33:48.093] Step 2/5 step1
-#> INFO  [2026-06-07 17:33:48.095] Step 3/5 step2
-#> INFO  [2026-06-07 17:33:48.097] Step 4/5 step3
-#> INFO  [2026-06-07 17:33:48.098] Step 5/5 step4
-#> INFO  [2026-06-07 17:33:48.100] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.100] Done.
+#> INFO  [2026-06-13 17:08:09.703] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:09.704] Step 1/5 data
+#> INFO  [2026-06-13 17:08:09.707] Step 2/5 step1
+#> INFO  [2026-06-13 17:08:09.709] Step 3/5 step2
+#> INFO  [2026-06-13 17:08:09.711] Step 4/5 step3
+#> INFO  [2026-06-13 17:08:09.713] Step 5/5 step4
+#> INFO  [2026-06-13 17:08:09.714] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:09.715] Done.
 p$collect_out(all = TRUE) |> str()
 #> List of 3
 #>  $ data: int [1:2] 1 2
@@ -2153,12 +2153,12 @@ p <- Pipeline$new("pipe", data = 1:2)
 p$add("add1", \(x = ~data) x + 1)
 p$add("add2", \(x = ~data, y = ~add1) x + y)
 p$run()
-#> INFO  [2026-06-07 17:33:48.264] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.265] Step 1/3 data
-#> INFO  [2026-06-07 17:33:48.268] Step 2/3 add1
-#> INFO  [2026-06-07 17:33:48.270] Step 3/3 add2
-#> INFO  [2026-06-07 17:33:48.271] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.272] Done.
+#> INFO  [2026-06-13 17:08:09.879] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:09.880] Step 1/3 data
+#> INFO  [2026-06-13 17:08:09.884] Step 2/3 add1
+#> INFO  [2026-06-13 17:08:09.886] Step 3/3 add2
+#> INFO  [2026-06-13 17:08:09.888] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:09.888] Done.
 p$get_out("add1")
 #> [1] 2 3
 p$get_out("add2")
@@ -2285,12 +2285,12 @@ p <- Pipeline$new("pipe", data = 1:2)
 p$add("add1", \(data = ~data, x = 1) x + data)
 p$add("add2", \(x = 1, y = 2, z = ~add1) x + y + z)
 p$run()
-#> INFO  [2026-06-07 17:33:48.323] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.325] Step 1/3 data
-#> INFO  [2026-06-07 17:33:48.327] Step 2/3 add1
-#> INFO  [2026-06-07 17:33:48.329] Step 3/3 add2
-#> INFO  [2026-06-07 17:33:48.331] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.331] Done.
+#> INFO  [2026-06-13 17:08:09.946] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:09.947] Step 1/3 data
+#> INFO  [2026-06-13 17:08:09.951] Step 2/3 add1
+#> INFO  [2026-06-13 17:08:09.955] Step 3/3 add2
+#> INFO  [2026-06-13 17:08:09.956] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:09.957] Done.
 add1 <- p$get_step("add1")
 print(add1)
 #>      step           fun funcName    params depends    out keepOut  group
@@ -2298,12 +2298,12 @@ print(add1)
 #> 1:   add1 <function[1]> function <list[2]>    data    2,3   FALSE   add1
 #>    description                time  state
 #>         <char>              <POSc> <char>
-#> 1:             2026-06-07 17:33:48   Done
+#> 1:             2026-06-13 17:08:09   Done
 add1[["params"]]
 #> [[1]]
 #> [[1]]$data
 #> ~data
-#> <environment: 0x0000020ef0d0fe98>
+#> <environment: 0x000002036135d760>
 #> 
 #> [[1]]$x
 #> [1] 1
@@ -2313,7 +2313,7 @@ add1[["fun"]]
 #> [[1]]
 #> function (data = ~data, x = 1) 
 #> x + data
-#> <environment: 0x0000020eeb43f190>
+#> <environment: 0x000002035edbf6b8>
 #> 
 try()
 #> Error in try() : argument "expr" is missing, with no default
@@ -2402,12 +2402,12 @@ p <- Pipeline$new("pipe", data = 1)
 p$add("add1", \(x = 1, data = ~data) x + data)
 p$add("add2", \(x = 1, data = ~data) x + data)
 p$run()
-#> INFO  [2026-06-07 17:33:48.387] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.389] Step 1/3 data
-#> INFO  [2026-06-07 17:33:48.391] Step 2/3 add1
-#> INFO  [2026-06-07 17:33:48.393] Step 3/3 add2
-#> INFO  [2026-06-07 17:33:48.395] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.395] Done.
+#> INFO  [2026-06-13 17:08:10.031] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:10.032] Step 1/3 data
+#> INFO  [2026-06-13 17:08:10.036] Step 2/3 add1
+#> INFO  [2026-06-13 17:08:10.038] Step 3/3 add2
+#> INFO  [2026-06-13 17:08:10.039] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:10.040] Done.
 p$get_out("add1")
 #> [1] 2
 p$get_out("add2")
@@ -2418,12 +2418,12 @@ p$set_data(3)
 p$set_params(list(x = 3))
 #> skipping setting parameters x at locked step 'add1'
 p$run()
-#> INFO  [2026-06-07 17:33:48.417] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.418] Step 1/3 data
-#> INFO  [2026-06-07 17:33:48.420] Step 2/3 add1 - skip 'locked' step
-#> INFO  [2026-06-07 17:33:48.421] Step 3/3 add2
-#> INFO  [2026-06-07 17:33:48.423] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.423] Done.
+#> INFO  [2026-06-13 17:08:10.063] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:10.065] Step 1/3 data
+#> INFO  [2026-06-13 17:08:10.067] Step 2/3 add1 - skip 'locked' step
+#> INFO  [2026-06-13 17:08:10.069] Step 3/3 add2
+#> INFO  [2026-06-13 17:08:10.070] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:10.071] Done.
 p$get_out("add1")
 #> [1] 2
 p$get_out("add2")
@@ -2552,25 +2552,25 @@ p$add("add1", \(x = ~data, y = 1) x + y)
 p$add("add2", \(x = ~data, y = 2) x + y)
 p$add("mult", \(x = 1, y = 2) x * y, keepOut = TRUE)
 p$run()$collect_out()
-#> INFO  [2026-06-07 17:33:48.493] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.494] Step 1/4 data
-#> INFO  [2026-06-07 17:33:48.497] Step 2/4 add1
-#> INFO  [2026-06-07 17:33:48.499] Step 3/4 add2
-#> INFO  [2026-06-07 17:33:48.500] Step 4/4 mult
-#> INFO  [2026-06-07 17:33:48.502] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.502] Done.
+#> INFO  [2026-06-13 17:08:10.138] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:10.139] Step 1/4 data
+#> INFO  [2026-06-13 17:08:10.142] Step 2/4 add1
+#> INFO  [2026-06-13 17:08:10.144] Step 3/4 add2
+#> INFO  [2026-06-13 17:08:10.146] Step 4/4 mult
+#> INFO  [2026-06-13 17:08:10.147] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:10.148] Done.
 #> $mult
 #> [1] 2
 #> 
 p$replace_step("mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
 p$run()$collect_out()
-#> INFO  [2026-06-07 17:33:48.506] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.507] Step 1/4 data - skip 'done' step
-#> INFO  [2026-06-07 17:33:48.508] Step 2/4 add1 - skip 'done' step
-#> INFO  [2026-06-07 17:33:48.509] Step 3/4 add2 - skip 'done' step
-#> INFO  [2026-06-07 17:33:48.510] Step 4/4 mult
-#> INFO  [2026-06-07 17:33:48.511] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.512] Done.
+#> INFO  [2026-06-13 17:08:10.152] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:10.153] Step 1/4 data - skip 'done' step
+#> INFO  [2026-06-13 17:08:10.154] Step 2/4 add1 - skip 'done' step
+#> INFO  [2026-06-13 17:08:10.155] Step 3/4 add2 - skip 'done' step
+#> INFO  [2026-06-13 17:08:10.156] Step 4/4 mult
+#> INFO  [2026-06-13 17:08:10.158] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:10.158] Done.
 #> $mult
 #> [1] 6
 #> 
@@ -2585,12 +2585,12 @@ p <- Pipeline$new("pipe", data = 1:2)
 p$add("f1", \(x = 1) x)
 p$add("f2", \(y = 1) y)
 p$run()
-#> INFO  [2026-06-07 17:33:48.533] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.534] Step 1/3 data
-#> INFO  [2026-06-07 17:33:48.536] Step 2/3 f1
-#> INFO  [2026-06-07 17:33:48.538] Step 3/3 f2
-#> INFO  [2026-06-07 17:33:48.539] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.540] Done.
+#> INFO  [2026-06-13 17:08:10.176] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:10.178] Step 1/3 data
+#> INFO  [2026-06-13 17:08:10.179] Step 2/3 f1
+#> INFO  [2026-06-13 17:08:10.182] Step 3/3 f2
+#> INFO  [2026-06-13 17:08:10.183] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:10.184] Done.
 p
 #>      step depends    out keepOut  group  state
 #>    <char>  <list> <list>  <lgcl> <char> <char>
@@ -2615,13 +2615,13 @@ p$add("add1", \(x = ~data, y = 1) x + y)
 p$add("add2", \(x = ~add1, z = 2) x + z)
 p$add("final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
 p$run()$collect_out()
-#> INFO  [2026-06-07 17:33:48.550] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.552] Step 1/4 data
-#> INFO  [2026-06-07 17:33:48.554] Step 2/4 add1
-#> INFO  [2026-06-07 17:33:48.557] Step 3/4 add2
-#> INFO  [2026-06-07 17:33:48.559] Step 4/4 final
-#> INFO  [2026-06-07 17:33:48.561] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.561] Done.
+#> INFO  [2026-06-13 17:08:10.200] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:10.201] Step 1/4 data
+#> INFO  [2026-06-13 17:08:10.204] Step 2/4 add1
+#> INFO  [2026-06-13 17:08:10.206] Step 3/4 add2
+#> INFO  [2026-06-13 17:08:10.208] Step 4/4 final
+#> INFO  [2026-06-13 17:08:10.210] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:10.210] Done.
 #> $final
 #> [1] 8
 #> 
@@ -2634,25 +2634,25 @@ p
 #> 3:   add2      add1      4   FALSE   add2 Outdated
 #> 4:  final add1,add2      8    TRUE  final Outdated
 p$run()$collect_out()
-#> INFO  [2026-06-07 17:33:48.569] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.570] Step 1/4 data - skip 'done' step
-#> INFO  [2026-06-07 17:33:48.571] Step 2/4 add1 - skip 'done' step
-#> INFO  [2026-06-07 17:33:48.572] Step 3/4 add2
-#> INFO  [2026-06-07 17:33:48.574] Step 4/4 final
-#> INFO  [2026-06-07 17:33:48.576] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.576] Done.
+#> INFO  [2026-06-13 17:08:10.219] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:10.220] Step 1/4 data - skip 'done' step
+#> INFO  [2026-06-13 17:08:10.221] Step 2/4 add1 - skip 'done' step
+#> INFO  [2026-06-13 17:08:10.222] Step 3/4 add2
+#> INFO  [2026-06-13 17:08:10.224] Step 4/4 final
+#> INFO  [2026-06-13 17:08:10.226] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:10.227] Done.
 #> $final
 #> [1] 12
 #> 
 p$run(cleanUnkept = TRUE)  # clean up temporary results
-#> INFO  [2026-06-07 17:33:48.578] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.579] Step 1/4 data - skip 'done' step
-#> INFO  [2026-06-07 17:33:48.580] Step 2/4 add1 - skip 'done' step
-#> INFO  [2026-06-07 17:33:48.581] Step 3/4 add2 - skip 'done' step
-#> INFO  [2026-06-07 17:33:48.582] Step 4/4 final - skip 'done' step
-#> INFO  [2026-06-07 17:33:48.583] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.583] Clean temporary results.
-#> INFO  [2026-06-07 17:33:48.584] Done.
+#> INFO  [2026-06-13 17:08:10.229] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:10.230] Step 1/4 data - skip 'done' step
+#> INFO  [2026-06-13 17:08:10.231] Step 2/4 add1 - skip 'done' step
+#> INFO  [2026-06-13 17:08:10.232] Step 3/4 add2 - skip 'done' step
+#> INFO  [2026-06-13 17:08:10.234] Step 4/4 final - skip 'done' step
+#> INFO  [2026-06-13 17:08:10.234] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:10.235] Clean temporary results.
+#> INFO  [2026-06-13 17:08:10.236] Done.
 p
 #>      step   depends    out keepOut  group    state
 #>    <char>    <list> <list>  <lgcl> <char>   <char>
@@ -2671,17 +2671,17 @@ p$add("new_pipe", \(x = ~add1) {
     }
 )
 p$run(recursive = TRUE)$collect_out()
-#> INFO  [2026-06-07 17:33:48.592] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.593] Step 1/3 data
-#> INFO  [2026-06-07 17:33:48.595] Step 2/3 add1
-#> INFO  [2026-06-07 17:33:48.597] Step 3/3 new_pipe
-#> INFO  [2026-06-07 17:33:48.605] Abort pipeline execution and restart on new.
-#> INFO  [2026-06-07 17:33:48.606] Start run of 'new_pipe' pipeline:
-#> INFO  [2026-06-07 17:33:48.607] Step 1/3 data
-#> INFO  [2026-06-07 17:33:48.610] Step 2/3 add1
-#> INFO  [2026-06-07 17:33:48.612] Step 3/3 add2
-#> INFO  [2026-06-07 17:33:48.613] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:48.614] Done.
+#> INFO  [2026-06-13 17:08:10.244] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:10.245] Step 1/3 data
+#> INFO  [2026-06-13 17:08:10.248] Step 2/3 add1
+#> INFO  [2026-06-13 17:08:10.251] Step 3/3 new_pipe
+#> INFO  [2026-06-13 17:08:10.255] Abort pipeline execution and restart on new.
+#> INFO  [2026-06-13 17:08:10.256] Start run of 'new_pipe' pipeline:
+#> INFO  [2026-06-13 17:08:10.257] Step 1/3 data
+#> INFO  [2026-06-13 17:08:10.260] Step 2/3 add1
+#> INFO  [2026-06-13 17:08:10.262] Step 3/3 add2
+#> INFO  [2026-06-13 17:08:10.264] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:10.265] Done.
 #> $add2
 #> [1] 5
 #> 
@@ -2707,28 +2707,28 @@ p$add("add1", \(x = ~data, y = 1) x + y)
 p$add("add2", \(x = ~add1, z = 2) x + z)
 p$add("mult", \(x = ~add1, y = ~add2) x * y)
 p$run_step("add2")
-#> INFO  [2026-06-07 17:33:51.699] Start step run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:51.700] Step 1/3 data (upstream)
-#> INFO  [2026-06-07 17:33:51.702] Step 2/3 add1 (upstream)
-#> INFO  [2026-06-07 17:33:51.705] Step 3/3 add2
-#> INFO  [2026-06-07 17:33:51.706] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:51.707] Done.
+#> INFO  [2026-06-13 17:08:13.357] Start step run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:13.358] Step 1/3 data (upstream)
+#> INFO  [2026-06-13 17:08:13.361] Step 2/3 add1 (upstream)
+#> INFO  [2026-06-13 17:08:13.363] Step 3/3 add2
+#> INFO  [2026-06-13 17:08:13.365] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:13.365] Done.
 p$run_step("add2", downstream = TRUE)
-#> INFO  [2026-06-07 17:33:51.721] Start step run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:51.722] Step 1/4 data (upstream)
-#> INFO  [2026-06-07 17:33:51.725] Step 2/4 add1 (upstream)
-#> INFO  [2026-06-07 17:33:51.727] Step 3/4 add2
-#> INFO  [2026-06-07 17:33:51.729] Step 4/4 mult (downstream)
-#> INFO  [2026-06-07 17:33:51.730] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:51.734] Done.
+#> INFO  [2026-06-13 17:08:13.380] Start step run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:13.381] Step 1/4 data (upstream)
+#> INFO  [2026-06-13 17:08:13.384] Step 2/4 add1 (upstream)
+#> INFO  [2026-06-13 17:08:13.386] Step 3/4 add2
+#> INFO  [2026-06-13 17:08:13.388] Step 4/4 mult (downstream)
+#> INFO  [2026-06-13 17:08:13.390] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:13.390] Done.
 p$run_step("mult", upstream = TRUE)
-#> INFO  [2026-06-07 17:33:51.736] Start step run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:51.737] Step 1/4 data (upstream)
-#> INFO  [2026-06-07 17:33:51.740] Step 2/4 add1 (upstream)
-#> INFO  [2026-06-07 17:33:51.742] Step 3/4 add2 (upstream)
-#> INFO  [2026-06-07 17:33:51.744] Step 4/4 mult
-#> INFO  [2026-06-07 17:33:51.745] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:51.746] Done.
+#> INFO  [2026-06-13 17:08:13.392] Start step run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:13.393] Step 1/4 data (upstream)
+#> INFO  [2026-06-13 17:08:13.395] Step 2/4 add1 (upstream)
+#> INFO  [2026-06-13 17:08:13.398] Step 3/4 add2 (upstream)
+#> INFO  [2026-06-13 17:08:13.400] Step 4/4 mult
+#> INFO  [2026-06-13 17:08:13.405] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:13.406] Done.
 
 ## ------------------------------------------------
 ## Method `Pipeline$set_data()`
@@ -2737,21 +2737,21 @@ p$run_step("mult", upstream = TRUE)
 p <- Pipeline$new("pipe", data = 1)
 p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
 p$run()$collect_out()
-#> INFO  [2026-06-07 17:33:51.751] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:51.752] Step 1/2 data
-#> INFO  [2026-06-07 17:33:51.754] Step 2/2 add1
-#> INFO  [2026-06-07 17:33:51.755] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:51.756] Done.
+#> INFO  [2026-06-13 17:08:13.410] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:13.412] Step 1/2 data
+#> INFO  [2026-06-13 17:08:13.414] Step 2/2 add1
+#> INFO  [2026-06-13 17:08:13.415] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:13.416] Done.
 #> $add1
 #> [1] 2
 #> 
 p$set_data(3)
 p$run()$collect_out()
-#> INFO  [2026-06-07 17:33:51.759] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:51.760] Step 1/2 data
-#> INFO  [2026-06-07 17:33:51.762] Step 2/2 add1
-#> INFO  [2026-06-07 17:33:51.763] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:51.764] Done.
+#> INFO  [2026-06-13 17:08:13.419] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:13.420] Step 1/2 data
+#> INFO  [2026-06-13 17:08:13.422] Step 2/2 add1
+#> INFO  [2026-06-13 17:08:13.424] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:13.424] Done.
 #> $add1
 #> [1] 4
 #> 
@@ -2779,18 +2779,18 @@ p
 #> 8: add1.c        data.c [NULL]    TRUE      c Outdated
 #> 9: mult.c data.c,add1.c [NULL]    TRUE      c Outdated
 p$run()$collect_out() |> str()
-#> INFO  [2026-06-07 17:33:51.792] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:51.793] Step 1/9 data.a
-#> INFO  [2026-06-07 17:33:51.795] Step 2/9 add1.a
-#> INFO  [2026-06-07 17:33:51.797] Step 3/9 mult.a
-#> INFO  [2026-06-07 17:33:51.799] Step 4/9 data.b
-#> INFO  [2026-06-07 17:33:51.805] Step 5/9 add1.b
-#> INFO  [2026-06-07 17:33:51.808] Step 6/9 mult.b
-#> INFO  [2026-06-07 17:33:51.810] Step 7/9 data.c
-#> INFO  [2026-06-07 17:33:51.812] Step 8/9 add1.c
-#> INFO  [2026-06-07 17:33:51.814] Step 9/9 mult.c
-#> INFO  [2026-06-07 17:33:51.816] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:51.816] Done.
+#> INFO  [2026-06-13 17:08:13.453] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:13.454] Step 1/9 data.a
+#> INFO  [2026-06-13 17:08:13.457] Step 2/9 add1.a
+#> INFO  [2026-06-13 17:08:13.459] Step 3/9 mult.a
+#> INFO  [2026-06-13 17:08:13.461] Step 4/9 data.b
+#> INFO  [2026-06-13 17:08:13.463] Step 5/9 add1.b
+#> INFO  [2026-06-13 17:08:13.465] Step 6/9 mult.b
+#> INFO  [2026-06-13 17:08:13.467] Step 7/9 data.c
+#> INFO  [2026-06-13 17:08:13.470] Step 8/9 add1.c
+#> INFO  [2026-06-13 17:08:13.475] Step 9/9 mult.c
+#> INFO  [2026-06-13 17:08:13.477] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:13.478] Done.
 #> List of 3
 #>  $ a:List of 2
 #>   ..$ add1.a: num 2
@@ -2820,18 +2820,18 @@ p
 #> 8: add1.c        data.c [NULL]    TRUE add1.c Outdated
 #> 9: mult.c data.c,add1.c [NULL]    TRUE mult.c Outdated
 p$run()$collect_out() |> str()
-#> INFO  [2026-06-07 17:33:51.848] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:51.849] Step 1/9 data.a
-#> INFO  [2026-06-07 17:33:51.852] Step 2/9 add1.a
-#> INFO  [2026-06-07 17:33:51.854] Step 3/9 mult.a
-#> INFO  [2026-06-07 17:33:51.856] Step 4/9 data.b
-#> INFO  [2026-06-07 17:33:51.858] Step 5/9 add1.b
-#> INFO  [2026-06-07 17:33:51.861] Step 6/9 mult.b
-#> INFO  [2026-06-07 17:33:51.863] Step 7/9 data.c
-#> INFO  [2026-06-07 17:33:51.865] Step 8/9 add1.c
-#> INFO  [2026-06-07 17:33:51.867] Step 9/9 mult.c
-#> INFO  [2026-06-07 17:33:51.869] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:51.869] Done.
+#> INFO  [2026-06-13 17:08:13.509] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:13.510] Step 1/9 data.a
+#> INFO  [2026-06-13 17:08:13.513] Step 2/9 add1.a
+#> INFO  [2026-06-13 17:08:13.515] Step 3/9 mult.a
+#> INFO  [2026-06-13 17:08:13.517] Step 4/9 data.b
+#> INFO  [2026-06-13 17:08:13.519] Step 5/9 add1.b
+#> INFO  [2026-06-13 17:08:13.521] Step 6/9 mult.b
+#> INFO  [2026-06-13 17:08:13.523] Step 7/9 data.c
+#> INFO  [2026-06-13 17:08:13.526] Step 8/9 add1.c
+#> INFO  [2026-06-13 17:08:13.528] Step 9/9 mult.c
+#> INFO  [2026-06-13 17:08:13.529] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:13.530] Done.
 #> List of 6
 #>  $ add1.a: num 2
 #>  $ mult.a: num 2
@@ -2876,19 +2876,19 @@ p$get_depends()[["average_result"]]
 #> 
 
 p$run()$collect_out()
-#> INFO  [2026-06-07 17:33:51.909] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:51.911] Step 1/10 data.a
-#> INFO  [2026-06-07 17:33:51.914] Step 2/10 add1.a
-#> INFO  [2026-06-07 17:33:51.916] Step 3/10 mult.a
-#> INFO  [2026-06-07 17:33:51.918] Step 4/10 data.b
-#> INFO  [2026-06-07 17:33:51.921] Step 5/10 add1.b
-#> INFO  [2026-06-07 17:33:51.924] Step 6/10 mult.b
-#> INFO  [2026-06-07 17:33:51.926] Step 7/10 data.c
-#> INFO  [2026-06-07 17:33:51.929] Step 8/10 add1.c
-#> INFO  [2026-06-07 17:33:51.932] Step 9/10 mult.c
-#> INFO  [2026-06-07 17:33:51.934] Step 10/10 average_result
-#> INFO  [2026-06-07 17:33:51.935] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:51.936] Done.
+#> INFO  [2026-06-13 17:08:13.577] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:13.578] Step 1/10 data.a
+#> INFO  [2026-06-13 17:08:13.581] Step 2/10 add1.a
+#> INFO  [2026-06-13 17:08:13.584] Step 3/10 mult.a
+#> INFO  [2026-06-13 17:08:13.586] Step 4/10 data.b
+#> INFO  [2026-06-13 17:08:13.589] Step 5/10 add1.b
+#> INFO  [2026-06-13 17:08:13.592] Step 6/10 mult.b
+#> INFO  [2026-06-13 17:08:13.594] Step 7/10 data.c
+#> INFO  [2026-06-13 17:08:13.597] Step 8/10 add1.c
+#> INFO  [2026-06-13 17:08:13.599] Step 9/10 mult.c
+#> INFO  [2026-06-13 17:08:13.602] Step 10/10 average_result
+#> INFO  [2026-06-13 17:08:13.603] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:13.604] Done.
 #> $average_result
 #> [1] 6.666667
 #> 
@@ -2902,13 +2902,13 @@ p$add("add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
 p$add("add2", \(x = ~data, y = 2) x + y)
 p$add("mult", \(x = ~add1, y = ~add2) x * y)
 p$run()$collect_out()
-#> INFO  [2026-06-07 17:33:51.943] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:33:51.948] Step 1/4 data
-#> INFO  [2026-06-07 17:33:51.951] Step 2/4 add1
-#> INFO  [2026-06-07 17:33:51.953] Step 3/4 add2
-#> INFO  [2026-06-07 17:33:51.955] Step 4/4 mult
-#> INFO  [2026-06-07 17:33:51.957] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:51.957] Done.
+#> INFO  [2026-06-13 17:08:13.611] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:13.613] Step 1/4 data
+#> INFO  [2026-06-13 17:08:13.615] Step 2/4 add1
+#> INFO  [2026-06-13 17:08:13.618] Step 3/4 add2
+#> INFO  [2026-06-13 17:08:13.620] Step 4/4 mult
+#> INFO  [2026-06-13 17:08:13.621] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:13.622] Done.
 #> $add1
 #> [1] 2
 #> 

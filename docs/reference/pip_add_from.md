@@ -1,7 +1,7 @@
 # Copy a step from another pipeline
 
 Copies one step from pipeline `y` into pipeline `x`, preserving its
-function, parameters, group, tags, and dependency links.
+function, parameters, tags, and dependency links.
 
 ## Usage
 
@@ -41,10 +41,10 @@ dst <- pip_new("target")
 pip_add_from(dst, src, "load")
 pip_add_from(dst, src, "square")
 pip_run(dst)
-#> info [2026-06-07 15:34:06.508 UTC]: Start run of pipeflow_pip 'target'
-#> info [2026-06-07 15:34:06.508 UTC]: Step 1/2 load
-#> info [2026-06-07 15:34:06.509 UTC]: Step 2/2 square
-#> info [2026-06-07 15:34:06.510 UTC]: Finished run of pipeflow_pip 'target'
+#> info [2026-06-13 15:08:32.639 UTC]: Start run of pipeflow_pip 'target'
+#> info [2026-06-13 15:08:32.639 UTC]: Step 1/2 load
+#> info [2026-06-13 15:08:32.640 UTC]: Step 2/2 square
+#> info [2026-06-13 15:08:32.641 UTC]: Finished run of pipeflow_pip 'target'
 pip_collect_out(dst)
 #> $load
 #> [1] 1 2 3

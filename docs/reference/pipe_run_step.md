@@ -57,28 +57,28 @@ pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 pipe_add(p, "add2", \(x = ~add1, z = 2) x + z)
 pipe_add(p, "mult", \(x = ~add1, y = ~add2) x * y)
 pipe_run_step(p, "add2")
-#> INFO  [2026-06-07 17:34:03.883] Start step run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:34:03.884] Step 1/3 data (upstream)
-#> INFO  [2026-06-07 17:34:03.887] Step 2/3 add1 (upstream)
-#> INFO  [2026-06-07 17:34:03.890] Step 3/3 add2
-#> INFO  [2026-06-07 17:34:03.892] Finished execution of steps.
-#> INFO  [2026-06-07 17:34:03.893] Done.
+#> INFO  [2026-06-13 17:08:29.321] Start step run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:29.322] Step 1/3 data (upstream)
+#> INFO  [2026-06-13 17:08:29.324] Step 2/3 add1 (upstream)
+#> INFO  [2026-06-13 17:08:29.327] Step 3/3 add2
+#> INFO  [2026-06-13 17:08:29.329] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:29.330] Done.
 
 pipe_run_step(p, "add2", downstream = TRUE)
-#> INFO  [2026-06-07 17:34:03.895] Start step run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:34:03.896] Step 1/4 data (upstream)
-#> INFO  [2026-06-07 17:34:03.898] Step 2/4 add1 (upstream)
-#> INFO  [2026-06-07 17:34:03.901] Step 3/4 add2
-#> INFO  [2026-06-07 17:34:03.904] Step 4/4 mult (downstream)
-#> INFO  [2026-06-07 17:34:03.906] Finished execution of steps.
-#> INFO  [2026-06-07 17:34:03.907] Done.
+#> INFO  [2026-06-13 17:08:29.332] Start step run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:29.333] Step 1/4 data (upstream)
+#> INFO  [2026-06-13 17:08:29.336] Step 2/4 add1 (upstream)
+#> INFO  [2026-06-13 17:08:29.339] Step 3/4 add2
+#> INFO  [2026-06-13 17:08:29.340] Step 4/4 mult (downstream)
+#> INFO  [2026-06-13 17:08:29.343] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:29.344] Done.
 
 pipe_run_step(p, "mult", upstream = TRUE)
-#> INFO  [2026-06-07 17:34:03.909] Start step run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:34:03.910] Step 1/4 data (upstream)
-#> INFO  [2026-06-07 17:34:03.913] Step 2/4 add1 (upstream)
-#> INFO  [2026-06-07 17:34:03.915] Step 3/4 add2 (upstream)
-#> INFO  [2026-06-07 17:34:03.918] Step 4/4 mult
-#> INFO  [2026-06-07 17:34:03.919] Finished execution of steps.
-#> INFO  [2026-06-07 17:34:03.920] Done.
+#> INFO  [2026-06-13 17:08:29.346] Start step run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:29.347] Step 1/4 data (upstream)
+#> INFO  [2026-06-13 17:08:29.350] Step 2/4 add1 (upstream)
+#> INFO  [2026-06-13 17:08:29.352] Step 3/4 add2 (upstream)
+#> INFO  [2026-06-13 17:08:29.354] Step 4/4 mult
+#> INFO  [2026-06-13 17:08:29.355] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:29.356] Done.
 ```

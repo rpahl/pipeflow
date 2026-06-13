@@ -13,7 +13,7 @@ affect only the selected steps."><meta property="og:image" content="https://gith
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9005</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9006</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,6 +44,7 @@ affect only the selected steps."><meta property="og:image" content="https://gith
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -123,78 +124,78 @@ is <code>FALSE</code>).</p></dd>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="pip_new.html">pip_new</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="va">p</span>, <span class="st">"load_raw"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">x</span>,</span></span>
-<span class="r-in"><span>  group <span class="op">=</span> <span class="st">"io"</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"core"</span>, <span class="st">"daily"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"io"</span>, <span class="st">"core"</span>, <span class="st">"daily"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="va">p</span>, <span class="st">"fit_model"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span>,</span></span>
-<span class="r-in"><span>  group <span class="op">=</span> <span class="st">"model"</span>, tags <span class="op">=</span> <span class="st">"model"</span></span></span>
+<span class="r-in"><span>  tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="va">p</span>, <span class="st">"eval_model"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit_model</span><span class="op">)</span> <span class="va">x</span>,</span></span>
-<span class="r-in"><span>  group <span class="op">=</span> <span class="st">"model"</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"daily"</span>, <span class="st">"report"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"daily"</span>, <span class="st">"report"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Filter by a fixed column value (one or more groups)</span></span></span>
-<span class="r-in"><span><span class="fu">pip_view</span><span class="op">(</span><span class="va">p</span>, filter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>group <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; pipe view (2 of 3 steps)</span>
+<span class="r-in"><span><span class="co"># Filter by a fixed column value (one or more states)</span></span></span>
+<span class="r-in"><span><span class="fu">pip_view</span><span class="op">(</span><span class="va">p</span>, filter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>state <span class="op">=</span> <span class="st">"new"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; pipe view (3 of 3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        step group   depends    out state         tags</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   fit_model model           [NULL]   new        model</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  eval_model model fit_model [NULL]   new daily,report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        step   depends    out state               tags</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    load_raw           [NULL]   new      io,core,daily</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   fit_model           [NULL]   new              model</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  eval_model fit_model [NULL]   new model,daily,report</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Combine filters: group AND state</span></span></span>
-<span class="r-in"><span><span class="fu">pip_view</span><span class="op">(</span><span class="va">p</span>, filter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>group <span class="op">=</span> <span class="st">"model"</span>, state <span class="op">=</span> <span class="st">"new"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; pipe view (2 of 3 steps)</span>
+<span class="r-in"><span><span class="co"># Combine filters: step pattern AND state</span></span></span>
+<span class="r-in"><span><span class="fu">pip_view</span><span class="op">(</span><span class="va">p</span>, filter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>step <span class="op">=</span> <span class="st">"model"</span>, state <span class="op">=</span> <span class="st">"new"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; pipe view (0 of 3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        step group   depends    out state         tags</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   fit_model model           [NULL]   new        model</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  eval_model model fit_model [NULL]   new daily,report</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Filter by tag — keeps steps that have *any* of the given tags</span></span></span>
 <span class="r-in"><span><span class="fu">pip_view</span><span class="op">(</span><span class="va">p</span>, tags <span class="op">=</span> <span class="st">"daily"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; pipe view (2 of 3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        step group   depends    out state         tags</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    load_raw    io           [NULL]   new   core,daily</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  eval_model model fit_model [NULL]   new daily,report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        step   depends    out state               tags</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    load_raw           [NULL]   new      io,core,daily</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  eval_model fit_model [NULL]   new model,daily,report</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Combine explicit step selection with a filter (intersection)</span></span></span>
 <span class="r-in"><span><span class="fu">pip_view</span><span class="op">(</span><span class="va">p</span>,</span></span>
 <span class="r-in"><span>  i      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"load_raw"</span>, <span class="st">"fit_model"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  filter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>group <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  filter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>state <span class="op">=</span> <span class="st">"new"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; pipe view (1 of 3 steps)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; pipe view (2 of 3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       step group depends    out state  tags</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  fit_model model         [NULL]   new model</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       step depends    out state          tags</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   load_raw         [NULL]   new io,core,daily</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  fit_model         [NULL]   new         model</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Select by integer row indices</span></span></span>
-<span class="r-in"><span><span class="fu">pip_view</span><span class="op">(</span><span class="va">p</span>, i <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">2L</span><span class="op">)</span>, filter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>group <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; pipe view (1 of 3 steps)</span>
+<span class="r-in"><span><span class="fu">pip_view</span><span class="op">(</span><span class="va">p</span>, i <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">2L</span><span class="op">)</span>, filter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>state <span class="op">=</span> <span class="st">"new"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; pipe view (2 of 3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       step group depends    out state  tags</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  fit_model model         [NULL]   new model</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       step depends    out state          tags</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   load_raw         [NULL]   new io,core,daily</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  fit_model         [NULL]   new         model</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use a regex pattern to match step names</span></span></span>
 <span class="r-in"><span><span class="fu">pip_view</span><span class="op">(</span><span class="va">p</span>, filter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>step <span class="op">=</span> <span class="st">"_model$"</span><span class="op">)</span>, fixed <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; pipe view (2 of 3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        step group   depends    out state         tags</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   fit_model model           [NULL]   new        model</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  eval_model model fit_model [NULL]   new daily,report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        step   depends    out state               tags</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   fit_model           [NULL]   new              model</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  eval_model fit_model [NULL]   new model,daily,report</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Views are composable: create a view-of-view for progressive narrowing</span></span></span>
 <span class="r-in"><span><span class="va">v1</span> <span class="op">&lt;-</span> <span class="fu">pip_view</span><span class="op">(</span><span class="va">p</span>, tags <span class="op">=</span> <span class="st">"daily"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">v1</span><span class="op">)</span> <span class="co"># load_raw, eval_model</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; pipe view (2 of 3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        step group   depends    out state         tags</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    load_raw    io           [NULL]   new   core,daily</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  eval_model model fit_model [NULL]   new daily,report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        step   depends    out state               tags</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    load_raw           [NULL]   new      io,core,daily</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  eval_model fit_model [NULL]   new model,daily,report</span>
 <span class="r-in"><span><span class="va">v2</span> <span class="op">&lt;-</span> <span class="fu">pip_view</span><span class="op">(</span><span class="va">v1</span>, tags <span class="op">=</span> <span class="st">"report"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">v2</span><span class="op">)</span> <span class="co"># eval_model only</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; pipe view view (1 of 3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        step group   depends    out state         tags</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  eval_model model fit_model [NULL]   new daily,report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        step   depends    out state               tags</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  eval_model fit_model [NULL]   new model,daily,report</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -28,7 +28,7 @@
 
     <a class="navbar-brand me-2" href="index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9005</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9006</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -63,6 +63,7 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
+    <li><a class="dropdown-item" href="articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul>
 </li>
       </ul>
@@ -102,109 +103,7 @@
 <div class="section level3">
 <h3 id="pipeflow-vs-targets">{pipeflow} vs {targets}<a class="anchor" aria-label="anchor" href="#pipeflow-vs-targets"></a>
 </h3>
-<p><a href="https://docs.ropensci.org/targets/" class="external-link">{targets}</a> is the most widely used pipeline toolkit in the R ecosystem and the de-facto standard for heavy-duty reproducible workflows. The table below contrasts the two packages to help you decide which one fits your project.</p>
-<table class="table">
-<colgroup>
-<col width="33%">
-<col width="33%">
-<col width="33%">
-</colgroup>
-<thead><tr>
-<th>Feature</th>
-<th><strong>targets</strong></th>
-<th><strong>pipeflow</strong></th>
-</tr></thead>
-<tbody>
-<tr>
-<td>Paradigm</td>
-<td>Declarative — define the full DAG upfront in a <code>_targets.R</code> script, then execute</td>
-<td>Interactive — incrementally build the pipeline with <code><a href="reference/pip_add.html">pip_add()</a></code> as you code</td>
-</tr>
-<tr>
-<td>Execution</td>
-<td>
-<code>tar_make()</code> runs in a <strong>fresh R process</strong>
-</td>
-<td>
-<code><a href="reference/pip_run.html">pip_run()</a></code> runs in the <strong>current R session</strong>
-</td>
-</tr>
-<tr>
-<td>Dependencies</td>
-<td>Heavy (~20+ packages: <code>tarchetypes</code>, <code>crew</code>, <code>qs</code>, etc.)</td>
-<td>Minimal (<code>data.table</code>)</td>
-</tr>
-<tr>
-<td>Learning curve</td>
-<td>Steep — requires understanding <code>_targets.R</code> conventions, storage formats, cue rules</td>
-<td>Shallow — R-native API with few concepts</td>
-</tr>
-<tr>
-<td>Skip up-to-date steps</td>
-<td>✅ Hash-based invalidation of code and data</td>
-<td>✅ State-based (<code>done</code> / <code>outdated</code>)</td>
-</tr>
-<tr>
-<td>Modify pipeline at runtime</td>
-<td>❌ Must edit <code>_targets.R</code> and re-run</td>
-<td>✅ <code><a href="reference/pip_remove.html">pip_remove()</a></code>, <code><a href="reference/pip_rename.html">pip_rename()</a></code>, <code><a href="reference/pip_replace.html">pip_replace()</a></code>, insert with <code>after =</code>
-</td>
-</tr>
-<tr>
-<td>Parameter management</td>
-<td>❌ No unified parameter view across targets</td>
-<td>✅ <code><a href="reference/pip_get_params.html">pip_get_params()</a></code> / <code><a href="reference/pip_set_params.html">pip_set_params()</a></code> — one call updates all steps</td>
-</tr>
-<tr>
-<td>Split / map / reduce</td>
-<td>Requires target factories (<code>tarchetypes</code>) or branching</td>
-<td>✅ Built-in <code>exec = "split"</code> / <code>"auto"</code> / <code>"reduce"</code>
-</td>
-</tr>
-<tr>
-<td>Dynamic branching</td>
-<td>✅ Comprehensive via <code>tarchetypes</code>
-</td>
-<td>✅ Auto-mapping over partition keys (<code>exec = "auto"</code>)</td>
-</tr>
-<tr>
-<td>Views / tag filtering</td>
-<td>❌</td>
-<td>✅ <code><a href="reference/pip_view.html">pip_view()</a></code> — filter steps by tags, groups, or index</td>
-</tr>
-<tr>
-<td>Pipeline composition</td>
-<td>❌</td>
-<td>✅ <code><a href="reference/pip_bind.html">pip_bind()</a></code> two pipelines, <code><a href="reference/pip_add_from.html">pip_add_from()</a></code> copy individual steps</td>
-</tr>
-<tr>
-<td>Self-modifying pipelines</td>
-<td>❌</td>
-<td>✅ <code>pip_run(recursive = TRUE)</code> — steps can return modified pipelines</td>
-</tr>
-<tr>
-<td>Distributed computing</td>
-<td>✅ <code>crew</code> for HPC and cloud workers</td>
-<td>❌ (by design — stays lightweight and single-machine)</td>
-</tr>
-<tr>
-<td>Cloud storage</td>
-<td>✅ AWS, GCS</td>
-<td>❌</td>
-</tr>
-<tr>
-<td>File tracking</td>
-<td>✅ File targets with <code>format = "file"</code>
-</td>
-<td>❌</td>
-</tr>
-<tr>
-<td>Step locking</td>
-<td>❌</td>
-<td>✅ <code><a href="reference/pip_lock.html">pip_lock()</a></code> / <code><a href="reference/pip_unlock.html">pip_unlock()</a></code> — protect steps from accidental modification</td>
-</tr>
-</tbody>
-</table>
+<p><a href="https://docs.ropensci.org/targets/" class="external-link">{targets}</a> is the most widely used pipeline toolkit in the R ecosystem. For a detailed comparison and benchmark results, see the <a href="https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html" class="external-link">vs targets vignette</a>.</p>
 <p>In short, <strong>{targets}</strong> is the tool of choice for large-scale, formally reproducible projects that may run on distributed infrastructure. <strong>{pipeflow}</strong> is designed for interactive development, rapid parameter exploration, and projects where you want to modify the pipeline structure as your analysis evolves — all while keeping a shallow learning curve and minimal dependencies.</p>
 </div>
 <div class="section level3">

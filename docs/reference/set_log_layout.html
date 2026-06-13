@@ -13,7 +13,7 @@ logger_config function from the lgr package.'><meta property="og:image" content=
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9005</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9006</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,6 +44,7 @@ logger_config function from the lgr package.'><meta property="og:image" content=
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -92,11 +93,11 @@ which you can retrieve via <code>lgr::get_logger("pipeflow")</code>, see e.g. th
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="va"><a href="Pipeline.html">Pipeline</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="st">"pipe"</span>, data <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"add1"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">x</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">data</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:34:11.914] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:34:11.915] Step 1/2 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:34:11.917] Step 2/2 add1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:34:11.919] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:34:11.920] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-13 17:08:41.975] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-13 17:08:41.976] Step 1/2 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-13 17:08:41.978] Step 2/2 add1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-13 17:08:41.979] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-13 17:08:41.980] Done.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">lg</span> <span class="op">&lt;-</span> <span class="fu">set_log_layout</span><span class="op">(</span><span class="st">"json"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">lg</span><span class="op">)</span></span></span>
@@ -106,19 +107,19 @@ which you can retrieve via <code>lgr::get_logger("pipeflow")</code>, see e.g. th
 <span class="r-out co"><span class="r-pr">#&gt;</span>   [[1]]: &lt;AppenderConsole&gt; [all] -&gt; console</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2026-06-07 15:34:11.940 UTC","message":"Start run of 'pipe' pipeline:"}</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2026-06-07 15:34:11.941 UTC","message":"Step 1/2 data - skip 'done' step"}</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2026-06-07 15:34:11.947 UTC","message":"Step 2/2 add1 - skip 'done' step"}</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2026-06-07 15:34:11.948 UTC","message":"Finished execution of steps."}</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2026-06-07 15:34:11.948 UTC","message":"Done."}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2026-06-13 15:08:42.000 UTC","message":"Start run of 'pipe' pipeline:"}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2026-06-13 15:08:42.001 UTC","message":"Step 1/2 data - skip 'done' step"}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2026-06-13 15:08:42.007 UTC","message":"Step 2/2 add1 - skip 'done' step"}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2026-06-13 15:08:42.008 UTC","message":"Finished execution of steps."}</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {"application":"pipeflow","level":"info","time":"2026-06-13 15:08:42.008 UTC","message":"Done."}</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu">set_log_layout</span><span class="op">(</span><span class="st">"text"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:34:11.951] Start run of 'pipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:34:11.952] Step 1/2 data - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:34:11.953] Step 2/2 add1 - skip 'done' step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:34:11.954] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:34:11.954] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-13 17:08:42.011] Start run of 'pipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-13 17:08:42.013] Step 1/2 data - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-13 17:08:42.014] Step 2/2 add1 - skip 'done' step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-13 17:08:42.014] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-13 17:08:42.015] Done.</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

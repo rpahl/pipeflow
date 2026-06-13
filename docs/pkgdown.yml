@@ -8,7 +8,8 @@ articles:
   v04-collect-output: v04-collect-output.html
   v05-split-map-reduce: v05-split-map-reduce.html
   v06-self-modify-pipeline: v06-self-modify-pipeline.html
-last_built: 2026-06-07T15:33Z
+  v07-vs-targets: v07-vs-targets.html
+last_built: 2026-06-13T15:08Z
 urls:
   reference: https://github.com/rpahl/pipeflow/reference
   article: https://github.com/rpahl/pipeflow/articles

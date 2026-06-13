@@ -59,12 +59,12 @@ p <- pipe_new("pipe", data = 1:2)
 pipe_add(p, "add1", \(data = ~data, x = 1) x + data)
 pipe_add(p, "add2", \(x = 1, y = 2, z = ~add1) x + y + z)
 pipe_run(p)
-#> INFO  [2026-06-07 17:34:12.220] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-07 17:34:12.222] Step 1/3 data
-#> INFO  [2026-06-07 17:34:12.224] Step 2/3 add1
-#> INFO  [2026-06-07 17:34:12.227] Step 3/3 add2
-#> INFO  [2026-06-07 17:34:12.228] Finished execution of steps.
-#> INFO  [2026-06-07 17:34:12.229] Done.
+#> INFO  [2026-06-13 17:08:42.325] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-13 17:08:42.326] Step 1/3 data
+#> INFO  [2026-06-13 17:08:42.329] Step 2/3 add1
+#> INFO  [2026-06-13 17:08:42.331] Step 3/3 add2
+#> INFO  [2026-06-13 17:08:42.333] Finished execution of steps.
+#> INFO  [2026-06-13 17:08:42.334] Done.
 
 # pipe_get_step_names
 pipe_get_step_names(p)
@@ -91,13 +91,13 @@ add1
 #> 1:   add1 <function[1]> function <list[2]>    data    2,3   FALSE   add1
 #>    description                time  state
 #>         <char>              <POSc> <char>
-#> 1:             2026-06-07 17:34:12   Done
+#> 1:             2026-06-13 17:08:42   Done
 
 add1[["params"]]
 #> [[1]]
 #> [[1]]$data
 #> ~data
-#> <environment: 0x0000020ef6c11648>
+#> <environment: 0x0000020361d4c140>
 #> 
 #> [[1]]$x
 #> [1] 1
@@ -108,7 +108,7 @@ add1[["fun"]]
 #> [[1]]
 #> function (data = ~data, x = 1) 
 #> x + data
-#> <environment: 0x0000020ef5b5f3e8>
+#> <environment: 0x00000203618376f0>
 #> 
 
 try(p$get_step("foo")) # error: step 'foo' does not exist

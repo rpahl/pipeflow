@@ -49,27 +49,28 @@ you decide which one fits your project.
 |---|---|---|
 | Paradigm | Declarative — define the full DAG upfront in a `_targets.R` script, then execute | Interactive — incrementally build the pipeline with `pip_add()` as you code |
 | Execution | `tar_make()` runs in a **fresh R process** | `pip_run()` runs in the **current R session** |
-| Dependencies | Heavy (~20+ packages: `tarchetypes`, `crew`, `qs`, etc.) | Minimal (`data.table`) |
-| Learning curve | Steep — requires understanding `_targets.R` conventions, storage formats, cue rules | Shallow — R-native API with few concepts |
+| Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ❌ In-memory only, lost when R session ends |
 | Skip up-to-date steps | ✅ Hash-based invalidation of code and data | ✅ State-based (`done` / `outdated`) |
+| Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | ❌ No per-step provenance metadata |
 | Modify pipeline at runtime | ❌ Must edit `_targets.R` and re-run | ✅ `pip_remove()`, `pip_rename()`, `pip_replace()`, insert with `after =` |
 | Parameter management | ❌ No unified parameter view across targets | ✅ `pip_get_params()` / `pip_set_params()` — one call updates all steps |
-| Split / map / reduce | Requires target factories (`tarchetypes`) or branching | ✅ Built-in `exec = "split"` / `"auto"` / `"reduce"` |
+| Split / map / reduce | ✅ `pattern = map()` / `cross()` built-in, `tarchetypes` for advanced patterns | ✅ Built-in `exec = "split"` / `"auto"` / `"reduce"` |
 | Dynamic branching | ✅ Comprehensive via `tarchetypes` | ✅ Auto-mapping over partition keys (`exec = "auto"`) |
-| Views / tag filtering | ❌ | ✅ `pip_view()` — filter steps by tags, groups, or index |
+| Views / tag filtering | `tar_described_as()` selects by description tags | ✅ `pip_view()` — filter steps by tags or index |
 | Pipeline composition | ❌ | ✅ `pip_bind()` two pipelines, `pip_add_from()` copy individual steps |
 | Self-modifying pipelines | ❌ | ✅ `pip_run(recursive = TRUE)` — steps can return modified pipelines |
-| Distributed computing | ✅ `crew` for HPC and cloud workers | ❌ (by design — stays lightweight and single-machine) |
+| Distributed computing | ✅ `crew` for HPC and cloud workers | ❌ |
 | Cloud storage | ✅ AWS, GCS | ❌ |
 | File tracking | ✅ File targets with `format = "file"` | ❌ |
 | Step locking | ❌ | ✅ `pip_lock()` / `pip_unlock()` — protect steps from accidental modification |
 
-In short, **{targets}** is the tool of choice for large-scale, formally
-reproducible projects that may run on distributed infrastructure.
-**{pipeflow}** is designed for interactive development, rapid parameter
-exploration, and projects where you want to modify the pipeline structure
-as your analysis evolves — all while keeping a shallow learning curve and
-minimal dependencies.
+In short, **{targets}** is the tool of choice for large-scale reproducible
+projects: it persists results to disk, captures provenance with
+`tar_meta()`, and scales to distributed infrastructure via `crew`.
+**{pipeflow}** prioritises speed and interactivity — sub-millisecond
+skipped-step checks, in-session pipeline modification, and low response
+times make it well suited as a Shiny backend or for rapid parameter
+exploration during analysis.
 
 The benchmarks below provide a quantitative comparison on three pipeline
 topologies. All timings are measured with `system.time()` across
@@ -333,7 +334,7 @@ make_branch_tar <- function(n) {
 # Verify
 tar_dir({
     tar_script(make_branch_tar(4), ask = FALSE)
-    tar_make_here()
+    tar_make_here(reporter = "timestamp")
     stopifnot(tar_read(sink) == 8)
 })
 ```

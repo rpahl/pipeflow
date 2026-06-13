@@ -199,14 +199,14 @@ Let’s now run the combined pipeline and inspect the plot.
 ``` r
 
 pip_run(pip)
-# info [2026-06-07 15:34:40.323 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
-# info [2026-06-07 15:34:40.324 UTC]: Step 1/6 data
-# info [2026-06-07 15:34:40.325 UTC]: Step 2/6 data_prep
-# info [2026-06-07 15:34:40.326 UTC]: Step 3/6 standardize
-# info [2026-06-07 15:34:40.328 UTC]: Step 4/6 data2
-# info [2026-06-07 15:34:40.329 UTC]: Step 5/6 fit
-# info [2026-06-07 15:34:40.332 UTC]: Step 6/6 plot
-# info [2026-06-07 15:34:40.741 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-06-13 15:09:14.367 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-06-13 15:09:14.368 UTC]: Step 1/6 data
+# info [2026-06-13 15:09:14.369 UTC]: Step 2/6 data_prep
+# info [2026-06-13 15:09:14.371 UTC]: Step 3/6 standardize
+# info [2026-06-13 15:09:14.372 UTC]: Step 4/6 data2
+# info [2026-06-13 15:09:14.374 UTC]: Step 5/6 fit
+# info [2026-06-13 15:09:14.377 UTC]: Step 6/6 plot
+# info [2026-06-13 15:09:15.109 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
 ```
 
 ``` r
@@ -230,14 +230,14 @@ pip_set_params(pip, params = list(xVar = "Temp.Celsius"))
 ``` r
 
 pip_run(pip)
-# info [2026-06-07 15:34:41.416 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
-# info [2026-06-07 15:34:41.417 UTC]: Step 1/6 data - skipping done step
-# info [2026-06-07 15:34:41.417 UTC]: Step 2/6 data_prep - skipping done step
-# info [2026-06-07 15:34:41.417 UTC]: Step 3/6 standardize - skipping done step
-# info [2026-06-07 15:34:41.417 UTC]: Step 4/6 data2 - skipping done step
-# info [2026-06-07 15:34:41.417 UTC]: Step 5/6 fit
-# info [2026-06-07 15:34:41.423 UTC]: Step 6/6 plot
-# info [2026-06-07 15:34:41.443 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-06-13 15:09:15.963 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-06-13 15:09:15.963 UTC]: Step 1/6 data - skipping done step
+# info [2026-06-13 15:09:15.964 UTC]: Step 2/6 data_prep - skipping done step
+# info [2026-06-13 15:09:15.964 UTC]: Step 3/6 standardize - skipping done step
+# info [2026-06-13 15:09:15.964 UTC]: Step 4/6 data2 - skipping done step
+# info [2026-06-13 15:09:15.964 UTC]: Step 5/6 fit
+# info [2026-06-13 15:09:15.969 UTC]: Step 6/6 plot
+# info [2026-06-13 15:09:15.990 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
 ```
 
 ``` r

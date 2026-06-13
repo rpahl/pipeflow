@@ -20,6 +20,20 @@ structured overview of your project.
 - Facilitates reusability and collaboration
 - Simplifies error handling and debugging
 
+### {pipeflow} vs {targets}
+
+[{targets}](https://docs.ropensci.org/targets/) is the most widely used
+pipeline toolkit in the R ecosystem. For a detailed comparison and
+benchmark results, see the [vs targets
+vignette](https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html).
+
+In short, **{targets}** is the tool of choice for large-scale, formally
+reproducible projects that may run on distributed infrastructure.
+**{pipeflow}** is designed for interactive development, rapid parameter
+exploration, and projects where you want to modify the pipeline
+structure as your analysis evolves — all while keeping a shallow
+learning curve and minimal dependencies.
+
 ### Installation
 
 ``` r
