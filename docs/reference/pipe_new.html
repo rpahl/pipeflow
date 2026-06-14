@@ -9,7 +9,7 @@ which basically is a function returning the data."><meta property="og:image" con
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9005</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9006</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,9 @@ which basically is a function returning the data."><meta property="og:image" con
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
+    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -113,10 +116,10 @@ any time via <code><a href="set_log_layout.html">set_log_layout()</a></code>.</p
 <span class="r-in"><span><span class="va">p</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pipe_run.html">pipe_run</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pipe_get_out.html">pipe_get_out</a></span><span class="op">(</span><span class="st">"data"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:33:59.933] Start run of 'myPipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:33:59.935] Step 1/1 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:33:59.936] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:33:59.937] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-14 15:39:57.600] Start run of 'myPipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-14 15:39:57.602] Step 1/1 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-14 15:39:57.604] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-14 15:39:57.605] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   x y</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 1 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2 2 4</span>
@@ -134,10 +137,10 @@ any time via <code><a href="set_log_layout.html">set_log_layout()</a></code>.</p
 <span class="r-in"><span><span class="va">p</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pipe_run.html">pipe_run</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pipe_get_out.html">pipe_get_out</a></span><span class="op">(</span><span class="st">"data"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:33:59.944] Start run of 'myPipe' pipeline:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:33:59.945] Step 1/1 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:33:59.947] Finished execution of steps.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-07 17:33:59.948] Done.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-14 15:39:57.615] Start run of 'myPipe' pipeline:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-14 15:39:57.617] Step 1/1 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-14 15:39:57.619] Finished execution of steps.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> INFO  [2026-06-14 15:39:57.620] Done.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   x y</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 1 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2 2 4</span>

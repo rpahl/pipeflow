@@ -1,0 +1,423 @@
+---
+title: "pipeflow vs targets"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+description: >
+  A detailed comparison and benchmark between pipeflow and targets.
+params:
+  nrep: 30
+---
+
+```{r knitr-setup, include = FALSE}
+knitr::opts_chunk$set(
+    comment = "#",
+    prompt = FALSE,
+    tidy = FALSE,
+    cache = FALSE,
+    collapse = TRUE
+)
+
+old <- options(width = 100L)
+```
+
+```{r libs, include = FALSE}
+library(pipeflow)
+library(targets)
+library(ggplot2)
+
+elapsed_time <- function(expr) {
+    system.time(expr, gcFirst = FALSE)[["elapsed"]]
+}
+
+nrep <- params$nrep
+```
+
+## Overview
+
+[{targets}](https://docs.ropensci.org/targets/) is the most widely used
+pipeline toolkit in the R ecosystem and the de-facto standard for heavy-duty
+reproducible workflows. The table below contrasts the two packages to help
+you decide which one fits your project.
+
+| Feature | **targets** | **pipeflow** |
+|---|---|---|
+| Paradigm | Declarative — define the full DAG upfront in a `_targets.R` script, then execute | Interactive — incrementally build the pipeline with `pip_add()` as you code |
+| Execution | `tar_make()` runs in a **fresh R process** | `pip_run()` runs in the **current R session** |
+| Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ❌ In-memory only, lost when R session ends |
+| Skip up-to-date steps | ✅ Hash-based invalidation of code and data | ✅ State-based (`done` / `outdated`) |
+| Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | ❌ No per-step provenance metadata |
+| Dependency validation | ✅ `tar_validate()` for pre-flight checks (opt-in) | ✅ On `pip_add()`, `pip_replace()`, `pip_remove()` — fails fast on broken references |
+| Modify pipeline at runtime | ❌ Must edit `_targets.R` and re-run | ✅ `pip_remove()`, `pip_rename()`, `pip_replace()`, insert with `after =` |
+| Parameter management | ❌ No unified parameter view across targets | ✅ `pip_get_params()` / `pip_set_params()` — one call updates all steps |
+| Split / map / reduce | ✅ `pattern = map()` / `cross()` built-in, `tarchetypes` for advanced patterns | ✅ Built-in `exec = "split"` / `"auto"` / `"reduce"` |
+| Dynamic branching | ✅ Comprehensive via `tarchetypes` | ✅ Auto-mapping over partition keys (`exec = "auto"`) |
+| Views / tag filtering | `tar_described_as()` selects by description tags | ✅ `pip_view()` — filter steps by tags or index |
+| Pipeline composition | ❌ | ✅ `pip_bind()` two pipelines, `pip_add_from()` copy individual steps |
+| Self-modifying pipelines | ❌ | ✅ `pip_run(recursive = TRUE)` — steps can return modified pipelines |
+| Distributed computing | ✅ `crew` for HPC and cloud workers | ❌ |
+| Cloud storage | ✅ AWS, GCS | ❌ |
+| File tracking | ✅ File targets with `format = "file"` | ❌ |
+| Step locking | ❌ | ✅ `pip_lock()` / `pip_unlock()` — protect steps from accidental modification |
+
+In short, **{targets}** is the tool of choice for large-scale reproducible
+projects: it persists results to disk, captures provenance with
+`tar_meta()`, and scales to distributed infrastructure via `crew`.
+**{pipeflow}** prioritises speed and interactivity — sub-millisecond
+skipped-step checks, in-session pipeline modification, and low response
+times make it well suited as a Shiny backend or for rapid parameter
+exploration during analysis.
+
+
+## Benchmarks
+
+The benchmarks below provide a quantitative comparison on three pipeline
+topologies. All timings are measured with `system.time()` across
+`r nrep` iterations per scenario.
+
+Package versions: pipeflow `r packageVersion("pipeflow")`,
+targets `r packageVersion("targets")`.
+
+The three scenarios were chosen to isolate different aspects of pipeline
+overhead:
+
+- **Walkthrough** — a minimal 4-step pipeline mimicking a typical
+  exploratory workflow. This measures startup cost and skip-check
+  overhead in the simplest realistic case.
+- **Long linear pipeline** — a chain of N steps (`s0 -> s1 -> ... -> sN`).
+  This isolates per-step bookkeeping cost as the pipeline grows to 128
+  steps.
+- **Fan-out DAG** — a single source feeds N parallel branches that
+  converge on one sink. This tests how each package handles wide
+  dependency structures.
+
+For targets, each iteration uses a fresh `tar_dir()` and `tar_script()`
+to ensure fair timing of end-to-end pipeline execution. For pipeflow,
+pipelines are built once and timed with `force = TRUE` to measure the
+cost of a full re-run.
+
+### Walkthrough example
+
+A minimal four-step pipeline based on the
+[{targets} walkthrough](https://books.ropensci.org/targets/walkthrough.html)
+— read CSV data, fit a linear model, and produce a plot. We measure both
+the first full run (all steps executed) and the subsequent skipped run
+(all steps already up to date). Full runs with targets include a
+`tar_destroy()` between iterations so each is a true cold start.
+
+```{r helpers}
+create_data_csv <- function(data = airquality, file = "data.csv") {
+    utils::write.csv(data, file)
+}
+
+get_data <- function(file) {
+    utils::read.csv(file) |> stats::na.omit()
+}
+
+fit_model <- function(data) {
+    lm(Ozone ~ Temp, data) |> coefficients()
+}
+
+plot_model <- function(model, data) {
+    ggplot(data) +
+        geom_point(aes(x = Temp, y = Ozone)) +
+        geom_abline(intercept = model[1], slope = model[2])
+}
+```
+
+#### pipeflow pipeline
+
+```{r pipeflow-walkthrough-run}
+tar_dir({
+    create_data_csv(file = "data.csv")
+    p <- pip_new("walkthrough") |>
+        pip_add("data",  \(file = "data.csv") get_data(file)) |>
+        pip_add("model", \(data = ~data) fit_model(data)) |>
+        pip_add(
+            "plot",
+            \(model = ~model, data = ~data) plot_model(model, data)
+        )
+
+    message("\nProof of principle full run (no skips)")
+    pip_run(p)
+    p_r <- replicate(nrep, elapsed_time(pip_run(p, lgr = NULL, force = TRUE)))
+
+    message("\nProof of principle skipped run")
+    pip_run(p)
+    p_s <- replicate(nrep, elapsed_time(pip_run(p, lgr = NULL)))
+})
+```
+
+#### targets pipeline
+
+```{r targets-walkthrough-run}
+tar_make_here <- function(reporter = "silent") {
+    tar_make(callr_function = NULL, reporter = reporter)
+}
+
+tar_dir({
+    create_data_csv(file = "data.csv")
+    tar_script({
+        list(
+            tar_target(file, "data.csv", format = "file"),
+            tar_target(data, get_data(file)),
+            tar_target(model, fit_model(data)),
+            tar_target(plot, plot_model(model, data))
+        )
+    }, ask = FALSE)
+
+    message("\nProof of principle full run (no skips)")
+    tar_make_here(reporter = "timestamp")
+    tar_r <- replicate(nrep, {
+        tar_destroy(ask = FALSE)
+        elapsed_time(tar_make_here(reporter = "silent"))
+    })
+
+    message("\nProof of principle skipped run")
+    tar_make_here(reporter = "timestamp")
+    tar_s <- replicate(nrep, {
+        elapsed_time(tar_make_here(reporter = "silent"))
+    })
+})
+```
+
+#### Runtimes
+
+```{r walkthrough-runtime-plot, echo = FALSE, fig.width = 7, fig.height = 4}
+title <- sprintf("Walkthrough (4 steps) — %d iterations", nrep)
+
+data <- data.frame(
+    "Package" = c("pipeflow", "targets") |> rep(each = 2 * nrep),
+    "Operation" = c("full run", "skipped run") |> rep(each = nrep),
+    "Time" = c(p_r, p_s, tar_r, tar_s) * 1000
+)
+
+ggplot(data, aes(x = Operation, y = Time, fill = Package)) +
+    geom_violin(trim = FALSE, alpha = 0.6) +
+    stat_summary(
+        fun = median,
+        geom = "crossbar",
+        width = 0.3,
+        position = position_dodge(0.9)
+    ) +
+    labs(y = "Time (ms)", x = NULL, title = title) +
+    theme_bw()
+```
+
+### Long linear pipeline
+
+Each step depends on the output of the previous step:
+`s0 -> s1 -> s2 -> ... -> sN`. This measures the overhead of managing
+the pipeline structure and skipping logic as the number of steps
+increases. We benchmark at 16, 32, 64, and 128 steps to show how the
+per-step cost scales.
+
+#### pipeflow pipeline
+
+```{r linear-pipeflow}
+create_linear_pip <- function(n) {
+    pip <- pip_new("linear") |> pip_add("s0", \(init = 0) init)
+
+    for (i in seq_len(n)) {
+        pip_add(pip, step = paste0("s", i), \(x = ~ -1) x + 1)
+    }
+    pip
+}
+
+# Verify
+p <- create_linear_pip(3)
+pip_run(p)
+stopifnot(p[["s3", "out"]] == 3)
+```
+
+#### targets pipeline
+
+```{r linear-targets}
+create_linear_tar <- function(n) {
+    init <- tar_target(s0, 0)
+    rest <- lapply(
+        seq_len(n),
+        FUN = \(i) tar_target_raw(
+            sprintf("s%d", i),
+            call("+", as.symbol(sprintf("s%d", i - 1)), 1)
+        )
+    )
+    c(list(init), rest)
+}
+
+# Verify
+tar_dir({
+    tar_script(create_linear_tar(3), ask = FALSE)
+    tar_make_here(reporter = "timestamp")
+    stopifnot(tar_read(s3) == 3)
+})
+```
+
+#### Runtimes
+
+```{r linear-benchmark, echo = FALSE}
+pipeline_sizes <- c(16, 32, 64, 128)
+
+# ---- pipeflow: build once, time only forced re-runs ----
+pips_pf <- lapply(pipeline_sizes, create_linear_pip) |>
+    stats::setNames(paste0("pf_n=", pipeline_sizes))
+
+pf_times <- lapply(pips_pf, function(p) {
+    replicate(nrep, elapsed_time(pip_run(p, lgr = NULL, force = TRUE)))
+})
+
+# ---- targets: fresh tar_dir each iteration, only tar_make is timed ----
+tar_times <- lapply(pipeline_sizes, function(n) {
+    replicate(nrep, {
+        tar_dir({
+            tar_script(create_linear_tar(n), ask = FALSE)
+            elapsed_time(tar_make(callr_function = NULL, reporter = "silent"))
+        })
+    })
+})
+
+# Reshape into a single data.frame for plotting
+pf_df <- do.call(rbind, lapply(seq_along(pf_times), function(i) {
+    data.frame(expr = names(pf_times)[i], time = pf_times[[i]])
+}))
+tar_df <- do.call(rbind, lapply(seq_along(tar_times), function(i) {
+    data.frame(
+        expr = paste0("tar n=", pipeline_sizes[i]),
+        time = tar_times[[i]]
+    )
+}))
+
+d_pf  <- cbind(pf_df,  package = "pipeflow")
+d_tar <- cbind(tar_df, package = "targets")
+
+d_all <- rbind(d_pf, d_tar)
+d_all$n <- as.numeric(gsub("[^0-9]", "", d_all$expr))
+```
+
+```{r linear-plot, echo = FALSE, fig.width = 7, fig.height = 4}
+title <- sprintf("Linear pipeline — %d iterations", nrep)
+ggplot(d_all, aes(x = factor(n), y = time * 1000, fill = package)) +
+    geom_violin(trim = FALSE, alpha = 0.6, scale = "width") +
+    labs(y = "Time (ms)", x = "Number of steps", title = title) +
+    theme_bw()
+```
+
+### DAG with branching
+
+A source feeds N parallel branches, all converging on a single sink
+step. This tests scalability with fan-out structures and how each
+package handles wide dependency graphs — from 16 up to 128 parallel
+branches. Unlike the linear pipeline, all branches can potentially run
+independently once the source completes.
+
+```{r dag-helpers}
+dag_source <- function() 1
+dag_branch <- function(x) x + 1
+dag_sink   <- function(...) sum(...)
+```
+
+#### pipeflow pipeline
+
+```{r dag-pipeflow}
+make_branch_pip <- function(n) {
+    pip <- pip_new("dag") |> pip_add("source", dag_source)
+    for (i in seq_len(n))
+        pip_add(pip, paste0("b", i), \(x = ~source) dag_branch(x))
+
+    sink_args <- paste(
+        sprintf("x%s = ~b%s", seq_len(n), seq_len(n)),
+        collapse = ", "
+    )
+    sink_call <- paste(paste0("x", seq_len(n)), collapse = ", ")
+    eval(parse(text = sprintf(
+        "pip_add(pip, 'sink', function(%s) { dag_sink(%s) })",
+        sink_args, sink_call
+    )))
+    invisible(pip)
+}
+
+p4 <- make_branch_pip(4)
+pip_run(p4)
+stopifnot(p4[["sink", "out"]] == 8)
+```
+
+#### targets pipeline
+
+```{r dag-targets}
+make_branch_tar <- function(n) {
+    source <- tar_target(source, dag_source())
+    branches <- lapply(
+        seq_len(n),
+        FUN = \(i) tar_target_raw(
+            sprintf("b%d", i),
+            call("dag_branch", as.symbol("source"))
+        )
+    )
+    sink <- tar_target_raw(
+        "sink",
+        as.call(c(
+            as.symbol("dag_sink"),
+            lapply(paste0("b", seq_len(n)), as.symbol)
+        ))
+    )
+    c(list(source), branches, list(sink))
+}
+
+# Verify
+tar_dir({
+    tar_script(make_branch_tar(4), ask = FALSE)
+    tar_make_here(reporter = "timestamp")
+    stopifnot(tar_read(sink) == 8)
+})
+```
+
+#### Runtimes
+
+```{r dag-benchmark, echo = FALSE}
+br_sizes <- c(16, 32, 64, 128)
+
+# ---- pipeflow: build once, time only forced re-runs ----
+pips_pf <- lapply(br_sizes, make_branch_pip) |>
+    stats::setNames(paste0("pf_br=", br_sizes))
+
+pf_times <- lapply(pips_pf, function(p) {
+    replicate(nrep, elapsed_time(pip_run(p, lgr = NULL, force = TRUE)))
+})
+
+# ---- targets: fresh tar_dir each iteration, only tar_make is timed ----
+tar_times <- lapply(br_sizes, function(n) {
+    replicate(nrep, {
+        tar_dir({
+            tar_script(make_branch_tar(n), ask = FALSE)
+            elapsed_time(tar_make(callr_function = NULL, reporter = "silent"))
+        })
+    })
+})
+
+# Reshape into data.frames for plotting
+pf_df <- do.call(rbind, lapply(seq_along(pf_times), function(i) {
+    data.frame(expr = names(pf_times)[i], time = pf_times[[i]])
+}))
+tar_df <- do.call(rbind, lapply(seq_along(tar_times), function(i) {
+    data.frame(expr = paste0("tar br=", br_sizes[i]), time = tar_times[[i]])
+}))
+
+d_pf  <- cbind(pf_df,  package = "pipeflow")
+d_tar <- cbind(tar_df, package = "targets")
+```
+
+```{r dag-plot, echo = FALSE, fig.width = 7, fig.height = 4}
+d_all <- rbind(d_pf, d_tar)
+d_all$n <- as.numeric(gsub("[^0-9]", "", d_all$expr))
+
+title <- sprintf("Fan-out DAG — %d iterations", nrep)
+ggplot(d_all, aes(x = factor(n), y = time * 1000, fill = package)) +
+    geom_violin(trim = FALSE, alpha = 0.6, scale = "width") +
+    labs(y = "Time (ms)", x = "Number of branches", title = title) +
+    theme_bw()
+```
+
+```{r, include = FALSE}
+options(old)
+```

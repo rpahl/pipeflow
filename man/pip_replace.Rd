@@ -4,7 +4,7 @@
 \alias{pip_replace}
 \title{Replace a step}
 \usage{
-pip_replace(x, step, fun, group = step, tags = character(0))
+pip_replace(x, step, fun, tags = character(0))
 }
 \arguments{
 \item{x}{A pipeflow pipeline object.}
@@ -12,8 +12,6 @@ pip_replace(x, step, fun, group = step, tags = character(0))
 \item{step}{Step name.}
 
 \item{fun}{Function to execute for the step.}
-
-\item{group}{Step group name.}
 
 \item{tags}{Optional character vector of tags belonging to the step.
 Can also be adjusted later using \verb{[pip_tag()]}.}

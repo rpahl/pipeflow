@@ -10,7 +10,6 @@ describe(".empty_pipeline", {
 describe(".new_step", {
     step <- .new_step(
         step = "step2",
-        group = "group1",
         fun = function(x) x^2,
         params = list(x = 1, y = ~step1),
         depends = c(y = "step1"),
@@ -20,7 +19,6 @@ describe(".new_step", {
 
     it("contains the expected elements", {
         expect_equal(step$step, "step2")
-        expect_equal(step$group, "group1")
         expect_equal(step$fun[[1]](2), 4)
         expect_equivalent(step$params[[1]], list(x = 1, y = ~step1))
         expect_equal(step$signature, "(x)")

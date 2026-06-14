@@ -29,12 +29,12 @@ Node shapes reflect execution mode:
 }
 \examples{
 p <- pip_new()
-pip_add(p, "load", \(x = 1) x, group = "io")
-pip_add(p, "clean", \(x = ~load) x + 1, group = "io")
-pip_add(p, "fit", \(x = ~clean) x * 2, group = "model")
+pip_add(p, "load", \(x = 1) x, tags = "io")
+pip_add(p, "clean", \(x = ~load) x + 1, tags = "io")
+pip_add(p, "fit", \(x = ~clean) x * 2, tags = "model")
 
 graph <- pip_get_graph(p)
-graph$nodes # data.frame: id, label, group, shape, color
+graph$nodes # data.frame: id, label, shape, color
 graph$edges # data.frame: from, to, arrows
 
 # For a view, include_upstream = TRUE adds upstream deps to the graph
