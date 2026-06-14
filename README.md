@@ -28,25 +28,25 @@ status](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https:/
 
 # pipeflow <img src="man/figures/logo.png" alt="logo" align="right" width="163" height="121"/>
 
-A lightweight yet powerful framework for building robust data analysis
-pipelines. With {pipeflow}, you initialize a pipeline with your dataset
-and construct workflows step by step simply by adding R functions. You
-can modify, remove, or insert steps and parameters at any stage, while
-{pipeflow} ensures the pipeline’s integrity.
+Build analysis pipelines quick and easy and run them fast.
+
+{pipeflow} simply lets you add R functions one by one, wiring them into
+a pipeline that stays consistent as you go. Modify, remove, or insert
+steps at any stage, and manage all parameters in one place.
 
 Thanks to its intuitive interface, using {pipeflow} quickly pays off in
-the beginning while in the long run will help you to keep a clear and
-structured overview of your project.
+the beginning while in the long run helps keeping a clear and structured
+overview of your project.
 
 <img src="man/figures/cartoon.png" alt="cartoon" align="right" width="330"/>
 
 ### Why use {pipeflow}
 
-- Simple and intuitive API
+- Lightweight and intuitive API
 - Filtered pipeline views
 - All parameters managed in one place
 - Pipeline verified at definition time
-- Fast execution with minimal overhead
+- Fast execution for interactive use and Shiny backends
 
 ### Installation
 
@@ -77,11 +77,11 @@ p
 # 3:   total squared [NULL]   new
 
 pip_run(p)
-# info [2026-06-14 13:38:28.463 UTC]: Start run of pipeflow_pip 'demo'
-# info [2026-06-14 13:38:28.463 UTC]: Step 1/3 numbers
-# info [2026-06-14 13:38:28.465 UTC]: Step 2/3 squared
-# info [2026-06-14 13:38:28.468 UTC]: Step 3/3 total
-# info [2026-06-14 13:38:28.469 UTC]: Finished run of pipeflow_pip 'demo'
+# info [2026-06-14 15:51:51.784 UTC]: Start run of pipeflow_pip 'demo'
+# info [2026-06-14 15:51:51.784 UTC]: Step 1/3 numbers
+# info [2026-06-14 15:51:51.787 UTC]: Step 2/3 squared
+# info [2026-06-14 15:51:51.790 UTC]: Step 3/3 total
+# info [2026-06-14 15:51:51.791 UTC]: Finished run of pipeflow_pip 'demo'
 
 pip_collect_out(p)
 # $numbers
