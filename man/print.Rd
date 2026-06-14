@@ -51,18 +51,18 @@ Print pipeflow objects
 }
 \examples{
 p <- pip_new("demo") |>
-  pip_add("load", \(n = 5) seq_len(n), group = "io", tags = "raw") |>
-  pip_add("square", \(x = ~load) x^2, group = "compute") |>
-  pip_add("total", \(x = ~square) sum(x), group = "compute")
+  pip_add("load", \(n = 5) seq_len(n), tags = c("io", "raw")) |>
+  pip_add("square", \(x = ~load) x^2, tags = "compute") |>
+  pip_add("total", \(x = ~square) sum(x), tags = "compute")
 
-print(p) # core columns: step, group, depends, tags, out, state
+print(p) # core columns: step, depends, tags, out, state
 print(p, cols = "all") # all non-hidden columns
 print(p, rows = 2:3) # print only steps 2 and 3
 p <- pip_new() |>
-  pip_add("s1", \(x = 1) x, group = "io") |>
-  pip_add("s2", \(x = ~s1) x + 1, group = "model")
+  pip_add("s1", \(x = 1) x, tags = "io") |>
+  pip_add("s2", \(x = ~s1) x + 1, tags = "model")
 
 # A view header shows how many steps are selected out of the total
-v <- pip_view(p, filter = list(group = "model"))
+v <- pip_view(p, tags = "model")
 print(v) # "<pipeflow_view> pipe view (1 of 2 steps)"
 }

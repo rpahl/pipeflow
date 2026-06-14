@@ -5,7 +5,6 @@ output: github_document
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 ```{r, include = FALSE}
-require(pipeflow)
 require(badger)
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -38,25 +37,25 @@ old <- options(width = 100L)
 
 # pipeflow <img src="man/figures/logo.png" alt="logo" align="right" width="163" height="121"/>
 
-A lightweight yet powerful framework for building robust data
-analysis pipelines. With {pipeflow}, you initialize a pipeline with your
-dataset and construct workflows step by step simply by adding R functions.
-You can modify, remove, or insert steps and parameters at any stage,
-while {pipeflow} ensures the pipeline's integrity.
+Build analysis pipelines quick and easy and run them fast.
+
+{pipeflow} simply lets you add R functions one by one, wiring them into a
+pipeline that stays consistent as you go. Modify, remove, or insert
+steps at any stage, and manage all parameters in one place.
 
 Thanks to its intuitive interface, using {pipeflow} quickly pays off in
-the beginning while in the long run will help you to keep a clear and
+the beginning while in the long run helps keeping a clear and
 structured overview of your project.
 
 <img src="man/figures/cartoon.png" alt="cartoon" align="right" width="330"/>
 
 ### Why use {pipeflow}
 
-* Easy to learn yet suited for growingly complex workflows
-* Automatically manages function and parameter dependencies
-* Promotes structured and modular code
-* Facilitates reusability and collaboration
-* Simplifies error handling and debugging
+* Lightweight and intuitive API
+* Filtered pipeline views
+* All parameters managed in one place
+* Pipeline verified at definition time
+* Fast execution for interactive use and Shiny backends
 
 ### Installation
 
@@ -71,8 +70,19 @@ devtools::install_github("rpahl/pipeflow")
 
 ### Usage
 
-```{r}
+```{r usage}
 library(pipeflow)
+
+p <- pip_new("demo") |>
+    pip_add("numbers", \(n = 5) seq_len(n)) |>
+    pip_add("squared", \(x = ~numbers) x^2) |>
+    pip_add("total",   \(x = ~squared) sum(x))
+
+p
+
+pip_run(p)
+
+pip_collect_out(p)
 ```
 
 ### Getting Started
@@ -90,6 +100,9 @@ It is recommended to read the vignettes in the order they are listed below:
 * [Split, map, and reduce](https://rpahl.github.io/pipeflow/articles/v05-split-map-reduce.html)
 * [Recursive self-modification](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
 
+### Benchmarks
+
+* [pipeflow vs targets](https://rpahl.github.io/pipeflow/articles/articles/v07-vs-targets.html)
 
 ```{r, include = FALSE}
 options(old)

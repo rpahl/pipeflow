@@ -112,6 +112,10 @@ navbar:
         href: articles/v05-split-map-reduce.html
       - text: "Recursive self-modification"
         href: articles/v06-self-modify-pipeline.html
+      - text: ----
+      - text: "Benchmarks"
+      - text: "pipeflow vs targets"
+        href: articles/articles/v07-vs-targets.html
 
 
     github:
