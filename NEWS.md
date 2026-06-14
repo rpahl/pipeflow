@@ -1,5 +1,17 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.2.3.9007
+
+- `pip_collect_out()` no longer accepts `grouped` or `by` parameters.
+- The `group` column has been removed from the pipeline data.table.
+- New pkgdown-only article *pipeflow vs targets*
+- Revised `vignettes/v04-collect-output.Rmd` to demonstrate
+- Updated README with a "Why use {pipeflow}" feature list, a
+- Added "Dependency validation" row to the vs-targets comparison
+- Fixed Ubuntu CI by adding `libglpk-dev` to system dependencies
+- Extensive test updates for the `group` column removal and
+
+
 # pipeflow 0.2.3.9006
 
 - **C++ DAG engine** (`src/dag.cpp`, 882 lines): All graph operations (node/edge add/remove, topological ordering, reachability queries) now run at C++ speed via Rcpp external pointers and `.Call` interface. This eliminates the R object overhead for dependency resolution.

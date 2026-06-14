@@ -1,6 +1,6 @@
 Package: pipeflow
 Title: Lightweight, General-Purpose Data Analysis Pipelines
-Version: 0.2.3.9006
+Version: 0.2.3.9007
 Authors@R:
     person("Roman", "Pahl", , "roman.pahl@gmail.com", role = c("aut", "cre"))
 Maintainer: Roman Pahl <roman.pahl@gmail.com>
