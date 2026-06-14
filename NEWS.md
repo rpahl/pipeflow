@@ -1,5 +1,10 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.2.3.9008
+
+- Same as previous version.
+
+
 # pipeflow 0.2.3.9007
 
 - `pip_collect_out()` no longer accepts `grouped` or `by` parameters.
