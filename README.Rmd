@@ -52,9 +52,9 @@ structured overview of your project.
 ### Why use {pipeflow}
 
 * Simple and intuitive API
-* Pipeline structure verified at definition time
 * Filtered pipeline views
-* View and manage parameters across all steps
+* All parameters managed in one place
+* Pipeline verified at definition time
 * Fast execution with minimal overhead
 
 ### Installation
