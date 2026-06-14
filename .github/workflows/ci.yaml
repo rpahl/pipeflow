@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6
 
-      - uses: r-lib/actions/setup-r@929c772977a3a13c8733b363bf5a2f685c25dd91  # v2.9
+      - uses: r-lib/actions/setup-r@a51a8012b0aab7c32ef9d19bf54da93f3254335e  # v2.9
         with:
           r-version: renv          # R version from renv.lock
           Ncpus: 6
@@ -99,7 +99,7 @@ jobs:
           _R_CHECK_LIMIT_CORES_: FALSE   # allow more than 2 cores
 
       - name: R CMD check against current CRAN
-        uses: r-lib/actions/check-r-package@929c772977a3a13c8733b363bf5a2f685c25dd91  # v2.9
+        uses: r-lib/actions/check-r-package@a51a8012b0aab7c32ef9d19bf54da93f3254335e  # v2.9
         with:
           upload-snapshots: true
           build_args: 'c("--no-manual")'
