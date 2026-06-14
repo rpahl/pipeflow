@@ -8,7 +8,7 @@ re-run on the next
 ## Usage
 
 ``` r
-pip_replace(x, step, fun, group = step, tags = character(0))
+pip_replace(x, step, fun, tags = character(0))
 ```
 
 ## Arguments
@@ -24,10 +24,6 @@ pip_replace(x, step, fun, group = step, tags = character(0))
 - fun:
 
   Function to execute for the step.
-
-- group:
-
-  Step group name.
 
 - tags:
 
@@ -45,10 +41,10 @@ p <- pip_new() |>
     pip_add("load", \(n = 5) seq_len(n)) |>
     pip_add("double", \(x = ~load) x * 2)
 pip_run(p)
-#> info [2026-06-07 15:34:09.317 UTC]: Start run of pipeflow_pip 'pipe'
-#> info [2026-06-07 15:34:09.318 UTC]: Step 1/2 load
-#> info [2026-06-07 15:34:09.318 UTC]: Step 2/2 double
-#> info [2026-06-07 15:34:09.320 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-06-14 13:40:16.251 UTC]: Start run of pipeflow_pip 'pipe'
+#> info [2026-06-14 13:40:16.252 UTC]: Step 1/2 load
+#> info [2026-06-14 13:40:16.252 UTC]: Step 2/2 double
+#> info [2026-06-14 13:40:16.254 UTC]: Finished run of pipeflow_pip 'pipe'
 p
 #> <pipeflow_pip> pipe (2 steps)
 #> -----------------------------
@@ -67,10 +63,10 @@ p
 
 # Re-run to bring everything up to date
 pip_run(p)
-#> info [2026-06-07 15:34:09.330 UTC]: Start run of pipeflow_pip 'pipe'
-#> info [2026-06-07 15:34:09.330 UTC]: Step 1/2 load
-#> info [2026-06-07 15:34:09.331 UTC]: Step 2/2 double
-#> info [2026-06-07 15:34:09.332 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-06-14 13:40:16.266 UTC]: Start run of pipeflow_pip 'pipe'
+#> info [2026-06-14 13:40:16.266 UTC]: Step 1/2 load
+#> info [2026-06-14 13:40:16.267 UTC]: Step 2/2 double
+#> info [2026-06-14 13:40:16.269 UTC]: Finished run of pipeflow_pip 'pipe'
 p
 #> <pipeflow_pip> pipe (2 steps)
 #> -----------------------------

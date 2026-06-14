@@ -144,23 +144,6 @@ describe("pip_add", {
         )
     })
 
-    it("signals if group is not a non-empty single defined string", {
-        p <- pip_new()
-
-        expect_error(
-            pip_add(p, "s1", fun = \() 1, group = list("not a string")),
-            "group must be a non-empty valid string"
-        )
-        expect_error(
-            pip_add(p, "s1", fun = \() 1, group = ""),
-            "group must be a non-empty valid string"
-        )
-        expect_error(
-            pip_add(p, "s1", fun = \() 1, group = c("a", "b")),
-            "group must be a non-empty valid string"
-        )
-    })
-
     it("signals duplicate step names", {
         p <- pip_new()
         pip_add(p, "s1", \(a = 0) a)
@@ -490,12 +473,11 @@ describe("pip_bind", {
 describe("pip_add_from", {
     test_source <- function() {
         pip_new("src") |>
-            pip_add("base", \(x = 2) x, group = "g1") |>
+            pip_add("base", \(x = 2) x, tags = "g1") |>
             pip_add(
                 "calc",
                 \(x = ~base, m = 3) x * m,
-                group = "g2",
-                tags = c("reuse", "math")
+                tags = c("g2", "reuse", "math")
             )
     }
 
@@ -514,7 +496,7 @@ describe("pip_add_from", {
         )
     })
 
-    it("adds an independent step preserving group and tags", {
+    it("adds an independent step preserving tags", {
         src <- test_source()
         trg <- pip_new("target")
 
@@ -522,10 +504,8 @@ describe("pip_add_from", {
         expect_true(.is_pipeflow_pip(res))
         expect_true(pip_has_step(trg, "base"))
 
-        grp <- trg[["pipeline"]][step == "base", group][[1]]
         tgs <- trg[["pipeline"]][step == "base", tags][[1]]
-        expect_equal(grp, "g1")
-        expect_equal(tgs, character(0))
+        expect_equal(tgs, "g1")
     })
 
     it("adds dependent step when dependencies exist in target", {
@@ -792,10 +772,6 @@ describe("pip_replace", {
             "step 'unknown' does not exist"
         )
         expect_error(pip_replace(p, "f1", 1), "fun must be a function")
-        expect_error(
-            pip_replace(p, "f1", \(x = 1) x, group = ""),
-            "group must be a non-empty valid string"
-        )
     })
 
     it("replaces a step in-place while keeping the original order", {
@@ -840,7 +816,7 @@ describe("pip_replace", {
         )
     })
 
-    it("updates group and tags on replaced step", {
+    it("updates tags on replaced step", {
         p <- pip_new("pipe") |>
             pip_add("a1", \(x = 1) x) |>
             pip_add("a2", \(x = ~a1) x + 1)
@@ -849,12 +825,10 @@ describe("pip_replace", {
             p,
             "a2",
             \(x = ~a1) x + 10,
-            group = "new_group",
             tags = c("updated", "core")
         )
 
         i <- match("a2", p[["pipeline"]][["step"]])
-        expect_equal(p[["pipeline"]][["group"]][[i]], "new_group")
         expect_equal(p[["pipeline"]][["tags"]][[i]], c("updated", "core"))
     })
 })
@@ -940,92 +914,51 @@ describe("pip_collect_out", {
         expect_equal(pip_collect_out(p), list())
     })
 
-    it("returns named flat list when grouped is FALSE", {
+    it("returns named flat list", {
         p <- pip_new()
-        pip_add(p, "s1", \(x = 1) x, group = "data")
-        pip_add(p, "s2", \(x = ~ -1) x + 1, group = "model")
+        pip_add(p, "s1", \(x = 1) x, tags = "data")
+        pip_add(p, "s2", \(x = ~ -1) x + 1, tags = "model")
 
         p[["pipeline"]][["out"]] <- list(10, 20)
 
-        out <- pip_collect_out(p, grouped = FALSE)
+        out <- pip_collect_out(p)
         expect_equal(names(out), c("s1", "s2"))
         expect_equal(unname(out), list(10, 20))
     })
 
-    it("groups outputs if at least two steps share a group label", {
-        p <- pip_new()
-        pip_add(p, "s1", \(x = 1) x, group = "data")
-        pip_add(p, "s2", \(x = ~ -1) x + 1, group = "model")
-        pip_add(p, "s3", \(x = ~ -1) x + 1, group = "model")
-        pip_add(p, "s4", \(x = ~ -1) x + 1, group = "final")
-
-        p[["pipeline"]][["out"]] <- list("o1", "o2", "o3", "o4")
-
-        out <- pip_collect_out(p, grouped = TRUE)
-
-        expect_equal(names(out), c("data", "model", "final"))
-        expect_equal(out[["data"]], "o1")
-        expect_equal(out[["model"]], list(s2 = "o2", s3 = "o3"))
-        expect_equal(out[["final"]], "o4")
-    })
-
     it("works on pipeline views", {
         p <- pip_new()
-        pip_add(p, "s1", \(x = 1) x, group = "data")
-        pip_add(p, "s2", \(x = ~ -1) x + 1, group = "model")
-        pip_add(p, "s3", \(x = ~ -1) x + 1, group = "model")
+        pip_add(p, "s1", \(x = 1) x, tags = "data")
+        pip_add(p, "s2", \(x = ~ -1) x + 1, tags = "model")
+        pip_add(p, "s3", \(x = ~ -1) x + 1, tags = "model")
 
         p[["pipeline"]][["out"]] <- list("o1", "o2", "o3")
 
-        v <- pip_view(p, filter = list(group = "model"))
+        v <- pip_view(p, tags = "model")
         out <- pip_collect_out(v)
 
-        expect_equal(names(out), "model")
-        expect_equal(out[["model"]], list(s2 = "o2", s3 = "o3"))
+        expect_equal(names(out), c("s2", "s3"))
+        expect_equal(unname(out), list("o2", "o3"))
     })
 
-    it("grouped output works if an output is NULL", {
+    it("preserves NULL outputs", {
         p <- pip_new("test") |>
             pip_add("s1", \(x = NULL) x) |>
-            pip_add("s2", \(x = 3) x, group = "g2") |>
+            pip_add("s2", \(x = 3) x, tags = "g2") |>
             pip_add("s3", \(x = ~s2, factor = 2) x * factor) |>
-            pip_add("s4", \(x = ~s2) x^2, group = "g4")
+            pip_add("s4", \(x = ~s2) x^2, tags = "g4")
 
         out <- pip_collect_out(p)
-        expect_equal(out, list(s1 = NULL, g2 = NULL, s3 = NULL, g4 = NULL))
-
-        out <- pip_collect_out(p, grouped = FALSE)
         expect_equal(out, list(s1 = NULL, s2 = NULL, s3 = NULL, s4 = NULL))
 
         pip_run(p, lgr = NULL)
         out <- pip_collect_out(p)
-        expect_equal(out, list(s1 = NULL, g2 = 3, s3 = 2 * 3, g4 = 3^2))
-
-        out <- pip_collect_out(p, grouped = FALSE)
         expect_equal(out, list(s1 = NULL, s2 = 3, s3 = 2 * 3, s4 = 3^2))
-    })
-
-    it("returns same for grouped = TRUE/FALSE, if no group was defined", {
-        p <- pip_new("test") |>
-            pip_add("s1", \(x = NULL) x) |>
-            pip_add("s2", \(x = 3) x) |>
-            pip_add("s3", \(x = ~s2, factor = 2) x * factor) |>
-            pip_add("s4", \(x = ~s2) x^2)
-
-        expect_equal(p[["step"]], p[["group"]])
-        expect_equal(
-            pip_collect_out(p, grouped = TRUE),
-            pip_collect_out(p, grouped = FALSE)
-        )
     })
 
     it("signals invalid arguments", {
         p <- pip_new()
         expect_error(pip_collect_out(1), "x must be a pipeflow pip or view")
-        expect_error(
-            pip_collect_out(p, grouped = c(TRUE, FALSE)),
-            "grouped must be a single logical value"
-        )
     })
 })
 
@@ -1085,9 +1018,9 @@ describe("pip_get_params", {
 describe("pip_get_graph", {
     test_pip <- function() {
         pip_new() |>
-            pip_add("s1", \(x = 1) x, group = "io", exec = "split") |>
-            pip_add("s2", \(x = ~s1) x + 1, group = "model", exec = "reduce") |>
-            pip_add("s3", \(x = ~s2) x + 2, group = "model")
+            pip_add("s1", \(x = 1) x, tags = "io", exec = "split") |>
+            pip_add("s2", \(x = ~s1) x + 1, tags = "model", exec = "reduce") |>
+            pip_add("s3", \(x = ~s2) x + 2, tags = "model")
     }
 
     map_edge_labels <- function(graph) {
@@ -1113,7 +1046,7 @@ describe("pip_get_graph", {
         expect_named(g, c("nodes", "edges"))
         expect_s3_class(nodes, "data.frame")
         expect_s3_class(edges, "data.frame")
-        expect_equal(names(nodes), c("id", "label", "group", "shape", "color"))
+        expect_equal(names(nodes), c("id", "label", "shape", "color"))
         expect_equal(names(edges), c("from", "to", "arrows"))
         nodeShape <- stats::setNames(nodes[["shape"]], nodes[["label"]])
         expect_equal(nodeShape[["s1"]], "star")
@@ -1184,10 +1117,10 @@ describe("pip_has_step", {
 describe("pip_run", {
     test_pip <- function() {
         pip_new() |>
-            pip_add("load_raw", \(x = 1) x, group = "io") |>
-            pip_add("fit_model", \(x = ~ -1) x + 1, group = "model") |>
-            pip_add("eval_model", \(x = ~fit_model) x, group = "model") |>
-            pip_add("bla_bla", \(bla = "blabla") bla, group = "bla")
+            pip_add("load_raw", \(x = 1) x, tags = "io") |>
+            pip_add("fit_model", \(x = ~ -1) x + 1, tags = "model") |>
+            pip_add("eval_model", \(x = ~fit_model) x, tags = "model") |>
+            pip_add("bla_bla", \(bla = "blabla") bla, tags = "bla")
     }
 
     describe("standard runs", {
@@ -1200,9 +1133,9 @@ describe("pip_run", {
 
         it("marks downstream steps not reached due to abort as outdated", {
             p <- pip_new() |>
-                pip_add("load_raw", \(x = 1) stop("io error"), group = "io") |>
-                pip_add("fit_model", \(x = ~ -1) x + 1, group = "model") |>
-                pip_add("eval_model", \(x = ~fit_model) x, group = "model")
+                pip_add("load_raw", \(x = 1) stop("io error"), tags = "io") |>
+                pip_add("fit_model", \(x = ~ -1) x + 1, tags = "model") |>
+                pip_add("eval_model", \(x = ~fit_model) x, tags = "model")
 
             expect_error(pip_run(p, lgr = NULL), "io error")
             expect_equal(
@@ -1215,21 +1148,21 @@ describe("pip_run", {
     describe("running views", {
         it("can run parts of the pipeline via views", {
             p <- test_pip()
-            v <- pip_view(p, filter = list(group = "bla"))
+            v <- pip_view(p, tags = "bla")
             pip_run(v, lgr = NULL)
             expect_equal(p$pipeline[["out"]], list(NULL, NULL, NULL, "blabla"))
         })
 
         it("runs all steps of the view plus upstream dependencies", {
             p <- test_pip()
-            v <- pip_view(p, filter = list(group = "model"))
+            v <- pip_view(p, tags = "model")
             pip_run(v, lgr = NULL)
             expect_equal(p$pipeline[["out"]], list(1, 2, 2, NULL))
         })
 
         it("marks downstream steps outside the view as outdated", {
             p <- test_pip()
-            v <- pip_view(p, filter = list(group = "io"))
+            v <- pip_view(p, tags = "io")
             pip_run(v, lgr = NULL)
             expect_equal(
                 p$pipeline[["state"]],
@@ -1239,7 +1172,7 @@ describe("pip_run", {
 
         it("adds [view]/[upstream] markers to view-run logs", {
             p <- test_pip()
-            v <- pip_view(p, filter = list(group = "model"))
+            v <- pip_view(p, tags = "model")
 
             logs <- character(0)
             lgr <- function(level, msg) {
@@ -2058,7 +1991,7 @@ describe("pip_unlock", {
 describe("pip_view", {
     it("returns a view object with the expected structure", {
         p <- pip_new("test_pipeline")
-        pip_add(p, "load", \(x = 1) x, group = "io")
+        pip_add(p, "load", \(x = 1) x, tags = "io")
 
         v <- pip_view(p)
         expect_true(.is_pipeflow_view(v))
@@ -2069,26 +2002,26 @@ describe("pip_view", {
 
     it("can filter by columns with fixed matching", {
         p <- pip_new()
-        pip_add(p, "load", \(x = 1) x, group = "io")
-        pip_add(p, "fit", \(x = ~ -1) x + 1, group = "model")
-        pip_add(p, "eval", \(x = ~fit) x, group = "model")
+        pip_add(p, "load", \(x = 1) x, tags = "io")
+        pip_add(p, "fit", \(x = ~ -1) x + 1, tags = "model")
+        pip_add(p, "eval", \(x = ~fit) x, tags = "model")
 
         p[["pipeline"]][2, state := "done"]
 
-        v <- pip_view(p, filter = list(group = "model", state = "done"))
+        v <- pip_view(p, tags = "model", filter = list(state = "done"))
 
         expect_equal(v[["rows"]], 2L)
     })
 
     it("can filter by depends column with multiple entries", {
         p <- pip_new()
-        pip_add(p, "load", \(x = 1) x, group = "io")
-        pip_add(p, "fit", \(x = ~ -1) x + 1, group = "model")
-        pip_add(p, "eval", \(x = ~load, y = ~fit) x, group = "model")
+        pip_add(p, "load", \(x = 1) x, tags = "io")
+        pip_add(p, "fit", \(x = ~ -1) x + 1, tags = "model")
+        pip_add(p, "eval", \(x = ~load, y = ~fit) x, tags = "model")
 
         v <- pip_view(
             p,
-            filter = list(depends = "fit", group = "model")
+            filter = list(depends = "fit"), tags = "model"
         )
         v
         expect_equal(v[["rows"]], 3L)
@@ -2120,14 +2053,14 @@ describe("pip_view", {
 
     it("intersects filtered rows with explicit i", {
         p <- pip_new()
-        pip_add(p, "a1", \(x = 1) x, group = "g1")
-        pip_add(p, "a2", \(x = ~ -1) x, group = "g2")
-        pip_add(p, "a3", \(x = ~ -1) x, group = "g2")
+        pip_add(p, "a1", \(x = 1) x, tags = "g1")
+        pip_add(p, "a2", \(x = ~ -1) x, tags = "g2")
+        pip_add(p, "a3", \(x = ~ -1) x, tags = "g2")
 
         v <- pip_view(
             p,
             i = c(1L, 2L),
-            filter = list(group = "g2")
+            tags = "g2"
         )
 
         expect_equal(v[["rows"]], 2L)
@@ -2135,14 +2068,14 @@ describe("pip_view", {
 
     it("can select rows via step names in i", {
         p <- pip_new()
-        pip_add(p, "a1", \(x = 1) x, group = "g1")
-        pip_add(p, "a2", \(x = ~ -1) x, group = "g2")
-        pip_add(p, "a3", \(x = ~ -1) x, group = "g2")
+        pip_add(p, "a1", \(x = 1) x, tags = "g1")
+        pip_add(p, "a2", \(x = ~ -1) x, tags = "g2")
+        pip_add(p, "a3", \(x = ~ -1) x, tags = "g2")
 
         v <- pip_view(p, i = c("a1", "a3"))
         expect_equal(v[["rows"]], c(1L, 3L))
 
-        v <- pip_view(p, i = c("a1", "a2"), filter = list(group = "g2"))
+        v <- pip_view(p, i = c("a1", "a2"), tags = "g2")
         expect_equal(v[["rows"]], 2L)
     })
 
@@ -2470,30 +2403,30 @@ describe("print.pipeflow_pip", {
         trimws(out[[iHeader]]) |> strsplit("\\s+") |> unlist()
     }
 
-    it("shows step/depends/out/state by default when group equals step", {
+    it("shows step/depends/out/state plus tags when steps have tags", {
         op <- options(width = 1000L)
         on.exit(options(op))
 
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(x = ~s1) x + 1, group = "s2")
+            pip_add("s2", \(x = ~s1) x + 1, tags = "s2")
 
         header <- get_print_header(p)
 
-        expect_equal(header, c("step", "depends", "out", "state"))
+        expect_equal(header, c("step", "depends", "out", "state", "tags"))
     })
 
-    it("shows group column by default when at least one group differs", {
+    it("shows tags when at least one step has tags", {
         op <- options(width = 1000L)
         on.exit(options(op))
 
         p <- pip_new("pipe")
         pip_add(p, "s1", \(x = 1) x)
-        pip_add(p, "s2", \(x = ~s1) x + 1, group = "model")
+        pip_add(p, "s2", \(x = ~s1) x + 1, tags = "model")
 
         header <- get_print_header(p)
 
-        expect_equal(header, c("step", "group", "depends", "out", "state"))
+        expect_equal(header, c("step", "depends", "out", "state", "tags"))
     })
 
     it("prints the tags column last when any step defines tags", {
@@ -2502,7 +2435,7 @@ describe("print.pipeflow_pip", {
 
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x, tags = "core") |>
-            pip_add("s2", \(x = ~s1) x + 1, group = "s2")
+            pip_add("s2", \(x = ~s1) x + 1, tags = "s2")
 
         header <- get_print_header(p)
 
@@ -2515,7 +2448,7 @@ describe("print.pipeflow_pip", {
 
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x, tags = "core") |>
-            pip_add("s2", \(x = ~s1) x + 1, group = "s2", exec = "split")
+            pip_add("s2", \(x = ~s1) x + 1, tags = "s2", exec = "split")
 
         header <- get_print_header(p)
 
@@ -2539,16 +2472,16 @@ describe("print.pipeflow_view", {
         on.exit(options(op))
 
         p <- pip_new("pipe") |>
-            pip_add("s1", \(x = 1) x, group = "io") |>
-            pip_add("s2", \(x = ~s1) x + 1, group = "model")
+            pip_add("s1", \(x = 1) x, tags = "io") |>
+            pip_add("s2", \(x = ~s1) x + 1, tags = "model")
 
-        v <- pip_view(p, filter = list(group = "model"))
+        v <- pip_view(p, tags = "model")
         out <- capture.output(print(v))
 
         expect_true(any(grepl("<pipeflow_view>", out)))
         expect_equal(
             get_view_header(v),
-            c("step", "group", "depends", "out", "state")
+            c("step", "depends", "out", "state", "tags")
         )
     })
 
@@ -2558,7 +2491,7 @@ describe("print.pipeflow_view", {
 
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x, tags = "core") |>
-            pip_add("s2", \(x = ~s1) x + 1, group = "s2")
+            pip_add("s2", \(x = ~s1) x + 1, tags = "s2")
 
         v <- pip_view(p, tags = "core")
 
@@ -2574,7 +2507,7 @@ describe("print.pipeflow_view", {
 
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x, exec = "split", tags = "core") |>
-            pip_add("s2", \(x = ~s1) x + 1, group = "s2")
+            pip_add("s2", \(x = ~s1) x + 1, tags = "s2")
 
         v <- pip_view(p, tags = "core")
 

@@ -9,7 +9,7 @@ them with pip_run()."><meta property="og:image" content="https://github.com/rpah
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9005</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9006</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,9 @@ them with pip_run()."><meta property="og:image" content="https://github.com/rpah
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
+    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -97,10 +100,10 @@ them with <code><a href="pip_run.html">pip_run()</a></code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:   load         [NULL]   new</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: double    load [NULL]   new</span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:08.563 UTC]: Start run of pipeflow_pip 'my_analysis'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:08.563 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:08.564 UTC]: Step 2/2 double</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:08.565 UTC]: Finished run of pipeflow_pip 'my_analysis'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:13.961 UTC]: Start run of pipeflow_pip 'my_analysis'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:13.961 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:13.962 UTC]: Step 2/2 double</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:13.964 UTC]: Finished run of pipeflow_pip 'my_analysis'</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="co"># list of outputs, one per step</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1 2 3 4 5</span>

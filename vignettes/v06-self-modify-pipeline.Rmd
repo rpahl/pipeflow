@@ -429,7 +429,7 @@ or changing important columns such as `depends` or `.nodeId` as
 this immediately would invalidate the internal consistency of the
 dependency graph.
 
-On the other hand, changing entries in columns such as `group`,
+On the other hand, changing entries in columns such as
 `tags`, `time`, `state` or `output` is generally not critical.
 If in doubt, just try and see what works.
 

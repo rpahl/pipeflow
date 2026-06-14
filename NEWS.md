@@ -1,5 +1,31 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.2.3.9007
+
+- `pip_collect_out()` no longer accepts `grouped` or `by` parameters.
+- The `group` column has been removed from the pipeline data.table.
+- New pkgdown-only article *pipeflow vs targets*
+- Revised `vignettes/v04-collect-output.Rmd` to demonstrate
+- Updated README with a "Why use {pipeflow}" feature list, a
+- Added "Dependency validation" row to the vs-targets comparison
+- Fixed Ubuntu CI by adding `libglpk-dev` to system dependencies
+- Extensive test updates for the `group` column removal and
+
+
+# pipeflow 0.2.3.9006
+
+- **C++ DAG engine** (`src/dag.cpp`, 882 lines): All graph operations (node/edge add/remove, topological ordering, reachability queries) now run at C++ speed via Rcpp external pointers and `.Call` interface. This eliminates the R object overhead for dependency resolution.
+- **New and improved `pip_*` API**: Functional API replacing the R6 `Pipeline` class — `pip_new()`, `pip_add()`, `pip_run()`, `pip_replace()`, `pip_clone()`, `pip_bind()`, etc.
+- **Execution modes** (`auto`/`split`/`reduce`/`plain`): Native support for map-reduce style workflows where steps can split output into named partitions and downstream steps auto-map over them.
+- **Backward compatibility**: Legacy `pipe_*` functions and `Pipeline` R6 class preserved as deprecated aliases (`R/aliases.R`, `R/pipelineR6.R`).
+- `pip_view()` — create filtered pipeline views (by dependencies, tags)
+- `pip_tag()` / `pip_untag()`
+- `[[` extract operator for pipelines
+- Comprehensive revision of all vignettes to match new API
+- MIT license, updated CI workflows, dependabot config, kilo.json, lintr/styler config
+- Extensive test suite (~10K+ lines) covering C++ DAG, pip_* API, aliases, execution modes, and recursive runs
+
+
 # pipeflow 0.2.3.9005
 
 * deprecate legacy `pipe_*` API in favor of the new `pip_*` API

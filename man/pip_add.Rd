@@ -4,15 +4,7 @@
 \alias{pip_add}
 \title{Add a step}
 \usage{
-pip_add(
-  x,
-  step,
-  fun,
-  group = step,
-  tags = character(0),
-  after = length(x),
-  exec = "auto"
-)
+pip_add(x, step, fun, tags = character(0), after = length(x), exec = "auto")
 }
 \arguments{
 \item{x}{A pipeflow pipeline object.}
@@ -24,9 +16,6 @@ have a default value. Default values that are simple constants are resolved
 immediately. Default values that are formulas like \code{~other_step} are
 treated as dependencies to those steps and resolved to the respective output
 values at runtime once the step is executed.}
-
-\item{group}{Optional character label used for grouping output collections -
-see also \verb{[pip_collect_out()]}.}
 
 \item{tags}{Optional character vector of tags belonging to the step.
 Can also be adjusted later using \verb{[pip_tag()]}.}
@@ -68,20 +57,12 @@ requires re-wiring parts of the internal pipeline structure, especially
 if the new step is inserted at an early position.
 }
 \examples{
-# --- Groups, tags, and view filtering ---
+# --- Tags, and view filtering ---
 p <- pip_new("analysis") |>
-  pip_add("load", \(n = 5) seq_len(n),
-    group = "io", tags = "raw"
-  ) |>
-  pip_add("clean", \(x = ~load) x * 2,
-    group = "io", tags = "process"
-  ) |>
-  pip_add("fit", \(x = ~clean) sum(x),
-    group = "model", tags = c("core", "daily")
-  ) |>
-  pip_add("report", \(x = ~fit) paste("result:", x),
-    group = "model", tags = "report"
-  )
+  pip_add("load", \(n = 5) seq_len(n), tags = c("io", "raw")) |>
+  pip_add("clean", \(x = ~load) x * 2, tags = c("io", "process")) |>
+  pip_add("fit", \(x = ~clean) sum(x), tags = c("model", "core", "daily")) |>
+  pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
 
 pip_run(p)
 p

@@ -46,10 +46,10 @@ pip_get_params(p) # list(n = 100, seed = 42, lambda = 0.1)
 # Useful as a guide for pip_set_params()
 pip_set_params(p, params = list(n = 20, lambda = 0.5))
 pip_run(p) |> pip_collect_out()
-#> info [2026-06-07 15:34:07.835 UTC]: Start run of pipeflow_pip 'pipe'
-#> info [2026-06-07 15:34:07.835 UTC]: Step 1/2 load
-#> info [2026-06-07 15:34:07.835 UTC]: Step 2/2 model
-#> info [2026-06-07 15:34:07.837 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-06-14 13:40:12.142 UTC]: Start run of pipeflow_pip 'pipe'
+#> info [2026-06-14 13:40:12.142 UTC]: Step 1/2 load
+#> info [2026-06-14 13:40:12.143 UTC]: Step 2/2 model
+#> info [2026-06-14 13:40:12.145 UTC]: Finished run of pipeflow_pip 'pipe'
 #> $load
 #>  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
 #> 
