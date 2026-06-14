@@ -8,15 +8,7 @@ validated when the step is added.
 ## Usage
 
 ``` r
-pip_add(
-  x,
-  step,
-  fun,
-  group = step,
-  tags = character(0),
-  after = length(x),
-  exec = "auto"
-)
+pip_add(x, step, fun, tags = character(0), after = length(x), exec = "auto")
 ```
 
 ## Arguments
@@ -36,11 +28,6 @@ pip_add(
   immediately. Default values that are formulas like `~other_step` are
   treated as dependencies to those steps and resolved to the respective
   output values at runtime once the step is executed.
-
-- group:
-
-  Optional character label used for grouping output collections - see
-  also `[pip_collect_out()]`.
 
 - tags:
 
@@ -88,54 +75,46 @@ if the new step is inserted at an early position.
 ## Examples
 
 ``` r
-# --- Groups, tags, and view filtering ---
+# --- Tags, and view filtering ---
 p <- pip_new("analysis") |>
-  pip_add("load", \(n = 5) seq_len(n),
-    group = "io", tags = "raw"
-  ) |>
-  pip_add("clean", \(x = ~load) x * 2,
-    group = "io", tags = "process"
-  ) |>
-  pip_add("fit", \(x = ~clean) sum(x),
-    group = "model", tags = c("core", "daily")
-  ) |>
-  pip_add("report", \(x = ~fit) paste("result:", x),
-    group = "model", tags = "report"
-  )
+  pip_add("load", \(n = 5) seq_len(n), tags = c("io", "raw")) |>
+  pip_add("clean", \(x = ~load) x * 2, tags = c("io", "process")) |>
+  pip_add("fit", \(x = ~clean) sum(x), tags = c("model", "core", "daily")) |>
+  pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
 
 pip_run(p)
-#> info [2026-06-07 15:34:06.128 UTC]: Start run of pipeflow_pip 'analysis'
-#> info [2026-06-07 15:34:06.128 UTC]: Step 1/4 load
-#> info [2026-06-07 15:34:06.129 UTC]: Step 2/4 clean
-#> info [2026-06-07 15:34:06.131 UTC]: Step 3/4 fit
-#> info [2026-06-07 15:34:06.132 UTC]: Step 4/4 report
-#> info [2026-06-07 15:34:06.134 UTC]: Finished run of pipeflow_pip 'analysis'
+#> info [2026-06-14 13:40:08.247 UTC]: Start run of pipeflow_pip 'analysis'
+#> info [2026-06-14 13:40:08.247 UTC]: Step 1/4 load
+#> info [2026-06-14 13:40:08.248 UTC]: Step 2/4 clean
+#> info [2026-06-14 13:40:08.250 UTC]: Step 3/4 fit
+#> info [2026-06-14 13:40:08.252 UTC]: Step 4/4 report
+#> info [2026-06-14 13:40:08.255 UTC]: Finished run of pipeflow_pip 'analysis'
 p
 #> <pipeflow_pip> analysis (4 steps)
 #> ---------------------------------
-#>      step group depends            out state       tags
-#> 1:   load    io              1,2,3,4,5  done        raw
-#> 2:  clean    io    load  2, 4, 6, 8,10  done    process
-#> 3:    fit model   clean             30  done core,daily
-#> 4: report model     fit     result: 30  done     report
+#>      step depends            out state             tags
+#> 1:   load              1,2,3,4,5  done           io,raw
+#> 2:  clean    load  2, 4, 6, 8,10  done       io,process
+#> 3:    fit   clean             30  done model,core,daily
+#> 4: report     fit     result: 30  done           report
 
 # Filter by tag using pip_view — keeps steps with any matching tag
 pip_view(p, tags = "daily")
 #> <pipeflow_view> analysis view (1 of 4 steps)
 #> --------------------------------------------
-#>  step group depends out state       tags
-#>   fit model   clean  30  done core,daily
+#>  step depends out state             tags
+#>   fit   clean  30  done model,core,daily
 pip_view(p, tags = "core")
 #> <pipeflow_view> analysis view (1 of 4 steps)
 #> --------------------------------------------
-#>  step group depends out state       tags
-#>   fit model   clean  30  done core,daily
+#>  step depends out state             tags
+#>   fit   clean  30  done model,core,daily
 pip_view(p, tags = c("raw", "report"))
 #> <pipeflow_view> analysis view (2 of 4 steps)
 #> --------------------------------------------
-#>    step group depends        out state   tags
-#>    load    io          1,2,3,4,5  done    raw
-#>  report model     fit result: 30  done report
+#>    step depends        out state   tags
+#>    load          1,2,3,4,5  done io,raw
+#>  report     fit result: 30  done report
 
 # --- Split / reduce execution modes ---
 q <- pip_new("split-demo") |>
@@ -149,12 +128,12 @@ q <- pip_new("split-demo") |>
   )
 
 pip_run(q)
-#> info [2026-06-07 15:34:06.154 UTC]: Start run of pipeflow_pip 'split-demo'
-#> info [2026-06-07 15:34:06.154 UTC]: Step 1/4 data
-#> info [2026-06-07 15:34:06.155 UTC]: Step 2/4 split
-#> info [2026-06-07 15:34:06.156 UTC]: Step 3/4 stats
-#> info [2026-06-07 15:34:06.161 UTC]: Step 4/4 combine
-#> info [2026-06-07 15:34:06.163 UTC]: Finished run of pipeflow_pip 'split-demo'
+#> info [2026-06-14 13:40:08.277 UTC]: Start run of pipeflow_pip 'split-demo'
+#> info [2026-06-14 13:40:08.277 UTC]: Step 1/4 data
+#> info [2026-06-14 13:40:08.277 UTC]: Step 2/4 split
+#> info [2026-06-14 13:40:08.279 UTC]: Step 3/4 stats
+#> info [2026-06-14 13:40:08.285 UTC]: Step 4/4 combine
+#> info [2026-06-14 13:40:08.286 UTC]: Finished run of pipeflow_pip 'split-demo'
 q[["stats", "out"]]   # partitioned list — one summary per species
 #> $setosa
 #>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   

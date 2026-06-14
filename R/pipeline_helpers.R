@@ -1,7 +1,6 @@
 .empty_pipeline <- function() {
     data.table::data.table(
         step = character(0),
-        group = character(0),
         fun = list(),
         params = list(),
         signature = character(0),
@@ -20,7 +19,6 @@
 
 .new_step <- function(
     step,
-    group,
     fun,
     params,
     depends,
@@ -30,7 +28,6 @@
 ) {
     list(
         step = step,
-        group = group,
         fun = list(fun),
         params = list(params),
         signature = trimws(substring(deparse(args(fun))[1], 10)),

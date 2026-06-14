@@ -14,11 +14,11 @@ structured overview of your project.
 
 ### Why use {pipeflow}
 
-- Easy to learn yet suited for growingly complex workflows
-- Automatically manages function and parameter dependencies
-- Promotes structured and modular code
-- Facilitates reusability and collaboration
-- Simplifies error handling and debugging
+- Simple and intuitive API
+- Filtered pipeline views
+- All parameters managed in one place
+- Pipeline verified at definition time
+- Fast execution with minimal overhead
 
 ### Installation
 
@@ -36,6 +36,36 @@ devtools::install_github("rpahl/pipeflow")
 ``` r
 
 library(pipeflow)
+
+p <- pip_new("demo") |>
+    pip_add("numbers", \(n = 5) seq_len(n)) |>
+    pip_add("squared", \(x = ~numbers) x^2) |>
+    pip_add("total",   \(x = ~squared) sum(x))
+
+p
+# <pipeflow_pip> demo (3 steps)
+# -----------------------------
+#       step depends    out state
+# 1: numbers         [NULL]   new
+# 2: squared numbers [NULL]   new
+# 3:   total squared [NULL]   new
+
+pip_run(p)
+# info [2026-06-14 13:38:28.463 UTC]: Start run of pipeflow_pip 'demo'
+# info [2026-06-14 13:38:28.463 UTC]: Step 1/3 numbers
+# info [2026-06-14 13:38:28.465 UTC]: Step 2/3 squared
+# info [2026-06-14 13:38:28.468 UTC]: Step 3/3 total
+# info [2026-06-14 13:38:28.469 UTC]: Finished run of pipeflow_pip 'demo'
+
+pip_collect_out(p)
+# $numbers
+# [1] 1 2 3 4 5
+# 
+# $squared
+# [1]  1  4  9 16 25
+# 
+# $total
+# [1] 55
 ```
 
 ### Getting Started
@@ -58,6 +88,11 @@ below:
   reduce](https://rpahl.github.io/pipeflow/articles/v05-split-map-reduce.html)
 - [Recursive
   self-modification](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
+
+### Benchmarks
+
+- [pipeflow vs
+  targets](https://rpahl.github.io/pipeflow/articles/articles/v07-vs-targets.html)
 
 # Package index
 
@@ -165,7 +200,7 @@ Generic methods for pipeflow objects.
 - [Collecting and filtering
   output](https://github.com/rpahl/pipeflow/articles/v04-collect-output.md):
 
-  Shows how to collect, filter, and group pipeline output.
+  Shows how to tag, filter, and collect pipeline output.
 
 - [Split, map, and
   reduce](https://github.com/rpahl/pipeflow/articles/v05-split-map-reduce.md):
@@ -180,3 +215,8 @@ Generic methods for pipeflow objects.
   which, for example, allows for changing pipeline parameters based on
   intermediate results or even dynamically modify the pipeline’s own
   structure during a pipeline run.
+
+- [pipeflow vs
+  targets](https://github.com/rpahl/pipeflow/articles/v07-vs-targets.md):
+
+  A detailed comparison and benchmark between pipeflow and targets.

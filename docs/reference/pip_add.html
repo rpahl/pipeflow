@@ -13,7 +13,7 @@ is added."><meta property="og:image" content="https://github.com/rpahl/pipeflow/
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9005</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9006</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,6 +44,9 @@ is added."><meta property="og:image" content="https://github.com/rpahl/pipeflow/
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
+    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -70,15 +73,7 @@ is added.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">pip_add</span><span class="op">(</span></span>
-<span>  <span class="va">x</span>,</span>
-<span>  <span class="va">step</span>,</span>
-<span>  <span class="va">fun</span>,</span>
-<span>  group <span class="op">=</span> <span class="va">step</span>,</span>
-<span>  tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span>,</span>
-<span>  after <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>,</span>
-<span>  exec <span class="op">=</span> <span class="st">"auto"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">pip_add</span><span class="op">(</span><span class="va">x</span>, <span class="va">step</span>, <span class="va">fun</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span>, after <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>, exec <span class="op">=</span> <span class="st">"auto"</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -99,11 +94,6 @@ have a default value. Default values that are simple constants are resolved
 immediately. Default values that are formulas like <code>~other_step</code> are
 treated as dependencies to those steps and resolved to the respective output
 values at runtime once the step is executed.</p></dd>
-
-
-<dt id="arg-group">group<a class="anchor" aria-label="anchor" href="#arg-group"></a></dt>
-<dd><p>Optional character label used for grouping output collections -
-see also <code>[pip_collect_out()]</code>.</p></dd>
 
 
 <dt id="arg-tags">tags<a class="anchor" aria-label="anchor" href="#arg-tags"></a></dt>
@@ -148,54 +138,46 @@ if the new step is inserted at an early position.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># --- Groups, tags, and view filtering ---</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># --- Tags, and view filtering ---</span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"analysis"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu">pip_add</span><span class="op">(</span><span class="st">"load"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    group <span class="op">=</span> <span class="st">"io"</span>, tags <span class="op">=</span> <span class="st">"raw"</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu">pip_add</span><span class="op">(</span><span class="st">"clean"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">load</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="fl">2</span>,</span></span>
-<span class="r-in"><span>    group <span class="op">=</span> <span class="st">"io"</span>, tags <span class="op">=</span> <span class="st">"process"</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu">pip_add</span><span class="op">(</span><span class="st">"fit"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">clean</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    group <span class="op">=</span> <span class="st">"model"</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"core"</span>, <span class="st">"daily"</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu">pip_add</span><span class="op">(</span><span class="st">"report"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"result:"</span>, <span class="va">x</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    group <span class="op">=</span> <span class="st">"model"</span>, tags <span class="op">=</span> <span class="st">"report"</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">pip_add</span><span class="op">(</span><span class="st">"load"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"io"</span>, <span class="st">"raw"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">pip_add</span><span class="op">(</span><span class="st">"clean"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">load</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="fl">2</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"io"</span>, <span class="st">"process"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">pip_add</span><span class="op">(</span><span class="st">"fit"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">clean</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"core"</span>, <span class="st">"daily"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">pip_add</span><span class="op">(</span><span class="st">"report"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"result:"</span>, <span class="va">x</span><span class="op">)</span>, tags <span class="op">=</span> <span class="st">"report"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:06.128 UTC]: Start run of pipeflow_pip 'analysis'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:06.128 UTC]: Step 1/4 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:06.129 UTC]: Step 2/4 clean</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:06.131 UTC]: Step 3/4 fit</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:06.132 UTC]: Step 4/4 report</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:06.134 UTC]: Finished run of pipeflow_pip 'analysis'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:08.247 UTC]: Start run of pipeflow_pip 'analysis'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:08.247 UTC]: Step 1/4 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:08.248 UTC]: Step 2/4 clean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:08.250 UTC]: Step 3/4 fit</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:08.252 UTC]: Step 4/4 report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:08.255 UTC]: Finished run of pipeflow_pip 'analysis'</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_pip&gt; analysis (4 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      step group depends            out state       tags</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   load    io              1,2,3,4,5  done        raw</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:  clean    io    load  2, 4, 6, 8,10  done    process</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3:    fit model   clean             30  done core,daily</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: report model     fit     result: 30  done     report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      step depends            out state             tags</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   load              1,2,3,4,5  done           io,raw</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:  clean    load  2, 4, 6, 8,10  done       io,process</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3:    fit   clean             30  done model,core,daily</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: report     fit     result: 30  done           report</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Filter by tag using pip_view — keeps steps with any matching tag</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">p</span>, tags <span class="op">=</span> <span class="st">"daily"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; analysis view (1 of 4 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  step group depends out state       tags</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   fit model   clean  30  done core,daily</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  step depends out state             tags</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   fit   clean  30  done model,core,daily</span>
 <span class="r-in"><span><span class="fu"><a href="pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">p</span>, tags <span class="op">=</span> <span class="st">"core"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; analysis view (1 of 4 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  step group depends out state       tags</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   fit model   clean  30  done core,daily</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  step depends out state             tags</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   fit   clean  30  done model,core,daily</span>
 <span class="r-in"><span><span class="fu"><a href="pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">p</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"raw"</span>, <span class="st">"report"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; analysis view (2 of 4 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    step group depends        out state   tags</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    load    io          1,2,3,4,5  done    raw</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  report model     fit result: 30  done report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    step depends        out state   tags</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    load          1,2,3,4,5  done io,raw</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  report     fit result: 30  done report</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># --- Split / reduce execution modes ---</span></span></span>
 <span class="r-in"><span><span class="va">q</span> <span class="op">&lt;-</span> <span class="fu"><a href="pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"split-demo"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
@@ -209,12 +191,12 @@ if the new step is inserted at an early position.</p>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">q</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:06.154 UTC]: Start run of pipeflow_pip 'split-demo'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:06.154 UTC]: Step 1/4 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:06.155 UTC]: Step 2/4 split</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:06.156 UTC]: Step 3/4 stats</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:06.161 UTC]: Step 4/4 combine</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-07 15:34:06.163 UTC]: Finished run of pipeflow_pip 'split-demo'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:08.277 UTC]: Start run of pipeflow_pip 'split-demo'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:08.277 UTC]: Step 1/4 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:08.277 UTC]: Step 2/4 split</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:08.279 UTC]: Step 3/4 stats</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:08.285 UTC]: Step 4/4 combine</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-14 13:40:08.286 UTC]: Finished run of pipeflow_pip 'split-demo'</span>
 <span class="r-in"><span><span class="va">q</span><span class="op">[[</span><span class="st">"stats"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span>   <span class="co"># partitioned list — one summary per species</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $setosa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   </span>

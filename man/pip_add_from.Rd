@@ -18,7 +18,7 @@ The updated target pipeline, invisibly.
 }
 \description{
 Copies one step from pipeline \code{y} into pipeline \code{x}, preserving its
-function, parameters, group, tags, and dependency links.
+function, parameters, tags, and dependency links.
 }
 \examples{
 # Build a source pipeline with reusable steps

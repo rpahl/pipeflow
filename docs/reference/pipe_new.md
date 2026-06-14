@@ -60,10 +60,10 @@ p <- pipe_new("myPipe", data = data)
 p |>
   pipe_run() |>
   pipe_get_out("data")
-#> INFO  [2026-06-07 17:33:59.933] Start run of 'myPipe' pipeline:
-#> INFO  [2026-06-07 17:33:59.935] Step 1/1 data
-#> INFO  [2026-06-07 17:33:59.936] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:59.937] Done.
+#> INFO  [2026-06-14 15:39:57.600] Start run of 'myPipe' pipeline:
+#> INFO  [2026-06-14 15:39:57.602] Step 1/1 data
+#> INFO  [2026-06-14 15:39:57.604] Finished execution of steps.
+#> INFO  [2026-06-14 15:39:57.605] Done.
 #>   x y
 #> 1 1 3
 #> 2 2 4
@@ -81,10 +81,10 @@ pipe_get_data(p)
 p |>
   pipe_run() |>
   pipe_get_out("data")
-#> INFO  [2026-06-07 17:33:59.944] Start run of 'myPipe' pipeline:
-#> INFO  [2026-06-07 17:33:59.945] Step 1/1 data
-#> INFO  [2026-06-07 17:33:59.947] Finished execution of steps.
-#> INFO  [2026-06-07 17:33:59.948] Done.
+#> INFO  [2026-06-14 15:39:57.615] Start run of 'myPipe' pipeline:
+#> INFO  [2026-06-14 15:39:57.617] Step 1/1 data
+#> INFO  [2026-06-14 15:39:57.619] Finished execution of steps.
+#> INFO  [2026-06-14 15:39:57.620] Done.
 #>   x y
 #> 1 1 3
 #> 2 2 4

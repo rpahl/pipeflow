@@ -73,43 +73,43 @@ Invisibly returns `x`.
 
 ``` r
 p <- pip_new("demo") |>
-  pip_add("load", \(n = 5) seq_len(n), group = "io", tags = "raw") |>
-  pip_add("square", \(x = ~load) x^2, group = "compute") |>
-  pip_add("total", \(x = ~square) sum(x), group = "compute")
+  pip_add("load", \(n = 5) seq_len(n), tags = c("io", "raw")) |>
+  pip_add("square", \(x = ~load) x^2, tags = "compute") |>
+  pip_add("total", \(x = ~square) sum(x), tags = "compute")
 
-print(p) # core columns: step, group, depends, tags, out, state
+print(p) # core columns: step, depends, tags, out, state
 #> <pipeflow_pip> demo (3 steps)
 #> -----------------------------
-#>      step   group depends    out state tags
-#> 1:   load      io         [NULL]   new  raw
-#> 2: square compute    load [NULL]   new     
-#> 3:  total compute  square [NULL]   new     
+#>      step depends    out state    tags
+#> 1:   load         [NULL]   new  io,raw
+#> 2: square    load [NULL]   new compute
+#> 3:  total  square [NULL]   new compute
 print(p, cols = "all") # all non-hidden columns
 #> <pipeflow_pip> demo (3 steps)
 #> -----------------------------
-#>      step   group           fun    params     signature depends    out state
-#> 1:   load      io <function[1]> <list[1]>       (n = 5)         [NULL]   new
-#> 2: square compute <function[1]> <list[1]>   (x = ~load)    load [NULL]   new
-#> 3:  total compute <function[1]> <list[1]> (x = ~square)  square [NULL]   new
-#>    tags                time locked exec
-#> 1:  raw 2026-06-07 17:34:11  FALSE auto
-#> 2:      2026-06-07 17:34:11  FALSE auto
-#> 3:      2026-06-07 17:34:11  FALSE auto
+#>      step  group           fun    params     signature depends    out state
+#> 1:   load   load <function[1]> <list[1]>       (n = 5)         [NULL]   new
+#> 2: square square <function[1]> <list[1]>   (x = ~load)    load [NULL]   new
+#> 3:  total  total <function[1]> <list[1]> (x = ~square)  square [NULL]   new
+#>       tags                time locked exec
+#> 1:  io,raw 2026-06-14 15:40:20  FALSE auto
+#> 2: compute 2026-06-14 15:40:20  FALSE auto
+#> 3: compute 2026-06-14 15:40:20  FALSE auto
 print(p, rows = 2:3) # print only steps 2 and 3
 #> <pipeflow_pip> demo (3 steps)
 #> -----------------------------
-#>      step   group depends    out state tags
-#> 1: square compute    load [NULL]   new     
-#> 2:  total compute  square [NULL]   new     
+#>      step depends    out state    tags
+#> 1: square    load [NULL]   new compute
+#> 2:  total  square [NULL]   new compute
 p <- pip_new() |>
-  pip_add("s1", \(x = 1) x, group = "io") |>
-  pip_add("s2", \(x = ~s1) x + 1, group = "model")
+  pip_add("s1", \(x = 1) x, tags = "io") |>
+  pip_add("s2", \(x = ~s1) x + 1, tags = "model")
 
 # A view header shows how many steps are selected out of the total
-v <- pip_view(p, filter = list(group = "model"))
+v <- pip_view(p, tags = "model")
 print(v) # "<pipeflow_view> pipe view (1 of 2 steps)"
 #> <pipeflow_view> pipe view (1 of 2 steps)
 #> ----------------------------------------
-#>  step group depends    out state
-#>    s2 model      s1 [NULL]   new
+#>  step depends    out state  tags
+#>    s2      s1 [NULL]   new model
 ```
