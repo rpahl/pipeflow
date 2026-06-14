@@ -120,15 +120,15 @@ inspect the output individually as we did in the previous vignettes.
 ``` r
 
 pip_run(pip)
-# info [2026-06-13 17:23:19.012 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-13 17:23:19.013 UTC]: Step 1/7 data
-# info [2026-06-13 17:23:19.014 UTC]: Step 2/7 data_prep
-# info [2026-06-13 17:23:19.017 UTC]: Step 3/7 data_summary
-# info [2026-06-13 17:23:19.020 UTC]: Step 4/7 data_plot
-# info [2026-06-13 17:23:19.678 UTC]: Step 5/7 model_fit
-# info [2026-06-13 17:23:19.682 UTC]: Step 6/7 model_summary
-# info [2026-06-13 17:23:19.685 UTC]: Step 7/7 model_plot
-# info [2026-06-13 17:23:19.692 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-14 13:41:09.224 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-14 13:41:09.225 UTC]: Step 1/7 data
+# info [2026-06-14 13:41:09.226 UTC]: Step 2/7 data_prep
+# info [2026-06-14 13:41:09.229 UTC]: Step 3/7 data_summary
+# info [2026-06-14 13:41:09.231 UTC]: Step 4/7 data_plot
+# info [2026-06-14 13:41:09.885 UTC]: Step 5/7 model_fit
+# info [2026-06-14 13:41:09.890 UTC]: Step 6/7 model_summary
+# info [2026-06-14 13:41:09.904 UTC]: Step 7/7 model_plot
+# info [2026-06-14 13:41:09.911 UTC]: Finished run of pipeflow_pip 'my-pip'
 
 pip
 # <pipeflow_pip> my-pip (7 steps)
@@ -305,12 +305,12 @@ ensures that any upstream dependencies are run first if needed.
 ``` r
 
 v2 |> pip_run()
-# info [2026-06-13 17:23:21.281 UTC]: Start run of pipeflow_view 'my-pip view view'
-# info [2026-06-13 17:23:21.281 UTC]: Step 1/4 [upstream] data_prep - skipping done step
-# info [2026-06-13 17:23:21.281 UTC]: Step 2/4 [view] data_plot
-# info [2026-06-13 17:23:21.291 UTC]: Step 3/4 [upstream] model_fit
-# info [2026-06-13 17:23:21.296 UTC]: Step 4/4 [view] model_plot
-# info [2026-06-13 17:23:21.304 UTC]: Finished run of pipeflow_view 'my-pip view view'
+# info [2026-06-14 13:41:11.527 UTC]: Start run of pipeflow_view 'my-pip view view'
+# info [2026-06-14 13:41:11.527 UTC]: Step 1/4 [upstream] data_prep - skipping done step
+# info [2026-06-14 13:41:11.527 UTC]: Step 2/4 [view] data_plot
+# info [2026-06-14 13:41:11.538 UTC]: Step 3/4 [upstream] model_fit
+# info [2026-06-14 13:41:11.541 UTC]: Step 4/4 [view] model_plot
+# info [2026-06-14 13:41:11.549 UTC]: Finished run of pipeflow_view 'my-pip view view'
 ```
 
 Having a closer look at the run log, you’ll see which steps were re-run

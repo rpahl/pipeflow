@@ -14,13 +14,10 @@
 <url><loc>https://github.com/rpahl/pipeflow/LICENSE.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/news/index.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/Extract.pipeflow_pip.html</loc></url>
-<url><loc>https://github.com/rpahl/pipeflow/reference/get_depends.html</loc></url>
-<url><loc>https://github.com/rpahl/pipeflow/reference/get_params.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/index.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/length.pipeflow.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/pipeflow-package.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/Pipeline.html</loc></url>
-<url><loc>https://github.com/rpahl/pipeflow/reference/pipelineAliases.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/pipe_add.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/pipe_append.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/pipe_append_to_step_names.html</loc></url>
@@ -32,7 +29,6 @@
 <url><loc>https://github.com/rpahl/pipeflow/reference/pipe_get_graph.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/pipe_get_out.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/pipe_get_params.html</loc></url>
-<url><loc>https://github.com/rpahl/pipeflow/reference/pipe_get_step.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/pipe_insert.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/pipe_length.html</loc></url>
 <url><loc>https://github.com/rpahl/pipeflow/reference/pipe_lock_unlock.html</loc></url>

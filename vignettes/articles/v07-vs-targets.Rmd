@@ -134,7 +134,10 @@ tar_dir({
     p <- pip_new("walkthrough") |>
         pip_add("data",  \(file = "data.csv") get_data(file)) |>
         pip_add("model", \(data = ~data) fit_model(data)) |>
-        pip_add("plot",  \(model = ~model, data = ~data) plot_model(model, data))
+        pip_add(
+            "plot",
+            \(model = ~model, data = ~data) plot_model(model, data)
+        )
 
     message("\nProof of principle full run (no skips)")
     pip_run(p)
@@ -279,7 +282,10 @@ pf_df <- do.call(rbind, lapply(seq_along(pf_times), function(i) {
     data.frame(expr = names(pf_times)[i], time = pf_times[[i]])
 }))
 tar_df <- do.call(rbind, lapply(seq_along(tar_times), function(i) {
-    data.frame(expr = paste0("tar n=", pipeline_sizes[i]), time = tar_times[[i]])
+    data.frame(
+        expr = paste0("tar n=", pipeline_sizes[i]),
+        time = tar_times[[i]]
+    )
 }))
 
 d_pf  <- cbind(pf_df,  package = "pipeflow")
@@ -331,7 +337,8 @@ make_branch_pip <- function(n) {
     invisible(pip)
 }
 
-p4 <- make_branch_pip(4); pip_run(p4)
+p4 <- make_branch_pip(4)
+pip_run(p4)
 stopifnot(p4[["sink", "out"]] == 8)
 ```
 

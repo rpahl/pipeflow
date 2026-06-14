@@ -115,10 +115,10 @@ pip$pipeline
 # 4:                     plot                     plot <function[1]> <list[2]>
 #                                 signature depends    out  state   tags                time locked
 #                                    <char>  <list> <list> <char> <list>              <POSc> <lgcl>
-# 1:                          (data = NULL)         [NULL]    new        2026-06-13 19:23:40  FALSE
-# 2: (data = ~data, xVar = "x", yVar = "y")    data [NULL]    new        2026-06-13 19:23:40  FALSE
-# 3:                           (fit = ~fit)     fit [NULL]    new        2026-06-13 19:23:40  FALSE
-# 4:     (fit = ~fit, pointColor = "black")     fit [NULL]    new        2026-06-13 19:23:40  FALSE
+# 1:                          (data = NULL)         [NULL]    new        2026-06-14 15:41:31  FALSE
+# 2: (data = ~data, xVar = "x", yVar = "y")    data [NULL]    new        2026-06-14 15:41:31  FALSE
+# 3:                           (fit = ~fit)     fit [NULL]    new        2026-06-14 15:41:31  FALSE
+# 4:     (fit = ~fit, pointColor = "black")     fit [NULL]    new        2026-06-14 15:41:31  FALSE
 #      exec .nodeId    .indeps
 #    <char>   <int>     <list>
 # 1:   auto       0       data
@@ -136,12 +136,12 @@ First, we set some data and parameters and run the pipeline as usual.
 pip |> pip_set_params(list(data = airquality, xVar = "Ozone", yVar = "Temp"))
 
 pip_run(pip)
-# info [2026-06-13 17:23:41.111 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-13 17:23:41.112 UTC]: Step 1/4 data
-# info [2026-06-13 17:23:41.113 UTC]: Step 2/4 fit
-# info [2026-06-13 17:23:41.116 UTC]: Step 3/4 residual_shapiro_p_value
-# info [2026-06-13 17:23:41.118 UTC]: Step 4/4 plot
-# info [2026-06-13 17:23:41.815 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:32.147 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:32.147 UTC]: Step 1/4 data
+# info [2026-06-14 13:41:32.149 UTC]: Step 2/4 fit
+# info [2026-06-14 13:41:32.152 UTC]: Step 3/4 residual_shapiro_p_value
+# info [2026-06-14 13:41:32.155 UTC]: Step 4/4 plot
+# info [2026-06-14 13:41:32.996 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip[["plot", "out"]]
 ```
@@ -164,12 +164,12 @@ if (pip[["residual_shapiro_p_value", "out"]] < 0.05) {
         pip_set_params(list(pointColor = "red")) |>
         pip_run()
 }
-# info [2026-06-13 17:23:42.122 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-13 17:23:42.123 UTC]: Step 1/4 data - skipping done step
-# info [2026-06-13 17:23:42.123 UTC]: Step 2/4 fit - skipping done step
-# info [2026-06-13 17:23:42.123 UTC]: Step 3/4 residual_shapiro_p_value - skipping done step
-# info [2026-06-13 17:23:42.123 UTC]: Step 4/4 plot
-# info [2026-06-13 17:23:42.171 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:33.321 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:33.321 UTC]: Step 1/4 data - skipping done step
+# info [2026-06-14 13:41:33.321 UTC]: Step 2/4 fit - skipping done step
+# info [2026-06-14 13:41:33.322 UTC]: Step 3/4 residual_shapiro_p_value - skipping done step
+# info [2026-06-14 13:41:33.322 UTC]: Step 4/4 plot
+# info [2026-06-14 13:41:33.366 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip[["plot", "out"]]
 ```
@@ -209,12 +209,12 @@ Now we just have to make sure to set the `.self` parameter.
 ``` r
 
 pip_run(pip)
-# info [2026-06-13 17:23:42.670 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-13 17:23:42.671 UTC]: Step 1/4 data - skipping done step
-# info [2026-06-13 17:23:42.671 UTC]: Step 2/4 fit - skipping done step
-# info [2026-06-13 17:23:42.671 UTC]: Step 3/4 residual_shapiro_p_value
-# info [2026-06-13 17:23:42.675 UTC]: Step 4/4 plot
-# info [2026-06-13 17:23:42.713 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:33.694 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:33.695 UTC]: Step 1/4 data - skipping done step
+# info [2026-06-14 13:41:33.695 UTC]: Step 2/4 fit - skipping done step
+# info [2026-06-14 13:41:33.695 UTC]: Step 3/4 residual_shapiro_p_value
+# info [2026-06-14 13:41:33.699 UTC]: Step 4/4 plot
+# info [2026-06-14 13:41:33.759 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip[["plot", "out"]]
 ```
@@ -246,12 +246,12 @@ This pipeline just adds 1, 2, and 3 to the initial value, respectively.
 ``` r
 
 pip_run(pip)
-# info [2026-06-13 17:23:42.990 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-13 17:23:42.990 UTC]: Step 1/4 init
-# info [2026-06-13 17:23:42.991 UTC]: Step 2/4 f1
-# info [2026-06-13 17:23:42.993 UTC]: Step 3/4 f2
-# info [2026-06-13 17:23:42.994 UTC]: Step 4/4 f3
-# info [2026-06-13 17:23:42.995 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.095 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.095 UTC]: Step 1/4 init
+# info [2026-06-14 13:41:34.096 UTC]: Step 2/4 f1
+# info [2026-06-14 13:41:34.100 UTC]: Step 3/4 f2
+# info [2026-06-14 13:41:34.103 UTC]: Step 4/4 f3
+# info [2026-06-14 13:41:34.112 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip
 # <pipeflow_pip> my-pipeline (4 steps)
@@ -298,12 +298,12 @@ To see this, let’s try it with an input of 15.
 pip |>
     pip_set_params(list(xInit = 15)) |>
     pip_run()
-# info [2026-06-13 17:23:43.125 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-13 17:23:43.126 UTC]: Step 1/4 init
-# info [2026-06-13 17:23:43.127 UTC]: Step 2/4 f1
-# info [2026-06-13 17:23:43.130 UTC]: Step 3/4 f2
-# info [2026-06-13 17:23:43.135 UTC]: Step 4/4 f3
-# info [2026-06-13 17:23:43.137 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.283 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.283 UTC]: Step 1/4 init
+# info [2026-06-14 13:41:34.284 UTC]: Step 2/4 f1
+# info [2026-06-14 13:41:34.287 UTC]: Step 3/4 f2
+# info [2026-06-14 13:41:34.291 UTC]: Step 4/4 f3
+# info [2026-06-14 13:41:34.293 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip
 # <pipeflow_pip> my-pipeline (4 steps)
@@ -324,7 +324,7 @@ last step.
 pip[["f3", "fun"]]
 # function (x = ~f1) 
 # x * 3
-# <environment: 0x000001dc328b3cf0>
+# <environment: 0x00000136cecb4780>
 ```
 
 #### Insert and remove steps
@@ -378,12 +378,12 @@ of 0 to see the original output.
 ``` r
 
 pip_run(pip)
-# info [2026-06-13 17:23:43.319 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-13 17:23:43.320 UTC]: Step 1/4 init
-# info [2026-06-13 17:23:43.320 UTC]: Step 2/4 f1
-# info [2026-06-13 17:23:43.322 UTC]: Step 3/4 f2
-# info [2026-06-13 17:23:43.323 UTC]: Step 4/4 f3
-# info [2026-06-13 17:23:43.325 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.461 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.461 UTC]: Step 1/4 init
+# info [2026-06-14 13:41:34.462 UTC]: Step 2/4 f1
+# info [2026-06-14 13:41:34.463 UTC]: Step 3/4 f2
+# info [2026-06-14 13:41:34.465 UTC]: Step 4/4 f3
+# info [2026-06-14 13:41:34.467 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip
 # <pipeflow_pip> my-pipeline (4 steps)
@@ -402,12 +402,12 @@ Next, we set the initial value to 11 to trigger the changes.
 pip |>
     pip_set_params(list(xInit = 11)) |>
     pip_run()
-# info [2026-06-13 17:23:43.383 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-13 17:23:43.383 UTC]: Step 1/4 init
-# info [2026-06-13 17:23:43.383 UTC]: Step 2/4 f1
-# info [2026-06-13 17:23:43.385 UTC]: Step 3/4 f2
-# info [2026-06-13 17:23:43.405 UTC]: Step 4/4 f3
-# info [2026-06-13 17:23:43.407 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.526 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.527 UTC]: Step 1/4 init
+# info [2026-06-14 13:41:34.527 UTC]: Step 2/4 f1
+# info [2026-06-14 13:41:34.529 UTC]: Step 3/4 f2
+# info [2026-06-14 13:41:34.551 UTC]: Step 4/4 f3
+# info [2026-06-14 13:41:34.553 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip
 # <pipeflow_pip> my-pipeline (5 steps)
@@ -433,13 +433,13 @@ to re-run the pipeline.
 pip |>
     pip_set_params(list(xInit = 11)) |>
     pip_run()
-# info [2026-06-13 17:23:43.466 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-13 17:23:43.466 UTC]: Step 1/5 init
-# info [2026-06-13 17:23:43.466 UTC]: Step 2/5 f1
-# info [2026-06-13 17:23:43.468 UTC]: Step 3/5 f2a
-# info [2026-06-13 17:23:43.469 UTC]: Step 4/5 f2b
-# info [2026-06-13 17:23:43.471 UTC]: Step 5/5 f3
-# info [2026-06-13 17:23:43.472 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.616 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.617 UTC]: Step 1/5 init
+# info [2026-06-14 13:41:34.617 UTC]: Step 2/5 f1
+# info [2026-06-14 13:41:34.619 UTC]: Step 3/5 f2a
+# info [2026-06-14 13:41:34.620 UTC]: Step 4/5 f2b
+# info [2026-06-14 13:41:34.622 UTC]: Step 5/5 f3
+# info [2026-06-14 13:41:34.623 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip
 # <pipeflow_pip> my-pipeline (5 steps)
@@ -507,18 +507,18 @@ argument to `TRUE` and have a closer look at the log.
 pip |>
     pip_set_params(list(xInit = 11)) |>
     pip_run(recursive = TRUE)
-# info [2026-06-13 17:23:43.593 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-13 17:23:43.594 UTC]: Step 1/4 init
-# info [2026-06-13 17:23:43.594 UTC]: Step 2/4 f1
-# info [2026-06-13 17:23:43.596 UTC]: Step 3/4 f2
-# info [2026-06-13 17:23:43.611 UTC]: Abort pipeline execution and restart on returned pipeline.
-# info [2026-06-13 17:23:43.612 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-13 17:23:43.612 UTC]: Step 1/5 init
-# info [2026-06-13 17:23:43.612 UTC]: Step 2/5 f1
-# info [2026-06-13 17:23:43.614 UTC]: Step 3/5 f2a
-# info [2026-06-13 17:23:43.615 UTC]: Step 4/5 f2b
-# info [2026-06-13 17:23:43.617 UTC]: Step 5/5 f3
-# info [2026-06-13 17:23:43.618 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.741 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.741 UTC]: Step 1/4 init
+# info [2026-06-14 13:41:34.742 UTC]: Step 2/4 f1
+# info [2026-06-14 13:41:34.743 UTC]: Step 3/4 f2
+# info [2026-06-14 13:41:34.758 UTC]: Abort pipeline execution and restart on returned pipeline.
+# info [2026-06-14 13:41:34.758 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-14 13:41:34.759 UTC]: Step 1/5 init
+# info [2026-06-14 13:41:34.759 UTC]: Step 2/5 f1
+# info [2026-06-14 13:41:34.761 UTC]: Step 3/5 f2a
+# info [2026-06-14 13:41:34.762 UTC]: Step 4/5 f2b
+# info [2026-06-14 13:41:34.763 UTC]: Step 5/5 f3
+# info [2026-06-14 13:41:34.765 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 ```
 
 As you can see, the run is now automatically aborted right after the

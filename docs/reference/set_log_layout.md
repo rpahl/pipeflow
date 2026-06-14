@@ -29,11 +29,11 @@ invisibly returns a `Logger` object
 p <- Pipeline$new("pipe", data = 1:2)
 p$add("add1", \(data = ~data, x = 1) x + data)
 p$run()
-#> INFO  [2026-06-13 19:22:33.690] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-13 19:22:33.691] Step 1/2 data
-#> INFO  [2026-06-13 19:22:33.693] Step 2/2 add1
-#> INFO  [2026-06-13 19:22:33.695] Finished execution of steps.
-#> INFO  [2026-06-13 19:22:33.695] Done.
+#> INFO  [2026-06-14 15:40:21.235] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-14 15:40:21.237] Step 1/2 data
+#> INFO  [2026-06-14 15:40:21.239] Step 2/2 add1
+#> INFO  [2026-06-14 15:40:21.240] Finished execution of steps.
+#> INFO  [2026-06-14 15:40:21.241] Done.
 
 lg <- set_log_layout("json")
 print(lg)
@@ -43,17 +43,17 @@ print(lg)
 #>   [[1]]: <AppenderConsole> [all] -> console
 
 p$run()
-#> {"application":"pipeflow","level":"info","time":"2026-06-13 17:22:33.715 UTC","message":"Start run of 'pipe' pipeline:"}
-#> {"application":"pipeflow","level":"info","time":"2026-06-13 17:22:33.716 UTC","message":"Step 1/2 data - skip 'done' step"}
-#> {"application":"pipeflow","level":"info","time":"2026-06-13 17:22:33.722 UTC","message":"Step 2/2 add1 - skip 'done' step"}
-#> {"application":"pipeflow","level":"info","time":"2026-06-13 17:22:33.723 UTC","message":"Finished execution of steps."}
-#> {"application":"pipeflow","level":"info","time":"2026-06-13 17:22:33.723 UTC","message":"Done."}
+#> {"application":"pipeflow","level":"info","time":"2026-06-14 13:40:21.267 UTC","message":"Start run of 'pipe' pipeline:"}
+#> {"application":"pipeflow","level":"info","time":"2026-06-14 13:40:21.268 UTC","message":"Step 1/2 data - skip 'done' step"}
+#> {"application":"pipeflow","level":"info","time":"2026-06-14 13:40:21.273 UTC","message":"Step 2/2 add1 - skip 'done' step"}
+#> {"application":"pipeflow","level":"info","time":"2026-06-14 13:40:21.276 UTC","message":"Finished execution of steps."}
+#> {"application":"pipeflow","level":"info","time":"2026-06-14 13:40:21.276 UTC","message":"Done."}
 
 set_log_layout("text")
 p$run()
-#> INFO  [2026-06-13 19:22:33.726] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-13 19:22:33.728] Step 1/2 data - skip 'done' step
-#> INFO  [2026-06-13 19:22:33.729] Step 2/2 add1 - skip 'done' step
-#> INFO  [2026-06-13 19:22:33.729] Finished execution of steps.
-#> INFO  [2026-06-13 19:22:33.730] Done.
+#> INFO  [2026-06-14 15:40:21.279] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-14 15:40:21.281] Step 1/2 data - skip 'done' step
+#> INFO  [2026-06-14 15:40:21.282] Step 2/2 add1 - skip 'done' step
+#> INFO  [2026-06-14 15:40:21.282] Finished execution of steps.
+#> INFO  [2026-06-14 15:40:21.283] Done.
 ```

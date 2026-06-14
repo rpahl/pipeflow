@@ -40,12 +40,12 @@ p <- pipe_new("pipe", data = 1:2)
 pipe_add(p, "add1", \(x = ~data) x + 1)
 pipe_add(p, "add2", \(x = ~data, y = ~add1) x + y)
 pipe_run(p)
-#> INFO  [2026-06-13 19:22:13.082] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-13 19:22:13.083] Step 1/3 data
-#> INFO  [2026-06-13 19:22:13.086] Step 2/3 add1
-#> INFO  [2026-06-13 19:22:13.088] Step 3/3 add2
-#> INFO  [2026-06-13 19:22:13.089] Finished execution of steps.
-#> INFO  [2026-06-13 19:22:13.090] Done.
+#> INFO  [2026-06-14 15:39:53.369] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-14 15:39:53.370] Step 1/3 data
+#> INFO  [2026-06-14 15:39:53.373] Step 2/3 add1
+#> INFO  [2026-06-14 15:39:53.376] Step 3/3 add2
+#> INFO  [2026-06-14 15:39:53.378] Finished execution of steps.
+#> INFO  [2026-06-14 15:39:53.378] Done.
 pipe_get_out(p, "add1")
 #> [1] 2 3
 pipe_get_out(p, "add2")

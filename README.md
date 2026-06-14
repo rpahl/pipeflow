@@ -77,11 +77,11 @@ p
 # 3:   total squared [NULL]   new
 
 pip_run(p)
-# info [2026-06-14 13:15:20.128 UTC]: Start run of pipeflow_pip 'demo'
-# info [2026-06-14 13:15:20.129 UTC]: Step 1/3 numbers
-# info [2026-06-14 13:15:20.131 UTC]: Step 2/3 squared
-# info [2026-06-14 13:15:20.133 UTC]: Step 3/3 total
-# info [2026-06-14 13:15:20.135 UTC]: Finished run of pipeflow_pip 'demo'
+# info [2026-06-14 13:38:28.463 UTC]: Start run of pipeflow_pip 'demo'
+# info [2026-06-14 13:38:28.463 UTC]: Step 1/3 numbers
+# info [2026-06-14 13:38:28.465 UTC]: Step 2/3 squared
+# info [2026-06-14 13:38:28.468 UTC]: Step 3/3 total
+# info [2026-06-14 13:38:28.469 UTC]: Finished run of pipeflow_pip 'demo'
 
 pip_collect_out(p)
 # $numbers
@@ -114,5 +114,8 @@ below:
   reduce](https://rpahl.github.io/pipeflow/articles/v05-split-map-reduce.html)
 - [Recursive
   self-modification](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
+
+### Benchmarks
+
 - [pipeflow vs
   targets](https://rpahl.github.io/pipeflow/articles/articles/v07-vs-targets.html)

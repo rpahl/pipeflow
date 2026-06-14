@@ -79,18 +79,18 @@ p |>
   pipe_run() |>
   pipe_collect_out() |>
   str()
-#> INFO  [2026-06-13 19:22:22.685] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-13 19:22:22.687] Step 1/9 data.a
-#> INFO  [2026-06-13 19:22:22.689] Step 2/9 add1.a
-#> INFO  [2026-06-13 19:22:22.692] Step 3/9 mult.a
-#> INFO  [2026-06-13 19:22:22.694] Step 4/9 data.b
-#> INFO  [2026-06-13 19:22:22.696] Step 5/9 add1.b
-#> INFO  [2026-06-13 19:22:22.699] Step 6/9 mult.b
-#> INFO  [2026-06-13 19:22:22.701] Step 7/9 data.c
-#> INFO  [2026-06-13 19:22:22.703] Step 8/9 add1.c
-#> INFO  [2026-06-13 19:22:22.706] Step 9/9 mult.c
-#> INFO  [2026-06-13 19:22:22.707] Finished execution of steps.
-#> INFO  [2026-06-13 19:22:22.708] Done.
+#> INFO  [2026-06-14 15:40:05.111] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-14 15:40:05.113] Step 1/9 data.a
+#> INFO  [2026-06-14 15:40:05.116] Step 2/9 add1.a
+#> INFO  [2026-06-14 15:40:05.119] Step 3/9 mult.a
+#> INFO  [2026-06-14 15:40:05.123] Step 4/9 data.b
+#> INFO  [2026-06-14 15:40:05.126] Step 5/9 add1.b
+#> INFO  [2026-06-14 15:40:05.129] Step 6/9 mult.b
+#> INFO  [2026-06-14 15:40:05.131] Step 7/9 data.c
+#> INFO  [2026-06-14 15:40:05.134] Step 8/9 add1.c
+#> INFO  [2026-06-14 15:40:05.137] Step 9/9 mult.c
+#> INFO  [2026-06-14 15:40:05.138] Finished execution of steps.
+#> INFO  [2026-06-14 15:40:05.139] Done.
 #> List of 3
 #>  $ a:List of 2
 #>   ..$ add1.a: num 2
@@ -124,18 +124,18 @@ p |>
   pipe_run() |>
   pipe_collect_out() |>
   str()
-#> INFO  [2026-06-13 19:22:22.742] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-13 19:22:22.743] Step 1/9 data.a
-#> INFO  [2026-06-13 19:22:22.746] Step 2/9 add1.a
-#> INFO  [2026-06-13 19:22:22.749] Step 3/9 mult.a
-#> INFO  [2026-06-13 19:22:22.751] Step 4/9 data.b
-#> INFO  [2026-06-13 19:22:22.754] Step 5/9 add1.b
-#> INFO  [2026-06-13 19:22:22.756] Step 6/9 mult.b
-#> INFO  [2026-06-13 19:22:22.762] Step 7/9 data.c
-#> INFO  [2026-06-13 19:22:22.765] Step 8/9 add1.c
-#> INFO  [2026-06-13 19:22:22.767] Step 9/9 mult.c
-#> INFO  [2026-06-13 19:22:22.769] Finished execution of steps.
-#> INFO  [2026-06-13 19:22:22.769] Done.
+#> INFO  [2026-06-14 15:40:05.178] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-14 15:40:05.179] Step 1/9 data.a
+#> INFO  [2026-06-14 15:40:05.182] Step 2/9 add1.a
+#> INFO  [2026-06-14 15:40:05.184] Step 3/9 mult.a
+#> INFO  [2026-06-14 15:40:05.186] Step 4/9 data.b
+#> INFO  [2026-06-14 15:40:05.189] Step 5/9 add1.b
+#> INFO  [2026-06-14 15:40:05.192] Step 6/9 mult.b
+#> INFO  [2026-06-14 15:40:05.194] Step 7/9 data.c
+#> INFO  [2026-06-14 15:40:05.197] Step 8/9 add1.c
+#> INFO  [2026-06-14 15:40:05.199] Step 9/9 mult.c
+#> INFO  [2026-06-14 15:40:05.200] Finished execution of steps.
+#> INFO  [2026-06-14 15:40:05.201] Done.
 #> List of 6
 #>  $ add1.a: num 2
 #>  $ mult.a: num 2
@@ -183,19 +183,19 @@ p |>
   pipe_run() |>
   pipe_collect_out() |>
   str()
-#> INFO  [2026-06-13 19:22:22.811] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-13 19:22:22.812] Step 1/10 data.a
-#> INFO  [2026-06-13 19:22:22.816] Step 2/10 add1.a
-#> INFO  [2026-06-13 19:22:22.818] Step 3/10 mult.a
-#> INFO  [2026-06-13 19:22:22.820] Step 4/10 data.b
-#> INFO  [2026-06-13 19:22:22.824] Step 5/10 add1.b
-#> INFO  [2026-06-13 19:22:22.826] Step 6/10 mult.b
-#> INFO  [2026-06-13 19:22:22.829] Step 7/10 data.c
-#> INFO  [2026-06-13 19:22:22.832] Step 8/10 add1.c
-#> INFO  [2026-06-13 19:22:22.835] Step 9/10 mult.c
-#> INFO  [2026-06-13 19:22:22.837] Step 10/10 average_result
-#> INFO  [2026-06-13 19:22:22.838] Finished execution of steps.
-#> INFO  [2026-06-13 19:22:22.839] Done.
+#> INFO  [2026-06-14 15:40:05.241] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-14 15:40:05.243] Step 1/10 data.a
+#> INFO  [2026-06-14 15:40:05.246] Step 2/10 add1.a
+#> INFO  [2026-06-14 15:40:05.249] Step 3/10 mult.a
+#> INFO  [2026-06-14 15:40:05.251] Step 4/10 data.b
+#> INFO  [2026-06-14 15:40:05.255] Step 5/10 add1.b
+#> INFO  [2026-06-14 15:40:05.258] Step 6/10 mult.b
+#> INFO  [2026-06-14 15:40:05.260] Step 7/10 data.c
+#> INFO  [2026-06-14 15:40:05.267] Step 8/10 add1.c
+#> INFO  [2026-06-14 15:40:05.270] Step 9/10 mult.c
+#> INFO  [2026-06-14 15:40:05.272] Step 10/10 average_result
+#> INFO  [2026-06-14 15:40:05.274] Finished execution of steps.
+#> INFO  [2026-06-14 15:40:05.275] Done.
 #> List of 1
 #>  $ average_result: num 6.67
 ```

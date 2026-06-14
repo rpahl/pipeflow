@@ -65,6 +65,8 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
     <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul>
 </li>
@@ -298,7 +300,10 @@ is a true cold start.</p>
 <span>    <span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"walkthrough"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>        <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"data"</span>,  \<span class="op">(</span><span class="va">file</span> <span class="op">=</span> <span class="st">"data.csv"</span><span class="op">)</span> <span class="fu">get_data</span><span class="op">(</span><span class="va">file</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>        <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"model"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="fu">fit_model</span><span class="op">(</span><span class="va">data</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"plot"</span>,  \<span class="op">(</span><span class="va">model</span> <span class="op">=</span> <span class="op">~</span><span class="va">model</span>, <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="fu">plot_model</span><span class="op">(</span><span class="va">model</span>, <span class="va">data</span><span class="op">)</span><span class="op">)</span></span>
+<span>        <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
+<span>            <span class="st">"plot"</span>,</span>
+<span>            \<span class="op">(</span><span class="va">model</span> <span class="op">=</span> <span class="op">~</span><span class="va">model</span>, <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="fu">plot_model</span><span class="op">(</span><span class="va">model</span>, <span class="va">data</span><span class="op">)</span></span>
+<span>        <span class="op">)</span></span>
 <span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"\nProof of principle full run (no skips)"</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
@@ -310,18 +315,18 @@ is a true cold start.</p>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span><span class="co"># </span></span>
 <span><span class="co"># Proof of principle full run (no skips)</span></span>
-<span><span class="co"># info [2026-06-13 17:23:53.961 UTC]: Start run of pipeflow_pip 'walkthrough'</span></span>
-<span><span class="co"># info [2026-06-13 17:23:53.961 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-06-13 17:23:53.965 UTC]: Step 2/3 model</span></span>
-<span><span class="co"># info [2026-06-13 17:23:53.970 UTC]: Step 3/3 plot</span></span>
-<span><span class="co"># info [2026-06-13 17:23:53.997 UTC]: Finished run of pipeflow_pip 'walkthrough'</span></span>
+<span><span class="co"># info [2026-06-14 13:41:45.794 UTC]: Start run of pipeflow_pip 'walkthrough'</span></span>
+<span><span class="co"># info [2026-06-14 13:41:45.794 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-06-14 13:41:45.799 UTC]: Step 2/3 model</span></span>
+<span><span class="co"># info [2026-06-14 13:41:45.804 UTC]: Step 3/3 plot</span></span>
+<span><span class="co"># info [2026-06-14 13:41:45.832 UTC]: Finished run of pipeflow_pip 'walkthrough'</span></span>
 <span><span class="co"># </span></span>
 <span><span class="co"># Proof of principle skipped run</span></span>
-<span><span class="co"># info [2026-06-13 17:23:54.418 UTC]: Start run of pipeflow_pip 'walkthrough'</span></span>
-<span><span class="co"># info [2026-06-13 17:23:54.418 UTC]: Step 1/3 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 17:23:54.419 UTC]: Step 2/3 model - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 17:23:54.419 UTC]: Step 3/3 plot - skipping done step</span></span>
-<span><span class="co"># info [2026-06-13 17:23:54.419 UTC]: Finished run of pipeflow_pip 'walkthrough'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-14 13:41:46.249 UTC]: Start run of pipeflow_pip 'walkthrough'</span></span>
+<span><span class="co"># info [2026-06-14 13:41:46.249 UTC]: Step 1/3 data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-14 13:41:46.249 UTC]: Step 2/3 model - skipping done step</span></span>
+<span><span class="co"># info [2026-06-14 13:41:46.249 UTC]: Step 3/3 plot - skipping done step</span></span>
+<span><span class="co"># info [2026-06-14 13:41:46.250 UTC]: Finished run of pipeflow_pip 'walkthrough'</span></span></code></pre></div>
 </div>
 <div class="section level4">
 <h4 id="targets-pipeline">targets pipeline<a class="anchor" aria-label="anchor" href="#targets-pipeline"></a>
@@ -357,19 +362,19 @@ is a true cold start.</p>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span><span class="co"># </span></span>
 <span><span class="co"># Proof of principle full run (no skips)</span></span>
-<span><span class="co"># 2026-06-13 19:23:54.57 dispatched target file</span></span>
-<span><span class="co"># 2026-06-13 19:23:54.58 completed target file [0ms, 3.87 kB]</span></span>
-<span><span class="co"># 2026-06-13 19:23:54.58 dispatched target data</span></span>
-<span><span class="co"># 2026-06-13 19:23:54.60 completed target data [0ms, 1.38 kB]</span></span>
-<span><span class="co"># 2026-06-13 19:23:54.62 dispatched target model</span></span>
-<span><span class="co"># 2026-06-13 19:23:54.63 completed target model [0ms, 111 B]</span></span>
-<span><span class="co"># 2026-06-13 19:23:54.63 dispatched target plot</span></span>
-<span><span class="co"># 2026-06-13 19:23:54.68 completed target plot [0ms, 114.10 kB]</span></span>
-<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-13 19:23:54.69 ended pipeline [170ms, 4 completed, 0 skipped]</span></span>
+<span><span class="co"># 2026-06-14 15:41:46.41 dispatched target file</span></span>
+<span><span class="co"># 2026-06-14 15:41:46.42 completed target file [0ms, 3.87 kB]</span></span>
+<span><span class="co"># 2026-06-14 15:41:46.42 dispatched target data</span></span>
+<span><span class="co"># 2026-06-14 15:41:46.44 completed target data [0ms, 1.38 kB]</span></span>
+<span><span class="co"># 2026-06-14 15:41:46.46 dispatched target model</span></span>
+<span><span class="co"># 2026-06-14 15:41:46.47 completed target model [0ms, 111 B]</span></span>
+<span><span class="co"># 2026-06-14 15:41:46.47 dispatched target plot</span></span>
+<span><span class="co"># 2026-06-14 15:41:46.52 completed target plot [20ms, 114.10 kB]</span></span>
+<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-14 15:41:46.53 ended pipeline [170ms, 4 completed, 0 skipped]</span></span>
 <span><span class="co"># </span></span>
 <span><span class="co"># Proof of principle skipped run</span></span>
-<span><span class="co"># 2026-06-13 19:24:27.26 skipped 1 targets</span></span>
-<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-13 19:24:27.27 skipped pipeline [81ms, 4 skipped]</span></span></code></pre></div>
+<span><span class="co"># 2026-06-14 15:42:21.42 skipped 1 targets</span></span>
+<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-14 15:42:21.43 skipped pipeline [31ms, 4 skipped]</span></span></code></pre></div>
 </div>
 <div class="section level4">
 <h4 id="runtimes">Runtimes<a class="anchor" aria-label="anchor" href="#runtimes"></a>
@@ -401,12 +406,12 @@ show how the per-step cost scales.</p>
 <span><span class="co"># Verify</span></span>
 <span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu">create_linear_pip</span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-13 17:24:29.395 UTC]: Start run of pipeflow_pip 'linear'</span></span>
-<span><span class="co"># info [2026-06-13 17:24:29.396 UTC]: Step 1/4 s0</span></span>
-<span><span class="co"># info [2026-06-13 17:24:29.396 UTC]: Step 2/4 s1</span></span>
-<span><span class="co"># info [2026-06-13 17:24:29.398 UTC]: Step 3/4 s2</span></span>
-<span><span class="co"># info [2026-06-13 17:24:29.400 UTC]: Step 4/4 s3</span></span>
-<span><span class="co"># info [2026-06-13 17:24:29.401 UTC]: Finished run of pipeflow_pip 'linear'</span></span>
+<span><span class="co"># info [2026-06-14 13:42:23.567 UTC]: Start run of pipeflow_pip 'linear'</span></span>
+<span><span class="co"># info [2026-06-14 13:42:23.567 UTC]: Step 1/4 s0</span></span>
+<span><span class="co"># info [2026-06-14 13:42:23.568 UTC]: Step 2/4 s1</span></span>
+<span><span class="co"># info [2026-06-14 13:42:23.569 UTC]: Step 3/4 s2</span></span>
+<span><span class="co"># info [2026-06-14 13:42:23.571 UTC]: Step 4/4 s3</span></span>
+<span><span class="co"># info [2026-06-14 13:42:23.572 UTC]: Finished run of pipeflow_pip 'linear'</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">p</span><span class="op">[[</span><span class="st">"s3"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level4">
@@ -431,15 +436,15 @@ show how the per-step cost scales.</p>
 <span>    <span class="fu">tar_make_here</span><span class="op">(</span>reporter <span class="op">=</span> <span class="st">"timestamp"</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu">tar_read</span><span class="op">(</span><span class="va">s3</span><span class="op">)</span> <span class="op">==</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
-<span><span class="co"># 2026-06-13 19:24:29.50 dispatched target s0</span></span>
-<span><span class="co"># 2026-06-13 19:24:29.50 completed target s0 [0ms, 49 B]</span></span>
-<span><span class="co"># 2026-06-13 19:24:29.50 dispatched target s1</span></span>
-<span><span class="co"># 2026-06-13 19:24:29.51 completed target s1 [0ms, 51 B]</span></span>
-<span><span class="co"># 2026-06-13 19:24:29.51 dispatched target s2</span></span>
-<span><span class="co"># 2026-06-13 19:24:29.52 completed target s2 [0ms, 50 B]</span></span>
-<span><span class="co"># 2026-06-13 19:24:29.52 dispatched target s3</span></span>
-<span><span class="co"># 2026-06-13 19:24:29.52 completed target s3 [0ms, 51 B]</span></span>
-<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-13 19:24:29.53 ended pipeline [61ms, 4 completed, 0 skipped]</span></span>
+<span><span class="co"># 2026-06-14 15:42:23.66 dispatched target s0</span></span>
+<span><span class="co"># 2026-06-14 15:42:23.67 completed target s0 [0ms, 49 B]</span></span>
+<span><span class="co"># 2026-06-14 15:42:23.67 dispatched target s1</span></span>
+<span><span class="co"># 2026-06-14 15:42:23.67 completed target s1 [0ms, 51 B]</span></span>
+<span><span class="co"># 2026-06-14 15:42:23.67 dispatched target s2</span></span>
+<span><span class="co"># 2026-06-14 15:42:23.68 completed target s2 [0ms, 50 B]</span></span>
+<span><span class="co"># 2026-06-14 15:42:23.68 dispatched target s3</span></span>
+<span><span class="co"># 2026-06-14 15:42:23.69 completed target s3 [0ms, 51 B]</span></span>
+<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-14 15:42:23.69 ended pipeline [40ms, 4 completed, 0 skipped]</span></span>
 <span><span class="co"># </span></span></code></pre></div>
 </div>
 <div class="section level4">
@@ -481,15 +486,16 @@ independently once the source completes.</p>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/invisible.html" class="external-link">invisible</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">p4</span> <span class="op">&lt;-</span> <span class="fu">make_branch_pip</span><span class="op">(</span><span class="fl">4</span><span class="op">)</span>; <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p4</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-13 17:25:35.708 UTC]: Start run of pipeflow_pip 'dag'</span></span>
-<span><span class="co"># info [2026-06-13 17:25:35.708 UTC]: Step 1/6 source</span></span>
-<span><span class="co"># info [2026-06-13 17:25:35.708 UTC]: Step 2/6 b1</span></span>
-<span><span class="co"># info [2026-06-13 17:25:35.710 UTC]: Step 3/6 b2</span></span>
-<span><span class="co"># info [2026-06-13 17:25:35.712 UTC]: Step 4/6 b3</span></span>
-<span><span class="co"># info [2026-06-13 17:25:35.714 UTC]: Step 5/6 b4</span></span>
-<span><span class="co"># info [2026-06-13 17:25:35.715 UTC]: Step 6/6 sink</span></span>
-<span><span class="co"># info [2026-06-13 17:25:35.717 UTC]: Finished run of pipeflow_pip 'dag'</span></span>
+<span><span class="va">p4</span> <span class="op">&lt;-</span> <span class="fu">make_branch_pip</span><span class="op">(</span><span class="fl">4</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p4</span><span class="op">)</span></span>
+<span><span class="co"># info [2026-06-14 13:43:30.173 UTC]: Start run of pipeflow_pip 'dag'</span></span>
+<span><span class="co"># info [2026-06-14 13:43:30.174 UTC]: Step 1/6 source</span></span>
+<span><span class="co"># info [2026-06-14 13:43:30.174 UTC]: Step 2/6 b1</span></span>
+<span><span class="co"># info [2026-06-14 13:43:30.176 UTC]: Step 3/6 b2</span></span>
+<span><span class="co"># info [2026-06-14 13:43:30.179 UTC]: Step 4/6 b3</span></span>
+<span><span class="co"># info [2026-06-14 13:43:30.181 UTC]: Step 5/6 b4</span></span>
+<span><span class="co"># info [2026-06-14 13:43:30.183 UTC]: Step 6/6 sink</span></span>
+<span><span class="co"># info [2026-06-14 13:43:30.185 UTC]: Finished run of pipeflow_pip 'dag'</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">p4</span><span class="op">[[</span><span class="st">"sink"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level4">
@@ -521,19 +527,19 @@ independently once the source completes.</p>
 <span>    <span class="fu">tar_make_here</span><span class="op">(</span>reporter <span class="op">=</span> <span class="st">"timestamp"</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu">tar_read</span><span class="op">(</span><span class="va">sink</span><span class="op">)</span> <span class="op">==</span> <span class="fl">8</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
-<span><span class="co"># 2026-06-13 19:25:35.81 dispatched target source</span></span>
-<span><span class="co"># 2026-06-13 19:25:35.82 completed target source [0ms, 51 B]</span></span>
-<span><span class="co"># 2026-06-13 19:25:35.82 dispatched target b1</span></span>
-<span><span class="co"># 2026-06-13 19:25:35.83 completed target b1 [0ms, 50 B]</span></span>
-<span><span class="co"># 2026-06-13 19:25:35.83 dispatched target b2</span></span>
-<span><span class="co"># 2026-06-13 19:25:35.83 completed target b2 [10ms, 50 B]</span></span>
-<span><span class="co"># 2026-06-13 19:25:35.83 dispatched target b3</span></span>
-<span><span class="co"># 2026-06-13 19:25:35.84 completed target b3 [0ms, 50 B]</span></span>
-<span><span class="co"># 2026-06-13 19:25:35.84 dispatched target b4</span></span>
-<span><span class="co"># 2026-06-13 19:25:35.85 completed target b4 [0ms, 50 B]</span></span>
-<span><span class="co"># 2026-06-13 19:25:35.85 dispatched target sink</span></span>
-<span><span class="co"># 2026-06-13 19:25:35.86 completed target sink [0ms, 51 B]</span></span>
-<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-13 19:25:35.86 ended pipeline [71ms, 6 completed, 0 skipped]</span></span>
+<span><span class="co"># 2026-06-14 15:43:30.29 dispatched target source</span></span>
+<span><span class="co"># 2026-06-14 15:43:30.29 completed target source [0ms, 51 B]</span></span>
+<span><span class="co"># 2026-06-14 15:43:30.30 dispatched target b1</span></span>
+<span><span class="co"># 2026-06-14 15:43:30.30 completed target b1 [0ms, 50 B]</span></span>
+<span><span class="co"># 2026-06-14 15:43:30.30 dispatched target b2</span></span>
+<span><span class="co"># 2026-06-14 15:43:30.31 completed target b2 [0ms, 50 B]</span></span>
+<span><span class="co"># 2026-06-14 15:43:30.31 dispatched target b3</span></span>
+<span><span class="co"># 2026-06-14 15:43:30.34 completed target b3 [0ms, 50 B]</span></span>
+<span><span class="co"># 2026-06-14 15:43:30.34 dispatched target b4</span></span>
+<span><span class="co"># 2026-06-14 15:43:30.40 completed target b4 [10ms, 50 B]</span></span>
+<span><span class="co"># 2026-06-14 15:43:30.40 dispatched target sink</span></span>
+<span><span class="co"># 2026-06-14 15:43:30.41 completed target sink [0ms, 51 B]</span></span>
+<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-06-14 15:43:30.41 ended pipeline [160ms, 6 completed, 0 skipped]</span></span>
 <span><span class="co"># </span></span></code></pre></div>
 </div>
 <div class="section level4">
