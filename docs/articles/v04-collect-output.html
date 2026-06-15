@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9006</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -209,15 +209,15 @@ and inspect the output individually as we did in the previous
 vignettes.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-14 13:41:09.224 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
-<span><span class="co"># info [2026-06-14 13:41:09.225 UTC]: Step 1/7 data</span></span>
-<span><span class="co"># info [2026-06-14 13:41:09.226 UTC]: Step 2/7 data_prep</span></span>
-<span><span class="co"># info [2026-06-14 13:41:09.229 UTC]: Step 3/7 data_summary</span></span>
-<span><span class="co"># info [2026-06-14 13:41:09.231 UTC]: Step 4/7 data_plot</span></span>
-<span><span class="co"># info [2026-06-14 13:41:09.885 UTC]: Step 5/7 model_fit</span></span>
-<span><span class="co"># info [2026-06-14 13:41:09.890 UTC]: Step 6/7 model_summary</span></span>
-<span><span class="co"># info [2026-06-14 13:41:09.904 UTC]: Step 7/7 model_plot</span></span>
-<span><span class="co"># info [2026-06-14 13:41:09.911 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-15 10:51:57.655 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-15 10:51:57.656 UTC]: Step 1/7 data</span></span>
+<span><span class="co"># info [2026-06-15 10:51:57.658 UTC]: Step 2/7 data_prep</span></span>
+<span><span class="co"># info [2026-06-15 10:51:57.661 UTC]: Step 3/7 data_summary</span></span>
+<span><span class="co"># info [2026-06-15 10:51:57.665 UTC]: Step 4/7 data_plot</span></span>
+<span><span class="co"># info [2026-06-15 10:51:58.405 UTC]: Step 5/7 model_fit</span></span>
+<span><span class="co"># info [2026-06-15 10:51:58.410 UTC]: Step 6/7 model_summary</span></span>
+<span><span class="co"># info [2026-06-15 10:51:58.418 UTC]: Step 7/7 model_plot</span></span>
+<span><span class="co"># info [2026-06-15 10:51:58.425 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow_pip&gt; my-pip (7 steps)</span></span>
@@ -353,12 +353,12 @@ allows to conveniently re-run only the filtered steps, while {pipeflow}
 ensures that any upstream dependencies are run first if needed.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">v2</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-14 13:41:11.527 UTC]: Start run of pipeflow_view 'my-pip view view'</span></span>
-<span><span class="co"># info [2026-06-14 13:41:11.527 UTC]: Step 1/4 [upstream] data_prep - skipping done step</span></span>
-<span><span class="co"># info [2026-06-14 13:41:11.527 UTC]: Step 2/4 [view] data_plot</span></span>
-<span><span class="co"># info [2026-06-14 13:41:11.538 UTC]: Step 3/4 [upstream] model_fit</span></span>
-<span><span class="co"># info [2026-06-14 13:41:11.541 UTC]: Step 4/4 [view] model_plot</span></span>
-<span><span class="co"># info [2026-06-14 13:41:11.549 UTC]: Finished run of pipeflow_view 'my-pip view view'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-15 10:52:00.107 UTC]: Start run of pipeflow_view 'my-pip view view'</span></span>
+<span><span class="co"># info [2026-06-15 10:52:00.107 UTC]: Step 1/4 [upstream] data_prep - skipping done step</span></span>
+<span><span class="co"># info [2026-06-15 10:52:00.107 UTC]: Step 2/4 [view] data_plot</span></span>
+<span><span class="co"># info [2026-06-15 10:52:00.118 UTC]: Step 3/4 [upstream] model_fit</span></span>
+<span><span class="co"># info [2026-06-15 10:52:00.122 UTC]: Step 4/4 [view] model_plot</span></span>
+<span><span class="co"># info [2026-06-15 10:52:00.132 UTC]: Finished run of pipeflow_view 'my-pip view view'</span></span></code></pre></div>
 <p>Having a closer look at the run log, you’ll see which steps were
 re-run as part of the <code>[view]</code> and which were re-run as
 <code>[upstream]</code> dependencies. Since all views work by reference

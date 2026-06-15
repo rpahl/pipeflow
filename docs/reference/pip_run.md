@@ -65,11 +65,11 @@ p <- pip_new() |>
   pip_add("total", \(x = ~square) sum(x))
 
 pip_run(p)
-#> info [2026-06-14 13:40:17.149 UTC]: Start run of pipeflow_pip 'pipe'
-#> info [2026-06-14 13:40:17.150 UTC]: Step 1/3 load
-#> info [2026-06-14 13:40:17.150 UTC]: Step 2/3 square
-#> info [2026-06-14 13:40:17.152 UTC]: Step 3/3 total
-#> info [2026-06-14 13:40:17.153 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-06-15 10:50:46.215 UTC]: Start run of pipeflow_pip 'pipe'
+#> info [2026-06-15 10:50:46.215 UTC]: Step 1/3 load
+#> info [2026-06-15 10:50:46.216 UTC]: Step 2/3 square
+#> info [2026-06-15 10:50:46.217 UTC]: Step 3/3 total
+#> info [2026-06-15 10:50:46.219 UTC]: Finished run of pipeflow_pip 'pipe'
 p
 #> <pipeflow_pip> pipe (3 steps)
 #> -----------------------------
@@ -80,29 +80,29 @@ p
 
 # Already-done steps are skipped on a second run
 pip_run(p) # all steps skipped
-#> info [2026-06-14 13:40:17.156 UTC]: Start run of pipeflow_pip 'pipe'
-#> info [2026-06-14 13:40:17.157 UTC]: Step 1/3 load - skipping done step
-#> info [2026-06-14 13:40:17.158 UTC]: Step 2/3 square - skipping done step
-#> info [2026-06-14 13:40:17.159 UTC]: Step 3/3 total - skipping done step
-#> info [2026-06-14 13:40:17.159 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-06-15 10:50:46.224 UTC]: Start run of pipeflow_pip 'pipe'
+#> info [2026-06-15 10:50:46.224 UTC]: Step 1/3 load - skipping done step
+#> info [2026-06-15 10:50:46.225 UTC]: Step 2/3 square - skipping done step
+#> info [2026-06-15 10:50:46.225 UTC]: Step 3/3 total - skipping done step
+#> info [2026-06-15 10:50:46.225 UTC]: Finished run of pipeflow_pip 'pipe'
 
 # lgr = NULL suppresses log output
 pip_run(p, lgr = NULL)
 
 # force = TRUE re-executes every step regardless of state
 pip_run(p, force = TRUE)
-#> info [2026-06-14 13:40:17.165 UTC]: Start run of pipeflow_pip 'pipe'
-#> info [2026-06-14 13:40:17.166 UTC]: Step 1/3 load
-#> info [2026-06-14 13:40:17.166 UTC]: Step 2/3 square
-#> info [2026-06-14 13:40:17.167 UTC]: Step 3/3 total
-#> info [2026-06-14 13:40:17.169 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-06-15 10:50:46.228 UTC]: Start run of pipeflow_pip 'pipe'
+#> info [2026-06-15 10:50:46.228 UTC]: Step 1/3 load
+#> info [2026-06-15 10:50:46.228 UTC]: Step 2/3 square
+#> info [2026-06-15 10:50:46.230 UTC]: Step 3/3 total
+#> info [2026-06-15 10:50:46.231 UTC]: Finished run of pipeflow_pip 'pipe'
 
 # Run only a subset of steps via a view;
 # upstream dependencies are automatically included
 v <- pip_view(p, i = "total")
 pip_run(v)
-#> info [2026-06-14 13:40:17.171 UTC]: Start run of pipeflow_view 'pipe view'
-#> info [2026-06-14 13:40:17.171 UTC]: Step 1/2 [upstream] square - skipping done step
-#> info [2026-06-14 13:40:17.171 UTC]: Step 2/2 [view] total - skipping done step
-#> info [2026-06-14 13:40:17.171 UTC]: Finished run of pipeflow_view 'pipe view'
+#> info [2026-06-15 10:50:46.234 UTC]: Start run of pipeflow_view 'pipe view'
+#> info [2026-06-15 10:50:46.234 UTC]: Step 1/2 [upstream] square - skipping done step
+#> info [2026-06-15 10:50:46.234 UTC]: Step 2/2 [view] total - skipping done step
+#> info [2026-06-15 10:50:46.234 UTC]: Finished run of pipeflow_view 'pipe view'
 ```

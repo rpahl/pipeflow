@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9006</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -165,11 +165,11 @@ fits a linear model and outputs the model coefficients.</p>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.756 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.756 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.757 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.761 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.762 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-15 10:52:14.876 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-06-15 10:52:14.877 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-06-15 10:52:14.878 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-06-15 10:52:14.881 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-06-15 10:52:14.883 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"coefs"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co">#  (Intercept) Sepal.Length </span></span>
@@ -190,21 +190,21 @@ for each subset. For example:</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">iris</span>, <span class="va">iris</span><span class="op">$</span><span class="va">Species</span><span class="op">)</span>, FUN <span class="op">=</span> <span class="va">run_pipeline_helper</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.872 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.872 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.873 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.877 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.879 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.882 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.883 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.883 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.885 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.886 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.890 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.890 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.890 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.892 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-06-14 13:41:21.893 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-15 10:52:15.010 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.010 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.011 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.015 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.018 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.022 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.022 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.023 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.025 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.027 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.030 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.030 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.031 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.033 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.035 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span></code></pre></div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span></span>
 <span><span class="co"># $setosa</span></span>
@@ -279,7 +279,7 @@ inspected in the graph:</p>
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://datastorm-open.github.io/visNetwork/" class="external-link">visNetwork</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">visNetwork</span>, args <span class="op">=</span> <span class="fu"><a href="../reference/pip_get_graph.html">pip_get_graph</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div id="htmlwidget-ac96cb3ee4656e2e9ec3" style="width:500px;height:100px;" class="visNetwork html-widget"></div>
-<script type="application/json" data-for="htmlwidget-ac96cb3ee4656e2e9ec3">{"x":{"nodes":{"id":[0,1,2,3],"label":["data","split_data","fit","coefs"],"group":["data","split_data","fit","coefs"],"shape":["hexagon","star","hexagon","hexagon"],"color":["#47b8ffff","#47b8ffff","#47b8ffff","#47b8ffff"]},"edges":{"from":[0,1,2],"to":[1,2,3],"arrows":["to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":["data","split_data","fit","coefs"],"width":500,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>Now what does this execution mode actually do? It basically tells the
+<script type="application/json" data-for="htmlwidget-ac96cb3ee4656e2e9ec3">{"x":{"nodes":{"id":[0,1,2,3],"label":["data","split_data","fit","coefs"],"shape":["hexagon","star","hexagon","hexagon"],"color":["#47b8ffff","#47b8ffff","#47b8ffff","#47b8ffff"]},"edges":{"from":[0,1,2],"to":[1,2,3],"arrows":["to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":null,"width":500,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>Now what does this execution mode actually do? It basically tells the
 pipeline that for all steps that depend on the <code>split_data</code>
 step (directly or indirectly), the results coming from the split step
 should be treated as lists of results, which should be iterated
@@ -299,12 +299,12 @@ step.</p>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.302 UTC]: Start run of pipeflow_pip 'my-split-pip'</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.302 UTC]: Step 1/4 data</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.302 UTC]: Step 2/4 split_data</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.304 UTC]: Step 3/4 fit</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.307 UTC]: Step 4/4 coefs</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.309 UTC]: Finished run of pipeflow_pip 'my-split-pip'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-15 10:52:15.497 UTC]: Start run of pipeflow_pip 'my-split-pip'</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.497 UTC]: Step 1/4 data</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.498 UTC]: Step 2/4 split_data</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.500 UTC]: Step 3/4 fit</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.503 UTC]: Step 4/4 coefs</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.505 UTC]: Finished run of pipeflow_pip 'my-split-pip'</span></span></code></pre></div>
 <p>Looking at the pipeline overview, we see that the
 <code>out</code>puts following the <code>split_data</code> steps are now
 all lists of results.</p>
@@ -375,17 +375,17 @@ represented by a circle.</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">visNetwork</span>, args <span class="op">=</span> <span class="fu"><a href="../reference/pip_get_graph.html">pip_get_graph</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div id="htmlwidget-e5c8c404fe174e4c81bd" style="width:650px;height:100px;" class="visNetwork html-widget"></div>
-<script type="application/json" data-for="htmlwidget-e5c8c404fe174e4c81bd">{"x":{"nodes":{"id":[0,1,2,3,4],"label":["data","split_data","fit","coefs","combine_coefs"],"group":["data","split_data","fit","coefs","combine_coefs"],"shape":["hexagon","star","hexagon","hexagon","dot"],"color":["#87ff6fff","#87ff6fff","#87ff6fff","#87ff6fff","#47b8ffff"]},"edges":{"from":[0,1,2,3],"to":[1,2,3,4],"arrows":["to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":["data","split_data","fit","coefs","combine_coefs"],"width":650,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>If we now run the pipeline, we see that the output of the
+<script type="application/json" data-for="htmlwidget-e5c8c404fe174e4c81bd">{"x":{"nodes":{"id":[0,1,2,3,4],"label":["data","split_data","fit","coefs","combine_coefs"],"shape":["hexagon","star","hexagon","hexagon","dot"],"color":["#87ff6fff","#87ff6fff","#87ff6fff","#87ff6fff","#47b8ffff"]},"edges":{"from":[0,1,2,3],"to":[1,2,3,4],"arrows":["to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":null,"width":650,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>If we now run the pipeline, we see that the output of the
 <code>combine_coefs</code> step is a combined table of coefficients.</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.697 UTC]: Start run of pipeflow_pip 'my-split-pip'</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.697 UTC]: Step 1/5 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.697 UTC]: Step 2/5 split_data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.697 UTC]: Step 3/5 fit - skipping done step</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.697 UTC]: Step 4/5 coefs - skipping done step</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.698 UTC]: Step 5/5 combine_coefs</span></span>
-<span><span class="co"># info [2026-06-14 13:41:22.699 UTC]: Finished run of pipeflow_pip 'my-split-pip'</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.927 UTC]: Start run of pipeflow_pip 'my-split-pip'</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.928 UTC]: Step 1/5 data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.928 UTC]: Step 2/5 split_data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.928 UTC]: Step 3/5 fit - skipping done step</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.928 UTC]: Step 4/5 coefs - skipping done step</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.928 UTC]: Step 5/5 combine_coefs</span></span>
+<span><span class="co"># info [2026-06-15 10:52:15.930 UTC]: Finished run of pipeflow_pip 'my-split-pip'</span></span>
 <span></span>
 <span><span class="va">pip</span><span class="op">[[</span><span class="st">"combine_coefs"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co">#            (Intercept) Sepal.Length</span></span>

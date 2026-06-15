@@ -10,14 +10,13 @@
 Source:
 [`DESCRIPTION`](https://github.com/rpahl/pipeflow/blob/HEAD/DESCRIPTION)
 
-Pahl R (2026). *pipeflow: Lightweight, General-Purpose Data Analysis
-Pipelines*. R package version 0.2.3.9006,
-<https://rpahl.github.io/pipeflow/>.
+Pahl R (2026). *pipeflow: Fast Interactive Data Analysis Pipelines*. R
+package version 0.3.0, <https://rpahl.github.io/pipeflow/>.
 
     @Manual{,
-      title = {pipeflow: Lightweight, General-Purpose Data Analysis Pipelines},
+      title = {pipeflow: Fast Interactive Data Analysis Pipelines},
       author = {Roman Pahl},
       year = {2026},
-      note = {R package version 0.2.3.9006},
+      note = {R package version 0.3.0},
       url = {https://rpahl.github.io/pipeflow/},
     }

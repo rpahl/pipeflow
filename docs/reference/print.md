@@ -87,14 +87,14 @@ print(p) # core columns: step, depends, tags, out, state
 print(p, cols = "all") # all non-hidden columns
 #> <pipeflow_pip> demo (3 steps)
 #> -----------------------------
-#>      step  group           fun    params     signature depends    out state
-#> 1:   load   load <function[1]> <list[1]>       (n = 5)         [NULL]   new
-#> 2: square square <function[1]> <list[1]>   (x = ~load)    load [NULL]   new
-#> 3:  total  total <function[1]> <list[1]> (x = ~square)  square [NULL]   new
-#>       tags                time locked exec
-#> 1:  io,raw 2026-06-14 15:40:20  FALSE auto
-#> 2: compute 2026-06-14 15:40:20  FALSE auto
-#> 3: compute 2026-06-14 15:40:20  FALSE auto
+#>      step           fun    params     signature depends    out state    tags
+#> 1:   load <function[1]> <list[1]>       (n = 5)         [NULL]   new  io,raw
+#> 2: square <function[1]> <list[1]>   (x = ~load)    load [NULL]   new compute
+#> 3:  total <function[1]> <list[1]> (x = ~square)  square [NULL]   new compute
+#>                   time locked exec
+#> 1: 2026-06-15 12:50:49  FALSE auto
+#> 2: 2026-06-15 12:50:49  FALSE auto
+#> 3: 2026-06-15 12:50:49  FALSE auto
 print(p, rows = 2:3) # print only steps 2 and 3
 #> <pipeflow_pip> demo (3 steps)
 #> -----------------------------

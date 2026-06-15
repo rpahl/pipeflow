@@ -47,3 +47,9 @@
 ^workflows\.zip$
 ^logo/logo.xcf$
 ^LICENSE\.md$
+
+^scratch.md$
+^kilo.json$
+
+# Rd2pdf temp directories
+^\.Rd2pdf

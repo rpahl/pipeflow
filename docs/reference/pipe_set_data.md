@@ -36,11 +36,11 @@ pipe_add(p, "add1", \(x = ~data, y = 1) x + y, keepOut = TRUE)
 p |>
   pipe_run() |>
   pipe_collect_out()
-#> INFO  [2026-06-14 15:40:04.446] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-14 15:40:04.447] Step 1/2 data
-#> INFO  [2026-06-14 15:40:04.449] Step 2/2 add1
-#> INFO  [2026-06-14 15:40:04.451] Finished execution of steps.
-#> INFO  [2026-06-14 15:40:04.452] Done.
+#> INFO  [2026-06-15 12:50:38.699] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-15 12:50:38.701] Step 1/2 data
+#> INFO  [2026-06-15 12:50:38.704] Step 2/2 add1
+#> INFO  [2026-06-15 12:50:38.706] Finished execution of steps.
+#> INFO  [2026-06-15 12:50:38.707] Done.
 #> $add1
 #> [1] 2
 #> 
@@ -49,11 +49,11 @@ pipe_set_data(p, 3)
 p |>
   pipe_run() |>
   pipe_collect_out()
-#> INFO  [2026-06-14 15:40:04.458] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-14 15:40:04.459] Step 1/2 data
-#> INFO  [2026-06-14 15:40:04.461] Step 2/2 add1
-#> INFO  [2026-06-14 15:40:04.462] Finished execution of steps.
-#> INFO  [2026-06-14 15:40:04.463] Done.
+#> INFO  [2026-06-15 12:50:38.712] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-15 12:50:38.714] Step 1/2 data
+#> INFO  [2026-06-15 12:50:38.716] Step 2/2 add1
+#> INFO  [2026-06-15 12:50:38.718] Finished execution of steps.
+#> INFO  [2026-06-15 12:50:38.720] Done.
 #> $add1
 #> [1] 4
 #> 

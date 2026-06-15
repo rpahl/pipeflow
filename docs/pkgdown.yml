@@ -9,7 +9,7 @@ articles:
   v05-split-map-reduce: v05-split-map-reduce.html
   v06-self-modify-pipeline: v06-self-modify-pipeline.html
   articles/v07-vs-targets: v07-vs-targets.html
-last_built: 2026-06-14T13:39Z
+last_built: 2026-06-15T10:50Z
 urls:
   reference: https://github.com/rpahl/pipeflow/reference
   article: https://github.com/rpahl/pipeflow/articles

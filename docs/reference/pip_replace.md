@@ -41,10 +41,10 @@ p <- pip_new() |>
     pip_add("load", \(n = 5) seq_len(n)) |>
     pip_add("double", \(x = ~load) x * 2)
 pip_run(p)
-#> info [2026-06-14 13:40:16.251 UTC]: Start run of pipeflow_pip 'pipe'
-#> info [2026-06-14 13:40:16.252 UTC]: Step 1/2 load
-#> info [2026-06-14 13:40:16.252 UTC]: Step 2/2 double
-#> info [2026-06-14 13:40:16.254 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-06-15 10:50:45.828 UTC]: Start run of pipeflow_pip 'pipe'
+#> info [2026-06-15 10:50:45.829 UTC]: Step 1/2 load
+#> info [2026-06-15 10:50:45.830 UTC]: Step 2/2 double
+#> info [2026-06-15 10:50:45.832 UTC]: Finished run of pipeflow_pip 'pipe'
 p
 #> <pipeflow_pip> pipe (2 steps)
 #> -----------------------------
@@ -63,10 +63,10 @@ p
 
 # Re-run to bring everything up to date
 pip_run(p)
-#> info [2026-06-14 13:40:16.266 UTC]: Start run of pipeflow_pip 'pipe'
-#> info [2026-06-14 13:40:16.266 UTC]: Step 1/2 load
-#> info [2026-06-14 13:40:16.267 UTC]: Step 2/2 double
-#> info [2026-06-14 13:40:16.269 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-06-15 10:50:45.843 UTC]: Start run of pipeflow_pip 'pipe'
+#> info [2026-06-15 10:50:45.844 UTC]: Step 1/2 load
+#> info [2026-06-15 10:50:45.844 UTC]: Step 2/2 double
+#> info [2026-06-15 10:50:45.846 UTC]: Finished run of pipeflow_pip 'pipe'
 p
 #> <pipeflow_pip> pipe (2 steps)
 #> -----------------------------

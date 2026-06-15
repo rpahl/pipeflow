@@ -37,7 +37,7 @@ old <- options(width = 100L)
 
 # pipeflow <img src="man/figures/logo.png" alt="logo" align="right" width="163" height="121"/>
 
-Build analysis pipelines quick and easy and run them fast.
+Build fast interactive data analysis pipelines quick and easy.
 
 {pipeflow} simply lets you add R functions one by one, wiring them into a
 pipeline that stays consistent as you go. Modify, remove, or insert
@@ -55,7 +55,7 @@ structured overview of your project.
 * Filtered pipeline views
 * All parameters managed in one place
 * Pipeline verified at definition time
-* Fast execution for interactive use and Shiny backends
+* Execution remains fast for complex pipelines (C++-powered DAG)
 
 ### Installation
 
