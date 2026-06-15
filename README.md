@@ -28,7 +28,7 @@ status](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https:/
 
 # pipeflow <img src="man/figures/logo.png" alt="logo" align="right" width="163" height="121"/>
 
-Build analysis pipelines quick and easy and run them fast.
+Build fast interactive data analysis pipelines quick and easy.
 
 {pipeflow} simply lets you add R functions one by one, wiring them into
 a pipeline that stays consistent as you go. Modify, remove, or insert
@@ -46,7 +46,7 @@ overview of your project.
 - Filtered pipeline views
 - All parameters managed in one place
 - Pipeline verified at definition time
-- Fast execution for interactive use and Shiny backends
+- Execution remains fast for complex pipelines (C++-powered DAG)
 
 ### Installation
 
@@ -77,11 +77,11 @@ p
 # 3:   total squared [NULL]   new
 
 pip_run(p)
-# info [2026-06-14 15:51:51.784 UTC]: Start run of pipeflow_pip 'demo'
-# info [2026-06-14 15:51:51.784 UTC]: Step 1/3 numbers
-# info [2026-06-14 15:51:51.787 UTC]: Step 2/3 squared
-# info [2026-06-14 15:51:51.790 UTC]: Step 3/3 total
-# info [2026-06-14 15:51:51.791 UTC]: Finished run of pipeflow_pip 'demo'
+# info [2026-06-14 20:16:14.083 UTC]: Start run of pipeflow_pip 'demo'
+# info [2026-06-14 20:16:14.084 UTC]: Step 1/3 numbers
+# info [2026-06-14 20:16:14.086 UTC]: Step 2/3 squared
+# info [2026-06-14 20:16:14.088 UTC]: Step 3/3 total
+# info [2026-06-14 20:16:14.090 UTC]: Finished run of pipeflow_pip 'demo'
 
 pip_collect_out(p)
 # $numbers
