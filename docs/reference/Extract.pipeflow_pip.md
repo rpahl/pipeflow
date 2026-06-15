@@ -70,14 +70,14 @@ p <- pip_new() |>
 
 # Access internal objects by name
 p[["pipeline"]] # the full step table
-#>      step  group           fun    params   signature depends    out  state
-#>    <char> <char>        <list>    <list>      <char>  <list> <list> <char>
-#> 1:   load   load <function[1]> <list[1]>     (x = 1)         [NULL]    new
-#> 2:    fit    fit <function[1]> <list[1]> (x = ~load)    load [NULL]    new
-#>      tags                time locked   exec .nodeId .indeps
-#>    <list>              <POSc> <lgcl> <char>   <int>  <list>
-#> 1:        2026-06-14 15:39:34  FALSE   auto       0       x
-#> 2:        2026-06-14 15:39:34  FALSE   auto       1        
+#>      step           fun    params   signature depends    out  state   tags
+#>    <char>        <list>    <list>      <char>  <list> <list> <char> <list>
+#> 1:   load <function[1]> <list[1]>     (x = 1)         [NULL]    new       
+#> 2:    fit <function[1]> <list[1]> (x = ~load)    load [NULL]    new       
+#>                   time locked   exec .nodeId .indeps
+#>                 <POSc> <lgcl> <char>   <int>  <list>
+#> 1: 2026-06-15 12:50:14  FALSE   auto       0       x
+#> 2: 2026-06-15 12:50:14  FALSE   auto       1        
 p[["name"]] # "pipe"
 #> [1] "pipe"
 

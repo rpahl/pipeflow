@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9006</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -151,7 +151,7 @@ is, we have the following pipeline</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">visNetwork</span>, args <span class="op">=</span> <span class="fu"><a href="../reference/pip_get_graph.html">pip_get_graph</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/pkg/visNetwork/man/visHierarchicalLayout.html" class="external-link">visHierarchicalLayout</a></span><span class="op">(</span>direction <span class="op">=</span> <span class="st">"LR"</span>, sortMethod <span class="op">=</span> <span class="st">"directed"</span><span class="op">)</span></span></code></pre></div>
 <div id="htmlwidget-ac96cb3ee4656e2e9ec3" style="width:700px;height:300px;" class="visNetwork html-widget"></div>
-<script type="application/json" data-for="htmlwidget-ac96cb3ee4656e2e9ec3">{"x":{"nodes":{"id":[0,1,2,3,4],"label":["data","data_prep","standardize","model_fit","model_plot"],"group":["data","data_prep","standardize","model_fit","model_plot"],"shape":["hexagon","hexagon","hexagon","hexagon","hexagon"],"color":["#87ff6fff","#87ff6fff","#47b8ffff","#87ff6fff","#87ff6fff"]},"edges":{"from":[0,1,1,3,1],"to":[1,2,3,4,4],"arrows":["to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":["data","data_prep","standardize","model_fit","model_plot"],"width":null,"height":300,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>The <code>standardize</code> step is now part of the pipeline, but so
+<script type="application/json" data-for="htmlwidget-ac96cb3ee4656e2e9ec3">{"x":{"nodes":{"id":[0,1,2,3,4],"label":["data","data_prep","standardize","model_fit","model_plot"],"shape":["hexagon","hexagon","hexagon","hexagon","hexagon"],"color":["#87ff6fff","#87ff6fff","#47b8ffff","#87ff6fff","#87ff6fff"]},"edges":{"from":[0,1,1,3,1],"to":[1,2,3,4,4],"arrows":["to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":null,"width":null,"height":300,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>The <code>standardize</code> step is now part of the pipeline, but so
 far it is not used by any other step.</p>
 </div>
 <div class="section level3">
@@ -210,19 +210,19 @@ way.</p>
 <span><span class="co"># 4:   model_fit           standardize             [NULL]   new</span></span>
 <span><span class="co"># 5:  model_plot model_fit,standardize             [NULL]   new</span></span></code></pre></div>
 <div id="htmlwidget-e5c8c404fe174e4c81bd" style="width:700px;height:100px;" class="visNetwork html-widget"></div>
-<script type="application/json" data-for="htmlwidget-e5c8c404fe174e4c81bd">{"x":{"nodes":{"id":[0,1,2,3,4],"label":["data","data_prep","standardize","model_fit","model_plot"],"group":["data","data_prep","standardize","model_fit","model_plot"],"shape":["hexagon","hexagon","hexagon","hexagon","hexagon"],"color":["#87ff6fff","#87ff6fff","#47b8ffff","#47b8ffff","#47b8ffff"]},"edges":{"from":[0,1,2,3,2],"to":[1,2,3,4,4],"arrows":["to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR"}}},"groups":["data","data_prep","standardize","model_fit","model_plot"],"width":null,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>We see that the <code>model_fit</code> and <code>model_plot</code>
+<script type="application/json" data-for="htmlwidget-e5c8c404fe174e4c81bd">{"x":{"nodes":{"id":[0,1,2,3,4],"label":["data","data_prep","standardize","model_fit","model_plot"],"shape":["hexagon","hexagon","hexagon","hexagon","hexagon"],"color":["#87ff6fff","#87ff6fff","#47b8ffff","#47b8ffff","#47b8ffff"]},"edges":{"from":[0,1,2,3,2],"to":[1,2,3,4,4],"arrows":["to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR"}}},"groups":null,"width":null,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>We see that the <code>model_fit</code> and <code>model_plot</code>
 steps now use (i.e., depend on) the standardized data. Let’s re-run the
 pipeline and inspect the output.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">pip</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span>, yVar <span class="op">=</span> <span class="st">"Wind"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-14 13:40:46.614 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
-<span><span class="co"># info [2026-06-14 13:40:46.614 UTC]: Step 1/5 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-14 13:40:46.614 UTC]: Step 2/5 data_prep - skipping done step</span></span>
-<span><span class="co"># info [2026-06-14 13:40:46.614 UTC]: Step 3/5 standardize</span></span>
-<span><span class="co"># info [2026-06-14 13:40:46.616 UTC]: Step 4/5 model_fit</span></span>
-<span><span class="co"># info [2026-06-14 13:40:46.619 UTC]: Step 5/5 model_plot</span></span>
-<span><span class="co"># info [2026-06-14 13:40:46.628 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-15 10:51:23.245 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-15 10:51:23.246 UTC]: Step 1/5 data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-15 10:51:23.246 UTC]: Step 2/5 data_prep - skipping done step</span></span>
+<span><span class="co"># info [2026-06-15 10:51:23.246 UTC]: Step 3/5 standardize</span></span>
+<span><span class="co"># info [2026-06-15 10:51:23.249 UTC]: Step 4/5 model_fit</span></span>
+<span><span class="co"># info [2026-06-15 10:51:23.251 UTC]: Step 5/5 model_plot</span></span>
+<span><span class="co"># info [2026-06-15 10:51:23.262 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"model_fit"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#  (Intercept)      Solar.R </span></span>

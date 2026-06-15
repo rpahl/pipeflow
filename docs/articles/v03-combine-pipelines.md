@@ -111,13 +111,13 @@ pip <- pip_bind(pip1, pip2)
 pip
 # <pipeflow_pip> preprocessing-modeling (6 steps)
 # -----------------------------------------------
-#           step       group   depends    out state
-# 1:        data        data           [NULL]   new
-# 2:   data_prep   data_prep      data [NULL]   new
-# 3: standardize standardize data_prep [NULL]   new
-# 4:       data2        data           [NULL]   new
-# 5:         fit         fit     data2 [NULL]   new
-# 6:        plot        plot fit,data2 [NULL]   new
+#           step   depends    out state
+# 1:        data           [NULL]   new
+# 2:   data_prep      data [NULL]   new
+# 3: standardize data_prep [NULL]   new
+# 4:       data2           [NULL]   new
+# 5:         fit     data2 [NULL]   new
+# 6:        plot fit,data2 [NULL]   new
 ```
 
 First of all, note that the `data` step of the second pipeline has been
@@ -199,14 +199,14 @@ Let’s now run the combined pipeline and inspect the plot.
 ``` r
 
 pip_run(pip)
-# info [2026-06-14 13:40:57.779 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
-# info [2026-06-14 13:40:57.780 UTC]: Step 1/6 data
-# info [2026-06-14 13:40:57.781 UTC]: Step 2/6 data_prep
-# info [2026-06-14 13:40:57.783 UTC]: Step 3/6 standardize
-# info [2026-06-14 13:40:57.784 UTC]: Step 4/6 data2
-# info [2026-06-14 13:40:57.786 UTC]: Step 5/6 fit
-# info [2026-06-14 13:40:57.789 UTC]: Step 6/6 plot
-# info [2026-06-14 13:40:58.452 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-06-15 10:51:41.198 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-06-15 10:51:41.198 UTC]: Step 1/6 data
+# info [2026-06-15 10:51:41.199 UTC]: Step 2/6 data_prep
+# info [2026-06-15 10:51:41.201 UTC]: Step 3/6 standardize
+# info [2026-06-15 10:51:41.204 UTC]: Step 4/6 data2
+# info [2026-06-15 10:51:41.205 UTC]: Step 5/6 fit
+# info [2026-06-15 10:51:41.209 UTC]: Step 6/6 plot
+# info [2026-06-15 10:51:41.945 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
 ```
 
 ``` r
@@ -230,14 +230,14 @@ pip_set_params(pip, params = list(xVar = "Temp.Celsius"))
 ``` r
 
 pip_run(pip)
-# info [2026-06-14 13:40:59.037 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
-# info [2026-06-14 13:40:59.038 UTC]: Step 1/6 data - skipping done step
-# info [2026-06-14 13:40:59.038 UTC]: Step 2/6 data_prep - skipping done step
-# info [2026-06-14 13:40:59.039 UTC]: Step 3/6 standardize - skipping done step
-# info [2026-06-14 13:40:59.039 UTC]: Step 4/6 data2 - skipping done step
-# info [2026-06-14 13:40:59.039 UTC]: Step 5/6 fit
-# info [2026-06-14 13:40:59.046 UTC]: Step 6/6 plot
-# info [2026-06-14 13:40:59.061 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-06-15 10:51:42.601 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-06-15 10:51:42.602 UTC]: Step 1/6 data - skipping done step
+# info [2026-06-15 10:51:42.602 UTC]: Step 2/6 data_prep - skipping done step
+# info [2026-06-15 10:51:42.602 UTC]: Step 3/6 standardize - skipping done step
+# info [2026-06-15 10:51:42.602 UTC]: Step 4/6 data2 - skipping done step
+# info [2026-06-15 10:51:42.602 UTC]: Step 5/6 fit
+# info [2026-06-15 10:51:42.606 UTC]: Step 6/6 plot
+# info [2026-06-15 10:51:42.622 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
 ```
 
 ``` r

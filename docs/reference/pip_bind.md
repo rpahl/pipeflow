@@ -40,8 +40,8 @@ ab[["step"]] # "prep", "fit", "prep2" (step name conflict auto-resolved)
 ab
 #> <pipeflow_pip> a-b (3 steps)
 #> ----------------------------
-#>     step group depends    out state
-#> 1:  prep  prep         [NULL]   new
-#> 2:   fit   fit    prep [NULL]   new
-#> 3: prep2  prep         [NULL]   new
+#>     step depends    out state
+#> 1:  prep         [NULL]   new
+#> 2:   fit    prep [NULL]   new
+#> 3: prep2         [NULL]   new
 ```

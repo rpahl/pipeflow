@@ -39,9 +39,9 @@ pip_rename(p, from = "s1", to = "load_data")
 p
 #> <pipeflow_pip> pipe (2 steps)
 #> -----------------------------
-#>         step group   depends    out state
-#> 1: load_data    s1           [NULL]   new
-#> 2:        s2    s2 load_data [NULL]   new
+#>         step   depends    out state
+#> 1: load_data           [NULL]   new
+#> 2:        s2 load_data [NULL]   new
 
 #' # Trying to rename to an existing step name raises an error:
 try(pip_rename(p, "load_data", to = "s2"))  # step 's2' already exists!

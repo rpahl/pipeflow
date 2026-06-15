@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.3.9006</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,66 +58,38 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.3.9006" id="pipeflow-0239006">pipeflow 0.2.3.9006<a class="anchor" aria-label="anchor" href="#pipeflow-0239006"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.3.0" id="pipeflow-030">pipeflow 0.3.0<a class="anchor" aria-label="anchor" href="#pipeflow-030"></a></h2><p class="text-muted">CRAN release: 2026-06-15</p>
+<div class="section level3">
+<h3 id="new-features-0-3-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-3-0"></a></h3>
 <ul><li>
-<strong>C++ DAG engine</strong> (<code>src/dag.cpp</code>, 882 lines): All graph operations (node/edge add/remove, topological ordering, reachability queries) now run at C++ speed via Rcpp external pointers and <code>.Call</code> interface. This eliminates the R object overhead for dependency resolution.</li>
+<strong>C++ DAG engine</strong> (<code>src/dag.cpp</code>): All graph operations (node/edge add/remove, topological ordering, reachability queries) run at C++ speed via Rcpp, eliminating R object overhead for dependency resolution.</li>
 <li>
-<strong>New and improved <code>pip_*</code> API</strong>: Functional API replacing the R6 <code>Pipeline</code> class — <code><a href="../reference/pip_new.html">pip_new()</a></code>, <code><a href="../reference/pip_add.html">pip_add()</a></code>, <code><a href="../reference/pip_run.html">pip_run()</a></code>, <code><a href="../reference/pip_replace.html">pip_replace()</a></code>, <code><a href="../reference/pip_clone.html">pip_clone()</a></code>, <code><a href="../reference/pip_bind.html">pip_bind()</a></code>, etc.</li>
+<strong>New <code>pip_*</code> API</strong>: Functional API replacing the R6 <code>Pipeline</code> class — <code><a href="../reference/pip_new.html">pip_new()</a></code>, <code><a href="../reference/pip_add.html">pip_add()</a></code>, <code><a href="../reference/pip_run.html">pip_run()</a></code>, <code><a href="../reference/pip_replace.html">pip_replace()</a></code>, <code><a href="../reference/pip_clone.html">pip_clone()</a></code>, <code><a href="../reference/pip_bind.html">pip_bind()</a></code>, <code><a href="../reference/pip_view.html">pip_view()</a></code>, <code><a href="../reference/pip_tag.html">pip_tag()</a></code>/<code><a href="../reference/pip_untag.html">pip_untag()</a></code>, etc.</li>
 <li>
-<strong>Execution modes</strong> (<code>auto</code>/<code>split</code>/<code>reduce</code>/<code>plain</code>): Native support for map-reduce style workflows where steps can split output into named partitions and downstream steps auto-map over them.</li>
+<strong>Execution modes</strong> (<code>auto</code>/<code>split</code>/<code>reduce</code>/<code>plain</code>): Native support for map-reduce style workflows where steps split output into named partitions and downstream steps auto-map over them.</li>
 <li>
-<strong>Backward compatibility</strong>: Legacy <code>pipe_*</code> functions and <code>Pipeline</code> R6 class preserved as deprecated aliases (<code>R/aliases.R</code>, <code>R/pipelineR6.R</code>).</li>
+<strong>Dependency validation at definition time</strong>: <code><a href="../reference/pip_add.html">pip_add()</a></code>, <code><a href="../reference/pip_replace.html">pip_replace()</a></code>, and <code><a href="../reference/pip_remove.html">pip_remove()</a></code> fail fast on broken references.</li>
+<li>New pkgdown-only article <em>pipeflow vs targets</em> (<code>vignettes/articles/v07-vs-targets.Rmd</code>) with an 18-row feature comparison table and benchmarks.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="breaking-changes-0-3-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-3-0"></a></h3>
+<ul><li>Legacy <code>pipe_*</code> functions and <code>Pipeline</code> R6 class are deprecated (preserved as aliases in <code>R/aliases.R</code>, <code>R/pipelineR6.R</code>).</li>
 <li>
-<code><a href="../reference/pip_view.html">pip_view()</a></code> — create filtered pipeline views (by dependencies, tags)</li>
-<li>
-<code><a href="../reference/pip_tag.html">pip_tag()</a></code> / <code><a href="../reference/pip_untag.html">pip_untag()</a></code>
-</li>
-<li>
-<code>[[</code> extract operator for pipelines</li>
-<li>Comprehensive revision of all vignettes to match new API</li>
-<li>MIT license, updated CI workflows, dependabot config, kilo.json, lintr/styler config</li>
-<li>Extensive test suite (~10K+ lines) covering C++ DAG, pip_* API, aliases, execution modes, and recursive runs</li>
+<code><a href="../reference/pip_collect_out.html">pip_collect_out()</a></code> no longer accepts <code>grouped</code> or <code>by</code> parameters. It returns a flat named list of step outputs. Use <code><a href="../reference/pip_view.html">pip_view()</a></code> with tags and manual list composition for grouped output.</li>
+<li>The <code>group</code> column has been removed from the pipeline data.table. Steps previously using <code>group = "..."</code> in <code><a href="../reference/pip_add.html">pip_add()</a></code> should use <code>tags = "..."</code>.</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.3.9005" id="pipeflow-0239005">pipeflow 0.2.3.9005<a class="anchor" aria-label="anchor" href="#pipeflow-0239005"></a></h2>
-<ul><li>deprecate legacy <code>pipe_*</code> API in favor of the new <code>pip_*</code> API</li>
-<li>deprecate legacy <code>Pipeline</code> R6 interface (<code>Pipeline$new()</code>)</li>
+<div class="section level3">
+<h3 id="documentation-0-3-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-3-0"></a></h3>
+<ul><li>Comprehensive revision of all vignettes to match the new <code>pip_*</code> API.</li>
+<li>Revised <code>vignettes/v04-collect-output.Rmd</code> to demonstrate tag-based grouping via <code><a href="../reference/pip_view.html">pip_view()</a></code> composition.</li>
+<li>Updated README with a “Why use {pipeflow}” feature list, a short usage example, and a revised vs-targets summary.</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.3.9005" id="pipeflow-0239005-1">pipeflow 0.2.3.9005<a class="anchor" aria-label="anchor" href="#pipeflow-0239005-1"></a></h2>
-<ul><li>refactor: deprecate <code>keepOut</code> field and introduce <code>tags</code> field</li>
+<div class="section level3">
+<h3 id="internal-0-3-0">Internal<a class="anchor" aria-label="anchor" href="#internal-0-3-0"></a></h3>
+<ul><li>Extensive test suite covering C++ DAG, <code>pip_*</code> API, aliases, execution modes, and recursive runs.</li>
+<li>MIT license, updated CI workflows, dependabot config, kilo.json, lintr/styler config.</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.3.9004" id="pipeflow-0239004">pipeflow 0.2.3.9004<a class="anchor" aria-label="anchor" href="#pipeflow-0239004"></a></h2>
-<ul><li>deprecate <code>all</code> parameter in <code><a href="../reference/pipe_collect_out.html">pipe_collect_out()</a></code>
-</li>
-<li>deprecate <code><a href="../reference/pipe_set_data_split.html">pipe_set_data_split()</a></code> and <code><a href="../reference/pipe_set_keep_out.html">pipe_set_keep_out()</a></code>
-</li>
-<li>add new functions to skip and unskip pipeline steps and groups: <code>pipe_skip_step()</code>, <code>pipe_unskip_step()</code>, <code>pipe_skip_group()</code>, and <code>pipe_unskip_group()</code>.</li>
-<li>add new function, <code>pipe_get_step_field()</code> to retrieve a specific field of a pipeline step</li>
-<li>remove advanced vignette on using pipeflow with split data sets</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.3.9003" id="pipeflow-0239003">pipeflow 0.2.3.9003<a class="anchor" aria-label="anchor" href="#pipeflow-0239003"></a></h2>
-<ul><li>Refactor: Remove Param object handling from pipeline and utility functions</li>
-<li>Refactor: Remove unused get_params_unique_json method and its documentation</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.3.9002" id="pipeflow-0239002">pipeflow 0.2.3.9002<a class="anchor" aria-label="anchor" href="#pipeflow-0239002"></a></h2>
-<ul><li>refactor: ensure unit tests for logging is always done with logging enabled</li>
-<li>refactor: add ‘locked’ column and improve indexing performance</li>
-<li>refactor: implement slightly faster step existence check</li>
-<li>feat: set locked status via boolean flag and add has_step_locked function</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.3.9001" id="pipeflow-0239001">pipeflow 0.2.3.9001<a class="anchor" aria-label="anchor" href="#pipeflow-0239001"></a></h2>
-<ul><li>feat: implement index map and BFS for dependency graphs (improved performance)</li>
-<li>chore: add benchmark for running long linear pipelines</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.2.3.9000" id="pipeflow-0239000">pipeflow 0.2.3.9000<a class="anchor" aria-label="anchor" href="#pipeflow-0239000"></a></h2>
-<ul><li>Same as previous version.</li>
-</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.3" id="pipeflow-023">pipeflow 0.2.3<a class="anchor" aria-label="anchor" href="#pipeflow-023"></a></h2><p class="text-muted">CRAN release: 2025-07-26</p>
 <ul><li>Add Depends R &gt;= 4.2.0 to DESCRIPTION</li>

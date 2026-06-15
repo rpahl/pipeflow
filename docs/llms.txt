@@ -1,24 +1,24 @@
 # pipeflow
 
-A lightweight yet powerful framework for building robust data analysis
-pipelines. With {pipeflow}, you initialize a pipeline with your dataset
-and construct workflows step by step simply by adding R functions. You
-can modify, remove, or insert steps and parameters at any stage, while
-{pipeflow} ensures the pipeline’s integrity.
+Build fast interactive data analysis pipelines quick and easy.
+
+{pipeflow} simply lets you add R functions one by one, wiring them into
+a pipeline that stays consistent as you go. Modify, remove, or insert
+steps at any stage, and manage all parameters in one place.
 
 Thanks to its intuitive interface, using {pipeflow} quickly pays off in
-the beginning while in the long run will help you to keep a clear and
-structured overview of your project.
+the beginning while in the long run helps keeping a clear and structured
+overview of your project.
 
 ![cartoon](reference/figures/cartoon.png)
 
 ### Why use {pipeflow}
 
-- Simple and intuitive API
+- Lightweight and intuitive API
 - Filtered pipeline views
 - All parameters managed in one place
 - Pipeline verified at definition time
-- Fast execution with minimal overhead
+- Execution remains fast for complex pipelines (C++-powered DAG)
 
 ### Installation
 
@@ -51,11 +51,11 @@ p
 # 3:   total squared [NULL]   new
 
 pip_run(p)
-# info [2026-06-14 13:38:28.463 UTC]: Start run of pipeflow_pip 'demo'
-# info [2026-06-14 13:38:28.463 UTC]: Step 1/3 numbers
-# info [2026-06-14 13:38:28.465 UTC]: Step 2/3 squared
-# info [2026-06-14 13:38:28.468 UTC]: Step 3/3 total
-# info [2026-06-14 13:38:28.469 UTC]: Finished run of pipeflow_pip 'demo'
+# info [2026-06-14 20:16:14.083 UTC]: Start run of pipeflow_pip 'demo'
+# info [2026-06-14 20:16:14.084 UTC]: Step 1/3 numbers
+# info [2026-06-14 20:16:14.086 UTC]: Step 2/3 squared
+# info [2026-06-14 20:16:14.088 UTC]: Step 3/3 total
+# info [2026-06-14 20:16:14.090 UTC]: Finished run of pipeflow_pip 'demo'
 
 pip_collect_out(p)
 # $numbers

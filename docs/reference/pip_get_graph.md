@@ -45,10 +45,10 @@ pip_add(p, "fit", \(x = ~clean) x * 2, tags = "model")
 
 graph <- pip_get_graph(p)
 graph$nodes # data.frame: id, label, shape, color
-#>   id label group   shape     color
-#> 1  0  load  load hexagon #47b8ffff
-#> 2  1 clean clean hexagon #47b8ffff
-#> 3  2   fit   fit hexagon #47b8ffff
+#>   id label   shape     color
+#> 1  0  load hexagon #47b8ffff
+#> 2  1 clean hexagon #47b8ffff
+#> 3  2   fit hexagon #47b8ffff
 graph$edges # data.frame: from, to, arrows
 #>   from to arrows
 #> 1    0  1     to
@@ -58,10 +58,10 @@ graph$edges # data.frame: from, to, arrows
 v <- pip_view(p, i = "fit")
 pip_get_graph(v, include_upstream = TRUE)
 #> $nodes
-#>   id label group   shape     color
-#> 1  0  load  load hexagon #47b8ffff
-#> 2  1 clean clean hexagon #47b8ffff
-#> 3  2   fit   fit hexagon #47b8ffff
+#>   id label   shape     color
+#> 1  0  load hexagon #47b8ffff
+#> 2  1 clean hexagon #47b8ffff
+#> 3  2   fit hexagon #47b8ffff
 #> 
 #> $edges
 #>   from to arrows
@@ -73,5 +73,5 @@ if (require("visNetwork", quietly = TRUE)) {
   do.call(what = visNetwork::visNetwork, args = graph)
 }
 
-{"x":{"nodes":{"id":[0,1,2],"label":["load","clean","fit"],"group":["load","clean","fit"],"shape":["hexagon","hexagon","hexagon"],"color":["#47b8ffff","#47b8ffff","#47b8ffff"]},"edges":{"from":[0,1],"to":[1,2],"arrows":["to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false}},"groups":["load","clean","fit"],"width":null,"height":null,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}
+{"x":{"nodes":{"id":[0,1,2],"label":["load","clean","fit"],"shape":["hexagon","hexagon","hexagon"],"color":["#47b8ffff","#47b8ffff","#47b8ffff"]},"edges":{"from":[0,1],"to":[1,2],"arrows":["to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false}},"groups":null,"width":null,"height":null,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}
 ```
