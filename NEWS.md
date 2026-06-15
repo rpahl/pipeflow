@@ -1,3 +1,10 @@
+<!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
+
+# pipeflow 0.3.0.9000
+
+- Same as previous version.
+
+
 
 # pipeflow 0.3.0
 
