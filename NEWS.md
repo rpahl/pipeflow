@@ -1,5 +1,11 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.3.0.9001
+
+- fix some typos and missing viz
+- fix link to pipeflow vs targets vignette
+
+
 # pipeflow 0.3.0.9000
 
 - Same as previous version.
