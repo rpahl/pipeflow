@@ -95,7 +95,9 @@ pip_get_params(pip)[["data"]] |> head(3)
 ### Insert new step
 
 Let's say we want to insert a new step after the `data_prep` step
-that standardizes the y-variable.
+that standardizes the y-variable. To do this, we use `pip_add()`
+with the `after` argument.
+
 
 ```{r insert-step}
 pip |> pip_add(
@@ -147,9 +149,9 @@ a fixed y-variable in the model, let's pass it as a parameter.
 pip |> pip_replace(
     "model_fit",
     function(
-        data = ~standardize, # <- changed data reference
+        data = ~standardize,            # <- changed data reference
         xVar = "Temp.Celsius",
-        yVar = "Ozone" # <- new y-variable
+        yVar = "Ozone"                  # <- new y-variable
     ) {
         lm(paste(yVar, "~", xVar), data = data)
     }
@@ -164,9 +166,9 @@ pip |> pip_replace(
     "model_plot",
     function(
         model = ~model_fit,
-        data = ~standardize, # <- changed data reference
+        data = ~standardize,            # <- changed data reference
         xVar = "Temp.Celsius",
-        yVar = "Ozone", # <- new y-variable
+        yVar = "Ozone",                 # <- new y-variable
         title = "Linear model fit"
     ) {
         coeffs <- coefficients(model)

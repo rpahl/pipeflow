@@ -9,7 +9,7 @@ function, parameters, tags, and dependency links."><meta property="og:image" con
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,7 +42,7 @@ function, parameters, tags, and dependency links."><meta property="og:image" con
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -104,10 +104,10 @@ function, parameters, tags, and dependency links.</p>
 <span class="r-in"><span><span class="fu">pip_add_from</span><span class="op">(</span><span class="va">dst</span>, <span class="va">src</span>, <span class="st">"load"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">pip_add_from</span><span class="op">(</span><span class="va">dst</span>, <span class="va">src</span>, <span class="st">"square"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">dst</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:41.955 UTC]: Start run of pipeflow_pip 'target'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:41.955 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:41.956 UTC]: Step 2/2 square</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:41.958 UTC]: Finished run of pipeflow_pip 'target'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:04.294 UTC]: Start run of pipeflow_pip 'target'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:04.296 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:04.304 UTC]: Step 2/2 square</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:04.313 UTC]: Finished run of pipeflow_pip 'target'</span>
 <span class="r-in"><span><span class="fu"><a href="pip_collect_out.html">pip_collect_out</a></span><span class="op">(</span><span class="va">dst</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $load</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1 2 3</span>

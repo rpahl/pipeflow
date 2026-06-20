@@ -116,18 +116,18 @@ tar_dir({
 })
 # 
 # Proof of principle full run (no skips)
-# info [2026-06-15 10:52:47.493 UTC]: Start run of pipeflow_pip 'walkthrough'
-# info [2026-06-15 10:52:47.493 UTC]: Step 1/3 data
-# info [2026-06-15 10:52:47.498 UTC]: Step 2/3 model
-# info [2026-06-15 10:52:47.505 UTC]: Step 3/3 plot
-# info [2026-06-15 10:52:47.537 UTC]: Finished run of pipeflow_pip 'walkthrough'
+# info [2026-06-20 19:20:51.077 UTC]: Start run of pipeflow_pip 'walkthrough'
+# info [2026-06-20 19:20:51.077 UTC]: Step 1/3 data
+# info [2026-06-20 19:20:51.083 UTC]: Step 2/3 model
+# info [2026-06-20 19:20:51.089 UTC]: Step 3/3 plot
+# info [2026-06-20 19:20:51.121 UTC]: Finished run of pipeflow_pip 'walkthrough'
 # 
 # Proof of principle skipped run
-# info [2026-06-15 10:52:48.093 UTC]: Start run of pipeflow_pip 'walkthrough'
-# info [2026-06-15 10:52:48.093 UTC]: Step 1/3 data - skipping done step
-# info [2026-06-15 10:52:48.094 UTC]: Step 2/3 model - skipping done step
-# info [2026-06-15 10:52:48.094 UTC]: Step 3/3 plot - skipping done step
-# info [2026-06-15 10:52:48.094 UTC]: Finished run of pipeflow_pip 'walkthrough'
+# info [2026-06-20 19:20:51.560 UTC]: Start run of pipeflow_pip 'walkthrough'
+# info [2026-06-20 19:20:51.560 UTC]: Step 1/3 data - skipping done step
+# info [2026-06-20 19:20:51.560 UTC]: Step 2/3 model - skipping done step
+# info [2026-06-20 19:20:51.560 UTC]: Step 3/3 plot - skipping done step
+# info [2026-06-20 19:20:51.561 UTC]: Finished run of pipeflow_pip 'walkthrough'
 ```
 
 #### targets pipeline
@@ -164,19 +164,19 @@ tar_dir({
 })
 # 
 # Proof of principle full run (no skips)
-# 2026-06-15 12:52:48.29 dispatched target file
-# 2026-06-15 12:52:48.30 completed target file [0ms, 3.87 kB]
-# 2026-06-15 12:52:48.31 dispatched target data
-# 2026-06-15 12:52:48.33 completed target data [10ms, 1.38 kB]
-# 2026-06-15 12:52:48.35 dispatched target model
-# 2026-06-15 12:52:48.38 completed target model [0ms, 111 B]
-# 2026-06-15 12:52:48.38 dispatched target plot
-# 2026-06-15 12:52:48.45 completed target plot [10ms, 114.10 kB]
-# ✔ 2026-06-15 12:52:48.46 ended pipeline [250ms, 4 completed, 0 skipped]
+# 2026-06-20 21:20:51.73 dispatched target file
+# 2026-06-20 21:20:51.74 completed target file [0ms, 3.87 kB]
+# 2026-06-20 21:20:51.74 dispatched target data
+# 2026-06-20 21:20:51.76 completed target data [0ms, 1.38 kB]
+# 2026-06-20 21:20:51.79 dispatched target model
+# 2026-06-20 21:20:51.79 completed target model [0ms, 111 B]
+# 2026-06-20 21:20:51.79 dispatched target plot
+# 2026-06-20 21:20:51.85 completed target plot [0ms, 114.10 kB]
+# ✔ 2026-06-20 21:20:51.86 ended pipeline [190ms, 4 completed, 0 skipped]
 # 
 # Proof of principle skipped run
-# 2026-06-15 12:53:21.41 skipped 1 targets
-# ✔ 2026-06-15 12:53:21.41 skipped pipeline [51ms, 4 skipped]
+# 2026-06-20 21:21:21.57 skipped 1 targets
+# ✔ 2026-06-20 21:21:21.57 skipped pipeline [31ms, 4 skipped]
 ```
 
 #### Runtimes
@@ -207,12 +207,12 @@ create_linear_pip <- function(n) {
 # Verify
 p <- create_linear_pip(3)
 pip_run(p)
-# info [2026-06-15 10:53:23.704 UTC]: Start run of pipeflow_pip 'linear'
-# info [2026-06-15 10:53:23.704 UTC]: Step 1/4 s0
-# info [2026-06-15 10:53:23.705 UTC]: Step 2/4 s1
-# info [2026-06-15 10:53:23.707 UTC]: Step 3/4 s2
-# info [2026-06-15 10:53:23.708 UTC]: Step 4/4 s3
-# info [2026-06-15 10:53:23.709 UTC]: Finished run of pipeflow_pip 'linear'
+# info [2026-06-20 19:21:23.552 UTC]: Start run of pipeflow_pip 'linear'
+# info [2026-06-20 19:21:23.552 UTC]: Step 1/4 s0
+# info [2026-06-20 19:21:23.553 UTC]: Step 2/4 s1
+# info [2026-06-20 19:21:23.554 UTC]: Step 3/4 s2
+# info [2026-06-20 19:21:23.556 UTC]: Step 4/4 s3
+# info [2026-06-20 19:21:23.557 UTC]: Finished run of pipeflow_pip 'linear'
 stopifnot(p[["s3", "out"]] == 3)
 ```
 
@@ -238,15 +238,15 @@ tar_dir({
     tar_make_here(reporter = "timestamp")
     stopifnot(tar_read(s3) == 3)
 })
-# 2026-06-15 12:53:23.81 dispatched target s0
-# 2026-06-15 12:53:23.81 completed target s0 [0ms, 49 B]
-# 2026-06-15 12:53:23.81 dispatched target s1
-# 2026-06-15 12:53:23.82 completed target s1 [0ms, 51 B]
-# 2026-06-15 12:53:23.82 dispatched target s2
-# 2026-06-15 12:53:23.83 completed target s2 [0ms, 50 B]
-# 2026-06-15 12:53:23.83 dispatched target s3
-# 2026-06-15 12:53:23.84 completed target s3 [0ms, 51 B]
-# ✔ 2026-06-15 12:53:23.84 ended pipeline [60ms, 4 completed, 0 skipped]
+# 2026-06-20 21:21:23.65 dispatched target s0
+# 2026-06-20 21:21:23.66 completed target s0 [0ms, 49 B]
+# 2026-06-20 21:21:23.66 dispatched target s1
+# 2026-06-20 21:21:23.66 completed target s1 [0ms, 51 B]
+# 2026-06-20 21:21:23.66 dispatched target s2
+# 2026-06-20 21:21:23.67 completed target s2 [0ms, 50 B]
+# 2026-06-20 21:21:23.67 dispatched target s3
+# 2026-06-20 21:21:23.68 completed target s3 [0ms, 51 B]
+# ✔ 2026-06-20 21:21:23.68 ended pipeline [61ms, 4 completed, 0 skipped]
 # 
 ```
 
@@ -292,14 +292,14 @@ make_branch_pip <- function(n) {
 
 p4 <- make_branch_pip(4)
 pip_run(p4)
-# info [2026-06-15 10:54:37.882 UTC]: Start run of pipeflow_pip 'dag'
-# info [2026-06-15 10:54:37.882 UTC]: Step 1/6 source
-# info [2026-06-15 10:54:37.883 UTC]: Step 2/6 b1
-# info [2026-06-15 10:54:37.885 UTC]: Step 3/6 b2
-# info [2026-06-15 10:54:37.887 UTC]: Step 4/6 b3
-# info [2026-06-15 10:54:37.888 UTC]: Step 5/6 b4
-# info [2026-06-15 10:54:37.890 UTC]: Step 6/6 sink
-# info [2026-06-15 10:54:37.891 UTC]: Finished run of pipeflow_pip 'dag'
+# info [2026-06-20 19:22:29.081 UTC]: Start run of pipeflow_pip 'dag'
+# info [2026-06-20 19:22:29.081 UTC]: Step 1/6 source
+# info [2026-06-20 19:22:29.082 UTC]: Step 2/6 b1
+# info [2026-06-20 19:22:29.084 UTC]: Step 3/6 b2
+# info [2026-06-20 19:22:29.087 UTC]: Step 4/6 b3
+# info [2026-06-20 19:22:29.089 UTC]: Step 5/6 b4
+# info [2026-06-20 19:22:29.090 UTC]: Step 6/6 sink
+# info [2026-06-20 19:22:29.092 UTC]: Finished run of pipeflow_pip 'dag'
 stopifnot(p4[["sink", "out"]] == 8)
 ```
 
@@ -332,19 +332,19 @@ tar_dir({
     tar_make_here(reporter = "timestamp")
     stopifnot(tar_read(sink) == 8)
 })
-# 2026-06-15 12:54:38.01 dispatched target source
-# 2026-06-15 12:54:38.02 completed target source [0ms, 51 B]
-# 2026-06-15 12:54:38.02 dispatched target b1
-# 2026-06-15 12:54:38.03 completed target b1 [0ms, 50 B]
-# 2026-06-15 12:54:38.04 dispatched target b2
-# 2026-06-15 12:54:38.04 completed target b2 [0ms, 50 B]
-# 2026-06-15 12:54:38.04 dispatched target b3
-# 2026-06-15 12:54:38.05 completed target b3 [0ms, 50 B]
-# 2026-06-15 12:54:38.05 dispatched target b4
-# 2026-06-15 12:54:38.06 completed target b4 [0ms, 50 B]
-# 2026-06-15 12:54:38.06 dispatched target sink
-# 2026-06-15 12:54:38.07 completed target sink [0ms, 51 B]
-# ✔ 2026-06-15 12:54:38.07 ended pipeline [110ms, 6 completed, 0 skipped]
+# 2026-06-20 21:22:29.19 dispatched target source
+# 2026-06-20 21:22:29.19 completed target source [0ms, 51 B]
+# 2026-06-20 21:22:29.20 dispatched target b1
+# 2026-06-20 21:22:29.21 completed target b1 [0ms, 50 B]
+# 2026-06-20 21:22:29.21 dispatched target b2
+# 2026-06-20 21:22:29.21 completed target b2 [0ms, 50 B]
+# 2026-06-20 21:22:29.22 dispatched target b3
+# 2026-06-20 21:22:29.22 completed target b3 [0ms, 50 B]
+# 2026-06-20 21:22:29.22 dispatched target b4
+# 2026-06-20 21:22:29.23 completed target b4 [0ms, 50 B]
+# 2026-06-20 21:22:29.23 dispatched target sink
+# 2026-06-20 21:22:29.24 completed target sink [0ms, 51 B]
+# ✔ 2026-06-20 21:22:29.24 ended pipeline [70ms, 6 completed, 0 skipped]
 # 
 ```
 

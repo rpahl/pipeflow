@@ -32,7 +32,9 @@ pip_get_params(pip)[["data"]] |> head(3)
 ### Insert new step
 
 Let’s say we want to insert a new step after the `data_prep` step that
-standardizes the y-variable.
+standardizes the y-variable. To do this, we use
+[`pip_add()`](https://github.com/rpahl/pipeflow/reference/pip_add.md)
+with the `after` argument.
 
 ``` r
 
@@ -94,9 +96,9 @@ y-variable in the model, let’s pass it as a parameter.
 pip |> pip_replace(
     "model_fit",
     function(
-        data = ~standardize, # <- changed data reference
+        data = ~standardize,            # <- changed data reference
         xVar = "Temp.Celsius",
-        yVar = "Ozone" # <- new y-variable
+        yVar = "Ozone"                  # <- new y-variable
     ) {
         lm(paste(yVar, "~", xVar), data = data)
     }
@@ -111,9 +113,9 @@ pip |> pip_replace(
     "model_plot",
     function(
         model = ~model_fit,
-        data = ~standardize, # <- changed data reference
+        data = ~standardize,            # <- changed data reference
         xVar = "Temp.Celsius",
-        yVar = "Ozone", # <- new y-variable
+        yVar = "Ozone",                 # <- new y-variable
         title = "Linear model fit"
     ) {
         coeffs <- coefficients(model)
@@ -148,13 +150,13 @@ output.
 
 pip_set_params(pip, params = list(xVar = "Solar.R", yVar = "Wind"))
 pip_run(pip)
-# info [2026-06-15 10:51:23.245 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-15 10:51:23.246 UTC]: Step 1/5 data - skipping done step
-# info [2026-06-15 10:51:23.246 UTC]: Step 2/5 data_prep - skipping done step
-# info [2026-06-15 10:51:23.246 UTC]: Step 3/5 standardize
-# info [2026-06-15 10:51:23.249 UTC]: Step 4/5 model_fit
-# info [2026-06-15 10:51:23.251 UTC]: Step 5/5 model_plot
-# info [2026-06-15 10:51:23.262 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-20 19:19:41.357 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-20 19:19:41.358 UTC]: Step 1/5 data - skipping done step
+# info [2026-06-20 19:19:41.358 UTC]: Step 2/5 data_prep - skipping done step
+# info [2026-06-20 19:19:41.358 UTC]: Step 3/5 standardize
+# info [2026-06-20 19:19:41.360 UTC]: Step 4/5 model_fit
+# info [2026-06-20 19:19:41.362 UTC]: Step 5/5 model_plot
+# info [2026-06-20 19:19:41.372 UTC]: Finished run of pipeflow_pip 'my-pip'
 ```
 
 ``` r

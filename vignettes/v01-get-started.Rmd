@@ -73,13 +73,15 @@ column. The `depends` column lists the dependencies of a step, which is empty
 for the `data` step since it does not depend on any other step (more on
 dependencies later). The `out` column will eventually contain the output of the
 step, which is currently `NULL` since we haven't run the pipeline yet, and
-the `state` column shows the current, which initially is `new` for all steps.
+the `state` column shows the current state, which initially is `new` for
+all steps.
 
 Next, we add a step called `data_prep`, which consists of a function that
 takes the output of the `data` step as its first argument, adds a new column
 and returns the modified data as its output. To refer to the output of an
 earlier pipeline step, we just write the name of the step preceded with the
-tilde (~) operator, that is, `~data` in this case.
+tilde (~) operator, that is, the output of the `data` step can be
+referred to via `~data`.
 
 Since `pip_add` works "by reference", we can add the step as follows:
 
@@ -94,6 +96,10 @@ pip |> pip_add(
 
 So, a second step called `data_prep` was added and it depends on the `data`
 step as now visible in column `depends`.
+
+```{r}
+pip
+```
 
 Next, we want to add a step called `model_fit` that fits a linear model to the
 data. The function takes the output of the `data_prep` and defines a
@@ -110,14 +116,14 @@ pip |> pip_add(
         lm(paste("Ozone ~", xVar), data = data)
     }
 )
+
 pip
 ```
 
 Lastly, we add a step called `model_plot`, which plots the data and the
 linear model fit. The function uses the output from both the
-`model_fit` and `data_prep` step. It also defines the `xVar`
-parameter and a parameter `title`, which is used as the title
-of the plot.
+`model_fit` and `data_prep` step. As in the previous step, it defines the
+`xVar` parameter plus two more plot-specific parameters `xLab` and `title`.
 
 ```{r}
 pip |> pip_add(
@@ -137,11 +143,14 @@ pip |> pip_add(
             labs(title = title, x = xLab)
     }
 )
-pip
 ```
 
 In the last line, we see that the `model_plot` step depends on both
 the `model_fit` and `data_prep` step.
+
+```{r}
+pip
+```
 
 In addition to the tabular output, {pipeflow} also provides a graphical
 representation that is compatible with the `visNetwork` package.
@@ -170,12 +179,12 @@ the nodes represent the steps and the edges represent the dependencies.
 
 A key feature of {pipeflow} is that the integrity of a pipeline is verified at
 definition time. To see this, let's try to add another step that is referring
-to a non-existent step `foo` as its input.
+to a non-existent step `i_dont_exist` as its input.
 
 ```{r try-add-bad-step, error = TRUE}
 pip |> pip_add(
     "another_step",
-    function(data = ~foo) {
+    function(data = ~i_dont_exist) {
         data
     }
 )
@@ -242,12 +251,13 @@ parameters of the above defined pipeline using the `pip_get_params()` function.
 pip_get_params(pip) |> str()
 ```
 
-It returns a list of all *independent* parameters (here `data`, `xVar`, and `title`).
+It returns a list of all *independent* parameters (here
+``r toString(names(pip_get_params(pip)))``).
 By *independent* we mean that these parameters don't depend
 on other steps (i.e. steps defined with the `~` operator). This is important as you
 never want to mess with parameters defined in terms of other steps.
 
-Furthermore, each parameter is only listed once, even if it is used in multiple
+Furthermore, each parameter is only listed once, even if it's used in multiple
 steps^[For example, the `xVar` parameter is used in both the `model_fit`
 and `model_plot` step].
 To change any independent parameter, we simply call `pip_set_params()`:

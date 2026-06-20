@@ -2,14 +2,18 @@
 
 Generally speaking, one should keep pipeline steps as simple as
 possible, basically following the principle *“one step, one task”*.
-Splitting up analysis steps into multiple functions naturally can be
-hard to manage, but since {pipeflow} manages all function and parameter
-dependencies for you, this is not a problem.
+While splitting up analysis steps into multiple functions naturally
+becomes hard to manage with a growing number of functions, with
+{pipeflow}, which manages all function and parameter dependencies for
+you, this feels rather easy.
 
-Following this principle, usually a lot of pipeline steps will carry
-intermediate results and only a few steps will contain the final output
-we are interested in. This vignette shows how to conveniently tag,
-collect, and filter pipeline outputs using tags and views.
+Following this principle, most of the pipeline steps will carry
+intermediate results while only a few steps contain the final output we
+are interested in.
+
+This vignette shows how to conveniently tag and collect those final
+outputs as well as how to filter pipelines via {pipeflow}s view
+functionality.
 
 ### Tagging steps
 
@@ -97,7 +101,8 @@ pip <- pip_new("my-pip") |>
 
 We used two families of tags: `"data"`/`"model"` to distinguish the
 topic, and `"summary"`/`"plot"`/`"fit"` for the output type. Whenever
-tags are defined, they are shown in the pipeline overview:
+tags are defined, they are shown in the pipeline overview (see rightmost
+column):
 
 ``` r
 
@@ -120,15 +125,15 @@ inspect the output individually as we did in the previous vignettes.
 ``` r
 
 pip_run(pip)
-# info [2026-06-15 10:51:57.655 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-15 10:51:57.656 UTC]: Step 1/7 data
-# info [2026-06-15 10:51:57.658 UTC]: Step 2/7 data_prep
-# info [2026-06-15 10:51:57.661 UTC]: Step 3/7 data_summary
-# info [2026-06-15 10:51:57.665 UTC]: Step 4/7 data_plot
-# info [2026-06-15 10:51:58.405 UTC]: Step 5/7 model_fit
-# info [2026-06-15 10:51:58.410 UTC]: Step 6/7 model_summary
-# info [2026-06-15 10:51:58.418 UTC]: Step 7/7 model_plot
-# info [2026-06-15 10:51:58.425 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-20 19:20:07.873 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-20 19:20:07.873 UTC]: Step 1/7 data
+# info [2026-06-20 19:20:07.875 UTC]: Step 2/7 data_prep
+# info [2026-06-20 19:20:07.878 UTC]: Step 3/7 data_summary
+# info [2026-06-20 19:20:07.881 UTC]: Step 4/7 data_plot
+# info [2026-06-20 19:20:08.572 UTC]: Step 5/7 model_fit
+# info [2026-06-20 19:20:08.576 UTC]: Step 6/7 model_summary
+# info [2026-06-20 19:20:08.583 UTC]: Step 7/7 model_plot
+# info [2026-06-20 19:20:08.591 UTC]: Finished run of pipeflow_pip 'my-pip'
 
 pip
 # <pipeflow_pip> my-pip (7 steps)
@@ -160,7 +165,8 @@ pip[["model_plot", "out"]]
 ### Flat output collection
 
 [`pip_collect_out()`](https://github.com/rpahl/pipeflow/reference/pip_collect_out.md)
-returns all step outputs as a flat named list.
+returns all step outputs as a flat named list^ \[ Below, we only show
+the names of the list elements, to keep the vignette concise.\].
 
 ``` r
 
@@ -178,8 +184,8 @@ To collect only the output of steps with a specific tag, we use
 which is {pipeflow}’s general-purpose function for filtering pipelines,
 and then call
 [`pip_collect_out()`](https://github.com/rpahl/pipeflow/reference/pip_collect_out.md)
-on the filtered pipeline. To collect only the plots, for example, we can
-filter by the `plot` tag.
+on the filtered pipeline view. For example, to collect only the plots,
+we can filter by the `plot` tag.
 
 ``` r
 
@@ -247,8 +253,8 @@ pip
 
 {pipeflow} views provide a variety of filtering options. In the previous
 section, the filtering was done based on tags, but you can also filter
-based on other properties, for example, all steps that depend on the
-`model_fit` step:
+based on other properties, for example, to select all `outdated` steps
+that depend on the `model_fit` step:
 
 ``` r
 
@@ -260,8 +266,8 @@ pip |> pip_view(filter = list(depends = "model_fit", state = "outdated"))
 #     model_plot model_fit,data_plot <ggplot2::ggplot> outdated    model,plot
 ```
 
-or using regex-based filtering, for example, to filter all outdated
-steps starting with `data`:
+or using regex-based filtering to filter all outdated steps starting
+with `data`:
 
 ``` r
 
@@ -305,12 +311,12 @@ ensures that any upstream dependencies are run first if needed.
 ``` r
 
 v2 |> pip_run()
-# info [2026-06-15 10:52:00.107 UTC]: Start run of pipeflow_view 'my-pip view view'
-# info [2026-06-15 10:52:00.107 UTC]: Step 1/4 [upstream] data_prep - skipping done step
-# info [2026-06-15 10:52:00.107 UTC]: Step 2/4 [view] data_plot
-# info [2026-06-15 10:52:00.118 UTC]: Step 3/4 [upstream] model_fit
-# info [2026-06-15 10:52:00.122 UTC]: Step 4/4 [view] model_plot
-# info [2026-06-15 10:52:00.132 UTC]: Finished run of pipeflow_view 'my-pip view view'
+# info [2026-06-20 19:20:10.109 UTC]: Start run of pipeflow_view 'my-pip view view'
+# info [2026-06-20 19:20:10.109 UTC]: Step 1/4 [upstream] data_prep - skipping done step
+# info [2026-06-20 19:20:10.109 UTC]: Step 2/4 [view] data_plot
+# info [2026-06-20 19:20:10.120 UTC]: Step 3/4 [upstream] model_fit
+# info [2026-06-20 19:20:10.124 UTC]: Step 4/4 [view] model_plot
+# info [2026-06-20 19:20:10.131 UTC]: Finished run of pipeflow_view 'my-pip view view'
 ```
 
 Having a closer look at the run log, you’ll see which steps were re-run

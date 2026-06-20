@@ -26,15 +26,16 @@ old <- options(width = 100L)
 
 Generally speaking, one should keep pipeline steps as simple as possible,
 basically following the
-principle *"one step, one task"*. Splitting up analysis steps into multiple
-functions naturally can be hard to manage, but since {pipeflow} manages all
-function and parameter dependencies for you, this is not a problem.
+principle *"one step, one task"*. While splitting up analysis steps into multiple
+functions naturally becomes hard to manage with a growing number of functions,
+with {pipeflow}, which manages all function and parameter dependencies for you,
+this feels rather easy.
 
-Following this principle, usually a lot of pipeline steps will carry
-intermediate results and only a few steps will contain the final output we
-are interested in.
-This vignette shows how to conveniently tag, collect, and filter pipeline
-outputs using tags and views.
+Following this principle, most of the pipeline steps will carry intermediate
+results while only a few steps contain the final output we are interested in.
+
+This vignette shows how to conveniently tag and collect those final outputs
+as well as how to filter pipelines via {pipeflow}s view functionality.
 
 ### Tagging steps
 
@@ -121,7 +122,8 @@ pip <- pip_new("my-pip") |>
 
 We used two families of tags: `"data"`/`"model"` to distinguish the
 topic, and `"summary"`/`"plot"`/`"fit"` for the output type.
-Whenever tags are defined, they are shown in the pipeline overview:
+Whenever tags are defined, they are shown in the pipeline overview
+(see rightmost column):
 
 ```{r}
 pip
@@ -147,7 +149,11 @@ pip[["model_plot", "out"]]
 
 ### Flat output collection
 
-`pip_collect_out()` returns all step outputs as a flat named list.
+`pip_collect_out()` returns all step outputs as a flat named list^
+[
+    Below, we only show the names of the list elements, to keep
+    the vignette concise.
+].
 
 ```{r}
 out <- pip_collect_out(pip)
@@ -160,8 +166,8 @@ names(out)
 
 To collect only the output of steps with a specific tag, we use
 `pip_view()`, which is {pipeflow}'s general-purpose function for filtering
-pipelines, and then call `pip_collect_out()` on the filtered pipeline.
-To collect only the plots, for example, we can filter by the `plot` tag.
+pipelines, and then call `pip_collect_out()` on the filtered pipeline view.
+For example, to collect only the plots, we can filter by the `plot` tag.
 
 ```{r}
 pip_view(pip, tags = "plot")
@@ -204,14 +210,14 @@ pip
 
 {pipeflow} views provide a variety of filtering options. In the previous
 section, the filtering was done based on tags, but you can also filter
-based on other properties, for example, all steps that depend on the
-`model_fit` step:
+based on other properties, for example, to select all `outdated` steps
+that depend on the `model_fit` step:
 
 ```{r}
 pip |> pip_view(filter = list(depends = "model_fit", state = "outdated"))
 ```
 
-or using regex-based filtering, for example, to filter all outdated steps
+or using regex-based filtering to filter all outdated steps
 starting with `data`:
 
 ```{r}

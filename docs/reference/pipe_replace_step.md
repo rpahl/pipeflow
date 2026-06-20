@@ -86,26 +86,26 @@ pipe_add(p, "add1", \(x = ~data, y = 1) x + y)
 pipe_add(p, "add2", \(x = ~data, y = 2) x + y)
 pipe_add(p, "mult", \(x = 1, y = 2) x * y, keepOut = TRUE)
 pipe_run(p) |> pipe_collect_out()
-#> INFO  [2026-06-15 12:50:35.376] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-15 12:50:35.377] Step 1/4 data
-#> INFO  [2026-06-15 12:50:35.380] Step 2/4 add1
-#> INFO  [2026-06-15 12:50:35.382] Step 3/4 add2
-#> INFO  [2026-06-15 12:50:35.386] Step 4/4 mult
-#> INFO  [2026-06-15 12:50:35.388] Finished execution of steps.
-#> INFO  [2026-06-15 12:50:35.388] Done.
+#> INFO  [2026-06-20 21:18:58.306] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-20 21:18:58.308] Step 1/4 data
+#> INFO  [2026-06-20 21:18:58.312] Step 2/4 add1
+#> INFO  [2026-06-20 21:18:58.314] Step 3/4 add2
+#> INFO  [2026-06-20 21:18:58.316] Step 4/4 mult
+#> INFO  [2026-06-20 21:18:58.318] Finished execution of steps.
+#> INFO  [2026-06-20 21:18:58.318] Done.
 #> $mult
 #> [1] 2
 #> 
 pipe_replace_step(p, "mult", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
 #> Warning: The legacy 'pipe_*' API is deprecated and will be removed in a future release. Please migrate to the new 'pip_*' API.
 pipe_run(p) |> pipe_collect_out()
-#> INFO  [2026-06-15 12:50:35.394] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-15 12:50:35.396] Step 1/4 data - skip 'done' step
-#> INFO  [2026-06-15 12:50:35.398] Step 2/4 add1 - skip 'done' step
-#> INFO  [2026-06-15 12:50:35.401] Step 3/4 add2 - skip 'done' step
-#> INFO  [2026-06-15 12:50:35.403] Step 4/4 mult
-#> INFO  [2026-06-15 12:50:35.405] Finished execution of steps.
-#> INFO  [2026-06-15 12:50:35.410] Done.
+#> INFO  [2026-06-20 21:18:58.323] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-20 21:18:58.325] Step 1/4 data - skip 'done' step
+#> INFO  [2026-06-20 21:18:58.326] Step 2/4 add1 - skip 'done' step
+#> INFO  [2026-06-20 21:18:58.327] Step 3/4 add2 - skip 'done' step
+#> INFO  [2026-06-20 21:18:58.328] Step 4/4 mult
+#> INFO  [2026-06-20 21:18:58.330] Finished execution of steps.
+#> INFO  [2026-06-20 21:18:58.331] Done.
 #> $mult
 #> [1] 6
 #> 
