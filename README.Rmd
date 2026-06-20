@@ -37,7 +37,7 @@ old <- options(width = 100L)
 
 # pipeflow <img src="man/figures/logo.png" alt="logo" align="right" width="163" height="121"/>
 
-Build fast interactive data analysis pipelines quick and easy.
+Build fast interactive data analysis pipelines that scale.
 
 {pipeflow} simply lets you add R functions one by one, wiring them into a
 pipeline that stays consistent as you go. Modify, remove, or insert
@@ -52,10 +52,11 @@ structured overview of your project.
 ### Why use {pipeflow}
 
 * Lightweight and intuitive API
-* Filtered pipeline views
 * All parameters managed in one place
 * Pipeline verified at definition time
-* Execution remains fast for complex pipelines (C++-powered DAG)
+* Filter pipeline steps via views ![](https://img.shields.io/badge/-new-orange)
+* Branch and merge pipeline steps ![](https://img.shields.io/badge/-new-orange)
+* Fast dependency resolution (C++-powered DAG) ![](https://img.shields.io/badge/-new-orange)
 
 ### Installation
 
@@ -102,7 +103,7 @@ It is recommended to read the vignettes in the order they are listed below:
 
 ### Benchmarks
 
-* [pipeflow vs targets](https://rpahl.github.io/pipeflow/articles/articles/v07-vs-targets.html)
+* [pipeflow vs targets](https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html)
 
 ```{r, include = FALSE}
 options(old)

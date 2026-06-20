@@ -30,11 +30,11 @@ p <- pip_new() |>
   pip_add("clean", \(x = ~load) x + 1, tags = "io") |>
   pip_add("model", \(x = ~clean) x * 2, tags = "model")
 pip_run(p)
-#> info [2026-06-15 10:50:42.973 UTC]: Start run of pipeflow_pip 'pipe'
-#> info [2026-06-15 10:50:42.974 UTC]: Step 1/3 load
-#> info [2026-06-15 10:50:42.974 UTC]: Step 2/3 clean
-#> info [2026-06-15 10:50:42.976 UTC]: Step 3/3 model
-#> info [2026-06-15 10:50:42.978 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-06-20 19:19:05.402 UTC]: Start run of pipeflow_pip 'pipe'
+#> info [2026-06-20 19:19:05.402 UTC]: Step 1/3 load
+#> info [2026-06-20 19:19:05.402 UTC]: Step 2/3 clean
+#> info [2026-06-20 19:19:05.404 UTC]: Step 3/3 model
+#> info [2026-06-20 19:19:05.405 UTC]: Finished run of pipeflow_pip 'pipe'
 
 # Flat named list with one entry per step
 pip_collect_out(p)

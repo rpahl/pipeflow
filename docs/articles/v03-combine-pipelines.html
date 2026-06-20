@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -67,7 +67,7 @@
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul>
 </li>
       </ul>
@@ -100,12 +100,16 @@
 <p>The possibility to combine pipelines basically allows to modularize
 the pipeline creation process. This is especially useful when you have a
 set of pipelines that are used in different contexts and you want to
-avoid code duplication.</p>
+avoid code duplication<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt; Note that code duplication is not bad per se. For
+example, it naturally reduces entanglement and improves local
+readability. On the other hand, there are certainly scenarios where code
+duplication should be avoided, specifically if duplicated multiple
+times, or if the code is complex.&lt;/p&gt;"><sup>1</sup></a>.</p>
 <div class="section level3">
 <h3 id="two-pipelines">Two pipelines<a class="anchor" aria-label="anchor" href="#two-pipelines"></a>
 </h3>
-<p>Let’s define one pipeline that is used for data preprocessing and one
-that does the modeling.</p>
+<p>As a simple example, let’s define one pipeline that is used for data
+preprocessing and one that does the modeling.</p>
 <p>Data preprocessing pipeline:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpahl.github.io/pipeflow/" class="external-link">pipeflow</a></span><span class="op">)</span></span>
@@ -200,13 +204,13 @@ that does the modeling.</p>
 <span><span class="co"># 5:         fit     data2 [NULL]   new</span></span>
 <span><span class="co"># 6:        plot fit,data2 [NULL]   new</span></span></code></pre></div>
 <p>First of all, note that the <code>data</code> step of the second
-pipeline has been renamed automatically to avoid name clashes. In
-particular, the first step of the second pipeline has been renamed from
-<code>data</code> to <code>data2</code> (line 4 in the <code>step</code>
-column) and likewise the data-dependencies of the second pipeline have
-been updated (see lines 5-6 in the <code>depends</code> column).</p>
-<p>That is, when binding two pipelines, {pipeflow} ensures that the step
-names remain unique in the resulting combined pipeline and therefore
+pipeline has been renamed automatically to <code>data2</code> (see line
+4 in the <code>step</code> column), which is necessary to avoid name
+clashes. Of course, the data-dependencies of the second pipeline were
+automatically updated as well (see lines 5-6 in the <code>depends</code>
+column).</p>
+<p>Generally, when binding two pipelines, {pipeflow} ensures that the
+step names remain unique in the resulting combined pipeline and thereby
 automatically renames duplicated step names if necessary.</p>
 <p>Now, as can be also seen from the graphical representation of the
 pipeline,</p>
@@ -220,7 +224,8 @@ combined pipeline, we have to use the output of the first pipeline as
 input of the second pipeline, that is, we want to use the output of the
 <code>standardize</code> step as the data parameter input in the
 <code>data2</code> step. To achieve this, we apply the
-<code>replace</code> function as described earlier in the vignette <a href="v02-modify-pipeline.html">modify the pipeline</a>:</p>
+<code>replace</code> function, which was introduced in the previous
+vignette <a href="v02-modify-pipeline.html">modify the pipeline</a>:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_replace.html">pip_replace</a></span><span class="op">(</span><span class="st">"data2"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">standardize</span><span class="op">)</span> <span class="va">data</span><span class="op">)</span></span>
 <span></span>
@@ -239,7 +244,7 @@ input of the second pipeline, that is, we want to use the output of the
 <h4 id="relative-indexing">Relative indexing<a class="anchor" aria-label="anchor" href="#relative-indexing"></a>
 </h4>
 <p>Since the name of the re-routed step might not always be known<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt;A typical example would be appending several pipelines
-in a programmatic context.&lt;/p&gt;"><sup>1</sup></a>, the
+in a programmatic context.&lt;/p&gt;"><sup>2</sup></a>, the
 {pipeflow} package also provides a relative position indexing mechanism,
 which allows to rewrite the above command as follows:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
@@ -267,14 +272,14 @@ steps back”, and so on.</p>
 <p>Let’s now run the combined pipeline and inspect the plot.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-15 10:51:41.198 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'</span></span>
-<span><span class="co"># info [2026-06-15 10:51:41.198 UTC]: Step 1/6 data</span></span>
-<span><span class="co"># info [2026-06-15 10:51:41.199 UTC]: Step 2/6 data_prep</span></span>
-<span><span class="co"># info [2026-06-15 10:51:41.201 UTC]: Step 3/6 standardize</span></span>
-<span><span class="co"># info [2026-06-15 10:51:41.204 UTC]: Step 4/6 data2</span></span>
-<span><span class="co"># info [2026-06-15 10:51:41.205 UTC]: Step 5/6 fit</span></span>
-<span><span class="co"># info [2026-06-15 10:51:41.209 UTC]: Step 6/6 plot</span></span>
-<span><span class="co"># info [2026-06-15 10:51:41.945 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-20 19:19:54.381 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'</span></span>
+<span><span class="co"># info [2026-06-20 19:19:54.382 UTC]: Step 1/6 data</span></span>
+<span><span class="co"># info [2026-06-20 19:19:54.383 UTC]: Step 2/6 data_prep</span></span>
+<span><span class="co"># info [2026-06-20 19:19:54.385 UTC]: Step 3/6 standardize</span></span>
+<span><span class="co"># info [2026-06-20 19:19:54.387 UTC]: Step 4/6 data2</span></span>
+<span><span class="co"># info [2026-06-20 19:19:54.388 UTC]: Step 5/6 fit</span></span>
+<span><span class="co"># info [2026-06-20 19:19:54.392 UTC]: Step 6/6 plot</span></span>
+<span><span class="co"># info [2026-06-20 19:19:55.068 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'</span></span></code></pre></div>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co"># Warning: Removed 37 rows containing missing values or values outside the scale range</span></span>
@@ -288,14 +293,14 @@ x-variable of the model and rerun the pipeline.</p>
 <div id="htmlwidget-36aa3d2a04d42bbc2145" style="width:700px;height:100px;" class="visNetwork html-widget"></div>
 <script type="application/json" data-for="htmlwidget-36aa3d2a04d42bbc2145">{"x":{"nodes":{"id":[0,1,2,3,4,5],"label":["data","data_prep","standardize","data2","fit","plot"],"shape":["hexagon","hexagon","hexagon","hexagon","hexagon","hexagon"],"color":["#87ff6fff","#87ff6fff","#87ff6fff","#87ff6fff","#ffa040ff","#ffa040ff"]},"edges":{"from":[0,1,2,3,4,3],"to":[1,2,3,4,5,5],"arrows":["to","to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":null,"width":700,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-15 10:51:42.601 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'</span></span>
-<span><span class="co"># info [2026-06-15 10:51:42.602 UTC]: Step 1/6 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-15 10:51:42.602 UTC]: Step 2/6 data_prep - skipping done step</span></span>
-<span><span class="co"># info [2026-06-15 10:51:42.602 UTC]: Step 3/6 standardize - skipping done step</span></span>
-<span><span class="co"># info [2026-06-15 10:51:42.602 UTC]: Step 4/6 data2 - skipping done step</span></span>
-<span><span class="co"># info [2026-06-15 10:51:42.602 UTC]: Step 5/6 fit</span></span>
-<span><span class="co"># info [2026-06-15 10:51:42.606 UTC]: Step 6/6 plot</span></span>
-<span><span class="co"># info [2026-06-15 10:51:42.622 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-20 19:19:55.630 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'</span></span>
+<span><span class="co"># info [2026-06-20 19:19:55.631 UTC]: Step 1/6 data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-20 19:19:55.631 UTC]: Step 2/6 data_prep - skipping done step</span></span>
+<span><span class="co"># info [2026-06-20 19:19:55.631 UTC]: Step 3/6 standardize - skipping done step</span></span>
+<span><span class="co"># info [2026-06-20 19:19:55.631 UTC]: Step 4/6 data2 - skipping done step</span></span>
+<span><span class="co"># info [2026-06-20 19:19:55.631 UTC]: Step 5/6 fit</span></span>
+<span><span class="co"># info [2026-06-20 19:19:55.635 UTC]: Step 6/6 plot</span></span>
+<span><span class="co"># info [2026-06-20 19:19:55.649 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'</span></span></code></pre></div>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co"># Warning: Removed 37 rows containing missing values or values outside the scale range</span></span>

@@ -75,6 +75,20 @@ pip
 
 Or graphically:
 
+```{r, eval = FALSE}
+library(visNetwork)
+do.call(visNetwork, args = pip_get_graph(pip))
+```
+
+```{r, echo = FALSE}
+library(visNetwork)
+do.call(
+    visNetwork,
+    args = c(pip_get_graph(pip), list(height = 100, width = 500))
+) |>
+    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
+```
+
 We use the `iris` data set as our working example.
 
 ```{r}
@@ -126,9 +140,9 @@ the run log quickly can become redundant and confusing, as it now
 contains multiple runs of the same pipeline.
 Since splitting data sets (or more generally mapping function calls
 to different subsets of data) is such a common scenario,
-{pipeflow} also provides a built-in mechanism to handle this case.
+{pipeflow} provides a built-in mechanism to handle this case.
 
-Since version 0.4.0, for each step, it is possible to set the
+Since version 0.3.0, for each step, it is possible to set the
 so-called execution mode, which by default is `exec = "auto"`.
 To model the above scenario, we add a new step to our pipeline
 that splits the data set and set its execution mode to `split`.
@@ -176,12 +190,10 @@ column `exec` marking the `split` execution mode for the `split_data` step.
 This also can be inspected in the graph:
 
 ```{r, eval = FALSE}
-library(visNetwork)
 do.call(visNetwork, args = pip_get_graph(pip))
 ```
 
 ```{r, echo = FALSE}
-library(visNetwork)
 do.call(
     visNetwork,
     args = c(pip_get_graph(pip), list(height = 100, width = 500))

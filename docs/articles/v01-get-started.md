@@ -65,14 +65,15 @@ first column. The `depends` column lists the dependencies of a step,
 which is empty for the `data` step since it does not depend on any other
 step (more on dependencies later). The `out` column will eventually
 contain the output of the step, which is currently `NULL` since we
-haven’t run the pipeline yet, and the `state` column shows the current,
-which initially is `new` for all steps.
+haven’t run the pipeline yet, and the `state` column shows the current
+state, which initially is `new` for all steps.
 
 Next, we add a step called `data_prep`, which consists of a function
 that takes the output of the `data` step as its first argument, adds a
 new column and returns the modified data as its output. To refer to the
 output of an earlier pipeline step, we just write the name of the step
-preceded with the tilde (~) operator, that is, `~data` in this case.
+preceded with the tilde (~) operator, that is, the output of the `data`
+step can be referred to via `~data`.
 
 Since `pip_add` works “by reference”, we can add the step as follows:
 
@@ -88,6 +89,16 @@ pip |> pip_add(
 
 So, a second step called `data_prep` was added and it depends on the
 `data` step as now visible in column `depends`.
+
+``` r
+
+pip
+# <pipeflow_pip> my-pip (2 steps)
+# -------------------------------
+#         step depends    out state
+# 1:      data         [NULL]   new
+# 2: data_prep    data [NULL]   new
+```
 
 Next, we want to add a step called `model_fit` that fits a linear model
 to the data. The function takes the output of the `data_prep` and
@@ -105,6 +116,7 @@ pip |> pip_add(
         lm(paste("Ozone ~", xVar), data = data)
     }
 )
+
 pip
 # <pipeflow_pip> my-pip (3 steps)
 # -------------------------------
@@ -116,8 +128,8 @@ pip
 
 Lastly, we add a step called `model_plot`, which plots the data and the
 linear model fit. The function uses the output from both the `model_fit`
-and `data_prep` step. It also defines the `xVar` parameter and a
-parameter `title`, which is used as the title of the plot.
+and `data_prep` step. As in the previous step, it defines the `xVar`
+parameter plus two more plot-specific parameters `xLab` and `title`.
 
 ``` r
 
@@ -138,6 +150,13 @@ pip |> pip_add(
             labs(title = title, x = xLab)
     }
 )
+```
+
+In the last line, we see that the `model_plot` step depends on both the
+`model_fit` and `data_prep` step.
+
+``` r
+
 pip
 # <pipeflow_pip> my-pip (4 steps)
 # -------------------------------
@@ -147,9 +166,6 @@ pip
 # 3:  model_fit           data_prep [NULL]   new
 # 4: model_plot model_fit,data_prep [NULL]   new
 ```
-
-In the last line, we see that the `model_plot` step depends on both the
-`model_fit` and `data_prep` step.
 
 In addition to the tabular output, {pipeflow} also provides a graphical
 representation that is compatible with the `visNetwork` package. In
@@ -172,18 +188,18 @@ the nodes represent the steps and the edges represent the dependencies.
 
 A key feature of {pipeflow} is that the integrity of a pipeline is
 verified at definition time. To see this, let’s try to add another step
-that is referring to a non-existent step `foo` as its input.
+that is referring to a non-existent step `i_dont_exist` as its input.
 
 ``` r
 
 pip |> pip_add(
     "another_step",
-    function(data = ~foo) {
+    function(data = ~i_dont_exist) {
         data
     }
 )
 # Error:
-# ! while adding step 'another_step' - cannot reference unknown steps: 'foo'
+# ! while adding step 'another_step' - cannot reference unknown steps: 'i_dont_exist'
 ```
 
 {pipeflow} immediately signals an error and the pipeline remains
@@ -210,12 +226,12 @@ which produces the following output:
 ``` r
 
 pip_run(pip)
-# info [2026-06-15 10:51:03.726 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-15 10:51:03.726 UTC]: Step 1/4 data
-# info [2026-06-15 10:51:03.727 UTC]: Step 2/4 data_prep
-# info [2026-06-15 10:51:03.730 UTC]: Step 3/4 model_fit
-# info [2026-06-15 10:51:03.736 UTC]: Step 4/4 model_plot
-# info [2026-06-15 10:51:04.377 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-20 19:19:24.397 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-20 19:19:24.397 UTC]: Step 1/4 data
+# info [2026-06-20 19:19:24.399 UTC]: Step 2/4 data_prep
+# info [2026-06-20 19:19:24.401 UTC]: Step 3/4 model_fit
+# info [2026-06-20 19:19:24.405 UTC]: Step 4/4 model_plot
+# info [2026-06-20 19:19:24.980 UTC]: Finished run of pipeflow_pip 'my-pip'
 ```
 
 Let’s inspect the pipeline again.
@@ -288,13 +304,13 @@ pip_get_params(pip) |> str()
 #  $ title: chr "Linear model fit"
 ```
 
-It returns a list of all *independent* parameters (here `data`, `xVar`,
-and `title`). By *independent* we mean that these parameters don’t
-depend on other steps (i.e. steps defined with the `~` operator). This
-is important as you never want to mess with parameters defined in terms
-of other steps.
+It returns a list of all *independent* parameters (here
+`data, xVar, xLab, title`). By *independent* we mean that these
+parameters don’t depend on other steps (i.e. steps defined with the `~`
+operator). This is important as you never want to mess with parameters
+defined in terms of other steps.
 
-Furthermore, each parameter is only listed once, even if it is used in
+Furthermore, each parameter is only listed once, even if it’s used in
 multiple steps[^1]. To change any independent parameter, we simply call
 [`pip_set_params()`](https://github.com/rpahl/pipeflow/reference/pip_set_params.md):
 
@@ -340,12 +356,12 @@ results, we just run the pipeline again.
 ``` r
 
 pip_run(pip)
-# info [2026-06-15 10:51:05.553 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-15 10:51:05.553 UTC]: Step 1/4 data - skipping done step
-# info [2026-06-15 10:51:05.553 UTC]: Step 2/4 data_prep - skipping done step
-# info [2026-06-15 10:51:05.554 UTC]: Step 3/4 model_fit
-# info [2026-06-15 10:51:05.557 UTC]: Step 4/4 model_plot
-# info [2026-06-15 10:51:05.572 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-20 19:19:26.155 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-20 19:19:26.155 UTC]: Step 1/4 data - skipping done step
+# info [2026-06-20 19:19:26.155 UTC]: Step 2/4 data_prep - skipping done step
+# info [2026-06-20 19:19:26.155 UTC]: Step 3/4 model_fit
+# info [2026-06-20 19:19:26.159 UTC]: Step 4/4 model_plot
+# info [2026-06-20 19:19:26.176 UTC]: Finished run of pipeflow_pip 'my-pip'
 ```
 
 The outdated steps were re-run as expected and the output was updated
@@ -385,12 +401,12 @@ pip
 ``` r
 
 pip_run(pip)
-# info [2026-06-15 10:51:05.966 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-15 10:51:05.966 UTC]: Step 1/4 data - skipping done step
-# info [2026-06-15 10:51:05.966 UTC]: Step 2/4 data_prep - skipping done step
-# info [2026-06-15 10:51:05.966 UTC]: Step 3/4 model_fit - skipping done step
-# info [2026-06-15 10:51:05.967 UTC]: Step 4/4 model_plot
-# info [2026-06-15 10:51:05.980 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-20 19:19:26.567 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-20 19:19:26.567 UTC]: Step 1/4 data - skipping done step
+# info [2026-06-20 19:19:26.567 UTC]: Step 2/4 data_prep - skipping done step
+# info [2026-06-20 19:19:26.567 UTC]: Step 3/4 model_fit - skipping done step
+# info [2026-06-20 19:19:26.567 UTC]: Step 4/4 model_plot
+# info [2026-06-20 19:19:26.577 UTC]: Finished run of pipeflow_pip 'my-pip'
 pip[["model_plot", "out"]]
 ```
 
@@ -416,12 +432,12 @@ pip
 ``` r
 
 pip_run(pip)
-# info [2026-06-15 10:51:06.304 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-15 10:51:06.305 UTC]: Step 1/4 data
-# info [2026-06-15 10:51:06.306 UTC]: Step 2/4 data_prep
-# info [2026-06-15 10:51:06.309 UTC]: Step 3/4 model_fit
-# info [2026-06-15 10:51:06.312 UTC]: Step 4/4 model_plot
-# info [2026-06-15 10:51:06.322 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-06-20 19:19:26.900 UTC]: Start run of pipeflow_pip 'my-pip'
+# info [2026-06-20 19:19:26.900 UTC]: Step 1/4 data
+# info [2026-06-20 19:19:26.902 UTC]: Step 2/4 data_prep
+# info [2026-06-20 19:19:26.908 UTC]: Step 3/4 model_fit
+# info [2026-06-20 19:19:26.911 UTC]: Step 4/4 model_plot
+# info [2026-06-20 19:19:26.932 UTC]: Finished run of pipeflow_pip 'my-pip'
 pip[["model_plot", "out"]]
 ```
 
