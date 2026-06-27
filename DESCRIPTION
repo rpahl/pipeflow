@@ -1,6 +1,6 @@
 Package: pipeflow
 Title: Fast Interactive Data Analysis Pipelines
-Version: 0.3.0.9001
+Version: 0.3.0.9002
 Authors@R:
     person("Roman", "Pahl", , "roman.pahl@gmail.com", role = c("aut", "cre"))
 Maintainer: Roman Pahl <roman.pahl@gmail.com>

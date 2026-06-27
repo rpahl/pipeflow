@@ -1,5 +1,13 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.3.0.9002
+
+- Updated descriptions in v04-collect-output.Rmd for better readability.
+- Enhanced explanations in v06-self-modify-pipeline.Rmd, focusing on the use of the .self parameter and runtime modifications.
+- Improved wording and fixed typos throughout the document.
+- Clarified the process of modifying pipeline structure and the importance of returning the modified pipeline object.
+
+
 # pipeflow 0.3.0.9001
 
 - fix some typos and missing viz
