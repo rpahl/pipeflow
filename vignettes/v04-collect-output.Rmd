@@ -149,8 +149,7 @@ pip[["model_plot", "out"]]
 
 ### Flat output collection
 
-`pip_collect_out()` returns all step outputs as a flat named list^
-[
+`pip_collect_out()` returns all step outputs as a flat named list^[
     Below, we only show the names of the list elements, to keep
     the vignette concise.
 ].

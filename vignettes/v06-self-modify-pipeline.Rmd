@@ -163,10 +163,11 @@ as it requires to run additional code around the pipeline.
 We rather want to set the parameter from within the
 pipeline during execution.
 
-Luckily, the pipeline by default assigns itself to the `.self`
-parameter to potentially be used in any step functions.
-With this in mind, we update the `residual_shapiro_p_value` step
-as follows:
+Luckily, the pipeline by default provides a self-reference in the
+form of the `.self` parameter that potentially can be used in any
+step function.
+With this in mind, we can update the `residual_shapiro_p_value`
+step to change the `pointColor` parameter on the fly.
 
 ```{r}
 pip |> pip_replace(
@@ -187,7 +188,8 @@ pip |> pip_replace(
 )
 ```
 
-Now we just have to make sure to set the `.self` parameter.
+Now we can run the pipeline again and see that the color of the points
+has changed.
 
 ```{r, fig.alt = "residual-plot2"}
 pip_run(pip)
@@ -195,16 +197,15 @@ pip_run(pip)
 pip[["plot", "out"]]
 ```
 
-This simple "trick" opens up a wide range of possibilities for pipeline
-modifications at runtime. As we will show in the next section, this is
-not limited to changing parameters but can also be used to modify the
-very own pipeline structure.
+As we will show in the next section, modications of the pipeline at
+runtime are not limited to changing parameters but can also be used
+to modify the very own pipeline structure.
 
 ### Changing pipeline structure at runtime
 
 Subsequently, the pipeline steps will be comprised only of very basic functions
-in order to keep matters simple. The focus here is on the pipeline structure
-and how it can be modified at runtime.
+in order to keep matters simple. The focus here should be on the pipeline
+structure and how it is modified.
 
 ```{r}
 pip <- pip_new("my-pipeline") |>
@@ -269,7 +270,7 @@ pip[["f3", "fun"]]
 
 #### Insert and remove steps
 
-For our last example, we get even more hacky an dinstead of just replacing,
+For our last example, we get even more hacky and instead of just replacing,
 we will go a bit further to insert and remove steps.
 The pipeline definition is as follows:
 
@@ -334,7 +335,10 @@ pip
 While the structure has changed as expected, some steps were not
 yet run. In fact, since originally step `f3`came after `f2`,
 and in contrast to what the log is showing, instead of step `f3`,
-actually the new step `f2b` was run, albeit with x = NULL as input.
+actually the new step `f2b` was run^[
+    Compare the state of `f2b`, which is set to `done`.
+]
+, albeit with x = NULL as input.
 
 So to have the true results, we need to re-init the parameter
 and need to re-run the pipeline.
@@ -349,12 +353,17 @@ pip
 
 Now the output of all steps is as expected. If we want to use
 {pipeflow} in production, obviously, having to re-run the pipeline
-and temporarily showing a wrong log is not ideal. Luckily,
-{pipeflow} provides a built-in solution for this.
+and temporarily showing a wrong log is not ideal. Ideally, the
+pipeline run would be aborted right after all changes were
+done in `f2` and the pipeline re-run automatically from the beginning.
+Also, this process potentially should be repeated recursively until
+the structure does not change anymore.
 
-First, we have to make sure that any step modifying the pipeline
-structure returns the modified pipeline object itself, so let's
-redefine the pipeline as follows:
+Luckily, with some minimal changes, this behaviour can be achieved
+with {pipeflow}.
+First, for any step where you want to restart the pipeline run, you
+need to return the pipeline object, so we adapt the `f2` function as
+follows:
 
 ```{r}
 pip <- pip_new("my-pipeline") |>
@@ -385,7 +394,7 @@ pip <- pip_new("my-pipeline") |>
                         }
                     ) |>
                     pip_remove("f2")
-                return(.self) # <-- return modified pipeline
+                return(.self)           # <-- return modified pipeline
             }
             x + 2
         }
@@ -393,8 +402,7 @@ pip <- pip_new("my-pipeline") |>
     pip_add("f3", function(x = ~f2) x + 3)
 ```
 
-Then let's run the pipeline again while also setting the `recursive`
-argument to `TRUE` and have a closer look at the log.
+Second, you need to run the pipeline with `recursive = TRUE`.
 
 ```{r}
 pip |>
@@ -416,9 +424,9 @@ the expected output of the modified pipeline.
 pip
 ```
 
-In summary, this was just a silly example to show some possibilities
-and I leave it to the user to come up with more sensible and complex
-use cases.
+Of course, this was just a silly example to show some possibilities,
+but I have made use of this feature already in various projects and
+may present one of them in a more sophisticated example in the future.
 
 Lastly note that since you have full access to the pipeline object,
 of course, you can get even more hacky, but be aware that some
@@ -432,4 +440,3 @@ dependency graph.
 On the other hand, changing entries in columns such as
 `tags`, `time`, `state` or `output` is generally not critical.
 If in doubt, just try and see what works.
-
