@@ -28,7 +28,7 @@ status](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https:/
 
 # pipeflow <img src="man/figures/logo.png" alt="logo" align="right" width="163" height="121"/>
 
-Build fast interactive data analysis pipelines quick and easy.
+Build fast interactive data analysis pipelines that scale.
 
 {pipeflow} simply lets you add R functions one by one, wiring them into
 a pipeline that stays consistent as you go. Modify, remove, or insert
@@ -43,10 +43,14 @@ overview of your project.
 ### Why use {pipeflow}
 
 - Lightweight and intuitive API
-- Filtered pipeline views
 - All parameters managed in one place
 - Pipeline verified at definition time
-- Execution remains fast for complex pipelines (C++-powered DAG)
+- Filter pipeline steps via views
+  ![](https://img.shields.io/badge/-new-orange)
+- Branch and merge pipeline steps
+  ![](https://img.shields.io/badge/-new-orange)
+- Fast dependency resolution (C++-powered DAG)
+  ![](https://img.shields.io/badge/-new-orange)
 
 ### Installation
 
@@ -77,11 +81,11 @@ p
 # 3:   total squared [NULL]   new
 
 pip_run(p)
-# info [2026-06-14 20:16:14.083 UTC]: Start run of pipeflow_pip 'demo'
-# info [2026-06-14 20:16:14.084 UTC]: Step 1/3 numbers
-# info [2026-06-14 20:16:14.086 UTC]: Step 2/3 squared
-# info [2026-06-14 20:16:14.088 UTC]: Step 3/3 total
-# info [2026-06-14 20:16:14.090 UTC]: Finished run of pipeflow_pip 'demo'
+# info [2026-06-20 19:16:29.615 UTC]: Start run of pipeflow_pip 'demo'
+# info [2026-06-20 19:16:29.616 UTC]: Step 1/3 numbers
+# info [2026-06-20 19:16:29.618 UTC]: Step 2/3 squared
+# info [2026-06-20 19:16:29.620 UTC]: Step 3/3 total
+# info [2026-06-20 19:16:29.622 UTC]: Finished run of pipeflow_pip 'demo'
 
 pip_collect_out(p)
 # $numbers
@@ -118,4 +122,4 @@ below:
 ### Benchmarks
 
 - [pipeflow vs
-  targets](https://rpahl.github.io/pipeflow/articles/articles/v07-vs-targets.html)
+  targets](https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html)

@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -67,7 +67,7 @@
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul>
 </li>
       </ul>
@@ -123,7 +123,9 @@ is, we have the following pipeline</p>
 <h3 id="insert-new-step">Insert new step<a class="anchor" aria-label="anchor" href="#insert-new-step"></a>
 </h3>
 <p>Let’s say we want to insert a new step after the
-<code>data_prep</code> step that standardizes the y-variable.</p>
+<code>data_prep</code> step that standardizes the y-variable. To do
+this, we use <code><a href="../reference/pip_add.html">pip_add()</a></code> with the <code>after</code>
+argument.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
 <span>    <span class="st">"standardize"</span>,</span>
@@ -172,9 +174,9 @@ of a fixed y-variable in the model, let’s pass it as a parameter.</p>
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_replace.html">pip_replace</a></span><span class="op">(</span></span>
 <span>    <span class="st">"model_fit"</span>,</span>
 <span>    <span class="kw">function</span><span class="op">(</span></span>
-<span>        <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">standardize</span>, <span class="co"># &lt;- changed data reference</span></span>
+<span>        <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">standardize</span>,            <span class="co"># &lt;- changed data reference</span></span>
 <span>        <span class="va">xVar</span> <span class="op">=</span> <span class="st">"Temp.Celsius"</span>,</span>
-<span>        <span class="va">yVar</span> <span class="op">=</span> <span class="st">"Ozone"</span> <span class="co"># &lt;- new y-variable</span></span>
+<span>        <span class="va">yVar</span> <span class="op">=</span> <span class="st">"Ozone"</span>                  <span class="co"># &lt;- new y-variable</span></span>
 <span>    <span class="op">)</span> <span class="op">{</span></span>
 <span>        <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">yVar</span>, <span class="st">"~"</span>, <span class="va">xVar</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
@@ -186,9 +188,9 @@ way.</p>
 <span>    <span class="st">"model_plot"</span>,</span>
 <span>    <span class="kw">function</span><span class="op">(</span></span>
 <span>        <span class="va">model</span> <span class="op">=</span> <span class="op">~</span><span class="va">model_fit</span>,</span>
-<span>        <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">standardize</span>, <span class="co"># &lt;- changed data reference</span></span>
+<span>        <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">standardize</span>,            <span class="co"># &lt;- changed data reference</span></span>
 <span>        <span class="va">xVar</span> <span class="op">=</span> <span class="st">"Temp.Celsius"</span>,</span>
-<span>        <span class="va">yVar</span> <span class="op">=</span> <span class="st">"Ozone"</span>, <span class="co"># &lt;- new y-variable</span></span>
+<span>        <span class="va">yVar</span> <span class="op">=</span> <span class="st">"Ozone"</span>,                 <span class="co"># &lt;- new y-variable</span></span>
 <span>        <span class="va">title</span> <span class="op">=</span> <span class="st">"Linear model fit"</span></span>
 <span>    <span class="op">)</span> <span class="op">{</span></span>
 <span>        <span class="va">coeffs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span>
@@ -216,13 +218,13 @@ pipeline and inspect the output.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">pip</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span>, yVar <span class="op">=</span> <span class="st">"Wind"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-15 10:51:23.245 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
-<span><span class="co"># info [2026-06-15 10:51:23.246 UTC]: Step 1/5 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-15 10:51:23.246 UTC]: Step 2/5 data_prep - skipping done step</span></span>
-<span><span class="co"># info [2026-06-15 10:51:23.246 UTC]: Step 3/5 standardize</span></span>
-<span><span class="co"># info [2026-06-15 10:51:23.249 UTC]: Step 4/5 model_fit</span></span>
-<span><span class="co"># info [2026-06-15 10:51:23.251 UTC]: Step 5/5 model_plot</span></span>
-<span><span class="co"># info [2026-06-15 10:51:23.262 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-20 19:19:41.357 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-20 19:19:41.358 UTC]: Step 1/5 data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-20 19:19:41.358 UTC]: Step 2/5 data_prep - skipping done step</span></span>
+<span><span class="co"># info [2026-06-20 19:19:41.358 UTC]: Step 3/5 standardize</span></span>
+<span><span class="co"># info [2026-06-20 19:19:41.360 UTC]: Step 4/5 model_fit</span></span>
+<span><span class="co"># info [2026-06-20 19:19:41.362 UTC]: Step 5/5 model_plot</span></span>
+<span><span class="co"># info [2026-06-20 19:19:41.372 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"model_fit"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#  (Intercept)      Solar.R </span></span>

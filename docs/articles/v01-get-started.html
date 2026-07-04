@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -67,7 +67,7 @@
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul>
 </li>
       </ul>
@@ -152,14 +152,15 @@ of a step, which is empty for the <code>data</code> step since it does
 not depend on any other step (more on dependencies later). The
 <code>out</code> column will eventually contain the output of the step,
 which is currently <code>NULL</code> since we haven’t run the pipeline
-yet, and the <code>state</code> column shows the current, which
+yet, and the <code>state</code> column shows the current state, which
 initially is <code>new</code> for all steps.</p>
 <p>Next, we add a step called <code>data_prep</code>, which consists of
 a function that takes the output of the <code>data</code> step as its
 first argument, adds a new column and returns the modified data as its
 output. To refer to the output of an earlier pipeline step, we just
 write the name of the step preceded with the tilde (~) operator, that
-is, <code>~data</code> in this case.</p>
+is, the output of the <code>data</code> step can be referred to via
+<code>~data</code>.</p>
 <p>Since <code>pip_add</code> works “by reference”, we can add the step
 as follows:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
@@ -172,12 +173,19 @@ as follows:</p>
 <p>So, a second step called <code>data_prep</code> was added and it
 depends on the <code>data</code> step as now visible in column
 <code>depends</code>.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span></span>
+<span><span class="co"># &lt;pipeflow_pip&gt; my-pip (2 steps)</span></span>
+<span><span class="co"># -------------------------------</span></span>
+<span><span class="co">#         step depends    out state</span></span>
+<span><span class="co"># 1:      data         [NULL]   new</span></span>
+<span><span class="co"># 2: data_prep    data [NULL]   new</span></span></code></pre></div>
 <p>Next, we want to add a step called <code>model_fit</code> that fits a
 linear model to the data. The function takes the output of the
 <code>data_prep</code> and defines a parameter <code>xVar</code>, which
 is used to specify the variable that is used as predictor in the linear
 model.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
 <span>    <span class="st">"model_fit"</span>,</span>
 <span>    <span class="kw">function</span><span class="op">(</span></span>
@@ -187,6 +195,7 @@ model.</p>
 <span>        <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Ozone ~"</span>, <span class="va">xVar</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
 <span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow_pip&gt; my-pip (3 steps)</span></span>
 <span><span class="co"># -------------------------------</span></span>
@@ -196,10 +205,10 @@ model.</p>
 <span><span class="co"># 3: model_fit data_prep [NULL]   new</span></span></code></pre></div>
 <p>Lastly, we add a step called <code>model_plot</code>, which plots the
 data and the linear model fit. The function uses the output from both
-the <code>model_fit</code> and <code>data_prep</code> step. It also
-defines the <code>xVar</code> parameter and a parameter
-<code>title</code>, which is used as the title of the plot.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+the <code>model_fit</code> and <code>data_prep</code> step. As in the
+previous step, it defines the <code>xVar</code> parameter plus two more
+plot-specific parameters <code>xLab</code> and <code>title</code>.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
 <span>    <span class="st">"model_plot"</span>,</span>
 <span>    <span class="kw">function</span><span class="op">(</span></span>
@@ -216,8 +225,12 @@ defines the <code>xVar</code> parameter and a parameter
 <span>            <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_abline</a></span><span class="op">(</span>intercept <span class="op">=</span> <span class="va">coeffs</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, slope <span class="op">=</span> <span class="va">coeffs</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span> <span class="op">+</span></span>
 <span>            <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="va">title</span>, x <span class="op">=</span> <span class="va">xLab</span><span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">pip</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>In the last line, we see that the <code>model_plot</code> step
+depends on both the <code>model_fit</code> and <code>data_prep</code>
+step.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow_pip&gt; my-pip (4 steps)</span></span>
 <span><span class="co"># -------------------------------</span></span>
 <span><span class="co">#          step             depends    out state</span></span>
@@ -225,15 +238,12 @@ defines the <code>xVar</code> parameter and a parameter
 <span><span class="co"># 2:  data_prep                data [NULL]   new</span></span>
 <span><span class="co"># 3:  model_fit           data_prep [NULL]   new</span></span>
 <span><span class="co"># 4: model_plot model_fit,data_prep [NULL]   new</span></span></code></pre></div>
-<p>In the last line, we see that the <code>model_plot</code> step
-depends on both the <code>model_fit</code> and <code>data_prep</code>
-step.</p>
 <p>In addition to the tabular output, {pipeflow} also provides a
 graphical representation that is compatible with the
 <code>visNetwork</code> package. In particular, the
 <code><a href="../reference/pip_get_graph.html">pip_get_graph()</a></code> function returns a list of arguments that
 can be feed directly to <code><a href="https://rdrr.io/pkg/visNetwork/man/visNetwork.html" class="external-link">visNetwork::visNetwork()</a></code>.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://datastorm-open.github.io/visNetwork/" class="external-link">visNetwork</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">visNetwork</span>, args <span class="op">=</span> <span class="fu"><a href="../reference/pip_get_graph.html">pip_get_graph</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/pkg/visNetwork/man/visHierarchicalLayout.html" class="external-link">visHierarchicalLayout</a></span><span class="op">(</span>direction <span class="op">=</span> <span class="st">"LR"</span><span class="op">)</span></span></code></pre></div>
@@ -247,20 +257,20 @@ dependencies.</p>
 </h3>
 <p>A key feature of {pipeflow} is that the integrity of a pipeline is
 verified at definition time. To see this, let’s try to add another step
-that is referring to a non-existent step <code>foo</code> as its
-input.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+that is referring to a non-existent step <code>i_dont_exist</code> as
+its input.</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
 <span>    <span class="st">"another_step"</span>,</span>
-<span>    <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">foo</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">i_dont_exist</span><span class="op">)</span> <span class="op">{</span></span>
 <span>        <span class="va">data</span></span>
 <span>    <span class="op">}</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co"># <span style="color: #BBBB00; font-weight: bold;">Error</span><span style="font-weight: bold;">:</span></span></span>
-<span><span class="co"># <span style="color: #BBBB00;">!</span> while adding step 'another_step' - cannot reference unknown steps: 'foo'</span></span></code></pre></div>
+<span><span class="co"># <span style="color: #BBBB00;">!</span> while adding step 'another_step' - cannot reference unknown steps: 'i_dont_exist'</span></span></code></pre></div>
 <p>{pipeflow} immediately signals an error and the pipeline remains
 unchanged.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow_pip&gt; my-pip (4 steps)</span></span>
 <span><span class="co"># -------------------------------</span></span>
@@ -275,16 +285,16 @@ unchanged.</p>
 </h3>
 <p>To run the pipeline, we simply call <code><a href="../reference/pip_run.html">pip_run()</a></code>, which
 produces the following output:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-15 10:51:03.726 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
-<span><span class="co"># info [2026-06-15 10:51:03.726 UTC]: Step 1/4 data</span></span>
-<span><span class="co"># info [2026-06-15 10:51:03.727 UTC]: Step 2/4 data_prep</span></span>
-<span><span class="co"># info [2026-06-15 10:51:03.730 UTC]: Step 3/4 model_fit</span></span>
-<span><span class="co"># info [2026-06-15 10:51:03.736 UTC]: Step 4/4 model_plot</span></span>
-<span><span class="co"># info [2026-06-15 10:51:04.377 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-20 19:19:24.397 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-20 19:19:24.397 UTC]: Step 1/4 data</span></span>
+<span><span class="co"># info [2026-06-20 19:19:24.399 UTC]: Step 2/4 data_prep</span></span>
+<span><span class="co"># info [2026-06-20 19:19:24.401 UTC]: Step 3/4 model_fit</span></span>
+<span><span class="co"># info [2026-06-20 19:19:24.405 UTC]: Step 4/4 model_plot</span></span>
+<span><span class="co"># info [2026-06-20 19:19:24.980 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
 <p>Let’s inspect the pipeline again.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow_pip&gt; my-pip (4 steps)</span></span>
 <span><span class="co"># -------------------------------</span></span>
@@ -302,7 +312,7 @@ access a specific entry of the pipeline, we just select the row (aka
 step) and column of pipeline table via the <code>[[</code> operator. For
 example, to inspect the <code>out</code>put of the
 <code>model_fit</code> and <code>model_plot</code> steps, we do:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"model_fit"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co"># </span></span>
 <span><span class="co"># Call:</span></span>
@@ -311,7 +321,7 @@ example, to inspect the <code>out</code>put of the
 <span><span class="co"># Coefficients:</span></span>
 <span><span class="co">#  (Intercept)  Temp.Celsius  </span></span>
 <span><span class="co">#      -69.277         4.372</span></span></code></pre></div>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"model_plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
 <p><img src="v01-get-started_files/figure-html/inspect-plot-1.png" class="r-plt" alt="model-plot" width="700"></p>
 </div>
@@ -325,7 +335,7 @@ parameters can quickly get out of hand.</p>
 pipeline itself keeps track of all parameters and their values. Let’s
 first inspect the parameters of the above defined pipeline using the
 <code><a href="../reference/pip_get_params.html">pip_get_params()</a></code> function.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_get_params.html">pip_get_params</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co"># List of 4</span></span>
 <span><span class="co">#  $ data :'data.frame':    153 obs. of  6 variables:</span></span>
@@ -339,16 +349,15 @@ first inspect the parameters of the above defined pipeline using the
 <span><span class="co">#  $ xLab : chr "Temperature in degrees Celsius"</span></span>
 <span><span class="co">#  $ title: chr "Linear model fit"</span></span></code></pre></div>
 <p>It returns a list of all <em>independent</em> parameters (here
-<code>data</code>, <code>xVar</code>, and <code>title</code>). By
-<em>independent</em> we mean that these parameters don’t depend on other
-steps (i.e. steps defined with the <code>~</code> operator). This is
-important as you never want to mess with parameters defined in terms of
-other steps.</p>
-<p>Furthermore, each parameter is only listed once, even if it is used
-in multiple steps<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt;For example, the &lt;code&gt;xVar&lt;/code&gt; parameter is used in
+<code>data, xVar, xLab, title</code>). By <em>independent</em> we mean
+that these parameters don’t depend on other steps (i.e. steps defined
+with the <code>~</code> operator). This is important as you never want
+to mess with parameters defined in terms of other steps.</p>
+<p>Furthermore, each parameter is only listed once, even if it’s used in
+multiple steps<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt;For example, the &lt;code&gt;xVar&lt;/code&gt; parameter is used in
 both the &lt;code&gt;model_fit&lt;/code&gt; and &lt;code&gt;model_plot&lt;/code&gt; step&lt;/p&gt;"><sup>1</sup></a>. To change any independent parameter, we
 simply call <code><a href="../reference/pip_set_params.html">pip_set_params()</a></code>:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span>, xLab <span class="op">=</span> <span class="st">"Solar radiation in Langleys"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -368,7 +377,7 @@ simply call <code><a href="../reference/pip_set_params.html">pip_set_params()</a
 that use the respective parameter. In addition, it will recognize which
 steps are affected by the parameter change and mark them as
 <code>outdated</code>.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow_pip&gt; my-pip (4 steps)</span></span>
 <span><span class="co"># -------------------------------</span></span>
@@ -382,17 +391,17 @@ steps are affected by the parameter change and mark them as
 <code>model_plot</code> steps are now in state <code>outdated</code>
 (graphically indicated by the orange color). To update the results, we
 just run the pipeline again.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-15 10:51:05.553 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
-<span><span class="co"># info [2026-06-15 10:51:05.553 UTC]: Step 1/4 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-15 10:51:05.553 UTC]: Step 2/4 data_prep - skipping done step</span></span>
-<span><span class="co"># info [2026-06-15 10:51:05.554 UTC]: Step 3/4 model_fit</span></span>
-<span><span class="co"># info [2026-06-15 10:51:05.557 UTC]: Step 4/4 model_plot</span></span>
-<span><span class="co"># info [2026-06-15 10:51:05.572 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
+<span><span class="co"># info [2026-06-20 19:19:26.155 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.155 UTC]: Step 1/4 data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.155 UTC]: Step 2/4 data_prep - skipping done step</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.155 UTC]: Step 3/4 model_fit</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.159 UTC]: Step 4/4 model_plot</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.176 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
 <p>The outdated steps were re-run as expected and the output was updated
 accordingly now showing the new x-variable <code>Solar.R</code>.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"model_plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
 <p><img src="v01-get-started_files/figure-html/inspect-plot-again-1.png" class="r-plt" alt="model-plot" width="700"></p>
 <p>A closer look at the run log shows that the pipeline skipped the
@@ -407,7 +416,7 @@ quick updates.&lt;/p&gt;"><sup>2</sup></a>.</p>
 <p>Let’s visit some more examples of parameter changes and their effects
 on the pipeline. To just change the title of the plot, only the
 <code>model_plot</code> step needs to be rerun.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Some new title"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow_pip&gt; my-pip (4 steps)</span></span>
@@ -417,20 +426,20 @@ on the pipeline. To just change the title of the plot, only the
 <span><span class="co"># 2:  data_prep                data &lt;data.frame[153x7]&gt;     done</span></span>
 <span><span class="co"># 3:  model_fit           data_prep            &lt;lm[13]&gt;     done</span></span>
 <span><span class="co"># 4: model_plot model_fit,data_prep   &lt;ggplot2::ggplot&gt; outdated</span></span></code></pre></div>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-15 10:51:05.966 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
-<span><span class="co"># info [2026-06-15 10:51:05.966 UTC]: Step 1/4 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-15 10:51:05.966 UTC]: Step 2/4 data_prep - skipping done step</span></span>
-<span><span class="co"># info [2026-06-15 10:51:05.966 UTC]: Step 3/4 model_fit - skipping done step</span></span>
-<span><span class="co"># info [2026-06-15 10:51:05.967 UTC]: Step 4/4 model_plot</span></span>
-<span><span class="co"># info [2026-06-15 10:51:05.980 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.567 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.567 UTC]: Step 1/4 data - skipping done step</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.567 UTC]: Step 2/4 data_prep - skipping done step</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.567 UTC]: Step 3/4 model_fit - skipping done step</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.567 UTC]: Step 4/4 model_plot</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.577 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span>
 <span><span class="va">pip</span><span class="op">[[</span><span class="st">"model_plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
 <p><img src="v01-get-started_files/figure-html/inspect-plot-after-title-change-1.png" class="r-plt" alt="model-plot" width="700"></p>
 <p>Once we change the input data parameter from the <code>data</code>
 step, since all other steps depend on it, we expect all steps to be
 rerun.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">small_airquality</span> <span class="op">&lt;-</span> <span class="va">airquality</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">10</span>, <span class="op">]</span></span>
 <span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">small_airquality</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pip</span></span>
@@ -441,19 +450,19 @@ rerun.</p>
 <span><span class="co"># 2:  data_prep                data &lt;data.frame[153x7]&gt; outdated</span></span>
 <span><span class="co"># 3:  model_fit           data_prep            &lt;lm[13]&gt; outdated</span></span>
 <span><span class="co"># 4: model_plot model_fit,data_prep   &lt;ggplot2::ggplot&gt; outdated</span></span></code></pre></div>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-15 10:51:06.304 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
-<span><span class="co"># info [2026-06-15 10:51:06.305 UTC]: Step 1/4 data</span></span>
-<span><span class="co"># info [2026-06-15 10:51:06.306 UTC]: Step 2/4 data_prep</span></span>
-<span><span class="co"># info [2026-06-15 10:51:06.309 UTC]: Step 3/4 model_fit</span></span>
-<span><span class="co"># info [2026-06-15 10:51:06.312 UTC]: Step 4/4 model_plot</span></span>
-<span><span class="co"># info [2026-06-15 10:51:06.322 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.900 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.900 UTC]: Step 1/4 data</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.902 UTC]: Step 2/4 data_prep</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.908 UTC]: Step 3/4 model_fit</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.911 UTC]: Step 4/4 model_plot</span></span>
+<span><span class="co"># info [2026-06-20 19:19:26.932 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span>
 <span><span class="va">pip</span><span class="op">[[</span><span class="st">"model_plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
 <p><img src="v01-get-started_files/figure-html/inspect-plot-after-data-change-1.png" class="r-plt" alt="model-plot" width="700"></p>
 <p>Last but not least let’s try to set parameters that don’t exist in
 the pipeline, which mostly happens due to accidental misspells.</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>titel <span class="op">=</span> <span class="st">"misspelled variable name"</span>, foo <span class="op">=</span> <span class="st">"my foo"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co"># Warning in pip_set_params(pip, list(titel = "misspelled variable name", : Trying to set parameters</span></span>
 <span><span class="co"># not defined in the target: titel, foo</span></span></code></pre></div>

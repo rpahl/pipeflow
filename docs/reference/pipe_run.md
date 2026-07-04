@@ -69,13 +69,13 @@ pipe_add(p, "final", \(x = ~add1, y = ~add2) x * y, keepOut = TRUE)
 p |>
   pipe_run() |>
   pipe_collect_out()
-#> INFO  [2026-06-15 12:50:36.119] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-15 12:50:36.120] Step 1/4 data
-#> INFO  [2026-06-15 12:50:36.123] Step 2/4 add1
-#> INFO  [2026-06-15 12:50:36.126] Step 3/4 add2
-#> INFO  [2026-06-15 12:50:36.128] Step 4/4 final
-#> INFO  [2026-06-15 12:50:36.130] Finished execution of steps.
-#> INFO  [2026-06-15 12:50:36.131] Done.
+#> INFO  [2026-06-20 21:18:59.002] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-20 21:18:59.004] Step 1/4 data
+#> INFO  [2026-06-20 21:18:59.008] Step 2/4 add1
+#> INFO  [2026-06-20 21:18:59.011] Step 3/4 add2
+#> INFO  [2026-06-20 21:18:59.014] Step 4/4 final
+#> INFO  [2026-06-20 21:18:59.015] Finished execution of steps.
+#> INFO  [2026-06-20 21:18:59.016] Done.
 #> $final
 #> [1] 8
 #> 
@@ -89,26 +89,26 @@ p
 #> 4:  final add1,add2      8    TRUE  final Outdated
 
 p |> pipe_run() |> pipe_collect_out()
-#> INFO  [2026-06-15 12:50:36.146] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-15 12:50:36.148] Step 1/4 data - skip 'done' step
-#> INFO  [2026-06-15 12:50:36.149] Step 2/4 add1 - skip 'done' step
-#> INFO  [2026-06-15 12:50:36.150] Step 3/4 add2
-#> INFO  [2026-06-15 12:50:36.153] Step 4/4 final
-#> INFO  [2026-06-15 12:50:36.154] Finished execution of steps.
-#> INFO  [2026-06-15 12:50:36.155] Done.
+#> INFO  [2026-06-20 21:18:59.025] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-20 21:18:59.027] Step 1/4 data - skip 'done' step
+#> INFO  [2026-06-20 21:18:59.028] Step 2/4 add1 - skip 'done' step
+#> INFO  [2026-06-20 21:18:59.029] Step 3/4 add2
+#> INFO  [2026-06-20 21:18:59.031] Step 4/4 final
+#> INFO  [2026-06-20 21:18:59.033] Finished execution of steps.
+#> INFO  [2026-06-20 21:18:59.034] Done.
 #> $final
 #> [1] 12
 #> 
 
 pipe_run(p, cleanUnkept = TRUE)
-#> INFO  [2026-06-15 12:50:36.157] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-15 12:50:36.158] Step 1/4 data - skip 'done' step
-#> INFO  [2026-06-15 12:50:36.160] Step 2/4 add1 - skip 'done' step
-#> INFO  [2026-06-15 12:50:36.161] Step 3/4 add2 - skip 'done' step
-#> INFO  [2026-06-15 12:50:36.162] Step 4/4 final - skip 'done' step
-#> INFO  [2026-06-15 12:50:36.163] Finished execution of steps.
-#> INFO  [2026-06-15 12:50:36.164] Clean temporary results.
-#> INFO  [2026-06-15 12:50:36.164] Done.
+#> INFO  [2026-06-20 21:18:59.036] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-20 21:18:59.037] Step 1/4 data - skip 'done' step
+#> INFO  [2026-06-20 21:18:59.039] Step 2/4 add1 - skip 'done' step
+#> INFO  [2026-06-20 21:18:59.041] Step 3/4 add2 - skip 'done' step
+#> INFO  [2026-06-20 21:18:59.044] Step 4/4 final - skip 'done' step
+#> INFO  [2026-06-20 21:18:59.045] Finished execution of steps.
+#> INFO  [2026-06-20 21:18:59.046] Clean temporary results.
+#> INFO  [2026-06-20 21:18:59.047] Done.
 p
 #>      step   depends    out keepOut  group    state
 #>    <char>    <list> <list>  <lgcl> <char>   <char>
@@ -127,17 +127,17 @@ pipe_add(p, "new_pipe", \(x = ~add1) {
   }
 )
 p |> pipe_run() |> pipe_collect_out()
-#> INFO  [2026-06-15 12:50:36.174] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-15 12:50:36.176] Step 1/3 data
-#> INFO  [2026-06-15 12:50:36.178] Step 2/3 add1
-#> INFO  [2026-06-15 12:50:36.181] Step 3/3 new_pipe
-#> INFO  [2026-06-15 12:50:36.187] Abort pipeline execution and restart on new.
-#> INFO  [2026-06-15 12:50:36.187] Start run of 'new_pipe' pipeline:
-#> INFO  [2026-06-15 12:50:36.189] Step 1/3 data
-#> INFO  [2026-06-15 12:50:36.191] Step 2/3 add1
-#> INFO  [2026-06-15 12:50:36.193] Step 3/3 add2
-#> INFO  [2026-06-15 12:50:36.195] Finished execution of steps.
-#> INFO  [2026-06-15 12:50:36.195] Done.
+#> INFO  [2026-06-20 21:18:59.059] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-20 21:18:59.060] Step 1/3 data
+#> INFO  [2026-06-20 21:18:59.063] Step 2/3 add1
+#> INFO  [2026-06-20 21:18:59.065] Step 3/3 new_pipe
+#> INFO  [2026-06-20 21:18:59.071] Abort pipeline execution and restart on new.
+#> INFO  [2026-06-20 21:18:59.072] Start run of 'new_pipe' pipeline:
+#> INFO  [2026-06-20 21:18:59.075] Step 1/3 data
+#> INFO  [2026-06-20 21:18:59.078] Step 2/3 add1
+#> INFO  [2026-06-20 21:18:59.080] Step 3/3 add2
+#> INFO  [2026-06-20 21:18:59.081] Finished execution of steps.
+#> INFO  [2026-06-20 21:18:59.082] Done.
 #> $add2
 #> [1] 5
 #> 

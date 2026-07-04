@@ -27,12 +27,17 @@ old <- options(width = 100L)
 The possibility to combine pipelines basically allows to modularize the
 pipeline creation process. This is especially useful when you have a set of
 pipelines that are used in different contexts and you want to avoid code
-duplication.
+duplication^[
+    Note that code duplication is not bad per se. For example, it naturally
+    reduces entanglement and improves local readability. On the other hand,
+    there are certainly scenarios where code duplication should be avoided,
+    specifically if duplicated multiple times, or if the code is complex.
+].
 
 ### Two pipelines
 
-Let's define one pipeline that is used for data preprocessing and one that does
-the modeling.
+As a simple example, let's define one pipeline that is used for data
+preprocessing and one that does the modeling.
 
 Data preprocessing pipeline:
 ```{r define-prepocessing-pipeline}
@@ -118,13 +123,14 @@ pip
 ```
 
 First of all, note that the `data` step of the second pipeline
-has been renamed automatically to avoid name clashes. In particular, the first
-step of the second pipeline has been renamed from `data` to `data2`
-(line 4 in the `step` column) and likewise the data-dependencies of the
-second pipeline have been updated (see lines 5-6 in the `depends` column).
+has been renamed automatically to `data2`
+(see line 4 in the `step` column), which is necessary to
+avoid name clashes.
+Of course, the data-dependencies of the second pipeline were automatically
+updated as well (see lines 5-6 in the `depends` column).
 
-That is, when binding two pipelines, {pipeflow} ensures that the
-step names remain unique in the resulting combined pipeline and therefore
+Generally, when binding two pipelines, {pipeflow} ensures that the
+step names remain unique in the resulting combined pipeline and thereby
 automatically renames duplicated step names if necessary.
 
 Now, as can be also seen from the graphical representation of the pipeline,
@@ -148,8 +154,8 @@ the two pipelines are not yet connected. To make actual use of the combined
 pipeline, we have to use the output of the first pipeline as input of
 the second pipeline, that is, we want to use the output of the
 `standardize` step as the data parameter input in the `data2` step.
-To achieve this, we apply the `replace` function as described earlier
-in the vignette [modify the pipeline](v02-modify-pipeline.html):
+To achieve this, we apply the `replace` function, which was introduced
+in the previous vignette [modify the pipeline](v02-modify-pipeline.html):
 
 ```{r}
 pip |> pip_replace("data2", function(data = ~standardize) data)

@@ -3,12 +3,12 @@
 The possibility to combine pipelines basically allows to modularize the
 pipeline creation process. This is especially useful when you have a set
 of pipelines that are used in different contexts and you want to avoid
-code duplication.
+code duplication[^1].
 
 ### Two pipelines
 
-Let’s define one pipeline that is used for data preprocessing and one
-that does the modeling.
+As a simple example, let’s define one pipeline that is used for data
+preprocessing and one that does the modeling.
 
 Data preprocessing pipeline:
 
@@ -121,14 +121,13 @@ pip
 ```
 
 First of all, note that the `data` step of the second pipeline has been
-renamed automatically to avoid name clashes. In particular, the first
-step of the second pipeline has been renamed from `data` to `data2`
-(line 4 in the `step` column) and likewise the data-dependencies of the
-second pipeline have been updated (see lines 5-6 in the `depends`
-column).
+renamed automatically to `data2` (see line 4 in the `step` column),
+which is necessary to avoid name clashes. Of course, the
+data-dependencies of the second pipeline were automatically updated as
+well (see lines 5-6 in the `depends` column).
 
-That is, when binding two pipelines, {pipeflow} ensures that the step
-names remain unique in the resulting combined pipeline and therefore
+Generally, when binding two pipelines, {pipeflow} ensures that the step
+names remain unique in the resulting combined pipeline and thereby
 automatically renames duplicated step names if necessary.
 
 Now, as can be also seen from the graphical representation of the
@@ -145,8 +144,8 @@ the two pipelines are not yet connected. To make actual use of the
 combined pipeline, we have to use the output of the first pipeline as
 input of the second pipeline, that is, we want to use the output of the
 `standardize` step as the data parameter input in the `data2` step. To
-achieve this, we apply the `replace` function as described earlier in
-the vignette [modify the
+achieve this, we apply the `replace` function, which was introduced in
+the previous vignette [modify the
 pipeline](https://github.com/rpahl/pipeflow/articles/v02-modify-pipeline.md):
 
 ``` r
@@ -167,7 +166,7 @@ pip
 
 #### Relative indexing
 
-Since the name of the re-routed step might not always be known[^1], the
+Since the name of the re-routed step might not always be known[^2], the
 {pipeflow} package also provides a relative position indexing mechanism,
 which allows to rewrite the above command as follows:
 
@@ -199,14 +198,14 @@ Let’s now run the combined pipeline and inspect the plot.
 ``` r
 
 pip_run(pip)
-# info [2026-06-15 10:51:41.198 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
-# info [2026-06-15 10:51:41.198 UTC]: Step 1/6 data
-# info [2026-06-15 10:51:41.199 UTC]: Step 2/6 data_prep
-# info [2026-06-15 10:51:41.201 UTC]: Step 3/6 standardize
-# info [2026-06-15 10:51:41.204 UTC]: Step 4/6 data2
-# info [2026-06-15 10:51:41.205 UTC]: Step 5/6 fit
-# info [2026-06-15 10:51:41.209 UTC]: Step 6/6 plot
-# info [2026-06-15 10:51:41.945 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-06-20 19:19:54.381 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-06-20 19:19:54.382 UTC]: Step 1/6 data
+# info [2026-06-20 19:19:54.383 UTC]: Step 2/6 data_prep
+# info [2026-06-20 19:19:54.385 UTC]: Step 3/6 standardize
+# info [2026-06-20 19:19:54.387 UTC]: Step 4/6 data2
+# info [2026-06-20 19:19:54.388 UTC]: Step 5/6 fit
+# info [2026-06-20 19:19:54.392 UTC]: Step 6/6 plot
+# info [2026-06-20 19:19:55.068 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
 ```
 
 ``` r
@@ -230,14 +229,14 @@ pip_set_params(pip, params = list(xVar = "Temp.Celsius"))
 ``` r
 
 pip_run(pip)
-# info [2026-06-15 10:51:42.601 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
-# info [2026-06-15 10:51:42.602 UTC]: Step 1/6 data - skipping done step
-# info [2026-06-15 10:51:42.602 UTC]: Step 2/6 data_prep - skipping done step
-# info [2026-06-15 10:51:42.602 UTC]: Step 3/6 standardize - skipping done step
-# info [2026-06-15 10:51:42.602 UTC]: Step 4/6 data2 - skipping done step
-# info [2026-06-15 10:51:42.602 UTC]: Step 5/6 fit
-# info [2026-06-15 10:51:42.606 UTC]: Step 6/6 plot
-# info [2026-06-15 10:51:42.622 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-06-20 19:19:55.630 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-06-20 19:19:55.631 UTC]: Step 1/6 data - skipping done step
+# info [2026-06-20 19:19:55.631 UTC]: Step 2/6 data_prep - skipping done step
+# info [2026-06-20 19:19:55.631 UTC]: Step 3/6 standardize - skipping done step
+# info [2026-06-20 19:19:55.631 UTC]: Step 4/6 data2 - skipping done step
+# info [2026-06-20 19:19:55.631 UTC]: Step 5/6 fit
+# info [2026-06-20 19:19:55.635 UTC]: Step 6/6 plot
+# info [2026-06-20 19:19:55.649 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
 ```
 
 ``` r
@@ -289,5 +288,11 @@ possibly group those final outputs, see the next vignette [Collecting
 and filtering
 output](https://github.com/rpahl/pipeflow/articles/v04-collect-output.md).
 
-[^1]: A typical example would be appending several pipelines in a
+[^1]: Note that code duplication is not bad per se. For example, it
+    naturally reduces entanglement and improves local readability. On
+    the other hand, there are certainly scenarios where code duplication
+    should be avoided, specifically if duplicated multiple times, or if
+    the code is complex.
+
+[^2]: A typical example would be appending several pipelines in a
     programmatic context.

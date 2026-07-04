@@ -28,7 +28,7 @@
 
     <a class="navbar-brand me-2" href="index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -65,7 +65,7 @@
     <li><a class="dropdown-item" href="articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><a class="dropdown-item" href="articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul>
 </li>
       </ul>
@@ -88,7 +88,7 @@
 <img src="logo.png" class="logo" alt=""><h1 id="pipeflow-">pipeflow <a class="anchor" aria-label="anchor" href="#pipeflow-"></a>
 </h1>
 </div>
-<p>Build fast interactive data analysis pipelines quick and easy.</p>
+<p>Build fast interactive data analysis pipelines that scale.</p>
 <p>{pipeflow} simply lets you add R functions one by one, wiring them into a pipeline that stays consistent as you go. Modify, remove, or insert steps at any stage, and manage all parameters in one place.</p>
 <p>Thanks to its intuitive interface, using {pipeflow} quickly pays off in the beginning while in the long run helps keeping a clear and structured overview of your project.</p>
 <p><img src="reference/figures/cartoon.png" alt="cartoon" align="right" width="330"></p>
@@ -97,10 +97,14 @@
 </h3>
 <ul>
 <li>Lightweight and intuitive API</li>
-<li>Filtered pipeline views</li>
 <li>All parameters managed in one place</li>
 <li>Pipeline verified at definition time</li>
-<li>Execution remains fast for complex pipelines (C++-powered DAG)</li>
+<li>Filter pipeline steps via views <img src="https://img.shields.io/badge/-new-orange">
+</li>
+<li>Branch and merge pipeline steps <img src="https://img.shields.io/badge/-new-orange">
+</li>
+<li>Fast dependency resolution (C++-powered DAG) <img src="https://img.shields.io/badge/-new-orange">
+</li>
 </ul>
 </div>
 <div class="section level3">
@@ -133,11 +137,11 @@
 <span><span class="co"># 3:   total squared [NULL]   new</span></span>
 <span></span>
 <span><span class="fu"><a href="reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-14 20:16:14.083 UTC]: Start run of pipeflow_pip 'demo'</span></span>
-<span><span class="co"># info [2026-06-14 20:16:14.084 UTC]: Step 1/3 numbers</span></span>
-<span><span class="co"># info [2026-06-14 20:16:14.086 UTC]: Step 2/3 squared</span></span>
-<span><span class="co"># info [2026-06-14 20:16:14.088 UTC]: Step 3/3 total</span></span>
-<span><span class="co"># info [2026-06-14 20:16:14.090 UTC]: Finished run of pipeflow_pip 'demo'</span></span>
+<span><span class="co"># info [2026-06-20 19:16:29.615 UTC]: Start run of pipeflow_pip 'demo'</span></span>
+<span><span class="co"># info [2026-06-20 19:16:29.616 UTC]: Step 1/3 numbers</span></span>
+<span><span class="co"># info [2026-06-20 19:16:29.618 UTC]: Step 2/3 squared</span></span>
+<span><span class="co"># info [2026-06-20 19:16:29.620 UTC]: Step 3/3 total</span></span>
+<span><span class="co"># info [2026-06-20 19:16:29.622 UTC]: Finished run of pipeflow_pip 'demo'</span></span>
 <span></span>
 <span><span class="fu"><a href="reference/pip_collect_out.html">pip_collect_out</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
 <span><span class="co"># $numbers</span></span>
@@ -172,7 +176,7 @@
 <h3 id="benchmarks">Benchmarks<a class="anchor" aria-label="anchor" href="#benchmarks"></a>
 </h3>
 <ul>
-<li><a href="https://rpahl.github.io/pipeflow/articles/articles/v07-vs-targets.html" class="external-link">pipeflow vs targets</a></li>
+<li><a href="https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html" class="external-link">pipeflow vs targets</a></li>
 </ul>
 </div>
 </div>

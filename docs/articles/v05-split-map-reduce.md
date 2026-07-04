@@ -56,6 +56,12 @@ pip
 
 Or graphically:
 
+``` r
+
+library(visNetwork)
+do.call(visNetwork, args = pip_get_graph(pip))
+```
+
 We use the `iris` data set as our working example.
 
 ``` r
@@ -81,11 +87,11 @@ pip |> pip_set_params(list(
 ))
 
 pip_run(pip)
-# info [2026-06-15 10:52:14.876 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-15 10:52:14.877 UTC]: Step 1/3 data
-# info [2026-06-15 10:52:14.878 UTC]: Step 2/3 fit
-# info [2026-06-15 10:52:14.881 UTC]: Step 3/3 coefs
-# info [2026-06-15 10:52:14.883 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-20 19:20:22.441 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-20 19:20:22.442 UTC]: Step 1/3 data
+# info [2026-06-20 19:20:22.444 UTC]: Step 2/3 fit
+# info [2026-06-20 19:20:22.447 UTC]: Step 3/3 coefs
+# info [2026-06-20 19:20:22.449 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 ```
 
 ``` r
@@ -110,21 +116,21 @@ run_pipeline_helper <- function(data) {
 }
 
 results <- lapply(split(iris, iris$Species), FUN = run_pipeline_helper)
-# info [2026-06-15 10:52:15.010 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-15 10:52:15.010 UTC]: Step 1/3 data
-# info [2026-06-15 10:52:15.011 UTC]: Step 2/3 fit
-# info [2026-06-15 10:52:15.015 UTC]: Step 3/3 coefs
-# info [2026-06-15 10:52:15.018 UTC]: Finished run of pipeflow_pip 'my-pipeline'
-# info [2026-06-15 10:52:15.022 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-15 10:52:15.022 UTC]: Step 1/3 data
-# info [2026-06-15 10:52:15.023 UTC]: Step 2/3 fit
-# info [2026-06-15 10:52:15.025 UTC]: Step 3/3 coefs
-# info [2026-06-15 10:52:15.027 UTC]: Finished run of pipeflow_pip 'my-pipeline'
-# info [2026-06-15 10:52:15.030 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-15 10:52:15.030 UTC]: Step 1/3 data
-# info [2026-06-15 10:52:15.031 UTC]: Step 2/3 fit
-# info [2026-06-15 10:52:15.033 UTC]: Step 3/3 coefs
-# info [2026-06-15 10:52:15.035 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-20 19:20:22.566 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-20 19:20:22.567 UTC]: Step 1/3 data
+# info [2026-06-20 19:20:22.567 UTC]: Step 2/3 fit
+# info [2026-06-20 19:20:22.571 UTC]: Step 3/3 coefs
+# info [2026-06-20 19:20:22.573 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-20 19:20:22.577 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-20 19:20:22.577 UTC]: Step 1/3 data
+# info [2026-06-20 19:20:22.578 UTC]: Step 2/3 fit
+# info [2026-06-20 19:20:22.580 UTC]: Step 3/3 coefs
+# info [2026-06-20 19:20:22.581 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-06-20 19:20:22.583 UTC]: Start run of pipeflow_pip 'my-pipeline'
+# info [2026-06-20 19:20:22.584 UTC]: Step 1/3 data
+# info [2026-06-20 19:20:22.584 UTC]: Step 2/3 fit
+# info [2026-06-20 19:20:22.586 UTC]: Step 3/3 coefs
+# info [2026-06-20 19:20:22.587 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 ```
 
 ``` r
@@ -148,10 +154,9 @@ had to be run outside the pipeline framework. In addition, the run log
 quickly can become redundant and confusing, as it now contains multiple
 runs of the same pipeline. Since splitting data sets (or more generally
 mapping function calls to different subsets of data) is such a common
-scenario, {pipeflow} also provides a built-in mechanism to handle this
-case.
+scenario, {pipeflow} provides a built-in mechanism to handle this case.
 
-Since version 0.4.0, for each step, it is possible to set the so-called
+Since version 0.3.0, for each step, it is possible to set the so-called
 execution mode, which by default is `exec = "auto"`. To model the above
 scenario, we add a new step to our pipeline that splits the data set and
 set its execution mode to `split`.
@@ -209,7 +214,6 @@ step. This also can be inspected in the graph:
 
 ``` r
 
-library(visNetwork)
 do.call(visNetwork, args = pip_get_graph(pip))
 ```
 
@@ -235,12 +239,12 @@ pip |> pip_set_params(list(
 ))
 
 pip_run(pip)
-# info [2026-06-15 10:52:15.497 UTC]: Start run of pipeflow_pip 'my-split-pip'
-# info [2026-06-15 10:52:15.497 UTC]: Step 1/4 data
-# info [2026-06-15 10:52:15.498 UTC]: Step 2/4 split_data
-# info [2026-06-15 10:52:15.500 UTC]: Step 3/4 fit
-# info [2026-06-15 10:52:15.503 UTC]: Step 4/4 coefs
-# info [2026-06-15 10:52:15.505 UTC]: Finished run of pipeflow_pip 'my-split-pip'
+# info [2026-06-20 19:20:22.935 UTC]: Start run of pipeflow_pip 'my-split-pip'
+# info [2026-06-20 19:20:22.935 UTC]: Step 1/4 data
+# info [2026-06-20 19:20:22.936 UTC]: Step 2/4 split_data
+# info [2026-06-20 19:20:22.938 UTC]: Step 3/4 fit
+# info [2026-06-20 19:20:22.941 UTC]: Step 4/4 coefs
+# info [2026-06-20 19:20:22.943 UTC]: Finished run of pipeflow_pip 'my-split-pip'
 ```
 
 Looking at the pipeline overview, we see that the `out`puts following
@@ -333,13 +337,13 @@ If we now run the pipeline, we see that the output of the
 ``` r
 
 pip_run(pip)
-# info [2026-06-15 10:52:15.927 UTC]: Start run of pipeflow_pip 'my-split-pip'
-# info [2026-06-15 10:52:15.928 UTC]: Step 1/5 data - skipping done step
-# info [2026-06-15 10:52:15.928 UTC]: Step 2/5 split_data - skipping done step
-# info [2026-06-15 10:52:15.928 UTC]: Step 3/5 fit - skipping done step
-# info [2026-06-15 10:52:15.928 UTC]: Step 4/5 coefs - skipping done step
-# info [2026-06-15 10:52:15.928 UTC]: Step 5/5 combine_coefs
-# info [2026-06-15 10:52:15.930 UTC]: Finished run of pipeflow_pip 'my-split-pip'
+# info [2026-06-20 19:20:23.349 UTC]: Start run of pipeflow_pip 'my-split-pip'
+# info [2026-06-20 19:20:23.349 UTC]: Step 1/5 data - skipping done step
+# info [2026-06-20 19:20:23.349 UTC]: Step 2/5 split_data - skipping done step
+# info [2026-06-20 19:20:23.349 UTC]: Step 3/5 fit - skipping done step
+# info [2026-06-20 19:20:23.349 UTC]: Step 4/5 coefs - skipping done step
+# info [2026-06-20 19:20:23.350 UTC]: Step 5/5 combine_coefs
+# info [2026-06-20 19:20:23.351 UTC]: Finished run of pipeflow_pip 'my-split-pip'
 
 pip[["combine_coefs", "out"]]
 #            (Intercept) Sepal.Length

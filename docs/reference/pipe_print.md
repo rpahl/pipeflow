@@ -49,9 +49,9 @@ pipe_print(p, verbose = TRUE)
 #> 3:     f2 <function[1]> function <list[1]>         [NULL]   FALSE     f2
 #>    description                time  state
 #>         <char>              <POSc> <char>
-#> 1:             2026-06-15 12:50:34    New
-#> 2:             2026-06-15 12:50:34    New
-#> 3:             2026-06-15 12:50:34    New
+#> 1:             2026-06-20 21:18:57    New
+#> 2:             2026-06-20 21:18:57    New
+#> 3:             2026-06-20 21:18:57    New
 
 # Also works with standard print function
 print(p)
@@ -68,7 +68,7 @@ print(p, verbose = TRUE)
 #> 3:     f2 <function[1]> function <list[1]>         [NULL]   FALSE     f2
 #>    description                time  state
 #>         <char>              <POSc> <char>
-#> 1:             2026-06-15 12:50:34    New
-#> 2:             2026-06-15 12:50:34    New
-#> 3:             2026-06-15 12:50:34    New
+#> 1:             2026-06-20 21:18:57    New
+#> 2:             2026-06-20 21:18:57    New
+#> 3:             2026-06-20 21:18:57    New
 ```

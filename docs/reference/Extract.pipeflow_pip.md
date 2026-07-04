@@ -76,8 +76,8 @@ p[["pipeline"]] # the full step table
 #> 2:    fit <function[1]> <list[1]> (x = ~load)    load [NULL]    new       
 #>                   time locked   exec .nodeId .indeps
 #>                 <POSc> <lgcl> <char>   <int>  <list>
-#> 1: 2026-06-15 12:50:14  FALSE   auto       0       x
-#> 2: 2026-06-15 12:50:14  FALSE   auto       1        
+#> 1: 2026-06-20 21:18:41  FALSE   auto       0       x
+#> 2: 2026-06-20 21:18:41  FALSE   auto       1        
 p[["name"]] # "pipe"
 #> [1] "pipe"
 

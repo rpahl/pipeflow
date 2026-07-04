@@ -115,7 +115,7 @@ navbar:
       - text: ----
       - text: "Benchmarks"
       - text: "pipeflow vs targets"
-        href: articles/articles/v07-vs-targets.html
+        href: articles/v07-vs-targets.html
 
 
     github:

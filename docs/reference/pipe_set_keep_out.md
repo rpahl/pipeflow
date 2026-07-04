@@ -45,13 +45,13 @@ pipe_add(p, "mult", \(x = ~add1, y = ~add2) x * y)
 p |>
   pipe_run() |>
   pipe_collect_out()
-#> INFO  [2026-06-15 12:50:39.725] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-15 12:50:39.726] Step 1/4 data
-#> INFO  [2026-06-15 12:50:39.730] Step 2/4 add1
-#> INFO  [2026-06-15 12:50:39.732] Step 3/4 add2
-#> INFO  [2026-06-15 12:50:39.735] Step 4/4 mult
-#> INFO  [2026-06-15 12:50:39.737] Finished execution of steps.
-#> INFO  [2026-06-15 12:50:39.738] Done.
+#> INFO  [2026-06-20 21:19:02.319] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-20 21:19:02.328] Step 1/4 data
+#> INFO  [2026-06-20 21:19:02.333] Step 2/4 add1
+#> INFO  [2026-06-20 21:19:02.335] Step 3/4 add2
+#> INFO  [2026-06-20 21:19:02.338] Step 4/4 mult
+#> INFO  [2026-06-20 21:19:02.340] Finished execution of steps.
+#> INFO  [2026-06-20 21:19:02.340] Done.
 #> $add1
 #> [1] 2
 #> 
@@ -61,13 +61,13 @@ pipe_set_keep_out(p, "mult", keepOut = TRUE)
 p |>
   pipe_run() |>
   pipe_collect_out()
-#> INFO  [2026-06-15 12:50:39.742] Start run of 'pipe' pipeline:
-#> INFO  [2026-06-15 12:50:39.743] Step 1/4 data - skip 'done' step
-#> INFO  [2026-06-15 12:50:39.744] Step 2/4 add1 - skip 'done' step
-#> INFO  [2026-06-15 12:50:39.746] Step 3/4 add2 - skip 'done' step
-#> INFO  [2026-06-15 12:50:39.747] Step 4/4 mult - skip 'done' step
-#> INFO  [2026-06-15 12:50:39.748] Finished execution of steps.
-#> INFO  [2026-06-15 12:50:39.748] Done.
+#> INFO  [2026-06-20 21:19:02.345] Start run of 'pipe' pipeline:
+#> INFO  [2026-06-20 21:19:02.348] Step 1/4 data - skip 'done' step
+#> INFO  [2026-06-20 21:19:02.349] Step 2/4 add1 - skip 'done' step
+#> INFO  [2026-06-20 21:19:02.351] Step 3/4 add2 - skip 'done' step
+#> INFO  [2026-06-20 21:19:02.353] Step 4/4 mult - skip 'done' step
+#> INFO  [2026-06-20 21:19:02.355] Finished execution of steps.
+#> INFO  [2026-06-20 21:19:02.356] Done.
 #> $mult
 #> [1] 6
 #> 

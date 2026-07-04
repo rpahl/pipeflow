@@ -92,9 +92,9 @@ print(p, cols = "all") # all non-hidden columns
 #> 2: square <function[1]> <list[1]>   (x = ~load)    load [NULL]   new compute
 #> 3:  total <function[1]> <list[1]> (x = ~square)  square [NULL]   new compute
 #>                   time locked exec
-#> 1: 2026-06-15 12:50:49  FALSE auto
-#> 2: 2026-06-15 12:50:49  FALSE auto
-#> 3: 2026-06-15 12:50:49  FALSE auto
+#> 1: 2026-06-20 21:19:10  FALSE auto
+#> 2: 2026-06-20 21:19:10  FALSE auto
+#> 3: 2026-06-20 21:19:10  FALSE auto
 print(p, rows = 2:3) # print only steps 2 and 3
 #> <pipeflow_pip> demo (3 steps)
 #> -----------------------------

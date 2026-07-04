@@ -11,7 +11,7 @@ re-run on the next pip_run()."><meta property="og:image" content="https://github
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,7 +44,7 @@ re-run on the next pip_run()."><meta property="og:image" content="https://github
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -105,10 +105,10 @@ Can also be adjusted later using <code>[pip_tag()]</code>.</p></dd>
 <span class="r-in"><span>    <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"load"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>    <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"double"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">load</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:45.828 UTC]: Start run of pipeflow_pip 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:45.829 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:45.830 UTC]: Step 2/2 double</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:45.832 UTC]: Finished run of pipeflow_pip 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:08.034 UTC]: Start run of pipeflow_pip 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:08.034 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:08.035 UTC]: Step 2/2 double</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:08.036 UTC]: Finished run of pipeflow_pip 'pipe'</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_pip&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------------</span>
@@ -127,10 +127,10 @@ Can also be adjusted later using <code>[pip_tag()]</code>.</p></dd>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Re-run to bring everything up to date</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:45.843 UTC]: Start run of pipeflow_pip 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:45.844 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:45.844 UTC]: Step 2/2 double</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:45.846 UTC]: Finished run of pipeflow_pip 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:08.046 UTC]: Start run of pipeflow_pip 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:08.047 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:08.047 UTC]: Step 2/2 double</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:08.050 UTC]: Finished run of pipeflow_pip 'pipe'</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_pip&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------------</span>

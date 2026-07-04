@@ -11,7 +11,7 @@ and compose calls if grouped output is needed."><meta property="og:image" conten
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,7 +44,7 @@ and compose calls if grouped output is needed."><meta property="og:image" conten
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="../articles/articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -93,11 +93,11 @@ and compose calls if grouped output is needed.</p>
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"clean"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">load</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span>, tags <span class="op">=</span> <span class="st">"io"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"model"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">clean</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="fl">2</span>, tags <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:42.973 UTC]: Start run of pipeflow_pip 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:42.974 UTC]: Step 1/3 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:42.974 UTC]: Step 2/3 clean</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:42.976 UTC]: Step 3/3 model</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-15 10:50:42.978 UTC]: Finished run of pipeflow_pip 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:05.402 UTC]: Start run of pipeflow_pip 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:05.402 UTC]: Step 1/3 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:05.402 UTC]: Step 2/3 clean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:05.404 UTC]: Step 3/3 model</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-06-20 19:19:05.405 UTC]: Finished run of pipeflow_pip 'pipe'</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Flat named list with one entry per step</span></span></span>
 <span class="r-in"><span><span class="fu">pip_collect_out</span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
