@@ -108,7 +108,7 @@ jobs:
 
       - name: Publish Linux Test Results
         if: always() && startsWith(matrix.os, 'ubuntu') && hashFiles('check/*.Rcheck/tests/testthat/*.xml') != ''
-        uses: EnricoMi/publish-unit-test-result-action@c950f6fb443cb5af20a377fd0dfaa78838901040  # v2.9
+        uses: EnricoMi/publish-unit-test-result-action@d0a4676d0e0b938bc201470d88276b7c74c712b3  # v2.9
         with:
           files: check/*.Rcheck/tests/testthat/*.xml
           deduplicate_classes_by_file_name: true
