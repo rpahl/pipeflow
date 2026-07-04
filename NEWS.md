@@ -1,5 +1,11 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.3.0.9004
+
+- bump actions/checkout from 6.0.3 to 7.0.0
+- bump EnricoMi/publish-unit-test-result-action from 2.23.0 to 2.24.0
+
+
 # pipeflow 0.3.0.9003
 
 - bump r-lib/actions/check-r-package from 2.12.0 to 2.12.1
