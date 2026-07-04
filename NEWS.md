@@ -1,5 +1,11 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.3.0.9003
+
+- bump r-lib/actions/check-r-package from 2.12.0 to 2.12.1
+- bump r-lib/actions/setup-r from 2.12.0 to 2.12.1
+
+
 # pipeflow 0.3.0.9002
 
 - Updated descriptions in v04-collect-output.Rmd for better readability.
