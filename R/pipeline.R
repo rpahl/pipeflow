@@ -153,7 +153,7 @@
     newStep <- .new_step(
         step = step,
         fun = fun,
-        params = lapply(params, eval),
+        params = params,
         depends = depends,
         tags = tags,
         exec = exec,
