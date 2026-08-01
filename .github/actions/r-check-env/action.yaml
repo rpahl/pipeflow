@@ -27,7 +27,7 @@ runs:
       with:
         r-version: renv          # pick R version from renv.lock
         Ncpus: 6
-        use-public-rspm: true    # faster Linux binaries
+        use-public-rspm: false   # faster Linux binaries
 
     - name: Setup renv
       uses: r-lib/actions/setup-renv@a51a8012b0aab7c32ef9d19bf54da93f3254335e  # v2

@@ -31,7 +31,7 @@ jobs:
         with:
           r-version: renv          # R version from renv.lock
           Ncpus: 6
-          use-public-rspm: true
+          use-public-rspm: false
 
       # If not available, install renv itself (small, from CRAN)
       - name: Install renv
