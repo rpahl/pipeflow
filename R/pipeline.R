@@ -1379,18 +1379,17 @@ pip_run <- function(
     isView <- .is_pipeflow_view(x)
     pip <- if (isView) x[["pip"]] else x
     dat <- pip[["pipeline"]]
-    rowsToRun <- if (isView) x[["rows"]] else seq_len(nrow(dat))
-    rowsRequested <- unique(as.integer(rowsToRun))
-    upstreamRows <- integer(0)
+    rowsToRun <- seq_len(nrow(dat))
+
     if (isView) {
-        # Add rows of upstream dependencies not yet covered by the view.
-        deps <- unique(unlist(dat[["depends"]][rowsToRun]))
-        if (length(deps) > 0L) {
-            depRows <- which(dat[["step"]] %in% deps)
-            rowsToRun <- sort(unique(c(rowsToRun, depRows)))
-        }
-        rowsToRun <- as.integer(rowsToRun)
-        upstreamRows <- setdiff(rowsToRun, rowsRequested)
+        requested <- x[["rows"]]
+        reqSteps <- dat[["step"]][requested]
+        upNodes <- .pip_get_reachable_nodes(pip, reqSteps, downstream = FALSE)
+        upRows <- as.integer(dat[list(upNodes), which = TRUE, on = ".nodeId"])
+        rowsToRun <- as.integer(sort(unique(c(requested, upRows))))
+        upstreamRows <- setdiff(rowsToRun, requested)
+        names(rowsToRun)[match(requested, rowsToRun)] <- "view"
+        names(rowsToRun)[match(upstreamRows, rowsToRun)] <- "upstream"
     }
     processedSteps <- character()
     on.exit({
@@ -1402,17 +1401,13 @@ pip_run <- function(
         outdatedNodes <- .pip_get_reachable_nodes(pip, processedSteps) |>
             unlist() |>
             unique() |>
-            setdiff(processedNodes) # nolint
+            setdiff(processedNodes)
         if (length(outdatedNodes) > 0L) {
-            rowsOutdated <- dat[
-                list(outdatedNodes),
-                which = TRUE,
-                on = ".nodeId"
-            ]
-            if (length(rowsOutdated) > 0L) {
+            iOutdated <- dat[list(outdatedNodes), which = TRUE, on = ".nodeId"]
+            if (length(iOutdated) > 0L) {
                 data.table::set(
                     dat,
-                    i = rowsOutdated,
+                    i = iOutdated,
                     j = "state",
                     value = "outdated"
                 )
@@ -1428,12 +1423,9 @@ pip_run <- function(
         if (!is.null(progress)) {
             progress(value = i, detail = step)
         }
-        marker <- ""
-        if (isView) {
-            marker <- if (row %in% rowsRequested) "[view]" else "[upstream]"
-        }
         msg <- if (isView) {
-            sprintf("Step %i/%i %s %s", i, length(rowsToRun), marker, step)
+            marker <- names(rowsToRun)[[i]]
+            sprintf("Step %i/%i [%s] %s", i, length(rowsToRun), marker, step)
         } else {
             sprintf("Step %i/%i %s", i, length(rowsToRun), step)
         }

@@ -1158,6 +1158,21 @@ describe("pip_run", {
             v <- pip_view(p, tags = "model")
             pip_run(v, lgr = NULL)
             expect_equal(p$pipeline[["out"]], list(1, 2, 2, NULL))
+
+            p <- pip_new() |>
+                pip_add("f1", \(x = 1) x) |>
+                pip_add("f2", \(x = ~f1) x + 1) |>
+                pip_add("f3", \(x = 1) x + 1) |>
+                pip_add("f4", \(x = ~f2) x + 1) |>
+                pip_add("f5", \(x = ~f4) x + 1)
+
+            v <- pip_view(p, i = "f2")
+            pip_run(v, lgr = NULL)
+            expect_equal(p$pipeline[["out"]], list(1, 2, NULL, NULL, NULL))
+
+            v <- pip_view(p, i = "f5")
+            pip_run(v, lgr = NULL)
+            expect_equal(p$pipeline[["out"]], list(1, 2, NULL, 3, 4))
         })
 
         it("marks downstream steps outside the view as outdated", {
