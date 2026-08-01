@@ -17,10 +17,7 @@ Depends:
     R (>= 4.2.0)
 Imports:
     data.table,
-    jsonlite,
-    lgr,
     methods,
-    R6,
     Rcpp (>= 1.1.1),
     stats,
     utils

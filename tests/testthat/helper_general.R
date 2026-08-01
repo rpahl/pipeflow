@@ -1,7 +1,3 @@
-if (identical(Sys.getenv("TESTTHAT"), "true")) {
-    lgr::suspend_logging()
-}
-
 expect_equivalent <- function(...) {
     testthat::expect_equal(..., ignore_attr = TRUE)
 }
