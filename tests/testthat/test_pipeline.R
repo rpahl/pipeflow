@@ -393,11 +393,11 @@ describe("pip_bind", {
         p2 <- test_pip("right")
         out <- pip_bind(p1, p2)
 
-        nodes <- .pip_get_downstream_nodes(out, "s1")
+        nodes <- .pip_get_reachable_nodes(out, "s1")
         steps <- .pip_filter_nodes(out, nodes)[["step"]]
         expect_setequal(steps, c("s1", "s2"))
 
-        nodes <- .pip_get_downstream_nodes(out, "s12")
+        nodes <- .pip_get_reachable_nodes(out, "s12")
         steps <- .pip_filter_nodes(out, nodes)[["step"]]
         expect_setequal(steps, c("s12", "s22"))
     })
@@ -616,7 +616,7 @@ describe("pip_rename", {
         expect_true(is.na(.pip_steps_to_nodes(p, "f1")[[1]]))
         expect_true(!is.na(.pip_steps_to_nodes(p, "first")[[1]]))
 
-        nodes <- .pip_get_downstream_nodes(p, "first")
+        nodes <- .pip_get_reachable_nodes(p, "first")
         steps <- .pip_filter_nodes(p, nodes)[["step"]]
         expect_setequal(steps, c("first", "f2", "f3"))
     })
@@ -658,7 +658,7 @@ describe("pip_remove", {
         beforeOrder <- dag_get_nodes_order(p[[".dag"]])
         beforeReach <- .pip_filter_nodes(
             p,
-            .pip_get_downstream_nodes(p, "f1")
+            .pip_get_reachable_nodes(p, "f1")
         )[["step"]]
 
         expect_true(dag_has_node(p[[".dag"]], node))
@@ -670,7 +670,7 @@ describe("pip_remove", {
         afterOrder <- dag_get_nodes_order(p[[".dag"]])
         afterReach <- .pip_filter_nodes(
             p,
-            .pip_get_downstream_nodes(p, "f1")
+            .pip_get_reachable_nodes(p, "f1")
         )[["step"]]
 
         expect_equal(p[["pipeline"]][["step"]], c("f1", "f2", "f3", "f4"))
@@ -726,7 +726,7 @@ describe("pip_remove", {
         expect_false(dag_has_node(p[[".dag"]], as.integer(nodeMap[["f3"]])))
         expect_false(dag_has_node(p[[".dag"]], as.integer(nodeMap[["f4"]])))
         expect_equal(
-            .pip_filter_nodes(p, .pip_get_downstream_nodes(p, "g1"))[["step"]],
+            .pip_filter_nodes(p, .pip_get_reachable_nodes(p, "g1"))[["step"]],
             "g1"
         )
         expect_equal(
@@ -2021,7 +2021,8 @@ describe("pip_view", {
 
         v <- pip_view(
             p,
-            filter = list(depends = "fit"), tags = "model"
+            filter = list(depends = "fit"),
+            tags = "model"
         )
         v
         expect_equal(v[["rows"]], 3L)
@@ -2228,11 +2229,11 @@ describe("extract operator [", {
         p <- test_pip()
         sub <- p[c("a2", "b2")]
 
-        nodes_a1 <- .pip_get_downstream_nodes(sub, "a1")
+        nodes_a1 <- .pip_get_reachable_nodes(sub, "a1")
         steps_a1 <- .pip_filter_nodes(sub, nodes_a1)[["step"]]
         expect_setequal(steps_a1, c("a1", "a2"))
 
-        nodes_b1 <- .pip_get_downstream_nodes(sub, "b1")
+        nodes_b1 <- .pip_get_reachable_nodes(sub, "b1")
         steps_b1 <- .pip_filter_nodes(sub, nodes_b1)[["step"]]
         expect_setequal(steps_b1, c("b1", "b2"))
     })
@@ -2247,13 +2248,13 @@ describe("extract operator [", {
 
         sub_steps <- .pip_filter_nodes(
             sub,
-            .pip_get_downstream_nodes(sub, "a1")
+            .pip_get_reachable_nodes(sub, "a1")
         )[["step"]]
         expect_setequal(sub_steps, c("a1", "a2", "b1", "b2"))
 
         original_steps <- .pip_filter_nodes(
             p,
-            .pip_get_downstream_nodes(p, "a1")
+            .pip_get_reachable_nodes(p, "a1")
         )[["step"]]
         expect_setequal(original_steps, c("a1", "a2", "a3"))
     })
@@ -2366,10 +2367,10 @@ describe("benchmarking", {
     grepv(pattern = v, x = w)
     `%chin%` <- data.table::`%chin%`
 
-    N = 1e3
-    u = as.character(as.hexmode(1:10000))
-    y = sample(u, N, replace = TRUE)
-    x = sample(u, 100)
+    N <- 1e3
+    u <- as.character(as.hexmode(1:10000))
+    y <- sample(u, N, replace = TRUE)
+    x <- sample(u, 100)
     system.time(x %in% y)
     system.time(x %chin% y)
 
@@ -2387,9 +2388,9 @@ describe("benchmarking", {
     identical(a, b)
 
     # Different example with more unique strings ...
-    u = as.character(as.hexmode(1:(N / 10)))
-    y = sample(u, N, replace = TRUE)
-    x = sample(u, N, replace = TRUE)
+    u <- as.character(as.hexmode(1:(N / 10)))
+    y <- sample(u, N, replace = TRUE)
+    x <- sample(u, N, replace = TRUE)
     system.time(a <- match(x, y)) # 46s
     system.time(b <- chmatch(x, y)) # 16s
     identical(a, b)

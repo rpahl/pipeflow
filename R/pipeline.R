@@ -183,24 +183,28 @@
     x[["pipeline"]][list(values), on = on]
 }
 
-.pip_get_downstream_nodes <- function(x, steps) {
+.pip_get_reachable_nodes <- function(x, steps, downstream = TRUE) {
     known <- intersect(steps, names(x[[".steps_to_nodes"]]))
     if (length(known) == 0L) {
         return(integer(0))
     }
 
-    start_ids <- mget(
+    start_ids <- as.integer(mget(
         known,
         envir = x[[".steps_to_nodes"]],
         ifnotfound = NA_integer_,
         inherits = FALSE
-    )
+    ))
     start_ids <- start_ids[!is.na(start_ids)]
     if (length(start_ids) == 0L) {
         return(integer(0))
     }
 
-    dag_get_reachable_nodes_down(x[[".dag"]], as.integer(start_ids))
+    if (downstream) {
+        dag_get_reachable_nodes_down(x[[".dag"]], start_ids)
+    } else {
+        dag_get_reachable_nodes_up(x[[".dag"]], start_ids)
+    }
 }
 
 .pip_is_indexed <- function(x) {
@@ -321,7 +325,7 @@
 }
 
 .pip_update_downstream <- function(x, steps, what, value) {
-    nodes <- .pip_get_downstream_nodes(x, steps)
+    nodes <- .pip_get_reachable_nodes(x, steps)
     x[["pipeline"]][list(nodes), (what) := value, on = ".nodeId"]
 
     invisible(x)
@@ -1065,7 +1069,7 @@ pip_remove <- function(x, step, recursive = FALSE) {
 
     stepsToRemove <- step
     if (recursive) {
-        downNodes <- .pip_get_downstream_nodes(x, step)
+        downNodes <- .pip_get_reachable_nodes(x, step)
         downNodes <- as.integer(downNodes)
         stepNode <- as.integer(.pip_steps_to_nodes(x, step)[[1]])
 
@@ -1275,7 +1279,7 @@ pip_replace <- function(x, step, fun, tags = character(0)) {
 
     # Mark downstream dependent steps as outdated, but keep the replaced
     # step itself as "new".
-    downNodes <- .pip_get_downstream_nodes(out, step)
+    downNodes <- .pip_get_reachable_nodes(out, step)
     stepNode <- .pip_steps_to_nodes(out, step)[[1]]
     downNodes <- unique(setdiff(as.integer(unlist(downNodes)), stepNode))
     if (length(downNodes) > 0L) {
@@ -1395,7 +1399,7 @@ pip_run <- function(
         # a) when running a view that does not cover the entire pipeline or
         # b) the run aborted in the middle due to an error
         processedNodes <- as.integer(.pip_steps_to_nodes(pip, processedSteps))
-        outdatedNodes <- .pip_get_downstream_nodes(pip, processedSteps) |>
+        outdatedNodes <- .pip_get_reachable_nodes(pip, processedSteps) |>
             unlist() |>
             unique() |>
             setdiff(processedNodes) # nolint
