@@ -31,7 +31,7 @@ jobs:
         with:
           r-version: renv          # R version from renv.lock
           Ncpus: 6
-          use-public-rspm: true
+          use-public-rspm: false
 
       # If not available, install renv itself (small, from CRAN)
       - name: Install renv
@@ -45,6 +45,8 @@ jobs:
       # Restore *only* lintr (and its deps) at the versions from renv.lock
       - name: Restore lintr from renv.lock
         shell: Rscript {0}
+        env:
+          USE_BUNDLED_LIBUV: '1'
         run: |
           renv::restore(packages = "lintr", prompt = FALSE, clean = FALSE)
 
@@ -75,6 +77,8 @@ jobs:
       checks: write            # required to create/update check runs
       pull-requests: write
       issues: read
+    env:
+      USE_BUNDLED_LIBUV: '1'
     strategy:
       fail-fast: false
       matrix:
@@ -84,6 +88,26 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           lfs: true
+
+      # Install system dependencies (Ubuntu)
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libuv1-dev libssl-dev libxml2-dev libcurl4-openssl-dev libgit2-dev build-essential pkg-config
+        shell: bash
+
+      - name: Install libuv on macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install libuv
+        shell: bash
+
+      - name: Install libuv on Windows
+        if: matrix.os == 'windows-latest'
+        run: choco install -y libuv
+        shell: powershell
 
       - uses: ./.github/actions/r-check-env
 
