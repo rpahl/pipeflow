@@ -1534,45 +1534,43 @@ pip_set_params <- function(p, params = list()) {
     x <- if (isView) p[["pip"]] else p
     dat <- x[["pipeline"]]
     rows <- if (isView) p[["rows"]] else seq_len(nrow(dat))
-    considered_rows <- setdiff(rows, which(dat[["locked"]]))
+    rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
 
-    if (length(considered_rows) == 0L) {
+    if (length(rowsConsidered) == 0L) {
         warning("No steps to update: all selected steps are locked")
         return(invisible(p))
     }
 
-    # Determine which steps/rows are affected (i.e. have overlapping parameters)
-    overlaps <- lapply(dat[[".indeps"]][considered_rows], FUN = \(indep) {
-        intersect(indep, parNames)
-    })
+    # Determine which steps/rows are affected, i.e. have intersecting params
+    indeps <- dat[[".indeps"]][rowsConsidered] # names of independent params
+    intersects <- lapply(indeps, FUN = intersect, y = parNames)
+    hasOverlap <- lengths(intersects) > 0
+    namesAffected <- intersects[hasOverlap]
+    rowsAffected <- rowsConsidered[hasOverlap]
 
-    used <- unique(unlist(overlaps))
-    unused <- setdiff(parNames, used)
-    if (length(unused) > 0L) {
+    # Signal parameters that are not defined in any of the affected steps
+    used <- unique(unlist(intersects))
+    undefined <- setdiff(parNames, used)
+    if (length(undefined) > 0L) {
         warning(
             "Trying to set parameters not defined in the target: ",
-            toString(unused)
+            toString(undefined)
         )
     }
 
-    hasOverlap <- lengths(overlaps) > 0
     if (any(hasOverlap)) {
-        changedRows <- considered_rows[hasOverlap]
-        for (j in seq_along(changedRows)) {
-            i <- changedRows[[j]]
-            ov <- overlaps[hasOverlap][[j]]
+        # Update parameters in all affected rows
+        for (j in seq_along(rowsAffected)) {
+            i <- rowsAffected[[j]]
+            names <- namesAffected[[j]]
             rowPars <- dat[["params"]][[i]]
-            rowPars[ov] <- params[ov]
-            data.table::set(
-                dat,
-                i = i,
-                j = "params",
-                value = list(list(rowPars))
-            )
+            rowPars[names] <- params[names]
+            value <- list(list(rowPars)) # need to wrap in list() for call below
+            data.table::set(dat, i = i, j = "params", value = value)
         }
 
-        # Update states of changed steps and their downstream steps
-        steps <- dat[["step"]][changedRows]
+        # Update states of affected steps and their downstream steps
+        steps <- dat[["step"]][rowsAffected]
         .pip_update_downstream(
             x,
             steps = steps,

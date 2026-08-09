@@ -1772,17 +1772,6 @@ describe("pip_set_params", {
             pip_add("s4", \(a = ~s1, b = ~s3) a + b)
     }
 
-    it("can be used with pip or view", {
-        p <- test_pip()
-
-        res <- pip_set_params(p, params = list(x = 11, y = 22))
-        expect_true(inherits(res, "pipeflow_pip"))
-
-        v <- pip_view(p, filter = list(step = "s2"))
-        res <- pip_set_params(v, params = list(y = 22))
-        expect_true(inherits(res, "pipeflow_view"))
-    })
-
     it("sets independent parameters in a pipeline", {
         p <- test_pip()
         params <- list(x = 11, z = 33, data = data.frame(b = 3:4))
@@ -1794,6 +1783,17 @@ describe("pip_set_params", {
         expect_equal(after[[2]][["y"]], 2)
         expect_equal(after[[3]][["x"]], 11)
         expect_equal(after[[3]][["z"]], 33)
+    })
+
+    it("can be used with pip or view", {
+        p <- test_pip()
+
+        res <- pip_set_params(p, params = list(x = 11, y = 22))
+        expect_true(inherits(res, "pipeflow_pip"))
+
+        v <- pip_view(p, filter = list(step = "s2"))
+        res <- pip_set_params(v, params = list(y = 22))
+        expect_true(inherits(res, "pipeflow_view"))
     })
 
     it("ignores locked steps", {
