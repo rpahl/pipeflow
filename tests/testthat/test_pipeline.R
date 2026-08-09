@@ -643,12 +643,12 @@ describe("pip_remove", {
         expect_error(pip_remove(p, NA_character_), "step must not be NA")
         expect_error(pip_remove(p, "unknown"), "step 'unknown' does not exist")
         expect_error(
-            pip_remove(p, "f1", recursive = NA),
-            "recursive must be a single logical value"
+            pip_remove(p, "f1", force = NA),
+            "force must be a single logical value"
         )
         expect_error(
-            pip_remove(p, "f1", recursive = c(TRUE, FALSE)),
-            "recursive must be a single logical value"
+            pip_remove(p, "f1", force = c(TRUE, FALSE)),
+            "force must be a single logical value"
         )
     })
 
@@ -709,7 +709,7 @@ describe("pip_remove", {
         )))
 
         out <- utils::capture.output(
-            pip_remove(p, "f1", recursive = TRUE),
+            pip_remove(p, "f1", force = TRUE),
             type = "message"
         )
 

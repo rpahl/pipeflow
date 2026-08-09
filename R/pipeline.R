@@ -1004,13 +1004,13 @@ pip_has_step <- function(x, step) {
 #' Remove a step
 #'
 #' If other steps depend on the step to be removed, an error is
-#' given and the removal is blocked, unless `recursive` was set to
-#' `TRUE`. In recursive mode, the selected step and all downstream
+#' given and the removal is blocked, unless `force` was set to
+#' `TRUE`. In force mode, the selected step and all downstream
 #' dependent steps are removed together.
 #'
 #' @param x A pipeflow pip
 #' @param step `string` the name of the step to be removed.
-#' @param recursive `logical` if `TRUE` the step is removed together
+#' @param force `logical` if `TRUE` the step is removed together
 #' with all its downstream dependencies.
 #' @return The updated pipeline, invisibly.
 #' @examples
@@ -1026,11 +1026,11 @@ pip_has_step <- function(x, step) {
 #' # Trying to remove a step that others depend on raises an error:
 #' # pip_remove(p, "load")  # Error!
 #'
-#' # recursive = TRUE removes the step and all its downstream dependents
-#' pip_remove(p, "load", recursive = TRUE)
+#' # force = TRUE removes the step and all its downstream dependents
+#' pip_remove(p, "load", force = TRUE)
 #' p                        # pipeline is now empty
 #' @export
-pip_remove <- function(x, step, recursive = FALSE) {
+pip_remove <- function(x, step, force = FALSE) {
     if (!.is_pipeflow_pip(x)) {
         stop("x must be a pipeflow pip")
     }
@@ -1043,8 +1043,8 @@ pip_remove <- function(x, step, recursive = FALSE) {
     if (!pip_has_step(x, step)) {
         stop("step '", step, "' does not exist")
     }
-    if (!is.logical(recursive) || length(recursive) != 1L || is.na(recursive)) {
-        stop("recursive must be a single logical value")
+    if (!is.logical(force) || length(force) != 1L || is.na(force)) {
+        stop("force must be a single logical value")
     }
 
     dat <- x[["pipeline"]]
@@ -1056,7 +1056,7 @@ pip_remove <- function(x, step, recursive = FALSE) {
         )
     ]
 
-    if (length(directDeps) > 0L && !recursive) {
+    if (length(directDeps) > 0L && !force) {
         stepsString <- paste0("'", directDeps, "'", collapse = ", ")
         stop(
             "cannot remove step '",
@@ -1068,16 +1068,16 @@ pip_remove <- function(x, step, recursive = FALSE) {
     }
 
     stepsToRemove <- step
-    if (recursive) {
+    if (force) {
         downNodes <- .pip_get_reachable_nodes(x, step)
         downNodes <- as.integer(downNodes)
         stepNode <- as.integer(.pip_steps_to_nodes(x, step)[[1]])
 
-        recursiveDeps <- dat[["step"]][
+        downDeps <- dat[["step"]][
             dat[[".nodeId"]] %in% setdiff(downNodes, stepNode)
         ]
-        if (length(recursiveDeps) > 0L) {
-            stepsString <- paste0("'", recursiveDeps, "'", collapse = ", ")
+        if (length(downDeps) > 0L) {
+            stepsString <- paste0("'", downDeps, "'", collapse = ", ")
             message(
                 "Removing step '",
                 step,
@@ -1095,7 +1095,7 @@ pip_remove <- function(x, step, recursive = FALSE) {
 
     # Remove DAG nodes first to keep node references stable during filtering.
     for (nid in rev(nodesToRemove)) {
-        ok <- dag_remove_node(x[[".dag"]], nid, force = recursive)
+        ok <- dag_remove_node(x[[".dag"]], nid, force = force)
         if (!ok) {
             stop("failed to remove node ", nid, " from DAG")
         }
