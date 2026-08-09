@@ -1859,6 +1859,17 @@ describe("pip_set_params", {
         expect_equal(p[["pipeline"]][["state"]], rep("new", 4))
     })
 
+    it("no-ops if all considered steps are locked, with a warning", {
+        p <- test_pip() |> pip_lock()
+        params <- pip_get_params(p)
+
+        expect_warning(
+            pip_set_params(p, params = list(x = 5)),
+            "all selected steps are locked"
+        )
+        expect_equal(pip_get_params(p), params) # verify that nothing changed
+    })
+
     it("signals unnamed params", {
         p <- test_pip()
         expect_error(

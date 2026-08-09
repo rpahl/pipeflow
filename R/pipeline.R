@@ -1537,10 +1537,7 @@ pip_set_params <- function(p, params = list()) {
     considered_rows <- setdiff(rows, which(dat[["locked"]]))
 
     if (length(considered_rows) == 0L) {
-        warning(
-            "Trying to set parameters not defined in the target: ",
-            toString(parNames)
-        )
+        warning("No steps to update: all selected steps are locked")
         return(invisible(p))
     }
 
@@ -1572,7 +1569,6 @@ pip_set_params <- function(p, params = list()) {
                 j = "params",
                 value = list(list(rowPars))
             )
-            data.table::set(dat, i = i, j = "state", value = "outdated")
         }
 
         # Update states of changed steps and their downstream steps
