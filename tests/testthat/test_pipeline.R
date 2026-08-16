@@ -306,6 +306,122 @@ describe("pip_add", {
             "step 'f2' already exists in the pipeline"
         )
     })
+
+    it("merges params with function defaults, letting defaults win", {
+        p <- pip_new()
+        pip_add(
+            p,
+            "s1",
+            function(x = 1, y = 2) x + y,
+            params = list(x = 10, y = 20, z = 99)
+        )
+
+        pars <- p[["pipeline"]][["params"]][[1]]
+        expect_equal(pars[["x"]], 1) # fun default takes precedence
+        expect_equal(pars[["y"]], 2)
+        expect_equal(pars[["z"]], 99) # extra param carried through
+    })
+
+    it("uses extra params passed via ... at runtime", {
+        p <- pip_new()
+        pip_add(
+            p,
+            "s1",
+            function(x = 1, ...) c(x, ...),
+            params = list(size = 42)
+        )
+
+        pars <- p[["pipeline"]][["params"]][[1]]
+        expect_equal(pars[["x"]], 1)
+        expect_equal(pars[["size"]], 42)
+
+        pip_run(p, lgr = NULL)
+        expect_equal(unname(p[["pipeline"]][["out"]][[1]]), c(1, 42))
+    })
+
+    it("resolves step references given via params", {
+        p <- pip_new()
+        pip_add(p, "s1", function(x = 1) x)
+        pip_add(
+            p,
+            "s2",
+            function(...) list(...),
+            params = list(y = ~s1)
+        )
+
+        expect_equal(unname(p[["pipeline"]][["depends"]][[2]]), "s1")
+        expect_equal(names(p[["pipeline"]][["depends"]][[2]]), "y")
+
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["pipeline"]][["out"]][[2]]$y, 1)
+    })
+
+    it("resolves relative step references given via params", {
+        p <- pip_new()
+        pip_add(p, "s1", function(x = 5) x)
+        pip_add(
+            p,
+            "s2",
+            function(...) list(...),
+            params = list(y = ~ -1)
+        )
+
+        expect_equal(unname(p[["pipeline"]][["depends"]][[2]]), "s1")
+
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["pipeline"]][["out"]][[2]]$y, 5)
+    })
+
+    it("signals unknown steps referenced via params", {
+        p <- pip_new()
+        expect_error(
+            pip_add(
+                p,
+                "s1",
+                function(...) list(...),
+                params = list(x = ~undefined)
+            ),
+            "cannot reference unknown steps: 'undefined'"
+        )
+    })
+
+    it("keeps referenced params out of the independent params", {
+        p <- pip_new()
+        pip_add(p, "s1", function(x = 1) x)
+        pip_add(
+            p,
+            "s2",
+            function(...) list(...),
+            params = list(y = ~s1, z = 2)
+        )
+
+        expect_equal(names(p[["pipeline"]][["params"]][[2]]), c("y", "z"))
+        expect_equal(p[["pipeline"]][[".indeps"]][[2]], "z") # y is a dependency
+        expect_equal(names(pip_get_params(p)), c("x", "z"))
+    })
+
+    it("outdates the step state if one of the params is updated", {
+        p <- pip_new()
+        pip_add(
+            p,
+            "s1",
+            function(x = 1, y = 2, ...) x + y,
+            params = list(x = 10, y = 20, z = 99)
+        )
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["pipeline"]][["state"]][[1]], "done")
+        pip_set_params(p, list(z = 100))
+        expect_equal(p[["pipeline"]][["state"]][[1]], "outdated")
+    })
+
+    it("signals parameter without default value", {
+        p <- pip_new()
+        expect_error(
+            pip_add(p, "s1", function(x) x),
+            "has no default value"
+        )
+    })
 })
 
 describe("pip_add exec modes", {

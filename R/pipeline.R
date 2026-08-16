@@ -118,12 +118,14 @@
     .as_pipeflow_partitioned(out)
 }
 
-.pip_append <- function(x, step, fun, tags, exec = "auto") {
-    # Determine and verify potential links to existing steps
-    params <- .extract_fun_params(fun)
+.pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
+    funParams <- .extract_fun_params(fun)
+    params[names(funParams)] <- funParams
     if (".self" %in% names(params)) {
         params[[".self"]] <- x
     }
+
+    # Determine and verify potential links to existing steps
     steps <- c(x[["pipeline"]][["step"]], step)
     depends <- .extract_depends(params = params, steps = steps)
     refNodes <- mget(
@@ -416,6 +418,13 @@ pip_new <- function(name = "pipe") {
 #' @param after Optional position after which the new step should be inserted
 #' (defaults to last position). Can be a step name or an integer index. If
 #' set to 0, the new step will be inserted at the beginning of the pipeline.
+#' @param params Optional named list of parameter values, which will be merged
+#' with the defaults of `fun` (if overlapping names, the default values in `fun`
+#' take precedence). There are two use cases for `params`:
+#' 1. Provide param values programmatically when adding steps at runtime
+#' 2. Provide extra param values that are defined in pipelines nested in a
+#'   step, which ensures that the step (and with that the pipeline in the step)
+#'   is re-executed when one of the respective param values change.
 #' @param exec Execution mode for this step. One of "auto", "split",
 #' "reduce" or "plain".
 #' Using execution mode `exec = split`, the output of the step is marked as
@@ -475,6 +484,7 @@ pip_add <- function(
     fun,
     tags = character(0),
     after = length(x),
+    params = list(),
     exec = "auto"
 ) {
     if (!.is_pipeflow_pip(x)) {
@@ -521,7 +531,14 @@ pip_add <- function(
 
     if (pos == n) {
         # Step is added at the end (simplest case)
-        .pip_append(x, step = step, fun = fun, tags = tags, exec = exec)
+        .pip_append(
+            x,
+            step = step,
+            fun = fun,
+            tags = tags,
+            exec = exec,
+            params = params
+        )
         return(invisible(x))
     }
 

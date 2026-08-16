@@ -4,7 +4,15 @@
 \alias{pip_add}
 \title{Add a step}
 \usage{
-pip_add(x, step, fun, tags = character(0), after = length(x), exec = "auto")
+pip_add(
+  x,
+  step,
+  fun,
+  tags = character(0),
+  after = length(x),
+  params = list(),
+  exec = "auto"
+)
 }
 \arguments{
 \item{x}{A pipeflow pipeline object.}
@@ -23,6 +31,16 @@ Can also be adjusted later using \verb{[pip_tag()]}.}
 \item{after}{Optional position after which the new step should be inserted
 (defaults to last position). Can be a step name or an integer index. If
 set to 0, the new step will be inserted at the beginning of the pipeline.}
+
+\item{params}{Optional named list of parameter values, which will be merged
+with the defaults of \code{fun} (if overlapping names, the default values in \code{fun}
+take precedence). There are two use cases for \code{params}:
+\enumerate{
+\item Provide param values programmatically when adding steps at runtime
+\item Provide extra param values that are defined in pipelines nested in a
+step, which ensures that the step (and with that the pipeline in the step)
+is re-executed when one of the respective param values change.
+}}
 
 \item{exec}{Execution mode for this step. One of "auto", "split",
 "reduce" or "plain".
