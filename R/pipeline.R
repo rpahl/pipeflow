@@ -497,7 +497,13 @@ pip_add <- function(
         if (!pip_has_step(x, after)) {
             stop("step '", after, "' does not exist")
         }
-        pos <- match(after, x[["pipeline"]][["step"]])
+        # Most of the time the new step is added at the end, so we check that
+        # first to avoid the more expensive match() call in the common case.
+        pos <- n
+        last <- x[["pipeline"]][["step"]][n]
+        if (after != last) {
+            pos <- match(after, x[["pipeline"]][["step"]])
+        }
     } else if (is.numeric(after)) {
         if (length(after) != 1 || is.na(after)) {
             stop("after must be a non-empty step name or integer index")
@@ -514,48 +520,45 @@ pip_add <- function(
     }
 
     if (pos == n) {
-        .pip_append(
-            x,
-            step = step,
-            fun = fun,
-            tags = tags,
-            exec = exec
-        )
+        # Step is added at the end (simplest case)
+        .pip_append(x, step = step, fun = fun, tags = tags, exec = exec)
         return(invisible(x))
     }
 
+    # The step is inserted in the middle of the pipeline, which would require
+    # to re-wire the DAG. Instead of trying to do that in place, we take a
+    # simpler approach and just create a new pipeline (1), copy all steps up
+    # to the insertion point (2), add the new step (3), and then re-add all
+    # remaining steps after that.
+    # 1) Clone the pipeline
     src <- pip_clone(x)
     dat <- src[["pipeline"]]
     n <- nrow(dat)
 
+    # 2) Create a new pipeline and copy all steps up to the insertion point
     out <- if (pos > 0L) src[seq_len(pos)] else pip_new(name = src[["name"]])
-    pip_add(
-        out,
-        step = step,
-        fun = fun,
-        tags = tags,
-        exec = exec
-    )
 
-    if (pos < n) {
-        tailRows <- seq.int(pos + 1L, n)
-        for (i in tailRows) {
-            tailStep <- dat[["step"]][[i]]
-            pip_add_from(out, y = src, step = tailStep)
+    # 3) Add the new step at the end of the new pipeline
+    pip_add(out, step = step, fun = fun, tags = tags, exec = exec)
 
-            iOut <- nrow(out[["pipeline"]])
-            data.table::set(
-                out[["pipeline"]],
-                i = iOut,
-                j = c("out", "time", "state", "locked"),
-                value = list(
-                    list(dat[["out"]][[i]]),
-                    dat[["time"]][[i]],
-                    dat[["state"]][[i]],
-                    dat[["locked"]][[i]]
-                )
+    # 4) Add all remaining steps to the end of the new pipeline
+    tailRows <- seq.int(pos + 1L, n)
+    for (i in tailRows) {
+        tailStep <- dat[["step"]][[i]]
+        pip_add_from(out, y = src, step = tailStep)
+
+        iOut <- nrow(out[["pipeline"]])
+        data.table::set(
+            out[["pipeline"]],
+            i = iOut,
+            j = c("out", "time", "state", "locked"),
+            value = list(
+                list(dat[["out"]][[i]]),
+                dat[["time"]][[i]],
+                dat[["state"]][[i]],
+                dat[["locked"]][[i]]
             )
-        }
+        )
     }
 
     x[["pipeline"]] <- out[["pipeline"]]
@@ -1446,9 +1449,6 @@ pip_run <- function(
             if (recursive) {
                 current_depth <- as.integer(x[[".recursive_depth"]])
                 max_depth <- getOption("pipeflow_max_recursive_depth", 10L)
-                if (is.na(max_depth) || max_depth < 0L) {
-                    max_depth <- 10L
-                }
 
                 if (current_depth >= max_depth) {
                     sprintf(
