@@ -4,14 +4,14 @@
 \alias{pip_remove}
 \title{Remove a step}
 \usage{
-pip_remove(x, step, recursive = FALSE)
+pip_remove(x, step, force = FALSE)
 }
 \arguments{
 \item{x}{A pipeflow pip}
 
 \item{step}{\code{string} the name of the step to be removed.}
 
-\item{recursive}{\code{logical} if \code{TRUE} the step is removed together
+\item{force}{\code{logical} if \code{TRUE} the step is removed together
 with all its downstream dependencies.}
 }
 \value{
@@ -19,8 +19,8 @@ The updated pipeline, invisibly.
 }
 \description{
 If other steps depend on the step to be removed, an error is
-given and the removal is blocked, unless \code{recursive} was set to
-\code{TRUE}. In recursive mode, the selected step and all downstream
+given and the removal is blocked, unless \code{force} was set to
+\code{TRUE}. In force mode, the selected step and all downstream
 dependent steps are removed together.
 }
 \examples{
@@ -36,7 +36,7 @@ p                        # "load", "transform"
 # Trying to remove a step that others depend on raises an error:
 # pip_remove(p, "load")  # Error!
 
-# recursive = TRUE removes the step and all its downstream dependents
-pip_remove(p, "load", recursive = TRUE)
+# force = TRUE removes the step and all its downstream dependents
+pip_remove(p, "load", force = TRUE)
 p                        # pipeline is now empty
 }
