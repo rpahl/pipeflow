@@ -294,19 +294,6 @@
     )
 }
 
-.pip_get_recursive_depth <- function(x) {
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
-
-    depth <- x[[".recursive_depth"]]
-    if (is.null(depth)) {
-        return(0L)
-    }
-
-    as.integer(depth)
-}
-
 .pip_steps_to_rows <- function(x, steps) {
     pip <- if (.is_pipeflow_view(x)) x[["pip"]] else x
     dat <- pip[["pipeline"]]
@@ -387,13 +374,23 @@ pip_new <- function(name = "pipe") {
         stop("name must not be NA")
     }
 
+    # Main pipeline components
     hash_map <- function() new.env(parent = emptyenv())
     env <- hash_map()
     env[["name"]] <- name
     env[["pipeline"]] <- .empty_pipeline()
     env[[".dag"]] <- dag_new()
     env[[".steps_to_nodes"]] <- hash_map()
-    env[[".recursive_depth"]] <- 0L
+
+    # Pipeline states
+    env[[".run_state"]] <- factor(
+        "ready",
+        levels = c("ready", "restart", "running", "stop")
+    )
+
+    # Restart tracking
+    env[[".restart_count"]] <- 0L
+    env[[".restart_force"]] <- TRUE
 
     structure(env, class = c("pipeflow_pip", "environment"))
 }
@@ -1341,14 +1338,11 @@ pip_replace <- function(x, step, fun, tags = character(0)) {
 #' regardless of whether they are outdated or not.
 #' @param progress Optional callback of the form
 #' `function(value, detail)` called before each step.
-#' @param recursive If `TRUE` and a step returns a pipeline object, the
-#' current run is aborted and continues from the returned pipeline. Useful
-#' for dynamic or self-modifying pipelines.
 #' @return The updated pipeline or view, invisibly.
 #' @details When `x` is a view, requested rows are run together with required
 #' upstream dependencies.
 #' @seealso `vignette("v06-self-modify-pipeline", package = "pipeflow")`
-#'   for an advanced example of recursive/dynamic pipelines.
+#'   for an advanced example of dynamic pipelines.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(n = 3) seq_len(n)) |>
@@ -1376,15 +1370,11 @@ pip_run <- function(
     x,
     lgr = pipeflow_lgr,
     force = FALSE,
-    progress = NULL,
-    recursive = FALSE
+    progress = NULL
 ) {
     .assert_pip_or_view(x)
     if (!.is_single(force, "logical")) {
         stop("force must be a single logical value")
-    }
-    if (!.is_single(recursive, "logical")) {
-        stop("recursive must be a single logical value")
     }
     if (!is.null(progress) && !is.function(progress)) {
         stop("progress must be a function")
@@ -1436,6 +1426,7 @@ pip_run <- function(
     })
 
     log_info(sprintf("Start run of %s '%s'", data.class(x), x[["name"]]))
+    x[[".run_state"]][] <- "running"
     for (i in seq_along(rowsToRun)) {
         row <- rowsToRun[[i]]
         step <- dat[["step"]][[row]]
@@ -1459,49 +1450,55 @@ pip_run <- function(
             next()
         }
 
+        # Run current step
         log_info(msg)
-        res <- .pip_run_row(pip, i = row, lgr = lgr)
+        .pip_run_row(pip, i = row, lgr = lgr)
+        state <- x[[".run_state"]]
 
-        if (.is_pipeflow_pip(res)) {
-            if (recursive) {
-                current_depth <- as.integer(x[[".recursive_depth"]])
-                max_depth <- getOption("pipeflow_max_recursive_depth", 10L)
-
-                if (current_depth >= max_depth) {
-                    sprintf(
-                        paste(
-                            "Maximum recursive restarts exceeded (%i).",
-                            "Set options(pipeflow_max_recursive_depth = <n>)",
-                            "increase the limit."
-                        ),
-                        max_depth
-                    ) |>
-                        stop(call. = FALSE)
-                }
-
-                res[[".recursive_depth"]] <- current_depth + 1L
-
-                log_info(
-                    "Abort pipeline execution and restart on returned pipeline."
-                )
-                pip_run(
-                    x = res,
-                    lgr = lgr,
-                    force = TRUE,
-                    progress = progress,
-                    recursive = TRUE
-                )
-                return(invisible(res))
+        # Check for restart or stop signals
+        if (state == "restart") {
+            count <- x[[".restart_count"]]
+            maxCount <- getOption("pipeflow_max_restart_count", 10L)
+            if (count > maxCount) {
+                sprintf(
+                    paste(
+                        "Maximum restart limit (%i) exceeded - to increase the",
+                        "limit, set options(pipeflow_max_restart_count = <n>)"
+                    ),
+                    maxCount
+                ) |>
+                    stop(call. = FALSE)
             }
+            log_info("Restarting pipeline execution.")
+            restart_force <- x[[".restart_force"]]
+            x[[".run_state"]][] <- "running"
+            pip_run(x, lgr = lgr, force = restart_force, progress = progress)
+            return(invisible(x))
+        }
 
-            log_info(
-                "Abort pipeline execution on returned pipeline."
-            )
-            return(invisible(res))
+        if (state == "stop") {
+            log_info("Aborting pipeline execution on manual stop.")
+            break
         }
     }
 
     log_info(sprintf("Finished run of %s '%s'", data.class(x), x[["name"]]))
+    x[[".run_state"]][] <- "ready"
+    x[[".restart_count"]] <- 0L
+    invisible(x)
+}
+
+pip_restart <- function(x, force = TRUE) {
+    .assert_pip_or_view(x)
+    x[[".run_state"]][] <- "restart"
+    x[[".restart_count"]] <- x[[".restart_count"]] + 1L
+    x[[".restart_force"]] <- force
+    invisible(x)
+}
+
+pip_stop <- function(x) {
+    .assert_pip_or_view(x)
+    x[[".run_state"]][] <- "stop"
     invisible(x)
 }
 

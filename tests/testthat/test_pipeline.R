@@ -1755,7 +1755,7 @@ describe("pip_run", {
                                 ) |>
                                 pip_remove("f2")
 
-                            return(.self)
+                            pip_restart(.self)
                         }
 
                         x + 2
@@ -1764,60 +1764,25 @@ describe("pip_run", {
                 pip_add("f3", function(x = ~f2) x + 3)
         }
 
-        pip1 <- test_pip()
-        pip_set_params(pip1, list(xInit = 11)) |> pip_run(lgr = NULL)
-
-        expect_equal(pip1[["step"]], c("init", "f1", "f2a", "f2b", "f3"))
-        expect_equal(pip1[["state"]], c("done", "done", "new", "new", "new"))
-        expect_equal(pip1[["out"]], list(11, 12, NULL, NULL, NULL))
-        pip_run(pip1, lgr = NULL)
-
-        expect_equal(pip1[["state"]], rep("done", 5))
-        expect_equal(pip1[["out"]], list(11, 12, 33, 55, 85))
-
-        pip2 <- test_pip()
-        expect_no_error(
-            pip_set_params(pip2, list(xInit = 11)) |>
-                pip_run(lgr = NULL, recursive = TRUE)
-        )
-
-        expect_equal(pip2[["step"]], c("init", "f1", "f2a", "f2b", "f3"))
-        expect_equal(pip2[["state"]], rep("done", 5))
-        expect_equal(pip2[["out"]], list(11, 12, 33, 55, 85))
-    })
-
-    it("can restart a run from the start when a step returns a pipeline", {
-        count <- 0L
-
-        pip <- pip_new("restart-demo") |>
-            pip_add(
-                "step1",
-                function(x = 1, .self = NULL) {
-                    count <<- count + 1L
-                    if (count == 1L) {
-                        return(.self)
-                    }
-                    x
-                }
-            )
-
-        pip_run(pip, lgr = NULL, recursive = TRUE)
-
-        expect_equal(count, 2L)
-        expect_equal(pip[["pipeline"]][["out"]], list(1))
+        pip <- test_pip()
+        pip_set_params(pip, list(xInit = 11)) |> pip_run(lgr = NULL)
+        expect_equal(pip[["step"]], c("init", "f1", "f2a", "f2b", "f3"))
+        expect_equal(pip[["state"]], rep("done", 5))
+        expect_equal(pip[["out"]], list(11, 12, 33, 55, 85))
     })
 
     it("stops recursive restarts after the configured limit", {
-        old <- getOption("pipeflow_max_recursive_depth")
-        options(pipeflow_max_recursive_depth = 1L)
-        on.exit(options(pipeflow_max_recursive_depth = old), add = TRUE)
+        old <- getOption("pipeflow_max_restart_count")
+        options(pipeflow_max_restart_count = 1L)
+        on.exit(options(pipeflow_max_restart_count = old), add = TRUE)
 
         pip <- pip_new("loop-demo") |>
-            pip_add("step1", function(x = 1, .self = NULL) .self)
+            pip_add("step1", function(x = 1, .self = NULL) pip_restart(.self))
 
         expect_error(
-            pip_run(pip, lgr = NULL, recursive = TRUE),
-            "Maximum recursive restarts exceeded"
+            pip_run(pip, lgr = NULL),
+            "Maximum restart limit (1) exceeded",
+            fixed = TRUE
         )
     })
 
@@ -1863,18 +1828,6 @@ describe("pip_run", {
 
         pip_run(p, lgr = NULL, force = TRUE)
         expect_equal(p[["pipeline"]][["out"]][[2]], 99)
-    })
-
-    it("aborts run if pipeline is returned but recursive = FALSE", {
-        pip <- pip_new("abort-demo") |>
-            pip_add("step1", function(x = 1, .self = NULL) .self) |>
-            pip_add("step2", \(x = ~step1) x + 1)
-
-        res <- pip_run(pip, lgr = NULL, recursive = FALSE)
-        expect_true(.is_pipeflow_pip(res))
-        expect_equal(pip[["pipeline"]][["step"]], c("step1", "step2"))
-        expect_true(.is_pipeflow_pip(pip[["pipeline"]][["out"]][[1]]))
-        expect_null(pip[["pipeline"]][["out"]][[2]])
     })
 })
 
