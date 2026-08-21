@@ -1,6 +1,6 @@
-# -------
-# Helpers
-# -------
+# ---------------------
+# Pipeline construction
+# ---------------------
 .empty_pipeline <- function() {
     data.table::data.table(
         step = character(0),
@@ -18,7 +18,6 @@
         .indeps = list() # names of independent parameters
     )
 }
-
 
 .new_step <- function(
     step,
@@ -46,6 +45,55 @@
     )
 }
 
+
+# ---------------
+# Type predicates
+# ---------------
+.is_pipeflow_pip <- function(x) {
+    inherits(x, "pipeflow_pip")
+}
+
+.is_pipeflow_view <- function(x) {
+    inherits(x, "pipeflow_view")
+}
+
+.is_pipeflow_partitioned <- function(x) {
+    inherits(x, "pipeflow_partitioned")
+}
+
+
+# -------
+# Asserts
+# -------
+.assert_exec_mode <- function(exec) {
+    if (!.is_single(exec, "character") || is.na(exec)) {
+        stop("exec must be a single string")
+    }
+    allowed <- c("auto", "split", "reduce", "plain")
+    if (!(exec %in% allowed)) {
+        stop("exec must be one of: ", toString(allowed))
+    }
+}
+
+.assert_logger <- function(lgr) {
+    if (!is.function(lgr)) {
+        stop("lgr must be a function")
+    }
+    if (!all(c("level", "msg") %in% names(formals(lgr)))) {
+        stop("lgr must be a function with arguments 'level' and 'msg'")
+    }
+}
+
+.assert_pip_or_view <- function(x) {
+    if (!(.is_pipeflow_pip(x) || .is_pipeflow_view(x))) {
+        stop_no_call("x must be a pipeflow pip or view")
+    }
+}
+
+
+# ------------------------------
+# Parameter & dependency parsing
+# ------------------------------
 .extract_fun_params <- function(fun) {
     args <- formals(fun)
 
@@ -73,7 +121,6 @@
     lapply(args, \(x) eval(x, envir = environment(fun)))
 }
 
-
 .rel_pos_to_step_num <- function(relPos, startPos) {
     if (!is.integer(relPos)) {
         stop("relPos must be an integer")
@@ -93,7 +140,6 @@
 
     stepNumber
 }
-
 
 .extract_depends <- function(
     params,
@@ -136,31 +182,10 @@
     unlist(depends)
 }
 
-.assert_exec_mode <- function(exec) {
-    if (!.is_single(exec, "character") || is.na(exec)) {
-        stop("exec must be a single string")
-    }
-    allowed <- c("auto", "split", "reduce", "plain")
-    if (!(exec %in% allowed)) {
-        stop("exec must be one of: ", toString(allowed))
-    }
-}
 
-.assert_logger <- function(lgr) {
-    if (!is.function(lgr)) {
-        stop("lgr must be a function")
-    }
-    if (!all(c("level", "msg") %in% names(formals(lgr)))) {
-        stop("lgr must be a function with arguments 'level' and 'msg'")
-    }
-}
-
-.assert_pip_or_view <- function(x) {
-    if (!(.is_pipeflow_pip(x) || .is_pipeflow_view(x))) {
-        stop_no_call("x must be a pipeflow pip or view")
-    }
-}
-
+# ---------------------
+# Partitioned execution
+# ---------------------
 .as_pipeflow_partitioned <- function(x) {
     if (!is.list(x)) {
         stop("split mode requires step output to be a list")
@@ -177,18 +202,6 @@
 
     class(x) <- c(class(x), "pipeflow_partitioned")
     x
-}
-
-.is_pipeflow_view <- function(x) {
-    inherits(x, "pipeflow_view")
-}
-
-.is_pipeflow_partitioned <- function(x) {
-    inherits(x, "pipeflow_partitioned")
-}
-
-.is_pipeflow_pip <- function(x) {
-    inherits(x, "pipeflow_pip")
 }
 
 .partition_keys <- function(x) {
@@ -253,6 +266,107 @@
     .as_pipeflow_partitioned(out)
 }
 
+
+# --------------------
+# Pipeline data access
+# --------------------
+.pip_data <- function(x) {
+    isView <- inherits(x, "pipeflow_view")
+    if (isView) {
+        rows <- x[["rows"]]
+        x[["pip"]][["pipeline"]][rows, ]
+    } else {
+        x[["pipeline"]]
+    }
+}
+
+.pip_filter <- function(x, on, values) {
+    x[["pipeline"]][list(values), on = on]
+}
+
+.pip_filter_nodes <- function(x, nodes) {
+    x[["pipeline"]][list(nodes), on = ".nodeId"]
+}
+
+
+# --------
+# Indexing
+# -------.
+.pip_is_indexed <- function(x) {
+    !is.null(data.table::indices(x[["pipeline"]]))
+}
+
+.pip_reindex <- function(x) {
+    if (!.is_pipeflow_pip(x)) {
+        stop("x must be a pipeflow pip")
+    }
+    data.table::setindexv(x[["pipeline"]], list("step", ".nodeId"))
+}
+
+
+# ---------------------------
+# Step lookup & DAG traversal
+# ---------------------------
+.pip_step_exists <- function(x, step) {
+    exists(step, where = x[[".steps_to_nodes"]], inherits = FALSE)
+}
+
+.pip_steps_to_nodes <- function(x, steps) {
+    mget(
+        steps,
+        envir = x[[".steps_to_nodes"]],
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    )
+}
+
+.pip_steps_to_rows <- function(x, steps) {
+    pip <- if (.is_pipeflow_view(x)) x[["pip"]] else x
+    dat <- pip[["pipeline"]]
+
+    if (anyNA(steps)) {
+        stop("step names must not contain NA", call. = FALSE)
+    }
+    if (!all(nzchar(steps))) {
+        stop("step names must be non-empty strings", call. = FALSE)
+    }
+
+    i <- match(steps, dat[["step"]])
+    if (anyNA(i)) {
+        unknown <- unique(steps[is.na(i)])
+        stop("Unknown step names: ", toString(unknown), call. = FALSE)
+    }
+    as.integer(i)
+}
+
+.pip_get_reachable_nodes <- function(x, steps, downstream = TRUE) {
+    known <- intersect(steps, names(x[[".steps_to_nodes"]]))
+    if (length(known) == 0L) {
+        return(integer(0))
+    }
+
+    start_ids <- as.integer(mget(
+        known,
+        envir = x[[".steps_to_nodes"]],
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    ))
+    start_ids <- start_ids[!is.na(start_ids)]
+    if (length(start_ids) == 0L) {
+        return(integer(0))
+    }
+
+    if (downstream) {
+        dag_get_reachable_nodes_down(x[[".dag"]], start_ids)
+    } else {
+        dag_get_reachable_nodes_up(x[[".dag"]], start_ids)
+    }
+}
+
+
+# -------
+# Step execution
+# -------
 .pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
     funParams <- .extract_fun_params(fun)
     params[names(funParams)] <- funParams
@@ -300,59 +414,6 @@
     x[["pipeline"]] <- data.table::rbindlist(list(x[["pipeline"]], newStep))
     x[[".steps_to_nodes"]][[step]] <- .nodeId
     x
-}
-
-.pip_data <- function(x) {
-    isView <- inherits(x, "pipeflow_view")
-    if (isView) {
-        rows <- x[["rows"]]
-        x[["pip"]][["pipeline"]][rows, ]
-    } else {
-        x[["pipeline"]]
-    }
-}
-
-.pip_filter_nodes <- function(x, nodes) {
-    x[["pipeline"]][list(nodes), on = ".nodeId"]
-}
-
-.pip_filter <- function(x, on, values) {
-    x[["pipeline"]][list(values), on = on]
-}
-
-.pip_get_reachable_nodes <- function(x, steps, downstream = TRUE) {
-    known <- intersect(steps, names(x[[".steps_to_nodes"]]))
-    if (length(known) == 0L) {
-        return(integer(0))
-    }
-
-    start_ids <- as.integer(mget(
-        known,
-        envir = x[[".steps_to_nodes"]],
-        ifnotfound = NA_integer_,
-        inherits = FALSE
-    ))
-    start_ids <- start_ids[!is.na(start_ids)]
-    if (length(start_ids) == 0L) {
-        return(integer(0))
-    }
-
-    if (downstream) {
-        dag_get_reachable_nodes_down(x[[".dag"]], start_ids)
-    } else {
-        dag_get_reachable_nodes_up(x[[".dag"]], start_ids)
-    }
-}
-
-.pip_is_indexed <- function(x) {
-    !is.null(data.table::indices(x[["pipeline"]]))
-}
-
-.pip_reindex <- function(x) {
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
-    data.table::setindexv(x[["pipeline"]], list("step", ".nodeId"))
 }
 
 .pip_run_row <- function(x, i, lgr) {
@@ -416,38 +477,10 @@
     out
 }
 
-.pip_step_exists <- function(x, step) {
-    exists(step, where = x[[".steps_to_nodes"]], inherits = FALSE)
-}
 
-.pip_steps_to_nodes <- function(x, steps) {
-    mget(
-        steps,
-        envir = x[[".steps_to_nodes"]],
-        ifnotfound = NA_integer_,
-        inherits = FALSE
-    )
-}
-
-.pip_steps_to_rows <- function(x, steps) {
-    pip <- if (.is_pipeflow_view(x)) x[["pip"]] else x
-    dat <- pip[["pipeline"]]
-
-    if (anyNA(steps)) {
-        stop("step names must not contain NA", call. = FALSE)
-    }
-    if (!all(nzchar(steps))) {
-        stop("step names must be non-empty strings", call. = FALSE)
-    }
-
-    i <- match(steps, dat[["step"]])
-    if (anyNA(i)) {
-        unknown <- unique(steps[is.na(i)])
-        stop("Unknown step names: ", toString(unknown), call. = FALSE)
-    }
-    as.integer(i)
-}
-
+# -------------
+# State updates
+# -------------
 .pip_update_downstream <- function(x, steps, what, value) {
     nodes <- .pip_get_reachable_nodes(x, steps)
     x[["pipeline"]][list(nodes), (what) := value, on = ".nodeId"]
