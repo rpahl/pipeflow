@@ -1730,7 +1730,6 @@ describe("pip_run", {
     })
 
     it("can insert and remove steps at runtime", {
-        skip("for now")
         test_pip <- function() {
             pip_new("my-pipeline") |>
                 pip_add("init", function(xInit = 0) xInit) |>
@@ -1770,6 +1769,52 @@ describe("pip_run", {
         expect_equal(pip[["step"]], c("init", "f1", "f2a", "f2b", "f3"))
         expect_equal(pip[["state"]], rep("done", 5))
         expect_equal(pip[["out"]], list(11, 12, 33, 55, 85))
+    })
+
+    it("keeps .self bound to the same pipeline across a restart", {
+        captured <- list()
+        p <- pip_new("self-bound") |>
+            pip_add("init", function(xInit = 0) xInit) |>
+            pip_add("f1", function(x = ~init) x + 1) |>
+            pip_add("f2", function(x = ~f1, .self = NULL) {
+                captured[[1]] <<- .self
+                pip_restart(.self)
+                x + 2
+            })
+
+        pip_run(p, lgr = NULL)
+
+        expect_true(identical(captured[[1]], p))
+    })
+
+    it("limits restarts with times while the pipeline is self-modifying", {
+        count <- 0L
+        p <- pip_new("mod-times") |>
+            pip_add("init", function(xInit = 0) xInit) |>
+            pip_add("f1", function(x = ~init) x + 1) |>
+            pip_add(
+                "f2",
+                function(x = ~f1, .self = NULL) {
+                    count <<- count + 1L
+                    if (x > 10 && count < 3L) {
+                        .self |>
+                            pip_replace("f3", function(x = ~f1) x * 3)
+                        pip_restart(.self, times = 2L)
+                    }
+                    x + 2
+                }
+            ) |>
+            pip_add("f3", function(x = ~f2) x + 3)
+
+        p |> pip_set_params(list(xInit = 11)) |> pip_run(lgr = NULL)
+
+        expect_equal(count, 3L)
+        expect_equal(p[["pipeline"]][["out"]], list(11, 12, 14, 36))
+        expect_equal(p[["pipeline"]][["state"]], rep("done", 4))
+        expect_equal(
+            body(p[["pipeline"]][["fun"]][[4]]),
+            body(function(x = ~f1) x * 3)
+        )
     })
 
     it("force = TRUE re-executes all steps regardless of state", {
