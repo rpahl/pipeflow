@@ -1,5 +1,6 @@
 #' @keywords internal
 #' @useDynLib pipeflow, .registration = TRUE
+#' @import data.table
 #' @importFrom Rcpp evalCpp
 "_PACKAGE"
 

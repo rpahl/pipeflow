@@ -1471,6 +1471,37 @@ pip_run <- function(
     invisible(x)
 }
 
+#' Restart a pipeline run
+#'
+#' Requests a restart of the current [pip_run()] execution. When called from
+#' within a step function (via the `.self` argument), the pipeline run is
+#' aborted and restarted from the first step. If a view was run, the view run
+#' is restarted together with its upstream dependencies.
+#'
+#' @param x A pipeflow pip or view.
+#' @param force Logical indicating if all steps should be forced to run on the
+#' restarted run. If `FALSE`, steps that are already in state `"done"` are
+#' skipped.
+#' @param times Maximum number of restarts to request. Once the pipeline has
+#' been restarted `times` times, further calls of `pip_restart()` are ignored
+#' until the next run.
+#'
+#' @return The updated pipeline or view, invisibly.
+#' @seealso `vignette("v06-self-modify-pipeline", package = "pipeflow")`
+#'   for an advanced example of dynamic pipelines.
+#' @examples
+#' p <- pip_new("restart") |>
+#'   pip_add("load", \(n = 3) seq_len(n)) |>
+#'   pip_add("model", \(x = ~load, .self = NULL) {
+#'     if (length(x) == 3L) {
+#'       pip_restart(.self)
+#'     }
+#'     x * 2
+#'   })
+#'
+#' pip_run(p)
+#' p
+#' @export
 pip_restart <- function(x, force = TRUE, times = 1L) {
     .assert_pip_or_view(x)
     if (!.is_single(force, "logical")) {
@@ -1495,6 +1526,32 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
     invisible(x)
 }
 
+#' Stop a pipeline run
+#'
+#' Aborts the current [pip_run()] execution. When called from within a step
+#' function (via the `.self` argument), the pipeline run is stopped after the
+#' current step. Steps that were not executed are marked as `"outdated"`. If a
+#' view was run, only the steps covered by the view are affected.
+#'
+#' @param x A pipeflow pip or view.
+#'
+#' @return The updated pipeline or view, invisibly.
+#' @seealso `vignette("v06-self-modify-pipeline", package = "pipeflow")`
+#'   for an advanced example of dynamic pipelines.
+#' @examples
+#' p <- pip_new("stop") |>
+#'   pip_add("load", \(n = 3) seq_len(n)) |>
+#'   pip_add("model", \(x = ~load, .self = NULL) {
+#'     if (length(x) == 3L) {
+#'       pip_stop(.self)
+#'     }
+#'     x * 2
+#'   }) |>
+#'   pip_add("report", \(x = ~model) paste("result:", x))
+#'
+#' pip_run(p)
+#' p
+#' @export
 pip_stop <- function(x) {
     .assert_pip_or_view(x)
     isView <- .is_pipeflow_view(x)

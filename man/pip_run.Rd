@@ -4,13 +4,7 @@
 \alias{pip_run}
 \title{Run a pipeline}
 \usage{
-pip_run(
-  x,
-  lgr = pipeflow_lgr,
-  force = FALSE,
-  progress = NULL,
-  recursive = FALSE
-)
+pip_run(x, lgr = pipeflow_lgr, force = FALSE, progress = NULL)
 }
 \arguments{
 \item{x}{A pipeflow pip or view}
@@ -23,10 +17,6 @@ regardless of whether they are outdated or not.}
 
 \item{progress}{Optional callback of the form
 \verb{function(value, detail)} called before each step.}
-
-\item{recursive}{If \code{TRUE} and a step returns a pipeline object, the
-current run is aborted and continues from the returned pipeline. Useful
-for dynamic or self-modifying pipelines.}
 }
 \value{
 The updated pipeline or view, invisibly.
@@ -64,5 +54,5 @@ pip_run(v)
 }
 \seealso{
 \code{vignette("v06-self-modify-pipeline", package = "pipeflow")}
-for an advanced example of recursive/dynamic pipelines.
+for an advanced example of dynamic pipelines.
 }
