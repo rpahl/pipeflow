@@ -92,7 +92,7 @@
 }
 
 
-.extract_depends = function(
+.extract_depends <- function(
     params,
     steps,
     toPos = as.integer(length(steps))

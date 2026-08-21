@@ -1406,27 +1406,24 @@ pip_run <- function(
         # At the end, mark all downstream dependent steps as outdated that
         # were *not* processed, which can happen in two different ways:
         # a) when running a view that does not cover the entire pipeline or
-        # b) the run aborted in the middle due to an error
+        # b) the run was aborted in the middle (due to an error or manual stop).
         processedNodes <- as.integer(.pip_steps_to_nodes(pip, processedSteps))
         outdatedNodes <- .pip_get_reachable_nodes(pip, processedSteps) |>
             unlist() |>
             unique() |>
             setdiff(processedNodes)
         if (length(outdatedNodes) > 0L) {
-            iOutdated <- dat[list(outdatedNodes), which = TRUE, on = ".nodeId"]
-            if (length(iOutdated) > 0L) {
-                data.table::set(
-                    dat,
-                    i = iOutdated,
-                    j = "state",
-                    value = "outdated"
-                )
+            iOut <- dat[list(outdatedNodes), which = TRUE, on = ".nodeId"]
+            if (length(iOut) > 0L) {
+                data.table::set(dat, i = iOut, j = "state", value = "outdated")
             }
         }
     })
 
-    log_info(sprintf("Start run of %s '%s'", data.class(x), x[["name"]]))
-    x[[".run_state"]][] <- "running"
+    state <- pip[[".run_state"]]
+    action <- if (state == "restart") "Restarting" else "Starting"
+    log_info(sprintf("%s run of %s '%s'", action, data.class(x), x[["name"]]))
+    pip[[".run_state"]][] <- "running"
     for (i in seq_along(rowsToRun)) {
         row <- rowsToRun[[i]]
         step <- dat[["step"]][[row]]
@@ -1453,52 +1450,56 @@ pip_run <- function(
         # Run current step
         log_info(msg)
         .pip_run_row(pip, i = row, lgr = lgr)
-        state <- x[[".run_state"]]
+        stateAfterStep <- pip[[".run_state"]]
 
         # Check for restart or stop signals
-        if (state == "restart") {
-            count <- x[[".restart_count"]]
-            maxCount <- getOption("pipeflow_max_restart_count", 10L)
-            if (count > maxCount) {
-                sprintf(
-                    paste(
-                        "Maximum restart limit (%i) exceeded - to increase the",
-                        "limit, set options(pipeflow_max_restart_count = <n>)"
-                    ),
-                    maxCount
-                ) |>
-                    stop(call. = FALSE)
-            }
+        if (stateAfterStep == "restart") {
             log_info("Restarting pipeline execution.")
-            restart_force <- x[[".restart_force"]]
-            x[[".run_state"]][] <- "running"
-            pip_run(x, lgr = lgr, force = restart_force, progress = progress)
+            doForce <- pip[[".restart_force"]]
+            pip_run(x, lgr = lgr, force = doForce, progress = progress)
             return(invisible(x))
         }
 
-        if (state == "stop") {
+        if (stateAfterStep == "stop") {
             log_info("Aborting pipeline execution on manual stop.")
             break
         }
     }
 
     log_info(sprintf("Finished run of %s '%s'", data.class(x), x[["name"]]))
-    x[[".run_state"]][] <- "ready"
-    x[[".restart_count"]] <- 0L
+    pip[[".run_state"]][] <- "ready"
     invisible(x)
 }
 
-pip_restart <- function(x, force = TRUE) {
+pip_restart <- function(x, force = TRUE, times = 1L) {
     .assert_pip_or_view(x)
-    x[[".run_state"]][] <- "restart"
-    x[[".restart_count"]] <- x[[".restart_count"]] + 1L
-    x[[".restart_force"]] <- force
+    if (!.is_single(force, "logical")) {
+        stop("force must be a single logical value")
+    }
+    if (!.is_single(times, "numeric") || is.na(times) || times < 1L) {
+        stop("times must be a single integer value >= 1")
+    }
+
+    isView <- .is_pipeflow_view(x)
+    pip <- if (isView) x[["pip"]] else x
+
+    count <- pip[[".restart_count"]]
+    if (count >= times) {
+        pip[[".restart_count"]] <- 0L
+        return(invisible(x))
+    }
+
+    pip[[".run_state"]][] <- "restart"
+    pip[[".restart_count"]] <- count + 1L
+    pip[[".restart_force"]] <- force
     invisible(x)
 }
 
 pip_stop <- function(x) {
     .assert_pip_or_view(x)
-    x[[".run_state"]][] <- "stop"
+    isView <- .is_pipeflow_view(x)
+    pip <- if (isView) x[["pip"]] else x
+    pip[[".run_state"]][] <- "stop"
     invisible(x)
 }
 
