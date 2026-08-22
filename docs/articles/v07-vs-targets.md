@@ -7,25 +7,25 @@ pipeline toolkit in the R ecosystem and the de-facto standard for
 heavy-duty reproducible workflows. The table below contrasts the two
 packages to help you decide which one fits your project.
 
-| Feature | **targets** | **pipeflow** |
-|----|----|----|
-| Paradigm | Declarative — define the full DAG upfront in a `_targets.R` script, then execute | Interactive — incrementally build the pipeline with [`pip_add()`](https://github.com/rpahl/pipeflow/reference/pip_add.md) as you code |
-| Execution | `tar_make()` runs in a **fresh R process** | [`pip_run()`](https://github.com/rpahl/pipeflow/reference/pip_run.md) runs in the **current R session** |
-| Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ❌ In-memory only, lost when R session ends |
-| Skip up-to-date steps | ✅ Hash-based invalidation of code and data | ✅ State-based (`done` / `outdated`) |
-| Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | ❌ No per-step provenance metadata |
-| Dependency validation | ✅ `tar_validate()` for pre-flight checks (opt-in) | ✅ On [`pip_add()`](https://github.com/rpahl/pipeflow/reference/pip_add.md), [`pip_replace()`](https://github.com/rpahl/pipeflow/reference/pip_replace.md), [`pip_remove()`](https://github.com/rpahl/pipeflow/reference/pip_remove.md) — fails fast on broken references |
-| Modify pipeline at runtime | ❌ Must edit `_targets.R` and re-run | ✅ [`pip_remove()`](https://github.com/rpahl/pipeflow/reference/pip_remove.md), [`pip_rename()`](https://github.com/rpahl/pipeflow/reference/pip_rename.md), [`pip_replace()`](https://github.com/rpahl/pipeflow/reference/pip_replace.md), insert with `after =` |
-| Parameter management | ❌ No unified parameter view across targets | ✅ [`pip_get_params()`](https://github.com/rpahl/pipeflow/reference/pip_get_params.md) / [`pip_set_params()`](https://github.com/rpahl/pipeflow/reference/pip_set_params.md) — one call updates all steps |
-| Split / map / reduce | ✅ `pattern = map()` / `cross()` built-in, `tarchetypes` for advanced patterns | ✅ Built-in `exec = "split"` / `"auto"` / `"reduce"` |
-| Dynamic branching | ✅ Comprehensive via `tarchetypes` | ✅ Auto-mapping over partition keys (`exec = "auto"`) |
-| Views / tag filtering | `tar_described_as()` selects by description tags | ✅ [`pip_view()`](https://github.com/rpahl/pipeflow/reference/pip_view.md) — filter steps by tags or index |
-| Pipeline composition | ❌ | ✅ [`pip_bind()`](https://github.com/rpahl/pipeflow/reference/pip_bind.md) two pipelines, [`pip_add_from()`](https://github.com/rpahl/pipeflow/reference/pip_add_from.md) copy individual steps |
-| Self-modifying pipelines | ❌ | ✅ `pip_run(recursive = TRUE)` — steps can return modified pipelines |
-| Distributed computing | ✅ `crew` for HPC and cloud workers | ❌ |
-| Cloud storage | ✅ AWS, GCS | ❌ |
-| File tracking | ✅ File targets with `format = "file"` | ❌ |
-| Step locking | ❌ | ✅ [`pip_lock()`](https://github.com/rpahl/pipeflow/reference/pip_lock.md) / [`pip_unlock()`](https://github.com/rpahl/pipeflow/reference/pip_unlock.md) — protect steps from accidental modification |
+| Feature                    | **targets**                                                                                       | **pipeflow**                                                                                                                                                                                                                                                              |
+|----------------------------|---------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Paradigm                   | Declarative — define the full DAG upfront in a `_targets.R` script, then execute                  | Interactive — incrementally build the pipeline with [`pip_add()`](https://github.com/rpahl/pipeflow/reference/pip_add.md) as you code                                                                                                                                     |
+| Execution                  | `tar_make()` runs in a **fresh R process**                                                        | [`pip_run()`](https://github.com/rpahl/pipeflow/reference/pip_run.md) runs in the **current R session**                                                                                                                                                                   |
+| Persistent storage         | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ❌ In-memory only, lost when R session ends                                                                                                                                                                                                                               |
+| Skip up-to-date steps      | ✅ Hash-based invalidation of code and data                                                       | ✅ State-based (`done` / `outdated`)                                                                                                                                                                                                                                      |
+| Metadata & provenance      | ✅ `tar_meta()` records runtime, size, errors per target                                          | ❌ No per-step provenance metadata                                                                                                                                                                                                                                        |
+| Dependency validation      | ✅ `tar_validate()` for pre-flight checks (opt-in)                                                | ✅ On [`pip_add()`](https://github.com/rpahl/pipeflow/reference/pip_add.md), [`pip_replace()`](https://github.com/rpahl/pipeflow/reference/pip_replace.md), [`pip_remove()`](https://github.com/rpahl/pipeflow/reference/pip_remove.md) — fails fast on broken references |
+| Modify pipeline at runtime | ❌ Must edit `_targets.R` and re-run                                                              | ✅ [`pip_remove()`](https://github.com/rpahl/pipeflow/reference/pip_remove.md), [`pip_rename()`](https://github.com/rpahl/pipeflow/reference/pip_rename.md), [`pip_replace()`](https://github.com/rpahl/pipeflow/reference/pip_replace.md), insert with `after =`         |
+| Parameter management       | ❌ No unified parameter view across targets                                                       | ✅ [`pip_get_params()`](https://github.com/rpahl/pipeflow/reference/pip_get_params.md) / [`pip_set_params()`](https://github.com/rpahl/pipeflow/reference/pip_set_params.md) — one call updates all steps                                                                 |
+| Split / map / reduce       | ✅ `pattern = map()` / `cross()` built-in, `tarchetypes` for advanced patterns                    | ✅ Built-in `exec = "split"` / `"auto"` / `"reduce"`                                                                                                                                                                                                                      |
+| Dynamic branching          | ✅ Comprehensive via `tarchetypes`                                                                | ✅ Auto-mapping over partition keys (`exec = "auto"`)                                                                                                                                                                                                                     |
+| Views / tag filtering      | `tar_described_as()` selects by description tags                                                  | ✅ [`pip_view()`](https://github.com/rpahl/pipeflow/reference/pip_view.md) — filter steps by tags or index                                                                                                                                                                |
+| Pipeline composition       | ❌                                                                                                | ✅ [`pip_bind()`](https://github.com/rpahl/pipeflow/reference/pip_bind.md) two pipelines, [`pip_add_from()`](https://github.com/rpahl/pipeflow/reference/pip_add_from.md) copy individual steps                                                                           |
+| Self-modifying pipelines   | ❌                                                                                                | ✅ `pip_run(recursive = TRUE)` — steps can return modified pipelines                                                                                                                                                                                                      |
+| Distributed computing      | ✅ `crew` for HPC and cloud workers                                                               | ❌                                                                                                                                                                                                                                                                        |
+| Cloud storage              | ✅ AWS, GCS                                                                                       | ❌                                                                                                                                                                                                                                                                        |
+| File tracking              | ✅ File targets with `format = "file"`                                                            | ❌                                                                                                                                                                                                                                                                        |
+| Step locking               | ❌                                                                                                | ✅ [`pip_lock()`](https://github.com/rpahl/pipeflow/reference/pip_lock.md) / [`pip_unlock()`](https://github.com/rpahl/pipeflow/reference/pip_unlock.md) — protect steps from accidental modification                                                                     |
 
 In short, **{targets}** is the tool of choice for large-scale
 reproducible projects: it persists results to disk, captures provenance
@@ -42,7 +42,7 @@ topologies. All timings are measured with
 [`system.time()`](https://rdrr.io/r/base/system.time.html) across 30
 iterations per scenario.
 
-Package versions: pipeflow 0.3.0, targets 1.12.0.
+Package versions: pipeflow 0.3.0.9004, targets 1.12.0.
 
 The three scenarios were chosen to isolate different aspects of pipeline
 overhead:
@@ -72,7 +72,6 @@ steps already up to date). Full runs with targets include a
 `tar_destroy()` between iterations so each is a true cold start.
 
 ``` r
-
 create_data_csv <- function(data = airquality, file = "data.csv") {
     utils::write.csv(data, file)
 }
@@ -95,7 +94,6 @@ plot_model <- function(model, data) {
 #### pipeflow pipeline
 
 ``` r
-
 tar_dir({
     create_data_csv(file = "data.csv")
     p <- pip_new("walkthrough") |>
@@ -116,24 +114,23 @@ tar_dir({
 })
 # 
 # Proof of principle full run (no skips)
-# info [2026-06-20 19:20:51.077 UTC]: Start run of pipeflow_pip 'walkthrough'
-# info [2026-06-20 19:20:51.077 UTC]: Step 1/3 data
-# info [2026-06-20 19:20:51.083 UTC]: Step 2/3 model
-# info [2026-06-20 19:20:51.089 UTC]: Step 3/3 plot
-# info [2026-06-20 19:20:51.121 UTC]: Finished run of pipeflow_pip 'walkthrough'
+# info [2026-08-22 17:09:08.473 UTC]: Starting run of pipeflow_pip 'walkthrough'
+# info [2026-08-22 17:09:08.473 UTC]: Step 1/3 data
+# info [2026-08-22 17:09:08.503 UTC]: Step 2/3 model
+# info [2026-08-22 17:09:08.508 UTC]: Step 3/3 plot
+# info [2026-08-22 17:09:08.534 UTC]: Finished run of pipeflow_pip 'walkthrough'
 # 
 # Proof of principle skipped run
-# info [2026-06-20 19:20:51.560 UTC]: Start run of pipeflow_pip 'walkthrough'
-# info [2026-06-20 19:20:51.560 UTC]: Step 1/3 data - skipping done step
-# info [2026-06-20 19:20:51.560 UTC]: Step 2/3 model - skipping done step
-# info [2026-06-20 19:20:51.560 UTC]: Step 3/3 plot - skipping done step
-# info [2026-06-20 19:20:51.561 UTC]: Finished run of pipeflow_pip 'walkthrough'
+# info [2026-08-22 17:09:08.962 UTC]: Starting run of pipeflow_pip 'walkthrough'
+# info [2026-08-22 17:09:08.962 UTC]: Step 1/3 data - skipping done step
+# info [2026-08-22 17:09:08.962 UTC]: Step 2/3 model - skipping done step
+# info [2026-08-22 17:09:08.962 UTC]: Step 3/3 plot - skipping done step
+# info [2026-08-22 17:09:08.962 UTC]: Finished run of pipeflow_pip 'walkthrough'
 ```
 
 #### targets pipeline
 
 ``` r
-
 tar_make_here <- function(reporter = "silent") {
     tar_make(callr_function = NULL, reporter = reporter)
 }
@@ -164,19 +161,19 @@ tar_dir({
 })
 # 
 # Proof of principle full run (no skips)
-# 2026-06-20 21:20:51.73 dispatched target file
-# 2026-06-20 21:20:51.74 completed target file [0ms, 3.87 kB]
-# 2026-06-20 21:20:51.74 dispatched target data
-# 2026-06-20 21:20:51.76 completed target data [0ms, 1.38 kB]
-# 2026-06-20 21:20:51.79 dispatched target model
-# 2026-06-20 21:20:51.79 completed target model [0ms, 111 B]
-# 2026-06-20 21:20:51.79 dispatched target plot
-# 2026-06-20 21:20:51.85 completed target plot [0ms, 114.10 kB]
-# ✔ 2026-06-20 21:20:51.86 ended pipeline [190ms, 4 completed, 0 skipped]
+# 2026-08-22 19:09:09.13 dispatched target file
+# 2026-08-22 19:09:09.15 completed target file [0ms, 3.71 kB]
+# 2026-08-22 19:09:09.15 dispatched target data
+# 2026-08-22 19:09:09.16 completed target data [1ms, 1.38 kB]
+# 2026-08-22 19:09:09.19 dispatched target model
+# 2026-08-22 19:09:09.19 completed target model [1ms, 111 B]
+# 2026-08-22 19:09:09.19 dispatched target plot
+# 2026-08-22 19:09:09.24 completed target plot [6ms, 114.10 kB]
+# ✔ 2026-08-22 19:09:09.25 ended pipeline [178ms, 4 completed, 0 skipped]
 # 
 # Proof of principle skipped run
-# 2026-06-20 21:21:21.57 skipped 1 targets
-# ✔ 2026-06-20 21:21:21.57 skipped pipeline [31ms, 4 skipped]
+# 2026-08-22 19:09:32.68 skipped 1 targets
+# ✔ 2026-08-22 19:09:32.68 skipped pipeline [23ms, 4 skipped]
 ```
 
 #### Runtimes
@@ -194,7 +191,6 @@ per-step cost scales.
 #### pipeflow pipeline
 
 ``` r
-
 create_linear_pip <- function(n) {
     pip <- pip_new("linear") |> pip_add("s0", \(init = 0) init)
 
@@ -207,19 +203,18 @@ create_linear_pip <- function(n) {
 # Verify
 p <- create_linear_pip(3)
 pip_run(p)
-# info [2026-06-20 19:21:23.552 UTC]: Start run of pipeflow_pip 'linear'
-# info [2026-06-20 19:21:23.552 UTC]: Step 1/4 s0
-# info [2026-06-20 19:21:23.553 UTC]: Step 2/4 s1
-# info [2026-06-20 19:21:23.554 UTC]: Step 3/4 s2
-# info [2026-06-20 19:21:23.556 UTC]: Step 4/4 s3
-# info [2026-06-20 19:21:23.557 UTC]: Finished run of pipeflow_pip 'linear'
+# info [2026-08-22 17:09:34.195 UTC]: Starting run of pipeflow_pip 'linear'
+# info [2026-08-22 17:09:34.195 UTC]: Step 1/4 s0
+# info [2026-08-22 17:09:34.195 UTC]: Step 2/4 s1
+# info [2026-08-22 17:09:34.197 UTC]: Step 3/4 s2
+# info [2026-08-22 17:09:34.198 UTC]: Step 4/4 s3
+# info [2026-08-22 17:09:34.198 UTC]: Finished run of pipeflow_pip 'linear'
 stopifnot(p[["s3", "out"]] == 3)
 ```
 
 #### targets pipeline
 
 ``` r
-
 create_linear_tar <- function(n) {
     init <- tar_target(s0, 0)
     rest <- lapply(
@@ -238,15 +233,15 @@ tar_dir({
     tar_make_here(reporter = "timestamp")
     stopifnot(tar_read(s3) == 3)
 })
-# 2026-06-20 21:21:23.65 dispatched target s0
-# 2026-06-20 21:21:23.66 completed target s0 [0ms, 49 B]
-# 2026-06-20 21:21:23.66 dispatched target s1
-# 2026-06-20 21:21:23.66 completed target s1 [0ms, 51 B]
-# 2026-06-20 21:21:23.66 dispatched target s2
-# 2026-06-20 21:21:23.67 completed target s2 [0ms, 50 B]
-# 2026-06-20 21:21:23.67 dispatched target s3
-# 2026-06-20 21:21:23.68 completed target s3 [0ms, 51 B]
-# ✔ 2026-06-20 21:21:23.68 ended pipeline [61ms, 4 completed, 0 skipped]
+# 2026-08-22 19:09:34.28 dispatched target s0
+# 2026-08-22 19:09:34.28 completed target s0 [0ms, 49 B]
+# 2026-08-22 19:09:34.28 dispatched target s1
+# 2026-08-22 19:09:34.28 completed target s1 [0ms, 51 B]
+# 2026-08-22 19:09:34.28 dispatched target s2
+# 2026-08-22 19:09:34.29 completed target s2 [0ms, 50 B]
+# 2026-08-22 19:09:34.29 dispatched target s3
+# 2026-08-22 19:09:34.29 completed target s3 [0ms, 51 B]
+# ✔ 2026-08-22 19:09:34.29 ended pipeline [34ms, 4 completed, 0 skipped]
 # 
 ```
 
@@ -263,7 +258,6 @@ branches. Unlike the linear pipeline, all branches can potentially run
 independently once the source completes.
 
 ``` r
-
 dag_source <- function() 1
 dag_branch <- function(x) x + 1
 dag_sink   <- function(...) sum(...)
@@ -272,7 +266,6 @@ dag_sink   <- function(...) sum(...)
 #### pipeflow pipeline
 
 ``` r
-
 make_branch_pip <- function(n) {
     pip <- pip_new("dag") |> pip_add("source", dag_source)
     for (i in seq_len(n))
@@ -292,21 +285,20 @@ make_branch_pip <- function(n) {
 
 p4 <- make_branch_pip(4)
 pip_run(p4)
-# info [2026-06-20 19:22:29.081 UTC]: Start run of pipeflow_pip 'dag'
-# info [2026-06-20 19:22:29.081 UTC]: Step 1/6 source
-# info [2026-06-20 19:22:29.082 UTC]: Step 2/6 b1
-# info [2026-06-20 19:22:29.084 UTC]: Step 3/6 b2
-# info [2026-06-20 19:22:29.087 UTC]: Step 4/6 b3
-# info [2026-06-20 19:22:29.089 UTC]: Step 5/6 b4
-# info [2026-06-20 19:22:29.090 UTC]: Step 6/6 sink
-# info [2026-06-20 19:22:29.092 UTC]: Finished run of pipeflow_pip 'dag'
+# info [2026-08-22 17:10:11.132 UTC]: Starting run of pipeflow_pip 'dag'
+# info [2026-08-22 17:10:11.133 UTC]: Step 1/6 source
+# info [2026-08-22 17:10:11.133 UTC]: Step 2/6 b1
+# info [2026-08-22 17:10:11.134 UTC]: Step 3/6 b2
+# info [2026-08-22 17:10:11.136 UTC]: Step 4/6 b3
+# info [2026-08-22 17:10:11.137 UTC]: Step 5/6 b4
+# info [2026-08-22 17:10:11.137 UTC]: Step 6/6 sink
+# info [2026-08-22 17:10:11.138 UTC]: Finished run of pipeflow_pip 'dag'
 stopifnot(p4[["sink", "out"]] == 8)
 ```
 
 #### targets pipeline
 
 ``` r
-
 make_branch_tar <- function(n) {
     source <- tar_target(source, dag_source())
     branches <- lapply(
@@ -332,19 +324,19 @@ tar_dir({
     tar_make_here(reporter = "timestamp")
     stopifnot(tar_read(sink) == 8)
 })
-# 2026-06-20 21:22:29.19 dispatched target source
-# 2026-06-20 21:22:29.19 completed target source [0ms, 51 B]
-# 2026-06-20 21:22:29.20 dispatched target b1
-# 2026-06-20 21:22:29.21 completed target b1 [0ms, 50 B]
-# 2026-06-20 21:22:29.21 dispatched target b2
-# 2026-06-20 21:22:29.21 completed target b2 [0ms, 50 B]
-# 2026-06-20 21:22:29.22 dispatched target b3
-# 2026-06-20 21:22:29.22 completed target b3 [0ms, 50 B]
-# 2026-06-20 21:22:29.22 dispatched target b4
-# 2026-06-20 21:22:29.23 completed target b4 [0ms, 50 B]
-# 2026-06-20 21:22:29.23 dispatched target sink
-# 2026-06-20 21:22:29.24 completed target sink [0ms, 51 B]
-# ✔ 2026-06-20 21:22:29.24 ended pipeline [70ms, 6 completed, 0 skipped]
+# 2026-08-22 19:10:11.22 dispatched target source
+# 2026-08-22 19:10:11.22 completed target source [0ms, 51 B]
+# 2026-08-22 19:10:11.22 dispatched target b1
+# 2026-08-22 19:10:11.23 completed target b1 [0ms, 50 B]
+# 2026-08-22 19:10:11.23 dispatched target b2
+# 2026-08-22 19:10:11.23 completed target b2 [0ms, 50 B]
+# 2026-08-22 19:10:11.23 dispatched target b3
+# 2026-08-22 19:10:11.23 completed target b3 [0ms, 50 B]
+# 2026-08-22 19:10:11.24 dispatched target b4
+# 2026-08-22 19:10:11.24 completed target b4 [0ms, 50 B]
+# 2026-08-22 19:10:11.24 dispatched target sink
+# 2026-08-22 19:10:11.24 completed target sink [0ms, 51 B]
+# ✔ 2026-08-22 19:10:11.24 ended pipeline [46ms, 6 completed, 0 skipped]
 # 
 ```
 

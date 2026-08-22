@@ -50,7 +50,7 @@ pip_run(p, force = TRUE)
 
 # Run only a subset of steps via a view;
 # upstream dependencies are automatically included
-v <- pip_view(p, i = "total")
+v <- pip_view(p, step = "total")
 pip_run(v)
 }
 \seealso{

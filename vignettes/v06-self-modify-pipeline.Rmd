@@ -359,7 +359,7 @@ the structure does not change anymore.
 Luckily, with some minimal changes, this behaviour can be achieved
 with {pipeflow}.
 First, for any step where you want to restart the pipeline run, you
-need to return the pipeline object, so we adapt the `f2` function as
+need to call `pip_restart(.self)`, so we adapt the `f2` function as
 follows:
 
 ```{r}
@@ -390,7 +390,7 @@ pip <- pip_new("my-pipeline") |>
                         }
                     ) |>
                     pip_remove("f2")
-                return(.self)           # <-- return modified pipeline
+                pip_restart(.self)   # <-- restart the run
             }
             x + 2
         }
@@ -398,17 +398,17 @@ pip <- pip_new("my-pipeline") |>
     pip_add("f3", function(x = ~f2) x + 3)
 ```
 
-Second, you need to run the pipeline with `recursive = TRUE`.
+Second, you just run the pipeline as usual.
 
 ```{r}
 pip |>
     pip_set_params(list(xInit = 11)) |>
-    pip_run(recursive = TRUE)
+    pip_run()
 ```
 
 As you can see, the run is now automatically aborted right after
-the pipeline was modified and, since we have set
-`recursive = TRUE`, the pipeline is also restarted automatically
+the pipeline was modified and, since the step called
+`pip_restart(.self)`, the pipeline is also restarted automatically
 based on the new structure.
 As a result, the log now is fully aligned with the performed
 pipeline run.

@@ -15,7 +15,6 @@ Let’s first define our pipeline, which, to keep matters simple, just
 fits a linear model and outputs the model coefficients.
 
 ``` r
-
 library(pipeflow)
 
 pip <- pip_new("my-pipeline") |>
@@ -44,7 +43,6 @@ pip <- pip_new("my-pipeline") |>
 So our pipeline looks like this:
 
 ``` r
-
 pip
 # <pipeflow_pip> my-pipeline (3 steps)
 # ------------------------------------
@@ -57,7 +55,6 @@ pip
 Or graphically:
 
 ``` r
-
 library(visNetwork)
 do.call(visNetwork, args = pip_get_graph(pip))
 ```
@@ -65,7 +62,6 @@ do.call(visNetwork, args = pip_get_graph(pip))
 We use the `iris` data set as our working example.
 
 ``` r
-
 head(iris)
 #   Sepal.Length Sepal.Width Petal.Length Petal.Width Species
 # 1          5.1         3.5          1.4         0.2  setosa
@@ -79,7 +75,6 @@ head(iris)
 First, we apply the pipeline to the whole data set.
 
 ``` r
-
 pip |> pip_set_params(list(
     data = iris,
     xVar = "Sepal.Length",
@@ -87,15 +82,14 @@ pip |> pip_set_params(list(
 ))
 
 pip_run(pip)
-# info [2026-06-20 19:20:22.441 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:22.442 UTC]: Step 1/3 data
-# info [2026-06-20 19:20:22.444 UTC]: Step 2/3 fit
-# info [2026-06-20 19:20:22.447 UTC]: Step 3/3 coefs
-# info [2026-06-20 19:20:22.449 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:49.921 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:49.921 UTC]: Step 1/3 data
+# info [2026-08-22 17:08:49.922 UTC]: Step 2/3 fit
+# info [2026-08-22 17:08:49.926 UTC]: Step 3/3 coefs
+# info [2026-08-22 17:08:49.927 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 ```
 
 ``` r
-
 pip[["coefs", "out"]]
 #  (Intercept) Sepal.Length 
 #    3.4189468   -0.0618848
@@ -108,7 +102,6 @@ to do this would be to use R’s `split` function. We can split it by the
 `Species` column and then run the pipeline for each subset. For example:
 
 ``` r
-
 run_pipeline_helper <- function(data) {
     pip |> pip_set_params(list(data = data))
     pip_run(pip)
@@ -116,25 +109,24 @@ run_pipeline_helper <- function(data) {
 }
 
 results <- lapply(split(iris, iris$Species), FUN = run_pipeline_helper)
-# info [2026-06-20 19:20:22.566 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:22.567 UTC]: Step 1/3 data
-# info [2026-06-20 19:20:22.567 UTC]: Step 2/3 fit
-# info [2026-06-20 19:20:22.571 UTC]: Step 3/3 coefs
-# info [2026-06-20 19:20:22.573 UTC]: Finished run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:22.577 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:22.577 UTC]: Step 1/3 data
-# info [2026-06-20 19:20:22.578 UTC]: Step 2/3 fit
-# info [2026-06-20 19:20:22.580 UTC]: Step 3/3 coefs
-# info [2026-06-20 19:20:22.581 UTC]: Finished run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:22.583 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:22.584 UTC]: Step 1/3 data
-# info [2026-06-20 19:20:22.584 UTC]: Step 2/3 fit
-# info [2026-06-20 19:20:22.586 UTC]: Step 3/3 coefs
-# info [2026-06-20 19:20:22.587 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:50.036 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:50.036 UTC]: Step 1/3 data
+# info [2026-08-22 17:08:50.036 UTC]: Step 2/3 fit
+# info [2026-08-22 17:08:50.038 UTC]: Step 3/3 coefs
+# info [2026-08-22 17:08:50.039 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:50.043 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:50.043 UTC]: Step 1/3 data
+# info [2026-08-22 17:08:50.043 UTC]: Step 2/3 fit
+# info [2026-08-22 17:08:50.045 UTC]: Step 3/3 coefs
+# info [2026-08-22 17:08:50.046 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:50.048 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:50.048 UTC]: Step 1/3 data
+# info [2026-08-22 17:08:50.048 UTC]: Step 2/3 fit
+# info [2026-08-22 17:08:50.050 UTC]: Step 3/3 coefs
+# info [2026-08-22 17:08:50.051 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 ```
 
 ``` r
-
 results
 # $setosa
 #  (Intercept) Sepal.Length 
@@ -162,7 +154,6 @@ scenario, we add a new step to our pipeline that splits the data set and
 set its execution mode to `split`.
 
 ``` r
-
 pip <- pip_new("my-split-pip") |>
     pip_add(
         "data",
@@ -197,7 +188,6 @@ pip <- pip_new("my-split-pip") |>
 ```
 
 ``` r
-
 pip
 # <pipeflow_pip> my-split-pip (4 steps)
 # -------------------------------------
@@ -213,7 +203,6 @@ column `exec` marking the `split` execution mode for the `split_data`
 step. This also can be inspected in the graph:
 
 ``` r
-
 do.call(visNetwork, args = pip_get_graph(pip))
 ```
 
@@ -230,7 +219,6 @@ from the `fit` step.
 Let’s see this in action by running the pipeline.
 
 ``` r
-
 pip |> pip_set_params(list(
     data = iris,
     xVar = "Sepal.Length",
@@ -239,19 +227,18 @@ pip |> pip_set_params(list(
 ))
 
 pip_run(pip)
-# info [2026-06-20 19:20:22.935 UTC]: Start run of pipeflow_pip 'my-split-pip'
-# info [2026-06-20 19:20:22.935 UTC]: Step 1/4 data
-# info [2026-06-20 19:20:22.936 UTC]: Step 2/4 split_data
-# info [2026-06-20 19:20:22.938 UTC]: Step 3/4 fit
-# info [2026-06-20 19:20:22.941 UTC]: Step 4/4 coefs
-# info [2026-06-20 19:20:22.943 UTC]: Finished run of pipeflow_pip 'my-split-pip'
+# info [2026-08-22 17:08:50.388 UTC]: Starting run of pipeflow_pip 'my-split-pip'
+# info [2026-08-22 17:08:50.388 UTC]: Step 1/4 data
+# info [2026-08-22 17:08:50.389 UTC]: Step 2/4 split_data
+# info [2026-08-22 17:08:50.390 UTC]: Step 3/4 fit
+# info [2026-08-22 17:08:50.392 UTC]: Step 4/4 coefs
+# info [2026-08-22 17:08:50.393 UTC]: Finished run of pipeflow_pip 'my-split-pip'
 ```
 
 Looking at the pipeline overview, we see that the `out`puts following
 the `split_data` steps are now all lists of results.
 
 ``` r
-
 pip
 # <pipeflow_pip> my-split-pip (4 steps)
 # -------------------------------------
@@ -266,7 +253,6 @@ Inspecting in particular the output of the `coefs` step, we see that it
 is now a list of coefficient tables, one for each species.
 
 ``` r
-
 pip[["coefs", "out"]]
 # $setosa
 #  (Intercept) Sepal.Length 
@@ -284,9 +270,9 @@ pip[["coefs", "out"]]
 # [1] "list"                 "pipeflow_partitioned"
 ```
 
-This matches the output[^1] we obtained earlier with the helper function
-but was obtained without the need having to write all this extra code
-around the pipeline.
+This matches the output[¹](#fn1) we obtained earlier with the helper
+function but was obtained without the need having to write all this
+extra code around the pipeline.
 
 ### Recombine output
 
@@ -299,7 +285,6 @@ This is where the `reduce` execution mode comes into play. Let’s for
 this matter extend our pipeline by one step at the end.
 
 ``` r
-
 pip |> pip_add(
     "combine_coefs",
     function(coefs = ~coefs) {
@@ -310,7 +295,6 @@ pip |> pip_add(
 ```
 
 ``` r
-
 pip
 # <pipeflow_pip> my-split-pip (5 steps)
 # -------------------------------------
@@ -327,7 +311,6 @@ Again, we see that the new step is marked with the execution mode
 circle.
 
 ``` r
-
 do.call(visNetwork, args = pip_get_graph(pip))
 ```
 
@@ -335,15 +318,14 @@ If we now run the pipeline, we see that the output of the
 `combine_coefs` step is a combined table of coefficients.
 
 ``` r
-
 pip_run(pip)
-# info [2026-06-20 19:20:23.349 UTC]: Start run of pipeflow_pip 'my-split-pip'
-# info [2026-06-20 19:20:23.349 UTC]: Step 1/5 data - skipping done step
-# info [2026-06-20 19:20:23.349 UTC]: Step 2/5 split_data - skipping done step
-# info [2026-06-20 19:20:23.349 UTC]: Step 3/5 fit - skipping done step
-# info [2026-06-20 19:20:23.349 UTC]: Step 4/5 coefs - skipping done step
-# info [2026-06-20 19:20:23.350 UTC]: Step 5/5 combine_coefs
-# info [2026-06-20 19:20:23.351 UTC]: Finished run of pipeflow_pip 'my-split-pip'
+# info [2026-08-22 17:08:50.767 UTC]: Starting run of pipeflow_pip 'my-split-pip'
+# info [2026-08-22 17:08:50.767 UTC]: Step 1/5 data - skipping done step
+# info [2026-08-22 17:08:50.767 UTC]: Step 2/5 split_data - skipping done step
+# info [2026-08-22 17:08:50.768 UTC]: Step 3/5 fit - skipping done step
+# info [2026-08-22 17:08:50.768 UTC]: Step 4/5 coefs - skipping done step
+# info [2026-08-22 17:08:50.768 UTC]: Step 5/5 combine_coefs
+# info [2026-08-22 17:08:50.769 UTC]: Finished run of pipeflow_pip 'my-split-pip'
 
 pip[["combine_coefs", "out"]]
 #            (Intercept) Sepal.Length
@@ -354,6 +336,7 @@ pip[["combine_coefs", "out"]]
 
 There you go :-)
 
-[^1]: Technically, the output is slightly different, because the
-    returned list has an additional class attribute
-    “pipeflow_partitioned”.
+------------------------------------------------------------------------
+
+1.  Technically, the output is slightly different, because the returned
+    list has an additional class attribute “pipeflow_partitioned”.

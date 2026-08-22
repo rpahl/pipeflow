@@ -3,7 +3,7 @@
 The possibility to combine pipelines basically allows to modularize the
 pipeline creation process. This is especially useful when you have a set
 of pipelines that are used in different contexts and you want to avoid
-code duplication[^1].
+code duplication[¹](#fn1).
 
 ### Two pipelines
 
@@ -13,7 +13,6 @@ preprocessing and one that does the modeling.
 Data preprocessing pipeline:
 
 ``` r
-
 library(pipeflow)
 
 pip1 <- pip_new("preprocessing") |>
@@ -40,7 +39,6 @@ pip1 <- pip_new("preprocessing") |>
 ```
 
 ``` r
-
 pip1
 # <pipeflow_pip> preprocessing (3 steps)
 # --------------------------------------
@@ -53,7 +51,6 @@ pip1
 Modelling pipeline:
 
 ``` r
-
 pip2 <- pip_new("modeling") |>
     pip_add(
         "data",
@@ -89,7 +86,6 @@ pip2 <- pip_new("modeling") |>
 ```
 
 ``` r
-
 pip2
 # <pipeflow_pip> modeling (3 steps)
 # ---------------------------------
@@ -105,7 +101,6 @@ Next we combine the two pipelines using
 [`pip_bind()`](https://github.com/rpahl/pipeflow/reference/pip_bind.md).
 
 ``` r
-
 pip <- pip_bind(pip1, pip2)
 
 pip
@@ -134,7 +129,6 @@ Now, as can be also seen from the graphical representation of the
 pipeline,
 
 ``` r
-
 library(visNetwork)
 do.call(visNetwork, args = pip_get_graph(pip)) |>
     visHierarchicalLayout(direction = "LR")
@@ -149,7 +143,6 @@ the previous vignette [modify the
 pipeline](https://github.com/rpahl/pipeflow/articles/v02-modify-pipeline.md):
 
 ``` r
-
 pip |> pip_replace("data2", function(data = ~standardize) data)
 
 pip
@@ -166,12 +159,11 @@ pip
 
 #### Relative indexing
 
-Since the name of the re-routed step might not always be known[^2], the
-{pipeflow} package also provides a relative position indexing mechanism,
-which allows to rewrite the above command as follows:
+Since the name of the re-routed step might not always be known[²](#fn2),
+the {pipeflow} package also provides a relative position indexing
+mechanism, which allows to rewrite the above command as follows:
 
 ``` r
-
 pip |> pip_replace("data2", function(data = ~ -1) data)
 
 pip
@@ -196,20 +188,18 @@ on.
 Let’s now run the combined pipeline and inspect the plot.
 
 ``` r
-
 pip_run(pip)
-# info [2026-06-20 19:19:54.381 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
-# info [2026-06-20 19:19:54.382 UTC]: Step 1/6 data
-# info [2026-06-20 19:19:54.383 UTC]: Step 2/6 data_prep
-# info [2026-06-20 19:19:54.385 UTC]: Step 3/6 standardize
-# info [2026-06-20 19:19:54.387 UTC]: Step 4/6 data2
-# info [2026-06-20 19:19:54.388 UTC]: Step 5/6 fit
-# info [2026-06-20 19:19:54.392 UTC]: Step 6/6 plot
-# info [2026-06-20 19:19:55.068 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-08-22 17:08:31.576 UTC]: Starting run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-08-22 17:08:31.577 UTC]: Step 1/6 data
+# info [2026-08-22 17:08:31.577 UTC]: Step 2/6 data_prep
+# info [2026-08-22 17:08:31.579 UTC]: Step 3/6 standardize
+# info [2026-08-22 17:08:31.580 UTC]: Step 4/6 data2
+# info [2026-08-22 17:08:31.581 UTC]: Step 5/6 fit
+# info [2026-08-22 17:08:31.588 UTC]: Step 6/6 plot
+# info [2026-08-22 17:08:31.930 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
 ```
 
 ``` r
-
 pip[["plot", "out"]]
 # Warning: Removed 37 rows containing missing values or values outside the scale range
 # (`geom_point()`).
@@ -222,25 +212,22 @@ data. We can now go ahead and for example change the x-variable of the
 model and rerun the pipeline.
 
 ``` r
-
 pip_set_params(pip, params = list(xVar = "Temp.Celsius"))
 ```
 
 ``` r
-
 pip_run(pip)
-# info [2026-06-20 19:19:55.630 UTC]: Start run of pipeflow_pip 'preprocessing-modeling'
-# info [2026-06-20 19:19:55.631 UTC]: Step 1/6 data - skipping done step
-# info [2026-06-20 19:19:55.631 UTC]: Step 2/6 data_prep - skipping done step
-# info [2026-06-20 19:19:55.631 UTC]: Step 3/6 standardize - skipping done step
-# info [2026-06-20 19:19:55.631 UTC]: Step 4/6 data2 - skipping done step
-# info [2026-06-20 19:19:55.631 UTC]: Step 5/6 fit
-# info [2026-06-20 19:19:55.635 UTC]: Step 6/6 plot
-# info [2026-06-20 19:19:55.649 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-08-22 17:08:32.504 UTC]: Starting run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-08-22 17:08:32.504 UTC]: Step 1/6 data - skipping done step
+# info [2026-08-22 17:08:32.504 UTC]: Step 2/6 data_prep - skipping done step
+# info [2026-08-22 17:08:32.504 UTC]: Step 3/6 standardize - skipping done step
+# info [2026-08-22 17:08:32.504 UTC]: Step 4/6 data2 - skipping done step
+# info [2026-08-22 17:08:32.504 UTC]: Step 5/6 fit
+# info [2026-08-22 17:08:32.506 UTC]: Step 6/6 plot
+# info [2026-08-22 17:08:32.516 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
 ```
 
 ``` r
-
 pip[["plot", "out"]]
 # Warning: Removed 37 rows containing missing values or values outside the scale range
 # (`geom_point()`).
@@ -254,7 +241,6 @@ Another way to re-use steps from other pipelines is by cherry-picking,
 which can be done via `pip_add_from`, for example:
 
 ``` r
-
 pip <- pip_new("cherry-picked-from-1-and-2") |>
     pip_add_from(pip1, "data") |>
     pip_add_from(pip1, "data_prep") |>
@@ -288,11 +274,13 @@ possibly group those final outputs, see the next vignette [Collecting
 and filtering
 output](https://github.com/rpahl/pipeflow/articles/v04-collect-output.md).
 
-[^1]: Note that code duplication is not bad per se. For example, it
+------------------------------------------------------------------------
+
+1.  Note that code duplication is not bad per se. For example, it
     naturally reduces entanglement and improves local readability. On
     the other hand, there are certainly scenarios where code duplication
     should be avoided, specifically if duplicated multiple times, or if
     the code is complex.
 
-[^2]: A typical example would be appending several pipelines in a
+2.  A typical example would be appending several pipelines in a
     programmatic context.

@@ -213,7 +213,7 @@ based on other properties, for example, to select all `outdated` steps
 that depend on the `model_fit` step:
 
 ```{r}
-pip |> pip_view(filter = list(depends = "model_fit", state = "outdated"))
+pip |> pip_view(depends = "model_fit", state = "outdated")
 ```
 
 or using regex-based filtering to filter all outdated steps
@@ -221,13 +221,13 @@ starting with `data`:
 
 ```{r}
 pip |>
-    pip_view(filter = list(step = "^data", state = "outdated"), fixed = FALSE)
+    pip_view(step = "^data", state = "outdated", fixed = FALSE)
 ```
 
 Views can also be chained together:
 
 ```{r}
-v <- pip |> pip_view(filter = list(state = "outdated"))
+v <- pip |> pip_view(state = "outdated")
 v
 
 v2 <- v |> pip_view(tags = "plot")

@@ -55,7 +55,7 @@ graph$edges # data.frame: from, to, arrows
 #> 2    1  2     to
 
 # For a view, include_upstream = TRUE adds upstream deps to the graph
-v <- pip_view(p, i = "fit")
+v <- pip_view(p, step = "fit")
 pip_get_graph(v, include_upstream = TRUE)
 #> $nodes
 #>   id label   shape     color

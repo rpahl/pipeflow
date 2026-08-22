@@ -26,6 +26,6 @@ p <- pip_new() |>
 length(p) # 3 — total steps in the pipeline
 
 # A view reports only the number of selected (visible) steps
-v <- pip_view(p, i = c("s2", "s3"))
+v <- pip_view(p, step = c("s2", "s3"))
 length(v) # 2
 }

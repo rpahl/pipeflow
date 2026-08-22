@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9004</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -166,7 +166,8 @@ step</p>
 <span><span class="co"># function (data = ~data_prep, xVar = "Solar.R") </span></span>
 <span><span class="co"># {</span></span>
 <span><span class="co">#     lm(paste("Ozone ~", xVar), data = data)</span></span>
-<span><span class="co"># }</span></span></code></pre></div>
+<span><span class="co"># }</span></span>
+<span><span class="co"># &lt;environment: 0x562e24f44730&gt;</span></span></code></pre></div>
 <p>To use the standardized data, we need to change the data dependency
 such that it refers to the <code>standardize</code> step. Also instead
 of a fixed y-variable in the model, let’s pass it as a parameter.</p>
@@ -218,13 +219,13 @@ pipeline and inspect the output.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">pip</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span>, yVar <span class="op">=</span> <span class="st">"Wind"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-20 19:19:41.357 UTC]: Start run of pipeflow_pip 'my-pip'</span></span>
-<span><span class="co"># info [2026-06-20 19:19:41.358 UTC]: Step 1/5 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-20 19:19:41.358 UTC]: Step 2/5 data_prep - skipping done step</span></span>
-<span><span class="co"># info [2026-06-20 19:19:41.358 UTC]: Step 3/5 standardize</span></span>
-<span><span class="co"># info [2026-06-20 19:19:41.360 UTC]: Step 4/5 model_fit</span></span>
-<span><span class="co"># info [2026-06-20 19:19:41.362 UTC]: Step 5/5 model_plot</span></span>
-<span><span class="co"># info [2026-06-20 19:19:41.372 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
+<span><span class="co"># info [2026-08-22 17:08:23.132 UTC]: Starting run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-08-22 17:08:23.132 UTC]: Step 1/5 data - skipping done step</span></span>
+<span><span class="co"># info [2026-08-22 17:08:23.132 UTC]: Step 2/5 data_prep - skipping done step</span></span>
+<span><span class="co"># info [2026-08-22 17:08:23.132 UTC]: Step 3/5 standardize</span></span>
+<span><span class="co"># info [2026-08-22 17:08:23.134 UTC]: Step 4/5 model_fit</span></span>
+<span><span class="co"># info [2026-08-22 17:08:23.135 UTC]: Step 5/5 model_plot</span></span>
+<span><span class="co"># info [2026-08-22 17:08:23.169 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"model_fit"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#  (Intercept)      Solar.R </span></span>
@@ -255,9 +256,9 @@ step would violate the integrity of the pipeline.</p>
 <span><span class="co"># Error in pip_remove(pip, "standardize") : </span></span>
 <span><span class="co">#   cannot remove step 'standardize' because the following steps depend on it: 'model_fit', 'model_plot'</span></span></code></pre></div>
 <p>To enforce removing a step together with all its downstream
-dependencies, you can use the <code>recursive</code> argument.</p>
+dependencies, you can use the <code>force</code> argument.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_remove.html">pip_remove</a></span><span class="op">(</span><span class="va">pip</span>, <span class="st">"standardize"</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_remove.html">pip_remove</a></span><span class="op">(</span><span class="va">pip</span>, <span class="st">"standardize"</span>, force <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co"># Removing step 'standardize' and its downstream dependencies: 'model_fit', 'model_plot'</span></span></code></pre></div>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>

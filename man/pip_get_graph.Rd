@@ -38,7 +38,7 @@ graph$nodes # data.frame: id, label, shape, color
 graph$edges # data.frame: from, to, arrows
 
 # For a view, include_upstream = TRUE adds upstream deps to the graph
-v <- pip_view(p, i = "fit")
+v <- pip_view(p, step = "fit")
 pip_get_graph(v, include_upstream = TRUE)
 
 if (require("visNetwork", quietly = TRUE)) {

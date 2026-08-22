@@ -27,7 +27,6 @@ overview of your project.
 ### Installation
 
 ``` r
-
 # Install release version from CRAN
 install.packages("pipeflow")
 
@@ -38,7 +37,6 @@ devtools::install_github("rpahl/pipeflow")
 ### Usage
 
 ``` r
-
 library(pipeflow)
 
 p <- pip_new("demo") |>

@@ -27,7 +27,6 @@ overview of your project.
 ### Installation
 
 ``` r
-
 # Install release version from CRAN
 install.packages("pipeflow")
 
@@ -38,7 +37,6 @@ devtools::install_github("rpahl/pipeflow")
 ### Usage
 
 ``` r
-
 library(pipeflow)
 
 p <- pip_new("demo") |>
@@ -108,13 +106,11 @@ Create a pipeline, add steps, run it, and collect results.
   : Create a pipeline
 - [`pip_add()`](https://github.com/rpahl/pipeflow/reference/pip_add.md)
   : Add a step
-- [`pip_run()`](https://github.com/rpahl/pipeflow/reference/pip_run.md)
-  : Run a pipeline
 - [`pip_collect_out()`](https://github.com/rpahl/pipeflow/reference/pip_collect_out.md)
   : Collect step outputs
 - [`pipeflow`](https://github.com/rpahl/pipeflow/reference/pipeflow-package.md)
   [`pipeflow-package`](https://github.com/rpahl/pipeflow/reference/pipeflow-package.md)
-  : pipeflow: Lightweight, General-Purpose Data Analysis Pipelines
+  : pipeflow: Fast Interactive Data Analysis Pipelines
 
 ## Modify steps
 
@@ -139,6 +135,17 @@ Combine, clone, or copy steps between pipelines.
   : Bind pipelines
 - [`pip_clone()`](https://github.com/rpahl/pipeflow/reference/pip_clone.md)
   : Clone a pipeline
+
+## Running pipelines
+
+Execute pipelines and control runs dynamically from within steps.
+
+- [`pip_run()`](https://github.com/rpahl/pipeflow/reference/pip_run.md)
+  : Run a pipeline
+- [`pip_restart()`](https://github.com/rpahl/pipeflow/reference/pip_restart.md)
+  : Restart a pipeline run
+- [`pip_stop()`](https://github.com/rpahl/pipeflow/reference/pip_stop.md)
+  : Stop a pipeline run
 
 ## Inspection and views
 
@@ -179,8 +186,6 @@ Generic methods for pipeflow objects.
 - [`` `[`( ``*`<pipeflow_pip>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow_pip.md)
   [`` `[[`( ``*`<pipeflow_pip>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow_pip.md)
   : Extract or subset a pipeline
-- [`set_log_layout()`](https://github.com/rpahl/pipeflow/reference/set_log_layout.md)
-  : Set pipeflow log layout
 
 # Articles
 

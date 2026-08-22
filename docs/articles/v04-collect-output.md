@@ -22,7 +22,6 @@ filter the pipeline by topic, stage, or output type. Tags can be set
 during pipeline creation or later using `pip_set_tags()`.
 
 ``` r
-
 library(pipeflow)
 
 pip <- pip_new("my-pip") |>
@@ -105,7 +104,6 @@ tags are defined, they are shown in the pipeline overview (see rightmost
 column):
 
 ``` r
-
 pip
 # <pipeflow_pip> my-pip (7 steps)
 # -------------------------------
@@ -123,17 +121,16 @@ Before showing how to make use of the tags, let’s run the pipeline and
 inspect the output individually as we did in the previous vignettes.
 
 ``` r
-
 pip_run(pip)
-# info [2026-06-20 19:20:07.873 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-20 19:20:07.873 UTC]: Step 1/7 data
-# info [2026-06-20 19:20:07.875 UTC]: Step 2/7 data_prep
-# info [2026-06-20 19:20:07.878 UTC]: Step 3/7 data_summary
-# info [2026-06-20 19:20:07.881 UTC]: Step 4/7 data_plot
-# info [2026-06-20 19:20:08.572 UTC]: Step 5/7 model_fit
-# info [2026-06-20 19:20:08.576 UTC]: Step 6/7 model_summary
-# info [2026-06-20 19:20:08.583 UTC]: Step 7/7 model_plot
-# info [2026-06-20 19:20:08.591 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:40.277 UTC]: Starting run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:40.278 UTC]: Step 1/7 data
+# info [2026-08-22 17:08:40.278 UTC]: Step 2/7 data_prep
+# info [2026-08-22 17:08:40.280 UTC]: Step 3/7 data_summary
+# info [2026-08-22 17:08:40.283 UTC]: Step 4/7 data_plot
+# info [2026-08-22 17:08:40.623 UTC]: Step 5/7 model_fit
+# info [2026-08-22 17:08:40.626 UTC]: Step 6/7 model_summary
+# info [2026-08-22 17:08:40.628 UTC]: Step 7/7 model_plot
+# info [2026-08-22 17:08:40.633 UTC]: Finished run of pipeflow_pip 'my-pip'
 
 pip
 # <pipeflow_pip> my-pip (7 steps)
@@ -149,14 +146,12 @@ pip
 ```
 
 ``` r
-
 pip[["data_plot", "out"]]
 ```
 
 ![](v04-collect-output_files/figure-html/unnamed-chunk-3-1.png)
 
 ``` r
-
 pip[["model_plot", "out"]]
 ```
 
@@ -165,11 +160,9 @@ pip[["model_plot", "out"]]
 ### Flat output collection
 
 [`pip_collect_out()`](https://github.com/rpahl/pipeflow/reference/pip_collect_out.md)
-returns all step outputs as a flat named list^ \[ Below, we only show
-the names of the list elements, to keep the vignette concise.\].
+returns all step outputs as a flat named list[¹](#fn1).
 
 ``` r
-
 out <- pip_collect_out(pip)
 
 names(out)
@@ -188,7 +181,6 @@ on the filtered pipeline view. For example, to collect only the plots,
 we can filter by the `plot` tag.
 
 ``` r
-
 pip_view(pip, tags = "plot")
 # <pipeflow_view> my-pip view (2 of 7 steps)
 # ------------------------------------------
@@ -198,7 +190,6 @@ pip_view(pip, tags = "plot")
 ```
 
 ``` r
-
 pip |>
     pip_view(tags = "plot") |>
     pip_collect_out() |>
@@ -217,7 +208,6 @@ For example, to collect outputs grouped by topic (`"data"` and
 `"model"`):
 
 ``` r
-
 grouped <- list(
     data  = pip_view(pip, tags = "data")  |> pip_collect_out(),
     model = pip_view(pip, tags = "model") |> pip_collect_out()
@@ -235,7 +225,6 @@ To make the example a bit more interesting, we first update some
 parameters.
 
 ``` r
-
 pip_set_params(pip, params = list(xVar = "Solar.R", yVar = "Wind"))
 
 pip
@@ -257,8 +246,7 @@ based on other properties, for example, to select all `outdated` steps
 that depend on the `model_fit` step:
 
 ``` r
-
-pip |> pip_view(filter = list(depends = "model_fit", state = "outdated"))
+pip |> pip_view(depends = "model_fit", state = "outdated")
 # <pipeflow_view> my-pip view (2 of 7 steps)
 # ------------------------------------------
 #           step             depends               out    state          tags
@@ -270,9 +258,8 @@ or using regex-based filtering to filter all outdated steps starting
 with `data`:
 
 ``` r
-
 pip |>
-    pip_view(filter = list(step = "^data", state = "outdated"), fixed = FALSE)
+    pip_view(step = "^data", state = "outdated", fixed = FALSE)
 # <pipeflow_view> my-pip view (2 of 7 steps)
 # ------------------------------------------
 #          step   depends               out    state         tags
@@ -283,8 +270,7 @@ pip |>
 Views can also be chained together:
 
 ``` r
-
-v <- pip |> pip_view(filter = list(state = "outdated"))
+v <- pip |> pip_view(state = "outdated")
 v
 # <pipeflow_view> my-pip view (5 of 7 steps)
 # ------------------------------------------
@@ -309,14 +295,14 @@ allows to conveniently re-run only the filtered steps, while {pipeflow}
 ensures that any upstream dependencies are run first if needed.
 
 ``` r
-
 v2 |> pip_run()
-# info [2026-06-20 19:20:10.109 UTC]: Start run of pipeflow_view 'my-pip view view'
-# info [2026-06-20 19:20:10.109 UTC]: Step 1/4 [upstream] data_prep - skipping done step
-# info [2026-06-20 19:20:10.109 UTC]: Step 2/4 [view] data_plot
-# info [2026-06-20 19:20:10.120 UTC]: Step 3/4 [upstream] model_fit
-# info [2026-06-20 19:20:10.124 UTC]: Step 4/4 [view] model_plot
-# info [2026-06-20 19:20:10.131 UTC]: Finished run of pipeflow_view 'my-pip view view'
+# info [2026-08-22 17:08:42.157 UTC]: Starting run of pipeflow_view 'my-pip view view'
+# info [2026-08-22 17:08:42.157 UTC]: Step 1/5 [upstream] data - skipping done step
+# info [2026-08-22 17:08:42.157 UTC]: Step 2/5 [upstream] data_prep - skipping done step
+# info [2026-08-22 17:08:42.157 UTC]: Step 3/5 [view] data_plot
+# info [2026-08-22 17:08:42.166 UTC]: Step 4/5 [upstream] model_fit
+# info [2026-08-22 17:08:42.168 UTC]: Step 5/5 [view] model_plot
+# info [2026-08-22 17:08:42.172 UTC]: Finished run of pipeflow_view 'my-pip view view'
 ```
 
 Having a closer look at the run log, you’ll see which steps were re-run
@@ -325,7 +311,6 @@ dependencies. Since all views work by reference on the given pipeline,
 the original pipeline is now up-to-date for the filtered steps.
 
 ``` r
-
 pip
 # <pipeflow_pip> my-pip (7 steps)
 # -------------------------------
@@ -338,3 +323,8 @@ pip
 # 6: model_summary           model_fit   <data.frame[2x4]> outdated model,summary
 # 7:    model_plot model_fit,data_plot   <ggplot2::ggplot>     done    model,plot
 ```
+
+------------------------------------------------------------------------
+
+1.  Below, we only show the names of the list elements, to keep the
+    vignette concise.

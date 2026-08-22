@@ -1,5 +1,29 @@
 # Changelog
 
+## pipeflow 0.3.0.9004
+
+- bump actions/checkout from 6.0.3 to 7.0.0
+- bump EnricoMi/publish-unit-test-result-action from 2.23.0 to 2.24.0
+
+## pipeflow 0.3.0.9003
+
+- bump r-lib/actions/check-r-package from 2.12.0 to 2.12.1
+- bump r-lib/actions/setup-r from 2.12.0 to 2.12.1
+
+## pipeflow 0.3.0.9002
+
+- Updated descriptions in v04-collect-output.Rmd for better readability.
+- Enhanced explanations in v06-self-modify-pipeline.Rmd, focusing on the
+  use of the .self parameter and runtime modifications.
+- Improved wording and fixed typos throughout the document.
+- Clarified the process of modifying pipeline structure and the
+  importance of returning the modified pipeline object.
+
+## pipeflow 0.3.0.9001
+
+- fix some typos and missing viz
+- fix link to pipeflow vs targets vignette
+
 ## pipeflow 0.3.0.9000
 
 - Same as previous version.

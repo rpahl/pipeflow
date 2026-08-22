@@ -29,7 +29,7 @@ pip_tag(p, tags = c("daily", "core"))
 p[["pipeline"]][["tags"]] # both steps have c("daily", "core")
 
 # Add an extra tag to only one step via a view
-v <- pip_view(p, i = "fit")
+v <- pip_view(p, step = "fit")
 pip_tag(v, tags = "model")
 p[["pipeline"]][["tags"]] # "fit" also has "model"
 }

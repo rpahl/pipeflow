@@ -20,7 +20,6 @@ residuals for normality using the Shapiro-Wilk test, and plots the
 residuals.
 
 ``` r
-
 library(pipeflow)
 
 pip <- pip_new("my-pipeline") |>
@@ -69,7 +68,6 @@ If you have followed the previous vignettes, you by now are used to the
 pipeline overview.
 
 ``` r
-
 pip
 # <pipeflow_pip> my-pipeline (4 steps)
 # ------------------------------------
@@ -83,7 +81,6 @@ pip
 To inspect the internal structure, let’s start with the class.
 
 ``` r
-
 class(pip)
 # [1] "pipeflow_pip" "environment"
 ```
@@ -91,7 +88,6 @@ class(pip)
 As we can see, the pipeline object is stored in an environment.
 
 ``` r
-
 ls(pip)
 # [1] "name"     "pipeline"
 ```
@@ -102,7 +98,6 @@ hood is a `data.table` object containing all the information about the
 steps, their dependencies, meta information, and so on.
 
 ``` r
-
 data.class(pip$pipeline)
 # [1] "data.table"
 
@@ -115,10 +110,10 @@ pip$pipeline
 # 4:                     plot <function[1]> <list[2]>     (fit = ~fit, pointColor = "black")     fit
 #       out  state   tags                time locked   exec .nodeId    .indeps
 #    <list> <char> <list>              <POSc> <lgcl> <char>   <int>     <list>
-# 1: [NULL]    new        2026-06-20 21:20:35  FALSE   auto       0       data
-# 2: [NULL]    new        2026-06-20 21:20:35  FALSE   auto       1  xVar,yVar
-# 3: [NULL]    new        2026-06-20 21:20:35  FALSE   auto       2           
-# 4: [NULL]    new        2026-06-20 21:20:35  FALSE   auto       3 pointColor
+# 1: [NULL]    new        2026-08-22 19:08:57  FALSE   auto       0       data
+# 2: [NULL]    new        2026-08-22 19:08:57  FALSE   auto       1  xVar,yVar
+# 3: [NULL]    new        2026-08-22 19:08:57  FALSE   auto       2           
+# 4: [NULL]    new        2026-08-22 19:08:57  FALSE   auto       3 pointColor
 ```
 
 ### Changing pipeline parameters at runtime
@@ -126,16 +121,15 @@ pip$pipeline
 First, we set some data and parameters and run the pipeline as usual.
 
 ``` r
-
 pip |> pip_set_params(list(data = airquality, xVar = "Ozone", yVar = "Temp"))
 
 pip_run(pip)
-# info [2026-06-20 19:20:35.700 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:35.701 UTC]: Step 1/4 data
-# info [2026-06-20 19:20:35.702 UTC]: Step 2/4 fit
-# info [2026-06-20 19:20:35.706 UTC]: Step 3/4 residual_shapiro_p_value
-# info [2026-06-20 19:20:35.708 UTC]: Step 4/4 plot
-# info [2026-06-20 19:20:36.432 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:58.231 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:58.231 UTC]: Step 1/4 data
+# info [2026-08-22 17:08:58.232 UTC]: Step 2/4 fit
+# info [2026-08-22 17:08:58.235 UTC]: Step 3/4 residual_shapiro_p_value
+# info [2026-08-22 17:08:58.236 UTC]: Step 4/4 plot
+# info [2026-08-22 17:08:58.611 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip[["plot", "out"]]
 ```
@@ -152,18 +146,17 @@ However, here we are interested in another way that would keep the
 second time as follows:
 
 ``` r
-
 if (pip[["residual_shapiro_p_value", "out"]] < 0.05) {
     pip |>
         pip_set_params(list(pointColor = "red")) |>
         pip_run()
 }
-# info [2026-06-20 19:20:36.766 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:36.766 UTC]: Step 1/4 data - skipping done step
-# info [2026-06-20 19:20:36.766 UTC]: Step 2/4 fit - skipping done step
-# info [2026-06-20 19:20:36.766 UTC]: Step 3/4 residual_shapiro_p_value - skipping done step
-# info [2026-06-20 19:20:36.767 UTC]: Step 4/4 plot
-# info [2026-06-20 19:20:36.829 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:58.889 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:58.889 UTC]: Step 1/4 data - skipping done step
+# info [2026-08-22 17:08:58.890 UTC]: Step 2/4 fit - skipping done step
+# info [2026-08-22 17:08:58.890 UTC]: Step 3/4 residual_shapiro_p_value - skipping done step
+# info [2026-08-22 17:08:58.890 UTC]: Step 4/4 plot
+# info [2026-08-22 17:08:58.930 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip[["plot", "out"]]
 ```
@@ -174,17 +167,17 @@ As was mentioned in another vignette, this solution is not ideal, as it
 requires to run additional code around the pipeline. We rather want to
 set the parameter from within the pipeline during execution.
 
-Luckily, the pipeline by default assigns itself to the `.self` parameter
-to potentially be used in any step functions. With this in mind, we
-update the `residual_shapiro_p_value` step as follows:
+For this, the pipeline by default provides a self-reference in the form
+of the `.self` object that is automatically made available in any step
+function. With this in mind, we can update the
+`residual_shapiro_p_value` step to change the `pointColor` parameter on
+the fly.
 
 ``` r
-
 pip |> pip_replace(
     "residual_shapiro_p_value",
     function(
-        fit = ~fit,
-        .self = NULL
+        fit = ~fit
     ) {
         residuals <- residuals(fit)
         p <- shapiro.test(residuals)$p.value
@@ -198,36 +191,34 @@ pip |> pip_replace(
 )
 ```
 
-Now we just have to make sure to set the `.self` parameter.
+Now we can run the pipeline again and see that the color of the points
+has changed.
 
 ``` r
-
 pip_run(pip)
-# info [2026-06-20 19:20:37.142 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:37.143 UTC]: Step 1/4 data - skipping done step
-# info [2026-06-20 19:20:37.143 UTC]: Step 2/4 fit - skipping done step
-# info [2026-06-20 19:20:37.143 UTC]: Step 3/4 residual_shapiro_p_value
-# info [2026-06-20 19:20:37.147 UTC]: Step 4/4 plot
-# info [2026-06-20 19:20:37.190 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:59.303 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:59.303 UTC]: Step 1/4 data - skipping done step
+# info [2026-08-22 17:08:59.303 UTC]: Step 2/4 fit - skipping done step
+# info [2026-08-22 17:08:59.303 UTC]: Step 3/4 residual_shapiro_p_value
+# info [2026-08-22 17:08:59.306 UTC]: Step 4/4 plot
+# info [2026-08-22 17:08:59.351 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip[["plot", "out"]]
 ```
 
 ![residual-plot2](v06-self-modify-pipeline_files/figure-html/unnamed-chunk-9-1.png)
 
-This simple “trick” opens up a wide range of possibilities for pipeline
-modifications at runtime. As we will show in the next section, this is
-not limited to changing parameters but can also be used to modify the
-very own pipeline structure.
+As we will show in the next section, modications of the pipeline at
+runtime are not limited to changing parameters but can also be used to
+modify the very own pipeline structure.
 
 ### Changing pipeline structure at runtime
 
 Subsequently, the pipeline steps will be comprised only of very basic
-functions in order to keep matters simple. The focus here is on the
-pipeline structure and how it can be modified at runtime.
+functions in order to keep matters simple. The focus here should be on
+the pipeline structure and how it is modified.
 
 ``` r
-
 pip <- pip_new("my-pipeline") |>
     pip_add("init", function(xInit = 0) xInit) |>
     pip_add("f1", function(x = ~init) x + 1) |>
@@ -238,14 +229,13 @@ pip <- pip_new("my-pipeline") |>
 This pipeline just adds 1, 2, and 3 to the initial value, respectively.
 
 ``` r
-
 pip_run(pip)
-# info [2026-06-20 19:20:37.473 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:37.473 UTC]: Step 1/4 init
-# info [2026-06-20 19:20:37.474 UTC]: Step 2/4 f1
-# info [2026-06-20 19:20:37.476 UTC]: Step 3/4 f2
-# info [2026-06-20 19:20:37.481 UTC]: Step 4/4 f3
-# info [2026-06-20 19:20:37.483 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:59.629 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:59.629 UTC]: Step 1/4 init
+# info [2026-08-22 17:08:59.629 UTC]: Step 2/4 f1
+# info [2026-08-22 17:08:59.630 UTC]: Step 3/4 f2
+# info [2026-08-22 17:08:59.631 UTC]: Step 4/4 f3
+# info [2026-08-22 17:08:59.632 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip
 # <pipeflow_pip> my-pipeline (4 steps)
@@ -264,12 +254,10 @@ interim result passed into `f2`.
 #### Modify steps
 
 ``` r
-
 pip |> pip_replace(
     "f2",
     function(
-        x = ~f1,
-        .self = NULL
+        x = ~f1
     ) {
         if (x > 10) {
             .self |> pip_replace("f3", function(x = ~f1) x * 3)
@@ -288,16 +276,15 @@ input.
 To see this, let’s try it with an input of 15.
 
 ``` r
-
 pip |>
     pip_set_params(list(xInit = 15)) |>
     pip_run()
-# info [2026-06-20 19:20:37.601 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:37.601 UTC]: Step 1/4 init
-# info [2026-06-20 19:20:37.602 UTC]: Step 2/4 f1
-# info [2026-06-20 19:20:37.604 UTC]: Step 3/4 f2
-# info [2026-06-20 19:20:37.609 UTC]: Step 4/4 f3
-# info [2026-06-20 19:20:37.611 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:59.744 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:59.744 UTC]: Step 1/4 init
+# info [2026-08-22 17:08:59.745 UTC]: Step 2/4 f1
+# info [2026-08-22 17:08:59.746 UTC]: Step 3/4 f2
+# info [2026-08-22 17:08:59.749 UTC]: Step 4/4 f3
+# info [2026-08-22 17:08:59.750 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip
 # <pipeflow_pip> my-pipeline (4 steps)
@@ -314,29 +301,26 @@ last step have changed. Let’s confirm by inspecting the function of the
 last step.
 
 ``` r
-
 pip[["f3", "fun"]]
 # function (x = ~f1) 
 # x * 3
-# <environment: 0x000001c07570ce48>
+# <environment: 0x5587796b76a8>
 ```
 
 #### Insert and remove steps
 
-For our last example, we get even more hacky an dinstead of just
+For our last example, we get even more hacky and instead of just
 replacing, we will go a bit further to insert and remove steps. The
 pipeline definition is as follows:
 
 ``` r
-
 pip <- pip_new("my-pipeline") |>
     pip_add("init", function(xInit = 0) xInit) |>
     pip_add("f1", function(x = ~init) x + 1) |>
     pip_add(
         "f2",
         function(
-            x = ~f1,
-            .self = NULL
+            x = ~f1
         ) {
             if (x > 10) {
                 .self |>
@@ -370,14 +354,13 @@ step that adds 30 to the input. Let’s first run with the initial value
 of 0 to see the original output.
 
 ``` r
-
 pip_run(pip)
-# info [2026-06-20 19:20:37.783 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:37.783 UTC]: Step 1/4 init
-# info [2026-06-20 19:20:37.784 UTC]: Step 2/4 f1
-# info [2026-06-20 19:20:37.786 UTC]: Step 3/4 f2
-# info [2026-06-20 19:20:37.787 UTC]: Step 4/4 f3
-# info [2026-06-20 19:20:37.789 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:59.914 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:59.914 UTC]: Step 1/4 init
+# info [2026-08-22 17:08:59.915 UTC]: Step 2/4 f1
+# info [2026-08-22 17:08:59.916 UTC]: Step 3/4 f2
+# info [2026-08-22 17:08:59.917 UTC]: Step 4/4 f3
+# info [2026-08-22 17:08:59.918 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip
 # <pipeflow_pip> my-pipeline (4 steps)
@@ -392,16 +375,15 @@ pip
 Next, we set the initial value to 11 to trigger the changes.
 
 ``` r
-
 pip |>
     pip_set_params(list(xInit = 11)) |>
     pip_run()
-# info [2026-06-20 19:20:37.848 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:37.848 UTC]: Step 1/4 init
-# info [2026-06-20 19:20:37.849 UTC]: Step 2/4 f1
-# info [2026-06-20 19:20:37.850 UTC]: Step 3/4 f2
-# info [2026-06-20 19:20:37.874 UTC]: Step 4/4 f3
-# info [2026-06-20 19:20:37.876 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:59.976 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:08:59.976 UTC]: Step 1/4 init
+# info [2026-08-22 17:08:59.976 UTC]: Step 2/4 f1
+# info [2026-08-22 17:08:59.977 UTC]: Step 3/4 f2
+# info [2026-08-22 17:08:59.988 UTC]: Step 4/4 f3
+# info [2026-08-22 17:08:59.989 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip
 # <pipeflow_pip> my-pipeline (5 steps)
@@ -417,23 +399,22 @@ pip
 While the structure has changed as expected, some steps were not yet
 run. In fact, since originally step `f3`came after `f2`, and in contrast
 to what the log is showing, instead of step `f3`, actually the new step
-`f2b` was run, albeit with x = NULL as input.
+`f2b` was run[¹](#fn1) , albeit with x = NULL as input.
 
 So to have the true results, we need to re-init the parameter and need
 to re-run the pipeline.
 
 ``` r
-
 pip |>
     pip_set_params(list(xInit = 11)) |>
     pip_run()
-# info [2026-06-20 19:20:37.937 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:37.937 UTC]: Step 1/5 init
-# info [2026-06-20 19:20:37.937 UTC]: Step 2/5 f1
-# info [2026-06-20 19:20:37.939 UTC]: Step 3/5 f2a
-# info [2026-06-20 19:20:37.941 UTC]: Step 4/5 f2b
-# info [2026-06-20 19:20:37.942 UTC]: Step 5/5 f3
-# info [2026-06-20 19:20:37.944 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:09:00.047 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:09:00.047 UTC]: Step 1/5 init
+# info [2026-08-22 17:09:00.048 UTC]: Step 2/5 f1
+# info [2026-08-22 17:09:00.049 UTC]: Step 3/5 f2a
+# info [2026-08-22 17:09:00.050 UTC]: Step 4/5 f2b
+# info [2026-08-22 17:09:00.051 UTC]: Step 5/5 f3
+# info [2026-08-22 17:09:00.052 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 
 pip
 # <pipeflow_pip> my-pipeline (5 steps)
@@ -448,23 +429,25 @@ pip
 
 Now the output of all steps is as expected. If we want to use {pipeflow}
 in production, obviously, having to re-run the pipeline and temporarily
-showing a wrong log is not ideal. Luckily, {pipeflow} provides a
-built-in solution for this.
+showing a wrong log is not ideal. Ideally, the pipeline run would be
+aborted right after all changes were done in `f2` and the pipeline
+re-run automatically from the beginning. Also, this process potentially
+should be repeated recursively until the structure does not change
+anymore.
 
-First, we have to make sure that any step modifying the pipeline
-structure returns the modified pipeline object itself, so let’s redefine
-the pipeline as follows:
+Luckily, with some minimal changes, this behaviour can be achieved with
+{pipeflow}. First, for any step where you want to restart the pipeline
+run, you need to call `pip_restart(.self)`, so we adapt the `f2`
+function as follows:
 
 ``` r
-
 pip <- pip_new("my-pipeline") |>
     pip_add("init", function(xInit = 0) xInit) |>
     pip_add("f1", function(x = ~init) x + 1) |>
     pip_add(
         "f2",
         function(
-            x = ~f1,
-            .self = NULL
+            x = ~f1
         ) {
             if (x > 10) {
                 .self |>
@@ -485,7 +468,7 @@ pip <- pip_new("my-pipeline") |>
                         }
                     ) |>
                     pip_remove("f2")
-                return(.self) # <-- return modified pipeline
+                pip_restart(.self)   # <-- restart the run
             }
             x + 2
         }
@@ -493,38 +476,36 @@ pip <- pip_new("my-pipeline") |>
     pip_add("f3", function(x = ~f2) x + 3)
 ```
 
-Then let’s run the pipeline again while also setting the `recursive`
-argument to `TRUE` and have a closer look at the log.
+Second, you just run the pipeline as usual.
 
 ``` r
-
 pip |>
     pip_set_params(list(xInit = 11)) |>
-    pip_run(recursive = TRUE)
-# info [2026-06-20 19:20:38.064 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:38.064 UTC]: Step 1/4 init
-# info [2026-06-20 19:20:38.065 UTC]: Step 2/4 f1
-# info [2026-06-20 19:20:38.066 UTC]: Step 3/4 f2
-# info [2026-06-20 19:20:38.084 UTC]: Abort pipeline execution and restart on returned pipeline.
-# info [2026-06-20 19:20:38.084 UTC]: Start run of pipeflow_pip 'my-pipeline'
-# info [2026-06-20 19:20:38.084 UTC]: Step 1/5 init
-# info [2026-06-20 19:20:38.084 UTC]: Step 2/5 f1
-# info [2026-06-20 19:20:38.086 UTC]: Step 3/5 f2a
-# info [2026-06-20 19:20:38.087 UTC]: Step 4/5 f2b
-# info [2026-06-20 19:20:38.089 UTC]: Step 5/5 f3
-# info [2026-06-20 19:20:38.091 UTC]: Finished run of pipeflow_pip 'my-pipeline'
+    pip_run()
+# info [2026-08-22 17:09:00.164 UTC]: Starting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:09:00.164 UTC]: Step 1/4 init
+# info [2026-08-22 17:09:00.164 UTC]: Step 2/4 f1
+# info [2026-08-22 17:09:00.165 UTC]: Step 3/4 f2
+# info [2026-08-22 17:09:00.176 UTC]: Restarting pipeline execution.
+# info [2026-08-22 17:09:00.176 UTC]: Restarting run of pipeflow_pip 'my-pipeline'
+# info [2026-08-22 17:09:00.176 UTC]: Step 1/5 init
+# info [2026-08-22 17:09:00.177 UTC]: Step 2/5 f1
+# info [2026-08-22 17:09:00.178 UTC]: Step 3/5 f2a
+# info [2026-08-22 17:09:00.179 UTC]: Step 4/5 f2b
+# info [2026-08-22 17:09:00.180 UTC]: Step 5/5 f3
+# info [2026-08-22 17:09:00.181 UTC]: Finished run of pipeflow_pip 'my-pipeline'
 ```
 
 As you can see, the run is now automatically aborted right after the
-pipeline was modified and, since we have set `recursive = TRUE`, the
-pipeline is also restarted automatically based on the new structure. As
-a result, the log now is fully aligned with the performed pipeline run.
+pipeline was modified and, since the step called `pip_restart(.self)`,
+the pipeline is also restarted automatically based on the new structure.
+As a result, the log now is fully aligned with the performed pipeline
+run.
 
 Looking at the final pipeline overview, we see that the output matches
 the expected output of the modified pipeline.
 
 ``` r
-
 pip
 # <pipeflow_pip> my-pipeline (5 steps)
 # ------------------------------------
@@ -536,9 +517,9 @@ pip
 # 5:   f3     f2b  85  done
 ```
 
-In summary, this was just a silly example to show some possibilities and
-I leave it to the user to come up with more sensible and complex use
-cases.
+Of course, this was just a silly example to show some possibilities, but
+I have made use of this feature already in various projects and may
+present one of them in a more sophisticated example in the future.
 
 Lastly note that since you have full access to the pipeline object, of
 course, you can get even more hacky, but be aware that some additional
@@ -551,3 +532,7 @@ would invalidate the internal consistency of the dependency graph.
 On the other hand, changing entries in columns such as `tags`, `time`,
 `state` or `output` is generally not critical. If in doubt, just try and
 see what works.
+
+------------------------------------------------------------------------
+
+1.  Compare the state of `f2b`, which is set to `done`.

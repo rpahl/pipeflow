@@ -224,10 +224,10 @@ try(pip_remove(pip, "standardize"))
 ```
 
 To enforce removing a step together with all its downstream
-dependencies, you can use the `recursive` argument.
+dependencies, you can use the `force` argument.
 
 ```{r remove-steps-recursively}
-pip_remove(pip, "standardize", recursive = TRUE)
+pip_remove(pip, "standardize", force = TRUE)
 ```
 
 ```{r}

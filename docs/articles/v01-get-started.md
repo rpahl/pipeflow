@@ -5,7 +5,6 @@
 In this example, we’ll use base R’s airquality dataset.
 
 ``` r
-
 head(airquality)
 #   Ozone Solar.R Wind Temp Month Day
 # 1    41     190  7.4   67     5   1
@@ -36,7 +35,6 @@ pipeline with the name “my-pipeline” and add a `data` step that provides
 the input dataset.
 
 ``` r
-
 library(pipeflow)
 
 pip <- pip_new("my-pip")
@@ -52,7 +50,6 @@ function that defines what is computed in that step. Let’s take a first
 look at the pipeline.
 
 ``` r
-
 pip
 # <pipeflow_pip> my-pip (1 step)
 # ------------------------------
@@ -78,7 +75,6 @@ step can be referred to via `~data`.
 Since `pip_add` works “by reference”, we can add the step as follows:
 
 ``` r
-
 pip |> pip_add(
     "data_prep",
     function(x = ~data) {
@@ -91,7 +87,6 @@ So, a second step called `data_prep` was added and it depends on the
 `data` step as now visible in column `depends`.
 
 ``` r
-
 pip
 # <pipeflow_pip> my-pip (2 steps)
 # -------------------------------
@@ -106,7 +101,6 @@ defines a parameter `xVar`, which is used to specify the variable that
 is used as predictor in the linear model.
 
 ``` r
-
 pip |> pip_add(
     "model_fit",
     function(
@@ -132,7 +126,6 @@ and `data_prep` step. As in the previous step, it defines the `xVar`
 parameter plus two more plot-specific parameters `xLab` and `title`.
 
 ``` r
-
 pip |> pip_add(
     "model_plot",
     function(
@@ -156,7 +149,6 @@ In the last line, we see that the `model_plot` step depends on both the
 `model_fit` and `data_prep` step.
 
 ``` r
-
 pip
 # <pipeflow_pip> my-pip (4 steps)
 # -------------------------------
@@ -175,7 +167,6 @@ function returns a list of arguments that can be feed directly to
 [`visNetwork::visNetwork()`](https://rdrr.io/pkg/visNetwork/man/visNetwork.html).
 
 ``` r
-
 library(visNetwork)
 do.call(visNetwork, args = pip_get_graph(pip)) |>
     visHierarchicalLayout(direction = "LR")
@@ -191,7 +182,6 @@ verified at definition time. To see this, let’s try to add another step
 that is referring to a non-existent step `i_dont_exist` as its input.
 
 ``` r
-
 pip |> pip_add(
     "another_step",
     function(data = ~i_dont_exist) {
@@ -206,7 +196,6 @@ pip |> pip_add(
 unchanged.
 
 ``` r
-
 pip
 # <pipeflow_pip> my-pip (4 steps)
 # -------------------------------
@@ -224,20 +213,18 @@ To run the pipeline, we simply call
 which produces the following output:
 
 ``` r
-
 pip_run(pip)
-# info [2026-06-20 19:19:24.397 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-20 19:19:24.397 UTC]: Step 1/4 data
-# info [2026-06-20 19:19:24.399 UTC]: Step 2/4 data_prep
-# info [2026-06-20 19:19:24.401 UTC]: Step 3/4 model_fit
-# info [2026-06-20 19:19:24.405 UTC]: Step 4/4 model_plot
-# info [2026-06-20 19:19:24.980 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:12.181 UTC]: Starting run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:12.182 UTC]: Step 1/4 data
+# info [2026-08-22 17:08:12.183 UTC]: Step 2/4 data_prep
+# info [2026-08-22 17:08:12.185 UTC]: Step 3/4 model_fit
+# info [2026-08-22 17:08:12.188 UTC]: Step 4/4 model_plot
+# info [2026-08-22 17:08:12.469 UTC]: Finished run of pipeflow_pip 'my-pip'
 ```
 
 Let’s inspect the pipeline again.
 
 ``` r
-
 pip
 # <pipeflow_pip> my-pip (4 steps)
 # -------------------------------
@@ -258,7 +245,6 @@ column of pipeline table via the `[[` operator. For example, to inspect
 the `out`put of the `model_fit` and `model_plot` steps, we do:
 
 ``` r
-
 pip[["model_fit", "out"]]
 # 
 # Call:
@@ -270,7 +256,6 @@ pip[["model_fit", "out"]]
 ```
 
 ``` r
-
 pip[["model_plot", "out"]]
 ```
 
@@ -289,7 +274,6 @@ first inspect the parameters of the above defined pipeline using the
 function.
 
 ``` r
-
 pip_get_params(pip) |> str()
 # List of 4
 #  $ data :'data.frame':    153 obs. of  6 variables:
@@ -311,11 +295,11 @@ operator). This is important as you never want to mess with parameters
 defined in terms of other steps.
 
 Furthermore, each parameter is only listed once, even if it’s used in
-multiple steps[^1]. To change any independent parameter, we simply call
+multiple steps[¹](#fn1). To change any independent parameter, we simply
+call
 [`pip_set_params()`](https://github.com/rpahl/pipeflow/reference/pip_set_params.md):
 
 ``` r
-
 pip |>
     pip_set_params(list(xVar = "Solar.R", xLab = "Solar radiation in Langleys"))
 
@@ -338,7 +322,6 @@ that use the respective parameter. In addition, it will recognize which
 steps are affected by the parameter change and mark them as `outdated`.
 
 ``` r
-
 pip
 # <pipeflow_pip> my-pip (4 steps)
 # -------------------------------
@@ -354,21 +337,19 @@ We can see that the `model_fit` and `model_plot` steps are now in state
 results, we just run the pipeline again.
 
 ``` r
-
 pip_run(pip)
-# info [2026-06-20 19:19:26.155 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-20 19:19:26.155 UTC]: Step 1/4 data - skipping done step
-# info [2026-06-20 19:19:26.155 UTC]: Step 2/4 data_prep - skipping done step
-# info [2026-06-20 19:19:26.155 UTC]: Step 3/4 model_fit
-# info [2026-06-20 19:19:26.159 UTC]: Step 4/4 model_plot
-# info [2026-06-20 19:19:26.176 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:13.334 UTC]: Starting run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:13.334 UTC]: Step 1/4 data - skipping done step
+# info [2026-08-22 17:08:13.334 UTC]: Step 2/4 data_prep - skipping done step
+# info [2026-08-22 17:08:13.334 UTC]: Step 3/4 model_fit
+# info [2026-08-22 17:08:13.336 UTC]: Step 4/4 model_plot
+# info [2026-08-22 17:08:13.345 UTC]: Finished run of pipeflow_pip 'my-pip'
 ```
 
 The outdated steps were re-run as expected and the output was updated
 accordingly now showing the new x-variable `Solar.R`.
 
 ``` r
-
 pip[["model_plot", "out"]]
 ```
 
@@ -379,14 +360,13 @@ two steps and ran only the steps that were outdated, which basically can
 be thought of caching or mimicking the behavior of `make` in software
 development. That is, {pipeflow} always keeps track of which steps are
 outdated and only re-runs those steps and their downstream dependencies,
-which can be a huge time saver for larger pipelines[^2].
+which can be a huge time saver for larger pipelines[²](#fn2).
 
 Let’s visit some more examples of parameter changes and their effects on
 the pipeline. To just change the title of the plot, only the
 `model_plot` step needs to be rerun.
 
 ``` r
-
 pip |> pip_set_params(list(title = "Some new title"))
 pip
 # <pipeflow_pip> my-pip (4 steps)
@@ -399,14 +379,13 @@ pip
 ```
 
 ``` r
-
 pip_run(pip)
-# info [2026-06-20 19:19:26.567 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-20 19:19:26.567 UTC]: Step 1/4 data - skipping done step
-# info [2026-06-20 19:19:26.567 UTC]: Step 2/4 data_prep - skipping done step
-# info [2026-06-20 19:19:26.567 UTC]: Step 3/4 model_fit - skipping done step
-# info [2026-06-20 19:19:26.567 UTC]: Step 4/4 model_plot
-# info [2026-06-20 19:19:26.577 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:13.727 UTC]: Starting run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:13.727 UTC]: Step 1/4 data - skipping done step
+# info [2026-08-22 17:08:13.727 UTC]: Step 2/4 data_prep - skipping done step
+# info [2026-08-22 17:08:13.727 UTC]: Step 3/4 model_fit - skipping done step
+# info [2026-08-22 17:08:13.727 UTC]: Step 4/4 model_plot
+# info [2026-08-22 17:08:13.736 UTC]: Finished run of pipeflow_pip 'my-pip'
 pip[["model_plot", "out"]]
 ```
 
@@ -416,7 +395,6 @@ Once we change the input data parameter from the `data` step, since all
 other steps depend on it, we expect all steps to be rerun.
 
 ``` r
-
 small_airquality <- airquality[1:10, ]
 pip |> pip_set_params(list(data = small_airquality))
 pip
@@ -430,14 +408,13 @@ pip
 ```
 
 ``` r
-
 pip_run(pip)
-# info [2026-06-20 19:19:26.900 UTC]: Start run of pipeflow_pip 'my-pip'
-# info [2026-06-20 19:19:26.900 UTC]: Step 1/4 data
-# info [2026-06-20 19:19:26.902 UTC]: Step 2/4 data_prep
-# info [2026-06-20 19:19:26.908 UTC]: Step 3/4 model_fit
-# info [2026-06-20 19:19:26.911 UTC]: Step 4/4 model_plot
-# info [2026-06-20 19:19:26.932 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:14.029 UTC]: Starting run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:14.030 UTC]: Step 1/4 data
+# info [2026-08-22 17:08:14.030 UTC]: Step 2/4 data_prep
+# info [2026-08-22 17:08:14.031 UTC]: Step 3/4 model_fit
+# info [2026-08-22 17:08:14.032 UTC]: Step 4/4 model_plot
+# info [2026-08-22 17:08:14.040 UTC]: Finished run of pipeflow_pip 'my-pip'
 pip[["model_plot", "out"]]
 ```
 
@@ -447,7 +424,6 @@ Last but not least let’s try to set parameters that don’t exist in the
 pipeline, which mostly happens due to accidental misspells.
 
 ``` r
-
 pip |> pip_set_params(list(titel = "misspelled variable name", foo = "my foo"))
 # Warning in pip_set_params(pip, list(titel = "misspelled variable name", : Trying to set parameters
 # not defined in the target: titel, foo
@@ -459,9 +435,11 @@ parameter names, which makes fixing any misspells straight-forward.
 Next, let’s see how to [modify the
 pipeline](https://github.com/rpahl/pipeflow/articles/v02-modify-pipeline.md).
 
-[^1]: For example, the `xVar` parameter is used in both the `model_fit`
+------------------------------------------------------------------------
+
+1.  For example, the `xVar` parameter is used in both the `model_fit`
     and `model_plot` step
 
-[^2]: Another use case is backend computation in interactive shiny
+2.  Another use case is backend computation in interactive shiny
     applications, where users change parameters dynamically and want
     quick updates.

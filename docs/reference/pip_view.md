@@ -11,14 +11,7 @@ applied to a view affect only the selected steps.
 ## Usage
 
 ``` r
-pip_view(
-  x,
-  i = integer(),
-  filter = list(),
-  tags = character(),
-  fixed = TRUE,
-  ...
-)
+pip_view(x, ..., fixed = TRUE)
 ```
 
 ## Arguments
@@ -27,29 +20,18 @@ pip_view(
 
   A pipeflow pipeline or view.
 
-- i:
+- ...:
 
-  Optional row indices or step names to keep.
-
-- filter:
-
-  A named list of filters to apply. Each element can be a character
-  vector specifying the values to keep for the corresponding property
-  or, if `fixed` is FALSE, a regular expression. See examples for usage.
-
-- tags:
-
-  Tag filter (character). Keeps steps with any matching tag.
+  Named filters. Supported filter names are `step`, `params`, `depends`,
+  `state`, `tags` and `exec`. Multiple filters are combined with a
+  logical AND (i.e. a step must match all of them). Each filter value is
+  a character vector of values to keep, or - if `fixed` is `FALSE` - a
+  regular expression. See examples for usage.
 
 - fixed:
 
-  If TRUE, values in `filter` are treated as fixed strings, otherwise
-  they are treated as regular expressions.
-
-- ...:
-
-  further args passed to `grepl` (only in effect when `fixed` is
-  `FALSE`).
+  If TRUE, values in `...` are treated as fixed strings, otherwise they
+  are treated as regular expressions.
 
 ## Value
 
@@ -58,7 +40,6 @@ A `pipeflow_view` object.
 ## Examples
 
 ``` r
-
 p <- pip_new()
 pip_add(p, "load_raw", \(x = 1) x,
   tags = c("io", "core", "daily")
@@ -71,7 +52,7 @@ pip_add(p, "eval_model", \(x = ~fit_model) x,
 )
 
 # Filter by a fixed column value (one or more states)
-pip_view(p, filter = list(state = "new"))
+pip_view(p, state = "new")
 #> <pipeflow_view> pipe view (3 of 3 steps)
 #> ----------------------------------------
 #>        step   depends    out state               tags
@@ -79,8 +60,8 @@ pip_view(p, filter = list(state = "new"))
 #>   fit_model           [NULL]   new              model
 #>  eval_model fit_model [NULL]   new model,daily,report
 
-# Combine filters: step pattern AND state
-pip_view(p, filter = list(step = "model", state = "new"))
+# Combine filters: step pattern AND state (logical AND)
+pip_view(p, step = "model", state = "new")
 #> <pipeflow_view> pipe view (0 of 3 steps)
 #> ----------------------------------------
 
@@ -92,19 +73,8 @@ pip_view(p, tags = "daily")
 #>    load_raw           [NULL]   new      io,core,daily
 #>  eval_model fit_model [NULL]   new model,daily,report
 
-# Combine explicit step selection with a filter (intersection)
-pip_view(p,
-  i      = c("load_raw", "fit_model"),
-  filter = list(state = "new")
-)
-#> <pipeflow_view> pipe view (2 of 3 steps)
-#> ----------------------------------------
-#>       step depends    out state          tags
-#>   load_raw         [NULL]   new io,core,daily
-#>  fit_model         [NULL]   new         model
-
-# Select by integer row indices
-pip_view(p, i = c(1L, 2L), filter = list(state = "new"))
+# Filter by step name
+pip_view(p, step = c("load_raw", "fit_model"))
 #> <pipeflow_view> pipe view (2 of 3 steps)
 #> ----------------------------------------
 #>       step depends    out state          tags
@@ -112,12 +82,20 @@ pip_view(p, i = c(1L, 2L), filter = list(state = "new"))
 #>  fit_model         [NULL]   new         model
 
 # Use a regex pattern to match step names
-pip_view(p, filter = list(step = "_model$"), fixed = FALSE)
+pip_view(p, step = "_model$", fixed = FALSE)
 #> <pipeflow_view> pipe view (2 of 3 steps)
 #> ----------------------------------------
 #>        step   depends    out state               tags
 #>   fit_model           [NULL]   new              model
 #>  eval_model fit_model [NULL]   new model,daily,report
+
+# Filter by parameter names — steps with any of the given parameters
+pip_view(p, params = c("x", "n"))
+#> <pipeflow_view> pipe view (2 of 3 steps)
+#> ----------------------------------------
+#>       step depends    out state          tags
+#>   load_raw         [NULL]   new io,core,daily
+#>  fit_model         [NULL]   new         model
 
 # Views are composable: create a view-of-view for progressive narrowing
 v1 <- pip_view(p, tags = "daily")

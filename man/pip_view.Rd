@@ -4,32 +4,19 @@
 \alias{pip_view}
 \title{Create a pipeline view}
 \usage{
-pip_view(
-  x,
-  i = integer(),
-  filter = list(),
-  tags = character(),
-  fixed = TRUE,
-  ...
-)
+pip_view(x, ..., fixed = TRUE)
 }
 \arguments{
 \item{x}{A pipeflow pipeline or view.}
 
-\item{i}{Optional row indices or step names to keep.}
+\item{...}{Named filters. Supported filter names are \code{step}, \code{params},
+\code{depends}, \code{state}, \code{tags} and \code{exec}. Multiple filters are combined
+with a logical AND (i.e. a step must match all of them). Each filter
+value is a character vector of values to keep, or - if \code{fixed} is
+\code{FALSE} - a regular expression. See examples for usage.}
 
-\item{filter}{A named list of filters to apply. Each element can be a
-character vector specifying the values to keep for the corresponding
-property or, if \code{fixed} is FALSE, a regular expression. See examples
-for usage.}
-
-\item{tags}{Tag filter (character). Keeps steps with any matching tag.}
-
-\item{fixed}{If TRUE, values in \code{filter} are treated as fixed strings,
+\item{fixed}{If TRUE, values in \code{...} are treated as fixed strings,
 otherwise they are treated as regular expressions.}
-
-\item{...}{further args passed to \code{grepl} (only in effect when \code{fixed}
-is \code{FALSE}).}
 }
 \value{
 A \code{pipeflow_view} object.
@@ -54,25 +41,22 @@ pip_add(p, "eval_model", \(x = ~fit_model) x,
 )
 
 # Filter by a fixed column value (one or more states)
-pip_view(p, filter = list(state = "new"))
+pip_view(p, state = "new")
 
-# Combine filters: step pattern AND state
-pip_view(p, filter = list(step = "model", state = "new"))
+# Combine filters: step pattern AND state (logical AND)
+pip_view(p, step = "model", state = "new")
 
 # Filter by tag — keeps steps that have *any* of the given tags
 pip_view(p, tags = "daily")
 
-# Combine explicit step selection with a filter (intersection)
-pip_view(p,
-  i      = c("load_raw", "fit_model"),
-  filter = list(state = "new")
-)
-
-# Select by integer row indices
-pip_view(p, i = c(1L, 2L), filter = list(state = "new"))
+# Filter by step name
+pip_view(p, step = c("load_raw", "fit_model"))
 
 # Use a regex pattern to match step names
-pip_view(p, filter = list(step = "_model$"), fixed = FALSE)
+pip_view(p, step = "_model$", fixed = FALSE)
+
+# Filter by parameter names — steps with any of the given parameters
+pip_view(p, params = c("x", "n"))
 
 # Views are composable: create a view-of-view for progressive narrowing
 v1 <- pip_view(p, tags = "daily")

@@ -8,7 +8,15 @@ validated when the step is added.
 ## Usage
 
 ``` r
-pip_add(x, step, fun, tags = character(0), after = length(x), exec = "auto")
+pip_add(
+  x,
+  step,
+  fun,
+  tags = character(0),
+  after = length(x),
+  params = list(),
+  exec = "auto"
+)
 ```
 
 ## Arguments
@@ -41,6 +49,19 @@ pip_add(x, step, fun, tags = character(0), after = length(x), exec = "auto")
   If set to 0, the new step will be inserted at the beginning of the
   pipeline.
 
+- params:
+
+  Optional named list of parameter values, which will be merged with the
+  defaults of `fun` (if overlapping names, the default values in `fun`
+  take precedence). There are two use cases for `params`:
+
+  1.  Provide param values programmatically when adding steps at runtime
+
+  2.  Provide extra param values that are defined in pipelines nested in
+      a step, which ensures that the step (and with that the pipeline in
+      the step) is re-executed when one of the respective param values
+      change.
+
 - exec:
 
   Execution mode for this step. One of "auto", "split", "reduce" or
@@ -66,7 +87,15 @@ The updated pipeline, invisibly.
 
 ## Details
 
-If `after` was specified, the new step will be inserted after the given
+Each step automatically has access to the pipeline object via `.self`,
+without needing to declare it as a parameter. This is useful for dynamic
+pipelines, e.g. to call
+[`pip_restart()`](https://github.com/rpahl/pipeflow/reference/pip_restart.md)
+or
+[`pip_stop()`](https://github.com/rpahl/pipeflow/reference/pip_stop.md)
+from within a step. `.self` is a reserved parameter name and must
+neither be declared in the step signature nor be passed via `params`. If
+`after` was specified, the new step will be inserted after the given
 step or position. Be aware that in contrast to adding a step at the end,
 inserting a step in the middle is a rather expensive operation as it
 requires re-wiring parts of the internal pipeline structure, especially
@@ -83,12 +112,12 @@ p <- pip_new("analysis") |>
   pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
 
 pip_run(p)
-#> info [2026-06-20 19:19:03.804 UTC]: Start run of pipeflow_pip 'analysis'
-#> info [2026-06-20 19:19:03.804 UTC]: Step 1/4 load
-#> info [2026-06-20 19:19:03.806 UTC]: Step 2/4 clean
-#> info [2026-06-20 19:19:03.808 UTC]: Step 3/4 fit
-#> info [2026-06-20 19:19:03.810 UTC]: Step 4/4 report
-#> info [2026-06-20 19:19:03.812 UTC]: Finished run of pipeflow_pip 'analysis'
+#> info [2026-08-22 17:08:00.632 UTC]: Starting run of pipeflow_pip 'analysis'
+#> info [2026-08-22 17:08:00.632 UTC]: Step 1/4 load
+#> info [2026-08-22 17:08:00.633 UTC]: Step 2/4 clean
+#> info [2026-08-22 17:08:00.635 UTC]: Step 3/4 fit
+#> info [2026-08-22 17:08:00.636 UTC]: Step 4/4 report
+#> info [2026-08-22 17:08:00.636 UTC]: Finished run of pipeflow_pip 'analysis'
 p
 #> <pipeflow_pip> analysis (4 steps)
 #> ---------------------------------
@@ -128,12 +157,12 @@ q <- pip_new("split-demo") |>
   )
 
 pip_run(q)
-#> info [2026-06-20 19:19:03.830 UTC]: Start run of pipeflow_pip 'split-demo'
-#> info [2026-06-20 19:19:03.830 UTC]: Step 1/4 data
-#> info [2026-06-20 19:19:03.831 UTC]: Step 2/4 split
-#> info [2026-06-20 19:19:03.832 UTC]: Step 3/4 stats
-#> info [2026-06-20 19:19:03.839 UTC]: Step 4/4 combine
-#> info [2026-06-20 19:19:03.840 UTC]: Finished run of pipeflow_pip 'split-demo'
+#> info [2026-08-22 17:08:00.647 UTC]: Starting run of pipeflow_pip 'split-demo'
+#> info [2026-08-22 17:08:00.647 UTC]: Step 1/4 data
+#> info [2026-08-22 17:08:00.648 UTC]: Step 2/4 split
+#> info [2026-08-22 17:08:00.649 UTC]: Step 3/4 stats
+#> info [2026-08-22 17:08:00.653 UTC]: Step 4/4 combine
+#> info [2026-08-22 17:08:00.654 UTC]: Finished run of pipeflow_pip 'split-demo'
 q[["stats", "out"]]   # partitioned list — one summary per species
 #> $setosa
 #>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   

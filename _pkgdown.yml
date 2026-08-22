@@ -28,7 +28,6 @@ reference:
   contents:
   - pip_new
   - pip_add
-  - pip_run
   - pip_collect_out
   - pipeflow-package
 
@@ -46,6 +45,13 @@ reference:
   - pip_add_from
   - pip_bind
   - pip_clone
+
+- title: "Running pipelines"
+  desc: Execute pipelines and control runs dynamically from within steps.
+  contents:
+  - pip_run
+  - pip_restart
+  - pip_stop
 
 - title: "Inspection and views"
   desc: Inspect the pipeline structure and create filtered views.
@@ -69,7 +75,6 @@ reference:
   - length.pipeflow_pip
   - print.pipeflow_pip
   - '[.pipeflow_pip'
-  - set_log_layout
 
 
 

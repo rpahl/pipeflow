@@ -23,7 +23,7 @@ p <- pip_new() |>
 pip_run(p, lgr = NULL)
 
 # Lock only "load" via a view so it won't be re-executed or overwritten
-pip_lock(pip_view(p, i = "load"))
+pip_lock(pip_view(p, step = "load"))
 p[["pipeline"]][["locked"]] # TRUE, FALSE
 
 # Locked steps are silently skipped during pip_run()

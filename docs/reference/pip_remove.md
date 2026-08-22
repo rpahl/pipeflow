@@ -1,14 +1,14 @@
 # Remove a step
 
 If other steps depend on the step to be removed, an error is given and
-the removal is blocked, unless `recursive` was set to `TRUE`. In
-recursive mode, the selected step and all downstream dependent steps are
-removed together.
+the removal is blocked, unless `force` was set to `TRUE`. In force mode,
+the selected step and all downstream dependent steps are removed
+together.
 
 ## Usage
 
 ``` r
-pip_remove(x, step, recursive = FALSE)
+pip_remove(x, step, force = FALSE)
 ```
 
 ## Arguments
@@ -21,7 +21,7 @@ pip_remove(x, step, recursive = FALSE)
 
   `string` the name of the step to be removed.
 
-- recursive:
+- force:
 
   `logical` if `TRUE` the step is removed together with all its
   downstream dependencies.
@@ -50,8 +50,8 @@ p                        # "load", "transform"
 # Trying to remove a step that others depend on raises an error:
 # pip_remove(p, "load")  # Error!
 
-# recursive = TRUE removes the step and all its downstream dependents
-pip_remove(p, "load", recursive = TRUE)
+# force = TRUE removes the step and all its downstream dependents
+pip_remove(p, "load", force = TRUE)
 #> Removing step 'load' and its downstream dependencies: 'transform'
 p                        # pipeline is now empty
 #> <pipeflow_pip> pipe (0 steps)
