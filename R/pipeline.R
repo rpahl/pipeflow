@@ -502,12 +502,13 @@
         }
     )
 
-    # Re-read after execution so runtime structural changes are reflected. We
-    # update by step name, so if the current step removed itself we simply
-    # skip the update instead of writing into a shifted row.
+    # Re-read pipeline after execution to handle scenarios where the pipeline
+    # modified itself at runtime. Since we update by step name, if the current
+    # step does not exist anymore, we simply skip the update.
     dat <- x[["pipeline"]]
     rowNow <- match(step, dat[["step"]])
-    if (!is.na(rowNow)) {
+    stepStillExists <- !is.na(rowNow)
+    if (stepStillExists) {
         data.table::set(
             dat,
             i = rowNow,
@@ -578,7 +579,7 @@ pip_new <- function(name = "pipe") {
     # Pipeline states
     env[[".run_state"]] <- factor(
         "ready",
-        levels = c("ready", "restart", "running", "stop")
+        levels = c("ready", "restart", "running", "stop", "failed")
     )
 
     # Restart tracking
@@ -1520,7 +1521,8 @@ pip_replace <- function(x, step, fun, tags = character(0)) {
 #' `function(value, detail)` called before each step.
 #' @return The updated pipeline or view, invisibly.
 #' @details When `x` is a view, requested rows are run together with required
-#' upstream dependencies.
+#' upstream dependencies. If a step fails, the pipeline run state is set to
+#' `"failed"` and the error is re-thrown.
 #' @seealso `vignette("v06-self-modify-pipeline", package = "pipeflow")`
 #'   for an advanced example of dynamic pipelines.
 #' @examples
@@ -1604,51 +1606,72 @@ pip_run <- function(
     action <- if (state == "restart") "Restarting" else "Starting"
     log_info(sprintf("%s run of %s '%s'", action, data.class(x), x[["name"]]))
     pip[[".run_state"]][] <- "running"
-    for (i in seq_along(rowsToRun)) {
-        row <- rowsToRun[[i]]
-        step <- dat[["step"]][[row]]
-        processedSteps <- c(processedSteps, step)
-        if (!is.null(progress)) {
-            progress(value = i, detail = step)
-        }
-        msg <- if (isView) {
-            marker <- names(rowsToRun)[[i]]
-            sprintf("Step %i/%i [%s] %s", i, length(rowsToRun), marker, step)
-        } else {
-            sprintf("Step %i/%i %s", i, length(rowsToRun), step)
-        }
+    tryCatch(
+        {
+            for (i in seq_along(rowsToRun)) {
+                row <- rowsToRun[[i]]
+                step <- dat[["step"]][[row]]
+                processedSteps <- c(processedSteps, step)
+                if (!is.null(progress)) {
+                    progress(value = i, detail = step)
+                }
+                msg <- if (isView) {
+                    marker <- names(rowsToRun)[[i]]
+                    sprintf(
+                        "Step %i/%i [%s] %s",
+                        i,
+                        length(rowsToRun),
+                        marker,
+                        step
+                    )
+                } else {
+                    sprintf("Step %i/%i %s", i, length(rowsToRun), step)
+                }
 
-        if (dat[["state"]][[row]] == "done" && !force) {
-            log_info(sprintf("%s - skipping done step", msg))
-            next()
-        }
-        if (dat[["locked"]][[row]]) {
-            log_info(sprintf("%s - skipping locked step", msg))
-            next()
-        }
+                if (dat[["state"]][[row]] == "done" && !force) {
+                    log_info(sprintf("%s - skipping done step", msg))
+                    next()
+                }
+                if (dat[["locked"]][[row]]) {
+                    log_info(sprintf("%s - skipping locked step", msg))
+                    next()
+                }
 
-        # Run current step
-        log_info(msg)
-        .pip_run_row(pip, i = row, lgr = lgr)
-        stateAfterStep <- pip[[".run_state"]]
+                # Run current step
+                log_info(msg)
+                .pip_run_row(pip, i = row, lgr = lgr)
+                stateAfterStep <- pip[[".run_state"]]
 
-        # Check for restart or stop signals
-        if (stateAfterStep == "restart") {
-            log_info("Restarting pipeline execution.")
-            doForce <- pip[[".restart_force"]]
-            pip_run(x, lgr = lgr, force = doForce, progress = progress)
-            return(invisible(x))
+                # Check for restart or stop signals
+                if (stateAfterStep == "restart") {
+                    log_info("Restarting pipeline execution.")
+                    doForce <- pip[[".restart_force"]]
+                    pip_run(
+                        x,
+                        lgr = lgr,
+                        force = doForce,
+                        progress = progress
+                    )
+                    return(invisible(x))
+                }
+
+                if (stateAfterStep == "stop") {
+                    log_info("Aborting pipeline execution on manual stop.")
+                    break
+                }
+            }
+
+            log_info(
+                sprintf("Finished run of %s '%s'", data.class(x), x[["name"]])
+            )
+            pip[[".run_state"]][] <- "ready"
+            invisible(x)
+        },
+        error = function(e) {
+            pip[[".run_state"]][] <- "failed"
+            stop_no_call(e$message)
         }
-
-        if (stateAfterStep == "stop") {
-            log_info("Aborting pipeline execution on manual stop.")
-            break
-        }
-    }
-
-    log_info(sprintf("Finished run of %s '%s'", data.class(x), x[["name"]]))
-    pip[[".run_state"]][] <- "ready"
-    invisible(x)
+    )
 }
 
 #' Restart a pipeline run

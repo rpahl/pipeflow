@@ -27,7 +27,8 @@ skipped unless \code{force = TRUE}.
 }
 \details{
 When \code{x} is a view, requested rows are run together with required
-upstream dependencies.
+upstream dependencies. If a step fails, the pipeline run state is set to
+\code{"failed"} and the error is re-thrown.
 }
 \examples{
 p <- pip_new() |>

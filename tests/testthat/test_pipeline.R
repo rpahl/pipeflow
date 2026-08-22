@@ -1496,6 +1496,31 @@ describe("pip_run", {
                 c("failed", "outdated", "outdated")
             )
         })
+
+        it("marks the run state as failed when a step errors", {
+            p <- pip_new() |>
+                pip_add("s1", \(x = 1) x) |>
+                pip_add("s2", \(x = ~s1) stop("boom")) |>
+                pip_add("s3", \(x = ~s2) x + 1)
+
+            expect_error(pip_run(p, lgr = NULL), "boom")
+            expect_equal(as.character(p[[".run_state"]]), "failed")
+
+            # A subsequent successful run resets the state to ready.
+            pip_replace(p, "s2", \(x = ~s1) x + 1)
+            pip_run(p, lgr = NULL)
+            expect_equal(as.character(p[[".run_state"]]), "ready")
+        })
+
+        it("marks the run state as failed when a view run errors", {
+            p <- pip_new() |>
+                pip_add("a", \(x = 1) x) |>
+                pip_add("b", \(x = ~a) stop("view boom"))
+            v <- pip_view(p, i = "b")
+
+            expect_error(pip_run(v, lgr = NULL), "view boom")
+            expect_equal(as.character(p[[".run_state"]]), "failed")
+        })
     })
 
     describe("running views", {
