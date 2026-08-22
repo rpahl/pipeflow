@@ -68,6 +68,11 @@ formula notation (\code{~step_name}). Dependencies are validated when the step
 is added.
 }
 \details{
+Each step automatically has access to the pipeline object via \code{.self},
+without needing to declare it as a parameter. This is useful for dynamic
+pipelines, e.g. to call \code{\link[=pip_restart]{pip_restart()}} or \code{\link[=pip_stop]{pip_stop()}} from within a
+step. \code{.self} is a reserved parameter name and must neither be declared
+in the step signature nor be passed via \code{params}.
 If \code{after} was specified, the new step will be inserted after the given
 step or position. Be aware that in contrast to adding a step at the end,
 inserting a step in the middle is a rather expensive operation as it

@@ -163,9 +163,9 @@ as it requires to run additional code around the pipeline.
 We rather want to set the parameter from within the
 pipeline during execution.
 
-Luckily, the pipeline by default provides a self-reference in the
-form of the `.self` parameter that potentially can be used in any
-step function.
+For this, the pipeline by default provides a self-reference in the
+form of the `.self` object that is automatically made available in
+any step function.
 With this in mind, we can update the `residual_shapiro_p_value`
 step to change the `pointColor` parameter on the fly.
 
@@ -173,8 +173,7 @@ step to change the `pointColor` parameter on the fly.
 pip |> pip_replace(
     "residual_shapiro_p_value",
     function(
-        fit = ~fit,
-        .self = NULL
+        fit = ~fit
     ) {
         residuals <- residuals(fit)
         p <- shapiro.test(residuals)$p.value
@@ -233,8 +232,7 @@ runtime based on the interim result passed into `f2`.
 pip |> pip_replace(
     "f2",
     function(
-        x = ~f1,
-        .self = NULL
+        x = ~f1
     ) {
         if (x > 10) {
             .self |> pip_replace("f3", function(x = ~f1) x * 3)
@@ -281,8 +279,7 @@ pip <- pip_new("my-pipeline") |>
     pip_add(
         "f2",
         function(
-            x = ~f1,
-            .self = NULL
+            x = ~f1
         ) {
             if (x > 10) {
                 .self |>
@@ -372,8 +369,7 @@ pip <- pip_new("my-pipeline") |>
     pip_add(
         "f2",
         function(
-            x = ~f1,
-            .self = NULL
+            x = ~f1
         ) {
             if (x > 10) {
                 .self |>

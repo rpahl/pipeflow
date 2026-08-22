@@ -375,8 +375,11 @@ describe("pip_add", {
 
     it("can refer to the pipeline itself via the .self argument", {
         p <- pip_new()
-        pip_add(p, "s1", \(x = 1, .self = NULL) length(.self))
-        expect_equal(p$pipeline[["params"]][[1]]$.self, p)
+        pip_add(p, "s1", \(x = 1) .self)
+
+        pip_run(p, lgr = NULL)
+
+        expect_true(identical(p$pipeline[["out"]][[1]], p))
     })
 
     it("allows functions with wildcard arguments", {
@@ -624,6 +627,22 @@ describe("pip_add", {
         expect_false(".self" %in% names(formals(p[["pipeline"]][["fun"]][[1]])))
     })
 
+    it("signals if .self is declared as a step parameter", {
+        p <- pip_new()
+        expect_error(
+            pip_add(p, "s1", function(x = 1, .self = NULL) x),
+            "'.self' is a reserved parameter name"
+        )
+    })
+
+    it("signals if .self is provided via params", {
+        p <- pip_new()
+        expect_error(
+            pip_add(p, "s1", function(x = 1) x, params = list(.self = p)),
+            "'.self' is a reserved parameter name"
+        )
+    })
+
     it("refreshes auto-provided .self to the clone when run", {
         p <- pip_new() |>
             pip_add("s1", function(x = 1) .self)
@@ -733,13 +752,16 @@ describe("pip_bind", {
 
     it("rebinds .self references to the bound pipeline", {
         p1 <- pip_new("left") |>
-            pip_add("s1", \(x = 1, .self = NULL) .self[["name"]])
+            pip_add("s1", \(x = 1) .self[["name"]])
         p2 <- pip_new("right") |>
-            pip_add("t1", \(x = 1, .self = NULL) .self[["name"]])
+            pip_add("t1", \(x = 1) .self[["name"]])
 
         out <- pip_bind(p1, p2)
-        expect_identical(out[["pipeline"]][["params"]][[1]]$.self, out)
-        expect_identical(out[["pipeline"]][["params"]][[2]]$.self, out)
+        pip_run(out, lgr = NULL)
+        expect_equal(
+            out[["pipeline"]][["out"]],
+            list("left-right", "left-right")
+        )
     })
 
     it("preserves runtime state from both source pipelines", {
@@ -865,11 +887,12 @@ describe("pip_add_from", {
 
     it("rebinds .self to target pipeline through pip_add", {
         src <- pip_new("src") |>
-            pip_add("self", \(x = 1, .self = NULL) .self[["name"]])
+            pip_add("self", \(x = 1) .self[["name"]])
         trg <- pip_new("target")
 
         pip_add_from(trg, src, "self")
-        expect_identical(trg[["pipeline"]][["params"]][[1]]$.self, trg)
+        pip_run(trg, lgr = NULL)
+        expect_equal(trg[["pipeline"]][["out"]][[1]], "target")
     })
 
     it("preserves tags and exec mode from source step", {
@@ -1166,7 +1189,7 @@ describe("pip_replace", {
 describe("pip_clone", {
     test_pip <- function() {
         pip_new("p1") |>
-            pip_add("s1", \(x = 1, .self = NULL) .self[["name"]]) |>
+            pip_add("s1", \(x = 1) .self[["name"]]) |>
             pip_add("s2", \(x = ~s1) x)
     }
 
@@ -1219,11 +1242,12 @@ describe("pip_clone", {
         p <- test_pip()
         p2 <- pip_clone(p)
 
-        expect_identical(p2[["pipeline"]][["params"]][[1]]$.self, p2)
-        expect_identical(p[["pipeline"]][["params"]][[1]]$.self, p)
-
         pip_run(p2, lgr = NULL)
         expect_equal(p2[["pipeline"]][["out"]][[1]], "p1")
+
+        # The original pipeline still points at itself.
+        pip_run(p, lgr = NULL, force = TRUE)
+        expect_equal(p[["pipeline"]][["out"]][[1]], "p1")
     })
 
     it("clones an empty pipeline", {
@@ -1723,7 +1747,7 @@ describe("pip_run", {
                     pip_add("f1", function(x = ~init) x + 1) |>
                     pip_add(
                         "f2",
-                        function(x = ~f1, .self = NULL) {
+                        function(x = ~f1) {
                             if (x > 10) {
                                 .self |>
                                     pip_replace("f3", function(x = ~f1) x * 3)
@@ -1761,7 +1785,7 @@ describe("pip_run", {
                 pip |>
                     pip_replace(
                         "f2",
-                        function(x = ~f1, .self = NULL) {
+                        function(x = ~f1) {
                             if (x > 10) {
                                 .self |>
                                     pip_replace("f3", function(x = ~f1) x * 3)
@@ -1795,7 +1819,7 @@ describe("pip_run", {
                     pip_add("f2", function(x = ~f1) x + 2) |>
                     pip_add(
                         "f3",
-                        function(x = ~f2, .self = NULL) {
+                        function(x = ~f2) {
                             if (x > 10) {
                                 .self |>
                                     pip_replace("f4", function(x = ~f1) x * 4)
@@ -1827,7 +1851,7 @@ describe("pip_run", {
                     pip_add("f1", function(x = ~init) x + 1) |>
                     pip_add(
                         "f2",
-                        function(x = ~f1, .self = NULL) {
+                        function(x = ~f1) {
                             if (x > 10) {
                                 .self |>
                                     pip_replace("f3", function(x = ~f1) x * 3)
@@ -1865,7 +1889,7 @@ describe("pip_run", {
                     pip_add("f1", function(x = ~init) x + 1) |>
                     pip_add(
                         "f2",
-                        function(x = ~f1, .self = NULL) {
+                        function(x = ~f1) {
                             if (x > 10) {
                                 .self |>
                                     pip_replace("f3", function(x = ~f1) x * 3)
@@ -1906,7 +1930,7 @@ describe("pip_run", {
             pip_add("f1", function(x = ~init) x + 1) |>
             pip_add(
                 "f2",
-                function(x = ~f1, .self = NULL) {
+                function(x = ~f1) {
                     if (x > 10) {
                         .self |>
                             pip_add(
@@ -1949,7 +1973,7 @@ describe("pip_run", {
                 pip_add("f1", function(x = ~init) x + 1) |>
                 pip_add(
                     "f2",
-                    function(x = ~f1, .self = NULL) {
+                    function(x = ~f1) {
                         if (x > 10) {
                             .self |>
                                 pip_add(
@@ -1989,7 +2013,7 @@ describe("pip_run", {
         p <- pip_new("self-bound") |>
             pip_add("init", function(xInit = 0) xInit) |>
             pip_add("f1", function(x = ~init) x + 1) |>
-            pip_add("f2", function(x = ~f1, .self = NULL) {
+            pip_add("f2", function(x = ~f1) {
                 captured[[1]] <<- .self
                 pip_restart(.self)
                 x + 2
@@ -2007,7 +2031,7 @@ describe("pip_run", {
             pip_add("f1", function(x = ~init) x + 1) |>
             pip_add(
                 "f2",
-                function(x = ~f1, .self = NULL) {
+                function(x = ~f1) {
                     count <<- count + 1L
                     if (x > 10 && count < 3L) {
                         .self |>
@@ -2119,7 +2143,7 @@ describe("pip_restart", {
     it("restarts the pipeline when a step requests a restart", {
         c <- counter_env(n = 0L)
         p <- pip_new() |>
-            pip_add("s1", function(x = 1, .self = NULL) {
+            pip_add("s1", function(x = 1) {
                 c[["n"]] <- c[["n"]] + 1L
                 if (c[["n"]] == 1L) {
                     pip_restart(.self)
@@ -2136,7 +2160,7 @@ describe("pip_restart", {
     it("stops recursive restarts after the announced times", {
         c <- counter_env(n = 0L)
         p <- pip_new() |>
-            pip_add("s1", function(x = 1, .self = NULL) {
+            pip_add("s1", function(x = 1) {
                 c[["n"]] <- c[["n"]] + 1L
                 pip_restart(.self, times = 2L)
                 c[["n"]]
@@ -2155,7 +2179,7 @@ describe("pip_restart", {
                 c[["a"]] <- c[["a"]] + 1L
                 x
             }) |>
-            pip_add("b", function(x = ~a, .self = NULL) {
+            pip_add("b", function(x = ~a) {
                 c[["b"]] <- c[["b"]] + 1L
                 if (c[["b"]] == 1L) {
                     pip_restart(.self, force = TRUE)
@@ -2182,7 +2206,7 @@ describe("pip_restart", {
                 c[["a"]] <- c[["a"]] + 1L
                 x
             }) |>
-            pip_add("b", function(x = ~a, .self = NULL) {
+            pip_add("b", function(x = ~a) {
                 c[["b"]] <- c[["b"]] + 1L
                 if (c[["b"]] == 1L) {
                     pip_restart(.self, force = FALSE)
@@ -2233,7 +2257,7 @@ describe("pip_restart", {
     it("restarts a view run when a step requests a restart", {
         c <- counter_env(n = 0L)
         p <- pip_new("view-pipeline") |>
-            pip_add("s1", function(x = 1, .self = NULL) {
+            pip_add("s1", function(x = 1) {
                 c[["n"]] <- c[["n"]] + 1L
                 if (c[["n"]] == 1L) {
                     pip_restart(.self)
@@ -2286,7 +2310,7 @@ describe("pip_stop", {
     it("aborts the run at the stopping step and marks downstream outdated", {
         p <- pip_new() |>
             pip_add("s1", function(x = 1) x) |>
-            pip_add("s2", function(x = ~s1, .self = NULL) {
+            pip_add("s2", function(x = ~s1) {
                 pip_stop(.self)
                 x + 1
             }) |>
@@ -2305,7 +2329,7 @@ describe("pip_stop", {
     it("logs the manual stop message during the run", {
         p <- pip_new() |>
             pip_add("s1", function(x = 1) x) |>
-            pip_add("s2", function(x = ~s1, .self = NULL) {
+            pip_add("s2", function(x = ~s1) {
                 pip_stop(.self)
                 x + 1
             }) |>
@@ -2330,7 +2354,7 @@ describe("pip_stop", {
                 ran <<- c(ran, "s1")
                 x
             }) |>
-            pip_add("s2", function(x = ~s1, .self = NULL) {
+            pip_add("s2", function(x = ~s1) {
                 ran <<- c(ran, "s2")
                 pip_stop(.self)
                 x + 1
@@ -2347,7 +2371,7 @@ describe("pip_stop", {
 
     it("stops at the first step and marks all later steps outdated", {
         p <- pip_new() |>
-            pip_add("s1", function(x = 1, .self = NULL) {
+            pip_add("s1", function(x = 1) {
                 pip_stop(.self)
                 x
             }) |>
@@ -2395,7 +2419,7 @@ describe("pip_stop", {
     it("aborts a view run at the stopping step", {
         p <- pip_new("view-pipeline") |>
             pip_add("s1", function(x = 1) x) |>
-            pip_add("s2", function(x = ~s1, .self = NULL) {
+            pip_add("s2", function(x = ~s1) {
                 pip_stop(.self)
                 x + 1
             }) |>

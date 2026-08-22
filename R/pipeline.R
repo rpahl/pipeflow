@@ -382,10 +382,9 @@
 # Step execution
 # -------
 
-# Wrap a step function so that `.self` is available in its body without the
-# user having to declare it as a formal argument. The wrapper gets its own
-# environment (parented by the original one) holding the pipeline reference,
-# so the original function object is never mutated.
+# Wrap a step function so that `.self` is available in its body. The wrapper
+# gets its own environment holding the pipeline reference, so the original
+# function object is never mutated.
 .wrap_self <- function(fun, self) {
     env <- new.env(parent = environment(fun))
     env[[".self"]] <- self
@@ -393,16 +392,26 @@
 }
 
 .pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
-    funParams <- .extract_fun_params(fun)
-    params[names(funParams)] <- funParams
+    if (".self" %in% names(formals(fun))) {
+        stop_no_call(
+            "'.self' is a reserved parameter name and must not be declared ",
+            "in step '",
+            step,
+            "' - it is provided automatically"
+        )
+    }
     if (".self" %in% names(params)) {
-        params[[".self"]] <- x
+        stop_no_call(
+            "'.self' is a reserved parameter name and must not be set via ",
+            "params - it is provided automatically"
+        )
     }
 
-    # Provide `.self` to steps that do not declare it in their signature.
-    if (!".self" %in% names(formals(fun))) {
-        fun <- .wrap_self(fun, x)
-    }
+    funParams <- .extract_fun_params(fun)
+    params[names(funParams)] <- funParams
+
+    # Provide `.self` to the step via a dedicated wrapper environment.
+    fun <- .wrap_self(fun, x)
 
     # Determine and verify potential links to existing steps
     steps <- c(x[["pipeline"]][["step"]], step)
@@ -471,9 +480,7 @@
 
     # Keep `.self` pointing at the pipeline object being run, so steps still
     # reference the correct pipeline after cloning, subsetting or replacing.
-    if (!".self" %in% names(formals(fun))) {
-        environment(fun)[[".self"]] <- x
-    }
+    environment(fun)[[".self"]] <- x
 
     out <- withCallingHandlers(
         .pip_execute_step_call(fun = fun, args = args, exec = exec),
@@ -522,27 +529,6 @@
     x[["pipeline"]][list(nodes), (what) := value, on = ".nodeId"]
 
     invisible(x)
-}
-
-.rebind_self <- function(dat, x) {
-    for (k in seq_len(nrow(dat))) {
-        pars <- dat[["params"]][[k]]
-        if (
-            ".self" %in%
-                names(pars) &&
-                inherits(pars[[".self"]], "pipeflow_pip") &&
-                !identical(pars[[".self"]], x)
-        ) {
-            pars[[".self"]] <- x
-            data.table::set(
-                dat,
-                i = k,
-                j = "params",
-                value = list(list(pars))
-            )
-        }
-    }
-    dat
 }
 
 
@@ -641,6 +627,11 @@ pip_new <- function(name = "pipe") {
 #' * plain: single call, only valid with non-partitioned input
 #'
 #' @details
+#' Each step automatically has access to the pipeline object via `.self`,
+#' without needing to declare it as a parameter. This is useful for dynamic
+#' pipelines, e.g. to call [pip_restart()] or [pip_stop()] from within a
+#' step. `.self` is a reserved parameter name and must neither be declared
+#' in the step signature nor be passed via `params`.
 #' If `after` was specified, the new step will be inserted after the given
 #' step or position. Be aware that in contrast to adding a step at the end,
 #' inserting a step in the middle is a rather expensive operation as it
@@ -843,11 +834,7 @@ pip_add_from <- function(x, y, step) {
     # resolve references and wire DAG updates in the target pipeline.
     f <- fun
     fml <- formals(f)
-
     for (nm in indeps) {
-        if (identical(nm, ".self")) {
-            next
-        }
         fml[[nm]] <- params[[nm]]
     }
 
@@ -972,16 +959,6 @@ pip_clone <- function(x, name = NULL) {
 
     out[[".dag"]] <- dag_clone(x[[".dag"]])
     dat <- data.table::copy(x[["pipeline"]])
-
-    # Re-point explicit self references to the cloned pipeline
-    for (k in seq_len(nrow(dat))) {
-        pars <- dat[["params"]][[k]]
-        if (".self" %in% names(pars) && identical(pars[[".self"]], x)) {
-            pars[[".self"]] <- out
-            data.table::set(dat, i = k, j = "params", value = list(list(pars)))
-        }
-    }
-
     out[["pipeline"]] <- dat
 
     # Clone steps to nodes mapping
@@ -1519,11 +1496,7 @@ pip_replace <- function(x, step, fun, tags = character(0)) {
         }
     }
 
-    # Rebind any explicit .self references from the temporary clone back to
-    # the actual pipeline object that is being mutated at runtime.
-    datOut <- .rebind_self(out[["pipeline"]], x)
-
-    x[["pipeline"]] <- datOut
+    x[["pipeline"]] <- out[["pipeline"]]
     x[[".dag"]] <- out[[".dag"]]
     x[[".steps_to_nodes"]] <- out[[".steps_to_nodes"]]
     invisible(x)
@@ -2292,15 +2265,6 @@ length.pipeflow_view <- function(x) {
         ))))
         to <- as.integer(subsetDat[[".nodeId"]][[k]])
         dag_add_edges_to(d, from = from, to = to)
-    }
-
-    # Re-point explicit self references to the extracted pipeline copy
-    for (k in seq_len(nrow(subsetDat))) {
-        pars <- subsetDat[["params"]][[k]]
-        if (".self" %in% names(pars) && identical(pars[[".self"]], x)) {
-            pars[[".self"]] <- out
-            subsetDat[["params"]][[k]] <- pars
-        }
     }
 
     data.table::setindexv(subsetDat, list("step", ".nodeId"))
