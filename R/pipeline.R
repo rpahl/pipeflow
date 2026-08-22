@@ -740,10 +740,10 @@ pip_add <- function(
 
     # The step is inserted in the middle of the pipeline, which would require
     # to re-wire the DAG. Instead of trying to do that in place, we take a
-    # simpler approach and just create a new pipeline (1), copy all steps up
-    # to the insertion point (2), add the new step (3), and then re-add all
-    # remaining steps after that.
-    # 1) Clone the pipeline
+    # simpler approach and just 1) create a new pipeline, 2) copy all steps up
+    # to the insertion point, 3) add the new step, and then 4) re-add all
+    # remaining steps after that:
+    # 1) Copy the pipeline
     src <- pip_clone(x)
     dat <- src[["pipeline"]]
     n <- nrow(dat)
@@ -836,8 +836,7 @@ pip_add_from <- function(x, y, step) {
 
     # Recreate defaults from stored params/dependencies so pip_add can
     # resolve references and wire DAG updates in the target pipeline.
-    f <- fun
-    fml <- formals(f)
+    fml <- formals(fun)
     for (nm in indeps) {
         fml[[nm]] <- params[[nm]]
     }
@@ -848,8 +847,8 @@ pip_add_from <- function(x, y, step) {
         }
     }
 
-    formals(f) <- fml
-    pip_add(x, step = step, fun = f, tags = tags, exec = exec)
+    formals(fun) <- fml
+    pip_add(x, step = step, fun = fun, tags = tags, exec = exec)
 }
 
 #' Bind pipelines
@@ -884,7 +883,7 @@ pip_bind <- function(x, y) {
     yy <- pip_clone(y)
     yyDat <- yy[["pipeline"]]
 
-    # 1) Resolve all name clashes directly on the cloned source pipeline.
+    # Resolve all name clashes directly on the cloned source pipeline.
     reserved <- out[["pipeline"]][["step"]]
     for (k in seq_len(nrow(yyDat))) {
         step <- yyDat[["step"]][[k]]
@@ -901,7 +900,7 @@ pip_bind <- function(x, y) {
         reserved <- c(reserved, yyDat[["step"]][[k]])
     }
 
-    # 2) Add (potentially renamed) steps from y one by one via pip_add_from.
+    # Add (potentially renamed) steps from y one by one via pip_add_from.
     for (k in seq_len(nrow(yyDat))) {
         step <- yyDat[["step"]][[k]]
         pip_add_from(out, y = yy, step = step)
@@ -1077,7 +1076,7 @@ pip_get_params <- function(x) {
 #' graph$edges # data.frame: from, to, arrows
 #'
 #' # For a view, include_upstream = TRUE adds upstream deps to the graph
-#' v <- pip_view(p, i = "fit")
+#' v <- pip_view(p, step = "fit")
 #' pip_get_graph(v, include_upstream = TRUE)
 #'
 #' if (require("visNetwork", quietly = TRUE)) {
@@ -1545,7 +1544,7 @@ pip_replace <- function(x, step, fun, tags = character(0)) {
 #'
 #' # Run only a subset of steps via a view;
 #' # upstream dependencies are automatically included
-#' v <- pip_view(p, i = "total")
+#' v <- pip_view(p, step = "total")
 #' pip_run(v)
 #' @export
 pip_run <- function(
@@ -1876,7 +1875,7 @@ pip_set_params <- function(p, params = list()) {
 #' p[["pipeline"]][["tags"]] # both steps have c("daily", "core")
 #'
 #' # Add an extra tag to only one step via a view
-#' v <- pip_view(p, i = "fit")
+#' v <- pip_view(p, step = "fit")
 #' pip_tag(v, tags = "model")
 #' p[["pipeline"]][["tags"]] # "fit" also has "model"
 #' @export
@@ -1969,7 +1968,7 @@ pip_untag <- function(p, tags = character()) {
 #' pip_run(p, lgr = NULL)
 #'
 #' # Lock only "load" via a view so it won't be re-executed or overwritten
-#' pip_lock(pip_view(p, i = "load"))
+#' pip_lock(pip_view(p, step = "load"))
 #' p[["pipeline"]][["locked"]] # TRUE, FALSE
 #'
 #' # Locked steps are silently skipped during pip_run()
@@ -2039,16 +2038,13 @@ pip_unlock <- function(p) {
 #' affect only the selected steps.
 #'
 #' @param x A pipeflow pipeline or view.
-#' @param i Optional row indices or step names to keep.
-#' @param filter A named list of filters to apply. Each element can be a
-#' character vector specifying the values to keep for the corresponding
-#' property or, if `fixed` is FALSE, a regular expression. See examples
-#' for usage.
-#' @param tags Tag filter (character). Keeps steps with any matching tag.
-#' @param fixed If TRUE, values in `filter` are treated as fixed strings,
+#' @param ... Named filters. Supported filter names are `step`, `params`,
+#' `depends`, `state`, `tags` and `exec`. Multiple filters are combined
+#' with a logical AND (i.e. a step must match all of them). Each filter
+#' value is a character vector of values to keep, or - if `fixed` is
+#' `FALSE` - a regular expression. See examples for usage.
+#' @param fixed If TRUE, values in `...` are treated as fixed strings,
 #' otherwise they are treated as regular expressions.
-#' @param ... further args passed to `grepl` (only in effect when `fixed`
-#' is `FALSE`).
 #'
 #' @return A `pipeflow_view` object.
 #' @export
@@ -2066,43 +2062,44 @@ pip_unlock <- function(p) {
 #' )
 #'
 #' # Filter by a fixed column value (one or more states)
-#' pip_view(p, filter = list(state = "new"))
+#' pip_view(p, state = "new")
 #'
-#' # Combine filters: step pattern AND state
-#' pip_view(p, filter = list(step = "model", state = "new"))
+#' # Combine filters: step pattern AND state (logical AND)
+#' pip_view(p, step = "model", state = "new")
 #'
 #' # Filter by tag — keeps steps that have *any* of the given tags
 #' pip_view(p, tags = "daily")
 #'
-#' # Combine explicit step selection with a filter (intersection)
-#' pip_view(p,
-#'   i      = c("load_raw", "fit_model"),
-#'   filter = list(state = "new")
-#' )
-#'
-#' # Select by integer row indices
-#' pip_view(p, i = c(1L, 2L), filter = list(state = "new"))
+#' # Filter by step name
+#' pip_view(p, step = c("load_raw", "fit_model"))
 #'
 #' # Use a regex pattern to match step names
-#' pip_view(p, filter = list(step = "_model$"), fixed = FALSE)
+#' pip_view(p, step = "_model$", fixed = FALSE)
+#'
+#' # Filter by parameter names — steps with any of the given parameters
+#' pip_view(p, params = c("x", "n"))
 #'
 #' # Views are composable: create a view-of-view for progressive narrowing
 #' v1 <- pip_view(p, tags = "daily")
 #' print(v1) # load_raw, eval_model
 #' v2 <- pip_view(v1, tags = "report")
 #' print(v2) # eval_model only
-pip_view <- function(
-    x,
-    i = integer(),
-    filter = list(),
-    tags = character(),
-    fixed = TRUE,
-    ...
-) {
+pip_view <- function(x, ..., fixed = TRUE) {
     .assert_pip_or_view(x)
     isView <- .is_pipeflow_view(x)
     pip <- if (isView) x[["pip"]] else x
     dat <- pip[["pipeline"]]
+
+    filters <- list(...)
+    validFilters <- c("step", "params", "depends", "state", "tags", "exec")
+    unknown <- setdiff(names(filters), validFilters)
+    if (length(unknown) > 0) {
+        stop(sprintf(
+            "Invalid filter name: '%s' - can be one of: %s",
+            unknown[[1]],
+            paste(validFilters, collapse = ", ")
+        ))
+    }
 
     # For view-of-view, filter only within parent view rows and map local
     # matches back to absolute row indices of the underlying pipeline.
@@ -2110,52 +2107,37 @@ pip_view <- function(
     sub <- dat[parent_rows]
     keep <- rep(TRUE, nrow(sub))
 
-    # Filters
-    validFilters <- c("step", "depends", "state", "exec")
-    for (name in names(filter)) {
-        if (!(name %in% validFilters)) {
-            stop(sprintf(
-                "Invalid filter name: '%s' - can be one of: %s",
-                name,
-                paste(validFilters, collapse = ", ")
-            ))
-        }
+    # Resolve each filter name to the column it filters on; "params" refers
+    # to the independent (tunable) parameter names stored in ".indeps".
+    filterCols <- c(
+        step = "step",
+        params = ".indeps",
+        depends = "depends",
+        state = "state",
+        tags = "tags",
+        exec = "exec"
+    )
+
+    for (name in names(filters)) {
+        col <- sub[[filterCols[[name]]]]
+        values <- filters[[name]]
         hasMatch <- if (fixed) {
-            sapply(sub[[name]], \(e) any(e %in% filter[[name]]))
+            vapply(col, FUN = \(e) any(e %in% values), logical(1))
         } else {
-            sapply(sub[[name]], \(e) any(grepl(filter[[name]], x = e, ...)))
+            vapply(
+                col,
+                FUN = \(e) any(vapply(
+                    values,
+                    FUN = \(p) any(grepl(p, x = e)),
+                    logical(1)
+                )),
+                logical(1)
+            )
         }
         keep <- keep & hasMatch
     }
 
-    # Tags
-    if (length(tags) > 0) {
-        hasTag <- vapply(
-            sub[["tags"]],
-            FUN = \(x) any(x %in% tags),
-            FUN.VALUE = logical(1)
-        )
-        keep <- keep & hasTag
-    }
-
-    # Rows
     rows <- parent_rows[which(keep)]
-    if (length(i) > 0) {
-        if (is.character(i)) {
-            i <- .pip_steps_to_rows(pip, i)
-        }
-        if (!is.numeric(i)) {
-            stop("i must be numeric row indices or character step names")
-        }
-        if (any(i < 1L | i > nrow(dat))) {
-            stop(
-                "Invalid row indices in 'i': ",
-                toString(i[i < 1L | i > nrow(dat)])
-            )
-        }
-        rows <- intersect(rows, as.integer(i))
-    }
-
     name <- sprintf("%s view", x[["name"]])
     view <- list(pip = pip, name = name, rows = rows)
     class(view) <- "pipeflow_view"
@@ -2178,7 +2160,7 @@ pip_view <- function(
 #' length(p) # 3 — total steps in the pipeline
 #'
 #' # A view reports only the number of selected (visible) steps
-#' v <- pip_view(p, i = c("s2", "s3"))
+#' v <- pip_view(p, step = c("s2", "s3"))
 #' length(v) # 2
 #' @rdname length.pipeflow
 #' @export

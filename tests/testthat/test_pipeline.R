@@ -204,7 +204,7 @@ describe(".pip_steps_to_rows", {
         p <- test_pip()
         expect_equal(.pip_steps_to_rows(p, c("s3", "s1")), c(3L, 1L))
 
-        v <- pip_view(p, filter = list(step = c("s2", "s3")))
+        v <- pip_view(p, step = c("s2", "s3"))
         expect_equal(.pip_steps_to_rows(v, c("s1", "s3")), c(1L, 3L))
     })
 
@@ -1343,7 +1343,7 @@ describe("pip_get_params", {
         pip_add(p, "s3", \(y = ~s2) y)
         pip_add(p, "s4", \(x = 9, y = ~s2) x + y)
 
-        v <- pip_view(p, filter = list(step = c("s3", "s4")))
+        v <- pip_view(p, step = c("s3", "s4"))
         params <- pip_get_params(v)
 
         expect_named(params, "x")
@@ -1355,7 +1355,7 @@ describe("pip_get_params", {
         pip_add(p, "s1", \(x = 1) x)
         pip_add(p, "s2", \(y = ~s1) y)
 
-        v <- pip_view(p, filter = list(step = "s2"))
+        v <- pip_view(p, step = "s2")
         expect_equal(pip_get_params(v), list())
     })
 
@@ -1418,7 +1418,7 @@ describe("pip_get_graph", {
 
     it("supports view-only graph or graph with upstream closure", {
         p <- test_pip()
-        v <- pip_view(p, i = "s3")
+        v <- pip_view(p, step = "s3")
 
         gView <- pip_get_graph(v, include_upstream = FALSE)
         expect_equal(gView[["nodes"]][["label"]], "s3")
@@ -1516,7 +1516,7 @@ describe("pip_run", {
             p <- pip_new() |>
                 pip_add("a", \(x = 1) x) |>
                 pip_add("b", \(x = ~a) stop("view boom"))
-            v <- pip_view(p, i = "b")
+            v <- pip_view(p, step = "b")
 
             expect_error(pip_run(v, lgr = NULL), "view boom")
             expect_equal(as.character(p[[".run_state"]]), "failed")
@@ -1544,11 +1544,11 @@ describe("pip_run", {
                 pip_add("f4", \(x = ~f2) x + 1) |>
                 pip_add("f5", \(x = ~f4) x + 1)
 
-            v <- pip_view(p, i = "f2")
+            v <- pip_view(p, step = "f2")
             pip_run(v, lgr = NULL)
             expect_equal(p$pipeline[["out"]], list(1, 2, NULL, NULL, NULL))
 
-            v <- pip_view(p, i = "f5")
+            v <- pip_view(p, step = "f5")
             pip_run(v, lgr = NULL)
             expect_equal(p$pipeline[["out"]], list(1, 2, NULL, 3, 4))
         })
@@ -1930,7 +1930,7 @@ describe("pip_run", {
                 expect_equal(pip[["out"]], list(0, 1, 3, 6, 7))
 
                 pip |> pip_set_params(list(xInit = 15))
-                v <- pip_view(pip, i = c("f1", "f2"))
+                v <- pip_view(pip, step = c("f1", "f2"))
                 pip_run(v, lgr = NULL, force = TRUE)
 
                 expect_equal(pip[["out"]], list(15, 16, 8, NULL, 7))
@@ -2286,7 +2286,7 @@ describe("pip_restart", {
     it("restarts the underlying pipeline when called on a view", {
         p <- pip_new() |>
             pip_add("s1", \(x = 1) x)
-        v <- pip_view(p, i = "s1")
+        v <- pip_view(p, step = "s1")
 
         pip_restart(v)
 
@@ -2306,7 +2306,7 @@ describe("pip_restart", {
                 x
             }) |>
             pip_add("s2", function(x = ~s1) x + 1)
-        v <- pip_view(p, i = "s2")
+        v <- pip_view(p, step = "s2")
 
         pip_run(v, lgr = NULL)
 
@@ -2449,7 +2449,7 @@ describe("pip_stop", {
     it("marks the underlying pipeline as stopping when called on a view", {
         p <- pip_new() |>
             pip_add("s1", \(x = 1) x)
-        v <- pip_view(p, i = "s1")
+        v <- pip_view(p, step = "s1")
 
         pip_stop(v)
 
@@ -2466,7 +2466,7 @@ describe("pip_stop", {
             }) |>
             pip_add("s3", function(x = ~s2) x + 1) |>
             pip_add("s4", function(x = ~s3) x + 1)
-        v <- pip_view(p, i = "s4")
+        v <- pip_view(p, step = "s4")
 
         pip_run(v, lgr = NULL)
 
@@ -2507,7 +2507,7 @@ describe("pip_set_params", {
         res <- pip_set_params(p, params = list(x = 11, y = 22))
         expect_true(inherits(res, "pipeflow_pip"))
 
-        v <- pip_view(p, filter = list(step = "s2"))
+        v <- pip_view(p, step = "s2")
         res <- pip_set_params(v, params = list(y = 22))
         expect_true(inherits(res, "pipeflow_view"))
     })
@@ -2533,7 +2533,7 @@ describe("pip_set_params", {
     it("sets parameters only within the selected view", {
         p <- test_pip()
 
-        v <- pip_view(p, filter = list(step = "s3"))
+        v <- pip_view(p, step = "s3")
         expect_warning(
             pip_set_params(v, params = list(z = 33, x = 11, y = 22)),
             "Trying to set parameters not defined in the target: y"
@@ -2639,7 +2639,7 @@ describe("pip_tag", {
         p[["pipeline"]][["locked"]][[2]] <- TRUE
         p[["pipeline"]][["tags"]][[2]] <- "keep"
 
-        v <- pip_view(p, filter = list(step = c("s2", "s3")))
+        v <- pip_view(p, step = c("s2", "s3"))
         pip_tag(v, tags = "view")
 
         expect_equal(p[["pipeline"]][["tags"]][[1]], c("init", "daily"))
@@ -2670,7 +2670,7 @@ describe("pip_untag", {
         p[["pipeline"]][["locked"]][[2]] <- TRUE
         p[["pipeline"]][["tags"]][[2]] <- c("daily", "model")
 
-        v <- pip_view(p, filter = list(step = c("s2", "s3")))
+        v <- pip_view(p, step = c("s2", "s3"))
         pip_untag(v, tags = "daily")
 
         expect_equal(p[["pipeline"]][["tags"]][[1]], c("init", "daily"))
@@ -2693,7 +2693,7 @@ describe("pip_lock", {
 
     it("locks only rows covered by a view", {
         p <- tag_lock_test_pip()
-        v <- pip_view(p, filter = list(step = c("s2", "s3")))
+        v <- pip_view(p, step = c("s2", "s3"))
         pip_lock(v)
 
         expect_false(p[["pipeline"]][["locked"]][[1]])
@@ -2720,7 +2720,7 @@ describe("pip_unlock", {
         p <- tag_lock_test_pip()
         p[["pipeline"]][["locked"]] <- rep(TRUE, nrow(p[["pipeline"]]))
 
-        v <- pip_view(p, filter = list(step = c("s2", "s3")))
+        v <- pip_view(p, step = c("s2", "s3"))
         pip_unlock(v)
 
         expect_true(p[["pipeline"]][["locked"]][[1]])
@@ -2742,7 +2742,7 @@ describe("pip_view", {
         expect_identical(v[["name"]], "test_pipeline view")
     })
 
-    it("can filter by columns with fixed matching", {
+    it("can filter by multiple properties with fixed matching", {
         p <- pip_new()
         pip_add(p, "load", \(x = 1) x, tags = "io")
         pip_add(p, "fit", \(x = ~ -1) x + 1, tags = "model")
@@ -2750,7 +2750,7 @@ describe("pip_view", {
 
         p[["pipeline"]][2, state := "done"]
 
-        v <- pip_view(p, tags = "model", filter = list(state = "done"))
+        v <- pip_view(p, tags = "model", state = "done")
 
         expect_equal(v[["rows"]], 2L)
     })
@@ -2761,11 +2761,7 @@ describe("pip_view", {
         pip_add(p, "fit", \(x = ~ -1) x + 1, tags = "model")
         pip_add(p, "eval", \(x = ~load, y = ~fit) x, tags = "model")
 
-        v <- pip_view(
-            p,
-            filter = list(depends = "fit"),
-            tags = "model"
-        )
+        v <- pip_view(p, depends = "fit", tags = "model")
         v
         expect_equal(v[["rows"]], 3L)
     })
@@ -2780,45 +2776,57 @@ describe("pip_view", {
         expect_equal(v[["rows"]], c(1L, 3L))
     })
 
+    it("can filter by step names", {
+        p <- pip_new()
+        pip_add(p, "a1", \(x = 1) x, tags = "g1")
+        pip_add(p, "a2", \(x = ~ -1) x, tags = "g2")
+        pip_add(p, "a3", \(x = ~ -1) x, tags = "g2")
+
+        v <- pip_view(p, step = c("a1", "a3"))
+        expect_equal(v[["rows"]], c(1L, 3L))
+
+        v <- pip_view(p, step = c("a1", "a2"), tags = "g2")
+        expect_equal(v[["rows"]], 2L)
+    })
+
+    it("can filter by parameter names", {
+        p <- pip_new()
+        pip_add(p, "s1", \(x = 1, n = 5) x, tags = "g1")
+        pip_add(p, "s2", \(y = ~ -1, z = 2) y, tags = "g2")
+
+        v <- pip_view(p, params = "n")
+        expect_equal(v[["rows"]], 1L)
+
+        v <- pip_view(p, params = c("x", "z"))
+        expect_equal(v[["rows"]], c(1L, 2L))
+    })
+
+    it("can filter by exec mode", {
+        p <- pip_new()
+        pip_add(p, "s1", \(x = 1) x)
+        pip_add(p, "s2", \(x = 2) x, exec = "split")
+
+        v <- pip_view(p, exec = "split")
+        expect_equal(v[["rows"]], 2L)
+    })
+
     it("can filter by regex when fixed is FALSE", {
         p <- pip_new()
         pip_add(p, "data", \(x = 1) x)
         pip_add(p, "fit_model", \(x = ~ -1) x + 1)
         pip_add(p, "eval_model", \(x = ~data, y = ~fit_model) x)
 
-        v <- pip_view(
-            p,
-            filter = list(step = "_model$"),
-            fixed = FALSE
-        )
+        v <- pip_view(p, step = "_model$", fixed = FALSE)
         expect_equal(v[["rows"]], c(2L, 3L))
     })
 
-    it("intersects filtered rows with explicit i", {
+    it("intersects multiple filters", {
         p <- pip_new()
         pip_add(p, "a1", \(x = 1) x, tags = "g1")
         pip_add(p, "a2", \(x = ~ -1) x, tags = "g2")
         pip_add(p, "a3", \(x = ~ -1) x, tags = "g2")
 
-        v <- pip_view(
-            p,
-            i = c(1L, 2L),
-            tags = "g2"
-        )
-
-        expect_equal(v[["rows"]], 2L)
-    })
-
-    it("can select rows via step names in i", {
-        p <- pip_new()
-        pip_add(p, "a1", \(x = 1) x, tags = "g1")
-        pip_add(p, "a2", \(x = ~ -1) x, tags = "g2")
-        pip_add(p, "a3", \(x = ~ -1) x, tags = "g2")
-
-        v <- pip_view(p, i = c("a1", "a3"))
-        expect_equal(v[["rows"]], c(1L, 3L))
-
-        v <- pip_view(p, i = c("a1", "a2"), tags = "g2")
+        v <- pip_view(p, step = c("a1", "a2"), tags = "g2")
         expect_equal(v[["rows"]], 2L)
     })
 
@@ -2842,40 +2850,8 @@ describe("pip_view", {
         pip_add(p, "s1", \(x = 1) x)
 
         expect_error(
-            pip_view(p, filter = list(not_a_column = "x")),
+            pip_view(p, not_a_column = "x"),
             "Invalid filter name"
-        )
-    })
-
-    it("signals invalid row indices", {
-        p <- pip_new()
-        pip_add(p, "s1", \(x = 1) x)
-
-        expect_error(
-            pip_view(p, i = c(0L, 1L)),
-            "Invalid row indices in 'i'"
-        )
-        expect_error(
-            pip_view(p, i = c(2L)),
-            "Invalid row indices in 'i'"
-        )
-    })
-
-    it("signals invalid step names in i", {
-        p <- pip_new()
-        pip_add(p, "s1", \(x = 1) x)
-
-        expect_error(
-            pip_view(p, i = c("s1", "")),
-            "step names must be non-empty strings"
-        )
-        expect_error(
-            pip_view(p, i = c("s1", NA_character_)),
-            "step names must not contain NA"
-        )
-        expect_error(
-            pip_view(p, i = "unknown"),
-            "Unknown step names: unknown"
         )
     })
 })
@@ -2898,7 +2874,7 @@ describe("length", {
         pip_add(p, "s2", \(a = 1) a)
         expect_equal(length(p), 2L)
 
-        v <- pip_view(p, 1)
+        v <- pip_view(p, step = "s1")
         expect_equal(length(v), 1L)
     })
 })
