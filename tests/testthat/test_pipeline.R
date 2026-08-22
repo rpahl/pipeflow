@@ -2801,6 +2801,15 @@ describe("pip_view", {
         expect_equal(v[["rows"]], c(1L, 2L))
     })
 
+    it("matches dependency parameters via the params filter", {
+        p <- pip_new()
+        pip_add(p, "s1", \(x = 1) x)
+        pip_add(p, "s2", \(y = ~s1) y)
+
+        v <- pip_view(p, params = "y")
+        expect_equal(v[["rows"]], 2L)
+    })
+
     it("can filter by exec mode", {
         p <- pip_new()
         pip_add(p, "s1", \(x = 1) x)

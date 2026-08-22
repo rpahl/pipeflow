@@ -13,7 +13,9 @@ pip_view(x, ..., fixed = TRUE)
 \code{depends}, \code{state}, \code{tags} and \code{exec}. Multiple filters are combined
 with a logical AND (i.e. a step must match all of them). Each filter
 value is a character vector of values to keep, or - if \code{fixed} is
-\code{FALSE} - a regular expression. See examples for usage.}
+\code{FALSE} - a regular expression. The \code{params} filter matches against the
+actual parameter names of each step (both independent and bound /
+dependency parameters). See examples for usage.}
 
 \item{fixed}{If TRUE, values in \code{...} are treated as fixed strings,
 otherwise they are treated as regular expressions.}

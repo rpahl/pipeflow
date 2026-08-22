@@ -2042,7 +2042,9 @@ pip_unlock <- function(p) {
 #' `depends`, `state`, `tags` and `exec`. Multiple filters are combined
 #' with a logical AND (i.e. a step must match all of them). Each filter
 #' value is a character vector of values to keep, or - if `fixed` is
-#' `FALSE` - a regular expression. See examples for usage.
+#' `FALSE` - a regular expression. The `params` filter matches against the
+#' actual parameter names of each step (both independent and bound /
+#' dependency parameters). See examples for usage.
 #' @param fixed If TRUE, values in `...` are treated as fixed strings,
 #' otherwise they are treated as regular expressions.
 #'
@@ -2107,11 +2109,12 @@ pip_view <- function(x, ..., fixed = TRUE) {
     sub <- dat[parent_rows]
     keep <- rep(TRUE, nrow(sub))
 
-    # Resolve each filter name to the column it filters on; "params" refers
-    # to the independent (tunable) parameter names stored in ".indeps".
+    # Resolve each filter name to the column it filters on. "params" is a
+    # special case: it matches against the actual parameter names of each
+    # step (both independent and bound/dependency parameters).
     filterCols <- c(
         step = "step",
-        params = ".indeps",
+        params = "params",
         depends = "depends",
         state = "state",
         tags = "tags",
@@ -2119,7 +2122,11 @@ pip_view <- function(x, ..., fixed = TRUE) {
     )
 
     for (name in names(filters)) {
-        col <- sub[[filterCols[[name]]]]
+        col <- if (name == "params") {
+            lapply(sub[["params"]], names)
+        } else {
+            sub[[filterCols[[name]]]]
+        }
         values <- filters[[name]]
         hasMatch <- if (fixed) {
             vapply(col, FUN = \(e) any(e %in% values), logical(1))
