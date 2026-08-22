@@ -2097,6 +2097,22 @@ describe("pip_run", {
         pip_run(p, lgr = NULL, force = TRUE)
         expect_equal(p[["pipeline"]][["out"]][[2]], 99)
     })
+
+    it("forwards warnings and messages from steps to the logger", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) {
+                warning("careful now")
+                message("hey there")
+                x
+            })
+
+        logs <- character(0)
+        lgr <- function(level, msg) logs <<- c(logs, paste(level, msg))
+        suppressWarnings(suppressMessages(pip_run(p, lgr = lgr)))
+
+        expect_true(any(grepl("warn careful now", logs)))
+        expect_true(any(grepl("info hey there", logs)))
+    })
 })
 
 

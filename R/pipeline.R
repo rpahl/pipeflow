@@ -496,6 +496,9 @@
         },
         warning = function(w) {
             lgr(level = "warn", msg = w$message)
+        },
+        message = function(m) {
+            lgr(level = "info", msg = m$message)
         }
     )
 
