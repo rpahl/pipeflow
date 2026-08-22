@@ -612,6 +612,29 @@ describe("pip_add", {
             "has no default value"
         )
     })
+
+    it("auto-provides .self to steps that do not declare it", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) .self)
+
+        pip_run(p, lgr = NULL)
+
+        expect_true(identical(p[["pipeline"]][["out"]][[1]], p))
+        expect_false(".self" %in% names(p[["pipeline"]][["params"]][[1]]))
+        expect_false(".self" %in% names(formals(p[["pipeline"]][["fun"]][[1]])))
+    })
+
+    it("refreshes auto-provided .self to the clone when run", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) .self)
+        pip_run(p, lgr = NULL)
+
+        p2 <- pip_clone(p)
+        pip_run(p2, lgr = NULL, force = TRUE)
+
+        expect_true(identical(p2[["pipeline"]][["out"]][[1]], p2))
+        expect_true(identical(p[["pipeline"]][["out"]][[1]], p))
+    })
 })
 
 describe("pip_add exec modes", {
@@ -2226,6 +2249,23 @@ describe("pip_restart", {
         expect_equal(p[["pipeline"]][["out"]], list(1, 2))
         expect_equal(as.character(p[[".run_state"]]), "ready")
     })
+
+    it("restarts without declaring .self in the step signature", {
+        c <- counter_env(n = 0L)
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) {
+                c[["n"]] <- c[["n"]] + 1L
+                if (c[["n"]] == 1L) {
+                    pip_restart(.self)
+                }
+                x
+            })
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(c[["n"]], 2L)
+        expect_equal(as.character(p[[".run_state"]]), "ready")
+    })
 })
 
 describe("pip_stop", {
@@ -2320,6 +2360,24 @@ describe("pip_stop", {
         expect_equal(
             p[["pipeline"]][["state"]],
             c("done", "outdated", "outdated")
+        )
+    })
+
+    it("stops without declaring .self in the step signature", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) x) |>
+            pip_add("s2", function(x = ~s1) {
+                pip_stop(.self)
+                x + 1
+            }) |>
+            pip_add("s3", function(x = ~s2) x + 1)
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["pipeline"]][["out"]], list(1, 2, NULL))
+        expect_equal(
+            p[["pipeline"]][["state"]],
+            c("done", "done", "outdated")
         )
     })
 

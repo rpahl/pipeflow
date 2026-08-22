@@ -21,7 +21,7 @@ view was run, only the steps covered by the view are affected.
 \examples{
 p <- pip_new("stop") |>
   pip_add("load", \(n = 3) seq_len(n)) |>
-  pip_add("model", \(x = ~load, .self = NULL) {
+  pip_add("model", \(x = ~load) {
     if (length(x) == 3L) {
       pip_stop(.self)
     }

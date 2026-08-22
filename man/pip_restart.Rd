@@ -29,7 +29,7 @@ is restarted together with its upstream dependencies.
 \examples{
 p <- pip_new("restart") |>
   pip_add("load", \(n = 3) seq_len(n)) |>
-  pip_add("model", \(x = ~load, .self = NULL) {
+  pip_add("model", \(x = ~load) {
     if (length(x) == 3L) {
       pip_restart(.self)
     }

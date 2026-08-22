@@ -381,11 +381,27 @@
 # -------
 # Step execution
 # -------
+
+# Wrap a step function so that `.self` is available in its body without the
+# user having to declare it as a formal argument. The wrapper gets its own
+# environment (parented by the original one) holding the pipeline reference,
+# so the original function object is never mutated.
+.wrap_self <- function(fun, self) {
+    env <- new.env(parent = environment(fun))
+    env[[".self"]] <- self
+    eval(call("function", formals(fun), body(fun)), envir = env)
+}
+
 .pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
     funParams <- .extract_fun_params(fun)
     params[names(funParams)] <- funParams
     if (".self" %in% names(params)) {
         params[[".self"]] <- x
+    }
+
+    # Provide `.self` to steps that do not declare it in their signature.
+    if (!".self" %in% names(formals(fun))) {
+        fun <- .wrap_self(fun, x)
     }
 
     # Determine and verify potential links to existing steps
@@ -452,6 +468,12 @@
     }
 
     step <- dat[["step"]][[i]]
+
+    # Keep `.self` pointing at the pipeline object being run, so steps still
+    # reference the correct pipeline after cloning, subsetting or replacing.
+    if (!".self" %in% names(formals(fun))) {
+        environment(fun)[[".self"]] <- x
+    }
 
     out <- withCallingHandlers(
         .pip_execute_step_call(fun = fun, args = args, exec = exec),
@@ -1674,7 +1696,7 @@ pip_run <- function(
 #' @examples
 #' p <- pip_new("restart") |>
 #'   pip_add("load", \(n = 3) seq_len(n)) |>
-#'   pip_add("model", \(x = ~load, .self = NULL) {
+#'   pip_add("model", \(x = ~load) {
 #'     if (length(x) == 3L) {
 #'       pip_restart(.self)
 #'     }
@@ -1723,7 +1745,7 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
 #' @examples
 #' p <- pip_new("stop") |>
 #'   pip_add("load", \(n = 3) seq_len(n)) |>
-#'   pip_add("model", \(x = ~load, .self = NULL) {
+#'   pip_add("model", \(x = ~load) {
 #'     if (length(x) == 3L) {
 #'       pip_stop(.self)
 #'     }
