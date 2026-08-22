@@ -2039,12 +2039,15 @@ pip_unlock <- function(p) {
 #'
 #' @param x A pipeflow pipeline or view.
 #' @param ... Named filters. Supported filter names are `step`, `params`,
-#' `depends`, `state`, `tags` and `exec`. Multiple filters are combined
-#' with a logical AND (i.e. a step must match all of them). Each filter
-#' value is a character vector of values to keep, or - if `fixed` is
-#' `FALSE` - a regular expression. The `params` filter matches against the
-#' actual parameter names of each step (both independent and bound /
-#' dependency parameters). See examples for usage.
+#' `depends`, `state`, `tags` and `exec`. Each filter value is a character
+#' vector of values to keep, or - if `fixed` is `FALSE` - a regular
+#' expression. The `params` filter matches against the actual parameter
+#' names of each step (both independent and bound / dependency
+#' parameters). See examples for usage.
+#' @param join How individual filters are combined: `"intersect"` (the
+#' default) keeps steps that match *all* filters, `"union"` keeps steps
+#' that match *any* filter. Within a single filter, multiple values are
+#' always treated as alternatives (OR).
 #' @param fixed If TRUE, values in `...` are treated as fixed strings,
 #' otherwise they are treated as regular expressions.
 #'
@@ -2069,6 +2072,9 @@ pip_unlock <- function(p) {
 #' # Combine filters: step pattern AND state (logical AND)
 #' pip_view(p, step = "model", state = "new")
 #'
+#' # Combine filters as a union (step OR state)
+#' pip_view(p, step = "load_raw", state = "done", join = "union")
+#'
 #' # Filter by tag — keeps steps that have *any* of the given tags
 #' pip_view(p, tags = "daily")
 #'
@@ -2086,8 +2092,12 @@ pip_unlock <- function(p) {
 #' print(v1) # load_raw, eval_model
 #' v2 <- pip_view(v1, tags = "report")
 #' print(v2) # eval_model only
-pip_view <- function(x, ..., fixed = TRUE) {
+pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
     .assert_pip_or_view(x)
+    join <- match.arg(join)
+    if (!.is_single(fixed, "logical")) {
+        stop("fixed must be a single logical value")
+    }
     isView <- .is_pipeflow_view(x)
     pip <- if (isView) x[["pip"]] else x
     dat <- pip[["pipeline"]]
@@ -2107,41 +2117,30 @@ pip_view <- function(x, ..., fixed = TRUE) {
     # matches back to absolute row indices of the underlying pipeline.
     parent_rows <- if (isView) as.integer(x[["rows"]]) else seq_len(nrow(dat))
     sub <- dat[parent_rows]
-    keep <- rep(TRUE, nrow(sub))
+
+    # Identity element for the join: TRUE for intersect, FALSE for union.
+    keep <- rep(join == "intersect", nrow(sub))
 
     # Resolve each filter name to the column it filters on. "params" is a
     # special case: it matches against the actual parameter names of each
     # step (both independent and bound/dependency parameters).
-    filterCols <- c(
-        step = "step",
-        params = "params",
-        depends = "depends",
-        state = "state",
-        tags = "tags",
-        exec = "exec"
-    )
-
     for (name in names(filters)) {
         col <- if (name == "params") {
             lapply(sub[["params"]], names)
         } else {
-            sub[[filterCols[[name]]]]
+            sub[[name]]
         }
         values <- filters[[name]]
-        hasMatch <- if (fixed) {
-            vapply(col, FUN = \(e) any(e %in% values), logical(1))
+        matchFun <- if (fixed) {
+            function(x) any(x %in% values)
         } else {
-            vapply(
-                col,
-                FUN = \(e) any(vapply(
-                    values,
-                    FUN = \(p) any(grepl(p, x = e)),
-                    logical(1)
-                )),
-                logical(1)
-            )
+            function(x) {
+                any(vapply(values, FUN = \(p) any(grepl(p, x = x)), logical(1)))
+            }
         }
-        keep <- keep & hasMatch
+        hasMatch <- vapply(col, FUN = matchFun, logical(1))
+        join_op <- if (join == "intersect") `&` else `|`
+        keep <- join_op(keep, hasMatch)
     }
 
     rows <- parent_rows[which(keep)]

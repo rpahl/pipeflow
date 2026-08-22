@@ -4,18 +4,22 @@
 \alias{pip_view}
 \title{Create a pipeline view}
 \usage{
-pip_view(x, ..., fixed = TRUE)
+pip_view(x, ..., join = c("intersect", "union"), fixed = TRUE)
 }
 \arguments{
 \item{x}{A pipeflow pipeline or view.}
 
 \item{...}{Named filters. Supported filter names are \code{step}, \code{params},
-\code{depends}, \code{state}, \code{tags} and \code{exec}. Multiple filters are combined
-with a logical AND (i.e. a step must match all of them). Each filter
-value is a character vector of values to keep, or - if \code{fixed} is
-\code{FALSE} - a regular expression. The \code{params} filter matches against the
-actual parameter names of each step (both independent and bound /
-dependency parameters). See examples for usage.}
+\code{depends}, \code{state}, \code{tags} and \code{exec}. Each filter value is a character
+vector of values to keep, or - if \code{fixed} is \code{FALSE} - a regular
+expression. The \code{params} filter matches against the actual parameter
+names of each step (both independent and bound / dependency
+parameters). See examples for usage.}
+
+\item{join}{How individual filters are combined: \code{"intersect"} (the
+default) keeps steps that match \emph{all} filters, \code{"union"} keeps steps
+that match \emph{any} filter. Within a single filter, multiple values are
+always treated as alternatives (OR).}
 
 \item{fixed}{If TRUE, values in \code{...} are treated as fixed strings,
 otherwise they are treated as regular expressions.}
@@ -47,6 +51,9 @@ pip_view(p, state = "new")
 
 # Combine filters: step pattern AND state (logical AND)
 pip_view(p, step = "model", state = "new")
+
+# Combine filters as a union (step OR state)
+pip_view(p, step = "load_raw", state = "done", join = "union")
 
 # Filter by tag — keeps steps that have *any* of the given tags
 pip_view(p, tags = "daily")

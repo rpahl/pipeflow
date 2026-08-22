@@ -2839,6 +2839,41 @@ describe("pip_view", {
         expect_equal(v[["rows"]], 2L)
     })
 
+    it("unions multiple filters with join = union", {
+        p <- pip_new()
+        pip_add(p, "a1", \(x = 1) x, tags = "g1")
+        pip_add(p, "a2", \(x = ~ -1) x, tags = "g2")
+        pip_add(p, "a3", \(x = ~ -1) x, tags = "g2")
+
+        v <- pip_view(p, step = "a1", tags = "g2", join = "union")
+        expect_equal(v[["rows"]], c(1L, 2L, 3L))
+    })
+
+    it("defaults to intersect and allows partial join names", {
+        p <- pip_new()
+        pip_add(p, "a1", \(x = 1) x, tags = "g1")
+        pip_add(p, "a2", \(x = ~ -1) x, tags = "g2")
+
+        expect_equal(
+            pip_view(p, step = "a1", tags = "g2")[["rows"]],
+            integer(0)
+        )
+        expect_equal(
+            pip_view(p, step = "a1", tags = "g2", join = "uni")[["rows"]],
+            c(1L, 2L)
+        )
+    })
+
+    it("signals invalid join values", {
+        p <- pip_new()
+        pip_add(p, "a1", \(x = 1) x)
+
+        expect_error(
+            pip_view(p, step = "a1", join = "bogus"),
+            "should be one of"
+        )
+    })
+
     it("can be called on views to further subset rows", {
         p <- pip_new("test_pipeline")
         pip_add(p, "s1", \(x = 1) x, tags = c("core", "daily"))
