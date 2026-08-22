@@ -172,11 +172,11 @@
         return(character(0))
     }
 
+    # Finally, convert any relative dependencies (those marked with a
+    # leading "-") to step names.
     iRelPos <- which(depends |> startsWith("-"))
     stepNumbers <- depends[iRelPos] |>
-        lapply(
-            FUN = \(x) .rel_pos_to_step_num(abs(as.integer(x)), toPos)
-        )
+        lapply(FUN = \(x) .rel_pos_to_step_num(abs(as.integer(x)), toPos))
     depends[iRelPos] <- steps[as.integer(stepNumbers)]
 
     unlist(depends)
@@ -212,34 +212,44 @@
 }
 
 .pip_execute_step_call <- function(fun, args, exec) {
+    # A partitioned argument is a list of per-key values produced by a
+    # step with exec = "split" and tagged with class "pipeflow_partitioned".
     partIdx <- which(vapply(
         args,
         FUN = .is_pipeflow_partitioned,
         FUN.VALUE = logical(1)
     ))
 
-    if (identical(exec, "split")) {
+    # Split mode: run the function once on the full (unpartitioned) inputs and
+    # mark the result as partitioned so downstream steps can map over it.
+    if (exec == "split") {
         out <- do.call(fun, args = args)
         return(.as_pipeflow_partitioned(out))
     }
 
-    if (identical(exec, "plain") && length(partIdx) > 0L) {
+    # Plain mode: only executes a single call, so partitioned inputs
+    # (which would require mapping) are not allowed.
+    if (exec == "plain" && length(partIdx) > 0L) {
         stop("plain mode does not accept partitioned inputs")
     }
 
-    if (identical(exec, "reduce") && length(partIdx) == 0L) {
+    # Reduce mode: combines partitioned inputs in a single call,
+    # so it needs at least one partitioned input to be meaningful.
+    if (exec == "reduce" && length(partIdx) == 0L) {
         stop("reduce mode requires at least one partitioned input")
     }
 
-    if (
-        length(partIdx) == 0L ||
-            identical(exec, "plain") ||
-            identical(exec, "reduce")
-    ) {
+    # Single-call, which happens in three scenarios:
+    # 1) there are no partitioned inputs, which is the standard case in a
+    #    standard pipeline that runs without any split/reduce steps
+    # 2) plain mode was explicitly requested (to ensure non-split mode)
+    # 3) reduce mode was requested to re-combine partitioned inputs
+    if (length(partIdx) == 0L || exec == "plain" || exec == "reduce") {
         return(do.call(fun, args = args))
     }
 
-    # Auto-map over partition keys.
+    # Auto mode with partitioned inputs: map the function over the partition
+    # keys. Keys are taken from the first partitioned argument...
     keys <- .partition_keys(args[[partIdx[[1]]]])
     for (k in partIdx[-1]) {
         kk <- .partition_keys(args[[k]])
@@ -248,6 +258,8 @@
         }
     }
 
+    # ...and each key is computed separately by slicing all partitioned
+    # arguments down to that key before calling the function.
     out <- stats::setNames(vector(mode = "list", length = length(keys)), keys)
     for (key in keys) {
         keyArgs <- args
@@ -255,6 +267,8 @@
             keyArgs[[idx]] <- args[[idx]][[key]]
         }
 
+        # Errors are re-raised with the key name so a failing partition can
+        # be located without inspecting the whole output.
         out[[key]] <- tryCatch(
             expr = do.call(fun, args = keyArgs),
             error = function(e) {
@@ -1606,7 +1620,7 @@ pip_run <- function(
             sprintf("Step %i/%i %s", i, length(rowsToRun), step)
         }
 
-        if (identical(dat[["state"]][[row]], "done") && !force) {
+        if (dat[["state"]][[row]] == "done" && !force) {
             log_info(sprintf("%s - skipping done step", msg))
             next()
         }
