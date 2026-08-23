@@ -20,8 +20,8 @@ Extracted value(s), depending on \code{i} and \code{j}.
 }
 \description{
 Extracts values from a pipeline or view using one or two indices.
-With a single string name, named fields such as \code{"pipeline"}, \code{"name"}
-(pipeline) or \code{"pip"}, \code{"rows"} (view) are returned first; anything else
+With a single string name, named fields such as \code{"data"}, \code{"name"}
+(pipeline) or \code{"pipenv"}, \code{"rows"} (view) are returned first; anything else
 returns the matching step-table column. For views, column access is
 restricted to the steps covered by the view. With two indices
 (\code{row}, \code{column}), a single cell is extracted.
@@ -33,10 +33,10 @@ p <- pip_new() |>
 pip_run(p)
 
 # Access internal objects by name
-p[["pipeline"]]          # the full step table
+p[["data"]]          # the full step table
 p[["name"]]              # "pipe"
 
-# Shorthand column access (equivalent to p[["pipeline"]][["step"]])
+# Shorthand column access (equivalent to p[["data"]][["step"]])
 p[["step"]]
 
 # Two-index form: p[[row, column]] extracts a single cell
@@ -45,7 +45,7 @@ p[[2, "state"]]          # state of the second step
 
 # Views behave analogously:
 v <- pip_view(p, step = c("load", "fit"))
-v[["pip"]]               # the underlying pipeline
+v[["pipenv"]]               # the underlying pipeline
 v[["rows"]]              # row indices of the covered steps
 v[["step"]]              # "load", "fit"
 v[["out"]]               # list of outputs

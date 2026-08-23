@@ -23,8 +23,8 @@ p <- pip_new() |>
 
 # Lock all steps, then unlock to restore normal execution
 pip_lock(p)
-p[["pipeline"]][["locked"]] # TRUE, TRUE
+p[["data"]][["locked"]] # TRUE, TRUE
 
 pip_unlock(p)
-p[["pipeline"]][["locked"]] # FALSE, FALSE
+p[["data"]][["locked"]] # FALSE, FALSE
 }

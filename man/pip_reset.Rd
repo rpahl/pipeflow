@@ -25,9 +25,9 @@ p <- pip_new() |>
   pip_add("square", \(x = ~load) x^2)
 
 pip_run(p)
-p[["pipeline"]][["state"]] # "done", "done"
+p[["data"]][["state"]] # "done", "done"
 
 pip_reset(p)
-p[["pipeline"]][["state"]] # "new", "new"
-p[["pipeline"]][["out"]]   # NULL, NULL
+p[["data"]][["state"]] # "new", "new"
+p[["data"]][["out"]]   # NULL, NULL
 }

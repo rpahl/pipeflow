@@ -300,12 +300,12 @@ describe("pip_new", {
         expect_true(is.list(p))
         expect_equal(p[["name"]], "pipe")
         expect_null(p[["rows"]])
-        expect_true(is.environment(p[["pip"]]))
+        expect_true(is.environment(p[["pipenv"]]))
         expect_true(data.table::is.data.table(p[["data"]]))
         expect_equal(nrow(p[["data"]]), 0L)
-        expect_true(is.environment(p[["pip"]][[".steps_to_nodes"]]))
-        expect_equal(ls(envir = p[["pip"]][[".steps_to_nodes"]]), character(0))
-        expect_equal(length(dag_get_nodes_order(p[["pip"]][[".dag"]])), 0L)
+        expect_true(is.environment(p[["pipenv"]][[".steps_to_nodes"]]))
+        expect_equal(ls(envir = p[["pipenv"]][[".steps_to_nodes"]]), character(0))
+        expect_equal(length(dag_get_nodes_order(p[["pipenv"]][[".dag"]])), 0L)
     })
 
     it("supports custom pipeline names", {
@@ -1009,19 +1009,19 @@ describe("pip_remove", {
     it("removes a leaf step", {
         p <- test_pip()
         node <- as.integer(.pip_steps_to_nodes(p, "g1")[[1]])
-        beforeOrder <- dag_get_nodes_order(p[["pip"]][[".dag"]])
+        beforeOrder <- dag_get_nodes_order(p[["pipenv"]][[".dag"]])
         beforeReach <- .pip_filter_nodes(
             p,
             .pip_get_reachable_nodes(p, "f1")
         )[["step"]]
 
-        expect_true(dag_has_node(p[["pip"]][[".dag"]], node))
+        expect_true(dag_has_node(p[["pipenv"]][[".dag"]], node))
         expect_true(node %in% beforeOrder)
         expect_setequal(beforeReach, c("f1", "f2", "f3", "f4"))
 
         pip_remove(p, "g1")
 
-        afterOrder <- dag_get_nodes_order(p[["pip"]][[".dag"]])
+        afterOrder <- dag_get_nodes_order(p[["pipenv"]][[".dag"]])
         afterReach <- .pip_filter_nodes(
             p,
             .pip_get_reachable_nodes(p, "f1")
@@ -1029,7 +1029,7 @@ describe("pip_remove", {
 
         expect_equal(p[["data"]][["step"]], c("f1", "f2", "f3", "f4"))
         expect_true(is.na(.pip_steps_to_nodes(p, "g1")[[1]]))
-        expect_false(dag_has_node(p[["pip"]][[".dag"]], node))
+        expect_false(dag_has_node(p[["pipenv"]][[".dag"]], node))
         expect_false(node %in% afterOrder)
         expect_equal(length(afterOrder), length(beforeOrder) - 1L)
         expect_setequal(afterReach, c("f1", "f2", "f3", "f4"))
@@ -1054,8 +1054,8 @@ describe("pip_remove", {
             FUN = \(s) as.integer(.pip_steps_to_nodes(p, s)[[1]]),
             FUN.VALUE = integer(1)
         )
-        beforeOrder <- dag_get_nodes_order(p[["pip"]][[".dag"]])
-        dag <- p[["pip"]][[".dag"]]
+        beforeOrder <- dag_get_nodes_order(p[["pipenv"]][[".dag"]])
+        dag <- p[["pipenv"]][[".dag"]]
 
         expect_true(all(vapply(
             nodeMap,
@@ -2198,7 +2198,7 @@ describe("pip_restart", {
         pip_run(p, lgr = NULL)
 
         expect_equal(c[["n"]], 3L)
-        expect_equal(p[["pip"]][[".restart_count"]], 0L)
+        expect_equal(p[["pipenv"]][[".restart_count"]], 0L)
     })
 
     it("re-runs all steps on restart when force = TRUE", {
@@ -2261,7 +2261,7 @@ describe("pip_restart", {
 
         pip_restart(p)
         expect_equal(as.character(p[["run_state"]]), "restart")
-        expect_equal(p[["pip"]][[".restart_count"]], 1L)
+        expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
 
         logs <- character(0)
         lgr <- function(level, msg) logs <<- c(logs, msg)
@@ -2279,7 +2279,7 @@ describe("pip_restart", {
         pip_restart(v)
 
         expect_equal(as.character(p[["run_state"]]), "restart")
-        expect_equal(p[["pip"]][[".restart_count"]], 1L)
+        expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
         expect_identical(v[["data"]], p[["data"]])
     })
 
@@ -3080,7 +3080,7 @@ describe("extract operator [", {
 
         from <- as.integer(.pip_steps_to_nodes(sub, "a2")[[1]])
         to <- as.integer(.pip_steps_to_nodes(sub, "b1")[[1]])
-        dag_add_edges_to(sub[["pip"]][[".dag"]], from = from, to = to)
+        dag_add_edges_to(sub[["pipenv"]][[".dag"]], from = from, to = to)
 
         sub_steps <- .pip_filter_nodes(
             sub,
@@ -3116,7 +3116,7 @@ describe("extract operator [[", {
         p <- test_pip()
         expect_equal(p[["name"]], "pipe")
         expect_true(data.table::is.data.table(p[["data"]]))
-        expect_false(is.null(p[["pip"]][[".dag"]]))
+        expect_false(is.null(p[["pipenv"]][[".dag"]]))
     })
 
     it("extracts full columns when j is missing", {
