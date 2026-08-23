@@ -297,8 +297,10 @@ describe("pip_new", {
         p <- pip_new()
 
         expect_true(.is_pipeflow_pip(p))
-        expect_true(is.environment(p))
+        expect_true(is.list(p))
         expect_equal(p[["name"]], "pipe")
+        expect_null(p[["rows"]])
+        expect_true(is.environment(p[["pip"]]))
         expect_true(data.table::is.data.table(p[["pipeline"]]))
         expect_equal(nrow(p[["pipeline"]]), 0L)
         expect_true(is.environment(p[[".steps_to_nodes"]]))
@@ -457,8 +459,8 @@ describe("pip_add", {
 
     it("keeps existing step state and output for appended tail steps", {
         p <- test_pip()
-        p[["pipeline"]][["out"]][[2]] <- 42
-        p[["pipeline"]][["state"]][[2]] <- "done"
+        data.table::set(p[["pipeline"]], i = 2, j = "out", value = list(42))
+        data.table::set(p[["pipeline"]], i = 2, j = "state", value = "done")
 
         pip_add(p, "f3", \(x = ~f1) x + 10, after = "f1")
 
@@ -1272,7 +1274,7 @@ describe("pip_collect_out", {
         pip_add(p, "s1", \(x = 1) x, tags = "data")
         pip_add(p, "s2", \(x = ~ -1) x + 1, tags = "model")
 
-        p[["pipeline"]][["out"]] <- list(10, 20)
+        data.table::set(p[["pipeline"]], j = "out", value = list(10, 20))
 
         out <- pip_collect_out(p)
         expect_equal(names(out), c("s1", "s2"))
@@ -1285,7 +1287,11 @@ describe("pip_collect_out", {
         pip_add(p, "s2", \(x = ~ -1) x + 1, tags = "model")
         pip_add(p, "s3", \(x = ~ -1) x + 1, tags = "model")
 
-        p[["pipeline"]][["out"]] <- list("o1", "o2", "o3")
+        data.table::set(
+            p[["pipeline"]],
+            j = "out",
+            value = list("o1", "o2", "o3")
+        )
 
         v <- pip_view(p, tags = "model")
         out <- pip_collect_out(v)
@@ -2085,7 +2091,7 @@ describe("pip_run", {
 
     it("skips locked steps during run", {
         p <- test_pip()
-        p[["pipeline"]][["locked"]][[2]] <- TRUE
+        data.table::set(p[["pipeline"]], i = 2, j = "locked", value = TRUE)
 
         pip_run(p, lgr = NULL)
         expect_equal(
@@ -2097,8 +2103,8 @@ describe("pip_run", {
 
     it("skips locked steps even with force = TRUE", {
         p <- test_pip()
-        p[["pipeline"]][["locked"]][[2]] <- TRUE
-        p[["pipeline"]][["out"]][[2]] <- 99
+        data.table::set(p[["pipeline"]], i = 2, j = "locked", value = TRUE)
+        data.table::set(p[["pipeline"]], i = 2, j = "out", value = list(99))
 
         pip_run(p, lgr = NULL, force = TRUE)
         expect_equal(p[["pipeline"]][["out"]][[2]], 99)
@@ -2273,7 +2279,7 @@ describe("pip_restart", {
 
         expect_equal(as.character(p[[".run_state"]]), "restart")
         expect_equal(p[[".restart_count"]], 1L)
-        expect_identical(v[["pip"]], p)
+        expect_identical(v[["pipeline"]], p[["pipeline"]])
     })
 
     it("restarts a view run when a step requests a restart", {
@@ -2435,7 +2441,7 @@ describe("pip_stop", {
         pip_stop(v)
 
         expect_equal(as.character(p[[".run_state"]]), "stop")
-        expect_identical(v[["pip"]], p)
+        expect_identical(v[["pipeline"]], p[["pipeline"]])
     })
 
     it("aborts a view run at the stopping step", {
@@ -2544,7 +2550,7 @@ describe("pip_set_params", {
 
         v <- pip_view(p, step = "s2")
         res <- pip_set_params(v, params = list(y = 22))
-        expect_true(inherits(res, "pipeflow_view"))
+        expect_true(.is_pipeflow_view(res))
     })
 
     it("ignores locked steps", {
@@ -2671,8 +2677,13 @@ describe("pip_tag", {
 
     it("updates only rows in a view and skips locked steps", {
         p <- tag_lock_test_pip()
-        p[["pipeline"]][["locked"]][[2]] <- TRUE
-        p[["pipeline"]][["tags"]][[2]] <- "keep"
+        data.table::set(p[["pipeline"]], i = 2, j = "locked", value = TRUE)
+        data.table::set(
+            p[["pipeline"]],
+            i = 2,
+            j = "tags",
+            value = list("keep")
+        )
 
         v <- pip_view(p, step = c("s2", "s3"))
         pip_tag(v, tags = "view")
@@ -2702,8 +2713,13 @@ describe("pip_untag", {
 
     it("updates only rows in a view and skips locked steps", {
         p <- tag_lock_test_pip()
-        p[["pipeline"]][["locked"]][[2]] <- TRUE
-        p[["pipeline"]][["tags"]][[2]] <- c("daily", "model")
+        data.table::set(p[["pipeline"]], i = 2, j = "locked", value = TRUE)
+        data.table::set(
+            p[["pipeline"]],
+            i = 2,
+            j = "tags",
+            value = list(c("daily", "model"))
+        )
 
         v <- pip_view(p, step = c("s2", "s3"))
         pip_untag(v, tags = "daily")
@@ -2753,7 +2769,11 @@ describe("pip_unlock", {
 
     it("unlocks only rows covered by a view", {
         p <- tag_lock_test_pip()
-        p[["pipeline"]][["locked"]] <- rep(TRUE, nrow(p[["pipeline"]]))
+        data.table::set(
+            p[["pipeline"]],
+            j = "locked",
+            value = rep(TRUE, nrow(p[["pipeline"]]))
+        )
 
         v <- pip_view(p, step = c("s2", "s3"))
         pip_unlock(v)
@@ -2773,7 +2793,7 @@ describe("pip_view", {
         v <- pip_view(p)
         expect_true(.is_pipeflow_view(v))
         expect_true("rows" %in% names(v))
-        expect_identical(v[["pip"]], p)
+        expect_identical(v[["pipeline"]], p[["pipeline"]])
         expect_identical(v[["name"]], "test_pipeline view")
     })
 
@@ -2974,7 +2994,7 @@ describe("extract operator [", {
 
         expect_true(.is_pipeflow_view(v))
         expect_equal(v[["rows"]], 5L)
-        expect_identical(v[["pip"]], p)
+        expect_identical(v[["pipeline"]], p[["pipeline"]])
     })
 
     it("returns a view by step names by default", {
@@ -3178,7 +3198,7 @@ describe("extract operator [[", {
         p <- test_pip() |> pip_run(lgr = NULL)
         v <- pip_view(p, step = c("s1", "s2"))
 
-        expect_identical(v[["pip"]], p)
+        expect_identical(v[["pipeline"]], p[["pipeline"]])
         expect_equal(v[["rows"]], c(1L, 2L))
         expect_equal(v[["step"]], c("s1", "s2"))
         expect_equal(v[["out"]], list(1, 2))
@@ -3207,8 +3227,10 @@ describe("extract operator [[", {
         v <- pip_view(p, step = "s1")
 
         expect_error(p[[0L, "step"]], "row index out of bounds")
-        expect_error(p[[nrow(p[["pipeline"]]) + 1L, "step"]],
-            "row index out of bounds")
+        expect_error(
+            p[[nrow(p[["pipeline"]]) + 1L, "step"]],
+            "row index out of bounds"
+        )
         expect_error(v[[0L, "step"]], "row index out of bounds")
         expect_error(v[[2L, "step"]], "row index out of bounds")
         expect_error(v[[length(v) + 1L, "step"]], "row index out of bounds")

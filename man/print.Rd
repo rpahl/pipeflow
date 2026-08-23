@@ -2,7 +2,6 @@
 % Please edit documentation in R/pipeline.R
 \name{print.pipeflow_pip}
 \alias{print.pipeflow_pip}
-\alias{print.pipeflow_view}
 \title{Print pipeflow objects}
 \usage{
 \method{print}{pipeflow_pip}(
@@ -16,8 +15,6 @@
   header = TRUE,
   ...
 )
-
-\method{print}{pipeflow_view}(x, header = TRUE, ...)
 }
 \arguments{
 \item{x}{A pipeflow pipeline or view.}
@@ -58,11 +55,7 @@ p <- pip_new("demo") |>
 print(p) # core columns: step, depends, tags, out, state
 print(p, cols = "all") # all non-hidden columns
 print(p, rows = 2:3) # print only steps 2 and 3
-p <- pip_new() |>
-  pip_add("s1", \(x = 1) x, tags = "io") |>
-  pip_add("s2", \(x = ~s1) x + 1, tags = "model")
 
-# A view header shows how many steps are selected out of the total
-v <- pip_view(p, tags = "model")
-print(v) # "<pipeflow_view> pipe view (1 of 2 steps)"
+v <- pip_view(p, tags = "compute")
+print(v)
 }

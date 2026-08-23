@@ -2,12 +2,12 @@
 % Please edit documentation in R/pipeline.R
 \name{[[.pipeflow_pip}
 \alias{[[.pipeflow_pip}
-\alias{[[.pipeflow_view}
+\alias{$.pipeflow_pip}
 \title{Extract values from a pipeline or view}
 \usage{
 \method{[[}{pipeflow_pip}(x, i, j, ...)
 
-\method{[[}{pipeflow_view}(x, i, j, ...)
+\method{$}{pipeflow_pip}(x, i)
 }
 \arguments{
 \item{i}{integer (row index) or character (step name) of the step to

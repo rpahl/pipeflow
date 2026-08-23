@@ -53,8 +53,9 @@
     inherits(x, "pipeflow_pip")
 }
 
+# A view is a pipeflow_pip whose `rows` field is not NULL.
 .is_pipeflow_view <- function(x) {
-    inherits(x, "pipeflow_view")
+    inherits(x, "pipeflow_pip") && !is.null(x[["rows"]])
 }
 
 .is_pipeflow_partitioned <- function(x) {
@@ -85,9 +86,49 @@
 }
 
 .assert_pip_or_view <- function(x) {
-    if (!(.is_pipeflow_pip(x) || .is_pipeflow_view(x))) {
+    if (!.is_pipeflow_pip(x)) {
         stop_no_call("x must be a pipeflow pip or view")
     }
+}
+
+# Structural operations require a full pipeline, not a view.
+.assert_pip <- function(x) {
+    if (!.is_pipeflow_pip(x)) {
+        stop_no_call("x must be a pipeflow pip")
+    }
+    if (.is_pipeflow_view(x)) {
+        stop_no_call("x must be a full pipeline, not a view")
+    }
+}
+
+# The shared inner environment holding all mutable state. Both full pipelines
+# and views reach it via `x[["pip"]]`, so run state, DAG and step data are
+# always shared between a pipeline and its views.
+.pip_root <- function(x) {
+    .subset2(x, "pip")
+}
+
+# A full pipeflow_pip wrapper (rows = NULL) around the shared inner
+# environment. Used for `.self` inside steps so structural operations such as
+# pip_replace() work on the underlying full pipeline even when running a view.
+.pip_root_pip <- function(x) {
+    structure(
+        list(pip = .pip_root(x), name = .subset2(x, "name"), rows = NULL),
+        class = "pipeflow_pip"
+    )
+}
+
+# Create a view: a pipeflow_pip sharing the inner environment with the parent
+# by reference, selecting only the given absolute row indices.
+.pip_make_view <- function(x, rows) {
+    structure(
+        list(
+            pip = .pip_root(x),
+            name = sprintf("%s view", .subset2(x, "name")),
+            rows = as.integer(rows)
+        ),
+        class = "pipeflow_pip"
+    )
 }
 
 
@@ -285,43 +326,46 @@
 # Pipeline data access
 # --------------------
 .pip_data <- function(x) {
-    isView <- inherits(x, "pipeflow_view")
-    if (isView) {
-        rows <- x[["rows"]]
-        x[["pip"]][["pipeline"]][rows, ]
+    rows <- .pip_view_rows(x)
+    .pip_root(x)[["pipeline"]][rows, ]
+}
+
+# The rows covered by `x`: all pipeline rows for a full pipeline, or the
+# view's `rows` selector for a view.
+.pip_view_rows <- function(x) {
+    if (is.null(.subset2(x, "rows"))) {
+        seq_len(nrow(.pip_root(x)[["pipeline"]]))
     } else {
-        x[["pipeline"]]
+        as.integer(.subset2(x, "rows"))
     }
 }
 
-# Internal implementation shared by [[.pipeflow_pip and [[.pipeflow_view.
+# Internal implementation of [[ for pipeflow_pip objects. Views are pips with
+# a `rows` selector, so list fields and inner-env bindings are accessed
+# through the same dispatch.
 .pip_subset2 <- function(x, i, j, ...) {
-    isView <- .is_pipeflow_view(x)
-    pip <- if (isView) unclass(x)[["pip"]] else x
-    dat <- get("pipeline", envir = pip, inherits = FALSE)
+    dat <- .pip_root(x)[["pipeline"]]
+    rows <- .pip_view_rows(x)
 
     if (missing(j)) {
         if (missing(i)) {
             stop("i must be provided")
         }
 
-        # Internal bindings have priority over step names/column names.
+        # List fields of the wrapper have priority over column names.
         if (is.character(i) && length(i) == 1L && !is.na(i)) {
-            if (isView) {
-                if (i %in% names(x)) {
-                    return(unclass(x)[[i]])
-                }
-            } else if (exists(i, where = x, inherits = FALSE)) {
-                return(get(i, envir = x, inherits = FALSE))
+            if (i %in% c("pip", "name", "rows")) {
+                return(.subset2(x, i))
+            }
+            # Inner-env bindings come next (e.g. "pipeline", ".dag").
+            env <- .pip_root(x)
+            if (exists(i, where = env, inherits = FALSE)) {
+                return(get(i, envir = env, inherits = FALSE))
             }
         }
 
         # Column access, restricted to the view's rows for views.
-        col <- dat[[i]]
-        if (isView) {
-            col <- col[as.integer(unclass(x)[["rows"]])]
-        }
-        return(col)
+        return(dat[[i]][rows])
     }
 
     # Two-index form extracts a single cell from a single row.
@@ -337,7 +381,7 @@
 
     if (is.character(i)) {
         row <- .pip_steps_to_rows(x, i)
-        if (isView && !(row %in% as.integer(unclass(x)[["rows"]]))) {
+        if (!(row %in% rows)) {
             stop("undefined step selected")
         }
     } else {
@@ -345,9 +389,7 @@
             stop("row index must be a whole number")
         }
         row <- as.integer(i)
-        if (isView) {
-            # We need to unclass the view first to access the underlying rows
-            rows <- as.integer(unclass(x)[["rows"]])
+        if (.is_pipeflow_view(x)) {
             if (row < 1L || row > length(rows)) {
                 stop("row index out of bounds")
             }
@@ -400,8 +442,7 @@
 }
 
 .pip_steps_to_rows <- function(x, steps) {
-    pip <- if (.is_pipeflow_view(x)) x[["pip"]] else x
-    dat <- pip[["pipeline"]]
+    dat <- x[["pipeline"]]
 
     if (anyNA(steps)) {
         stop("step names must not contain NA", call. = FALSE)
@@ -633,10 +674,10 @@ pip_new <- function(name = "pipe") {
         stop("name must not be NA")
     }
 
-    # Main pipeline components
+    # Main pipeline components live in an inner environment that is shared by
+    # reference with all views of this pipeline.
     hash_map <- function() new.env(parent = emptyenv())
     env <- hash_map()
-    env[["name"]] <- name
     env[["pipeline"]] <- .empty_pipeline()
     env[[".dag"]] <- dag_new()
     env[[".steps_to_nodes"]] <- hash_map()
@@ -651,7 +692,12 @@ pip_new <- function(name = "pipe") {
     env[[".restart_count"]] <- 0L
     env[[".restart_force"]] <- TRUE
 
-    structure(env, class = c("pipeflow_pip", "environment"))
+    # Outer list wrapper: `rows` is NULL for a full pipeline and holds the
+    # selected absolute row indices for a view.
+    structure(
+        list(pip = env, name = name, rows = NULL),
+        class = "pipeflow_pip"
+    )
 }
 
 
@@ -748,9 +794,7 @@ pip_add <- function(
     params = list(),
     exec = "auto"
 ) {
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
+    .assert_pip(x)
     if (!.is_single(step, "character")) {
         stop("step must be a single string")
     }
@@ -884,9 +928,7 @@ pip_add <- function(
 #' pip_collect_out(dst)
 #' @export
 pip_add_from <- function(x, y, step) {
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
+    .assert_pip(x)
     if (!.is_pipeflow_pip(y)) {
         stop("y must be a pipeflow pip")
     }
@@ -949,9 +991,7 @@ pip_add_from <- function(x, y, step) {
 #' ab
 #' @export
 pip_bind <- function(x, y) {
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
+    .assert_pip(x)
     if (!.is_pipeflow_pip(y)) {
         stop("y must be a pipeflow pip")
     }
@@ -1027,9 +1067,7 @@ pip_bind <- function(x, y) {
 #' p
 #' @export
 pip_clone <- function(x, name = NULL) {
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
+    .assert_pip(x)
     if (!is.null(name) && (!.is_single(name, "character") || is.na(name))) {
         stop("name must be a single non-NA string")
     }
@@ -1166,11 +1204,11 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
     }
 
     isView <- .is_pipeflow_view(x)
-    pip <- if (isView) x[["pip"]] else x
+    pip <- .pip_root(x)
     dat <- pip[["pipeline"]]
     dag <- pip[[".dag"]]
 
-    rows <- if (isView) as.integer(x[["rows"]]) else seq_len(nrow(dat))
+    rows <- .pip_view_rows(x)
     rows <- sort(unique(rows))
 
     if (isView && include_upstream && length(rows) > 0L) {
@@ -1274,9 +1312,7 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
 #' p                        # pipeline is now empty
 #' @export
 pip_remove <- function(x, step, force = FALSE) {
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
+    .assert_pip(x)
     if (!.is_single(step, "character")) {
         stop("step must be a single string")
     }
@@ -1380,9 +1416,7 @@ pip_remove <- function(x, step, force = FALSE) {
 #' try(pip_rename(p, "load_data", to = "s2"))  # step 's2' already exists!
 #' @export
 pip_rename <- function(x, from, to) {
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
+    .assert_pip(x)
 
     if (!.is_single(from, "character")) {
         stop("from must be a single string")
@@ -1465,9 +1499,7 @@ pip_rename <- function(x, from, to) {
 #' p
 #' @export
 pip_replace <- function(x, step, fun, tags = character(0)) {
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
+    .assert_pip(x)
     if (!.is_single(step, "character")) {
         stop("step must be a single string")
     }
@@ -1610,12 +1642,13 @@ pip_run <- function(
     log_info <- function(msg) lgr(level = "info", msg = msg)
 
     isView <- .is_pipeflow_view(x)
-    pip <- if (isView) x[["pip"]] else x
+    pip <- .pip_root(x)
+    selfPip <- .pip_root_pip(x)
     dat <- pip[["pipeline"]]
     rowsToRun <- seq_len(nrow(dat))
 
     if (isView) {
-        requested <- x[["rows"]]
+        requested <- .pip_view_rows(x)
         reqSteps <- dat[["step"]][requested]
         upNodes <- .pip_get_reachable_nodes(pip, reqSteps, downstream = FALSE)
         upRows <- as.integer(dat[list(upNodes), which = TRUE, on = ".nodeId"])
@@ -1680,7 +1713,7 @@ pip_run <- function(
 
                 # Run current step
                 log_info(msg)
-                .pip_run_row(pip, i = row, lgr = lgr)
+                .pip_run_row(selfPip, i = row, lgr = lgr)
                 stateAfterStep <- pip[[".run_state"]]
 
                 # Check for restart or stop signals
@@ -1755,8 +1788,7 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
         stop("times must be a single integer value >= 1")
     }
 
-    isView <- .is_pipeflow_view(x)
-    pip <- if (isView) x[["pip"]] else x
+    pip <- .pip_root(x)
 
     count <- pip[[".restart_count"]]
     if (count >= times) {
@@ -1798,8 +1830,7 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
 #' @export
 pip_stop <- function(x) {
     .assert_pip_or_view(x)
-    isView <- .is_pipeflow_view(x)
-    pip <- if (isView) x[["pip"]] else x
+    pip <- .pip_root(x)
     pip[[".run_state"]][] <- "stop"
     invisible(x)
 }
@@ -1831,10 +1862,10 @@ pip_stop <- function(x) {
 pip_reset <- function(x) {
     .assert_pip_or_view(x)
     isView <- .is_pipeflow_view(x)
-    pip <- if (isView) x[["pip"]] else x
+    pip <- .pip_root(x)
     dat <- pip[["pipeline"]]
 
-    rows <- if (isView) x[["rows"]] else seq_len(nrow(dat))
+    rows <- .pip_view_rows(x)
     if (length(rows) == 0L) {
         return(invisible(x))
     }
@@ -1900,9 +1931,9 @@ pip_set_params <- function(p, params = list()) {
 
     # Narrow down the considered rows
     isView <- .is_pipeflow_view(p)
-    x <- if (isView) p[["pip"]] else p
+    x <- .pip_root(p)
     dat <- x[["pipeline"]]
-    rows <- if (isView) p[["rows"]] else seq_len(nrow(dat))
+    rows <- .pip_view_rows(p)
     rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
 
     if (length(rowsConsidered) == 0L) {
@@ -1981,9 +2012,9 @@ pip_tag <- function(p, tags = character()) {
     }
 
     isView <- .is_pipeflow_view(p)
-    x <- if (isView) p[["pip"]] else p
+    x <- .pip_root(p)
     dat <- x[["pipeline"]]
-    rows <- if (isView) p[["rows"]] else seq_len(nrow(dat))
+    rows <- .pip_view_rows(p)
 
     if (length(rows) == 0L || length(tags) == 0L) {
         return(invisible(p))
@@ -2028,9 +2059,9 @@ pip_untag <- function(p, tags = character()) {
     }
 
     isView <- .is_pipeflow_view(p)
-    x <- if (isView) p[["pip"]] else p
+    x <- .pip_root(p)
     dat <- x[["pipeline"]]
-    rows <- if (isView) p[["rows"]] else seq_len(nrow(dat))
+    rows <- .pip_view_rows(p)
 
     if (length(rows) == 0L || length(tags) == 0L) {
         return(invisible(p))
@@ -2077,9 +2108,9 @@ pip_lock <- function(p) {
     .assert_pip_or_view(p)
 
     isView <- .is_pipeflow_view(p)
-    x <- if (isView) p[["pip"]] else p
+    x <- .pip_root(p)
     dat <- x[["pipeline"]]
-    rows <- if (isView) p[["rows"]] else seq_len(nrow(dat))
+    rows <- .pip_view_rows(p)
 
     if (length(rows) == 0L) {
         return(invisible(p))
@@ -2112,9 +2143,9 @@ pip_unlock <- function(p) {
     .assert_pip_or_view(p)
 
     isView <- .is_pipeflow_view(p)
-    x <- if (isView) p[["pip"]] else p
+    x <- .pip_root(p)
     dat <- x[["pipeline"]]
-    rows <- if (isView) p[["rows"]] else seq_len(nrow(dat))
+    rows <- .pip_view_rows(p)
 
     if (length(rows) == 0L) {
         return(invisible(p))
@@ -2193,8 +2224,7 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
     if (!.is_single(fixed, "logical")) {
         stop("fixed must be a single logical value")
     }
-    isView <- .is_pipeflow_view(x)
-    pip <- if (isView) x[["pip"]] else x
+    pip <- x[["pip"]]
     dat <- pip[["pipeline"]]
 
     filters <- list(...)
@@ -2210,7 +2240,7 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
 
     # For view-of-view, filter only within parent view rows and map local
     # matches back to absolute row indices of the underlying pipeline.
-    parent_rows <- if (isView) as.integer(x[["rows"]]) else seq_len(nrow(dat))
+    parent_rows <- .pip_view_rows(x)
     sub <- dat[parent_rows]
 
     # Identity element for the join: TRUE for intersect, FALSE for union.
@@ -2239,10 +2269,10 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
     }
 
     rows <- parent_rows[which(keep)]
-    name <- sprintf("%s view", x[["name"]])
-    view <- list(pip = pip, name = name, rows = rows)
-    class(view) <- "pipeflow_view"
-    view
+    structure(
+        list(pip = pip, name = sprintf("%s view", x[["name"]]), rows = rows),
+        class = "pipeflow_pip"
+    )
 }
 
 
@@ -2266,13 +2296,7 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
 #' @rdname length.pipeflow
 #' @export
 length.pipeflow_pip <- function(x) {
-    as.integer(nrow(x[["pipeline"]]))
-}
-
-#' @rdname length.pipeflow
-#' @export
-length.pipeflow_view <- function(x) {
-    as.integer(length(x[["rows"]]))
+    as.integer(length(.pip_view_rows(x)))
 }
 
 #' Extract or subset a pipeline
@@ -2344,10 +2368,7 @@ length.pipeflow_view <- function(x) {
     }
 
     if (view) {
-        name <- sprintf("%s view", x[["name"]])
-        view <- list(pip = x, name = name, rows = rows)
-        class(view) <- "pipeflow_view"
-        return(view)
+        return(.pip_make_view(x, rows))
     }
 
     out <- pip_new(name = x[["name"]])
@@ -2454,11 +2475,29 @@ length.pipeflow_view <- function(x) {
     .pip_subset2(x = x, i = i, j = j, ...)
 }
 
+# Assignment routes list fields (`pip`, `name`, `rows`) to the wrapper and all
+# other bindings to the shared inner environment.
+#' @export
+`[[<-.pipeflow_pip` <- function(x, i, j, ..., value) {
+    if (i %in% c("pip", "name", "rows")) {
+        unclass(x)[[i]] <- value
+    } else {
+        env <- .pip_root(x)
+        env[[i]] <- value
+    }
+    x
+}
 
 #' @rdname Extract_value.pipeflow
 #' @export
-`[[.pipeflow_view` <- function(x, i, j, ...) {
-    .pip_subset2(x = x, i = i, j = j, ...)
+`$.pipeflow_pip` <- function(x, i) {
+    x[[i]]
+}
+
+#' @export
+`$<-.pipeflow_pip` <- function(x, i, value) {
+    x[[i]] <- value
+    x
 }
 
 
@@ -2488,6 +2527,9 @@ length.pipeflow_view <- function(x) {
 #' print(p) # core columns: step, depends, tags, out, state
 #' print(p, cols = "all") # all non-hidden columns
 #' print(p, rows = 2:3) # print only steps 2 and 3
+#'
+#' v <- pip_view(p, tags = "compute")
+#' print(v)
 #' @rdname print
 #' @export
 print.pipeflow_pip <- function(
@@ -2503,6 +2545,7 @@ print.pipeflow_pip <- function(
 ) {
     dat <- x[["pipeline"]]
     n <- nrow(dat)
+    isView <- .is_pipeflow_view(x)
 
     if (identical(cols, "core")) {
         cols <- c("step", "depends", "out", "state")
@@ -2521,18 +2564,29 @@ print.pipeflow_pip <- function(
     }
 
     if (header) {
-        title <- sprintf(
-            "<pipeflow_pip> %s (%d step%s)",
-            x[["name"]],
-            n,
-            ifelse(n == 1, "", "s")
-        )
+        if (isView) {
+            nr <- length(.pip_view_rows(x))
+            title <- sprintf(
+                "<pipeflow_view> %s (%d of %d step%s)",
+                x[["name"]],
+                nr,
+                n,
+                ifelse(n == 1, "", "s")
+            )
+        } else {
+            title <- sprintf(
+                "<pipeflow_pip> %s (%d step%s)",
+                x[["name"]],
+                n,
+                ifelse(n == 1, "", "s")
+            )
+        }
         line <- paste(rep("-", nchar(title)), collapse = "")
         cat(title, line, sep = "\n")
     }
 
     if (length(rows) == 0) {
-        rows <- seq_len(n)
+        rows <- .pip_view_rows(x)
     }
 
     print(
@@ -2544,41 +2598,5 @@ print.pipeflow_pip <- function(
         ...
     )
 
-    invisible(x)
-}
-
-
-#' @examples
-#' p <- pip_new() |>
-#'   pip_add("s1", \(x = 1) x, tags = "io") |>
-#'   pip_add("s2", \(x = ~s1) x + 1, tags = "model")
-#'
-#' # A view header shows how many steps are selected out of the total
-#' v <- pip_view(p, tags = "model")
-#' print(v) # "<pipeflow_view> pipe view (1 of 2 steps)"
-#' @rdname print
-#' @export
-print.pipeflow_view <- function(x, header = TRUE, ...) {
-    pip <- x[["pip"]]
-    rows <- x[["rows"]]
-    nr <- length(rows)
-    n <- nrow(pip[["pipeline"]])
-
-    if (header) {
-        title <- sprintf(
-            "<pipeflow_view> %s (%d of %d step%s)",
-            x[["name"]],
-            nr,
-            n,
-            ifelse(n == 1, "", "s")
-        )
-        line <- paste(rep("-", nchar(title)), collapse = "")
-        cat(title, line, sep = "\n")
-    }
-
-    if (length(rows) == 0L) {
-        return(invisible(x))
-    }
-    print(pip, rows = rows, header = FALSE, row.names = FALSE, ...)
     invisible(x)
 }

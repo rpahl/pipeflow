@@ -2,12 +2,9 @@
 % Please edit documentation in R/pipeline.R
 \name{length.pipeflow_pip}
 \alias{length.pipeflow_pip}
-\alias{length.pipeflow_view}
 \title{Length of a pipeflow pipeline or view}
 \usage{
 \method{length}{pipeflow_pip}(x)
-
-\method{length}{pipeflow_view}(x)
 }
 \arguments{
 \item{x}{A pipeflow pipeline or view}
