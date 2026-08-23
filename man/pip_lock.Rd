@@ -2,19 +2,20 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_lock}
 \alias{pip_lock}
-\title{Lock selected steps against updates}
+\title{Lock steps against updates}
 \usage{
-pip_lock(p)
+pip_lock(x)
 }
 \arguments{
-\item{p}{A pipeflow pip or view.}
+\item{x}{A pipeflow pip or view.}
 }
 \value{
 The updated pipeline or view, invisibly.
 }
 \description{
-Locks all selected steps in the pipeline unless \code{p} is a view, in which
-case only steps covered by the view are locked.
+Locks all steps of a pipeline or a subset of steps defined by a view.
+Locked steps are skipped during \code{\link[=pip_run]{pip_run()}} and cannot be modified by
+\code{\link[=pip_set_params]{pip_set_params()}}, \code{\link[=pip_tag]{pip_tag()}} or \code{\link[=pip_untag]{pip_untag()}}.
 }
 \examples{
 p <- pip_new() |>

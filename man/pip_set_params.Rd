@@ -4,10 +4,10 @@
 \alias{pip_set_params}
 \title{Set independent parameters}
 \usage{
-pip_set_params(p, params = list())
+pip_set_params(x, params = list())
 }
 \arguments{
-\item{p}{A pipeflow pip or view}
+\item{x}{A pipeflow pip or view}
 
 \item{params}{Named list of parameters to set.}
 }
@@ -15,7 +15,8 @@ pip_set_params(p, params = list())
 The updated pipeline or view, invisibly.
 }
 \description{
-Updates the default values of tunable parameters across the pipeline.
+Updates the default values of tunable parameters across the pipeline
+or a subset of steps defined by a view.
 Affected steps and their downstream dependents are automatically marked
 as outdated.
 }

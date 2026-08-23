@@ -103,19 +103,20 @@
 
 # The shared inner environment holding all mutable state.
 # If `x` is already the inner environment, it is returned unchanged.
-.pip_root <- function(x) {
-    if (is.environment(x)) {
-        return(x)
-    }
+.pip_get_pip_env <- function(x) {
     .subset2(x, "pipenv")
 }
 
 # A full pipeflow_pip wrapper (rows = NULL) around the shared inner
 # environment. Used for `.self` inside steps so structural operations such as
 # pip_replace() work on the underlying full pipeline.
-.pip_root_pip <- function(x) {
+.pip_full_pip <- function(x) {
     structure(
-        list(pipenv = .pip_root(x), name = .subset2(x, "name"), rows = NULL),
+        list(
+            pipenv = .subset2(x, "pipenv"),
+            name = .subset2(x, "name"),
+            rows = NULL
+        ),
         class = "pipeflow_pip"
     )
 }
@@ -125,7 +126,7 @@
 .pip_make_view <- function(x, rows) {
     structure(
         list(
-            pipenv = .pip_root(x),
+            pipenv = .subset2(x, "pipenv"),
             name = sprintf("%s view", .subset2(x, "name")),
             rows = as.integer(rows)
         ),
@@ -329,14 +330,14 @@
 # --------------------
 .pip_data <- function(x) {
     rows <- .pip_view_rows(x)
-    .pip_root(x)[["data"]][rows, ]
+    .pip_get_pip_env(x)[["data"]][rows, ]
 }
 
 # The rows covered by `x`: all pipeline rows for a full pipeline, or the
 # view's `rows` selector for a view.
 .pip_view_rows <- function(x) {
     if (is.null(.subset2(x, "rows"))) {
-        seq_len(nrow(.pip_root(x)[["data"]]))
+        seq_len(nrow(.pip_get_pip_env(x)[["data"]]))
     } else {
         as.integer(.subset2(x, "rows"))
     }
@@ -346,7 +347,7 @@
 # a `rows` selector, so list fields and inner-env bindings are accessed
 # through the same dispatch.
 .pip_subset2 <- function(x, i, j, ...) {
-    dat <- .pip_root(x)[["data"]]
+    dat <- .pip_get_pip_env(x)[["data"]]
     rows <- .pip_view_rows(x)
 
     if (missing(j)) {
@@ -363,7 +364,7 @@
             # internals like ".dag" and ".steps_to_nodes" are deliberately
             # not exposed. They can still be accessed "manually" from the
             # inner environment if needed.
-            env <- .pip_root(x)
+            env <- .pip_get_pip_env(x)
             if (i %in% ls(env)) {
                 # ls() by default does not list variables starting with a dot
                 return(get(i, envir = env, inherits = FALSE))
@@ -435,13 +436,17 @@
 # Step lookup & DAG traversal
 # ---------------------------
 .pip_step_exists <- function(x, step) {
-    exists(step, where = .pip_root(x)[[".steps_to_nodes"]], inherits = FALSE)
+    exists(
+        step,
+        where = .pip_get_pip_env(x)[[".steps_to_nodes"]],
+        inherits = FALSE
+    )
 }
 
 .pip_steps_to_nodes <- function(x, steps) {
     mget(
         steps,
-        envir = .pip_root(x)[[".steps_to_nodes"]],
+        envir = .pip_get_pip_env(x)[[".steps_to_nodes"]],
         ifnotfound = NA_integer_,
         inherits = FALSE
     )
@@ -466,14 +471,15 @@
 }
 
 .pip_get_reachable_nodes <- function(x, steps, downstream = TRUE) {
-    known <- intersect(steps, names(.pip_root(x)[[".steps_to_nodes"]]))
+    env <- .pip_get_pip_env(x)
+    known <- intersect(steps, names(env[[".steps_to_nodes"]]))
     if (length(known) == 0L) {
         return(integer(0))
     }
 
     start_ids <- as.integer(mget(
         known,
-        envir = .pip_root(x)[[".steps_to_nodes"]],
+        envir = env[[".steps_to_nodes"]],
         ifnotfound = NA_integer_,
         inherits = FALSE
     ))
@@ -483,9 +489,9 @@
     }
 
     if (downstream) {
-        dag_get_reachable_nodes_down(.pip_root(x)[[".dag"]], start_ids)
+        dag_get_reachable_nodes_down(env[[".dag"]], start_ids)
     } else {
-        dag_get_reachable_nodes_up(.pip_root(x)[[".dag"]], start_ids)
+        dag_get_reachable_nodes_up(env[[".dag"]], start_ids)
     }
 }
 
@@ -526,11 +532,12 @@
     fun <- .wrap_self(fun, x)
 
     # Determine and verify potential links to existing steps
-    steps <- c(x[["data"]][["step"]], step)
+    env <- .pip_get_pip_env(x)
+    steps <- c(env[["data"]][["step"]], step)
     depends <- .extract_depends(params = params, steps = steps)
     refNodes <- mget(
         depends,
-        envir = .pip_root(x)[[".steps_to_nodes"]],
+        envir = env[[".steps_to_nodes"]],
         ifnotfound = NA_integer_,
         inherits = FALSE
     )
@@ -545,7 +552,7 @@
     }
 
     # Update DAG
-    d <- .pip_root(x)[[".dag"]]
+    d <- env[[".dag"]]
     .nodeId <- as.integer(dag_add_node(d))
     if (length(refNodes) > 0) {
         dag_add_edges_to(d, from = as.integer(refNodes), to = .nodeId)
@@ -562,8 +569,7 @@
         .nodeId = .nodeId
     )
 
-    x[["data"]] <- data.table::rbindlist(list(x[["data"]], newStep))
-    env <- .pip_root(x)
+    env[["data"]] <- data.table::rbindlist(list(env[["data"]], newStep))
     env[[".steps_to_nodes"]][[step]] <- .nodeId
     x
 }
@@ -904,9 +910,9 @@ pip_add <- function(
     }
 
     x[["data"]] <- out[["data"]]
-    env <- .pip_root(x)
-    env[[".dag"]] <- .pip_root(out)[[".dag"]]
-    env[[".steps_to_nodes"]] <- .pip_root(out)[[".steps_to_nodes"]]
+    env <- .pip_get_pip_env(x)
+    env[[".dag"]] <- .pip_get_pip_env(out)[[".dag"]]
+    env[[".steps_to_nodes"]] <- .pip_get_pip_env(out)[[".steps_to_nodes"]]
     invisible(x)
 }
 
@@ -1083,12 +1089,12 @@ pip_clone <- function(x, name = NULL) {
     newName <- if (is.null(name)) x[["name"]] else name
     out <- pip_new(name = newName)
 
-    out[[".dag"]] <- dag_clone(.pip_root(x)[[".dag"]])
+    out[[".dag"]] <- dag_clone(.pip_get_pip_env(x)[[".dag"]])
     dat <- data.table::copy(x[["data"]])
     out[["data"]] <- dat
 
     # Clone steps to nodes mapping
-    stepsToNodes <- .pip_root(out)[[".steps_to_nodes"]]
+    stepsToNodes <- .pip_get_pip_env(out)[[".steps_to_nodes"]]
     for (k in seq_len(nrow(dat))) {
         step <- dat[["step"]][[k]]
         nodeId <- dat[[".nodeId"]][[k]]
@@ -1213,9 +1219,9 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
     }
 
     isView <- .is_pipeflow_view(x)
-    pip <- .pip_root(x)
-    dat <- pip[["data"]]
-    dag <- pip[[".dag"]]
+    env <- .pip_get_pip_env(x)
+    dat <- env[["data"]]
+    dag <- env[[".dag"]]
 
     rows <- .pip_view_rows(x)
     rows <- sort(unique(rows))
@@ -1335,7 +1341,8 @@ pip_remove <- function(x, step, force = FALSE) {
         stop("force must be a single logical value")
     }
 
-    dat <- x[["data"]]
+    env <- .pip_get_pip_env(x)
+    dat <- env[["data"]]
     directDeps <- dat[["step"]][
         vapply(
             dat[["depends"]],
@@ -1383,33 +1390,33 @@ pip_remove <- function(x, step, force = FALSE) {
 
     # Remove DAG nodes first to keep node references stable during filtering.
     for (nid in rev(nodesToRemove)) {
-        ok <- dag_remove_node(.pip_root(x)[[".dag"]], nid, force = force)
+        ok <- dag_remove_node(env[[".dag"]], nid, force = force)
         if (!ok) {
             stop("failed to remove node ", nid, " from DAG")
         }
     }
-    dag_tidy_up(.pip_root(x)[[".dag"]])
+    dag_tidy_up(env[[".dag"]])
 
     keep <- !(dat[["step"]] %in% stepsToRemove)
-    x[["data"]] <- dat[keep]
+    env[["data"]] <- dat[keep]
 
     for (s in stepsToRemove) {
         if (
             exists(
                 s,
-                where = .pip_root(x)[[".steps_to_nodes"]],
+                where = env[[".steps_to_nodes"]],
                 inherits = FALSE
             )
         ) {
             rm(
                 list = s,
-                envir = .pip_root(x)[[".steps_to_nodes"]],
+                envir = env[[".steps_to_nodes"]],
                 inherits = FALSE
             )
         }
     }
 
-    data.table::setindexv(x[["data"]], list("step", ".nodeId"))
+    data.table::setindexv(env[["data"]], list("step", ".nodeId"))
     invisible(x)
 }
 
@@ -1464,7 +1471,8 @@ pip_rename <- function(x, from, to) {
         stop("step '", to, "' already exists")
     }
 
-    dat <- x[["data"]]
+    env <- .pip_get_pip_env(x)
+    dat <- env[["data"]]
     newSteps <- dat[["step"]]
     newSteps[newSteps %in% from] <- to
 
@@ -1481,7 +1489,7 @@ pip_rename <- function(x, from, to) {
     data.table::set(dat, j = "step", value = newSteps)
     data.table::set(dat, j = "depends", value = newDepends)
 
-    stepsToNodes <- .pip_root(x)[[".steps_to_nodes"]]
+    stepsToNodes <- env[[".steps_to_nodes"]]
     nodeId <- stepsToNodes[[from]]
     stepsToNodes[[to]] <- nodeId
     rm(list = from, envir = stepsToNodes, inherits = FALSE)
@@ -1594,9 +1602,9 @@ pip_replace <- function(x, step, fun, tags = character(0)) {
     }
 
     x[["data"]] <- out[["data"]]
-    env <- .pip_root(x)
-    env[[".dag"]] <- .pip_root(out)[[".dag"]]
-    env[[".steps_to_nodes"]] <- .pip_root(out)[[".steps_to_nodes"]]
+    env <- .pip_get_pip_env(x)
+    env[[".dag"]] <- .pip_get_pip_env(out)[[".dag"]]
+    env[[".steps_to_nodes"]] <- .pip_get_pip_env(out)[[".steps_to_nodes"]]
     invisible(x)
 }
 
@@ -1663,15 +1671,18 @@ pip_run <- function(
     log_info <- function(msg) lgr(level = "info", msg = msg)
 
     isView <- .is_pipeflow_view(x)
-    pip <- .pip_root(x)
-    selfPip <- .pip_root_pip(x)
-    dat <- pip[["data"]]
+    env <- .pip_get_pip_env(x)
+    dat <- env[["data"]]
     rowsToRun <- seq_len(nrow(dat))
 
     if (isView) {
         requested <- .pip_view_rows(x)
         reqSteps <- dat[["step"]][requested]
-        upNodes <- .pip_get_reachable_nodes(pip, reqSteps, downstream = FALSE)
+        upNodes <- .pip_get_reachable_nodes(
+            x,
+            reqSteps,
+            downstream = FALSE
+        )
         upRows <- as.integer(dat[list(upNodes), which = TRUE, on = ".nodeId"])
         rowsToRun <- as.integer(sort(unique(c(requested, upRows))))
         upstreamRows <- setdiff(rowsToRun, requested)
@@ -1684,8 +1695,8 @@ pip_run <- function(
         # were *not* processed, which can happen in two different ways:
         # a) when running a view that does not cover the entire pipeline or
         # b) the run was aborted in the middle (due to an error or manual stop).
-        processedNodes <- as.integer(.pip_steps_to_nodes(pip, processedSteps))
-        outdatedNodes <- .pip_get_reachable_nodes(pip, processedSteps) |>
+        processedNodes <- as.integer(.pip_steps_to_nodes(x, processedSteps))
+        outdatedNodes <- .pip_get_reachable_nodes(x, processedSteps) |>
             unlist() |>
             unique() |>
             setdiff(processedNodes)
@@ -1697,10 +1708,10 @@ pip_run <- function(
         }
     })
 
-    state <- pip[["run_state"]]
+    state <- env[["run_state"]]
     action <- if (state == "restart") "Restarting" else "Starting"
     log_info(sprintf("%s run of %s '%s'", action, data.class(x), x[["name"]]))
-    pip[["run_state"]][] <- "running"
+    env[["run_state"]][] <- "running"
     tryCatch(
         {
             for (i in seq_along(rowsToRun)) {
@@ -1732,15 +1743,18 @@ pip_run <- function(
                     next()
                 }
 
-                # Run current step
+                # Run current step - make sure we always pass the full pipeline
+                # object (not a view) to the step function, so that it can
+                # modify itself if needed.
                 log_info(msg)
-                .pip_run_row(selfPip, i = row, lgr = lgr)
-                stateAfterStep <- pip[["run_state"]]
+                self <- .pip_full_pip(x)
+                .pip_run_row(x = self, i = row, lgr = lgr)
+                stateAfterStep <- env[["run_state"]]
 
                 # Check for restart or stop signals
                 if (stateAfterStep == "restart") {
                     log_info("Restarting pipeline execution.")
-                    doForce <- pip[[".restart_force"]]
+                    doForce <- env[[".restart_force"]]
                     pip_run(
                         x,
                         lgr = lgr,
@@ -1759,11 +1773,11 @@ pip_run <- function(
             log_info(
                 sprintf("Finished run of %s '%s'", data.class(x), x[["name"]])
             )
-            pip[["run_state"]][] <- "ready"
+            env[["run_state"]][] <- "ready"
             invisible(x)
         },
         error = function(e) {
-            pip[["run_state"]][] <- "failed"
+            env[["run_state"]][] <- "failed"
             stop_no_call(e$message)
         }
     )
@@ -1809,17 +1823,17 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
         stop("times must be a single integer value >= 1")
     }
 
-    pip <- .pip_root(x)
+    env <- .pip_get_pip_env(x)
 
-    count <- pip[[".restart_count"]]
+    count <- env[[".restart_count"]]
     if (count >= times) {
-        pip[[".restart_count"]] <- 0L
+        env[[".restart_count"]] <- 0L
         return(invisible(x))
     }
 
-    pip[["run_state"]][] <- "restart"
-    pip[[".restart_count"]] <- count + 1L
-    pip[[".restart_force"]] <- force
+    env[["run_state"]][] <- "restart"
+    env[[".restart_count"]] <- count + 1L
+    env[[".restart_force"]] <- force
     invisible(x)
 }
 
@@ -1851,16 +1865,17 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
 #' @export
 pip_stop <- function(x) {
     .assert_pip_or_view(x)
-    pip <- .pip_root(x)
-    pip[["run_state"]][] <- "stop"
+    env <- .pip_get_pip_env(x)
+    env[["run_state"]][] <- "stop"
     invisible(x)
 }
 
 
 #' Reset a pipeline to its initial state
 #'
-#' Resets all steps to state `"new"` and clears their outputs, so a subsequent
-#' [pip_run()] re-executes the whole pipeline from scratch. The run state is
+#' Resets all steps of a pipeline (or a subset of steps defined by a view)
+#' to state `"new"` and clears their outputs, so a subsequent
+#' [pip_run()] re-executes the cleaned steps from scratch. The run state is
 #' reset to `"ready"` and any pending restart counter is cleared. Parameters,
 #' tags, and locked flags are left unchanged.
 #'
@@ -1882,9 +1897,8 @@ pip_stop <- function(x) {
 #' @export
 pip_reset <- function(x) {
     .assert_pip_or_view(x)
-    isView <- .is_pipeflow_view(x)
-    pip <- .pip_root(x)
-    dat <- pip[["data"]]
+    env <- .pip_get_pip_env(x)
+    dat <- env[["data"]]
 
     rows <- .pip_view_rows(x)
     if (length(rows) == 0L) {
@@ -1901,10 +1915,8 @@ pip_reset <- function(x) {
         )
     )
 
-    if (!isView) {
-        pip[["run_state"]][] <- "ready"
-        pip[[".restart_count"]] <- 0L
-    }
+    env[["run_state"]][] <- "ready"
+    env[[".restart_count"]] <- 0L
 
     invisible(x)
 }
@@ -1912,12 +1924,13 @@ pip_reset <- function(x) {
 
 #' Set independent parameters
 #'
-#' Updates the default values of tunable parameters across the pipeline.
+#' Updates the default values of tunable parameters across the pipeline
+#' or a subset of steps defined by a view.
 #' Affected steps and their downstream dependents are automatically marked
 #' as outdated.
 #' @details Parameters of locked steps are never changed and their state
 #' remains unchanged.
-#' @param p A pipeflow pip or view
+#' @param x A pipeflow pip or view
 #' @param params Named list of parameters to set.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
@@ -1935,15 +1948,15 @@ pip_reset <- function(x) {
 #' pip_run(p)
 #' p
 #' @export
-pip_set_params <- function(p, params = list()) {
+pip_set_params <- function(x, params = list()) {
     # Input checking
-    .assert_pip_or_view(p)
+    .assert_pip_or_view(x)
     if (!is.list(params)) {
         stop("params must be a list")
     }
     parNames <- names(params)
     if (length(params) == 0) {
-        return(invisible(p))
+        return(invisible(x))
     }
     allNamed <- length(parNames) == length(params) && all(nzchar(parNames))
     if (!allNamed) {
@@ -1951,15 +1964,14 @@ pip_set_params <- function(p, params = list()) {
     }
 
     # Narrow down the considered rows
-    isView <- .is_pipeflow_view(p)
-    x <- .pip_root(p)
-    dat <- x[["data"]]
-    rows <- .pip_view_rows(p)
+    env <- .pip_get_pip_env(x)
+    dat <- env[["data"]]
+    rows <- .pip_view_rows(x)
     rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
 
     if (length(rowsConsidered) == 0L) {
         warning("No steps to update: all selected steps are locked")
-        return(invisible(p))
+        return(invisible(x))
     }
 
     # Determine which steps/rows are affected, i.e. have intersecting params
@@ -2000,16 +2012,15 @@ pip_set_params <- function(p, params = list()) {
         )
     }
 
-    invisible(p)
+    invisible(x)
 }
 
 
 #' Add tags to selected steps
 #'
-#' Adds tags to existing tags for all steps in the pipeline unless `p` is a
-#' view, in which case tags are only added for steps covered by the view.
-#' Locked steps are skipped and not updated.
-#' @param p A pipeflow pip or view.
+#' Adds tags to existing tags for all steps of a pipeline or a subset
+#' of steps defined by a view.
+#' @param x A pipeflow pip or view.
 #' @param tags Character vector of tags to add for each selected step.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
@@ -2026,19 +2037,18 @@ pip_set_params <- function(p, params = list()) {
 #' pip_tag(v, tags = "model")
 #' p[["data"]][["tags"]] # "fit" also has "model"
 #' @export
-pip_tag <- function(p, tags = character()) {
-    .assert_pip_or_view(p)
+pip_tag <- function(x, tags = character()) {
+    .assert_pip_or_view(x)
     if (!is.character(tags)) {
         stop("tags must be a character vector")
     }
 
-    isView <- .is_pipeflow_view(p)
-    x <- .pip_root(p)
-    dat <- x[["data"]]
-    rows <- .pip_view_rows(p)
+    env <- .pip_get_pip_env(x)
+    dat <- env[["data"]]
+    rows <- .pip_view_rows(x)
 
     if (length(rows) == 0L || length(tags) == 0L) {
-        return(invisible(p))
+        return(invisible(x))
     }
 
     for (i in rows) {
@@ -2051,16 +2061,15 @@ pip_tag <- function(p, tags = character()) {
         data.table::set(dat, i = i, j = "tags", value = list(list(newTags)))
     }
 
-    invisible(p)
+    invisible(x)
 }
 
 
 #' Remove tags from selected steps
 #'
-#' Removes tags from existing tags for all steps in the pipeline unless `p`
-#' is a view, in which case tags are only removed for steps covered by the
-#' view. Locked steps are skipped and not updated.
-#' @param p A pipeflow pip or view.
+#' Removes tags from existing tags for all steps of a pipeline or a subset
+#' of steps defined by a view.
+#' @param x A pipeflow pip or view.
 #' @param tags Character vector of tags to remove for each selected step.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
@@ -2073,19 +2082,18 @@ pip_tag <- function(p, tags = character()) {
 #' # "load" retains "core"; "fit" retains "model"
 #' p[["data"]][["tags"]]
 #' @export
-pip_untag <- function(p, tags = character()) {
-    .assert_pip_or_view(p)
+pip_untag <- function(x, tags = character()) {
+    .assert_pip_or_view(x)
     if (!is.character(tags)) {
         stop("tags must be a character vector")
     }
 
-    isView <- .is_pipeflow_view(p)
-    x <- .pip_root(p)
-    dat <- x[["data"]]
-    rows <- .pip_view_rows(p)
+    env <- .pip_get_pip_env(x)
+    dat <- env[["data"]]
+    rows <- .pip_view_rows(x)
 
     if (length(rows) == 0L || length(tags) == 0L) {
-        return(invisible(p))
+        return(invisible(x))
     }
 
     for (i in rows) {
@@ -2098,15 +2106,16 @@ pip_untag <- function(p, tags = character()) {
         data.table::set(dat, i = i, j = "tags", value = list(list(newTags)))
     }
 
-    invisible(p)
+    invisible(x)
 }
 
 
-#' Lock selected steps against updates
+#' Lock steps against updates
 #'
-#' Locks all selected steps in the pipeline unless `p` is a view, in which
-#' case only steps covered by the view are locked.
-#' @param p A pipeflow pip or view.
+#' Locks all steps of a pipeline or a subset of steps defined by a view.
+#' Locked steps are skipped during [pip_run()] and cannot be modified by
+#' [pip_set_params()], [pip_tag()] or [pip_untag()].
+#' @param x A pipeflow pip or view.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |>
@@ -2125,28 +2134,26 @@ pip_untag <- function(p, tags = character()) {
 #' pip_unlock(p)
 #' p[["data"]][["locked"]] # FALSE, FALSE
 #' @export
-pip_lock <- function(p) {
-    .assert_pip_or_view(p)
+pip_lock <- function(x) {
+    .assert_pip_or_view(x)
 
-    isView <- .is_pipeflow_view(p)
-    x <- .pip_root(p)
-    dat <- x[["data"]]
-    rows <- .pip_view_rows(p)
+    env <- .pip_get_pip_env(x)
+    dat <- env[["data"]]
+    rows <- .pip_view_rows(x)
 
     if (length(rows) == 0L) {
-        return(invisible(p))
+        return(invisible(x))
     }
 
     data.table::set(dat, i = rows, j = "locked", value = TRUE)
-    invisible(p)
+    invisible(x)
 }
 
 
-#' Unlock selected steps
+#' Unlock steps
 #'
-#' Unlocks all selected steps in the pipeline unless `p` is a view, in which
-#' case only steps covered by the view are unlocked.
-#' @param p A pipeflow pip or view.
+#' Unlocks all steps of a pipeline or a subset of steps defined by a view.
+#' @param x A pipeflow pip or view.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |>
@@ -2160,20 +2167,19 @@ pip_lock <- function(p) {
 #' pip_unlock(p)
 #' p[["data"]][["locked"]] # FALSE, FALSE
 #' @export
-pip_unlock <- function(p) {
-    .assert_pip_or_view(p)
+pip_unlock <- function(x) {
+    .assert_pip_or_view(x)
 
-    isView <- .is_pipeflow_view(p)
-    x <- .pip_root(p)
-    dat <- x[["data"]]
-    rows <- .pip_view_rows(p)
+    env <- .pip_get_pip_env(x)
+    dat <- env[["data"]]
+    rows <- .pip_view_rows(x)
 
     if (length(rows) == 0L) {
-        return(invisible(p))
+        return(invisible(x))
     }
 
     data.table::set(dat, i = rows, j = "locked", value = FALSE)
-    invisible(p)
+    invisible(x)
 }
 
 
@@ -2245,8 +2251,8 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
     if (!.is_single(fixed, "logical")) {
         stop("fixed must be a single logical value")
     }
-    pip <- x[["pipenv"]]
-    dat <- pip[["data"]]
+    env <- x[["pipenv"]]
+    dat <- env[["data"]]
 
     filters <- list(...)
     validFilters <- c("step", "params", "depends", "state", "tags", "exec")
@@ -2291,7 +2297,7 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
 
     rows <- parent_rows[which(keep)]
     structure(
-        list(pipenv = pip, name = sprintf("%s view", x[["name"]]), rows = rows),
+        list(pipenv = env, name = sprintf("%s view", x[["name"]]), rows = rows),
         class = "pipeflow_pip"
     )
 }
@@ -2355,8 +2361,8 @@ length.pipeflow_pip <- function(x) {
 #' @rdname Extract.pipeflow_pip
 #' @export
 `[.pipeflow_pip` <- function(x, i, view = TRUE) {
-    dat <- x[["data"]]
-    n <- nrow(dat)
+    .assert_pip(x)
+    n <- length(x)
 
     # Resolve selected rows from either row indices or step names
     if (missing(i)) {
@@ -2398,9 +2404,11 @@ length.pipeflow_pip <- function(x) {
     }
 
     # Get all nodes that are reachable from the selected rows via upstream
+    env <- .pip_get_pip_env(x)
+    dat <- env[["data"]]
     startNodes <- dat[[".nodeId"]][rows]
     keepNodes <- dag_get_reachable_nodes_up(
-        .pip_root(x)[[".dag"]],
+        env[[".dag"]],
         as.integer(unique(startNodes))
     )
     subsetDat <- dat[dat[[".nodeId"]] %in% keepNodes]
@@ -2503,7 +2511,7 @@ length.pipeflow_pip <- function(x) {
     if (i %in% c("pipenv", "name", "rows")) {
         unclass(x)[[i]] <- value
     } else {
-        env <- .pip_root(x)
+        env <- .pip_get_pip_env(x)
         env[[i]] <- value
     }
     x

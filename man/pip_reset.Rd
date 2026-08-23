@@ -14,8 +14,9 @@ by the view are reset.}
 The updated pipeline or view, invisibly.
 }
 \description{
-Resets all steps to state \code{"new"} and clears their outputs, so a subsequent
-\code{\link[=pip_run]{pip_run()}} re-executes the whole pipeline from scratch. The run state is
+Resets all steps of a pipeline (or a subset of steps defined by a view)
+to state \code{"new"} and clears their outputs, so a subsequent
+\code{\link[=pip_run]{pip_run()}} re-executes the cleaned steps from scratch. The run state is
 reset to \code{"ready"} and any pending restart counter is cleared. Parameters,
 tags, and locked flags are left unchanged.
 }

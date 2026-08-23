@@ -2,19 +2,18 @@
 % Please edit documentation in R/pipeline.R
 \name{pip_unlock}
 \alias{pip_unlock}
-\title{Unlock selected steps}
+\title{Unlock steps}
 \usage{
-pip_unlock(p)
+pip_unlock(x)
 }
 \arguments{
-\item{p}{A pipeflow pip or view.}
+\item{x}{A pipeflow pip or view.}
 }
 \value{
 The updated pipeline or view, invisibly.
 }
 \description{
-Unlocks all selected steps in the pipeline unless \code{p} is a view, in which
-case only steps covered by the view are unlocked.
+Unlocks all steps of a pipeline or a subset of steps defined by a view.
 }
 \examples{
 p <- pip_new() |>

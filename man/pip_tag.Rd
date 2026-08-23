@@ -4,10 +4,10 @@
 \alias{pip_tag}
 \title{Add tags to selected steps}
 \usage{
-pip_tag(p, tags = character())
+pip_tag(x, tags = character())
 }
 \arguments{
-\item{p}{A pipeflow pip or view.}
+\item{x}{A pipeflow pip or view.}
 
 \item{tags}{Character vector of tags to add for each selected step.}
 }
@@ -15,9 +15,8 @@ pip_tag(p, tags = character())
 The updated pipeline or view, invisibly.
 }
 \description{
-Adds tags to existing tags for all steps in the pipeline unless \code{p} is a
-view, in which case tags are only added for steps covered by the view.
-Locked steps are skipped and not updated.
+Adds tags to existing tags for all steps of a pipeline or a subset
+of steps defined by a view.
 }
 \examples{
 p <- pip_new() |>
