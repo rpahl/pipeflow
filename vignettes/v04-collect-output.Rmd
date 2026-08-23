@@ -216,6 +216,14 @@ that depend on the `model_fit` step:
 pip |> pip_view(depends = "model_fit", state = "outdated")
 ```
 
+By default, multiple filters are combined with a logical AND, i.e. a step
+must match all of them. Alternatively, `join = "union"` keeps steps that
+match any of the filters:
+
+```{r}
+pip |> pip_view(tags = "data", depends = "model_fit", join = "union")
+```
+
 or using regex-based filtering to filter all outdated steps
 starting with `data`:
 
