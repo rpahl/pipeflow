@@ -58,7 +58,6 @@ reference:
   contents:
   - pip_get_graph
   - pip_get_params
-  - pip_has_step
   - pip_view
 
 - title: "Locking and tagging"

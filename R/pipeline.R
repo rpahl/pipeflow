@@ -686,7 +686,16 @@ pip_add <- function(
     if (!.is_pipeflow_pip(x)) {
         stop("x must be a pipeflow pip")
     }
-    if (pip_has_step(x, step)) {
+    if (!.is_single(step, "character")) {
+        stop("step must be a single string")
+    }
+    if (is.na(step)) {
+        stop("step must not be NA")
+    }
+    if (!nzchar(step)) {
+        stop("step must be a non-empty string")
+    }
+    if (.pip_step_exists(x, step)) {
         stop("step '", step, "' already exists in the pipeline")
     }
     if (!is.function(fun)) {
@@ -700,7 +709,7 @@ pip_add <- function(
         if (!.is_single(after, "character") || is.na(after) || !nzchar(after)) {
             stop("after must be a non-empty step name or integer index")
         }
-        if (!pip_has_step(x, after)) {
+        if (!.pip_step_exists(x, after)) {
             stop("step '", after, "' does not exist")
         }
         # Most of the time the new step is added at the end, so we check that
@@ -821,8 +830,7 @@ pip_add_from <- function(x, y, step) {
     if (!nzchar(step)) {
         stop("step must be a non-empty string")
     }
-
-    if (!pip_has_step(y, step)) {
+    if (!.pip_step_exists(y, step)) {
         stop("step '", step, "' does not exist in source pipeline")
     }
 
@@ -1167,41 +1175,6 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
 }
 
 
-#' Check whether a step exists
-#'
-#' @param x A pipeflow pip
-#' @param step A step name
-#' @return Logical indicating if the step exists
-#' @examples
-#' p <- pip_new() |>
-#'   pip_add("load", \(x = 1) x) |>
-#'   pip_add("fit", \(x = ~load) x + 1)
-#'
-#' pip_has_step(p, "load") # TRUE
-#' pip_has_step(p, "fit") # TRUE
-#' pip_has_step(p, "predict") # FALSE — step not yet added
-#' @export
-pip_has_step <- function(x, step) {
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
-
-    if (!.is_single(step, "character")) {
-        stop("step must be a single string")
-    }
-
-    if (is.na(step)) {
-        stop("step must not be NA")
-    }
-
-    if (!nzchar(step)) {
-        stop("step must be a non-empty string")
-    }
-
-    .pip_step_exists(x, step)
-}
-
-
 #' Remove a step
 #'
 #' If other steps depend on the step to be removed, an error is
@@ -1241,7 +1214,7 @@ pip_remove <- function(x, step, force = FALSE) {
     if (is.na(step)) {
         stop("step must not be NA")
     }
-    if (!pip_has_step(x, step)) {
+    if (!.pip_step_exists(x, step)) {
         stop("step '", step, "' does not exist")
     }
     if (!is.logical(force) || length(force) != 1L || is.na(force)) {
@@ -1362,10 +1335,10 @@ pip_rename <- function(x, from, to) {
         stop("to must be a non-empty string")
     }
 
-    if (!pip_has_step(x, from)) {
+    if (!.pip_step_exists(x, from)) {
         stop("step '", from, "' does not exist")
     }
-    if (pip_has_step(x, to)) {
+    if (.pip_step_exists(x, to)) {
         stop("step '", to, "' already exists")
     }
 
@@ -1435,7 +1408,7 @@ pip_replace <- function(x, step, fun, tags = character(0)) {
     if (!nzchar(step)) {
         stop("step must be a non-empty string")
     }
-    if (!pip_has_step(x, step)) {
+    if (!.pip_step_exists(x, step)) {
         stop("step '", step, "' does not exist")
     }
     if (!is.function(fun)) {
@@ -1759,6 +1732,59 @@ pip_stop <- function(x) {
     isView <- .is_pipeflow_view(x)
     pip <- if (isView) x[["pip"]] else x
     pip[[".run_state"]][] <- "stop"
+    invisible(x)
+}
+
+
+#' Reset a pipeline to its initial state
+#'
+#' Resets all steps to state `"new"` and clears their outputs, so a subsequent
+#' [pip_run()] re-executes the whole pipeline from scratch. The run state is
+#' reset to `"ready"` and any pending restart counter is cleared. Parameters,
+#' tags, and locked flags are left unchanged.
+#'
+#' @param x A pipeflow pip or view. If a view is given, only the steps covered
+#' by the view are reset.
+#'
+#' @return The updated pipeline or view, invisibly.
+#' @examples
+#' p <- pip_new() |>
+#'   pip_add("load", \(n = 3) seq_len(n)) |>
+#'   pip_add("square", \(x = ~load) x^2)
+#'
+#' pip_run(p)
+#' p[["pipeline"]][["state"]] # "done", "done"
+#'
+#' pip_reset(p)
+#' p[["pipeline"]][["state"]] # "new", "new"
+#' p[["pipeline"]][["out"]]   # NULL, NULL
+#' @export
+pip_reset <- function(x) {
+    .assert_pip_or_view(x)
+    isView <- .is_pipeflow_view(x)
+    pip <- if (isView) x[["pip"]] else x
+    dat <- pip[["pipeline"]]
+
+    rows <- if (isView) x[["rows"]] else seq_len(nrow(dat))
+    if (length(rows) == 0L) {
+        return(invisible(x))
+    }
+
+    data.table::set(
+        dat,
+        i = rows,
+        j = c("out", "state"),
+        value = list(
+            rep(list(NULL), length(rows)),
+            rep(.step_states[["new"]][["name"]], length(rows))
+        )
+    )
+
+    if (!isView) {
+        pip[[".run_state"]][] <- "ready"
+        pip[[".restart_count"]] <- 0L
+    }
+
     invisible(x)
 }
 

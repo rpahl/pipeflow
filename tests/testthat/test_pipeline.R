@@ -708,8 +708,8 @@ describe("pip_bind", {
         expect_equal(out[["pipeline"]][["step"]], c("s1", "s2", "t1", "t2"))
 
         pip_add(out, "extra", \(x = ~t2) x)
-        expect_false(pip_has_step(p1, "extra"))
-        expect_false(pip_has_step(p2, "extra"))
+        expect_false("extra" %in% p1[["pipeline"]][["step"]])
+        expect_false("extra" %in% p2[["pipeline"]][["step"]])
     })
 
     it("auto-renames duplicated step names from second pipeline", {
@@ -733,7 +733,7 @@ describe("pip_bind", {
             pip_add("s1", \(x = 3) x)
 
         out <- pip_bind(p1, p2)
-        expect_true(pip_has_step(out, "s13"))
+        expect_true("s13" %in% out[["pipeline"]][["step"]])
     })
 
     it("rebuilds DAG and keeps dependencies valid in result", {
@@ -853,7 +853,7 @@ describe("pip_add_from", {
 
         res <- pip_add_from(trg, src, "base")
         expect_true(.is_pipeflow_pip(res))
-        expect_true(pip_has_step(trg, "base"))
+        expect_true("base" %in% trg[["pipeline"]][["step"]])
 
         tgs <- trg[["pipeline"]][step == "base", tags][[1]]
         expect_equal(tgs, "g1")
@@ -865,7 +865,7 @@ describe("pip_add_from", {
             pip_add("base", \(x = 5) x)
 
         pip_add_from(trg, src, "calc")
-        expect_true(pip_has_step(trg, "calc"))
+        expect_true("calc" %in% trg[["pipeline"]][["step"]])
 
         dep <- trg[["pipeline"]][step == "calc", depends][[1]]
         expect_equal(unname(dep), "base")
@@ -1234,8 +1234,8 @@ describe("pip_clone", {
         expect_equal(p[["pipeline"]][["state"]][1], "new")
 
         pip_add(p2, "s3", \(x = ~s2) x)
-        expect_false(pip_has_step(p, "s3"))
-        expect_true(pip_has_step(p2, "s3"))
+        expect_false("s3" %in% p[["pipeline"]][["step"]])
+        expect_true("s3" %in% p2[["pipeline"]][["step"]])
     })
 
     it("rebinds .self params to the cloned pipeline", {
@@ -1444,25 +1444,6 @@ describe("pip_get_graph", {
         expect_equal(nrow(g[["nodes"]]), 0L)
         expect_equal(nrow(g[["edges"]]), 0L)
         expect_named(g, c("nodes", "edges"))
-    })
-})
-
-
-describe("pip_has_step", {
-    it("can be checked if pipeline has a step", {
-        p <- pip_new()
-        expect_false(pip_has_step(p, "s1"))
-        pip_add(p, "s1", \(a = 1) a)
-        expect_true(pip_has_step(p, "s1"))
-    })
-
-    it("errors at bad step argument", {
-        f <- pip_has_step
-        expect_error(f(p, list("not a character string")))
-        expect_error(f(p, c("not", "a", "single", "string")))
-        expect_error(f(p, NA))
-        expect_error(f(p, ""))
-        expect_error(f(p, 1))
     })
 })
 
@@ -2475,6 +2456,60 @@ describe("pip_stop", {
             p[["pipeline"]][["state"]],
             c("done", "done", "outdated", "outdated")
         )
+        expect_equal(as.character(p[[".run_state"]]), "ready")
+    })
+})
+
+describe("pip_reset", {
+    it("resets states and outputs of all steps", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1)
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["pipeline"]][["state"]], c("done", "done"))
+
+        pip_reset(p)
+
+        expect_equal(p[["pipeline"]][["state"]], c("new", "new"))
+        expect_true(all(vapply(p[["pipeline"]][["out"]], is.null, logical(1))))
+        expect_equal(as.character(p[[".run_state"]]), "ready")
+    })
+
+    it("keeps params and tags but clears outputs", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1, n = 5) x, tags = "io")
+        pip_run(p, lgr = NULL)
+        pip_set_params(p, list(n = 10))
+
+        pip_reset(p)
+
+        expect_equal(p[["pipeline"]][["params"]][[1]][["n"]], 10)
+        expect_equal(p[["pipeline"]][["tags"]][[1]], "io")
+    })
+
+    it("resets only the steps covered by a view", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1)
+        pip_run(p, lgr = NULL)
+
+        v <- pip_view(p, step = "b")
+        pip_reset(v)
+
+        expect_equal(p[["pipeline"]][["state"]], c("done", "new"))
+    })
+
+    it("allows re-running the pipeline from scratch after reset", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1)
+        pip_run(p, lgr = NULL)
+
+        pip_reset(p)
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["pipeline"]][["out"]], list(1, 2))
         expect_equal(as.character(p[[".run_state"]]), "ready")
     })
 })
