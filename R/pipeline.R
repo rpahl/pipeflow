@@ -2412,44 +2412,14 @@ length.pipeflow_view <- function(x) {
 }
 
 
-#' Extract bindings, columns, or row-level values from a pipeline
+#' Extract values from a pipeline or view
 #'
-#' Extracts values from a pipeline using one or two indices.
-#' With a single string name, named fields such as `"pipeline"` or `"name"`
-#' are returned first; anything else returns the matching step-table column.
-#' With two indices (`row`, `column`), a single cell is extracted.
-#' @param i integer (row index) or character (step name) of the step to
-#' select
-#' @param j column name to select
-#' @return Extracted value(s), depending on `i` and `j`.
-#' @examples
-#' p <- pip_new() |>
-#'   pip_add("load", \(x = 1) x) |>
-#'   pip_add("fit", \(x = ~load) x + 1)
-#'
-#' # Access internal objects by name
-#' p[["pipeline"]] # the full step table
-#' p[["name"]] # "pipe"
-#'
-#' # Shorthand column access (equivalent to p[["pipeline"]][["step"]])
-#' p[["step"]]
-#'
-#' # Two-index form: p[[row, column]] extracts a single cell
-#' p[["fit", "depends"]] # "load"
-#' p[[2, "state"]] # state of the second step
-#' @rdname Extract.pipeflow_pip
-#' @export
-`[[.pipeflow_pip` <- function(x, i, j, ...) {
-    .pip_subset2(x = x, i = i, j = j, ...)
-}
-
-
-#' Extract values from a view
-#'
-#' Extracts values from a view. With a single string name, named fields such
-#' as `"pip"` or `"rows"` are returned first; anything else returns the
-#' matching step-table column restricted to the steps covered by the view.
-#' With two indices (`row`, `column`), a single cell is extracted.
+#' Extracts values from a pipeline or view using one or two indices.
+#' With a single string name, named fields such as `"pipeline"`, `"name"`
+#' (pipeline) or `"pip"`, `"rows"` (view) are returned first; anything else
+#' returns the matching step-table column. For views, column access is
+#' restricted to the steps covered by the view. With two indices
+#' (`row`, `column`), a single cell is extracted.
 #' @param i integer (row index) or character (step name) of the step to
 #' select
 #' @param j column name to select
@@ -2460,19 +2430,32 @@ length.pipeflow_view <- function(x) {
 #'   pip_add("fit", \(x = ~load) x + 1)
 #' pip_run(p)
 #'
-#' v <- pip_view(p, step = c("load", "fit"))
-#'
 #' # Access internal objects by name
-#' v[["pip"]] # the underlying pipeline
-#' v[["rows"]] # row indices of the covered steps
+#' p[["pipeline"]]          # the full step table
+#' p[["name"]]              # "pipe"
 #'
-#' # Column access restricted to the view's steps
-#' v[["step"]] # "load", "fit"
-#' v[["out"]] # list of outputs
+#' # Shorthand column access (equivalent to p[["pipeline"]][["step"]])
+#' p[["step"]]
 #'
-#' # Two-index form: v[[row, column]] extracts a single cell
-#' v[["fit", "out"]] # output of the "fit" step
-#' @rdname Extract.pipeflow_pip
+#' # Two-index form: p[[row, column]] extracts a single cell
+#' p[["fit", "depends"]]    # "load"
+#' p[[2, "state"]]          # state of the second step
+#'
+#' # Views behave analogously:
+#' v <- pip_view(p, step = c("load", "fit"))
+#' v[["pip"]]               # the underlying pipeline
+#' v[["rows"]]              # row indices of the covered steps
+#' v[["step"]]              # "load", "fit"
+#' v[["out"]]               # list of outputs
+#' v[["fit", "out"]]        # output of the "fit" step
+#' @rdname Extract_value.pipeflow
+#' @export
+`[[.pipeflow_pip` <- function(x, i, j, ...) {
+    .pip_subset2(x = x, i = i, j = j, ...)
+}
+
+
+#' @rdname Extract_value.pipeflow
 #' @export
 `[[.pipeflow_view` <- function(x, i, j, ...) {
     .pip_subset2(x = x, i = i, j = j, ...)
