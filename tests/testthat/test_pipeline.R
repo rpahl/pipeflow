@@ -303,9 +303,9 @@ describe("pip_new", {
         expect_true(is.environment(p[["pip"]]))
         expect_true(data.table::is.data.table(p[["pipeline"]]))
         expect_equal(nrow(p[["pipeline"]]), 0L)
-        expect_true(is.environment(p[[".steps_to_nodes"]]))
-        expect_equal(ls(envir = p[[".steps_to_nodes"]]), character(0))
-        expect_equal(length(dag_get_nodes_order(p[[".dag"]])), 0L)
+        expect_true(is.environment(p[["pip"]][[".steps_to_nodes"]]))
+        expect_equal(ls(envir = p[["pip"]][[".steps_to_nodes"]]), character(0))
+        expect_equal(length(dag_get_nodes_order(p[["pip"]][[".dag"]])), 0L)
     })
 
     it("supports custom pipeline names", {
@@ -1009,19 +1009,19 @@ describe("pip_remove", {
     it("removes a leaf step", {
         p <- test_pip()
         node <- as.integer(.pip_steps_to_nodes(p, "g1")[[1]])
-        beforeOrder <- dag_get_nodes_order(p[[".dag"]])
+        beforeOrder <- dag_get_nodes_order(p[["pip"]][[".dag"]])
         beforeReach <- .pip_filter_nodes(
             p,
             .pip_get_reachable_nodes(p, "f1")
         )[["step"]]
 
-        expect_true(dag_has_node(p[[".dag"]], node))
+        expect_true(dag_has_node(p[["pip"]][[".dag"]], node))
         expect_true(node %in% beforeOrder)
         expect_setequal(beforeReach, c("f1", "f2", "f3", "f4"))
 
         pip_remove(p, "g1")
 
-        afterOrder <- dag_get_nodes_order(p[[".dag"]])
+        afterOrder <- dag_get_nodes_order(p[["pip"]][[".dag"]])
         afterReach <- .pip_filter_nodes(
             p,
             .pip_get_reachable_nodes(p, "f1")
@@ -1029,7 +1029,7 @@ describe("pip_remove", {
 
         expect_equal(p[["pipeline"]][["step"]], c("f1", "f2", "f3", "f4"))
         expect_true(is.na(.pip_steps_to_nodes(p, "g1")[[1]]))
-        expect_false(dag_has_node(p[[".dag"]], node))
+        expect_false(dag_has_node(p[["pip"]][[".dag"]], node))
         expect_false(node %in% afterOrder)
         expect_equal(length(afterOrder), length(beforeOrder) - 1L)
         expect_setequal(afterReach, c("f1", "f2", "f3", "f4"))
@@ -1054,11 +1054,12 @@ describe("pip_remove", {
             FUN = \(s) as.integer(.pip_steps_to_nodes(p, s)[[1]]),
             FUN.VALUE = integer(1)
         )
-        beforeOrder <- dag_get_nodes_order(p[[".dag"]])
+        beforeOrder <- dag_get_nodes_order(p[["pip"]][[".dag"]])
+        dag <- p[["pip"]][[".dag"]]
 
         expect_true(all(vapply(
             nodeMap,
-            FUN = \(nid) dag_has_node(p[[".dag"]], nid),
+            FUN = \(nid) dag_has_node(dag, nid),
             FUN.VALUE = logical(1)
         )))
 
@@ -1067,18 +1068,18 @@ describe("pip_remove", {
             type = "message"
         )
 
-        afterOrder <- dag_get_nodes_order(p[[".dag"]])
+        afterOrder <- dag_get_nodes_order(dag)
         remainingNode <- as.integer(nodeMap[["g1"]])
 
         expect_equal(p[["pipeline"]][["step"]], "g1")
         expect_equal(p[["pipeline"]][[".nodeId"]], remainingNode)
         expect_equal(afterOrder, remainingNode)
         expect_equal(length(afterOrder), length(beforeOrder) - 4L)
-        expect_true(dag_has_node(p[[".dag"]], remainingNode))
-        expect_false(dag_has_node(p[[".dag"]], as.integer(nodeMap[["f1"]])))
-        expect_false(dag_has_node(p[[".dag"]], as.integer(nodeMap[["f2"]])))
-        expect_false(dag_has_node(p[[".dag"]], as.integer(nodeMap[["f3"]])))
-        expect_false(dag_has_node(p[[".dag"]], as.integer(nodeMap[["f4"]])))
+        expect_true(dag_has_node(dag, remainingNode))
+        expect_false(dag_has_node(dag, as.integer(nodeMap[["f1"]])))
+        expect_false(dag_has_node(dag, as.integer(nodeMap[["f2"]])))
+        expect_false(dag_has_node(dag, as.integer(nodeMap[["f3"]])))
+        expect_false(dag_has_node(dag, as.integer(nodeMap[["f4"]])))
         expect_equal(
             .pip_filter_nodes(p, .pip_get_reachable_nodes(p, "g1"))[["step"]],
             "g1"
@@ -1491,12 +1492,12 @@ describe("pip_run", {
                 pip_add("s3", \(x = ~s2) x + 1)
 
             expect_error(pip_run(p, lgr = NULL), "boom")
-            expect_equal(as.character(p[[".run_state"]]), "failed")
+            expect_equal(as.character(p[["run_state"]]), "failed")
 
             # A subsequent successful run resets the state to ready.
             pip_replace(p, "s2", \(x = ~s1) x + 1)
             pip_run(p, lgr = NULL)
-            expect_equal(as.character(p[[".run_state"]]), "ready")
+            expect_equal(as.character(p[["run_state"]]), "ready")
         })
 
         it("marks the run state as failed when a view run errors", {
@@ -1506,7 +1507,7 @@ describe("pip_run", {
             v <- pip_view(p, step = "b")
 
             expect_error(pip_run(v, lgr = NULL), "view boom")
-            expect_equal(as.character(p[[".run_state"]]), "failed")
+            expect_equal(as.character(p[["run_state"]]), "failed")
         })
     })
 
@@ -2182,7 +2183,7 @@ describe("pip_restart", {
         pip_run(p, lgr = NULL)
 
         expect_equal(c[["n"]], 2L)
-        expect_equal(as.character(p[[".run_state"]]), "ready")
+        expect_equal(as.character(p[["run_state"]]), "ready")
     })
 
     it("stops recursive restarts after the announced times", {
@@ -2197,7 +2198,7 @@ describe("pip_restart", {
         pip_run(p, lgr = NULL)
 
         expect_equal(c[["n"]], 3L)
-        expect_equal(p[[".restart_count"]], 0L)
+        expect_equal(p[["pip"]][[".restart_count"]], 0L)
     })
 
     it("re-runs all steps on restart when force = TRUE", {
@@ -2259,15 +2260,15 @@ describe("pip_restart", {
             pip_add("s1", \(x = 1) x)
 
         pip_restart(p)
-        expect_equal(as.character(p[[".run_state"]]), "restart")
-        expect_equal(p[[".restart_count"]], 1L)
+        expect_equal(as.character(p[["run_state"]]), "restart")
+        expect_equal(p[["pip"]][[".restart_count"]], 1L)
 
         logs <- character(0)
         lgr <- function(level, msg) logs <<- c(logs, msg)
         pip_run(p, lgr = lgr)
 
         expect_true(any(grepl("Restarting run", logs)))
-        expect_equal(as.character(p[[".run_state"]]), "ready")
+        expect_equal(as.character(p[["run_state"]]), "ready")
     })
 
     it("restarts the underlying pipeline when called on a view", {
@@ -2277,8 +2278,8 @@ describe("pip_restart", {
 
         pip_restart(v)
 
-        expect_equal(as.character(p[[".run_state"]]), "restart")
-        expect_equal(p[[".restart_count"]], 1L)
+        expect_equal(as.character(p[["run_state"]]), "restart")
+        expect_equal(p[["pip"]][[".restart_count"]], 1L)
         expect_identical(v[["pipeline"]], p[["pipeline"]])
     })
 
@@ -2299,7 +2300,7 @@ describe("pip_restart", {
 
         expect_equal(c[["n"]], 2L)
         expect_equal(p[["pipeline"]][["out"]], list(1, 2))
-        expect_equal(as.character(p[[".run_state"]]), "ready")
+        expect_equal(as.character(p[["run_state"]]), "ready")
     })
 
     it("restarts without declaring .self in the step signature", {
@@ -2316,7 +2317,7 @@ describe("pip_restart", {
         pip_run(p, lgr = NULL)
 
         expect_equal(c[["n"]], 2L)
-        expect_equal(as.character(p[[".run_state"]]), "ready")
+        expect_equal(as.character(p[["run_state"]]), "ready")
     })
 })
 
@@ -2331,8 +2332,8 @@ describe("pip_stop", {
 
         pip_stop(p)
 
-        expect_equal(as.character(p[[".run_state"]]), "stop")
-        expect_equal(as.character(p[[".run_state"]][]), "stop")
+        expect_equal(as.character(p[["run_state"]]), "stop")
+        expect_equal(as.character(p[["run_state"]][]), "stop")
     })
 
     it("aborts the run at the stopping step and marks downstream outdated", {
@@ -2351,7 +2352,7 @@ describe("pip_stop", {
             p[["pipeline"]][["state"]],
             c("done", "done", "outdated")
         )
-        expect_equal(as.character(p[[".run_state"]]), "ready")
+        expect_equal(as.character(p[["run_state"]]), "ready")
     })
 
     it("logs the manual stop message during the run", {
@@ -2440,7 +2441,7 @@ describe("pip_stop", {
 
         pip_stop(v)
 
-        expect_equal(as.character(p[[".run_state"]]), "stop")
+        expect_equal(as.character(p[["run_state"]]), "stop")
         expect_identical(v[["pipeline"]], p[["pipeline"]])
     })
 
@@ -2462,7 +2463,7 @@ describe("pip_stop", {
             p[["pipeline"]][["state"]],
             c("done", "done", "outdated", "outdated")
         )
-        expect_equal(as.character(p[[".run_state"]]), "ready")
+        expect_equal(as.character(p[["run_state"]]), "ready")
     })
 })
 
@@ -2479,7 +2480,7 @@ describe("pip_reset", {
 
         expect_equal(p[["pipeline"]][["state"]], c("new", "new"))
         expect_true(all(vapply(p[["pipeline"]][["out"]], is.null, logical(1))))
-        expect_equal(as.character(p[[".run_state"]]), "ready")
+        expect_equal(as.character(p[["run_state"]]), "ready")
     })
 
     it("keeps params and tags but clears outputs", {
@@ -2516,7 +2517,7 @@ describe("pip_reset", {
         pip_run(p, lgr = NULL)
 
         expect_equal(p[["pipeline"]][["out"]], list(1, 2))
-        expect_equal(as.character(p[[".run_state"]]), "ready")
+        expect_equal(as.character(p[["run_state"]]), "ready")
     })
 })
 
@@ -3079,7 +3080,7 @@ describe("extract operator [", {
 
         from <- as.integer(.pip_steps_to_nodes(sub, "a2")[[1]])
         to <- as.integer(.pip_steps_to_nodes(sub, "b1")[[1]])
-        dag_add_edges_to(sub[[".dag"]], from = from, to = to)
+        dag_add_edges_to(sub[["pip"]][[".dag"]], from = from, to = to)
 
         sub_steps <- .pip_filter_nodes(
             sub,
@@ -3115,7 +3116,7 @@ describe("extract operator [[", {
         p <- test_pip()
         expect_equal(p[["name"]], "pipe")
         expect_true(data.table::is.data.table(p[["pipeline"]]))
-        expect_false(is.null(p[[".dag"]]))
+        expect_false(is.null(p[["pip"]][[".dag"]]))
     })
 
     it("extracts full columns when j is missing", {

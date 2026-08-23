@@ -101,16 +101,18 @@
     }
 }
 
-# The shared inner environment holding all mutable state. Both full pipelines
-# and views reach it via `x[["pip"]]`, so run state, DAG and step data are
-# always shared between a pipeline and its views.
+# The shared inner environment holding all mutable state.
+# If `x` is already the inner environment, it is returned unchanged.
 .pip_root <- function(x) {
+    if (is.environment(x)) {
+        return(x)
+    }
     .subset2(x, "pip")
 }
 
 # A full pipeflow_pip wrapper (rows = NULL) around the shared inner
 # environment. Used for `.self` inside steps so structural operations such as
-# pip_replace() work on the underlying full pipeline even when running a view.
+# pip_replace() work on the underlying full pipeline.
 .pip_root_pip <- function(x) {
     structure(
         list(pip = .pip_root(x), name = .subset2(x, "name"), rows = NULL),
@@ -357,9 +359,13 @@
             if (i %in% c("pip", "name", "rows")) {
                 return(.subset2(x, i))
             }
-            # Inner-env bindings come next (e.g. "pipeline", ".dag").
+            # Public inner-env bindings like "pipeline" are next. Hidden
+            # internals like ".dag" and ".steps_to_nodes" are deliberately
+            # not exposed. They can still be accessed "manually" from the
+            # inner environment if needed.
             env <- .pip_root(x)
-            if (exists(i, where = env, inherits = FALSE)) {
+            if (i %in% ls(env)) {
+                # ls() by default does not list variables starting with a dot
                 return(get(i, envir = env, inherits = FALSE))
             }
         }
@@ -429,13 +435,13 @@
 # Step lookup & DAG traversal
 # ---------------------------
 .pip_step_exists <- function(x, step) {
-    exists(step, where = x[[".steps_to_nodes"]], inherits = FALSE)
+    exists(step, where = .pip_root(x)[[".steps_to_nodes"]], inherits = FALSE)
 }
 
 .pip_steps_to_nodes <- function(x, steps) {
     mget(
         steps,
-        envir = x[[".steps_to_nodes"]],
+        envir = .pip_root(x)[[".steps_to_nodes"]],
         ifnotfound = NA_integer_,
         inherits = FALSE
     )
@@ -460,14 +466,14 @@
 }
 
 .pip_get_reachable_nodes <- function(x, steps, downstream = TRUE) {
-    known <- intersect(steps, names(x[[".steps_to_nodes"]]))
+    known <- intersect(steps, names(.pip_root(x)[[".steps_to_nodes"]]))
     if (length(known) == 0L) {
         return(integer(0))
     }
 
     start_ids <- as.integer(mget(
         known,
-        envir = x[[".steps_to_nodes"]],
+        envir = .pip_root(x)[[".steps_to_nodes"]],
         ifnotfound = NA_integer_,
         inherits = FALSE
     ))
@@ -477,9 +483,9 @@
     }
 
     if (downstream) {
-        dag_get_reachable_nodes_down(x[[".dag"]], start_ids)
+        dag_get_reachable_nodes_down(.pip_root(x)[[".dag"]], start_ids)
     } else {
-        dag_get_reachable_nodes_up(x[[".dag"]], start_ids)
+        dag_get_reachable_nodes_up(.pip_root(x)[[".dag"]], start_ids)
     }
 }
 
@@ -524,7 +530,7 @@
     depends <- .extract_depends(params = params, steps = steps)
     refNodes <- mget(
         depends,
-        envir = x[[".steps_to_nodes"]],
+        envir = .pip_root(x)[[".steps_to_nodes"]],
         ifnotfound = NA_integer_,
         inherits = FALSE
     )
@@ -539,7 +545,7 @@
     }
 
     # Update DAG
-    d <- x[[".dag"]]
+    d <- .pip_root(x)[[".dag"]]
     .nodeId <- as.integer(dag_add_node(d))
     if (length(refNodes) > 0) {
         dag_add_edges_to(d, from = as.integer(refNodes), to = .nodeId)
@@ -557,7 +563,8 @@
     )
 
     x[["pipeline"]] <- data.table::rbindlist(list(x[["pipeline"]], newStep))
-    x[[".steps_to_nodes"]][[step]] <- .nodeId
+    env <- .pip_root(x)
+    env[[".steps_to_nodes"]][[step]] <- .nodeId
     x
 }
 
@@ -683,7 +690,7 @@ pip_new <- function(name = "pipe") {
     env[[".steps_to_nodes"]] <- hash_map()
 
     # Pipeline states
-    env[[".run_state"]] <- factor(
+    env[["run_state"]] <- factor(
         "ready",
         levels = c("ready", "restart", "running", "stop", "failed")
     )
@@ -897,8 +904,9 @@ pip_add <- function(
     }
 
     x[["pipeline"]] <- out[["pipeline"]]
-    x[[".dag"]] <- out[[".dag"]]
-    x[[".steps_to_nodes"]] <- out[[".steps_to_nodes"]]
+    env <- .pip_root(x)
+    env[[".dag"]] <- .pip_root(out)[[".dag"]]
+    env[[".steps_to_nodes"]] <- .pip_root(out)[[".steps_to_nodes"]]
     invisible(x)
 }
 
@@ -1075,15 +1083,16 @@ pip_clone <- function(x, name = NULL) {
     newName <- if (is.null(name)) x[["name"]] else name
     out <- pip_new(name = newName)
 
-    out[[".dag"]] <- dag_clone(x[[".dag"]])
+    out[[".dag"]] <- dag_clone(.pip_root(x)[[".dag"]])
     dat <- data.table::copy(x[["pipeline"]])
     out[["pipeline"]] <- dat
 
     # Clone steps to nodes mapping
+    stepsToNodes <- .pip_root(out)[[".steps_to_nodes"]]
     for (k in seq_len(nrow(dat))) {
         step <- dat[["step"]][[k]]
         nodeId <- dat[[".nodeId"]][[k]]
-        out[[".steps_to_nodes"]][[step]] <- nodeId
+        stepsToNodes[[step]] <- nodeId
     }
 
     out
@@ -1374,19 +1383,29 @@ pip_remove <- function(x, step, force = FALSE) {
 
     # Remove DAG nodes first to keep node references stable during filtering.
     for (nid in rev(nodesToRemove)) {
-        ok <- dag_remove_node(x[[".dag"]], nid, force = force)
+        ok <- dag_remove_node(.pip_root(x)[[".dag"]], nid, force = force)
         if (!ok) {
             stop("failed to remove node ", nid, " from DAG")
         }
     }
-    dag_tidy_up(x[[".dag"]])
+    dag_tidy_up(.pip_root(x)[[".dag"]])
 
     keep <- !(dat[["step"]] %in% stepsToRemove)
     x[["pipeline"]] <- dat[keep]
 
     for (s in stepsToRemove) {
-        if (exists(s, where = x[[".steps_to_nodes"]], inherits = FALSE)) {
-            rm(list = s, envir = x[[".steps_to_nodes"]], inherits = FALSE)
+        if (
+            exists(
+                s,
+                where = .pip_root(x)[[".steps_to_nodes"]],
+                inherits = FALSE
+            )
+        ) {
+            rm(
+                list = s,
+                envir = .pip_root(x)[[".steps_to_nodes"]],
+                inherits = FALSE
+            )
         }
     }
 
@@ -1462,9 +1481,10 @@ pip_rename <- function(x, from, to) {
     data.table::set(dat, j = "step", value = newSteps)
     data.table::set(dat, j = "depends", value = newDepends)
 
-    nodeId <- x[[".steps_to_nodes"]][[from]]
-    x[[".steps_to_nodes"]][[to]] <- nodeId
-    rm(list = from, envir = x[[".steps_to_nodes"]], inherits = FALSE)
+    stepsToNodes <- .pip_root(x)[[".steps_to_nodes"]]
+    nodeId <- stepsToNodes[[from]]
+    stepsToNodes[[to]] <- nodeId
+    rm(list = from, envir = stepsToNodes, inherits = FALSE)
 
     data.table::setindexv(dat, list("step", ".nodeId"))
     invisible(x)
@@ -1574,8 +1594,9 @@ pip_replace <- function(x, step, fun, tags = character(0)) {
     }
 
     x[["pipeline"]] <- out[["pipeline"]]
-    x[[".dag"]] <- out[[".dag"]]
-    x[[".steps_to_nodes"]] <- out[[".steps_to_nodes"]]
+    env <- .pip_root(x)
+    env[[".dag"]] <- .pip_root(out)[[".dag"]]
+    env[[".steps_to_nodes"]] <- .pip_root(out)[[".steps_to_nodes"]]
     invisible(x)
 }
 
@@ -1676,10 +1697,10 @@ pip_run <- function(
         }
     })
 
-    state <- pip[[".run_state"]]
+    state <- pip[["run_state"]]
     action <- if (state == "restart") "Restarting" else "Starting"
     log_info(sprintf("%s run of %s '%s'", action, data.class(x), x[["name"]]))
-    pip[[".run_state"]][] <- "running"
+    pip[["run_state"]][] <- "running"
     tryCatch(
         {
             for (i in seq_along(rowsToRun)) {
@@ -1714,7 +1735,7 @@ pip_run <- function(
                 # Run current step
                 log_info(msg)
                 .pip_run_row(selfPip, i = row, lgr = lgr)
-                stateAfterStep <- pip[[".run_state"]]
+                stateAfterStep <- pip[["run_state"]]
 
                 # Check for restart or stop signals
                 if (stateAfterStep == "restart") {
@@ -1738,11 +1759,11 @@ pip_run <- function(
             log_info(
                 sprintf("Finished run of %s '%s'", data.class(x), x[["name"]])
             )
-            pip[[".run_state"]][] <- "ready"
+            pip[["run_state"]][] <- "ready"
             invisible(x)
         },
         error = function(e) {
-            pip[[".run_state"]][] <- "failed"
+            pip[["run_state"]][] <- "failed"
             stop_no_call(e$message)
         }
     )
@@ -1796,7 +1817,7 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
         return(invisible(x))
     }
 
-    pip[[".run_state"]][] <- "restart"
+    pip[["run_state"]][] <- "restart"
     pip[[".restart_count"]] <- count + 1L
     pip[[".restart_force"]] <- force
     invisible(x)
@@ -1831,7 +1852,7 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
 pip_stop <- function(x) {
     .assert_pip_or_view(x)
     pip <- .pip_root(x)
-    pip[[".run_state"]][] <- "stop"
+    pip[["run_state"]][] <- "stop"
     invisible(x)
 }
 
@@ -1881,7 +1902,7 @@ pip_reset <- function(x) {
     )
 
     if (!isView) {
-        pip[[".run_state"]][] <- "ready"
+        pip[["run_state"]][] <- "ready"
         pip[[".restart_count"]] <- 0L
     }
 
@@ -2379,7 +2400,7 @@ length.pipeflow_pip <- function(x) {
     # Get all nodes that are reachable from the selected rows via upstream
     startNodes <- dat[[".nodeId"]][rows]
     keepNodes <- dag_get_reachable_nodes_up(
-        x[[".dag"]],
+        .pip_root(x)[[".dag"]],
         as.integer(unique(startNodes))
     )
     subsetDat <- dat[dat[[".nodeId"]] %in% keepNodes]
