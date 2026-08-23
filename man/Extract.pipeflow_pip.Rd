@@ -3,34 +3,49 @@
 \name{[.pipeflow_pip}
 \alias{[.pipeflow_pip}
 \alias{[[.pipeflow_pip}
+\alias{[[.pipeflow_view}
 \title{Extract or subset a pipeline}
 \usage{
-\method{[}{pipeflow_pip}(x, i, ...)
+\method{[}{pipeflow_pip}(x, i, view = TRUE)
 
 \method{[[}{pipeflow_pip}(x, i, j, ...)
+
+\method{[[}{pipeflow_view}(x, i, j, ...)
 }
 \arguments{
 \item{x}{A pipeflow pipeline object.}
 
-\item{i}{integer (row indices) or character vector (step names) of steps to
+\item{i}{integer (row index) or character (step name) of the step to
 select}
 
-\item{...}{not used}
+\item{view}{If \code{TRUE} (default), a view referencing the selected steps is
+returned. If \code{FALSE}, a new pipeline is returned that includes the selected
+steps and all their upstream dependencies.}
 
-\item{j}{column names to select}
+\item{j}{column name to select}
 }
 \value{
-A new pipeflow pipeline object.
+A pipeflow view (if \code{view = TRUE}) or a new pipeflow pipeline
+(if \code{view = FALSE}).
+
+Extracted value(s), depending on \code{i} and \code{j}.
 
 Extracted value(s), depending on \code{i} and \code{j}.
 }
 \description{
-Returns a new pipeline containing selected steps and all required upstream
-dependencies.
+Selects steps from a pipeline. By default, a lightweight \code{\link[=pip_view]{pip_view()}} is
+returned that references the selected steps without copying them. Set
+\code{view = FALSE} to instead get a new, self-contained pipeline that includes
+all required upstream dependencies.
 
 Extracts values from a pipeline using one or two indices.
 With a single string name, named fields such as \code{"pipeline"} or \code{"name"}
 are returned first; anything else returns the matching step-table column.
+With two indices (\code{row}, \code{column}), a single cell is extracted.
+
+Extracts values from a view. With a single string name, named fields such
+as \code{"pip"} or \code{"rows"} are returned first; anything else returns the
+matching step-table column restricted to the steps covered by the view.
 With two indices (\code{row}, \code{column}), a single cell is extracted.
 }
 \examples{
@@ -39,16 +54,18 @@ p <- pip_new() |>
   pip_add("square", \(x = ~load) x^2) |>
   pip_add("total", \(x = ~square) sum(x))
 
-# Select by step name — upstream deps are pulled in automatically.
-# Selecting only "total" still includes "load" and "square".
+# By default, `[` returns a view into the selected steps.
 sub <- p["total"]
-sub[["pipeline"]][["step"]] # "load", "square", "total"
+sub # pipeflow_view, references the underlying pipeline
 
-# Select a subset of steps by name vector
-p[c("load", "square")][["pipeline"]][["step"]] # "load", "square"
+# With view = FALSE, a self-contained pipeline including all upstream
+# dependencies is returned instead.
+sub <- p["total", view = FALSE]
+sub[["step"]] # "load", "square", "total"
 
-# Select by integer row index
-p[1:2][["pipeline"]][["step"]] # "load", "square"
+# Select a subset of steps by name vector or integer row index
+p[c("load", "square")][["step"]] # view -> "load", "square"
+p[1:2, view = FALSE][["step"]]    # pipeline -> "load", "square"
 p <- pip_new() |>
   pip_add("load", \(x = 1) x) |>
   pip_add("fit", \(x = ~load) x + 1)
@@ -63,4 +80,24 @@ p[["step"]]
 # Two-index form: p[[row, column]] extracts a single cell
 p[["fit", "depends"]] # "load"
 p[[2, "state"]] # state of the second step
+
+# For column access across multiple steps, use a view:
+pip_view(p)[["state"]]
+p <- pip_new() |>
+  pip_add("load", \(x = 1) x) |>
+  pip_add("fit", \(x = ~load) x + 1)
+pip_run(p)
+
+v <- pip_view(p, step = c("load", "fit"))
+
+# Access internal objects by name
+v[["pip"]] # the underlying pipeline
+v[["rows"]] # row indices of the covered steps
+
+# Column access restricted to the view's steps
+v[["step"]] # "load", "fit"
+v[["out"]] # list of outputs
+
+# Two-index form: v[[row, column]] extracts a single cell
+v[["fit", "out"]] # output of the "fit" step
 }

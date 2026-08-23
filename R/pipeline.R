@@ -294,6 +294,71 @@
     }
 }
 
+# Internal implementation shared by [[.pipeflow_pip and [[.pipeflow_view.
+.pip_subset2 <- function(x, i, j, ...) {
+    isView <- .is_pipeflow_view(x)
+    pip <- if (isView) unclass(x)[["pip"]] else x
+    dat <- get("pipeline", envir = pip, inherits = FALSE)
+
+    if (missing(j)) {
+        if (missing(i)) {
+            stop("i must be provided")
+        }
+
+        # Internal bindings have priority over step names/column names.
+        if (is.character(i) && length(i) == 1L && !is.na(i)) {
+            if (isView) {
+                if (i %in% names(x)) {
+                    return(unclass(x)[[i]])
+                }
+            } else if (exists(i, where = x, inherits = FALSE)) {
+                return(get(i, envir = x, inherits = FALSE))
+            }
+        }
+
+        # Column access, restricted to the view's rows for views.
+        col <- dat[[i]]
+        if (isView) {
+            col <- col[as.integer(unclass(x)[["rows"]])]
+        }
+        return(col)
+    }
+
+    # Two-index form extracts a single cell from a single row.
+    if (missing(i)) {
+        stop("i must be provided")
+    }
+    if (length(i) != 1L || is.na(i)) {
+        stop("i must be a single step name or row index")
+    }
+    if (!is.character(j) || length(j) != 1L || is.na(j)) {
+        stop("j must be a single column name")
+    }
+
+    if (is.character(i)) {
+        row <- .pip_steps_to_rows(x, i)
+        if (isView && !(row %in% as.integer(unclass(x)[["rows"]]))) {
+            stop("undefined step selected")
+        }
+    } else {
+        if (!is.finite(i) || i != as.integer(i)) {
+            stop("row index must be a whole number")
+        }
+        row <- as.integer(i)
+        if (isView) {
+            # We need to unclass the view first to access the underlying rows
+            rows <- as.integer(unclass(x)[["rows"]])
+            if (row < 1L || row > length(rows)) {
+                stop("row index out of bounds")
+            }
+            row <- rows[row]
+        } else if (row < 1L || row > nrow(dat)) {
+            stop("row index out of bounds")
+        }
+    }
+    dat[[j]][[row]]
+}
+
 .pip_filter <- function(x, on, values) {
     x[["pipeline"]][list(values), on = on]
 }
@@ -758,7 +823,11 @@ pip_add <- function(
     n <- nrow(dat)
 
     # 2) Create a new pipeline and copy all steps up to the insertion point
-    out <- if (pos > 0L) src[seq_len(pos)] else pip_new(name = src[["name"]])
+    out <- if (pos > 0L) {
+        src[seq_len(pos), view = FALSE]
+    } else {
+        pip_new(name = src[["name"]])
+    }
 
     # 3) Add the new step at the end of the new pipeline
     pip_add(out, step = step, fun = fun, tags = tags, exec = exec)
@@ -1421,7 +1490,7 @@ pip_replace <- function(x, step, fun, tags = character(0)) {
     iStep <- match(step, dat[["step"]])
 
     out <- if (iStep > 1L) {
-        src[seq_len(iStep - 1L)]
+        src[seq_len(iStep - 1L), view = FALSE]
     } else {
         pip_new(name = src[["name"]])
     }
@@ -2208,38 +2277,49 @@ length.pipeflow_view <- function(x) {
 
 #' Extract or subset a pipeline
 #'
-#' Returns a new pipeline containing selected steps and all required upstream
-#' dependencies.
+#' Selects steps from a pipeline. By default, a lightweight [pip_view()] is
+#' returned that references the selected steps without copying them. Set
+#' `view = FALSE` to instead get a new, self-contained pipeline that includes
+#' all required upstream dependencies.
 #' @param x A pipeflow pipeline object.
 #' @param i integer (row indices) or character vector (step names) of steps to
 #' select
-#' @param ... not used
-#' @return A new pipeflow pipeline object.
+#' @param view If `TRUE` (default), a view referencing the selected steps is
+#' returned. If `FALSE`, a new pipeline is returned that includes the selected
+#' steps and all their upstream dependencies.
+#' @return A pipeflow view (if `view = TRUE`) or a new pipeflow pipeline
+#' (if `view = FALSE`).
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(n = 5) seq_len(n)) |>
 #'   pip_add("square", \(x = ~load) x^2) |>
 #'   pip_add("total", \(x = ~square) sum(x))
 #'
-#' # Select by step name — upstream deps are pulled in automatically.
-#' # Selecting only "total" still includes "load" and "square".
+#' # By default, `[` returns a view into the selected steps.
 #' sub <- p["total"]
-#' sub[["pipeline"]][["step"]] # "load", "square", "total"
+#' sub # pipeflow_view, references the underlying pipeline
 #'
-#' # Select a subset of steps by name vector
-#' p[c("load", "square")][["pipeline"]][["step"]] # "load", "square"
+#' # With view = FALSE, a self-contained pipeline including all upstream
+#' # dependencies is returned instead.
+#' sub <- p["total", view = FALSE]
+#' sub[["step"]] # "load", "square", "total"
 #'
-#' # Select by integer row index
-#' p[1:2][["pipeline"]][["step"]] # "load", "square"
+#' # Select a subset of steps by name vector or integer row index
+#' p[c("load", "square")][["step"]] # view -> "load", "square"
+#' p[1:2, view = FALSE][["step"]]    # pipeline -> "load", "square"
 #' @rdname Extract.pipeflow_pip
 #' @export
-`[.pipeflow_pip` <- function(x, i, ...) {
+`[.pipeflow_pip` <- function(x, i, view = TRUE) {
     dat <- x[["pipeline"]]
     n <- nrow(dat)
 
     # Resolve selected rows from either row indices or step names
     if (missing(i)) {
         return(pip_clone(x))
+    }
+
+    if (!.is_single(view, "logical") || is.na(view)) {
+        stop("view must be a single logical value")
     }
 
     if (!(is.numeric(i) || is.character(i))) {
@@ -2261,6 +2341,13 @@ length.pipeflow_view <- function(x) {
         if (length(bad) > 0L) {
             stop("Invalid row indices in 'i': ", toString(bad))
         }
+    }
+
+    if (view) {
+        name <- sprintf("%s view", x[["name"]])
+        view <- list(pip = x, name = name, rows = rows)
+        class(view) <- "pipeflow_view"
+        return(view)
     }
 
     out <- pip_new(name = x[["name"]])
@@ -2312,6 +2399,15 @@ length.pipeflow_view <- function(x) {
     out[[".dag"]] <- d
     out[[".steps_to_nodes"]] <- stepsToNodes
 
+    nUpstream <- nrow(subsetDat) - length(rows)
+    if (nUpstream > 0L) {
+        message(sprintf(
+            "pulled in %d upstream dependenc%s",
+            nUpstream,
+            if (nUpstream == 1L) "y" else "ies"
+        ))
+    }
+
     out
 }
 
@@ -2322,9 +2418,9 @@ length.pipeflow_view <- function(x) {
 #' With a single string name, named fields such as `"pipeline"` or `"name"`
 #' are returned first; anything else returns the matching step-table column.
 #' With two indices (`row`, `column`), a single cell is extracted.
-#' @param i integer (row indices) or character vector (step names) of steps to
+#' @param i integer (row index) or character (step name) of the step to
 #' select
-#' @param j column names to select
+#' @param j column name to select
 #' @return Extracted value(s), depending on `i` and `j`.
 #' @examples
 #' p <- pip_new() |>
@@ -2344,44 +2440,42 @@ length.pipeflow_view <- function(x) {
 #' @rdname Extract.pipeflow_pip
 #' @export
 `[[.pipeflow_pip` <- function(x, i, j, ...) {
-    # Keep environment-style extraction for internal bindings, e.g.
-    # x[["pipeline"]], x[[".dag"]], x[[".steps_to_nodes"]].
-    if (missing(j)) {
-        if (missing(i)) {
-            stop("i must be provided")
-        }
+    .pip_subset2(x = x, i = i, j = j, ...)
+}
 
-        # Internal bindings have priority over step names/column names.
-        # This guarantees p[["name"]] and p[["pipeline"]] behave like
-        # environment access even if steps with those names exist.
-        if (
-            is.character(i) &&
-                length(i) == 1L &&
-                !is.na(i) &&
-                exists(i, where = x, inherits = FALSE)
-        ) {
-            return(get(i, envir = x, inherits = FALSE))
-        }
 
-        # Lightweight fallback: delegate single-argument extraction to the
-        # pipeline data.table column extractor.
-        return(x[["pipeline"]][[i]])
-    }
-
-    col <- x[["pipeline"]][[j]]
-    if (missing(i)) {
-        return(col)
-    }
-
-    if (is.character(i)) {
-        i <- .pip_steps_to_rows(x, i)
-    }
-
-    res <- col[i]
-    if (length(i) == 1) {
-        res <- res[[1]]
-    }
-    res
+#' Extract values from a view
+#'
+#' Extracts values from a view. With a single string name, named fields such
+#' as `"pip"` or `"rows"` are returned first; anything else returns the
+#' matching step-table column restricted to the steps covered by the view.
+#' With two indices (`row`, `column`), a single cell is extracted.
+#' @param i integer (row index) or character (step name) of the step to
+#' select
+#' @param j column name to select
+#' @return Extracted value(s), depending on `i` and `j`.
+#' @examples
+#' p <- pip_new() |>
+#'   pip_add("load", \(x = 1) x) |>
+#'   pip_add("fit", \(x = ~load) x + 1)
+#' pip_run(p)
+#'
+#' v <- pip_view(p, step = c("load", "fit"))
+#'
+#' # Access internal objects by name
+#' v[["pip"]] # the underlying pipeline
+#' v[["rows"]] # row indices of the covered steps
+#'
+#' # Column access restricted to the view's steps
+#' v[["step"]] # "load", "fit"
+#' v[["out"]] # list of outputs
+#'
+#' # Two-index form: v[[row, column]] extracts a single cell
+#' v[["fit", "out"]] # output of the "fit" step
+#' @rdname Extract.pipeflow_pip
+#' @export
+`[[.pipeflow_view` <- function(x, i, j, ...) {
+    .pip_subset2(x = x, i = i, j = j, ...)
 }
 
 

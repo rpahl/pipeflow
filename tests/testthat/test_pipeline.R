@@ -2968,18 +2968,36 @@ describe("extract operator [", {
             pip_add("b2", \(x = ~b1) x)
     }
 
-    it("returns a pipeline subset including upstream dependencies by row", {
+    it("returns a view into the selected steps by default", {
         p <- test_pip()
-        sub <- p[5L]
+        v <- p[5L]
+
+        expect_true(.is_pipeflow_view(v))
+        expect_equal(v[["rows"]], 5L)
+        expect_identical(v[["pip"]], p)
+    })
+
+    it("returns a view by step names by default", {
+        p <- test_pip()
+        v <- p[c("a2", "b2")]
+
+        expect_true(.is_pipeflow_view(v))
+        expect_equal(v[["rows"]], c(2L, 5L))
+    })
+
+    it("returns a pipeline including upstream dependencies with view = FALSE", {
+        p <- test_pip()
+        suppressMessages(sub <- p[5L, view = FALSE])
 
         expect_true(.is_pipeflow_pip(sub))
         expect_equal(sub[["pipeline"]][["step"]], c("b1", "b2"))
     })
 
-    it("returns a pipeline subset including upstream dependencies by step", {
+    it("returns a pipeline by step names with view = FALSE", {
         p <- test_pip()
-        sub <- p[c("a2", "b2")]
+        suppressMessages(sub <- p[c("a2", "b2"), view = FALSE])
 
+        expect_true(.is_pipeflow_pip(sub))
         expect_equal(sub[["pipeline"]][["step"]], c("a1", "a2", "b1", "b2"))
     })
 
@@ -2990,11 +3008,11 @@ describe("extract operator [", {
         expect_equal(sub[["pipeline"]][["step"]], p[["pipeline"]][["step"]])
     })
 
-    it("returns an empty pipeline for empty selectors", {
+    it("returns an empty pipeline for empty selectors with view = FALSE", {
         p <- test_pip()
 
-        expect_equal(length(p[integer()]), 0L)
-        expect_equal(length(p[character()]), 0L)
+        expect_equal(length(p[integer(), view = FALSE]), 0L)
+        expect_equal(length(p[character(), view = FALSE]), 0L)
     })
 
     it("signals invalid row indices", {
@@ -3014,9 +3032,9 @@ describe("extract operator [", {
         expect_error(p[c("a1", "unknown")], "Unknown step names")
     })
 
-    it("returns an independent copy", {
+    it("returns an independent copy with view = FALSE", {
         p <- test_pip()
-        sub <- p[c("a2")]
+        suppressMessages(sub <- p[c("a2"), view = FALSE])
 
         sub[["pipeline"]][["state"]][1] <- "done"
         expect_equal(p[["pipeline"]][["state"]][1], "new")
@@ -3024,7 +3042,7 @@ describe("extract operator [", {
 
     it("copies DAG edges for the extracted subset", {
         p <- test_pip()
-        sub <- p[c("a2", "b2")]
+        suppressMessages(sub <- p[c("a2", "b2"), view = FALSE])
 
         nodes_a1 <- .pip_get_reachable_nodes(sub, "a1")
         steps_a1 <- .pip_filter_nodes(sub, nodes_a1)[["step"]]
@@ -3037,7 +3055,7 @@ describe("extract operator [", {
 
     it("uses an independent DAG copy in the extracted subset", {
         p <- test_pip()
-        sub <- p[c("a2", "b2")]
+        suppressMessages(sub <- p[c("a2", "b2"), view = FALSE])
 
         from <- as.integer(.pip_steps_to_nodes(sub, "a2")[[1]])
         to <- as.integer(.pip_steps_to_nodes(sub, "b1")[[1]])
@@ -3054,6 +3072,14 @@ describe("extract operator [", {
             .pip_get_reachable_nodes(p, "a1")
         )[["step"]]
         expect_setequal(original_steps, c("a1", "a2", "a3"))
+    })
+
+    it("signals the number of pulled-in upstream dependencies", {
+        p <- test_pip()
+
+        expect_message(p[5L, view = FALSE], "pulled in 1 upstream")
+        expect_message(p[c("a2", "b2"), view = FALSE], "pulled in 2 upstream")
+        expect_silent(p[c("a1", "b1"), view = FALSE])
     })
 })
 
@@ -3079,19 +3105,16 @@ describe("extract operator [[", {
         expect_null(p[["unknown"]])
     })
 
-    it("extracts by row selector and column selector", {
+    it("extracts a single cell by row selector and column selector", {
         p <- test_pip()
 
         expect_equal(p[[2L, "step"]], "s2")
         expect_equal(p[["s1", "state"]], "new")
-        expect_equal(p[[c(1L, 2L), "state"]], c("new", "new"))
-        expect_equal(p[[c("s1", "s2"), "step"]], c("s1", "s2"))
     })
 
-    it("extracts list-columns for single and multiple rows consistently", {
+    it("extracts list-column values for a single row", {
         p <- test_pip() |> pip_run(lgr = NULL)
 
-        # Single-row extraction returns the row value from the list-column.
         expect_equal(p[[1L, "tags"]], "init")
         expect_equal(p[[2L, "tags"]], character(0))
         expect_equal(p[[1L, "params"]], list(x = 1))
@@ -3100,22 +3123,19 @@ describe("extract operator [[", {
         expect_equal(p[[2L, "depends"]], c(x = "s1"))
         expect_equal(p[[1L, "out"]], 1)
         expect_equal(p[[2L, "out"]], 2)
+    })
 
-        # Multi-row extraction returns a list of row values.
-        tags <- p[[c(1L, 2L), "tags"]]
-        expect_true(is.list(tags))
-        expect_equal(tags[[1]], "init")
-        expect_equal(tags[[2]], character(0))
+    it("signals multi-step column access and points to pip_view", {
+        p <- test_pip()
 
-        depends <- p[[c("s1", "s2"), "depends"]]
-        expect_true(is.list(depends))
-        expect_equal(depends[[1]], character(0))
-        expect_equal(depends[[2]], c(x = "s1"))
-
-        outs <- p[[c("s1", "s2"), "out"]]
-        expect_true(is.list(outs))
-        expect_equal(outs[[1]], 1)
-        expect_equal(outs[[2]], 2)
+        expect_error(
+            p[[c(1L, 2L), "state"]],
+            "i must be a single step name or row index"
+        )
+        expect_error(
+            p[[c("s1", "s2"), "step"]],
+            "i must be a single step name or row index"
+        )
     })
 
     it(
@@ -3139,20 +3159,67 @@ describe("extract operator [[", {
     it("signals invalid row and column selectors", {
         p <- test_pip()
 
-        expect_equal(p[[c(1, NA), "step"]], c("s1", NA_character_))
         expect_error(
             p[[c("s1", ""), "step"]],
-            "step names must be non-empty strings"
+            "i must be a single step name or row index"
         )
         expect_error(
             p[[c("s1", "unknown"), "step"]],
-            "Unknown step names"
+            "i must be a single step name or row index"
         )
         expect_null(p[[1, "unknown"]])
         expect_error(
             p[[1, c("step", "state")]],
-            "subscript out of bounds"
+            "j must be a single column name"
         )
+    })
+
+    it("extracts internal bindings and columns from a view", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        v <- pip_view(p, step = c("s1", "s2"))
+
+        expect_identical(v[["pip"]], p)
+        expect_equal(v[["rows"]], c(1L, 2L))
+        expect_equal(v[["step"]], c("s1", "s2"))
+        expect_equal(v[["out"]], list(1, 2))
+    })
+
+    it("extracts a single cell from a view by step name or row index", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        v <- pip_view(p, step = c("s1", "s2"))
+
+        expect_equal(v[["s2", "out"]], 2)
+        expect_equal(v[[2, "step"]], "s2")
+    })
+
+    it("signals steps not covered by the view", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        v <- pip_view(p, step = "s1")
+
+        expect_error(
+            v[["s2", "out"]],
+            "undefined step selected"
+        )
+    })
+
+    it("signals out-of-bounds row indices for pipelines and views", {
+        p <- test_pip()
+        v <- pip_view(p, step = "s1")
+
+        expect_error(p[[0L, "step"]], "row index out of bounds")
+        expect_error(p[[nrow(p[["pipeline"]]) + 1L, "step"]],
+            "row index out of bounds")
+        expect_error(v[[0L, "step"]], "row index out of bounds")
+        expect_error(v[[2L, "step"]], "row index out of bounds")
+        expect_error(v[[length(v) + 1L, "step"]], "row index out of bounds")
+    })
+
+    it("signals non-whole-number row indices for pipelines and views", {
+        p <- test_pip()
+        v <- pip_view(p, step = "s1")
+
+        expect_error(p[[1.5, "step"]], "row index must be a whole number")
+        expect_error(v[[1.5, "step"]], "row index must be a whole number")
     })
 })
 

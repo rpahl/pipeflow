@@ -2,6 +2,7 @@
 
 S3method("[",pipeflow_pip)
 S3method("[[",pipeflow_pip)
+S3method("[[",pipeflow_view)
 S3method(length,pipeflow_pip)
 S3method(length,pipeflow_view)
 S3method(print,pipeflow_pip)
