@@ -462,7 +462,7 @@
         stop("step names must be non-empty strings", call. = FALSE)
     }
 
-    i <- match(steps, dat[["step"]])
+    i <- data.table::chmatch(steps, dat[["step"]])
     if (anyNA(i)) {
         unknown <- unique(steps[is.na(i)])
         stop("Unknown step names: ", toString(unknown), call. = FALSE)
@@ -625,7 +625,7 @@
     # modified itself at runtime. Since we update by step name, if the current
     # step does not exist anymore, we simply skip the update.
     dat <- x[["data"]]
-    rowNow <- match(step, dat[["step"]])
+    rowNow <- data.table::chmatch(step, dat[["step"]])
     stepStillExists <- !is.na(rowNow)
     if (stepStillExists) {
         data.table::set(
@@ -839,7 +839,7 @@ pip_add <- function(
         pos <- n
         last <- x[["data"]][["step"]][n]
         if (after != last) {
-            pos <- match(after, x[["data"]][["step"]])
+            pos <- data.table::chmatch(after, x[["data"]][["step"]])
         }
     } else if (is.numeric(after)) {
         if (length(after) != 1 || is.na(after)) {
@@ -959,7 +959,7 @@ pip_add_from <- function(x, y, step) {
         stop("step '", step, "' does not exist in source pipeline")
     }
 
-    iStep <- match(step, y[["data"]][["step"]])
+    iStep <- data.table::chmatch(step, y[["data"]][["step"]])
     fun <- y[["data"]][["fun"]][[iStep]]
     tags <- y[["data"]][["tags"]][[iStep]]
     exec <- y[["data"]][["exec"]][[iStep]]
@@ -1016,13 +1016,15 @@ pip_bind <- function(x, y) {
 
     # Resolve all name clashes directly on the cloned source pipeline.
     reserved <- out[["data"]][["step"]]
+
+    `%chin%` <- data.table::`%chin%`
     for (k in seq_len(nrow(yyDat))) {
         step <- yyDat[["step"]][[k]]
-        if (step %in% reserved) {
+        if (step %chin% reserved) {
             to <- step
             i <- 2L
             allSteps <- yyDat[["step"]]
-            while (to %in% reserved || to %in% allSteps) {
+            while (to %chin% reserved || to %chin% allSteps) {
                 to <- paste0(step, i)
                 i <- i + 1L
             }
@@ -1343,10 +1345,12 @@ pip_remove <- function(x, step, force = FALSE) {
 
     env <- .pip_get_pip_env(x)
     dat <- env[["data"]]
+    `%chin%` <- data.table::`%chin%`
+
     directDeps <- dat[["step"]][
         vapply(
             dat[["depends"]],
-            FUN = \(dep) step %in% dep,
+            FUN = \(dep) step %chin% dep,
             FUN.VALUE = logical(1)
         )
     ]
@@ -1397,7 +1401,7 @@ pip_remove <- function(x, step, force = FALSE) {
     }
     dag_tidy_up(env[[".dag"]])
 
-    keep <- !(dat[["step"]] %in% stepsToRemove)
+    keep <- !(dat[["step"]] %chin% stepsToRemove)
     env[["data"]] <- dat[keep]
 
     for (s in stepsToRemove) {
@@ -1473,8 +1477,9 @@ pip_rename <- function(x, from, to) {
 
     env <- .pip_get_pip_env(x)
     dat <- env[["data"]]
+    `%chin%` <- data.table::`%chin%`
     newSteps <- dat[["step"]]
-    newSteps[newSteps %in% from] <- to
+    newSteps[newSteps %chin% from] <- to
 
     newDepends <- lapply(
         dat[["depends"]],
@@ -1482,7 +1487,7 @@ pip_rename <- function(x, from, to) {
             if (length(dep) == 0L) {
                 return(dep)
             }
-            dep[dep %in% from] <- to
+            dep[dep %chin% from] <- to
             dep
         }
     )
@@ -1547,7 +1552,7 @@ pip_replace <- function(x, step, fun, tags = character(0)) {
     src <- pip_clone(x)
     dat <- src[["data"]]
     n <- nrow(dat)
-    iStep <- match(step, dat[["step"]])
+    iStep <- data.table::chmatch(step, dat[["step"]])
 
     out <- if (iStep > 1L) {
         src[seq_len(iStep - 1L), view = FALSE]
