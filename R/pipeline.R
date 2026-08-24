@@ -509,6 +509,34 @@
     eval(call("function", formals(fun), body(fun)), envir = env)
 }
 
+# Copy a step from another pipeline
+.pip_add_from <- function(x, y, step) {
+    iStep <- data.table::chmatch(step, y[["data"]][["step"]])
+    fun <- y[["data"]][["fun"]][[iStep]]
+    tags <- y[["data"]][["tags"]][[iStep]]
+    exec <- y[["data"]][["exec"]][[iStep]]
+    params <- y[["data"]][["params"]][[iStep]]
+    depends <- y[["data"]][["depends"]][[iStep]]
+    indeps <- y[["data"]][[".indeps"]][[iStep]]
+
+    # Recreate defaults from stored params/dependencies so pip_add can
+    # resolve references and wire DAG updates in the target pipeline.
+    fml <- formals(fun)
+    for (nm in indeps) {
+        fml[[nm]] <- params[[nm]]
+    }
+
+    if (length(depends) > 0L) {
+        for (arg in names(depends)) {
+            fml[[arg]] <- stats::as.formula(paste("~", depends[[arg]]))
+        }
+    }
+
+    formals(fun) <- fml
+    pip_add(x, step = step, fun = fun, tags = tags, exec = exec)
+}
+
+
 .pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
     if (".self" %in% names(formals(fun))) {
         stop_no_call(
@@ -893,7 +921,7 @@ pip_add <- function(
     tailRows <- seq.int(pos + 1L, n)
     for (i in tailRows) {
         tailStep <- dat[["step"]][[i]]
-        pip_add_from(out, y = src, step = tailStep)
+        .pip_add_from(out, y = src, step = tailStep)
 
         iOut <- nrow(out[["data"]])
         data.table::set(
@@ -916,73 +944,6 @@ pip_add <- function(
     invisible(x)
 }
 
-
-#' Copy a step from another pipeline
-#'
-#' Copies one step from pipeline `y` into pipeline `x`, preserving its
-#' function, parameters, tags, and dependency links.
-#'
-#' @param x Target pipeflow pipeline object.
-#' @param y Source pipeflow pipeline object.
-#' @param step Step name to copy from `y`.
-#'
-#' @return The updated target pipeline, invisibly.
-#' @examples
-#' # Build a source pipeline with reusable steps
-#' src <- pip_new("source") |>
-#'   pip_add("load", \(n = 3) seq_len(n)) |>
-#'   pip_add("square", \(x = ~load) x^2)
-#'
-#' # Copy steps into a new pipeline one at a time.
-#' # The dependency of "square" on "load" is re-established automatically.
-#' dst <- pip_new("target")
-#' pip_add_from(dst, src, "load")
-#' pip_add_from(dst, src, "square")
-#' pip_run(dst)
-#' pip_collect_out(dst)
-#' @export
-pip_add_from <- function(x, y, step) {
-    .assert_pip(x)
-    if (!.is_pipeflow_pip(y)) {
-        stop("y must be a pipeflow pip")
-    }
-    if (!.is_single(step, "character")) {
-        stop("step must be a single string")
-    }
-    if (is.na(step)) {
-        stop("step must not be NA")
-    }
-    if (!nzchar(step)) {
-        stop("step must be a non-empty string")
-    }
-    if (!.pip_step_exists(y, step)) {
-        stop("step '", step, "' does not exist in source pipeline")
-    }
-
-    iStep <- data.table::chmatch(step, y[["data"]][["step"]])
-    fun <- y[["data"]][["fun"]][[iStep]]
-    tags <- y[["data"]][["tags"]][[iStep]]
-    exec <- y[["data"]][["exec"]][[iStep]]
-    params <- y[["data"]][["params"]][[iStep]]
-    depends <- y[["data"]][["depends"]][[iStep]]
-    indeps <- y[["data"]][[".indeps"]][[iStep]]
-
-    # Recreate defaults from stored params/dependencies so pip_add can
-    # resolve references and wire DAG updates in the target pipeline.
-    fml <- formals(fun)
-    for (nm in indeps) {
-        fml[[nm]] <- params[[nm]]
-    }
-
-    if (length(depends) > 0L) {
-        for (arg in names(depends)) {
-            fml[[arg]] <- stats::as.formula(paste("~", depends[[arg]]))
-        }
-    }
-
-    formals(fun) <- fml
-    pip_add(x, step = step, fun = fun, tags = tags, exec = exec)
-}
 
 #' Bind pipelines
 #'
@@ -1033,10 +994,10 @@ pip_bind <- function(x, y) {
         reserved <- c(reserved, yyDat[["step"]][[k]])
     }
 
-    # Add (potentially renamed) steps from y one by one via pip_add_from.
+    # Add (potentially renamed) steps from y one by one via .pip_add_from.
     for (k in seq_len(nrow(yyDat))) {
         step <- yyDat[["step"]][[k]]
-        pip_add_from(out, y = yy, step = step)
+        .pip_add_from(out, y = yy, step = step)
 
         # Preserve runtime state from source pipeline.
         iOut <- nrow(out[["data"]])
@@ -1568,7 +1529,7 @@ pip_replace <- function(x, step, fun, tags = character(0)) {
         tailRows <- seq.int(iStep + 1L, n)
         for (i in tailRows) {
             tailStep <- dat[["step"]][[i]]
-            pip_add_from(out, y = src, step = tailStep)
+            .pip_add_from(out, y = src, step = tailStep)
 
             iOut <- nrow(out[["data"]])
             data.table::set(

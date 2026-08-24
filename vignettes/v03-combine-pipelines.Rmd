@@ -226,38 +226,6 @@ pip_run(pip)
 pip[["plot", "out"]]
 ```
 
-### Step cherry-picking
-
-Another way to re-use steps from other pipelines is by cherry-picking,
-which can be done via `pip_add_from`, for example:
-
-```{r cherry-pick}
-pip <- pip_new("cherry-picked-from-1-and-2") |>
-    pip_add_from(pip1, "data") |>
-    pip_add_from(pip1, "data_prep") |>
-    pip_add_from(pip1, "standardize") |>
-    pip_add_from(pip2, "fit") |>
-    pip_add_from(pip2, "plot")
-
-pip
-```
-
-Note that here the cherry-pick approach is not all that useful,
-because in contrast to the `pip_bind` command,
-which renames `data` to `data2`, the cherry-picked `fit` and `plot` steps
-still refer to the initial `data` step.
-
-```{r, echo = FALSE}
-library(visNetwork)
-do.call(
-    visNetwork,
-    args = c(pip_get_graph(pip), list(height = 250, width = 700))
-) |>
-    visHierarchicalLayout(direction = "LR", sortMethod = "directed")
-```
-
-In other scenarios, however, this might be exactly what you want.
-
 Generally, when creating these pipelines, there will be a lot of steps calculating
 intermediate results and only a few steps contain the final output we are
 interested in (see e.g. the `plot` output in the above example).

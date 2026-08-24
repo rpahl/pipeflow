@@ -240,6 +240,100 @@ describe(".pip_steps_to_rows", {
 })
 
 
+describe(".pip_add_from", {
+    test_source <- function() {
+        pip_new("src") |>
+            pip_add("base", \(x = 2) x, tags = "g1") |>
+            pip_add(
+                "calc",
+                \(x = ~base, m = 3) x * m,
+                tags = c("g2", "reuse", "math")
+            )
+    }
+
+    it("signals invalid inputs", {
+        src <- test_source()
+        trg <- pip_new("target")
+
+        expect_error(.pip_add_from(1, "base", src), "x must be a pipeflow pip")
+        expect_error(.pip_add_from(trg, "base", 1), "y must be a pipeflow pip")
+        expect_error(.pip_add_from(trg, src, c("a", "b")))
+        expect_error(.pip_add_from(trg, src, NA_character_))
+        expect_error(.pip_add_from(trg, src, ""))
+        expect_error(
+            .pip_add_from(trg, src, "unknown"),
+            "does not exist in source pipeline"
+        )
+    })
+
+    it("adds an independent step preserving tags", {
+        src <- test_source()
+        trg <- pip_new("target")
+
+        res <- .pip_add_from(trg, src, "base")
+        expect_true(.is_pipeflow_pip(res))
+        expect_true("base" %in% trg[["data"]][["step"]])
+
+        tgs <- trg[["data"]][step == "base", tags][[1]]
+        expect_equal(tgs, "g1")
+    })
+
+    it("adds dependent step when dependencies exist in target", {
+        src <- test_source()
+        trg <- pip_new("target") |>
+            pip_add("base", \(x = 5) x)
+
+        .pip_add_from(trg, src, "calc")
+        expect_true("calc" %in% trg[["data"]][["step"]])
+
+        dep <- trg[["data"]][step == "calc", depends][[1]]
+        expect_equal(unname(dep), "base")
+
+        pip_run(trg, lgr = NULL)
+        out <- trg[["data"]][step == "calc", out][[1]]
+        expect_equal(out, 15)
+    })
+
+    it("signals when copied step depends on missing steps in target", {
+        src <- test_source()
+        trg <- pip_new("target")
+
+        expect_error(
+            .pip_add_from(trg, src, "calc"),
+            "cannot reference unknown steps: 'base'"
+        )
+    })
+
+    it("rebinds .self to target pipeline through pip_add", {
+        src <- pip_new("src") |>
+            pip_add("self", \(x = 1) .self[["name"]])
+        trg <- pip_new("target")
+
+        .pip_add_from(trg, src, "self")
+        pip_run(trg, lgr = NULL)
+        expect_equal(trg[["data"]][["out"]][[1]], "target")
+    })
+
+    it("preserves tags and exec mode from source step", {
+        src <- pip_new("src") |>
+            pip_add(
+                "calc",
+                \(x = 1) x,
+                tags = c("math", "core"),
+                exec = "split"
+            )
+        trg <- pip_new("target")
+
+        .pip_add_from(trg, src, "calc")
+        expect_equal(
+            trg[["data"]][step == "calc", tags][[1]],
+            c("math", "core")
+        )
+        expect_equal(trg[["data"]][step == "calc", exec][[1]], "split")
+    })
+})
+
+
 describe(".pip_update_downstream", {
     test_pip <- function() {
         pip_new() |>
@@ -304,7 +398,10 @@ describe("pip_new", {
         expect_true(data.table::is.data.table(p[["data"]]))
         expect_equal(nrow(p[["data"]]), 0L)
         expect_true(is.environment(p[["pipenv"]][[".steps_to_nodes"]]))
-        expect_equal(ls(envir = p[["pipenv"]][[".steps_to_nodes"]]), character(0))
+        expect_equal(
+            ls(envir = p[["pipenv"]][[".steps_to_nodes"]]),
+            character(0)
+        )
         expect_equal(length(dag_get_nodes_order(p[["pipenv"]][[".dag"]])), 0L)
     })
 
@@ -819,100 +916,6 @@ describe("pip_bind", {
             out[["data"]][["locked"]],
             c(TRUE, FALSE, FALSE, TRUE)
         )
-    })
-})
-
-
-describe("pip_add_from", {
-    test_source <- function() {
-        pip_new("src") |>
-            pip_add("base", \(x = 2) x, tags = "g1") |>
-            pip_add(
-                "calc",
-                \(x = ~base, m = 3) x * m,
-                tags = c("g2", "reuse", "math")
-            )
-    }
-
-    it("signals invalid inputs", {
-        src <- test_source()
-        trg <- pip_new("target")
-
-        expect_error(pip_add_from(1, "base", src), "x must be a pipeflow pip")
-        expect_error(pip_add_from(trg, "base", 1), "y must be a pipeflow pip")
-        expect_error(pip_add_from(trg, src, c("a", "b")))
-        expect_error(pip_add_from(trg, src, NA_character_))
-        expect_error(pip_add_from(trg, src, ""))
-        expect_error(
-            pip_add_from(trg, src, "unknown"),
-            "does not exist in source pipeline"
-        )
-    })
-
-    it("adds an independent step preserving tags", {
-        src <- test_source()
-        trg <- pip_new("target")
-
-        res <- pip_add_from(trg, src, "base")
-        expect_true(.is_pipeflow_pip(res))
-        expect_true("base" %in% trg[["data"]][["step"]])
-
-        tgs <- trg[["data"]][step == "base", tags][[1]]
-        expect_equal(tgs, "g1")
-    })
-
-    it("adds dependent step when dependencies exist in target", {
-        src <- test_source()
-        trg <- pip_new("target") |>
-            pip_add("base", \(x = 5) x)
-
-        pip_add_from(trg, src, "calc")
-        expect_true("calc" %in% trg[["data"]][["step"]])
-
-        dep <- trg[["data"]][step == "calc", depends][[1]]
-        expect_equal(unname(dep), "base")
-
-        pip_run(trg, lgr = NULL)
-        out <- trg[["data"]][step == "calc", out][[1]]
-        expect_equal(out, 15)
-    })
-
-    it("signals when copied step depends on missing steps in target", {
-        src <- test_source()
-        trg <- pip_new("target")
-
-        expect_error(
-            pip_add_from(trg, src, "calc"),
-            "cannot reference unknown steps: 'base'"
-        )
-    })
-
-    it("rebinds .self to target pipeline through pip_add", {
-        src <- pip_new("src") |>
-            pip_add("self", \(x = 1) .self[["name"]])
-        trg <- pip_new("target")
-
-        pip_add_from(trg, src, "self")
-        pip_run(trg, lgr = NULL)
-        expect_equal(trg[["data"]][["out"]][[1]], "target")
-    })
-
-    it("preserves tags and exec mode from source step", {
-        src <- pip_new("src") |>
-            pip_add(
-                "calc",
-                \(x = 1) x,
-                tags = c("math", "core"),
-                exec = "split"
-            )
-        trg <- pip_new("target")
-
-        pip_add_from(trg, src, "calc")
-        expect_equal(
-            trg[["data"]][step == "calc", tags][[1]],
-            c("math", "core")
-        )
-        expect_equal(trg[["data"]][step == "calc", exec][[1]], "split")
     })
 })
 
