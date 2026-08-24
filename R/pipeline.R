@@ -602,6 +602,55 @@
     x
 }
 
+# Bind two pipelines together by concatenating their steps.
+.pip_bind <- function(x, y) {
+    out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
+    yy <- pip_clone(y)
+    yyDat <- yy[["data"]]
+
+    # Resolve all name clashes directly on the cloned source pipeline.
+    reserved <- out[["data"]][["step"]]
+
+    `%chin%` <- data.table::`%chin%`
+    for (k in seq_len(nrow(yyDat))) {
+        step <- yyDat[["step"]][[k]]
+        if (step %chin% reserved) {
+            to <- step
+            i <- 2L
+            allSteps <- yyDat[["step"]]
+            while (to %chin% reserved || to %chin% allSteps) {
+                to <- paste0(step, i)
+                i <- i + 1L
+            }
+            pip_rename(yy, from = step, to = to)
+        }
+        reserved <- c(reserved, yyDat[["step"]][[k]])
+    }
+
+    # Add (potentially renamed) steps from y one by one via .pip_add_from.
+    for (k in seq_len(nrow(yyDat))) {
+        step <- yyDat[["step"]][[k]]
+        .pip_add_from(out, y = yy, step = step)
+
+        # Preserve runtime state from source pipeline.
+        iOut <- nrow(out[["data"]])
+        data.table::set(
+            out[["data"]],
+            i = iOut,
+            j = c("out", "time", "state", "locked"),
+            value = list(
+                list(yyDat[["out"]][[k]]),
+                yyDat[["time"]][[k]],
+                yyDat[["state"]][[k]],
+                yyDat[["locked"]][[k]]
+            )
+        )
+    }
+
+    out
+}
+
+
 .pip_run_row <- function(x, i, lgr) {
     if (!.is_pipeflow_pip(x)) {
         stop("x must be a pipeflow pip")
@@ -942,79 +991,6 @@ pip_add <- function(
     env[[".dag"]] <- .pip_get_pip_env(out)[[".dag"]]
     env[[".steps_to_nodes"]] <- .pip_get_pip_env(out)[[".steps_to_nodes"]]
     invisible(x)
-}
-
-
-#' Bind pipelines
-#'
-#' Bind two pipelines together by concatenating their steps. If both pipelines
-#' have steps with the same name, the step names of the second pipeline will be
-#' automatically adapted to avoid name clashes.
-#' @param x A pipeflow pipeline object.
-#' @param y A pipeflow pipeline object.
-#' @return A new pipeflow pipeline object representing the bound pipelines.
-#' @examples
-#' a <- pip_new("a") |>
-#'   pip_add("prep", \(x = 1) x * 2) |>
-#'   pip_add("fit", \(x = ~prep) x + 10)
-#'
-#' # "prep" exists in both pipelines; the one from b gets a numeric suffix
-#' b <- pip_new("b") |> pip_add("prep", \(x = 5) x * 3)
-#'
-#' ab <- pip_bind(a, b)
-#' ab[["step"]] # "prep", "fit", "prep2" (step name conflict auto-resolved)
-#' ab
-#' @export
-pip_bind <- function(x, y) {
-    .assert_pip(x)
-    if (!.is_pipeflow_pip(y)) {
-        stop("y must be a pipeflow pip")
-    }
-
-    out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
-    yy <- pip_clone(y)
-    yyDat <- yy[["data"]]
-
-    # Resolve all name clashes directly on the cloned source pipeline.
-    reserved <- out[["data"]][["step"]]
-
-    `%chin%` <- data.table::`%chin%`
-    for (k in seq_len(nrow(yyDat))) {
-        step <- yyDat[["step"]][[k]]
-        if (step %chin% reserved) {
-            to <- step
-            i <- 2L
-            allSteps <- yyDat[["step"]]
-            while (to %chin% reserved || to %chin% allSteps) {
-                to <- paste0(step, i)
-                i <- i + 1L
-            }
-            pip_rename(yy, from = step, to = to)
-        }
-        reserved <- c(reserved, yyDat[["step"]][[k]])
-    }
-
-    # Add (potentially renamed) steps from y one by one via .pip_add_from.
-    for (k in seq_len(nrow(yyDat))) {
-        step <- yyDat[["step"]][[k]]
-        .pip_add_from(out, y = yy, step = step)
-
-        # Preserve runtime state from source pipeline.
-        iOut <- nrow(out[["data"]])
-        data.table::set(
-            out[["data"]],
-            i = iOut,
-            j = c("out", "time", "state", "locked"),
-            value = list(
-                list(yyDat[["out"]][[k]]),
-                yyDat[["time"]][[k]],
-                yyDat[["state"]][[k]],
-                yyDat[["locked"]][[k]]
-            )
-        )
-    }
-
-    out
 }
 
 
@@ -2594,4 +2570,51 @@ print.pipeflow_pip <- function(
     )
 
     invisible(x)
+}
+
+
+#' Bind pipelines
+#'
+#' Binds two or more pipelines together by concatenating their steps. If the
+#' pipelines have steps with the same name, the step names of later pipelines
+#' are automatically adapted to avoid name clashes. A single pipeline is
+#' returned unchanged.
+#' @param ... Two or more pipeflow pipeline objects.
+#' @param deparse.level Not used, for compatibility with the generic
+#' `rbind()`.
+#' @return A new pipeflow pipeline object representing the bound pipelines.
+#' @examples
+#' a <- pip_new("a") |>
+#'   pip_add("prep", \(x = 1) x * 2) |>
+#'   pip_add("fit", \(x = ~prep) x + 10)
+#'
+#' # "prep" exists in both pipelines; the one from b gets a numeric suffix
+#' b <- pip_new("b") |> pip_add("prep", \(x = 5) x * 3)
+#'
+#' ab <- rbind(a, b)
+#' ab[["step"]] # "prep", "fit", "prep2" (step name conflict auto-resolved)
+#' ab
+#'
+#' # Any number of pipelines can be combined
+#' abc <- rbind(a, b, b)
+#' abc
+#' @export
+rbind.pipeflow_pip <- function(..., deparse.level = 1) {
+    pips <- list(...)
+    if (length(pips) == 0L) {
+        stop("at least one pipeflow pipeline must be provided")
+    }
+    for (pip in pips) {
+        .assert_pip(pip)
+    }
+
+    out <- pips[[1L]]
+    if (length(pips) == 1L) {
+        return(out)
+    }
+
+    for (pip in pips[-1L]) {
+        out <- .pip_bind(out, pip)
+    }
+    out
 }

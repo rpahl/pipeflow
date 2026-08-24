@@ -43,7 +43,7 @@ reference:
   desc: Combine, clone, or copy steps between pipelines.
   contents:
   - pip_add_from
-  - pip_bind
+  - rbind.pipeflow_pip
   - pip_clone
 
 - title: "Running pipelines"

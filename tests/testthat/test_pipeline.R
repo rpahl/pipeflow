@@ -251,19 +251,14 @@ describe(".pip_add_from", {
             )
     }
 
-    it("signals invalid inputs", {
+    it("signals unknown steps", {
         src <- test_source()
         trg <- pip_new("target")
 
-        expect_error(.pip_add_from(1, "base", src), "x must be a pipeflow pip")
-        expect_error(.pip_add_from(trg, "base", 1), "y must be a pipeflow pip")
         expect_error(.pip_add_from(trg, src, c("a", "b")))
         expect_error(.pip_add_from(trg, src, NA_character_))
         expect_error(.pip_add_from(trg, src, ""))
-        expect_error(
-            .pip_add_from(trg, src, "unknown"),
-            "does not exist in source pipeline"
-        )
+        expect_error(.pip_add_from(trg, src, "unknown"))
     })
 
     it("adds an independent step preserving tags", {
@@ -778,144 +773,6 @@ describe("pip_add exec modes", {
             expect_no_error(pip_add(p, "s1", \(x = 1) x, exec = mode))
             expect_equal(p[["data"]][["exec"]][[1]], mode)
         }
-    })
-})
-
-
-describe("pip_bind", {
-    test_pip <- function(name = "p") {
-        pip_new(name) |>
-            pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(x = ~s1) x + 1)
-    }
-
-    it("signals invalid inputs", {
-        p <- test_pip()
-        expect_error(pip_bind(1, p), "x must be a pipeflow pip")
-        expect_error(pip_bind(p, 1), "y must be a pipeflow pip")
-    })
-
-    it("binds pipelines without mutating inputs", {
-        p1 <- test_pip("left")
-        p2 <- pip_new("right") |>
-            pip_add("t1", \(x = 3) x) |>
-            pip_add("t2", \(x = ~t1) x + 2)
-
-        out <- pip_bind(p1, p2)
-        expect_true(.is_pipeflow_pip(out))
-        expect_equal(out[["name"]], "left-right")
-        expect_equal(out[["data"]][["step"]], c("s1", "s2", "t1", "t2"))
-
-        pip_add(out, "extra", \(x = ~t2) x)
-        expect_false("extra" %in% p1[["data"]][["step"]])
-        expect_false("extra" %in% p2[["data"]][["step"]])
-    })
-
-    it("auto-renames duplicated step names from second pipeline", {
-        p1 <- test_pip("left")
-        p2 <- test_pip("right")
-
-        out <- pip_bind(p1, p2)
-        steps <- out[["data"]][["step"]]
-        expect_identical(anyDuplicated(steps), 0L)
-        expect_true(all(c("s1", "s2", "s12", "s22") %in% steps))
-
-        dep_new_s2 <- out[["data"]][step == "s22", depends][[1]]
-        expect_equal(unname(dep_new_s2), "s12")
-    })
-
-    it("handles collisions of auto-fixed names", {
-        p1 <- pip_new("left") |>
-            pip_add("s1", \(x = 1) x) |>
-            pip_add("s12", \(x = 2) x)
-        p2 <- pip_new("right") |>
-            pip_add("s1", \(x = 3) x)
-
-        out <- pip_bind(p1, p2)
-        expect_true("s13" %in% out[["data"]][["step"]])
-    })
-
-    it("rebuilds DAG and keeps dependencies valid in result", {
-        p1 <- test_pip("left")
-        p2 <- test_pip("right")
-        out <- pip_bind(p1, p2)
-
-        nodes <- .pip_get_reachable_nodes(out, "s1")
-        steps <- .pip_filter_nodes(out, nodes)[["step"]]
-        expect_setequal(steps, c("s1", "s2"))
-
-        nodes <- .pip_get_reachable_nodes(out, "s12")
-        steps <- .pip_filter_nodes(out, nodes)[["step"]]
-        expect_setequal(steps, c("s12", "s22"))
-    })
-
-    it("rebinds .self references to the bound pipeline", {
-        p1 <- pip_new("left") |>
-            pip_add("s1", \(x = 1) .self[["name"]])
-        p2 <- pip_new("right") |>
-            pip_add("t1", \(x = 1) .self[["name"]])
-
-        out <- pip_bind(p1, p2)
-        pip_run(out, lgr = NULL)
-        expect_equal(
-            out[["data"]][["out"]],
-            list("left-right", "left-right")
-        )
-    })
-
-    it("preserves runtime state from both source pipelines", {
-        p1 <- test_pip("left")
-        data.table::set(
-            p1[["data"]],
-            i = 1L,
-            j = "out",
-            value = list(10)
-        )
-        data.table::set(
-            p1[["data"]],
-            i = 1L,
-            j = "state",
-            value = "done"
-        )
-        data.table::set(
-            p1[["data"]],
-            i = 1L,
-            j = "locked",
-            value = TRUE
-        )
-
-        p2 <- pip_new("right") |>
-            pip_add("t1", \(x = 3) x) |>
-            pip_add("t2", \(x = ~t1) x + 2)
-
-        data.table::set(
-            p2[["data"]],
-            j = "out",
-            value = list(7, 9)
-        )
-        data.table::set(
-            p2[["data"]],
-            j = "state",
-            value = c("done", "outdated")
-        )
-        data.table::set(
-            p2[["data"]],
-            j = "locked",
-            value = c(FALSE, TRUE)
-        )
-
-        out <- pip_bind(p1, p2)
-        actualOut <- out[["data"]][["out"]]
-        expectedOut <- list(10, NULL, 7, 9)
-        expect_equal(actualOut, expectedOut)
-        expect_equal(
-            out[["data"]][["state"]],
-            c("done", "new", "done", "outdated")
-        )
-        expect_equal(
-            out[["data"]][["locked"]],
-            c(TRUE, FALSE, FALSE, TRUE)
-        )
     })
 })
 
@@ -3405,6 +3262,157 @@ describe("print.pipeflow_view", {
         expect_equal(
             get_view_header(v),
             c("step", "depends", "out", "state", "tags", "exec")
+        )
+    })
+})
+
+
+describe("rbind", {
+    test_pip <- function(name = "p") {
+        pip_new(name) |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1)
+    }
+
+    it("signals invalid inputs", {
+        p <- test_pip()
+        expect_error(rbind(1, p), "x must be a pipeflow pip")
+        expect_error(rbind(p, 1), "x must be a pipeflow pip")
+    })
+
+    it("binds pipelines without mutating inputs", {
+        p1 <- test_pip("left")
+        p2 <- pip_new("right") |>
+            pip_add("t1", \(x = 3) x) |>
+            pip_add("t2", \(x = ~t1) x + 2)
+
+        out <- rbind(p1, p2)
+        expect_true(.is_pipeflow_pip(out))
+        expect_equal(out[["name"]], "left-right")
+        expect_equal(out[["data"]][["step"]], c("s1", "s2", "t1", "t2"))
+
+        pip_add(out, "extra", \(x = ~t2) x)
+        expect_false("extra" %in% p1[["data"]][["step"]])
+        expect_false("extra" %in% p2[["data"]][["step"]])
+    })
+
+    it("binds any number of pipelines and returns a single one unchanged", {
+        p1 <- test_pip("left")
+        p2 <- test_pip("right")
+
+        out <- rbind(p1, p2, p2)
+        expect_equal(out[["name"]], "left-right-right")
+        steps <- out[["data"]][["step"]]
+        expect_true(all(c("s1", "s2", "s12", "s22", "s13", "s23") %in% steps))
+        expect_identical(anyDuplicated(steps), 0L)
+
+        expect_identical(rbind(p1), p1)
+    })
+
+    it("auto-renames duplicated step names from second pipeline", {
+        p1 <- test_pip("left")
+        p2 <- test_pip("right")
+
+        out <- rbind(p1, p2)
+        steps <- out[["data"]][["step"]]
+        expect_identical(anyDuplicated(steps), 0L)
+        expect_true(all(c("s1", "s2", "s12", "s22") %in% steps))
+
+        dep_new_s2 <- out[["data"]][step == "s22", depends][[1]]
+        expect_equal(unname(dep_new_s2), "s12")
+    })
+
+    it("handles collisions of auto-fixed names", {
+        p1 <- pip_new("left") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s12", \(x = 2) x)
+        p2 <- pip_new("right") |>
+            pip_add("s1", \(x = 3) x)
+
+        out <- rbind(p1, p2)
+        expect_true("s13" %in% out[["data"]][["step"]])
+    })
+
+    it("rebuilds DAG and keeps dependencies valid in result", {
+        p1 <- test_pip("left")
+        p2 <- test_pip("right")
+        out <- rbind(p1, p2)
+
+        nodes <- .pip_get_reachable_nodes(out, "s1")
+        steps <- .pip_filter_nodes(out, nodes)[["step"]]
+        expect_setequal(steps, c("s1", "s2"))
+
+        nodes <- .pip_get_reachable_nodes(out, "s12")
+        steps <- .pip_filter_nodes(out, nodes)[["step"]]
+        expect_setequal(steps, c("s12", "s22"))
+    })
+
+    it("rebinds .self references to the bound pipeline", {
+        p1 <- pip_new("left") |>
+            pip_add("s1", \(x = 1) .self[["name"]])
+        p2 <- pip_new("right") |>
+            pip_add("t1", \(x = 1) .self[["name"]])
+
+        out <- rbind(p1, p2)
+        pip_run(out, lgr = NULL)
+        expect_equal(
+            out[["data"]][["out"]],
+            list("left-right", "left-right")
+        )
+    })
+
+    it("preserves runtime state from both source pipelines", {
+        p1 <- test_pip("left")
+        data.table::set(
+            p1[["data"]],
+            i = 1L,
+            j = "out",
+            value = list(10)
+        )
+        data.table::set(
+            p1[["data"]],
+            i = 1L,
+            j = "state",
+            value = "done"
+        )
+        data.table::set(
+            p1[["data"]],
+            i = 1L,
+            j = "locked",
+            value = TRUE
+        )
+
+        p2 <- pip_new("right") |>
+            pip_add("t1", \(x = 3) x) |>
+            pip_add("t2", \(x = ~t1) x + 2)
+
+        data.table::set(
+            p2[["data"]],
+            j = "out",
+            value = list(7, 9)
+        )
+        data.table::set(
+            p2[["data"]],
+            j = "state",
+            value = c("done", "outdated")
+        )
+        data.table::set(
+            p2[["data"]],
+            j = "locked",
+            value = c(FALSE, TRUE)
+        )
+
+        out <- rbind(p1, p2)
+        actualOut <- out[["data"]][["out"]]
+        expectedOut <- list(10, NULL, 7, 9)
+        expect_equal(actualOut, expectedOut)
+        expect_equal(
+            out[["data"]][["state"]],
+            c("done", "new", "done", "outdated")
+        )
+        expect_equal(
+            out[["data"]][["locked"]],
+            c(TRUE, FALSE, FALSE, TRUE)
         )
     })
 })

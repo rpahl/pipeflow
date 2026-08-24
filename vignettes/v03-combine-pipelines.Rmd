@@ -114,10 +114,10 @@ pip2
 
 ### Combined pipeline
 
-Next we combine the two pipelines using `pip_bind()`.
+Next we combine the two pipelines using `rbind()`.
 
 ```{r}
-pip <- pip_bind(pip1, pip2)
+pip <- rbind(pip1, pip2)
 
 pip
 ```

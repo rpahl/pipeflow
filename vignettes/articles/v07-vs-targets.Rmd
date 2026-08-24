@@ -54,7 +54,7 @@ you decide which one fits your project.
 | Split / map / reduce | ✅ `pattern = map()` / `cross()` built-in, `tarchetypes` for advanced patterns | ✅ Built-in `exec = "split"` / `"auto"` / `"reduce"` |
 | Dynamic branching | ✅ Comprehensive via `tarchetypes` | ✅ Auto-mapping over partition keys (`exec = "auto"`) |
 | Views / tag filtering | `tar_described_as()` selects by description tags | ✅ `pip_view()` — filter steps by tags or index |
-| Pipeline composition | ❌ | ✅ `pip_bind()` two pipelines|
+| Pipeline composition | ❌ | ✅ `rbind()` any number of pipelines |
 | Self-modifying pipelines | ❌ | ✅ `pip_run(recursive = TRUE)` — steps can return modified pipelines |
 | Distributed computing | ✅ `crew` for HPC and cloud workers | ❌ |
 | Cloud storage | ✅ AWS, GCS | ❌ |
