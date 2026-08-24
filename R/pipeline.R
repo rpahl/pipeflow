@@ -55,7 +55,7 @@
 
 # A view is a pipeflow_pip whose `rows` field is not NULL.
 .is_pipeflow_view <- function(x) {
-    inherits(x, "pipeflow_pip") && !is.null(x[["rows"]])
+    inherits(x, "pipeflow_pip") && !is.null(x[["view"]])
 }
 
 .is_pipeflow_partitioned <- function(x) {
@@ -107,7 +107,7 @@
     .subset2(x, "pipenv")
 }
 
-# A full pipeflow_pip wrapper (rows = NULL) around the shared inner
+# A full pipeflow_pip wrapper (view = NULL) around the shared inner
 # environment. Used for `.self` inside steps so structural operations such as
 # pip_replace() work on the underlying full pipeline.
 .pip_full_pip <- function(x) {
@@ -115,7 +115,7 @@
         list(
             pipenv = .subset2(x, "pipenv"),
             name = .subset2(x, "name"),
-            rows = NULL
+            view = NULL
         ),
         class = "pipeflow_pip"
     )
@@ -128,7 +128,7 @@
         list(
             pipenv = .subset2(x, "pipenv"),
             name = sprintf("%s view", .subset2(x, "name")),
-            rows = as.integer(rows)
+            view = as.integer(rows)
         ),
         class = "pipeflow_pip"
     )
@@ -336,10 +336,10 @@
 # The rows covered by `x`: all pipeline rows for a full pipeline, or the
 # view's `rows` selector for a view.
 .pip_view_rows <- function(x) {
-    if (is.null(.subset2(x, "rows"))) {
+    if (is.null(.subset2(x, "view"))) {
         seq_len(nrow(.pip_get_pip_env(x)[["data"]]))
     } else {
-        as.integer(.subset2(x, "rows"))
+        as.integer(.subset2(x, "view"))
     }
 }
 
@@ -357,7 +357,7 @@
 
         # List fields of the wrapper have priority over column names.
         if (is.character(i) && length(i) == 1L && !is.na(i)) {
-            if (i %in% c("pipenv", "name", "rows")) {
+            if (i %in% c("pipenv", "name", "view")) {
                 return(.subset2(x, i))
             }
             # Public inner-env bindings like "data" are next. Hidden
@@ -708,7 +708,7 @@ pip_new <- function(name = "pipe") {
     # Outer list wrapper: `rows` is NULL for a full pipeline and holds the
     # selected absolute row indices for a view.
     structure(
-        list(pipenv = env, name = name, rows = NULL),
+        list(pipenv = env, name = name, view = NULL),
         class = "pipeflow_pip"
     )
 }
@@ -2302,7 +2302,7 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
 
     rows <- parent_rows[which(keep)]
     structure(
-        list(pipenv = env, name = sprintf("%s view", x[["name"]]), rows = rows),
+        list(pipenv = env, name = sprintf("%s view", x[["name"]]), view = rows),
         class = "pipeflow_pip"
     )
 }
@@ -2471,7 +2471,7 @@ length.pipeflow_pip <- function(x) {
 #'
 #' Extracts values from a pipeline or view using one or two indices.
 #' With a single string name, named fields such as `"data"`, `"name"`
-#' (pipeline) or `"pipenv"`, `"rows"` (view) are returned first; anything else
+#' (pipeline) or `"pipenv"`, `"view"` (view) are returned first; anything else
 #' returns the matching step-table column. For views, column access is
 #' restricted to the steps covered by the view. With two indices
 #' (`row`, `column`), a single cell is extracted.
@@ -2499,7 +2499,7 @@ length.pipeflow_pip <- function(x) {
 #' # Views behave analogously:
 #' v <- pip_view(p, step = c("load", "fit"))
 #' v[["pipenv"]]               # the underlying pipeline
-#' v[["rows"]]              # row indices of the covered steps
+#' v[["view"]]             # row indices of the covered steps
 #' v[["step"]]              # "load", "fit"
 #' v[["out"]]               # list of outputs
 #' v[["fit", "out"]]        # output of the "fit" step
@@ -2513,7 +2513,7 @@ length.pipeflow_pip <- function(x) {
 # other bindings to the shared inner environment.
 #' @export
 `[[<-.pipeflow_pip` <- function(x, i, j, ..., value) {
-    if (i %in% c("pipenv", "name", "rows")) {
+    if (i %in% c("pipenv", "name", "view")) {
         unclass(x)[[i]] <- value
     } else {
         env <- .pip_get_pip_env(x)

@@ -21,7 +21,7 @@ Extracted value(s), depending on \code{i} and \code{j}.
 \description{
 Extracts values from a pipeline or view using one or two indices.
 With a single string name, named fields such as \code{"data"}, \code{"name"}
-(pipeline) or \code{"pipenv"}, \code{"rows"} (view) are returned first; anything else
+(pipeline) or \code{"pipenv"}, \code{"view"} (view) are returned first; anything else
 returns the matching step-table column. For views, column access is
 restricted to the steps covered by the view. With two indices
 (\code{row}, \code{column}), a single cell is extracted.
@@ -46,7 +46,7 @@ p[[2, "state"]]          # state of the second step
 # Views behave analogously:
 v <- pip_view(p, step = c("load", "fit"))
 v[["pipenv"]]               # the underlying pipeline
-v[["rows"]]              # row indices of the covered steps
+v[["view"]]             # row indices of the covered steps
 v[["step"]]              # "load", "fit"
 v[["out"]]               # list of outputs
 v[["fit", "out"]]        # output of the "fit" step

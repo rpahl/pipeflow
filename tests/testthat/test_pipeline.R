@@ -299,7 +299,7 @@ describe("pip_new", {
         expect_true(.is_pipeflow_pip(p))
         expect_true(is.list(p))
         expect_equal(p[["name"]], "pipe")
-        expect_null(p[["rows"]])
+        expect_null(p[["view"]])
         expect_true(is.environment(p[["pipenv"]]))
         expect_true(data.table::is.data.table(p[["data"]]))
         expect_equal(nrow(p[["data"]]), 0L)
@@ -2793,7 +2793,7 @@ describe("pip_view", {
 
         v <- pip_view(p)
         expect_true(.is_pipeflow_view(v))
-        expect_true("rows" %in% names(v))
+        expect_true("view" %in% names(v))
         expect_identical(v[["data"]], p[["data"]])
         expect_identical(v[["name"]], "test_pipeline view")
     })
@@ -2808,7 +2808,7 @@ describe("pip_view", {
 
         v <- pip_view(p, tags = "model", state = "done")
 
-        expect_equal(v[["rows"]], 2L)
+        expect_equal(v[["view"]], 2L)
     })
 
     it("can filter by depends column with multiple entries", {
@@ -2819,7 +2819,7 @@ describe("pip_view", {
 
         v <- pip_view(p, depends = "fit", tags = "model")
         v
-        expect_equal(v[["rows"]], 3L)
+        expect_equal(v[["view"]], 3L)
     })
 
     it("can filter by tags", {
@@ -2829,7 +2829,7 @@ describe("pip_view", {
         pip_add(p, "s3", \(x = ~ -1) x, tags = c("daily", "report"))
 
         v <- pip_view(p, tags = "daily")
-        expect_equal(v[["rows"]], c(1L, 3L))
+        expect_equal(v[["view"]], c(1L, 3L))
     })
 
     it("can filter by step names", {
@@ -2839,10 +2839,10 @@ describe("pip_view", {
         pip_add(p, "a3", \(x = ~ -1) x, tags = "g2")
 
         v <- pip_view(p, step = c("a1", "a3"))
-        expect_equal(v[["rows"]], c(1L, 3L))
+        expect_equal(v[["view"]], c(1L, 3L))
 
         v <- pip_view(p, step = c("a1", "a2"), tags = "g2")
-        expect_equal(v[["rows"]], 2L)
+        expect_equal(v[["view"]], 2L)
     })
 
     it("can filter by parameter names", {
@@ -2851,10 +2851,10 @@ describe("pip_view", {
         pip_add(p, "s2", \(y = ~ -1, z = 2) y, tags = "g2")
 
         v <- pip_view(p, params = "n")
-        expect_equal(v[["rows"]], 1L)
+        expect_equal(v[["view"]], 1L)
 
         v <- pip_view(p, params = c("x", "z"))
-        expect_equal(v[["rows"]], c(1L, 2L))
+        expect_equal(v[["view"]], c(1L, 2L))
     })
 
     it("matches dependency parameters via the params filter", {
@@ -2863,7 +2863,7 @@ describe("pip_view", {
         pip_add(p, "s2", \(y = ~s1) y)
 
         v <- pip_view(p, params = "y")
-        expect_equal(v[["rows"]], 2L)
+        expect_equal(v[["view"]], 2L)
     })
 
     it("can filter by exec mode", {
@@ -2872,7 +2872,7 @@ describe("pip_view", {
         pip_add(p, "s2", \(x = 2) x, exec = "split")
 
         v <- pip_view(p, exec = "split")
-        expect_equal(v[["rows"]], 2L)
+        expect_equal(v[["view"]], 2L)
     })
 
     it("can filter by regex when fixed is FALSE", {
@@ -2882,7 +2882,7 @@ describe("pip_view", {
         pip_add(p, "eval_model", \(x = ~data, y = ~fit_model) x)
 
         v <- pip_view(p, step = "_model$", fixed = FALSE)
-        expect_equal(v[["rows"]], c(2L, 3L))
+        expect_equal(v[["view"]], c(2L, 3L))
     })
 
     it("intersects multiple filters", {
@@ -2892,7 +2892,7 @@ describe("pip_view", {
         pip_add(p, "a3", \(x = ~ -1) x, tags = "g2")
 
         v <- pip_view(p, step = c("a1", "a2"), tags = "g2")
-        expect_equal(v[["rows"]], 2L)
+        expect_equal(v[["view"]], 2L)
     })
 
     it("unions multiple filters with join = union", {
@@ -2902,7 +2902,7 @@ describe("pip_view", {
         pip_add(p, "a3", \(x = ~ -1) x, tags = "g2")
 
         v <- pip_view(p, step = "a1", tags = "g2", join = "union")
-        expect_equal(v[["rows"]], c(1L, 2L, 3L))
+        expect_equal(v[["view"]], c(1L, 2L, 3L))
     })
 
     it("defaults to intersect and allows partial join names", {
@@ -2911,11 +2911,11 @@ describe("pip_view", {
         pip_add(p, "a2", \(x = ~ -1) x, tags = "g2")
 
         expect_equal(
-            pip_view(p, step = "a1", tags = "g2")[["rows"]],
+            pip_view(p, step = "a1", tags = "g2")[["view"]],
             integer(0)
         )
         expect_equal(
-            pip_view(p, step = "a1", tags = "g2", join = "uni")[["rows"]],
+            pip_view(p, step = "a1", tags = "g2", join = "uni")[["view"]],
             c(1L, 2L)
         )
     })
@@ -2937,11 +2937,11 @@ describe("pip_view", {
         pip_add(p, "s3", \(x = ~ -1) x, tags = c("daily", "report"))
 
         v <- pip_view(p, tags = "daily")
-        expect_equal(v[["rows"]], c(1L, 3L))
+        expect_equal(v[["view"]], c(1L, 3L))
         expect_equal(v[["name"]], "test_pipeline view")
 
         v2 <- pip_view(v, tags = "report")
-        expect_equal(v2[["rows"]], 3L)
+        expect_equal(v2[["view"]], 3L)
         expect_equal(v2[["name"]], "test_pipeline view view")
     })
 
@@ -2994,7 +2994,7 @@ describe("extract operator [", {
         v <- p[5L]
 
         expect_true(.is_pipeflow_view(v))
-        expect_equal(v[["rows"]], 5L)
+        expect_equal(v[["view"]], 5L)
         expect_identical(v[["data"]], p[["data"]])
     })
 
@@ -3003,7 +3003,7 @@ describe("extract operator [", {
         v <- p[c("a2", "b2")]
 
         expect_true(.is_pipeflow_view(v))
-        expect_equal(v[["rows"]], c(2L, 5L))
+        expect_equal(v[["view"]], c(2L, 5L))
     })
 
     it("returns a pipeline including upstream dependencies with view = FALSE", {
@@ -3200,7 +3200,7 @@ describe("extract operator [[", {
         v <- pip_view(p, step = c("s1", "s2"))
 
         expect_identical(v[["data"]], p[["data"]])
-        expect_equal(v[["rows"]], c(1L, 2L))
+        expect_equal(v[["view"]], c(1L, 2L))
         expect_equal(v[["step"]], c("s1", "s2"))
         expect_equal(v[["out"]], list(1, 2))
     })
