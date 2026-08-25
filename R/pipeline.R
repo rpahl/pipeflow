@@ -346,11 +346,11 @@
 # Internal implementation of [[ for pipeflow_pip objects. Views are pips with
 # a `rows` selector, so list fields and inner-env bindings are accessed
 # through the same dispatch.
-.pip_subset2 <- function(x, i, j, ...) {
+.pip_subset2 <- function(x, i, j = NULL, ...) {
     dat <- .pip_get_pip_env(x)[["data"]]
     rows <- .pip_view_rows(x)
 
-    if (missing(j)) {
+    if (is.null(j)) {
         if (missing(i)) {
             stop("i must be provided")
         }
@@ -371,8 +371,13 @@
             }
         }
 
-        # Column access, restricted to the view's rows for views.
-        return(dat[[i]][rows])
+        # Column access, restricted to the view's rows for views. Name output
+        # vector by step names for easier inspection and post-processing.
+        col <- dat[[i]][rows]
+        if (!is.null(col)) {
+            return(stats::setNames(col, dat[["step"]][rows]))
+        }
+        return(col)
     }
 
     # Two-index form extracts a single cell from a single row.
@@ -2406,12 +2411,13 @@ length.pipeflow_pip <- function(x) {
 
 #' Extract values from a pipeline or view
 #'
-#' Extracts values from a pipeline or view using one or two indices.
-#' With a single string name, named fields such as `"data"`, `"name"`
-#' (pipeline) or `"pipenv"`, `"view"` (view) are returned first; anything else
-#' returns the matching step-table column. For views, column access is
-#' restricted to the steps covered by the view. With two indices
-#' (`row`, `column`), a single cell is extracted.
+#' A pipeline is conceptually a table of steps, so `[[` follows the
+#' table/data.frame conventions:
+#' * `p[[column]]` returns a column of the step table, named by the steps.
+#'   Named meta fields `"data"`, `"name"` (pipeline) or `"pipenv"`, `"view"`
+#'   (view) take priority over columns.
+#' * `p[[row, column]]` extracts a single cell.
+#' For views, column access is restricted to the steps covered by the view.
 #' @param i integer (row index) or character (step name) of the step to
 #' select
 #' @param j column name to select
@@ -2422,34 +2428,35 @@ length.pipeflow_pip <- function(x) {
 #'   pip_add("fit", \(x = ~load) x + 1)
 #' pip_run(p)
 #'
-#' # Access internal objects by name
-#' p[["data"]]          # the full step table
-#' p[["name"]]              # "pipe"
+#' # Column access, named by steps
+#' p[["step"]]   # c(load = "load", fit = "fit")
+#' p[["out"]]    # c(load = 1, fit = 2)
 #'
-#' # Shorthand column access (equivalent to p[["data"]][["step"]])
-#' p[["step"]]
+#' # Meta fields
+#' p[["data"]]   # the underlying step table
+#' p[["name"]]   # "pipe"
 #'
-#' # Two-index form: p[[row, column]] extracts a single cell
+#' # Single cell: p[[row, column]]
 #' p[["fit", "depends"]]    # "load"
 #' p[[2, "state"]]          # state of the second step
 #'
 #' # Views behave analogously:
 #' v <- pip_view(p, step = c("load", "fit"))
-#' v[["pipenv"]]               # the underlying pipeline
-#' v[["view"]]             # row indices of the covered steps
-#' v[["step"]]              # "load", "fit"
-#' v[["out"]]               # list of outputs
+#' v[["pipenv"]]            # the shared inner environment
+#' v[["view"]]              # row indices of the covered steps
+#' v[["step"]]              # c(load = "load", fit = "fit")
+#' v[["out"]]               # c(load = 1, fit = 2)
 #' v[["fit", "out"]]        # output of the "fit" step
 #' @rdname Extract_value.pipeflow
 #' @export
-`[[.pipeflow_pip` <- function(x, i, j, ...) {
+`[[.pipeflow_pip` <- function(x, i, j = NULL, ...) {
     .pip_subset2(x = x, i = i, j = j, ...)
 }
 
 # Assignment routes list fields (`pip`, `name`, `rows`) to the wrapper and all
 # other bindings to the shared inner environment.
 #' @export
-`[[<-.pipeflow_pip` <- function(x, i, j, ..., value) {
+`[[<-.pipeflow_pip` <- function(x, i, j = NULL, ..., value) {
     if (i %in% c("pipenv", "name", "view")) {
         unclass(x)[[i]] <- value
     } else {
@@ -2502,6 +2509,10 @@ length.pipeflow_pip <- function(x) {
 #' v <- pip_view(p, tags = "compute")
 #' print(v)
 #' @rdname print
+#' @export
+str.pipeflow_pip <- function(object, ...) {
+    str(unclass(object), ...)
+} #' @rdname print
 #' @export
 print.pipeflow_pip <- function(
     x,

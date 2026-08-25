@@ -5,7 +5,7 @@
 \alias{$.pipeflow_pip}
 \title{Extract values from a pipeline or view}
 \usage{
-\method{[[}{pipeflow_pip}(x, i, j, ...)
+\method{[[}{pipeflow_pip}(x, i, j = NULL, ...)
 
 \method{$}{pipeflow_pip}(x, i)
 }
@@ -19,12 +19,15 @@ select}
 Extracted value(s), depending on \code{i} and \code{j}.
 }
 \description{
-Extracts values from a pipeline or view using one or two indices.
-With a single string name, named fields such as \code{"data"}, \code{"name"}
-(pipeline) or \code{"pipenv"}, \code{"view"} (view) are returned first; anything else
-returns the matching step-table column. For views, column access is
-restricted to the steps covered by the view. With two indices
-(\code{row}, \code{column}), a single cell is extracted.
+A pipeline is conceptually a table of steps, so \code{[[} follows the
+table/data.frame conventions:
+\itemize{
+\item \code{p[[column]]} returns a column of the step table, named by the steps.
+Named meta fields \code{"data"}, \code{"name"} (pipeline) or \code{"pipenv"}, \code{"view"}
+(view) take priority over columns.
+\item \code{p[[row, column]]} extracts a single cell.
+For views, column access is restricted to the steps covered by the view.
+}
 }
 \examples{
 p <- pip_new() |>
@@ -32,22 +35,23 @@ p <- pip_new() |>
   pip_add("fit", \(x = ~load) x + 1)
 pip_run(p)
 
-# Access internal objects by name
-p[["data"]]          # the full step table
-p[["name"]]              # "pipe"
+# Column access, named by steps
+p[["step"]]   # c(load = "load", fit = "fit")
+p[["out"]]    # c(load = 1, fit = 2)
 
-# Shorthand column access (equivalent to p[["data"]][["step"]])
-p[["step"]]
+# Meta fields
+p[["data"]]   # the underlying step table
+p[["name"]]   # "pipe"
 
-# Two-index form: p[[row, column]] extracts a single cell
+# Single cell: p[[row, column]]
 p[["fit", "depends"]]    # "load"
 p[[2, "state"]]          # state of the second step
 
 # Views behave analogously:
 v <- pip_view(p, step = c("load", "fit"))
-v[["pipenv"]]               # the underlying pipeline
-v[["view"]]             # row indices of the covered steps
-v[["step"]]              # "load", "fit"
-v[["out"]]               # list of outputs
+v[["pipenv"]]            # the shared inner environment
+v[["view"]]              # row indices of the covered steps
+v[["step"]]              # c(load = "load", fit = "fit")
+v[["out"]]               # c(load = 1, fit = 2)
 v[["fit", "out"]]        # output of the "fit" step
 }

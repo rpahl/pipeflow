@@ -1632,10 +1632,10 @@ describe("pip_run", {
                     pip_add("f3", function(x = ~f2) x + 3)
 
                 pip_run(pip, lgr = NULL)
-                expect_equal(pip[["out"]], list(0, 1, 3, 6))
+                expect_equal(unname(pip[["out"]]), list(0, 1, 3, 6))
 
                 pip |> pip_set_params(list(xInit = 15)) |> pip_run(lgr = NULL)
-                expect_equal(pip[["out"]], list(15, 16, 16 / 2, 16 * 3))
+                expect_equal(unname(pip[["out"]]), list(15, 16, 16 / 2, 16 * 3))
                 expect_equal(
                     body(pip[["f3", "fun"]]),
                     body(function(x = ~f1) x * 3)
@@ -1669,10 +1669,10 @@ describe("pip_run", {
                     )
 
                 pip_run(pip, lgr = NULL)
-                expect_equal(pip[["out"]], list(0, 1, 3, 6))
+                expect_equal(unname(pip[["out"]]), list(0, 1, 3, 6))
 
                 pip |> pip_set_params(list(xInit = 15)) |> pip_run(lgr = NULL)
-                expect_equal(pip[["out"]], list(15, 16, 16 / 2, 16 * 3))
+                expect_equal(unname(pip[["out"]]), list(15, 16, 16 / 2, 16 * 3))
                 expect_equal(
                     body(pip[["f3", "fun"]]),
                     body(function(x = ~f1) x * 3)
@@ -1705,7 +1705,7 @@ describe("pip_run", {
                 pip |> pip_replace("f2", function(x = ~f1) x + 10)
 
                 pip_run(pip, lgr = NULL)
-                expect_equal(pip[["out"]], list(0, 1, 11, 14, 4))
+                expect_equal(unname(pip[["out"]]), list(0, 1, 11, 14, 4))
                 expect_equal(
                     body(pip[["f4", "fun"]]),
                     body(function(x = ~f1) x * 4)
@@ -1736,14 +1736,14 @@ describe("pip_run", {
                     pip_add("f3", function(x = ~f2) x + 3)
 
                 pip |> pip_set_params(list(xInit = 15)) |> pip_run(lgr = NULL)
-                expect_equal(pip[["out"]], list(15, 16, 8, 48))
+                expect_equal(unname(pip[["out"]]), list(15, 16, 8, 48))
                 expect_equal(
                     body(pip[["f3", "fun"]]),
                     body(function(x = ~f1) x * 3)
                 )
 
                 pip |> pip_set_params(list(xInit = 20)) |> pip_run(lgr = NULL)
-                expect_equal(pip[["out"]], list(20, 21, 10.5, 63))
+                expect_equal(unname(pip[["out"]]), list(20, 21, 10.5, 63))
                 expect_equal(
                     body(pip[["f3", "fun"]]),
                     body(function(x = ~f1) x * 3)
@@ -1775,13 +1775,13 @@ describe("pip_run", {
                     pip_add("f4", function(x = ~f3) x + 1)
 
                 pip_run(pip, lgr = NULL)
-                expect_equal(pip[["out"]], list(0, 1, 3, 6, 7))
+                expect_equal(unname(pip[["out"]]), list(0, 1, 3, 6, 7))
 
                 pip |> pip_set_params(list(xInit = 15))
                 v <- pip_view(pip, step = c("f1", "f2"))
                 pip_run(v, lgr = NULL, force = TRUE)
 
-                expect_equal(pip[["out"]], list(15, 16, 8, NULL, 7))
+                expect_equal(unname(pip[["out"]]), list(15, 16, 8, NULL, 7))
                 expect_equal(
                     body(pip[["f3", "fun"]]),
                     body(function(x = ~f1) x * 3)
@@ -1792,7 +1792,7 @@ describe("pip_run", {
                 )
 
                 pip_run(pip, lgr = NULL)
-                expect_equal(pip[["out"]], list(15, 16, 8, 48, 49))
+                expect_equal(unname(pip[["out"]]), list(15, 16, 8, 48, 49))
             }
         )
     })
@@ -1829,14 +1829,17 @@ describe("pip_run", {
 
         pip_set_params(pip, list(xInit = 11))
         pip_run(pip, lgr = NULL)
-        expect_equal(pip[["step"]], c("init", "f1", "f2a", "f2b", "f3"))
-        expect_equal(pip[["state"]], c("done", "done", "new", "done", "new"))
-        expect_equal(pip[["out"]], list(11, 12, NULL, NULL + 22, NULL))
+        expect_equal(unname(pip[["step"]]), c("init", "f1", "f2a", "f2b", "f3"))
+        expect_equal(
+            unname(pip[["state"]]),
+            c("done", "done", "new", "done", "new")
+        )
+        expect_equal(unname(pip[["out"]]), list(11, 12, NULL, NULL + 22, NULL))
 
         pip_set_params(pip, list(xInit = 11))
         pip_run(pip, lgr = NULL)
 
-        expect_equal(pip[["out"]], list(11, 12, 33, 55, 85))
+        expect_equal(unname(pip[["out"]]), list(11, 12, 33, 55, 85))
     })
 
     it("can insert and remove steps at runtime", {
@@ -1876,9 +1879,9 @@ describe("pip_run", {
 
         pip <- test_pip()
         pip_set_params(pip, list(xInit = 11)) |> pip_run(lgr = NULL)
-        expect_equal(pip[["step"]], c("init", "f1", "f2a", "f2b", "f3"))
-        expect_equal(pip[["state"]], rep("done", 5))
-        expect_equal(pip[["out"]], list(11, 12, 33, 55, 85))
+        expect_equal(unname(pip[["step"]]), c("init", "f1", "f2a", "f2b", "f3"))
+        expect_equal(unname(pip[["state"]]), rep("done", 5))
+        expect_equal(unname(pip[["out"]]), list(11, 12, 33, 55, 85))
     })
 
     it("keeps .self bound to the same pipeline across a restart", {
@@ -2981,8 +2984,8 @@ describe("extract operator [[", {
 
     it("extracts full columns when j is missing", {
         p <- test_pip()
-        expect_equal(p[["step"]], c("s1", "s2"))
-        expect_equal(p[[1]], c("s1", "s2"))
+        expect_equal(p[["step"]], c(s1 = "s1", s2 = "s2"))
+        expect_equal(p[[1]], c(s1 = "s1", s2 = "s2"))
         expect_null(p[["unknown"]])
     })
 
@@ -3061,8 +3064,8 @@ describe("extract operator [[", {
 
         expect_identical(v[["data"]], p[["data"]])
         expect_equal(v[["view"]], c(1L, 2L))
-        expect_equal(v[["step"]], c("s1", "s2"))
-        expect_equal(v[["out"]], list(1, 2))
+        expect_equal(v[["step"]], c(s1 = "s1", s2 = "s2"))
+        expect_equal(v[["out"]], list(s1 = 1, s2 = 2))
     })
 
     it("extracts a single cell from a view by step name or row index", {
