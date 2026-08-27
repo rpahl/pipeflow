@@ -4,7 +4,7 @@
 \alias{pip_replace}
 \title{Replace a step}
 \usage{
-pip_replace(x, step, fun, tags = character(0))
+pip_replace(x, step, fun, tags = character(0), params = list(), exec = "auto")
 }
 \arguments{
 \item{x}{A pipeflow pipeline object.}
@@ -15,6 +15,32 @@ pip_replace(x, step, fun, tags = character(0))
 
 \item{tags}{Optional character vector of tags belonging to the step.
 Can also be adjusted later using \verb{[pip_tag()]}.}
+
+\item{params}{Optional named list of parameter values, which will be merged
+with the defaults of \code{fun} (if overlapping names, the default values in \code{fun}
+take precedence). There are two use cases for \code{params}:
+\enumerate{
+\item Provide param values programmatically when adding steps at runtime
+\item Provide extra param values that are defined in pipelines nested in a
+step, which ensures that the step (and with that the pipeline in the step)
+is re-executed when one of the respective param values change.
+}}
+
+\item{exec}{Execution mode for this step. One of "auto", "split",
+"reduce" or "plain".
+Using execution mode \code{exec = split}, the output of the step is marked as
+partitioned output. In this mode, any step that depends on the split step
+(directly or indirectly) will have its output automatically mapped
+partition-wise during step execution. The \code{reduce} mode expects
+partitioned input and passes it through without mapping, while \code{plain}
+mode only accepts non-partitioned input and always intends to execute
+a single call. In summary:
+\itemize{
+\item auto: map if partitioned input appears, otherwise single call
+\item split: always split
+\item reduce: single call, but only valid with partitioned input
+\item plain: single call, only valid with non-partitioned input
+}}
 }
 \value{
 The updated pipeline, invisibly.
