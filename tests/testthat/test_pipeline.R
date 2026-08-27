@@ -2382,6 +2382,33 @@ describe("pip_reset", {
         expect_equal(p[["data"]][["out"]], list(1, 2))
         expect_equal(as.character(p[["run_state"]]), "ready")
     })
+
+    it("skips locked steps, keeping their state and output", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1)
+        pip_run(p, lgr = NULL)
+
+        pip_lock(pip_view(p, step = "b"))
+        pip_reset(p)
+
+        expect_equal(p[["data"]][["state"]], c("new", "done"))
+        expect_null(p[["data"]][["out"]][[1]])
+        expect_equal(p[["data"]][["out"]][[2]], 2)
+        expect_equal(p[["data"]][["locked"]], c(FALSE, TRUE))
+    })
+
+    it("warns when all selected steps are locked", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x)
+        pip_run(p, lgr = NULL)
+
+        pip_lock(p)
+
+        expect_message(pip_reset(p), "all selected steps are locked")
+        expect_equal(p[["data"]][["state"]], "done")
+        expect_equal(p[["data"]][["out"]][[1]], 1)
+    })
 })
 
 describe("pip_set_params", {
@@ -2484,7 +2511,7 @@ describe("pip_set_params", {
         p <- test_pip() |> pip_lock()
         params <- pip_get_params(p)
 
-        expect_warning(
+        expect_message(
             pip_set_params(p, params = list(x = 5)),
             "all selected steps are locked"
         )

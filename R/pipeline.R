@@ -1823,8 +1823,7 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
 #'
 #' Aborts the current [pip_run()] execution. When called from within a step
 #' function (via the `.self` argument), the pipeline run is stopped after the
-#' current step. Steps that were not executed are marked as `"outdated"`. If a
-#' view was run, only the steps covered by the view are affected.
+#' current step. Steps that were not executed are marked as `"outdated"`.
 #'
 #' @param x A pipeflow pip or view.
 #'
@@ -1855,11 +1854,15 @@ pip_stop <- function(x) {
 
 #' Reset a pipeline to its initial state
 #'
-#' Resets all steps of a pipeline (or a subset of steps defined by a view)
-#' to state `"new"` and clears their outputs, so a subsequent
+#' Resets all unlocked steps of a pipeline (or a subset of steps defined by a
+#' view) to state `"new"` and clears their outputs, so a subsequent
 #' [pip_run()] re-executes the cleaned steps from scratch. The run state is
 #' reset to `"ready"` and any pending restart counter is cleared. Parameters,
 #' tags, and locked flags are left unchanged.
+#'
+#' @details Locked steps are skipped: their state and output are preserved.
+#' If all selected steps are locked, a warning is issued and nothing is
+#' changed.
 #'
 #' @param x A pipeflow pip or view. If a view is given, only the steps covered
 #' by the view are reset.
@@ -1873,6 +1876,13 @@ pip_stop <- function(x) {
 #' pip_run(p)
 #' p[["data"]][["state"]] # "done", "done"
 #'
+#' # Locked steps keep their state and output when resetting
+#' pip_lock(pip_view(p, step = "square"))
+#' pip_reset(p)
+#' p[["data"]][["state"]] # "new", "done"
+#' p[["data"]][["out"]]   # NULL, (x^2 result)
+#'
+#' pip_unlock(p)
 #' pip_reset(p)
 #' p[["data"]][["state"]] # "new", "new"
 #' p[["data"]][["out"]]   # NULL, NULL
@@ -1886,14 +1896,20 @@ pip_reset <- function(x) {
     if (length(rows) == 0L) {
         return(invisible(x))
     }
+    rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
+
+    if (length(rowsConsidered) == 0L) {
+        message("No steps to update: all selected steps are locked")
+        return(invisible(x))
+    }
 
     data.table::set(
         dat,
-        i = rows,
+        i = rowsConsidered,
         j = c("out", "state"),
         value = list(
-            rep(list(NULL), length(rows)),
-            rep(.step_states[["new"]][["name"]], length(rows))
+            rep(list(NULL), length(rowsConsidered)),
+            rep(.step_states[["new"]][["name"]], length(rowsConsidered))
         )
     )
 
@@ -1952,7 +1968,7 @@ pip_set_params <- function(x, params = list()) {
     rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
 
     if (length(rowsConsidered) == 0L) {
-        warning("No steps to update: all selected steps are locked")
+        message("No steps to update: all selected steps are locked")
         return(invisible(x))
     }
 

@@ -14,11 +14,16 @@ by the view are reset.}
 The updated pipeline or view, invisibly.
 }
 \description{
-Resets all steps of a pipeline (or a subset of steps defined by a view)
-to state \code{"new"} and clears their outputs, so a subsequent
+Resets all unlocked steps of a pipeline (or a subset of steps defined by a
+view) to state \code{"new"} and clears their outputs, so a subsequent
 \code{\link[=pip_run]{pip_run()}} re-executes the cleaned steps from scratch. The run state is
 reset to \code{"ready"} and any pending restart counter is cleared. Parameters,
 tags, and locked flags are left unchanged.
+}
+\details{
+Locked steps are skipped: their state and output are preserved.
+If all selected steps are locked, a warning is issued and nothing is
+changed.
 }
 \examples{
 p <- pip_new() |>
@@ -28,6 +33,13 @@ p <- pip_new() |>
 pip_run(p)
 p[["data"]][["state"]] # "done", "done"
 
+# Locked steps keep their state and output when resetting
+pip_lock(pip_view(p, step = "square"))
+pip_reset(p)
+p[["data"]][["state"]] # "new", "done"
+p[["data"]][["out"]]   # NULL, (x^2 result)
+
+pip_unlock(p)
 pip_reset(p)
 p[["data"]][["state"]] # "new", "new"
 p[["data"]][["out"]]   # NULL, NULL

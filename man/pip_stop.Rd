@@ -15,8 +15,7 @@ The updated pipeline or view, invisibly.
 \description{
 Aborts the current \code{\link[=pip_run]{pip_run()}} execution. When called from within a step
 function (via the \code{.self} argument), the pipeline run is stopped after the
-current step. Steps that were not executed are marked as \code{"outdated"}. If a
-view was run, only the steps covered by the view are affected.
+current step. Steps that were not executed are marked as \code{"outdated"}.
 }
 \examples{
 p <- pip_new("stop") |>
