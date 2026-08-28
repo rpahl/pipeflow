@@ -3330,6 +3330,23 @@ describe("print.pipeflow_pip", {
         )
     })
 
+    it("prints the locked column when any step is locked", {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1)
+
+        pip_lock(p["s1", ])
+        header <- get_print_header(p)
+
+        expect_equal(
+            header,
+            c("step", "depends", "out", "state", "locked")
+        )
+    })
+
     it("prints a footer with the run state and last run time", {
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x) |>

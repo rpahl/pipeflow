@@ -2674,9 +2674,11 @@ print.pipeflow_pip <- function(
         if (has_tags) {
             cols <- append(cols, "tags")
         }
-        has_non_auto_exec <- any(dat[["exec"]] != "auto")
-        if (has_non_auto_exec) {
+        if (any(dat[["exec"]] != "auto")) {
             cols <- append(cols, "exec")
+        }
+        if (any(dat[["locked"]])) {
+            cols <- append(cols, "locked")
         }
     }
     if (identical(cols, "all")) {
@@ -2685,6 +2687,7 @@ print.pipeflow_pip <- function(
     }
 
     if (header) {
+        # Add header
         if (isView) {
             nr <- length(.pip_view_rows(x))
             title <- sprintf(
@@ -2724,6 +2727,7 @@ print.pipeflow_pip <- function(
     }
 
     if (header) {
+        # Add footer with run state infos
         runState <- as.character(.pip_get_pip_env(x)[[".run_state"]])
         lastRun <- x[["pipenv"]][[".last_run"]]
         lastRunStr <- if (is.null(lastRun)) {
