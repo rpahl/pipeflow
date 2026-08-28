@@ -13,3 +13,7 @@ expect_no_error <- function(...) {
 expect_no_warning <- function(...) {
     testthat::expect_warning(..., regexp = NA)
 }
+
+get_run_state <- function(x) {
+    as.character(.pip_get_pip_env(x)[[".run_state"]])
+}

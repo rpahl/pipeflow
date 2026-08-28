@@ -34,10 +34,6 @@ include \code{step}, \code{fun}, \code{params}, \code{signature}, \code{depends}
 \item \code{name} — the name of the pipeline.
 \item \code{view} — the absolute row indices of the steps covered by a view, or
 \code{NULL} for a full pipeline.
-\item \code{run_state} — the current run state of the pipeline: \code{"ready"},
-\code{"running"}, \code{"failed"}, \code{"restart"}, or \code{"stop"}.
-\item \code{last_run} — the time the pipeline was last run, or \code{NULL} if it has
-never been run. Cleared by \code{\link[=pip_reset]{pip_reset()}}.
 \item \code{pipenv} — the shared inner environment holding the pipeline's state.
 All views and extracted subsets reference the same environment, so
 mutations are shared.
@@ -63,7 +59,6 @@ pip_run(p)
 p[["data"]]              # the underlying step table
 p[["name"]]              # "pipe"
 p[["view"]]              # NULL — not a view
-p[["run_state"]]         # "ready" — the current run state
 p[["pipenv"]]            # the inner pipeline environment
 
 # Column access, named by steps

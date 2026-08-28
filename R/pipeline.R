@@ -778,11 +778,11 @@ pip_new <- function(name = "pipe") {
     env[[".steps_to_nodes"]] <- hash_map()
 
     # Pipeline states
-    env[["run_state"]] <- factor(
+    env[[".run_state"]] <- factor(
         "ready",
         levels = c("ready", "restart", "running", "stop", "failed")
     )
-    env[["last_run"]] <- NULL
+    env[[".last_run"]] <- NULL
 
     # Restart tracking
     env[[".restart_count"]] <- 0L
@@ -1691,10 +1691,10 @@ pip_run <- function(
         }
     })
 
-    state <- env[["run_state"]]
+    state <- env[[".run_state"]]
     action <- if (state == "restart") "Restarting" else "Starting"
     log_info(sprintf("%s run of %s '%s'", action, data.class(x), x[["name"]]))
-    env[["run_state"]][] <- "running"
+    env[[".run_state"]][] <- "running"
     tryCatch(
         {
             for (i in seq_along(rowsToRun)) {
@@ -1732,7 +1732,7 @@ pip_run <- function(
                 log_info(msg)
                 self <- .pip_full_pip(x)
                 .pip_run_row(x = self, i = row, lgr = lgr)
-                stateAfterStep <- env[["run_state"]]
+                stateAfterStep <- env[[".run_state"]]
 
                 # Check for restart or stop signals
                 if (stateAfterStep == "restart") {
@@ -1756,13 +1756,13 @@ pip_run <- function(
             log_info(
                 sprintf("Finished run of %s '%s'", data.class(x), x[["name"]])
             )
-            env[["run_state"]][] <- "ready"
-            env[["last_run"]] <- Sys.time()
+            env[[".run_state"]][] <- "ready"
+            env[[".last_run"]] <- Sys.time()
             invisible(x)
         },
         error = function(e) {
-            env[["run_state"]][] <- "failed"
-            env[["last_run"]] <- Sys.time()
+            env[[".run_state"]][] <- "failed"
+            env[[".last_run"]] <- Sys.time()
             stop_no_call(e$message)
         }
     )
@@ -1816,7 +1816,7 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
         return(invisible(x))
     }
 
-    env[["run_state"]][] <- "restart"
+    env[[".run_state"]][] <- "restart"
     env[[".restart_count"]] <- count + 1L
     env[[".restart_force"]] <- force
     invisible(x)
@@ -1850,7 +1850,7 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
 pip_stop <- function(x) {
     .assert_pip_or_view(x)
     env <- .pip_get_pip_env(x)
-    env[["run_state"]][] <- "stop"
+    env[[".run_state"]][] <- "stop"
     invisible(x)
 }
 
@@ -1916,9 +1916,9 @@ pip_reset <- function(x) {
         )
     )
 
-    env[["run_state"]][] <- "ready"
+    env[[".run_state"]][] <- "ready"
     env[[".restart_count"]] <- 0L
-    env[["last_run"]] <- NULL
+    env[[".last_run"]] <- NULL
 
     invisible(x)
 }
@@ -2500,10 +2500,6 @@ length.pipeflow_pip <- function(x) {
 #' * `name` — the name of the pipeline.
 #' * `view` — the absolute row indices of the steps covered by a view, or
 #'   `NULL` for a full pipeline.
-#' * `run_state` — the current run state of the pipeline: `"ready"`,
-#'   `"running"`, `"failed"`, `"restart"`, or `"stop"`.
-#' * `last_run` — the time the pipeline was last run, or `NULL` if it has
-#'   never been run. Cleared by [pip_reset()].
 #' * `pipenv` — the shared inner environment holding the pipeline's state.
 #'   All views and extracted subsets reference the same environment, so
 #'   mutations are shared.
@@ -2529,7 +2525,6 @@ length.pipeflow_pip <- function(x) {
 #' p[["data"]]              # the underlying step table
 #' p[["name"]]              # "pipe"
 #' p[["view"]]              # NULL — not a view
-#' p[["run_state"]]         # "ready" — the current run state
 #' p[["pipenv"]]            # the inner pipeline environment
 #'
 #' # Column access, named by steps
@@ -2685,8 +2680,8 @@ print.pipeflow_pip <- function(
     )
 
     if (header) {
-        runState <- as.character(x[["run_state"]])
-        lastRun <- x[["last_run"]]
+        runState <- as.character(.pip_get_pip_env(x)[[".run_state"]])
+        lastRun <- x[["pipenv"]][[".last_run"]]
         lastRunStr <- if (is.null(lastRun)) {
             "never"
         } else {

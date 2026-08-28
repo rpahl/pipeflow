@@ -1352,12 +1352,12 @@ describe("pip_run", {
                 pip_add("s3", \(x = ~s2) x + 1)
 
             expect_error(pip_run(p, lgr = NULL), "boom")
-            expect_equal(as.character(p[["run_state"]]), "failed")
+            expect_equal(get_run_state(p), "failed")
 
             # A subsequent successful run resets the state to ready.
             pip_replace(p, "s2", \(x = ~s1) x + 1)
             pip_run(p, lgr = NULL)
-            expect_equal(as.character(p[["run_state"]]), "ready")
+            expect_equal(get_run_state(p), "ready")
         })
 
         it("marks the run state as failed when a view run errors", {
@@ -1367,7 +1367,7 @@ describe("pip_run", {
             v <- pip_view(p, step = "b")
 
             expect_error(pip_run(v, lgr = NULL), "view boom")
-            expect_equal(as.character(p[["run_state"]]), "failed")
+            expect_equal(get_run_state(p), "failed")
         })
     })
 
@@ -2046,7 +2046,7 @@ describe("pip_restart", {
         pip_run(p, lgr = NULL)
 
         expect_equal(c[["n"]], 2L)
-        expect_equal(as.character(p[["run_state"]]), "ready")
+        expect_equal(get_run_state(p), "ready")
     })
 
     it("stops recursive restarts after the announced times", {
@@ -2123,7 +2123,7 @@ describe("pip_restart", {
             pip_add("s1", \(x = 1) x)
 
         pip_restart(p)
-        expect_equal(as.character(p[["run_state"]]), "restart")
+        expect_equal(get_run_state(p), "restart")
         expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
 
         logs <- character(0)
@@ -2131,7 +2131,7 @@ describe("pip_restart", {
         pip_run(p, lgr = lgr)
 
         expect_true(any(grepl("Restarting run", logs)))
-        expect_equal(as.character(p[["run_state"]]), "ready")
+        expect_equal(get_run_state(p), "ready")
     })
 
     it("restarts the underlying pipeline when called on a view", {
@@ -2141,7 +2141,7 @@ describe("pip_restart", {
 
         pip_restart(v)
 
-        expect_equal(as.character(p[["run_state"]]), "restart")
+        expect_equal(get_run_state(p), "restart")
         expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
         expect_identical(v[["data"]], p[["data"]])
     })
@@ -2163,7 +2163,7 @@ describe("pip_restart", {
 
         expect_equal(c[["n"]], 2L)
         expect_equal(p[["data"]][["out"]], list(1, 2))
-        expect_equal(as.character(p[["run_state"]]), "ready")
+        expect_equal(get_run_state(p), "ready")
     })
 
     it("restarts without declaring .self in the step signature", {
@@ -2180,7 +2180,7 @@ describe("pip_restart", {
         pip_run(p, lgr = NULL)
 
         expect_equal(c[["n"]], 2L)
-        expect_equal(as.character(p[["run_state"]]), "ready")
+        expect_equal(get_run_state(p), "ready")
     })
 })
 
@@ -2195,8 +2195,8 @@ describe("pip_stop", {
 
         pip_stop(p)
 
-        expect_equal(as.character(p[["run_state"]]), "stop")
-        expect_equal(as.character(p[["run_state"]][]), "stop")
+        expect_equal(get_run_state(p), "stop")
+        expect_equal(get_run_state(p), "stop")
     })
 
     it("aborts the run at the stopping step and marks downstream outdated", {
@@ -2215,7 +2215,7 @@ describe("pip_stop", {
             p[["data"]][["state"]],
             c("done", "done", "outdated")
         )
-        expect_equal(as.character(p[["run_state"]]), "ready")
+        expect_equal(get_run_state(p), "ready")
     })
 
     it("logs the manual stop message during the run", {
@@ -2304,7 +2304,7 @@ describe("pip_stop", {
 
         pip_stop(v)
 
-        expect_equal(as.character(p[["run_state"]]), "stop")
+        expect_equal(get_run_state(p), "stop")
         expect_identical(v[["data"]], p[["data"]])
     })
 
@@ -2326,7 +2326,7 @@ describe("pip_stop", {
             p[["data"]][["state"]],
             c("done", "done", "outdated", "outdated")
         )
-        expect_equal(as.character(p[["run_state"]]), "ready")
+        expect_equal(get_run_state(p), "ready")
     })
 })
 
@@ -2343,7 +2343,7 @@ describe("pip_reset", {
 
         expect_equal(p[["data"]][["state"]], c("new", "new"))
         expect_true(all(vapply(p[["data"]][["out"]], is.null, logical(1))))
-        expect_equal(as.character(p[["run_state"]]), "ready")
+        expect_equal(get_run_state(p), "ready")
     })
 
     it("keeps params and tags but clears outputs", {
@@ -2380,7 +2380,7 @@ describe("pip_reset", {
         pip_run(p, lgr = NULL)
 
         expect_equal(p[["data"]][["out"]], list(1, 2))
-        expect_equal(as.character(p[["run_state"]]), "ready")
+        expect_equal(get_run_state(p), "ready")
     })
 
     it("skips locked steps, keeping their state and output", {
@@ -3030,12 +3030,15 @@ describe("extract operator [", {
             expect_equal(v1[["view"]], c(1L, 2L, 4L))
 
             v3 <- p[step = "a1", state = "new", join = "union"]
-            expect_equal(v3[["view"]], pip_view(
-                p,
-                step = "a1",
-                state = "new",
-                join = "union"
-            )[["view"]])
+            expect_equal(
+                v3[["view"]],
+                pip_view(
+                    p,
+                    step = "a1",
+                    state = "new",
+                    join = "union"
+                )[["view"]]
+            )
         })
 
         it("filters by tags", {
@@ -3314,10 +3317,10 @@ describe("print.pipeflow_pip", {
         pip_run(p, lgr = NULL)
         out <- capture.output(print(p))
         expect_true(any(grepl("<ready> last run: \\d{4}-\\d{2}-\\d{2}", out)))
-        expect_false(is.null(p[["last_run"]]))
+        expect_false(is.null(p[["pipenv"]][[".last_run"]]))
 
         env <- p[["pipenv"]]
-        env[["run_state"]] <- factor(
+        env[[".run_state"]] <- factor(
             "failed",
             levels = c("ready", "restart", "running", "stop", "failed")
         )
@@ -3329,11 +3332,11 @@ describe("print.pipeflow_pip", {
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x)
         pip_run(p, lgr = NULL)
-        expect_false(is.null(p[["last_run"]]))
+        expect_false(is.null(p[["pipenv"]][[".last_run"]]))
 
         pip_reset(p)
 
-        expect_null(p[["last_run"]])
+        expect_null(p[["pipenv"]][[".last_run"]])
         out <- capture.output(print(p))
         expect_true(any(grepl("last run: never", out)))
     })
