@@ -19,18 +19,26 @@ Locked steps are skipped during \code{\link[=pip_run]{pip_run()}} and cannot be 
 }
 \examples{
 p <- pip_new() |>
-  pip_add("load", \(x = 10) x) |>
-  pip_add("fit", \(x = ~load) x * 2)
-pip_run(p, lgr = NULL)
+    pip_add("x", \(x = 1) x) |>
+    pip_add("y", \(y = 2) y) |>
+    pip_add("sum", \(x = 1, y = 2) x + y)
+(pip_run(p))
+p[["sum", "out"]] # 3
 
-# Lock only "load" via a view so it won't be re-executed or overwritten
-pip_lock(pip_view(p, step = "load"))
-p[["data"]][["locked"]] # TRUE, FALSE
+# Lock "sum" step via a view so it cannot be overwritten
+pip_set_params(p, params = list(x = 10, y = 20))
+p[["sum", "params"]] # x = 10, y = 20
+pip_lock(p["sum", ])
+(pip_run(p))
+p[["sum", "out"]] # still 3
 
-# Locked steps are silently skipped during pip_run()
-pip_run(p, lgr = NULL, force = TRUE)
-p[["data"]][["out"]][[1]] # still 10 — locked, not re-executed
-
+# Note that locking also prevents any parameter updates
+pip_set_params(p, params = list(x = 100, y = 200))
+p[["x", "params"]] # x = 100
+p[["y", "params"]] # y = 200
+p[["sum", "params"]] # still x = 10, y = 20
 pip_unlock(p)
-p[["data"]][["locked"]] # FALSE, FALSE
+pip_set_params(p, params = list(x = 100, y = 200))
+(pip_run(p))
+p[["sum", "out"]] # 300
 }

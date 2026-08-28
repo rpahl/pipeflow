@@ -750,16 +750,18 @@
 #'
 #' @return A pipeflow pipeline object.
 #' @examples
-#' # Create a named pipeline
-#' p <- pip_new("my_analysis")
-#' p[["name"]] # "my_analysis"
-#'
-#' # Build a simple pipeline and run it
-#' pip_add(p, "load", \(n = 5) seq_len(n))
-#' pip_add(p, "double", \(x = ~load) x * 2) # x depends on load's output
+#' p <- pip_new("demo") |>
+#'     pip_add("numbers", \(n = 5) seq_len(n)) |>
+#'     pip_add("squared", \(x = ~numbers) x^2) |>
+#'     pip_add("total",   \(x = ~squared) sum(x))
 #' p
-#' pip_run(p)
-#' p[["out"]] # list of outputs, one per step
+#' str(p)
+#' p[["name"]]
+#' p[["view"]]  # initially NULL
+#'
+#' # Inner pipeline environment (for advanced usage)
+#' ls(p[["pipenv"]])                # shows "data"
+#' ls(p[["pipenv"]], all = TRUE)    # also shows hidden variables
 #' @export
 pip_new <- function(name = "pipe") {
     if (!.is_single(name, "character")) {
@@ -2121,20 +2123,30 @@ pip_untag <- function(x, tags = character()) {
 #' @return The updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("load", \(x = 10) x) |>
-#'   pip_add("fit", \(x = ~load) x * 2)
-#' pip_run(p, lgr = NULL)
+#'     pip_add("x", \(x = 1) x) |>
+#'     pip_add("y", \(y = 2) y) |>
+#'     pip_add("sum", \(x = 1, y = 2) x + y)
+#' (pip_run(p))
+#' p[["sum", "out"]] # 3
 #'
-#' # Lock only "load" via a view so it won't be re-executed or overwritten
-#' pip_lock(pip_view(p, step = "load"))
-#' p[["data"]][["locked"]] # TRUE, FALSE
+#' # Lock "sum" step via a view so it cannot be overwritten
+#' pip_set_params(p, params = list(x = 10, y = 20))
+#' p[["sum", "params"]] # x = 10, y = 20
+#' pip_lock(p["sum", ])
+#' (pip_run(p))
+#' p[["sum", "out"]] # still 3
 #'
-#' # Locked steps are silently skipped during pip_run()
-#' pip_run(p, lgr = NULL, force = TRUE)
-#' p[["data"]][["out"]][[1]] # still 10 — locked, not re-executed
-#'
+#' # Note that locking also prevents any parameter updates
+#' pip_set_params(p, params = list(x = 100, y = 200))
+#' p[["x", "params"]] # x = 100
+#' p[["y", "params"]] # y = 200
+#' p[["sum", "params"]] # still x = 10, y = 20
+
+# Unlock everything to allow updates again
 #' pip_unlock(p)
-#' p[["data"]][["locked"]] # FALSE, FALSE
+#' pip_set_params(p, params = list(x = 100, y = 200))
+#' (pip_run(p))
+#' p[["sum", "out"]] # 300
 #' @export
 pip_lock <- function(x) {
     .assert_pip_or_view(x)

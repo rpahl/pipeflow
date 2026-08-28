@@ -17,14 +17,16 @@ Creates a new, empty pipeline. Add steps with \code{\link[=pip_add]{pip_add()}} 
 them with \code{\link[=pip_run]{pip_run()}}.
 }
 \examples{
-# Create a named pipeline
-p <- pip_new("my_analysis")
-p[["name"]] # "my_analysis"
-
-# Build a simple pipeline and run it
-pip_add(p, "load", \(n = 5) seq_len(n))
-pip_add(p, "double", \(x = ~load) x * 2) # x depends on load's output
+p <- pip_new("demo") |>
+    pip_add("numbers", \(n = 5) seq_len(n)) |>
+    pip_add("squared", \(x = ~numbers) x^2) |>
+    pip_add("total",   \(x = ~squared) sum(x))
 p
-pip_run(p)
-p[["out"]] # list of outputs, one per step
+str(p)
+p[["name"]]
+p[["view"]]  # initially NULL
+
+# Inner pipeline environment (for advanced usage)
+ls(p[["pipenv"]])                # shows "data"
+ls(p[["pipenv"]], all = TRUE)    # also shows hidden variables
 }
