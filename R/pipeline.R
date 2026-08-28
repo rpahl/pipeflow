@@ -2710,14 +2710,18 @@ print.pipeflow_pip <- function(
         rows <- .pip_view_rows(x)
     }
 
-    print(
-        dat[rows, cols, with = FALSE],
-        topn = topn,
-        nrows = nrows,
-        row.names = row.names,
-        class = class,
-        ...
-    )
+    if (length(rows) == 0L) {
+        cat("Empty pipeline\n")
+    } else {
+        print(
+            dat[rows, cols, with = FALSE],
+            topn = topn,
+            nrows = nrows,
+            row.names = row.names,
+            class = class,
+            ...
+        )
+    }
 
     if (header) {
         runState <- as.character(.pip_get_pip_env(x)[[".run_state"]])

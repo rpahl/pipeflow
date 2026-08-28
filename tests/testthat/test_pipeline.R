@@ -3364,6 +3364,21 @@ describe("print.pipeflow_pip", {
         out <- capture.output(print(p))
         expect_true(any(grepl("last run: never", out)))
     })
+
+    it("prints 'Empty pipeline' for empty pipelines and views", {
+        p <- pip_new("demo")
+        out <- capture.output(print(p))
+        expect_true(any(grepl("Empty pipeline", out)))
+        expect_false(any(grepl("Empty data.table", out)))
+
+        v <- pip_view(p)
+        out <- capture.output(print(v))
+        expect_true(any(grepl("Empty pipeline", out)))
+
+        p2 <- pip_new() |> pip_add("s1", \(x = 1) x)
+        out <- capture.output(print(pip_view(p2, step = "nope")))
+        expect_true(any(grepl("Empty pipeline", out)))
+    })
 })
 
 
