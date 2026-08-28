@@ -2330,17 +2330,25 @@ length.pipeflow_pip <- function(x) {
 #' returned that references the selected steps without copying them. Set
 #' `view = FALSE` to instead get a new, self-contained pipeline that includes
 #' all required upstream dependencies.
+#'
+#' If `i` is omitted, named arguments passed through `...` are forwarded to
+#' [pip_view()], so views can be defined directly with the extract operator:
+#' `p[state = "new", tags = "io"]`. With no arguments at all, a copy of the
+#' pipeline is returned.
 #' @param x A pipeflow pipeline object.
 #' @param i integer (row indices) or character vector (step names) of steps to
-#' select
+#' select. If omitted, `...` filters are forwarded to [pip_view()].
 #' @param view If `TRUE` (default), a view referencing the selected steps is
 #' returned. If `FALSE`, a new pipeline is returned that includes the selected
 #' steps and all their upstream dependencies.
+#' @param ... Named filters forwarded to [pip_view()], used when `i` is
+#' omitted. Can be one or more of `step`, `params`, `depends`, `state`,
+#' `tags`, `exec`.
 #' @return A pipeflow view (if `view = TRUE`) or a new pipeflow pipeline
 #' (if `view = FALSE`).
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("load", \(n = 5) seq_len(n)) |>
+#'   pip_add("load", \(n = 5) seq_len(n), tags = "io") |>
 #'   pip_add("square", \(x = ~load) x^2) |>
 #'   pip_add("total", \(x = ~square) sum(x))
 #'
@@ -2356,15 +2364,27 @@ length.pipeflow_pip <- function(x) {
 #' # Select a subset of steps by name vector or integer row index
 #' p[c("load", "square")][["step"]] # view -> "load", "square"
 #' p[1:2, view = FALSE][["step"]]    # pipeline -> "load", "square"
+#'
+#' # With i omitted, named arguments are forwarded to pip_view()
+#' v <- p[state = "new", tags = "io"]
+#' v[["step"]] # "load"
+#'
+#' # No arguments returns a copy of the pipeline
+#' length(p[]) # 3
 #' @rdname Extract.pipeflow_pip
 #' @export
-`[.pipeflow_pip` <- function(x, i, view = TRUE) {
+`[.pipeflow_pip` <- function(x, i, view = TRUE, ...) {
     .assert_pip(x)
     n <- length(x)
 
-    # Resolve selected rows from either row indices or step names
     if (missing(i)) {
-        return(pip_clone(x))
+        if (!missing(...)) {
+            # Allows views to be defined like x[state = "new", tags = "io"]
+            return(pip_view(x, ...))
+        } else {
+            # We land here if user calls x[]
+            return(pip_clone(x))
+        }
     }
 
     if (!.is_single(view, "logical") || is.na(view)) {

@@ -2992,6 +2992,73 @@ describe("extract operator [", {
         expect_message(p[c("a2", "b2"), view = FALSE], "pulled in 2 upstream")
         expect_silent(p[c("a1", "b1"), view = FALSE])
     })
+
+    describe("filter forwarding", {
+        it("can use custom filters as in pip_view", {
+            p <- test_pip()
+            res <- p["depends" = "a1", "state" = "new"]
+
+            expect_true(.is_pipeflow_view(res))
+            expect_equal(res[["view"]], unname(which(p[["depends"]] == "a1")))
+        })
+
+        it("forwards a single filter to pip_view", {
+            p <- test_pip()
+            v1 <- p[state = "new"]
+            v2 <- pip_view(p, state = "new")
+
+            expect_true(.is_pipeflow_view(v1))
+            expect_equal(v1[["view"]], v2[["view"]])
+            expect_equal(v1[["name"]], v2[["name"]])
+        })
+
+        it("combines multiple filters by intersection", {
+            p <- test_pip()
+            v1 <- p[state = "new", depends = "a1"]
+            v2 <- pip_view(p, state = "new", depends = "a1")
+
+            expect_equal(v1[["view"]], v2[["view"]])
+            expect_equal(v1[["view"]], c(2L, 4L))
+        })
+
+        it("forwards join and fixed arguments to pip_view", {
+            p <- test_pip()
+            v1 <- p[step = "a", fixed = FALSE]
+            v2 <- pip_view(p, step = "a", fixed = FALSE)
+
+            expect_equal(v1[["view"]], v2[["view"]])
+            expect_equal(v1[["view"]], c(1L, 2L, 4L))
+
+            v3 <- p[step = "a1", state = "new", join = "union"]
+            expect_equal(v3[["view"]], pip_view(
+                p,
+                step = "a1",
+                state = "new",
+                join = "union"
+            )[["view"]])
+        })
+
+        it("filters by tags", {
+            p <- pip_new() |>
+                pip_add("load", \(x = 1) x, tags = c("io", "raw")) |>
+                pip_add("report", \(x = ~load) x, tags = c("io", "report")) |>
+                pip_add("other", \(x = 1) x, tags = "misc")
+
+            v <- p[tags = "io"]
+
+            expect_true(.is_pipeflow_view(v))
+            expect_equal(v[["step"]], c(load = "load", report = "report"))
+        })
+
+        it("returns a copy of the pipeline when no arguments are given", {
+            p <- test_pip()
+            res <- p[]
+
+            expect_true(.is_pipeflow_pip(res))
+            expect_false(.is_pipeflow_view(res))
+            expect_equal(res[["data"]][["step"]], p[["data"]][["step"]])
+        })
+    })
 })
 
 

@@ -4,17 +4,21 @@
 \alias{[.pipeflow_pip}
 \title{Extract or subset a pipeline}
 \usage{
-\method{[}{pipeflow_pip}(x, i, view = TRUE)
+\method{[}{pipeflow_pip}(x, i, view = TRUE, ...)
 }
 \arguments{
 \item{x}{A pipeflow pipeline object.}
 
 \item{i}{integer (row indices) or character vector (step names) of steps to
-select}
+select. If omitted, \code{...} filters are forwarded to \code{\link[=pip_view]{pip_view()}}.}
 
 \item{view}{If \code{TRUE} (default), a view referencing the selected steps is
 returned. If \code{FALSE}, a new pipeline is returned that includes the selected
 steps and all their upstream dependencies.}
+
+\item{...}{Named filters forwarded to \code{\link[=pip_view]{pip_view()}}, used when \code{i} is
+omitted. Can be one or more of \code{step}, \code{params}, \code{depends}, \code{state},
+\code{tags}, \code{exec}.}
 }
 \value{
 A pipeflow view (if \code{view = TRUE}) or a new pipeflow pipeline
@@ -26,9 +30,15 @@ returned that references the selected steps without copying them. Set
 \code{view = FALSE} to instead get a new, self-contained pipeline that includes
 all required upstream dependencies.
 }
+\details{
+If \code{i} is omitted, named arguments passed through \code{...} are forwarded to
+\code{\link[=pip_view]{pip_view()}}, so views can be defined directly with the extract operator:
+\code{p[state = "new", tags = "io"]}. With no arguments at all, a copy of the
+pipeline is returned.
+}
 \examples{
 p <- pip_new() |>
-  pip_add("load", \(n = 5) seq_len(n)) |>
+  pip_add("load", \(n = 5) seq_len(n), tags = "io") |>
   pip_add("square", \(x = ~load) x^2) |>
   pip_add("total", \(x = ~square) sum(x))
 
@@ -44,4 +54,11 @@ sub[["step"]] # "load", "square", "total"
 # Select a subset of steps by name vector or integer row index
 p[c("load", "square")][["step"]] # view -> "load", "square"
 p[1:2, view = FALSE][["step"]]    # pipeline -> "load", "square"
+
+# With i omitted, named arguments are forwarded to pip_view()
+v <- p[state = "new", tags = "io"]
+v[["step"]] # "load"
+
+# No arguments returns a copy of the pipeline
+length(p[]) # 3
 }
