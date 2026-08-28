@@ -2328,6 +2328,34 @@ length.pipeflow_pip <- function(x) {
     as.integer(length(.pip_view_rows(x)))
 }
 
+#' Number of rows of a pipeflow pipeline or view
+#'
+#' Treats a pipeline as a table of steps: `nrow()` returns the number of
+#' steps, the same as [length.pipeflow_pip] / `length()`, and `ncol()`
+#' returns the number of columns of the underlying step table. Views report
+#' only the number of covered steps as rows.
+#' @param x A pipeflow pipeline or view
+#' @return `nrow()` returns the number of steps as an integer; `ncol()`
+#' returns the number of columns of the step table.
+#' @details Base R's `nrow()` is implemented as `dim(x)[1L]`, so the number
+#' of rows and columns is provided through a `dim()` method for
+#' `pipeflow_pip` objects.
+#' @examples
+#' p <- pip_new() |>
+#'   pip_add("s1", \(x = 1) x) |>
+#'   pip_add("s2", \(x = ~s1) x + 1)
+#' nrow(p) # 2
+#' ncol(p) # number of columns of the step table
+#' nrow(p) == length(p) # TRUE
+#'
+#' v <- pip_view(p, step = "s2")
+#' nrow(v) # 1
+#' @rdname nrow.pipeflow
+#' @export
+dim.pipeflow_pip <- function(x) {
+    c(as.integer(length(.pip_view_rows(x))), ncol(x[["data"]]))
+}
+
 #' Extract or subset a pipeline
 #'
 #' Selects steps from a pipeline. By default, a lightweight [pip_view()] is

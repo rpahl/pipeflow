@@ -2869,6 +2869,30 @@ describe("length", {
     })
 })
 
+describe("nrow", {
+    it("matches length for pipelines and views", {
+        p <- pip_new() |>
+            pip_add("s1", \(a = 1) a) |>
+            pip_add("s2", \(a = ~s1) a)
+        pip_add(p, "s3", \(a = 1) a)
+
+        expect_equal(nrow(p), length(p))
+        expect_equal(nrow(p), 3L)
+        expect_equal(ncol(p), ncol(p[["data"]]))
+
+        v <- pip_view(p, step = c("s1", "s3"))
+        expect_equal(nrow(v), length(v))
+        expect_equal(nrow(v), 2L)
+        expect_equal(ncol(v), ncol(p[["data"]]))
+    })
+
+    it("returns zero rows for an empty pipeline", {
+        p <- pip_new()
+        expect_equal(nrow(p), 0L)
+        expect_equal(ncol(p), ncol(p[["data"]]))
+    })
+})
+
 describe("extract operator [", {
     test_pip <- function() {
         pip_new() |>
