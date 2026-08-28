@@ -36,6 +36,8 @@ include \code{step}, \code{fun}, \code{params}, \code{signature}, \code{depends}
 \code{NULL} for a full pipeline.
 \item \code{run_state} — the current run state of the pipeline: \code{"ready"},
 \code{"running"}, \code{"failed"}, \code{"restart"}, or \code{"stop"}.
+\item \code{last_run} — the time the pipeline was last run, or \code{NULL} if it has
+never been run. Cleared by \code{\link[=pip_reset]{pip_reset()}}.
 \item \code{pipenv} — the shared inner environment holding the pipeline's state.
 All views and extracted subsets reference the same environment, so
 mutations are shared.

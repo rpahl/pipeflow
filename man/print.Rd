@@ -41,7 +41,8 @@ and end of tables with more than \code{nrows} rows.}
 column its storage class (or a self-evident abbreviation thereof).}
 
 \item{header}{If TRUE, a header with the pipeline name and number
-of steps will be printed.}
+of steps, and a footer with the run state and the time of the last run,
+will be printed.}
 }
 \value{
 Invisibly returns \code{x}.

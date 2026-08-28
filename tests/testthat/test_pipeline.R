@@ -3302,6 +3302,41 @@ describe("print.pipeflow_pip", {
             c("step", "depends", "out", "state", "tags", "exec")
         )
     })
+
+    it("prints a footer with the run state and last run time", {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1)
+
+        out <- capture.output(print(p))
+        expect_true(any(grepl("<ready> last run: never", out)))
+
+        pip_run(p, lgr = NULL)
+        out <- capture.output(print(p))
+        expect_true(any(grepl("<ready> last run: \\d{4}-\\d{2}-\\d{2}", out)))
+        expect_false(is.null(p[["last_run"]]))
+
+        env <- p[["pipenv"]]
+        env[["run_state"]] <- factor(
+            "failed",
+            levels = c("ready", "restart", "running", "stop", "failed")
+        )
+        out <- capture.output(print(p))
+        expect_true(any(grepl("<failed> last run:", out)))
+    })
+
+    it("resets the last run time", {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x)
+        pip_run(p, lgr = NULL)
+        expect_false(is.null(p[["last_run"]]))
+
+        pip_reset(p)
+
+        expect_null(p[["last_run"]])
+        out <- capture.output(print(p))
+        expect_true(any(grepl("last run: never", out)))
+    })
 })
 
 

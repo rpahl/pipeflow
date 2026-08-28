@@ -782,6 +782,7 @@ pip_new <- function(name = "pipe") {
         "ready",
         levels = c("ready", "restart", "running", "stop", "failed")
     )
+    env[["last_run"]] <- NULL
 
     # Restart tracking
     env[[".restart_count"]] <- 0L
@@ -1756,10 +1757,12 @@ pip_run <- function(
                 sprintf("Finished run of %s '%s'", data.class(x), x[["name"]])
             )
             env[["run_state"]][] <- "ready"
+            env[["last_run"]] <- Sys.time()
             invisible(x)
         },
         error = function(e) {
             env[["run_state"]][] <- "failed"
+            env[["last_run"]] <- Sys.time()
             stop_no_call(e$message)
         }
     )
@@ -1915,6 +1918,7 @@ pip_reset <- function(x) {
 
     env[["run_state"]][] <- "ready"
     env[[".restart_count"]] <- 0L
+    env[["last_run"]] <- NULL
 
     invisible(x)
 }
@@ -2498,6 +2502,8 @@ length.pipeflow_pip <- function(x) {
 #'   `NULL` for a full pipeline.
 #' * `run_state` — the current run state of the pipeline: `"ready"`,
 #'   `"running"`, `"failed"`, `"restart"`, or `"stop"`.
+#' * `last_run` — the time the pipeline was last run, or `NULL` if it has
+#'   never been run. Cleared by [pip_reset()].
 #' * `pipenv` — the shared inner environment holding the pipeline's state.
 #'   All views and extracted subsets reference the same environment, so
 #'   mutations are shared.
@@ -2589,7 +2595,8 @@ length.pipeflow_pip <- function(x) {
 #' column its storage class (or a self-evident abbreviation thereof).
 #' @param row.names If TRUE, row indices will be printed alongside x.
 #' @param header If TRUE, a header with the pipeline name and number
-#' of steps will be printed.
+#' of steps, and a footer with the run state and the time of the last run,
+#' will be printed.
 #' @param ...  Other arguments passed to `print.data.table`
 #' @return Invisibly returns `x`.
 #' @examples
@@ -2608,7 +2615,8 @@ length.pipeflow_pip <- function(x) {
 #' @export
 str.pipeflow_pip <- function(object, ...) {
     str(unclass(object), ...)
-} #' @rdname print
+}
+#' @rdname print
 #' @export
 print.pipeflow_pip <- function(
     x,
@@ -2675,6 +2683,21 @@ print.pipeflow_pip <- function(
         class = class,
         ...
     )
+
+    if (header) {
+        runState <- as.character(x[["run_state"]])
+        lastRun <- x[["last_run"]]
+        lastRunStr <- if (is.null(lastRun)) {
+            "never"
+        } else {
+            format(lastRun, format = "%Y-%m-%d %H:%M:%S")
+        }
+        cat(
+            line,
+            sprintf("<%s> last run: %s", runState, lastRunStr),
+            sep = "\n"
+        )
+    }
 
     invisible(x)
 }
