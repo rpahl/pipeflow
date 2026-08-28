@@ -19,14 +19,36 @@ select}
 Extracted value(s), depending on \code{i} and \code{j}.
 }
 \description{
-A pipeline is conceptually a table of steps, so \code{[[} follows the
-table/data.frame conventions:
+A pipeline can be read like a data.frame of steps: \code{p[[column]]} returns a
+column of the step table, and \code{p[[row, column]]} extracts a single cell.
+In addition, a few meta fields are accessible by name.
+}
+\details{
+\subsection{Meta fields}{
+
+The following meta fields are available via \code{p[["..."]]} (or \code{p$...}):
 \itemize{
-\item \code{p[[column]]} returns a column of the step table, named by the steps.
-Named meta fields \code{"data"}, \code{"name"} (pipeline) or \code{"pipenv"}, \code{"view"}
-(view) take priority over columns.
-\item \code{p[[row, column]]} extracts a single cell.
-For views, column access is restricted to the steps covered by the view.
+\item \code{data} — the step table, a \code{data.table} with one row per step. Columns
+include \code{step}, \code{fun}, \code{params}, \code{signature}, \code{depends}, \code{tags},
+\code{exec}, \code{state}, \code{out}, \code{time}, and \code{locked}.
+\item \code{name} — the name of the pipeline.
+\item \code{view} — the absolute row indices of the steps covered by a view, or
+\code{NULL} for a full pipeline.
+\item \code{run_state} — the current run state of the pipeline: \code{"ready"},
+\code{"running"}, \code{"failed"}, \code{"restart"}, or \code{"stop"}.
+\item \code{pipenv} — the shared inner environment holding the pipeline's state.
+All views and extracted subsets reference the same environment, so
+mutations are shared.
+}
+}
+
+\subsection{Step-table columns}{
+
+\code{p[["column"]]} returns a column of the step table, named by the step
+names. For views, the column is restricted to the steps covered by the
+view. Meta fields take priority over columns of the same name. The
+two-index form \code{p[[row, column]]} extracts a single cell, where \code{row} is
+an integer row index or a step name.
 }
 }
 \examples{
@@ -35,13 +57,16 @@ p <- pip_new() |>
   pip_add("fit", \(x = ~load) x + 1)
 pip_run(p)
 
+# Meta fields
+p[["data"]]              # the underlying step table
+p[["name"]]              # "pipe"
+p[["view"]]              # NULL — not a view
+p[["run_state"]]         # "ready" — the current run state
+p[["pipenv"]]            # the inner pipeline environment
+
 # Column access, named by steps
 p[["step"]]   # c(load = "load", fit = "fit")
 p[["out"]]    # c(load = 1, fit = 2)
-
-# Meta fields
-p[["data"]]   # the underlying step table
-p[["name"]]   # "pipe"
 
 # Single cell: p[[row, column]]
 p[["fit", "depends"]]    # "load"
@@ -49,8 +74,10 @@ p[[2, "state"]]          # state of the second step
 
 # Views behave analogously:
 v <- pip_view(p, step = c("load", "fit"))
-v[["pipenv"]]            # the shared inner environment
+v[["data"]]              # the underlying filtered step table
+v[["name"]]              # "pipe view"
 v[["view"]]              # row indices of the covered steps
+
 v[["step"]]              # c(load = "load", fit = "fit")
 v[["out"]]               # c(load = 1, fit = 2)
 v[["fit", "out"]]        # output of the "fit" step

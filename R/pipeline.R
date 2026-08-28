@@ -2482,13 +2482,33 @@ length.pipeflow_pip <- function(x) {
 
 #' Extract values from a pipeline or view
 #'
-#' A pipeline is conceptually a table of steps, so `[[` follows the
-#' table/data.frame conventions:
-#' * `p[[column]]` returns a column of the step table, named by the steps.
-#'   Named meta fields `"data"`, `"name"` (pipeline) or `"pipenv"`, `"view"`
-#'   (view) take priority over columns.
-#' * `p[[row, column]]` extracts a single cell.
-#' For views, column access is restricted to the steps covered by the view.
+#' A pipeline can be read like a data.frame of steps: `p[[column]]` returns a
+#' column of the step table, and `p[[row, column]]` extracts a single cell.
+#' In addition, a few meta fields are accessible by name.
+#'
+#' ## Meta fields
+#'
+#' The following meta fields are available via `p[["..."]]` (or `p$...`):
+#'
+#' * `data` — the step table, a `data.table` with one row per step. Columns
+#'   include `step`, `fun`, `params`, `signature`, `depends`, `tags`,
+#'   `exec`, `state`, `out`, `time`, and `locked`.
+#' * `name` — the name of the pipeline.
+#' * `view` — the absolute row indices of the steps covered by a view, or
+#'   `NULL` for a full pipeline.
+#' * `run_state` — the current run state of the pipeline: `"ready"`,
+#'   `"running"`, `"failed"`, `"restart"`, or `"stop"`.
+#' * `pipenv` — the shared inner environment holding the pipeline's state.
+#'   All views and extracted subsets reference the same environment, so
+#'   mutations are shared.
+#'
+#' ## Step-table columns
+#'
+#' `p[["column"]]` returns a column of the step table, named by the step
+#' names. For views, the column is restricted to the steps covered by the
+#' view. Meta fields take priority over columns of the same name. The
+#' two-index form `p[[row, column]]` extracts a single cell, where `row` is
+#' an integer row index or a step name.
 #' @param i integer (row index) or character (step name) of the step to
 #' select
 #' @param j column name to select
@@ -2499,13 +2519,16 @@ length.pipeflow_pip <- function(x) {
 #'   pip_add("fit", \(x = ~load) x + 1)
 #' pip_run(p)
 #'
+#' # Meta fields
+#' p[["data"]]              # the underlying step table
+#' p[["name"]]              # "pipe"
+#' p[["view"]]              # NULL — not a view
+#' p[["run_state"]]         # "ready" — the current run state
+#' p[["pipenv"]]            # the inner pipeline environment
+#'
 #' # Column access, named by steps
 #' p[["step"]]   # c(load = "load", fit = "fit")
 #' p[["out"]]    # c(load = 1, fit = 2)
-#'
-#' # Meta fields
-#' p[["data"]]   # the underlying step table
-#' p[["name"]]   # "pipe"
 #'
 #' # Single cell: p[[row, column]]
 #' p[["fit", "depends"]]    # "load"
@@ -2513,8 +2536,10 @@ length.pipeflow_pip <- function(x) {
 #'
 #' # Views behave analogously:
 #' v <- pip_view(p, step = c("load", "fit"))
-#' v[["pipenv"]]            # the shared inner environment
+#' v[["data"]]              # the underlying filtered step table
+#' v[["name"]]              # "pipe view"
 #' v[["view"]]              # row indices of the covered steps
+#'
 #' v[["step"]]              # c(load = "load", fit = "fit")
 #' v[["out"]]               # c(load = 1, fit = 2)
 #' v[["fit", "out"]]        # output of the "fit" step
