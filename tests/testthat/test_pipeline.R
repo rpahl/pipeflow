@@ -21,7 +21,6 @@ describe(".new_step", {
         expect_equal(step$step, "step2")
         expect_equal(step$fun[[1]](2), 4)
         expect_equivalent(step$params[[1]], list(x = 1, y = ~step1))
-        expect_equal(step$signature, "(x)")
         expect_equal(step$depends, list(c(y = "step1")))
         expect_equal(step$out, list(NULL))
         expect_equal(step$tags, list(c("t1", "t2")))
@@ -3285,7 +3284,10 @@ describe("print.pipeflow_pip", {
 
         header <- get_print_header(p)
 
-        expect_equal(header, c("step", "depends", "out", "state", "tags"))
+        expect_equal(
+            header,
+            c("step", "depends", "out", "state", "tags")
+        )
     })
 
     it("shows tags when at least one step has tags", {
@@ -3298,7 +3300,10 @@ describe("print.pipeflow_pip", {
 
         header <- get_print_header(p)
 
-        expect_equal(header, c("step", "depends", "out", "state", "tags"))
+        expect_equal(
+            header,
+            c("step", "depends", "out", "state", "tags")
+        )
     })
 
     it("prints the tags column last when any step defines tags", {
@@ -3311,7 +3316,10 @@ describe("print.pipeflow_pip", {
 
         header <- get_print_header(p)
 
-        expect_equal(header, c("step", "depends", "out", "state", "tags"))
+        expect_equal(
+            header,
+            c("step", "depends", "out", "state", "tags")
+        )
     })
 
     it("prints the exec column last when any step defines non-auto exec", {

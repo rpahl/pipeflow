@@ -6,7 +6,6 @@
         step = character(0),
         fun = list(),
         params = list(),
-        signature = character(0),
         depends = list(),
         out = list(),
         state = character(0),
@@ -32,7 +31,6 @@
         step = step,
         fun = list(fun),
         params = list(params),
-        signature = trimws(substring(deparse(args(fun))[1], 10)),
         depends = list(depends),
         out = list(NULL),
         state = .step_states[["new"]][["name"]],
@@ -2535,7 +2533,7 @@ dim.pipeflow_pip <- function(x) {
 #' The following meta fields are available via `p[["..."]]` (or `p$...`):
 #'
 #' * `data` — the step table, a `data.table` with one row per step. Columns
-#'   include `step`, `fun`, `params`, `signature`, `depends`, `tags`,
+#'   include `step`, `fun`, `params`, `depends`, `tags`,
 #'   `exec`, `state`, `out`, `time`, and `locked`.
 #' * `name` — the name of the pipeline.
 #' * `view` — the absolute row indices of the steps covered by a view, or
@@ -2651,6 +2649,8 @@ dim.pipeflow_pip <- function(x) {
 str.pipeflow_pip <- function(object, ...) {
     str(unclass(object), ...)
 }
+
+
 #' @rdname print
 #' @export
 print.pipeflow_pip <- function(
