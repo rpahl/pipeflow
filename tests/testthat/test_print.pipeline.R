@@ -2,13 +2,32 @@ describe(".class_abb", {
     it("abbreviates known classes", {
         expect_equal(
             .class_abb(list(
-                1, 1L, TRUE, 1 + 1i, "x", as.Date("2020-01-01"),
-                factor("a"), ordered("b"), as.POSIXct("2020-01-01"),
-                as.raw(1), list(1), expression(1)
+                1,
+                1L,
+                TRUE,
+                1 + 1i,
+                "x",
+                as.Date("2020-01-01"),
+                factor("a"),
+                ordered("b"),
+                as.POSIXct("2020-01-01"),
+                as.raw(1),
+                list(1),
+                expression(1)
             )),
             c(
-                "<num>", "<num>", "<lgcl>", "<cplx>", "<char>", "<Date>",
-                "<fctr>", "<ord>", "<POSc>", "<raw>", "<list>", "<expr>"
+                "<num>",
+                "<num>",
+                "<lgcl>",
+                "<cplx>",
+                "<char>",
+                "<Date>",
+                "<fctr>",
+                "<ord>",
+                "<POSc>",
+                "<raw>",
+                "<list>",
+                "<expr>"
             )
         )
     })
@@ -33,7 +52,7 @@ describe(".param_list_to_string", {
         params <- list(a = 1, b = ~s2, c = list(a = 1, b = 2))
         expect_equal(
             .param_list_to_string(params),
-            "a = 1, b = ~s2, c = <char>"
+            "a=1, b=~s2, c=<list>"
         )
     })
 
@@ -41,7 +60,7 @@ describe(".param_list_to_string", {
         params <- list(data = 1:100000, label = "some long label")
         expect_equal(
             .param_list_to_string(params),
-            "data = <char>, label = <char>"
+            "data=<num>, label=<char>"
         )
     })
 
@@ -49,14 +68,22 @@ describe(".param_list_to_string", {
         params <- list(a = 1, b = TRUE, c = "hi")
         expect_equal(
             .param_list_to_string(params),
-            "a = 1, b = TRUE, c = \"hi\""
+            "a=1, b=TRUE, c=\"hi\""
         )
     })
 
     it("respects a custom maxchar", {
         params <- list(a = 1)
-        expect_equal(.param_list_to_string(params, maxchar = 1), "a = 1")
-        expect_equal(.param_list_to_string(params, maxchar = 0), "a = <char>")
+        expect_equal(.param_list_to_string(params, maxchar = 1), "a=1")
+        expect_equal(.param_list_to_string(params, maxchar = 0), "a=<num>")
+    })
+
+    it("uses the class abbreviation of the value, not the deparsed string", {
+        params <- list(x = data.frame(a = 1:2), f = factor(letters[1:3]))
+        expect_equal(
+            .param_list_to_string(params),
+            "x=<data.frame>, f=<fctr>"
+        )
     })
 })
 
@@ -112,8 +139,8 @@ describe("print.pipeflow_pip", {
             pip_add("s1", \(x = 1) x) |>
             pip_add("s2", \(x = ~s1) x + 1, params = list(y = "hi"))
 
-        expect_true(grepl("x = 1", get_step_line(p, "s1")))
-        expect_true(grepl("y = \"hi\", x = ~s1", get_step_line(p, "s2")))
+        expect_true(grepl("x=1", get_step_line(p, "s1")))
+        expect_true(grepl("y=\"hi\", x=~s1", get_step_line(p, "s2")))
     })
 
     it("abbreviates long signatures with the maxchar option", {
@@ -123,7 +150,17 @@ describe("print.pipeflow_pip", {
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = list(a = 1, b = 2)) x)
 
-        expect_true(grepl("x = <char>", get_step_line(p, "s1")))
+        expect_true(grepl("x=<list>", get_step_line(p, "s1")))
+    })
+
+    it("shows the class abbreviation for long signatures", {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = data.frame(a = 1:2)) x)
+
+        expect_true(grepl("x=<data.frame>", get_step_line(p, "s1")))
     })
 
     it("shows tags when at least one step has tags", {
@@ -312,8 +349,8 @@ describe("print.pipeflow_view", {
         v <- pip_view(p, step = c("s2", "s3"))
         out <- capture.output(print(v))
 
-        expect_true(any(grepl("x = ~s1", out)))
-        expect_true(any(grepl("x = ~s2", out)))
+        expect_true(any(grepl("x=~s1", out)))
+        expect_true(any(grepl("x=~s2", out)))
         expect_false(any(grepl("^s1\\b", out)))
     })
 })

@@ -34,11 +34,12 @@
 ) {
     chars <- trimws(sapply(x, deparse1))
     if (length(idx <- which(nchar(chars) > maxchar))) {
-        chars[idx] <- .class_abb(chars[idx])
+        chars[idx] <- .class_abb(x[idx])
     }
 
-    toString(paste(names(x), "=", chars))
+    toString(paste0(names(x), "=", chars))
 }
+
 
 #' @rdname print
 #' @export
