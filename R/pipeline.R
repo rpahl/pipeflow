@@ -158,34 +158,39 @@
     if (!is.integer(toPos)) {
         stop_no_call("toPos must be an integer")
     }
+    if (toPos < 1) {
+        stop_no_call("toPos (", toPos, ") must be at least 1")
+    }
     if (toPos > length(steps)) {
-        stop_no_call("toPos exceeds number of steps")
+        stop_no_call(
+            sprintf(
+                "toPos (%d) exceeds number of steps (%d)",
+                toPos,
+                length(steps)
+            )
+        )
     }
 
     # References to other steps are marked using a formula and can be either
     # referencing earlier steps (e.g. x = ~step1) or using positional indices
-    # by pointing backwards a certain number of steps (e.g. x = ~-1)
+    # by pointing backwards a certain number of steps (e.g. x = ~-2)
     depends <- formula_deps(params)
     if (length(depends) == 0) {
         return(character(0))
     }
 
-    # Finally, convert any relative dependencies (those marked with a
-    # leading "-") to step names.
-    rel_pos_to_step_num <- function(relPos, startPos) {
-        if (startPos < 1) {
-            stop_no_call("startPos must be at least 1")
-        }
-        stepNumber <- startPos - relPos
-        if (stepNumber < 1) {
-            stop_no_call("relative index -", relPos, " points outside pipeline")
-        }
-        stepNumber
-    }
+    # Convert relative positional indices (e.g. x = ~-2) to step names.
     iRelPos <- which(depends |> startsWith("-"))
-    stepNumbers <- depends[iRelPos] |>
-        lapply(FUN = \(x) rel_pos_to_step_num(abs(as.integer(x)), toPos))
-    depends[iRelPos] <- steps[as.integer(stepNumbers)]
+    if (length(iRelPos) > 0) {
+        stepNumbers <- toPos + as.integer(depends[iRelPos])
+        if (any(stepNumbers < 1)) {
+            firstBad <- which(stepNumbers < 1)[1]
+            badIdx <- depends[iRelPos[firstBad]]
+            info <- "relative index %s = ~%s points outside pipeline"
+            stop_no_call(sprintf(info, names(badIdx), badIdx))
+        }
+        depends[iRelPos] <- steps[as.integer(stepNumbers)]
+    }
 
     unlist(depends)
 }

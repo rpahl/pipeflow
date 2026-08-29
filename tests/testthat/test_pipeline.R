@@ -145,17 +145,19 @@ describe(".extract_depends", {
     it("signals bad steps input", {
         expect_error(
             .extract_depends(list(a = ~ -1), character(0)),
-            "startPos must be at least 1"
+            "toPos (0) must be at least 1",
+            fixed = TRUE
         )
     })
     it("signals relative index out of bound", {
         expect_error(
             .extract_depends(list(a = ~ -1), "s1"),
-            "relative index -1 points outside pipeline"
+            "relative index a = ~-1 points outside pipeline",
+            fixed = TRUE
         )
         expect_error(
             .extract_depends(list(a = ~ -4), steps),
-            "relative index -4 points outside pipeline"
+            "relative index a = ~-4 points outside pipeline"
         )
     })
 
@@ -169,7 +171,8 @@ describe(".extract_depends", {
     it("signals toPos exceeding number of steps", {
         expect_error(
             .extract_depends(list(), steps, 4L),
-            "toPos exceeds number of steps"
+            "toPos (4) exceeds number of steps (3)",
+            fixed = TRUE
         )
     })
 
@@ -462,7 +465,8 @@ describe("pip_add", {
         pip_add(p, "s1", \(a = 5) a)
         expect_error(
             pip_add(p, "s2", \(x = ~ -2) 2 * x),
-            "relative index -2 points outside pipeline"
+            "relative index x = ~-2 points outside pipeline",
+            fixed = TRUE
         )
     })
 
