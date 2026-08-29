@@ -58,9 +58,11 @@ print.pipeflow_pip <- function(
     isView <- .is_pipeflow_view(x)
 
     if (identical(cols, "core")) {
-        cols <- c("step", "depends", "out", "state")
-        has_tags <- any(lengths(data[["tags"]]) > 0L)
-        if (has_tags) {
+        cols <- c("step", "depends", "state")
+        if (any(lengths(data[["out"]]) > 0L)) {
+            cols <- append(cols, "out")
+        }
+        if (any(lengths(data[["tags"]]) > 0L)) {
             cols <- append(cols, "tags")
         }
         if (any(data[["exec"]] != "auto")) {
@@ -105,8 +107,17 @@ print.pipeflow_pip <- function(
     if (length(rows) == 0L) {
         cat("Empty pipeline\n")
     } else {
+        dat <- data[rows, cols, with = FALSE]
+        sig <- data.table::data.table(
+            signature = vapply(
+                data[["params"]][rows],
+                FUN = .param_list_to_string,
+                character(1)
+            )
+        )
+        dat2print <- data.table::cbindlist(list(dat[, 1], sig, dat[, -1]))
         print(
-            data[rows, cols, with = FALSE],
+            dat2print,
             topn = topn,
             nrows = nrows,
             row.names = row.names,

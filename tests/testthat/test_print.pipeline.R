@@ -67,20 +67,63 @@ describe("print.pipeflow_pip", {
         trimws(out[[iHeader]]) |> strsplit("\\s+") |> unlist()
     }
 
-    it("shows step/depends/out/state plus tags when steps have tags", {
+    get_step_line <- function(x, step, ...) {
+        out <- capture.output(print(x, ...))
+        pattern <- sprintf("^\\s*\\d+:\\s+%s\\b", step)
+        out[grepl(pattern, out)][1]
+    }
+
+    it("shows signature after step and hides 'out' without results", {
         op <- options(width = 1000L)
         on.exit(options(op))
 
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(x = ~s1) x + 1, tags = "s2")
-
-        header <- get_print_header(p)
+            pip_add("s2", \(x = ~s1) x + 1)
 
         expect_equal(
-            header,
-            c("step", "depends", "out", "state", "tags")
+            get_print_header(p),
+            c("step", "signature", "depends", "state")
         )
+    })
+
+    it("shows the 'out' column only when a step has a result", {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1)
+
+        expect_false("out" %in% get_print_header(p))
+
+        pip_run(p, lgr = NULL)
+        expect_equal(
+            get_print_header(p),
+            c("step", "signature", "depends", "state", "out")
+        )
+    })
+
+    it("prints one signature per step", {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1, params = list(y = "hi"))
+
+        expect_true(grepl("x = 1", get_step_line(p, "s1")))
+        expect_true(grepl("y = \"hi\", x = ~s1", get_step_line(p, "s2")))
+    })
+
+    it("abbreviates long signatures with the maxchar option", {
+        op <- options(width = 1000L, pipeflow.print.param.maxchar = 4L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = list(a = 1, b = 2)) x)
+
+        expect_true(grepl("x = <char>", get_step_line(p, "s1")))
     })
 
     it("shows tags when at least one step has tags", {
@@ -95,7 +138,7 @@ describe("print.pipeflow_pip", {
 
         expect_equal(
             header,
-            c("step", "depends", "out", "state", "tags")
+            c("step", "signature", "depends", "state", "tags")
         )
     })
 
@@ -111,7 +154,7 @@ describe("print.pipeflow_pip", {
 
         expect_equal(
             header,
-            c("step", "depends", "out", "state", "tags")
+            c("step", "signature", "depends", "state", "tags")
         )
     })
 
@@ -127,7 +170,7 @@ describe("print.pipeflow_pip", {
 
         expect_equal(
             header,
-            c("step", "depends", "out", "state", "tags", "exec")
+            c("step", "signature", "depends", "state", "tags", "exec")
         )
     })
 
@@ -144,7 +187,7 @@ describe("print.pipeflow_pip", {
 
         expect_equal(
             header,
-            c("step", "depends", "out", "state", "locked")
+            c("step", "signature", "depends", "state", "locked")
         )
     })
 
@@ -221,7 +264,7 @@ describe("print.pipeflow_view", {
         expect_true(any(grepl("<pipeflow_view>", out)))
         expect_equal(
             get_view_header(v),
-            c("step", "depends", "out", "state", "tags")
+            c("step", "signature", "depends", "state", "tags")
         )
     })
 
@@ -237,7 +280,7 @@ describe("print.pipeflow_view", {
 
         expect_equal(
             get_view_header(v),
-            c("step", "depends", "out", "state", "tags")
+            c("step", "signature", "depends", "state", "tags")
         )
     })
 
@@ -253,7 +296,24 @@ describe("print.pipeflow_view", {
 
         expect_equal(
             get_view_header(v),
-            c("step", "depends", "out", "state", "tags", "exec")
+            c("step", "signature", "depends", "state", "tags", "exec")
         )
+    })
+
+    it("prints a signature for the selected steps", {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1) |>
+            pip_add("s3", \(x = ~s2) x + 1)
+
+        v <- pip_view(p, step = c("s2", "s3"))
+        out <- capture.output(print(v))
+
+        expect_true(any(grepl("x = ~s1", out)))
+        expect_true(any(grepl("x = ~s2", out)))
+        expect_false(any(grepl("^s1\\b", out)))
     })
 })
