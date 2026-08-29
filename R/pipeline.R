@@ -163,26 +163,6 @@
     lapply(args, \(x) eval(x, envir = environment(fun)))
 }
 
-.rel_pos_to_step_num <- function(relPos, startPos) {
-    if (!is.integer(relPos)) {
-        stop("relPos must be an integer")
-    }
-    if (!is.integer(startPos)) {
-        stop("startPos must be an integer")
-    }
-    if (startPos < 1) {
-        stop("startPos must be at least 1")
-    }
-
-    stepNumber <- startPos - relPos
-
-    if (stepNumber < 1) {
-        stop_no_call("relative index -", relPos, " points outside pipeline")
-    }
-
-    stepNumber
-}
-
 .extract_depends <- function(
     params,
     steps,
@@ -194,7 +174,6 @@
     if (!is.character(steps)) {
         stop_no_call("steps must be a character vector")
     }
-
     if (!is.integer(toPos)) {
         stop_no_call("toPos must be an integer")
     }
@@ -206,16 +185,25 @@
     # referencing earlier steps (e.g. x = ~step1) or using positional indices
     # by pointing backwards a certain number of steps (e.g. x = ~-1)
     depends <- formula_deps(params)
-
     if (length(depends) == 0) {
         return(character(0))
     }
 
     # Finally, convert any relative dependencies (those marked with a
     # leading "-") to step names.
+    rel_pos_to_step_num <- function(relPos, startPos) {
+        if (startPos < 1) {
+            stop_no_call("startPos must be at least 1")
+        }
+        stepNumber <- startPos - relPos
+        if (stepNumber < 1) {
+            stop_no_call("relative index -", relPos, " points outside pipeline")
+        }
+        stepNumber
+    }
     iRelPos <- which(depends |> startsWith("-"))
     stepNumbers <- depends[iRelPos] |>
-        lapply(FUN = \(x) .rel_pos_to_step_num(abs(as.integer(x)), toPos))
+        lapply(FUN = \(x) rel_pos_to_step_num(abs(as.integer(x)), toPos))
     depends[iRelPos] <- steps[as.integer(stepNumbers)]
 
     unlist(depends)
