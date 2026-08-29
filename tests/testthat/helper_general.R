@@ -15,5 +15,5 @@ expect_no_warning <- function(...) {
 }
 
 get_run_state <- function(x) {
-    as.character(.pip_get_pip_env(x)[[".run_state"]])
+    as.character(.pip_get_pipenv(x)[[".run_state"]])
 }
