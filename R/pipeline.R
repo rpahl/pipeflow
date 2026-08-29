@@ -105,33 +105,15 @@
     .subset2(x, "pipenv")
 }
 
-# A full pipeflow_pip wrapper (view = NULL) around the shared inner
-# environment. Used for `.self` inside steps so structural operations such as
-# pip_replace() work on the underlying full pipeline.
-.pip_full_pip <- function(x) {
+# Outer pipeline env wrapper that allows to create views as copied objects with
+# different names and view specifications, while sharing (i.e. pointing to) the
+# same underlying pipeline environment.
+.wrap_pip_env <- function(pipenv, name, view = NULL) {
     structure(
-        list(
-            pipenv = .subset2(x, "pipenv"),
-            name = .subset2(x, "name"),
-            view = NULL
-        ),
+        list(pipenv = pipenv, name = name, view = view),
         class = "pipeflow_pip"
     )
 }
-
-# Create a view: a pipeflow_pip sharing the inner environment with the parent
-# by reference, selecting only the given absolute row indices.
-.pip_make_view <- function(x, rows) {
-    structure(
-        list(
-            pipenv = .subset2(x, "pipenv"),
-            name = sprintf("%s view", .subset2(x, "name")),
-            view = as.integer(rows)
-        ),
-        class = "pipeflow_pip"
-    )
-}
-
 
 # ------------------------------
 # Parameter & dependency parsing
@@ -330,7 +312,7 @@
 # a `rows` selector, so list fields and inner-env bindings are accessed
 # through the same dispatch.
 .pip_subset2 <- function(x, i, j = NULL, ...) {
-    dat <- .pip_get_pip_env(x)[["data"]]
+    data <- .pip_get_pip_env(x)[["data"]]
     rows <- .pip_view_rows(x)
 
     if (is.null(j)) {
@@ -356,9 +338,9 @@
 
         # Column access, restricted to the view's rows for views. Name output
         # vector by step names for easier inspection and post-processing.
-        col <- dat[[i]][rows]
+        col <- data[[i]][rows]
         if (!is.null(col)) {
-            return(stats::setNames(col, dat[["step"]][rows]))
+            return(stats::setNames(col, data[["step"]][rows]))
         }
         return(col)
     }
@@ -389,11 +371,11 @@
                 stop("row index out of bounds")
             }
             row <- rows[row]
-        } else if (row < 1L || row > nrow(dat)) {
+        } else if (row < 1L || row > nrow(data)) {
             stop("row index out of bounds")
         }
     }
-    dat[[j]][[row]]
+    data[[j]][[row]]
 }
 
 .pip_filter <- function(x, on, values) {
@@ -441,7 +423,7 @@
 }
 
 .pip_steps_to_rows <- function(x, steps) {
-    dat <- x[["data"]]
+    data <- x[["data"]]
 
     if (anyNA(steps)) {
         stop("step names must not contain NA", call. = FALSE)
@@ -450,7 +432,7 @@
         stop("step names must be non-empty strings", call. = FALSE)
     }
 
-    i <- data.table::chmatch(steps, dat[["step"]])
+    i <- data.table::chmatch(steps, data[["step"]])
     if (anyNA(i)) {
         unknown <- unique(steps[is.na(i)])
         stop("Unknown step names: ", toString(unknown), call. = FALSE)
@@ -773,8 +755,6 @@ pip_new <- function(name = "pipe") {
     env[[".restart_count"]] <- 0L
     env[[".restart_force"]] <- TRUE
 
-    # Outer list wrapper: `rows` is NULL for a full pipeline and holds the
-    # selected absolute row indices for a view.
     structure(
         list(pipenv = env, name = name, view = NULL),
         class = "pipeflow_pip"
@@ -1639,8 +1619,9 @@ pip_run <- function(
     log_info <- function(msg) lgr(level = "info", msg = msg)
 
     isView <- .is_pipeflow_view(x)
-    env <- .pip_get_pip_env(x)
-    dat <- env[["data"]]
+    pipenv <- .pip_get_pip_env(x)
+    pipname <- x[["name"]]
+    dat <- pipenv[["data"]]
     rowsToRun <- seq_len(nrow(dat))
 
     if (isView) {
@@ -1676,10 +1657,10 @@ pip_run <- function(
         }
     })
 
-    state <- env[[".run_state"]]
+    state <- pipenv[[".run_state"]]
     action <- if (state == "restart") "Restarting" else "Starting"
-    log_info(sprintf("%s run of %s '%s'", action, data.class(x), x[["name"]]))
-    env[[".run_state"]][] <- "running"
+    log_info(sprintf("%s run of %s '%s'", action, data.class(x), pipname))
+    pipenv[[".run_state"]][] <- "running"
     tryCatch(
         {
             for (i in seq_along(rowsToRun)) {
@@ -1711,18 +1692,18 @@ pip_run <- function(
                     next()
                 }
 
-                # Run current step - make sure we always pass the full pipeline
-                # object (not a view) to the step function, so that it can
-                # modify itself if needed.
+                # Always pass the full pipeline object (not a view) to the
+                #step function, so that it can modify itself if needed.
+                self <- .wrap_pip_env(pipenv, pipname, view = NULL)
+
                 log_info(msg)
-                self <- .pip_full_pip(x)
                 .pip_run_row(x = self, i = row, lgr = lgr)
-                stateAfterStep <- env[[".run_state"]]
+                stateAfterStep <- pipenv[[".run_state"]]
 
                 # Check for restart or stop signals
                 if (stateAfterStep == "restart") {
                     log_info("Restarting pipeline execution.")
-                    doForce <- env[[".restart_force"]]
+                    doForce <- pipenv[[".restart_force"]]
                     pip_run(
                         x,
                         lgr = lgr,
@@ -1739,15 +1720,15 @@ pip_run <- function(
             }
 
             log_info(
-                sprintf("Finished run of %s '%s'", data.class(x), x[["name"]])
+                sprintf("Finished run of %s '%s'", data.class(x), pipname)
             )
-            env[[".run_state"]][] <- "ready"
-            env[[".last_run"]] <- Sys.time()
+            pipenv[[".run_state"]][] <- "ready"
+            pipenv[[".last_run"]] <- Sys.time()
             invisible(x)
         },
         error = function(e) {
-            env[[".run_state"]][] <- "failed"
-            env[[".last_run"]] <- Sys.time()
+            pipenv[[".run_state"]][] <- "failed"
+            pipenv[[".last_run"]] <- Sys.time()
             stop_no_call(e$message)
         }
     )
@@ -2439,24 +2420,27 @@ dim.pipeflow_pip <- function(x) {
         }
     }
 
+    pipenv <- .pip_get_pip_env(x)
+    name <- x[["name"]]
+    data <- pipenv[["data"]]
+
     if (view) {
-        return(.pip_make_view(x, rows))
+        # Return a view on the selected rows
+        return(.wrap_pip_env(pipenv, name = paste(name, view), view = rows))
     }
 
-    out <- pip_new(name = x[["name"]])
+    out <- pip_new(name = name)
     if (length(rows) == 0L) {
         return(out)
     }
 
     # Get all nodes that are reachable from the selected rows via upstream
-    env <- .pip_get_pip_env(x)
-    dat <- env[["data"]]
-    startNodes <- dat[[".nodeId"]][rows]
+    startNodes <- data[[".nodeId"]][rows]
     keepNodes <- dag_get_reachable_nodes_up(
-        env[[".dag"]],
+        pipenv[[".dag"]],
         as.integer(unique(startNodes))
     )
-    subsetDat <- dat[dat[[".nodeId"]] %in% keepNodes]
+    subsetDat <- data[data[[".nodeId"]] %in% keepNodes]
     subsetDat <- data.table::copy(subsetDat)
 
     # Re-map node ids to a compact sequence and rebuild lookup table
@@ -2649,26 +2633,26 @@ print.pipeflow_pip <- function(
     header = TRUE,
     ...
 ) {
-    dat <- x[["data"]]
-    n <- nrow(dat)
+    data <- x[["data"]]
+    n <- nrow(data)
     isView <- .is_pipeflow_view(x)
 
     if (identical(cols, "core")) {
         cols <- c("step", "depends", "out", "state")
-        has_tags <- any(lengths(dat[["tags"]]) > 0L)
+        has_tags <- any(lengths(data[["tags"]]) > 0L)
         if (has_tags) {
             cols <- append(cols, "tags")
         }
-        if (any(dat[["exec"]] != "auto")) {
+        if (any(data[["exec"]] != "auto")) {
             cols <- append(cols, "exec")
         }
-        if (any(dat[["locked"]])) {
+        if (any(data[["locked"]])) {
             cols <- append(cols, "locked")
         }
     }
     if (identical(cols, "all")) {
         isHidden <- function(name) startsWith(name, ".")
-        cols <- Filter(Negate(isHidden), colnames(dat))
+        cols <- Filter(Negate(isHidden), colnames(data))
     }
 
     if (header) {
@@ -2702,7 +2686,7 @@ print.pipeflow_pip <- function(
         cat("Empty pipeline\n")
     } else {
         print(
-            dat[rows, cols, with = FALSE],
+            data[rows, cols, with = FALSE],
             topn = topn,
             nrows = nrows,
             row.names = row.names,
