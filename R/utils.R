@@ -17,3 +17,13 @@ unlist1 <- function(x, ...) {
 stop_no_call <- function(...) {
     stop(..., call. = FALSE)
 }
+
+formula_deps <- function(x) {
+    is_one_sided_formula <- function(x) {
+        inherits(x, "formula") && length(x) == 2L
+    }
+    deps <- Filter(f = is_one_sided_formula, x = x) |>
+        lapply(\(x) substring(trimws(deparse1(x)), 2L)) |>
+        unlist()
+    if (is.null(deps)) character(0) else deps
+}

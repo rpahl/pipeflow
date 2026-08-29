@@ -81,3 +81,85 @@ describe("stop_no_call", {
         expect_true(is.null(res2$call))
     })
 })
+
+
+describe("formula_deps", {
+    it("extracts dependencies from one-sided formulas", {
+        expect_equal(formula_deps(list(x = ~s1)), c(x = "s1"))
+        expect_equal(
+            formula_deps(list(x = ~s1, y = ~s2)),
+            c(x = "s1", y = "s2")
+        )
+    })
+
+    it("works with unnamed lists", {
+        expect_equal(formula_deps(list(~s1, ~s2)), c("s1", "s2"))
+    })
+
+    it("ignores non-formula values, keeping formula order", {
+        expect_equal(
+            formula_deps(list(x = ~s1, y = 2, z = "abc", w = TRUE)),
+            c(x = "s1")
+        )
+        expect_equal(
+            formula_deps(list(x = ~s1, y = ~s2, z = "~s3")),
+            c(x = "s1", y = "s2")
+        )
+    })
+
+    it("returns an empty vector for empty or formula-free lists", {
+        expect_equal(formula_deps(list()), character(0))
+        expect_equal(formula_deps(list(a = 1, b = "x")), character(0))
+        expect_equal(
+            formula_deps(list(a = NULL, b = NA, c = 1.5)),
+            character(0)
+        )
+    })
+
+    it("extracts relative positional dependencies", {
+        expect_equal(formula_deps(list(x = ~ -1)), c(x = "-1"))
+        expect_equal(formula_deps(list(x = ~ -2)), c(x = "-2"))
+    })
+
+    it("treats strings starting with ~ as plain values, not formulas", {
+        expect_equal(formula_deps(list(x = "~s1")), character(0))
+    })
+
+    it("ignores two-sided formulas", {
+        expect_equal(formula_deps(list(f = y ~ x)), character(0))
+    })
+
+    it("detects formulas created by as.formula()", {
+        expect_equal(
+            formula_deps(list(x = as.formula("~s1"))),
+            c(x = "s1")
+        )
+    })
+
+    it("ignores plain language objects and calls", {
+        # quote(~s1) is an unevaluated "~" call, not a formula
+        expect_equal(formula_deps(list(x = quote(~s1))), character(0))
+        expect_equal(formula_deps(list(x = quote(s1))), character(0))
+        expect_equal(formula_deps(list(x = quote(foo()))), character(0))
+    })
+
+    it("ignores functions and vectors", {
+        expect_equal(
+            formula_deps(list(f = function(x) x, v = c(1, 2))),
+            character(0)
+        )
+    })
+
+    it("keeps the tail after the tilde for complex RHS", {
+        expect_equal(formula_deps(list(x = ~ s1 + s2)), c(x = "s1 + s2"))
+        expect_equal(formula_deps(list(x = ~ sqrt(s1))), c(x = "sqrt(s1)"))
+        expect_equal(formula_deps(list(x = ~1)), c(x = "1"))
+    })
+
+    it("handles backticked step names", {
+        expect_equal(
+            formula_deps(list(x = ~`my step`)),
+            c(x = "`my step`")
+        )
+    })
+})

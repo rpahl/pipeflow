@@ -205,10 +205,7 @@
     # References to other steps are marked using a formula and can be either
     # referencing earlier steps (e.g. x = ~step1) or using positional indices
     # by pointing backwards a certain number of steps (e.g. x = ~-1)
-    depends <- lapply(params, FUN = \(x) trimws(deparse(x))) |>
-        Filter(f = \(x) startsWith(x, "~")) |>
-        lapply(\(x) substring(x, 2)) |>
-        unlist()
+    depends <- formula_deps(params)
 
     if (length(depends) == 0) {
         return(character(0))
