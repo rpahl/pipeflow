@@ -1,3 +1,65 @@
+describe(".class_abb", {
+    it("abbreviates known classes", {
+        expect_equal(
+            .class_abb(list(
+                1, 1L, TRUE, 1 + 1i, "x", as.Date("2020-01-01"),
+                factor("a"), ordered("b"), as.POSIXct("2020-01-01"),
+                as.raw(1), list(1), expression(1)
+            )),
+            c(
+                "<num>", "<num>", "<lgcl>", "<cplx>", "<char>", "<Date>",
+                "<fctr>", "<ord>", "<POSc>", "<raw>", "<list>", "<expr>"
+            )
+        )
+    })
+
+    it("wraps classes without an abbreviation in angle brackets", {
+        expect_equal(
+            .class_abb(list(structure(1, class = "myclass"))),
+            "<myclass>"
+        )
+    })
+
+    it("returns one abbreviation per element, unnamed", {
+        x <- c(a = 1, b = 2)
+        abbs <- .class_abb(x)
+        expect_length(abbs, 2L)
+        expect_null(names(abbs))
+    })
+})
+
+describe(".param_list_to_string", {
+    it("converts a param list to a comma separated string", {
+        params <- list(a = 1, b = ~s2, c = list(a = 1, b = 2))
+        expect_equal(
+            .param_list_to_string(params),
+            "a = 1, b = ~s2, c = <char>"
+        )
+    })
+
+    it("abbreviates params whose string exceeds maxchar", {
+        params <- list(data = 1:100000, label = "some long label")
+        expect_equal(
+            .param_list_to_string(params),
+            "data = <char>, label = <char>"
+        )
+    })
+
+    it("keeps params whose string does not exceed maxchar", {
+        params <- list(a = 1, b = TRUE, c = "hi")
+        expect_equal(
+            .param_list_to_string(params),
+            "a = 1, b = TRUE, c = \"hi\""
+        )
+    })
+
+    it("respects a custom maxchar", {
+        params <- list(a = 1)
+        expect_equal(.param_list_to_string(params, maxchar = 1), "a = 1")
+        expect_equal(.param_list_to_string(params, maxchar = 0), "a = <char>")
+    })
+})
+
 describe("print.pipeflow_pip", {
     get_print_header <- function(x, ...) {
         out <- capture.output(print(x, ...))

@@ -1,3 +1,45 @@
+.class_abb <- function(x) {
+    # Abbreviations for common classes as also defined in the data.table package
+    classes <- vapply(x, data.class, character(1))
+    class_abb <- c(
+        character = "<char>",
+        complex = "<cplx>",
+        Date = "<Date>",
+        expression = "<expr>",
+        factor = "<fctr>",
+        IDate = "<IDat>",
+        integer = "<int>",
+        integer64 = "<i64>",
+        list = "<list>",
+        logical = "<lgcl>",
+        numeric = "<num>",
+        ordered = "<ord>",
+        POSIXct = "<POSc>",
+        raw = "<raw>"
+    )
+
+    abbs <- unname(class_abb[classes])
+
+    if (length(idx <- which(is.na(abbs)))) {
+        # If not in above abbreviation list, use original class name
+        abbs[idx] <- paste0("<", classes[idx], ">")
+    }
+
+    abbs
+}
+
+.param_list_to_string <- function(
+    x,
+    maxchar = getOption("pipeflow.print.param.maxchar", default = 6)
+) {
+    chars <- trimws(sapply(x, deparse1))
+    if (length(idx <- which(nchar(chars) > maxchar))) {
+        chars[idx] <- .class_abb(chars[idx])
+    }
+
+    toString(paste(names(x), "=", chars))
+}
+
 #' @rdname print
 #' @export
 print.pipeflow_pip <- function(
