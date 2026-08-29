@@ -186,10 +186,6 @@ describe(".extract_depends", {
             f(list(), steps = list("not a character")),
             "steps must be a character vector"
         )
-        expect_error(
-            f(list(), steps, toPos = 2.0),
-            "toPos must be an integer"
-        )
     })
 })
 
@@ -3206,7 +3202,7 @@ describe("extract operator [[", {
 
         expect_error(
             v[["s2", "out"]],
-            "undefined step selected"
+            "selected step not part of view: s2"
         )
     })
 

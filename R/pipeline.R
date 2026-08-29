@@ -139,8 +139,7 @@
         )
     }
 
-    # Make sure default values are returned as resolved values by evaluating
-    # them in the function's environment
+    # Make sure default values are returned as resolved values
     lapply(args, \(x) eval(x, envir = environment(fun)))
 }
 
@@ -154,9 +153,6 @@
     }
     if (!is.character(steps)) {
         stop_no_call("steps must be a character vector")
-    }
-    if (!is.integer(toPos)) {
-        stop_no_call("toPos must be an integer")
     }
     if (toPos < 1) {
         stop_no_call("toPos (", toPos, ") must be at least 1")
@@ -217,12 +213,6 @@
     x
 }
 
-.partition_keys <- function(x) {
-    if (!.is_pipeflow_partitioned(x)) {
-        stop("x must be a pipeflow_partitioned object")
-    }
-    names(x)
-}
 
 .pip_execute_step_call <- function(fun, args, exec) {
     # A partitioned argument is a list of per-key values produced by a
@@ -263,9 +253,9 @@
 
     # Auto mode with partitioned inputs: map the function over the partition
     # keys. Keys are taken from the first partitioned argument...
-    keys <- .partition_keys(args[[partIdx[[1]]]])
+    keys <- names(args[[partIdx[[1]]]])
     for (k in partIdx[-1]) {
-        kk <- .partition_keys(args[[k]])
+        kk <- names(args[[k]])
         if (!identical(kk, keys)) {
             stop("partitioned arguments must share identical keys")
         }
@@ -297,28 +287,27 @@
 # --------------------
 # Pipeline data access
 # --------------------
-.pip_data <- function(x) {
-    rows <- .pip_view_rows(x)
-    .pip_get_pipenv(x)[["data"]][rows, ]
-}
 
 # The rows covered by `x`: all pipeline rows for a full pipeline, or the
 # view's `rows` selector for a view.
 .pip_view_rows <- function(x) {
-    if (is.null(.subset2(x, "view"))) {
+    view <- .subset2(x, "view")
+    if (is.null(view)) {
         seq_len(nrow(.pip_get_pipenv(x)[["data"]]))
     } else {
-        as.integer(.subset2(x, "view"))
+        as.integer(view)
     }
+}
+
+.pip_view_data <- function(x) {
+    rows <- .pip_view_rows(x)
+    .pip_get_pipenv(x)[["data"]][rows, ]
 }
 
 # Internal implementation of [[ for pipeflow_pip objects. Views are pips with
 # a `rows` selector, so list fields and inner-env bindings are accessed
 # through the same dispatch.
 .pip_subset2 <- function(x, i, j = NULL, ...) {
-    data <- .pip_get_pipenv(x)[["data"]]
-    rows <- .pip_view_rows(x)
-
     if (is.null(j)) {
         if (missing(i)) {
             stop("i must be provided")
@@ -327,12 +316,13 @@
         # List fields of the wrapper have priority over column names.
         if (is.character(i) && length(i) == 1L && !is.na(i)) {
             if (i %in% c("pipenv", "name", "view")) {
+                # Scenario: x[["pipenv"]], x[["name"]] or x[["view"]]
                 return(.subset2(x, i))
             }
             # Public inner-env bindings like "data" are next. Hidden
             # internals like ".dag" and ".steps_to_nodes" are deliberately
-            # not exposed. They can still be accessed "manually" from the
-            # inner environment if needed.
+            # not exposed. Advanced users still can access them "manually"
+            # from the inner environment if needed.
             env <- .pip_get_pipenv(x)
             if (i %in% ls(env)) {
                 # ls() by default does not list variables starting with a dot
@@ -340,13 +330,13 @@
             }
         }
 
-        # Column access, restricted to the view's rows for views. Name output
-        # vector by step names for easier inspection and post-processing.
-        col <- data[[i]][rows]
-        if (!is.null(col)) {
-            return(stats::setNames(col, data[["step"]][rows]))
+        # Scenario: x[[col]]
+        data <- .pip_view_data(x)
+        col <- data[[i]]
+        if (is.null(col)) {
+            return(NULL)
         }
-        return(col)
+        return(stats::setNames(col, data[["step"]]))
     }
 
     # Two-index form extracts a single cell from a single row.
@@ -360,25 +350,24 @@
         stop("j must be a single column name")
     }
 
+    data <- .pip_view_data(x)
     if (is.character(i)) {
-        row <- .pip_steps_to_rows(x, i)
-        if (!(row %in% rows)) {
-            stop("undefined step selected")
+        # Scenario: x[[stepName, col]]
+        row <- .pip_steps_to_rows(x, steps = i)
+        if (row > nrow(data)) {
+            stop("selected step not part of view: ", i)
         }
     } else {
+        # Scenario: x[[i, col]]
         if (!is.finite(i) || i != as.integer(i)) {
             stop("row index must be a whole number")
         }
         row <- as.integer(i)
-        if (.is_pipeflow_view(x)) {
-            if (row < 1L || row > length(rows)) {
-                stop("row index out of bounds")
-            }
-            row <- rows[row]
-        } else if (row < 1L || row > nrow(data)) {
+        if (row < 1L || row > nrow(data)) {
             stop("row index out of bounds")
         }
     }
+
     data[[j]][[row]]
 }
 
@@ -399,9 +388,6 @@
 }
 
 .pip_reindex <- function(x) {
-    if (!.is_pipeflow_pip(x)) {
-        stop("x must be a pipeflow pip")
-    }
     data.table::setindexv(x[["data"]], list("step", ".nodeId"))
 }
 
@@ -1045,7 +1031,7 @@ pip_clone <- function(x, name = NULL) {
 #' @export
 pip_collect_out <- function(x) {
     .assert_pip_or_view(x)
-    dat <- .pip_data(x)
+    dat <- .pip_view_data(x)
     if (nrow(dat) == 0) {
         return(list())
     }
@@ -1076,7 +1062,7 @@ pip_collect_out <- function(x) {
 #' @export
 pip_get_params <- function(x) {
     .assert_pip_or_view(x)
-    dat <- .pip_data(x)
+    dat <- .pip_view_data(x)
 
     params <- mapply(
         par = dat[["params"]],
@@ -1255,8 +1241,8 @@ pip_remove <- function(x, step, force = FALSE) {
         stop("force must be a single logical value")
     }
 
-    env <- .pip_get_pipenv(x)
-    dat <- env[["data"]]
+    pipenv <- .pip_get_pipenv(x)
+    dat <- pipenv[["data"]]
     `%chin%` <- data.table::`%chin%`
 
     directDeps <- dat[["step"]][
@@ -1306,33 +1292,24 @@ pip_remove <- function(x, step, force = FALSE) {
 
     # Remove DAG nodes first to keep node references stable during filtering.
     for (nid in rev(nodesToRemove)) {
-        ok <- dag_remove_node(env[[".dag"]], nid, force = force)
+        ok <- dag_remove_node(pipenv[[".dag"]], nid, force = force)
         if (!ok) {
             stop("failed to remove node ", nid, " from DAG")
         }
     }
-    dag_tidy_up(env[[".dag"]])
 
+    dag_tidy_up(pipenv[[".dag"]])
     keep <- !(dat[["step"]] %chin% stepsToRemove)
-    env[["data"]] <- dat[keep]
+    pipenv[["data"]] <- dat[keep]
+    suppressWarnings(
+        rm(
+            list = stepsToRemove,
+            envir = pipenv[[".steps_to_nodes"]],
+            inherits = FALSE
+        )
+    )
 
-    for (s in stepsToRemove) {
-        if (
-            exists(
-                s,
-                where = env[[".steps_to_nodes"]],
-                inherits = FALSE
-            )
-        ) {
-            rm(
-                list = s,
-                envir = env[[".steps_to_nodes"]],
-                inherits = FALSE
-            )
-        }
-    }
-
-    data.table::setindexv(env[["data"]], list("step", ".nodeId"))
+    data.table::setindexv(pipenv[["data"]], list("step", ".nodeId"))
     invisible(x)
 }
 
@@ -2409,7 +2386,7 @@ dim.pipeflow_pip <- function(x) {
 
     # Verify and resolve row selection
     if (is.character(i)) {
-        rows <- sort(unique(.pip_steps_to_rows(x, i)))
+        rows <- sort(unique(.pip_steps_to_rows(x, steps = i)))
     } else {
         if (anyNA(i)) {
             stop("row indices in 'i' must not contain NA")
