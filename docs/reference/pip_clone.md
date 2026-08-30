@@ -37,7 +37,7 @@ pip_add(cp, "s3", \(x = ~s2) x * 10)
 
 # As a result, the clone has the new step ...
 cp
-#> <pipeflow_pip> copy (3 steps)
+#> <pipeflow> copy (3 steps)
 #> -----------------------------
 #>    step depends    out state
 #> 1:   s1         [NULL]   new
@@ -46,7 +46,7 @@ cp
 
 # ... while the original is left unchanged
 p
-#> <pipeflow_pip> original (2 steps)
+#> <pipeflow> original (2 steps)
 #> ---------------------------------
 #>    step depends    out state
 #> 1:   s1         [NULL]   new

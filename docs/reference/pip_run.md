@@ -54,13 +54,13 @@ p <- pip_new() |>
   pip_add("total", \(x = ~square) sum(x))
 
 pip_run(p)
-#> info [2026-08-22 17:08:03.134 UTC]: Starting run of pipeflow_pip 'pipe'
+#> info [2026-08-22 17:08:03.134 UTC]: Starting run of pipeflow 'pipe'
 #> info [2026-08-22 17:08:03.134 UTC]: Step 1/3 load
 #> info [2026-08-22 17:08:03.135 UTC]: Step 2/3 square
 #> info [2026-08-22 17:08:03.136 UTC]: Step 3/3 total
-#> info [2026-08-22 17:08:03.136 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-08-22 17:08:03.136 UTC]: Finished run of pipeflow 'pipe'
 p
-#> <pipeflow_pip> pipe (3 steps)
+#> <pipeflow> pipe (3 steps)
 #> -----------------------------
 #>      step depends   out state
 #> 1:   load         1,2,3  done
@@ -69,22 +69,22 @@ p
 
 # Already-done steps are skipped on a second run
 pip_run(p) # all steps skipped
-#> info [2026-08-22 17:08:03.139 UTC]: Starting run of pipeflow_pip 'pipe'
+#> info [2026-08-22 17:08:03.139 UTC]: Starting run of pipeflow 'pipe'
 #> info [2026-08-22 17:08:03.139 UTC]: Step 1/3 load - skipping done step
 #> info [2026-08-22 17:08:03.139 UTC]: Step 2/3 square - skipping done step
 #> info [2026-08-22 17:08:03.139 UTC]: Step 3/3 total - skipping done step
-#> info [2026-08-22 17:08:03.139 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-08-22 17:08:03.139 UTC]: Finished run of pipeflow 'pipe'
 
 # lgr = NULL suppresses log output
 pip_run(p, lgr = NULL)
 
 # force = TRUE re-executes every step regardless of state
 pip_run(p, force = TRUE)
-#> info [2026-08-22 17:08:03.140 UTC]: Starting run of pipeflow_pip 'pipe'
+#> info [2026-08-22 17:08:03.140 UTC]: Starting run of pipeflow 'pipe'
 #> info [2026-08-22 17:08:03.141 UTC]: Step 1/3 load
 #> info [2026-08-22 17:08:03.141 UTC]: Step 2/3 square
 #> info [2026-08-22 17:08:03.142 UTC]: Step 3/3 total
-#> info [2026-08-22 17:08:03.143 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-08-22 17:08:03.143 UTC]: Finished run of pipeflow 'pipe'
 
 # Run only a subset of steps via a view;
 # upstream dependencies are automatically included

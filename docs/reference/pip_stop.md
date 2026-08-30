@@ -42,13 +42,13 @@ p <- pip_new("stop") |>
   pip_add("report", \(x = ~model) paste("result:", x))
 
 pip_run(p)
-#> info [2026-08-22 17:08:03.499 UTC]: Starting run of pipeflow_pip 'stop'
+#> info [2026-08-22 17:08:03.499 UTC]: Starting run of pipeflow 'stop'
 #> info [2026-08-22 17:08:03.500 UTC]: Step 1/3 load
 #> info [2026-08-22 17:08:03.500 UTC]: Step 2/3 model
 #> info [2026-08-22 17:08:03.501 UTC]: Aborting pipeline execution on manual stop.
-#> info [2026-08-22 17:08:03.501 UTC]: Finished run of pipeflow_pip 'stop'
+#> info [2026-08-22 17:08:03.501 UTC]: Finished run of pipeflow 'stop'
 p
-#> <pipeflow_pip> stop (3 steps)
+#> <pipeflow> stop (3 steps)
 #> -----------------------------
 #>      step depends    out    state
 #> 1:   load          1,2,3     done

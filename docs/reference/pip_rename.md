@@ -37,7 +37,7 @@ p <- pip_new() |>
 # Downstream dependency references are updated automatically
 pip_rename(p, from = "s1", to = "load_data")
 p
-#> <pipeflow_pip> pipe (2 steps)
+#> <pipeflow> pipe (2 steps)
 #> -----------------------------
 #>         step   depends    out state
 #> 1: load_data           [NULL]   new

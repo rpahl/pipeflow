@@ -51,7 +51,7 @@ look at the pipeline.
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (1 step)
+# <pipeflow> my-pip (1 step)
 # ------------------------------
 #    step depends    out state
 # 1: data         [NULL]   new
@@ -88,7 +88,7 @@ So, a second step called `data_prep` was added and it depends on the
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (2 steps)
+# <pipeflow> my-pip (2 steps)
 # -------------------------------
 #         step depends    out state
 # 1:      data         [NULL]   new
@@ -112,7 +112,7 @@ pip |> pip_add(
 )
 
 pip
-# <pipeflow_pip> my-pip (3 steps)
+# <pipeflow> my-pip (3 steps)
 # -------------------------------
 #         step   depends    out state
 # 1:      data           [NULL]   new
@@ -150,7 +150,7 @@ In the last line, we see that the `model_plot` step depends on both the
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (4 steps)
+# <pipeflow> my-pip (4 steps)
 # -------------------------------
 #          step             depends    out state
 # 1:       data                     [NULL]   new
@@ -197,7 +197,7 @@ unchanged.
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (4 steps)
+# <pipeflow> my-pip (4 steps)
 # -------------------------------
 #          step             depends    out state
 # 1:       data                     [NULL]   new
@@ -214,19 +214,19 @@ which produces the following output:
 
 ``` r
 pip_run(pip)
-# info [2026-08-22 17:08:12.181 UTC]: Starting run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:12.181 UTC]: Starting run of pipeflow 'my-pip'
 # info [2026-08-22 17:08:12.182 UTC]: Step 1/4 data
 # info [2026-08-22 17:08:12.183 UTC]: Step 2/4 data_prep
 # info [2026-08-22 17:08:12.185 UTC]: Step 3/4 model_fit
 # info [2026-08-22 17:08:12.188 UTC]: Step 4/4 model_plot
-# info [2026-08-22 17:08:12.469 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:12.469 UTC]: Finished run of pipeflow 'my-pip'
 ```
 
 Let’s inspect the pipeline again.
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (4 steps)
+# <pipeflow> my-pip (4 steps)
 # -------------------------------
 #          step             depends                 out state
 # 1:       data                     <data.frame[153x6]>  done
@@ -246,12 +246,12 @@ the `out`put of the `model_fit` and `model_plot` steps, we do:
 
 ``` r
 pip[["model_fit", "out"]]
-# 
+#
 # Call:
 # lm(formula = paste("Ozone ~", xVar), data = data)
-# 
+#
 # Coefficients:
-#  (Intercept)  Temp.Celsius  
+#  (Intercept)  Temp.Celsius
 #      -69.277         4.372
 ```
 
@@ -323,7 +323,7 @@ steps are affected by the parameter change and mark them as `outdated`.
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (4 steps)
+# <pipeflow> my-pip (4 steps)
 # -------------------------------
 #          step             depends                 out    state
 # 1:       data                     <data.frame[153x6]>     done
@@ -338,12 +338,12 @@ results, we just run the pipeline again.
 
 ``` r
 pip_run(pip)
-# info [2026-08-22 17:08:13.334 UTC]: Starting run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:13.334 UTC]: Starting run of pipeflow 'my-pip'
 # info [2026-08-22 17:08:13.334 UTC]: Step 1/4 data - skipping done step
 # info [2026-08-22 17:08:13.334 UTC]: Step 2/4 data_prep - skipping done step
 # info [2026-08-22 17:08:13.334 UTC]: Step 3/4 model_fit
 # info [2026-08-22 17:08:13.336 UTC]: Step 4/4 model_plot
-# info [2026-08-22 17:08:13.345 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:13.345 UTC]: Finished run of pipeflow 'my-pip'
 ```
 
 The outdated steps were re-run as expected and the output was updated
@@ -369,7 +369,7 @@ the pipeline. To just change the title of the plot, only the
 ``` r
 pip |> pip_set_params(list(title = "Some new title"))
 pip
-# <pipeflow_pip> my-pip (4 steps)
+# <pipeflow> my-pip (4 steps)
 # -------------------------------
 #          step             depends                 out    state
 # 1:       data                     <data.frame[153x6]>     done
@@ -380,12 +380,12 @@ pip
 
 ``` r
 pip_run(pip)
-# info [2026-08-22 17:08:13.727 UTC]: Starting run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:13.727 UTC]: Starting run of pipeflow 'my-pip'
 # info [2026-08-22 17:08:13.727 UTC]: Step 1/4 data - skipping done step
 # info [2026-08-22 17:08:13.727 UTC]: Step 2/4 data_prep - skipping done step
 # info [2026-08-22 17:08:13.727 UTC]: Step 3/4 model_fit - skipping done step
 # info [2026-08-22 17:08:13.727 UTC]: Step 4/4 model_plot
-# info [2026-08-22 17:08:13.736 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:13.736 UTC]: Finished run of pipeflow 'my-pip'
 pip[["model_plot", "out"]]
 ```
 
@@ -398,7 +398,7 @@ other steps depend on it, we expect all steps to be rerun.
 small_airquality <- airquality[1:10, ]
 pip |> pip_set_params(list(data = small_airquality))
 pip
-# <pipeflow_pip> my-pip (4 steps)
+# <pipeflow> my-pip (4 steps)
 # -------------------------------
 #          step             depends                 out    state
 # 1:       data                     <data.frame[153x6]> outdated
@@ -409,12 +409,12 @@ pip
 
 ``` r
 pip_run(pip)
-# info [2026-08-22 17:08:14.029 UTC]: Starting run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:14.029 UTC]: Starting run of pipeflow 'my-pip'
 # info [2026-08-22 17:08:14.030 UTC]: Step 1/4 data
 # info [2026-08-22 17:08:14.030 UTC]: Step 2/4 data_prep
 # info [2026-08-22 17:08:14.031 UTC]: Step 3/4 model_fit
 # info [2026-08-22 17:08:14.032 UTC]: Step 4/4 model_plot
-# info [2026-08-22 17:08:14.040 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:14.040 UTC]: Finished run of pipeflow 'my-pip'
 pip[["model_plot", "out"]]
 ```
 

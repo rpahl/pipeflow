@@ -61,7 +61,7 @@
 
 #' @rdname print
 #' @export
-print.pipeflow_pip <- function(
+print.pipeflow <- function(
     x,
     rows = integer(),
     cols = getOption("pipeflow.print.cols", default = "core"),
@@ -109,7 +109,7 @@ print.pipeflow_pip <- function(
             )
         } else {
             title <- sprintf(
-                "<pipeflow_pip> %s (%d step%s)",
+                "<pipeflow> %s (%d step%s)",
                 x[["name"]],
                 n,
                 ifelse(n == 1, "", "s")

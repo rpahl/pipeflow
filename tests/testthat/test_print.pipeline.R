@@ -172,7 +172,7 @@ describe(".format_pip_data_table", {
     })
 })
 
-describe("print.pipeflow_pip", {
+describe("print.pipeflow", {
     get_print_header <- function(x, ...) {
         out <- capture.output(print(x, ...))
         iHeader <- which(grepl("^\\s*step\\b", out))[1]

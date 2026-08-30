@@ -43,7 +43,7 @@ reference:
   desc: Combine, clone, or copy steps between pipelines.
   contents:
   - pip_add_from
-  - rbind.pipeflow_pip
+  - rbind.pipeflow
   - pip_clone
 
 - title: "Running pipelines"
@@ -71,9 +71,9 @@ reference:
 - title: "S3 methods"
   desc: Generic methods for pipeflow objects.
   contents:
-  - length.pipeflow_pip
-  - print.pipeflow_pip
-  - '[.pipeflow_pip'
+  - length.pipeflow
+  - print.pipeflow
+  - '[.pipeflow'
 
 
 

@@ -8,7 +8,7 @@ vignette, that is, we have the following pipeline
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (4 steps)
+# <pipeflow> my-pip (4 steps)
 # -------------------------------
 #          step             depends                out state
 # 1:       data                     <data.frame[10x6]>  done
@@ -50,7 +50,7 @@ pip |> pip_add(
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (5 steps)
+# <pipeflow> my-pip (5 steps)
 # -------------------------------
 #           step             depends                out state
 # 1:        data                     <data.frame[10x6]>  done
@@ -75,7 +75,7 @@ Let’s revisit the function definition of the `model_fit` step
 
 ``` r
 pip[["model_fit", "fun"]]
-# function (data = ~data_prep, xVar = "Solar.R") 
+# function (data = ~data_prep, xVar = "Solar.R")
 # {
 #     lm(paste("Ozone ~", xVar), data = data)
 # }
@@ -124,7 +124,7 @@ The updated pipeline now looks as follows.
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (5 steps)
+# <pipeflow> my-pip (5 steps)
 # -------------------------------
 #           step               depends                out state
 # 1:        data                       <data.frame[10x6]>  done
@@ -141,18 +141,18 @@ output.
 ``` r
 pip_set_params(pip, params = list(xVar = "Solar.R", yVar = "Wind"))
 pip_run(pip)
-# info [2026-08-22 17:08:23.132 UTC]: Starting run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:23.132 UTC]: Starting run of pipeflow 'my-pip'
 # info [2026-08-22 17:08:23.132 UTC]: Step 1/5 data - skipping done step
 # info [2026-08-22 17:08:23.132 UTC]: Step 2/5 data_prep - skipping done step
 # info [2026-08-22 17:08:23.132 UTC]: Step 3/5 standardize
 # info [2026-08-22 17:08:23.134 UTC]: Step 4/5 model_fit
 # info [2026-08-22 17:08:23.135 UTC]: Step 5/5 model_plot
-# info [2026-08-22 17:08:23.169 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:23.169 UTC]: Finished run of pipeflow 'my-pip'
 ```
 
 ``` r
 pip[["model_fit", "out"]] |> coefficients()
-#  (Intercept)      Solar.R 
+#  (Intercept)      Solar.R
 #  0.979672739 -0.006625601
 ```
 
@@ -168,7 +168,7 @@ Let’s see the pipeline again.
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (5 steps)
+# <pipeflow> my-pip (5 steps)
 # -------------------------------
 #           step               depends                out state
 # 1:        data                       <data.frame[10x6]>  done
@@ -184,7 +184,7 @@ step would violate the integrity of the pipeline.
 
 ``` r
 try(pip_remove(pip, "standardize"))
-# Error in pip_remove(pip, "standardize") : 
+# Error in pip_remove(pip, "standardize") :
 #   cannot remove step 'standardize' because the following steps depend on it: 'model_fit', 'model_plot'
 ```
 
@@ -198,7 +198,7 @@ pip_remove(pip, "standardize", force = TRUE)
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (2 steps)
+# <pipeflow> my-pip (2 steps)
 # -------------------------------
 #         step depends                out state
 # 1:      data         <data.frame[10x6]>  done
@@ -215,7 +215,7 @@ pip_remove(pip, last_step)
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (1 step)
+# <pipeflow> my-pip (1 step)
 # ------------------------------
 #    step depends                out state
 # 1: data         <data.frame[10x6]>  done

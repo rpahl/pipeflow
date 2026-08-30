@@ -105,10 +105,10 @@ column):
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (7 steps)
+# <pipeflow> my-pip (7 steps)
 # -------------------------------
 #             step             depends    out state          tags
-# 1:          data                     [NULL]   new              
+# 1:          data                     [NULL]   new
 # 2:     data_prep                data [NULL]   new          data
 # 3:  data_summary           data_prep [NULL]   new  data,summary
 # 4:     data_plot           data_prep [NULL]   new     data,plot
@@ -122,7 +122,7 @@ inspect the output individually as we did in the previous vignettes.
 
 ``` r
 pip_run(pip)
-# info [2026-08-22 17:08:40.277 UTC]: Starting run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:40.277 UTC]: Starting run of pipeflow 'my-pip'
 # info [2026-08-22 17:08:40.278 UTC]: Step 1/7 data
 # info [2026-08-22 17:08:40.278 UTC]: Step 2/7 data_prep
 # info [2026-08-22 17:08:40.280 UTC]: Step 3/7 data_summary
@@ -130,13 +130,13 @@ pip_run(pip)
 # info [2026-08-22 17:08:40.623 UTC]: Step 5/7 model_fit
 # info [2026-08-22 17:08:40.626 UTC]: Step 6/7 model_summary
 # info [2026-08-22 17:08:40.628 UTC]: Step 7/7 model_plot
-# info [2026-08-22 17:08:40.633 UTC]: Finished run of pipeflow_pip 'my-pip'
+# info [2026-08-22 17:08:40.633 UTC]: Finished run of pipeflow 'my-pip'
 
 pip
-# <pipeflow_pip> my-pip (7 steps)
+# <pipeflow> my-pip (7 steps)
 # -------------------------------
 #             step             depends                 out state          tags
-# 1:          data                     <data.frame[153x6]>  done              
+# 1:          data                     <data.frame[153x6]>  done
 # 2:     data_prep                data <data.frame[153x7]>  done          data
 # 3:  data_summary           data_prep   <data.frame[7x2]>  done  data,summary
 # 4:     data_plot           data_prep   <ggplot2::ggplot>  done     data,plot
@@ -228,10 +228,10 @@ parameters.
 pip_set_params(pip, params = list(xVar = "Solar.R", yVar = "Wind"))
 
 pip
-# <pipeflow_pip> my-pip (7 steps)
+# <pipeflow> my-pip (7 steps)
 # -------------------------------
 #             step             depends                 out    state          tags
-# 1:          data                     <data.frame[153x6]>     done              
+# 1:          data                     <data.frame[153x6]>     done
 # 2:     data_prep                data <data.frame[153x7]>     done          data
 # 3:  data_summary           data_prep   <data.frame[7x2]> outdated  data,summary
 # 4:     data_plot           data_prep   <ggplot2::ggplot> outdated     data,plot
@@ -312,10 +312,10 @@ the original pipeline is now up-to-date for the filtered steps.
 
 ``` r
 pip
-# <pipeflow_pip> my-pip (7 steps)
+# <pipeflow> my-pip (7 steps)
 # -------------------------------
 #             step             depends                 out    state          tags
-# 1:          data                     <data.frame[153x6]>     done              
+# 1:          data                     <data.frame[153x6]>     done
 # 2:     data_prep                data <data.frame[153x7]>     done          data
 # 3:  data_summary           data_prep   <data.frame[7x2]> outdated  data,summary
 # 4:     data_plot           data_prep   <ggplot2::ggplot>     done     data,plot

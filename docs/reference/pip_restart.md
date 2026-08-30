@@ -53,16 +53,16 @@ p <- pip_new("restart") |>
   })
 
 pip_run(p)
-#> info [2026-08-22 17:08:02.976 UTC]: Starting run of pipeflow_pip 'restart'
+#> info [2026-08-22 17:08:02.976 UTC]: Starting run of pipeflow 'restart'
 #> info [2026-08-22 17:08:02.976 UTC]: Step 1/2 load
 #> info [2026-08-22 17:08:02.976 UTC]: Step 2/2 model
 #> info [2026-08-22 17:08:02.977 UTC]: Restarting pipeline execution.
-#> info [2026-08-22 17:08:02.977 UTC]: Restarting run of pipeflow_pip 'restart'
+#> info [2026-08-22 17:08:02.977 UTC]: Restarting run of pipeflow 'restart'
 #> info [2026-08-22 17:08:02.977 UTC]: Step 1/2 load
 #> info [2026-08-22 17:08:02.978 UTC]: Step 2/2 model
-#> info [2026-08-22 17:08:02.979 UTC]: Finished run of pipeflow_pip 'restart'
+#> info [2026-08-22 17:08:02.979 UTC]: Finished run of pipeflow 'restart'
 p
-#> <pipeflow_pip> restart (2 steps)
+#> <pipeflow> restart (2 steps)
 #> --------------------------------
 #>     step depends   out state
 #> 1:  load         1,2,3  done

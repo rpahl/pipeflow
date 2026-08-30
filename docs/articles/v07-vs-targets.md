@@ -112,20 +112,20 @@ tar_dir({
     pip_run(p)
     p_s <- replicate(nrep, elapsed_time(pip_run(p, lgr = NULL)))
 })
-# 
+#
 # Proof of principle full run (no skips)
-# info [2026-08-22 17:09:08.473 UTC]: Starting run of pipeflow_pip 'walkthrough'
+# info [2026-08-22 17:09:08.473 UTC]: Starting run of pipeflow 'walkthrough'
 # info [2026-08-22 17:09:08.473 UTC]: Step 1/3 data
 # info [2026-08-22 17:09:08.503 UTC]: Step 2/3 model
 # info [2026-08-22 17:09:08.508 UTC]: Step 3/3 plot
-# info [2026-08-22 17:09:08.534 UTC]: Finished run of pipeflow_pip 'walkthrough'
-# 
+# info [2026-08-22 17:09:08.534 UTC]: Finished run of pipeflow 'walkthrough'
+#
 # Proof of principle skipped run
-# info [2026-08-22 17:09:08.962 UTC]: Starting run of pipeflow_pip 'walkthrough'
+# info [2026-08-22 17:09:08.962 UTC]: Starting run of pipeflow 'walkthrough'
 # info [2026-08-22 17:09:08.962 UTC]: Step 1/3 data - skipping done step
 # info [2026-08-22 17:09:08.962 UTC]: Step 2/3 model - skipping done step
 # info [2026-08-22 17:09:08.962 UTC]: Step 3/3 plot - skipping done step
-# info [2026-08-22 17:09:08.962 UTC]: Finished run of pipeflow_pip 'walkthrough'
+# info [2026-08-22 17:09:08.962 UTC]: Finished run of pipeflow 'walkthrough'
 ```
 
 #### targets pipeline
@@ -159,7 +159,7 @@ tar_dir({
         elapsed_time(tar_make_here(reporter = "silent"))
     })
 })
-# 
+#
 # Proof of principle full run (no skips)
 # 2026-08-22 19:09:09.13 dispatched target file
 # 2026-08-22 19:09:09.15 completed target file [0ms, 3.71 kB]
@@ -170,7 +170,7 @@ tar_dir({
 # 2026-08-22 19:09:09.19 dispatched target plot
 # 2026-08-22 19:09:09.24 completed target plot [6ms, 114.10 kB]
 # ✔ 2026-08-22 19:09:09.25 ended pipeline [178ms, 4 completed, 0 skipped]
-# 
+#
 # Proof of principle skipped run
 # 2026-08-22 19:09:32.68 skipped 1 targets
 # ✔ 2026-08-22 19:09:32.68 skipped pipeline [23ms, 4 skipped]
@@ -203,12 +203,12 @@ create_linear_pip <- function(n) {
 # Verify
 p <- create_linear_pip(3)
 pip_run(p)
-# info [2026-08-22 17:09:34.195 UTC]: Starting run of pipeflow_pip 'linear'
+# info [2026-08-22 17:09:34.195 UTC]: Starting run of pipeflow 'linear'
 # info [2026-08-22 17:09:34.195 UTC]: Step 1/4 s0
 # info [2026-08-22 17:09:34.195 UTC]: Step 2/4 s1
 # info [2026-08-22 17:09:34.197 UTC]: Step 3/4 s2
 # info [2026-08-22 17:09:34.198 UTC]: Step 4/4 s3
-# info [2026-08-22 17:09:34.198 UTC]: Finished run of pipeflow_pip 'linear'
+# info [2026-08-22 17:09:34.198 UTC]: Finished run of pipeflow 'linear'
 stopifnot(p[["s3", "out"]] == 3)
 ```
 
@@ -242,7 +242,7 @@ tar_dir({
 # 2026-08-22 19:09:34.29 dispatched target s3
 # 2026-08-22 19:09:34.29 completed target s3 [0ms, 51 B]
 # ✔ 2026-08-22 19:09:34.29 ended pipeline [34ms, 4 completed, 0 skipped]
-# 
+#
 ```
 
 #### Runtimes
@@ -285,14 +285,14 @@ make_branch_pip <- function(n) {
 
 p4 <- make_branch_pip(4)
 pip_run(p4)
-# info [2026-08-22 17:10:11.132 UTC]: Starting run of pipeflow_pip 'dag'
+# info [2026-08-22 17:10:11.132 UTC]: Starting run of pipeflow 'dag'
 # info [2026-08-22 17:10:11.133 UTC]: Step 1/6 source
 # info [2026-08-22 17:10:11.133 UTC]: Step 2/6 b1
 # info [2026-08-22 17:10:11.134 UTC]: Step 3/6 b2
 # info [2026-08-22 17:10:11.136 UTC]: Step 4/6 b3
 # info [2026-08-22 17:10:11.137 UTC]: Step 5/6 b4
 # info [2026-08-22 17:10:11.137 UTC]: Step 6/6 sink
-# info [2026-08-22 17:10:11.138 UTC]: Finished run of pipeflow_pip 'dag'
+# info [2026-08-22 17:10:11.138 UTC]: Finished run of pipeflow 'dag'
 stopifnot(p4[["sink", "out"]] == 8)
 ```
 
@@ -337,7 +337,7 @@ tar_dir({
 # 2026-08-22 19:10:11.24 dispatched target sink
 # 2026-08-22 19:10:11.24 completed target sink [0ms, 51 B]
 # ✔ 2026-08-22 19:10:11.24 ended pipeline [46ms, 6 completed, 0 skipped]
-# 
+#
 ```
 
 #### Runtimes

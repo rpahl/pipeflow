@@ -40,27 +40,27 @@ p <- pip_new() |>
 pip_get_params(p) # list(n = 10, factor = 0.5)
 #> $n
 #> [1] 10
-#> 
+#>
 #> $factor
 #> [1] 0.5
-#> 
+#>
 
 # Updating params marks affected steps (and their dependents) outdated
 pip_set_params(p, params = list(n = 5, factor = 2.0))
 p
-#> <pipeflow_pip> pipe (2 steps)
+#> <pipeflow> pipe (2 steps)
 #> -----------------------------
 #>     step depends    out    state
 #> 1:  load         [NULL] outdated
 #> 2: scale    load [NULL] outdated
 
 pip_run(p)
-#> info [2026-08-22 17:08:03.330 UTC]: Starting run of pipeflow_pip 'pipe'
+#> info [2026-08-22 17:08:03.330 UTC]: Starting run of pipeflow 'pipe'
 #> info [2026-08-22 17:08:03.330 UTC]: Step 1/2 load
 #> info [2026-08-22 17:08:03.331 UTC]: Step 2/2 scale
-#> info [2026-08-22 17:08:03.332 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-08-22 17:08:03.332 UTC]: Finished run of pipeflow 'pipe'
 p
-#> <pipeflow_pip> pipe (2 steps)
+#> <pipeflow> pipe (2 steps)
 #> -----------------------------
 #>     step depends            out state
 #> 1:  load              1,2,3,4,5  done

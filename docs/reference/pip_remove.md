@@ -41,7 +41,7 @@ p <- pip_new() |>
 # Removing a leaf step (nothing depends on it) works directly
 pip_remove(p, "model")
 p                        # "load", "transform"
-#> <pipeflow_pip> pipe (2 steps)
+#> <pipeflow> pipe (2 steps)
 #> -----------------------------
 #>         step depends    out state
 #> 1:      load         [NULL]   new
@@ -54,7 +54,7 @@ p                        # "load", "transform"
 pip_remove(p, "load", force = TRUE)
 #> Removing step 'load' and its downstream dependencies: 'transform'
 p                        # pipeline is now empty
-#> <pipeflow_pip> pipe (0 steps)
+#> <pipeflow> pipe (0 steps)
 #> -----------------------------
 #> Empty data.table (0 rows and 4 cols): step,depends,out,state
 ```

@@ -41,12 +41,12 @@ p <- pip_new() |>
     pip_add("load", \(n = 5) seq_len(n)) |>
     pip_add("double", \(x = ~load) x * 2)
 pip_run(p)
-#> info [2026-08-22 17:08:02.801 UTC]: Starting run of pipeflow_pip 'pipe'
+#> info [2026-08-22 17:08:02.801 UTC]: Starting run of pipeflow 'pipe'
 #> info [2026-08-22 17:08:02.801 UTC]: Step 1/2 load
 #> info [2026-08-22 17:08:02.802 UTC]: Step 2/2 double
-#> info [2026-08-22 17:08:02.803 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-08-22 17:08:02.803 UTC]: Finished run of pipeflow 'pipe'
 p
-#> <pipeflow_pip> pipe (2 steps)
+#> <pipeflow> pipe (2 steps)
 #> -----------------------------
 #>      step depends            out state
 #> 1:   load              1,2,3,4,5  done
@@ -55,7 +55,7 @@ p
 # Replace "load" — downstream steps are automatically marked "outdated"
 pip_replace(p, "load", \(n = 3) seq_len(n))
 p
-#> <pipeflow_pip> pipe (2 steps)
+#> <pipeflow> pipe (2 steps)
 #> -----------------------------
 #>      step depends            out    state
 #> 1:   load                 [NULL]      new
@@ -63,12 +63,12 @@ p
 
 # Re-run to bring everything up to date
 pip_run(p)
-#> info [2026-08-22 17:08:02.813 UTC]: Starting run of pipeflow_pip 'pipe'
+#> info [2026-08-22 17:08:02.813 UTC]: Starting run of pipeflow 'pipe'
 #> info [2026-08-22 17:08:02.813 UTC]: Step 1/2 load
 #> info [2026-08-22 17:08:02.814 UTC]: Step 2/2 double
-#> info [2026-08-22 17:08:02.815 UTC]: Finished run of pipeflow_pip 'pipe'
+#> info [2026-08-22 17:08:02.815 UTC]: Finished run of pipeflow 'pipe'
 p
-#> <pipeflow_pip> pipe (2 steps)
+#> <pipeflow> pipe (2 steps)
 #> -----------------------------
 #>      step depends   out state
 #> 1:   load         1,2,3  done

@@ -79,12 +79,12 @@ Lock steps against changes or tag them for filtering.
 
 Generic methods for pipeflow objects.
 
-- [`length(`*`<pipeflow_pip>`*`)`](https://github.com/rpahl/pipeflow/reference/length.pipeflow.md)
+- [`length(`*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/length.pipeflow.md)
   [`length(`*`<pipeflow_view>`*`)`](https://github.com/rpahl/pipeflow/reference/length.pipeflow.md)
   : Length of a pipeflow pipeline or view
-- [`print(`*`<pipeflow_pip>`*`)`](https://github.com/rpahl/pipeflow/reference/print.md)
+- [`print(`*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/print.md)
   [`print(`*`<pipeflow_view>`*`)`](https://github.com/rpahl/pipeflow/reference/print.md)
   : Print pipeflow objects
-- [`` `[`( ``*`<pipeflow_pip>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow_pip.md)
-  [`` `[[`( ``*`<pipeflow_pip>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow_pip.md)
+- [`` `[`( ``*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow.md)
+  [`` `[[`( ``*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow.md)
   : Extract or subset a pipeline

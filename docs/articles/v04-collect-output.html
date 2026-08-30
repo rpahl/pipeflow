@@ -89,14 +89,14 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Collecting and filtering output</h1>
-            
-      
+
+
       <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/v04-collect-output.Rmd"><code>vignettes/v04-collect-output.Rmd</code></a></small>
       <div class="d-none name"><code>v04-collect-output.Rmd</code></div>
     </div>
 
-    
-    
+
+
 <p>Generally speaking, one should keep pipeline steps as simple as
 possible, basically following the principle <em>“one step, one
 task”</em>. While splitting up analysis steps into multiple functions
@@ -197,7 +197,7 @@ output type. Whenever tags are defined, they are shown in the pipeline
 overview (see rightmost column):</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow_pip&gt; my-pip (7 steps)</span></span>
+<span><span class="co"># &lt;pipeflow&gt; my-pip (7 steps)</span></span>
 <span><span class="co"># -------------------------------</span></span>
 <span><span class="co">#             step             depends    out state          tags</span></span>
 <span><span class="co"># 1:          data                     [NULL]   new              </span></span>
@@ -212,7 +212,7 @@ and inspect the output individually as we did in the previous
 vignettes.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-08-22 17:08:40.277 UTC]: Starting run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-08-22 17:08:40.277 UTC]: Starting run of pipeflow 'my-pip'</span></span>
 <span><span class="co"># info [2026-08-22 17:08:40.278 UTC]: Step 1/7 data</span></span>
 <span><span class="co"># info [2026-08-22 17:08:40.278 UTC]: Step 2/7 data_prep</span></span>
 <span><span class="co"># info [2026-08-22 17:08:40.280 UTC]: Step 3/7 data_summary</span></span>
@@ -220,10 +220,10 @@ vignettes.</p>
 <span><span class="co"># info [2026-08-22 17:08:40.623 UTC]: Step 5/7 model_fit</span></span>
 <span><span class="co"># info [2026-08-22 17:08:40.626 UTC]: Step 6/7 model_summary</span></span>
 <span><span class="co"># info [2026-08-22 17:08:40.628 UTC]: Step 7/7 model_plot</span></span>
-<span><span class="co"># info [2026-08-22 17:08:40.633 UTC]: Finished run of pipeflow_pip 'my-pip'</span></span>
+<span><span class="co"># info [2026-08-22 17:08:40.633 UTC]: Finished run of pipeflow 'my-pip'</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow_pip&gt; my-pip (7 steps)</span></span>
+<span><span class="co"># &lt;pipeflow&gt; my-pip (7 steps)</span></span>
 <span><span class="co"># -------------------------------</span></span>
 <span><span class="co">#             step             depends                 out state          tags</span></span>
 <span><span class="co"># 1:          data                     &lt;data.frame[153x6]&gt;  done              </span></span>
@@ -301,7 +301,7 @@ parameters.</p>
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">pip</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span>, yVar <span class="op">=</span> <span class="st">"Wind"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow_pip&gt; my-pip (7 steps)</span></span>
+<span><span class="co"># &lt;pipeflow&gt; my-pip (7 steps)</span></span>
 <span><span class="co"># -------------------------------</span></span>
 <span><span class="co">#             step             depends                 out    state          tags</span></span>
 <span><span class="co"># 1:          data                     &lt;data.frame[153x6]&gt;     done              </span></span>
@@ -372,7 +372,7 @@ on the given pipeline, the original pipeline is now up-to-date for the
 filtered steps.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow_pip&gt; my-pip (7 steps)</span></span>
+<span><span class="co"># &lt;pipeflow&gt; my-pip (7 steps)</span></span>
 <span><span class="co"># -------------------------------</span></span>
 <span><span class="co">#             step             depends                 out    state          tags</span></span>
 <span><span class="co"># 1:          data                     &lt;data.frame[153x6]&gt;     done              </span></span>

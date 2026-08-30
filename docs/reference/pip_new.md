@@ -33,21 +33,21 @@ p[["name"]] # "my_analysis"
 pip_add(p, "load", \(n = 5) seq_len(n))
 pip_add(p, "double", \(x = ~load) x * 2) # x depends on load's output
 p
-#> <pipeflow_pip> my_analysis (2 steps)
+#> <pipeflow> my_analysis (2 steps)
 #> ------------------------------------
 #>      step depends    out state
 #> 1:   load         [NULL]   new
 #> 2: double    load [NULL]   new
 pip_run(p)
-#> info [2026-08-22 17:08:02.364 UTC]: Starting run of pipeflow_pip 'my_analysis'
+#> info [2026-08-22 17:08:02.364 UTC]: Starting run of pipeflow 'my_analysis'
 #> info [2026-08-22 17:08:02.364 UTC]: Step 1/2 load
 #> info [2026-08-22 17:08:02.364 UTC]: Step 2/2 double
-#> info [2026-08-22 17:08:02.365 UTC]: Finished run of pipeflow_pip 'my_analysis'
+#> info [2026-08-22 17:08:02.365 UTC]: Finished run of pipeflow 'my_analysis'
 p[["out"]] # list of outputs, one per step
 #> [[1]]
 #> [1] 1 2 3 4 5
-#> 
+#>
 #> [[2]]
 #> [1]  2  4  6  8 10
-#> 
+#>
 ```

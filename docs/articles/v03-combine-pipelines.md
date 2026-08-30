@@ -40,7 +40,7 @@ pip1 <- pip_new("preprocessing") |>
 
 ``` r
 pip1
-# <pipeflow_pip> preprocessing (3 steps)
+# <pipeflow> preprocessing (3 steps)
 # --------------------------------------
 #           step   depends    out state
 # 1:        data           [NULL]   new
@@ -87,7 +87,7 @@ pip2 <- pip_new("modeling") |>
 
 ``` r
 pip2
-# <pipeflow_pip> modeling (3 steps)
+# <pipeflow> modeling (3 steps)
 # ---------------------------------
 #    step  depends    out state
 # 1: data          [NULL]   new
@@ -104,7 +104,7 @@ Next we combine the two pipelines using
 pip <- pip_bind(pip1, pip2)
 
 pip
-# <pipeflow_pip> preprocessing-modeling (6 steps)
+# <pipeflow> preprocessing-modeling (6 steps)
 # -----------------------------------------------
 #           step   depends    out state
 # 1:        data           [NULL]   new
@@ -146,7 +146,7 @@ pipeline](https://github.com/rpahl/pipeflow/articles/v02-modify-pipeline.md):
 pip |> pip_replace("data2", function(data = ~standardize) data)
 
 pip
-# <pipeflow_pip> preprocessing-modeling (6 steps)
+# <pipeflow> preprocessing-modeling (6 steps)
 # -----------------------------------------------
 #           step     depends    out    state
 # 1:        data             [NULL]      new
@@ -167,7 +167,7 @@ mechanism, which allows to rewrite the above command as follows:
 pip |> pip_replace("data2", function(data = ~ -1) data)
 
 pip
-# <pipeflow_pip> preprocessing-modeling (6 steps)
+# <pipeflow> preprocessing-modeling (6 steps)
 # -----------------------------------------------
 #           step     depends    out    state
 # 1:        data             [NULL]      new
@@ -189,14 +189,14 @@ Let’s now run the combined pipeline and inspect the plot.
 
 ``` r
 pip_run(pip)
-# info [2026-08-22 17:08:31.576 UTC]: Starting run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-08-22 17:08:31.576 UTC]: Starting run of pipeflow 'preprocessing-modeling'
 # info [2026-08-22 17:08:31.577 UTC]: Step 1/6 data
 # info [2026-08-22 17:08:31.577 UTC]: Step 2/6 data_prep
 # info [2026-08-22 17:08:31.579 UTC]: Step 3/6 standardize
 # info [2026-08-22 17:08:31.580 UTC]: Step 4/6 data2
 # info [2026-08-22 17:08:31.581 UTC]: Step 5/6 fit
 # info [2026-08-22 17:08:31.588 UTC]: Step 6/6 plot
-# info [2026-08-22 17:08:31.930 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-08-22 17:08:31.930 UTC]: Finished run of pipeflow 'preprocessing-modeling'
 ```
 
 ``` r
@@ -217,14 +217,14 @@ pip_set_params(pip, params = list(xVar = "Temp.Celsius"))
 
 ``` r
 pip_run(pip)
-# info [2026-08-22 17:08:32.504 UTC]: Starting run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-08-22 17:08:32.504 UTC]: Starting run of pipeflow 'preprocessing-modeling'
 # info [2026-08-22 17:08:32.504 UTC]: Step 1/6 data - skipping done step
 # info [2026-08-22 17:08:32.504 UTC]: Step 2/6 data_prep - skipping done step
 # info [2026-08-22 17:08:32.504 UTC]: Step 3/6 standardize - skipping done step
 # info [2026-08-22 17:08:32.504 UTC]: Step 4/6 data2 - skipping done step
 # info [2026-08-22 17:08:32.504 UTC]: Step 5/6 fit
 # info [2026-08-22 17:08:32.506 UTC]: Step 6/6 plot
-# info [2026-08-22 17:08:32.516 UTC]: Finished run of pipeflow_pip 'preprocessing-modeling'
+# info [2026-08-22 17:08:32.516 UTC]: Finished run of pipeflow 'preprocessing-modeling'
 ```
 
 ``` r
@@ -249,7 +249,7 @@ pip <- pip_new("cherry-picked-from-1-and-2") |>
     pip_add_from(pip2, "plot")
 
 pip
-# <pipeflow_pip> cherry-picked-from-1-and-2 (5 steps)
+# <pipeflow> cherry-picked-from-1-and-2 (5 steps)
 # ---------------------------------------------------
 #           step   depends    out state
 # 1:        data           [NULL]   new

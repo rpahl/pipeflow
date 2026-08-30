@@ -108,7 +108,7 @@ with all its downstream dependencies.</p></dd>
 <span class="r-in"><span><span class="co"># Removing a leaf step (nothing depends on it) works directly</span></span></span>
 <span class="r-in"><span><span class="fu">pip_remove</span><span class="op">(</span><span class="va">p</span>, <span class="st">"model"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span>                        <span class="co"># "load", "transform"</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_pip&gt; pipe (2 steps)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         step depends    out state</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:      load         [NULL]   new</span>
@@ -121,7 +121,7 @@ with all its downstream dependencies.</p></dd>
 <span class="r-in"><span><span class="fu">pip_remove</span><span class="op">(</span><span class="va">p</span>, <span class="st">"load"</span>, force <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Removing step 'load' and its downstream dependencies: 'transform'</span>
 <span class="r-in"><span><span class="va">p</span>                        <span class="co"># pipeline is now empty</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_pip&gt; pipe (0 steps)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (0 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Empty data.table (0 rows and 4 cols): step,depends,out,state</span>
 </code></pre></div>

@@ -11,10 +11,10 @@ indices (`row`, `column`), a single cell is extracted.
 ## Usage
 
 ``` r
-# S3 method for class 'pipeflow_pip'
+# S3 method for class 'pipeflow'
 x[i, ...]
 
-# S3 method for class 'pipeflow_pip'
+# S3 method for class 'pipeflow'
 x[[i, j, ...]]
 ```
 
@@ -55,7 +55,7 @@ p <- pip_new() |>
 # Selecting only "total" still includes "load" and "square".
 sub <- p["total"]
 sub[["pipeline"]][["step"]] # "load", "square", "total"
-#> [1] "load"   "square" "total" 
+#> [1] "load"   "square" "total"
 
 # Select a subset of steps by name vector
 p[c("load", "square")][["pipeline"]][["step"]] # "load", "square"
@@ -72,23 +72,23 @@ p <- pip_new() |>
 p[["pipeline"]] # the full step table
 #>      step           fun    params   signature depends    out  state   tags
 #>    <char>        <list>    <list>      <char>  <list> <list> <char> <list>
-#> 1:   load <function[1]> <list[1]>     (x = 1)         [NULL]    new       
-#> 2:    fit <function[1]> <list[1]> (x = ~load)    load [NULL]    new       
+#> 1:   load <function[1]> <list[1]>     (x = 1)         [NULL]    new
+#> 2:    fit <function[1]> <list[1]> (x = ~load)    load [NULL]    new
 #>                   time locked   exec .nodeId .indeps
 #>                 <POSc> <lgcl> <char>   <int>  <list>
 #> 1: 2026-08-22 19:08:00  FALSE   auto       0       x
-#> 2: 2026-08-22 19:08:00  FALSE   auto       1        
+#> 2: 2026-08-22 19:08:00  FALSE   auto       1
 p[["name"]] # "pipe"
 #> [1] "pipe"
 
 # Shorthand column access (equivalent to p[["pipeline"]][["step"]])
 p[["step"]]
-#> [1] "load" "fit" 
+#> [1] "load" "fit"
 
 # Two-index form: p[[row, column]] extracts a single cell
 p[["fit", "depends"]] # "load"
-#>      x 
-#> "load" 
+#>      x
+#> "load"
 p[[2, "state"]] # state of the second step
 #> [1] "new"
 ```

@@ -5,7 +5,7 @@ Print pipeflow objects
 ## Usage
 
 ``` r
-# S3 method for class 'pipeflow_pip'
+# S3 method for class 'pipeflow'
 print(
   x,
   rows = integer(),
@@ -78,14 +78,14 @@ p <- pip_new("demo") |>
   pip_add("total", \(x = ~square) sum(x), tags = "compute")
 
 print(p) # core columns: step, depends, tags, out, state
-#> <pipeflow_pip> demo (3 steps)
+#> <pipeflow> demo (3 steps)
 #> -----------------------------
 #>      step depends    out state    tags
 #> 1:   load         [NULL]   new  io,raw
 #> 2: square    load [NULL]   new compute
 #> 3:  total  square [NULL]   new compute
 print(p, cols = "all") # all non-hidden columns
-#> <pipeflow_pip> demo (3 steps)
+#> <pipeflow> demo (3 steps)
 #> -----------------------------
 #>      step           fun    params     signature depends    out state    tags
 #> 1:   load <function[1]> <list[1]>       (n = 5)         [NULL]   new  io,raw
@@ -96,7 +96,7 @@ print(p, cols = "all") # all non-hidden columns
 #> 2: 2026-08-22 19:08:04  FALSE auto
 #> 3: 2026-08-22 19:08:04  FALSE auto
 print(p, rows = 2:3) # print only steps 2 and 3
-#> <pipeflow_pip> demo (3 steps)
+#> <pipeflow> demo (3 steps)
 #> -----------------------------
 #>      step depends    out state    tags
 #> 1: square    load [NULL]   new compute

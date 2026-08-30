@@ -47,13 +47,13 @@
 # ---------------
 # Type predicates
 # ---------------
-.is_pipeflow_pip <- function(x) {
-    inherits(x, "pipeflow_pip")
+.is_pipeflow <- function(x) {
+    inherits(x, "pipeflow")
 }
 
-# A view is a pipeflow_pip whose `rows` field is not NULL.
+# A view is a pipeflow whose `rows` field is not NULL.
 .is_pipeflow_view <- function(x) {
-    inherits(x, "pipeflow_pip") && !is.null(x[["view"]])
+    inherits(x, "pipeflow") && !is.null(x[["view"]])
 }
 
 .is_pipeflow_partitioned <- function(x) {
@@ -84,14 +84,14 @@
 }
 
 .assert_pip_or_view <- function(x) {
-    if (!.is_pipeflow_pip(x)) {
+    if (!.is_pipeflow(x)) {
         stop_no_call("x must be a pipeflow pip or view")
     }
 }
 
 # Structural operations require a full pipeline, not a view.
 .assert_pip <- function(x) {
-    if (!.is_pipeflow_pip(x)) {
+    if (!.is_pipeflow(x)) {
         stop_no_call("x must be a pipeflow pip")
     }
     if (.is_pipeflow_view(x)) {
@@ -110,7 +110,7 @@
 .wrap_pipenv <- function(pipenv, name, view = NULL) {
     structure(
         list(pipenv = pipenv, name = name, view = view),
-        class = "pipeflow_pip"
+        class = "pipeflow"
     )
 }
 
@@ -304,7 +304,7 @@
     .pip_get_pipenv(x)[["data"]][rows, ]
 }
 
-# Internal implementation of [[ for pipeflow_pip objects. Views are pips with
+# Internal implementation of [[ for pipeflow objects. Views are pips with
 # a `rows` selector, so list fields and inner-env bindings are accessed
 # through the same dispatch.
 .pip_subset2 <- function(x, i, j = NULL, ...) {
@@ -612,7 +612,7 @@
 
 
 .pip_run_row <- function(x, i, lgr) {
-    if (!.is_pipeflow_pip(x)) {
+    if (!.is_pipeflow(x)) {
         stop("x must be a pipeflow pip")
     }
     if (!.pip_is_indexed(x)) {
@@ -747,7 +747,7 @@ pip_new <- function(name = "pipe") {
 
     structure(
         list(pipenv = env, name = name, view = NULL),
-        class = "pipeflow_pip"
+        class = "pipeflow"
     )
 }
 
@@ -2257,7 +2257,7 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
     rows <- parent_rows[which(keep)]
     structure(
         list(pipenv = env, name = sprintf("%s view", x[["name"]]), view = rows),
-        class = "pipeflow_pip"
+        class = "pipeflow"
     )
 }
 
@@ -2281,14 +2281,14 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
 #' length(v) # 2
 #' @rdname length.pipeflow
 #' @export
-length.pipeflow_pip <- function(x) {
+length.pipeflow <- function(x) {
     as.integer(length(.pip_view_rows(x)))
 }
 
 #' Number of rows of a pipeflow pipeline or view
 #'
 #' Treats a pipeline as a table of steps: `nrow()` returns the number of
-#' steps, the same as [length.pipeflow_pip] / `length()`, and `ncol()`
+#' steps, the same as [length.pipeflow] / `length()`, and `ncol()`
 #' returns the number of columns of the underlying step table. Views report
 #' only the number of covered steps as rows.
 #' @param x A pipeflow pipeline or view
@@ -2296,7 +2296,7 @@ length.pipeflow_pip <- function(x) {
 #' returns the number of columns of the step table.
 #' @details Base R's `nrow()` is implemented as `dim(x)[1L]`, so the number
 #' of rows and columns is provided through a `dim()` method for
-#' `pipeflow_pip` objects.
+#' `pipeflow` objects.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("s1", \(x = 1) x) |>
@@ -2309,7 +2309,7 @@ length.pipeflow_pip <- function(x) {
 #' nrow(v) # 1
 #' @rdname nrow.pipeflow
 #' @export
-dim.pipeflow_pip <- function(x) {
+dim.pipeflow <- function(x) {
     c(as.integer(length(.pip_view_rows(x))), ncol(x[["data"]]))
 }
 
@@ -2360,9 +2360,9 @@ dim.pipeflow_pip <- function(x) {
 #'
 #' # No arguments returns a copy of the pipeline
 #' length(p[]) # 3
-#' @rdname Extract.pipeflow_pip
+#' @rdname Extract.pipeflow
 #' @export
-`[.pipeflow_pip` <- function(x, i, view = TRUE, ...) {
+`[.pipeflow` <- function(x, i, view = TRUE, ...) {
     .assert_pip(x)
     n <- length(x)
 
@@ -2534,14 +2534,14 @@ dim.pipeflow_pip <- function(x) {
 #' v[["fit", "out"]]        # output of the "fit" step
 #' @rdname Extract_value.pipeflow
 #' @export
-`[[.pipeflow_pip` <- function(x, i, j = NULL, ...) {
+`[[.pipeflow` <- function(x, i, j = NULL, ...) {
     .pip_subset2(x = x, i = i, j = j, ...)
 }
 
 # Assignment routes list fields (`pip`, `name`, `rows`) to the wrapper and all
 # other bindings to the shared inner environment.
 #' @export
-`[[<-.pipeflow_pip` <- function(x, i, j = NULL, ..., value) {
+`[[<-.pipeflow` <- function(x, i, j = NULL, ..., value) {
     if (i %in% c("pipenv", "name", "view")) {
         unclass(x)[[i]] <- value
     } else {
@@ -2553,12 +2553,12 @@ dim.pipeflow_pip <- function(x) {
 
 #' @rdname Extract_value.pipeflow
 #' @export
-`$.pipeflow_pip` <- function(x, i) {
+`$.pipeflow` <- function(x, i) {
     x[[i]]
 }
 
 #' @export
-`$<-.pipeflow_pip` <- function(x, i, value) {
+`$<-.pipeflow` <- function(x, i, value) {
     x[[i]] <- value
     x
 }
@@ -2596,7 +2596,7 @@ dim.pipeflow_pip <- function(x) {
 #' print(v)
 #' @rdname print
 #' @export
-str.pipeflow_pip <- function(object, ...) {
+str.pipeflow <- function(object, ...) {
     str(unclass(object), ...)
 }
 
@@ -2627,7 +2627,7 @@ str.pipeflow_pip <- function(object, ...) {
 #' abc <- rbind(a, b, b)
 #' abc
 #' @export
-rbind.pipeflow_pip <- function(..., deparse.level = 1) {
+rbind.pipeflow <- function(..., deparse.level = 1) {
     pips <- list(...)
     if (length(pips) == 0L) {
         stop("at least one pipeflow pipeline must be provided")

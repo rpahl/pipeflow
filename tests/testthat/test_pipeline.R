@@ -264,7 +264,7 @@ describe(".pip_add_from", {
         trg <- pip_new("target")
 
         res <- .pip_add_from(trg, src, "base")
-        expect_true(.is_pipeflow_pip(res))
+        expect_true(.is_pipeflow(res))
         expect_true("base" %in% trg[["data"]][["step"]])
 
         tgs <- trg[["data"]][step == "base", tags][[1]]
@@ -383,7 +383,7 @@ describe("pip_new", {
     it("creates a pipeflow pipeline with expected base structure", {
         p <- pip_new()
 
-        expect_true(.is_pipeflow_pip(p))
+        expect_true(.is_pipeflow(p))
         expect_true(is.list(p))
         expect_equal(p[["name"]], "pipe")
         expect_null(p[["view"]])
@@ -1071,7 +1071,7 @@ describe("pip_clone", {
         p <- test_pip()
         p2 <- pip_clone(p)
 
-        expect_true(.is_pipeflow_pip(p2))
+        expect_true(.is_pipeflow(p2))
         expect_false(identical(p2, p))
         expect_equal(p2[["name"]], p[["name"]])
         expect_equal(p2[["data"]][["step"]], p[["data"]][["step"]])
@@ -2436,7 +2436,7 @@ describe("pip_set_params", {
         p <- test_pip()
 
         res <- pip_set_params(p, params = list(x = 11, y = 22))
-        expect_true(inherits(res, "pipeflow_pip"))
+        expect_true(inherits(res, "pipeflow"))
 
         v <- pip_view(p, step = "s2")
         res <- pip_set_params(v, params = list(y = 22))
@@ -2923,7 +2923,7 @@ describe("extract operator [", {
         p <- test_pip()
         suppressMessages(sub <- p[5L, view = FALSE])
 
-        expect_true(.is_pipeflow_pip(sub))
+        expect_true(.is_pipeflow(sub))
         expect_equal(sub[["data"]][["step"]], c("b1", "b2"))
     })
 
@@ -2931,7 +2931,7 @@ describe("extract operator [", {
         p <- test_pip()
         suppressMessages(sub <- p[c("a2", "b2"), view = FALSE])
 
-        expect_true(.is_pipeflow_pip(sub))
+        expect_true(.is_pipeflow(sub))
         expect_equal(sub[["data"]][["step"]], c("a1", "a2", "b1", "b2"))
     })
 
@@ -3080,7 +3080,7 @@ describe("extract operator [", {
             p <- test_pip()
             res <- p[]
 
-            expect_true(.is_pipeflow_pip(res))
+            expect_true(.is_pipeflow(res))
             expect_false(.is_pipeflow_view(res))
             expect_equal(res[["data"]][["step"]], p[["data"]][["step"]])
         })
@@ -3287,7 +3287,7 @@ describe("rbind", {
             pip_add("t2", \(x = ~t1) x + 2)
 
         out <- rbind(p1, p2)
-        expect_true(.is_pipeflow_pip(out))
+        expect_true(.is_pipeflow(out))
         expect_equal(out[["name"]], "left-right")
         expect_equal(out[["data"]][["step"]], c("s1", "s2", "t1", "t2"))
 

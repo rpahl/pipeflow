@@ -38,7 +38,7 @@ ab <- pip_bind(a, b)
 ab[["step"]] # "prep", "fit", "prep2" (step name conflict auto-resolved)
 #> [1] "prep"  "fit"   "prep2"
 ab
-#> <pipeflow_pip> a-b (3 steps)
+#> <pipeflow> a-b (3 steps)
 #> ----------------------------
 #>     step depends    out state
 #> 1:  prep         [NULL]   new

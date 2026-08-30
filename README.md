@@ -73,7 +73,7 @@ p <- pip_new("demo") |>
     pip_add("total",   \(x = ~squared) sum(x))
 
 p
-# <pipeflow_pip> demo (3 steps)
+# <pipeflow> demo (3 steps)
 # -----------------------------
 #       step depends    out state
 # 1: numbers         [NULL]   new
@@ -81,19 +81,19 @@ p
 # 3:   total squared [NULL]   new
 
 pip_run(p)
-# info [2026-06-20 19:16:29.615 UTC]: Start run of pipeflow_pip 'demo'
+# info [2026-06-20 19:16:29.615 UTC]: Start run of pipeflow 'demo'
 # info [2026-06-20 19:16:29.616 UTC]: Step 1/3 numbers
 # info [2026-06-20 19:16:29.618 UTC]: Step 2/3 squared
 # info [2026-06-20 19:16:29.620 UTC]: Step 3/3 total
-# info [2026-06-20 19:16:29.622 UTC]: Finished run of pipeflow_pip 'demo'
+# info [2026-06-20 19:16:29.622 UTC]: Finished run of pipeflow 'demo'
 
 pip_collect_out(p)
 # $numbers
 # [1] 1 2 3 4 5
-# 
+#
 # $squared
 # [1]  1  4  9 16 25
-# 
+#
 # $total
 # [1] 55
 ```

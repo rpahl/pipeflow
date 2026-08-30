@@ -5,7 +5,7 @@ Length of a pipeflow pipeline or view
 ## Usage
 
 ``` r
-# S3 method for class 'pipeflow_pip'
+# S3 method for class 'pipeflow'
 length(x)
 
 # S3 method for class 'pipeflow_view'
