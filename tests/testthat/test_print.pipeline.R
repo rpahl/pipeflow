@@ -87,6 +87,91 @@ describe(".param_list_to_string", {
     })
 })
 
+describe(".format_pip_data_table", {
+    make_dt <- function(strwidth = 50L) {
+        options(pipeflow.prettyprint.strwidth = strwidth)
+        data.table::data.table(
+            step = c("s1", "s2"),
+            signature = c(paste(rep("a", 60), collapse = ""), "short"),
+            state = c(paste(rep("x", 60), collapse = ""), "new"),
+            exec = c(paste(rep("y", 60), collapse = ""), "auto"),
+            tags = list(rep("t", 60), "s2")
+        )
+    }
+
+    it("truncates over-long values in character columns", {
+        op <- options(pipeflow.prettyprint.strwidth = 50L)
+        on.exit(options(op))
+
+        dt <- make_dt()
+        out <- .format_pip_data_table(dt)
+
+        expect_equal(
+            out[["signature"]],
+            c(paste0(paste(rep("a", 50), collapse = ""), "..."), "short")
+        )
+    })
+
+    it("leaves short character values untouched", {
+        op <- options(pipeflow.prettyprint.strwidth = 50L)
+        on.exit(options(op))
+
+        dt <- make_dt()
+        out <- .format_pip_data_table(dt)
+
+        expect_equal(out[["signature"]][[2]], "short")
+        expect_equal(out[["step"]], c("s1", "s2"))
+    })
+
+    it("does not truncate the 'state' and 'exec' columns", {
+        op <- options(pipeflow.prettyprint.strwidth = 50L)
+        on.exit(options(op))
+
+        dt <- make_dt()
+        out <- .format_pip_data_table(dt)
+
+        expect_equal(out[["state"]], dt[["state"]])
+        expect_equal(out[["exec"]], dt[["exec"]])
+    })
+
+    it("leaves non-character columns untouched", {
+        op <- options(pipeflow.prettyprint.strwidth = 50L)
+        on.exit(options(op))
+
+        dt <- make_dt()
+        out <- .format_pip_data_table(dt)
+
+        expect_identical(out[["tags"]], dt[["tags"]])
+    })
+
+    it("respects a custom strwidth option", {
+        op <- options(pipeflow.prettyprint.strwidth = 10L)
+        on.exit(options(op))
+
+        dt <- make_dt(strwidth = 10L)
+        out <- .format_pip_data_table(dt)
+
+        expect_equal(
+            out[["signature"]],
+            c(paste0(paste(rep("a", 10), collapse = ""), "..."), "short")
+        )
+    })
+
+    it("returns the table unchanged when no value exceeds strwidth", {
+        op <- options(pipeflow.prettyprint.strwidth = 50L)
+        on.exit(options(op))
+
+        dt <- data.table::data.table(
+            step = c("s1", "s2"),
+            signature = c("x=1", "x=~s1"),
+            state = c("new", "new")
+        )
+        out <- .format_pip_data_table(dt)
+
+        expect_identical(out, dt)
+    })
+})
+
 describe("print.pipeflow_pip", {
     get_print_header <- function(x, ...) {
         out <- capture.output(print(x, ...))
@@ -161,6 +246,20 @@ describe("print.pipeflow_pip", {
             pip_add("s1", \(x = data.frame(a = 1:2)) x)
 
         expect_true(grepl("x=<data.frame>", get_step_line(p, "s1")))
+    })
+
+    it("truncates over-long signatures in the printed table", {
+        op <- options(
+            width = 1000L,
+            pipeflow.prettyprint.strwidth = 10L,
+            pipeflow.print.param.maxchar = 100L
+        )
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = list(alpha = 1, beta = 2, gamma = 3)) x)
+
+        expect_true(grepl("x=list\\(alp\\.\\.\\.", get_step_line(p, "s1")))
     })
 
     it("shows tags when at least one step has tags", {

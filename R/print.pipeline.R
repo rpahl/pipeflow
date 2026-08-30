@@ -40,6 +40,24 @@
     toString(paste0(names(x), "=", chars))
 }
 
+.format_pip_data_table <- function(
+    dat,
+    strwidth = getOption("pipeflow.prettyprint.strwidth", default = 50L)
+) {
+    charCols <- setdiff(
+        names(Filter(f = is.character, x = dat)),
+        c("state", "exec")
+    )
+    for (col in charCols) {
+        nchars <- nchar(dat[[col]])
+        if (length(idx <- which(nchars > strwidth))) {
+            vals <- dat[[col]]
+            vals[idx] <- paste0(strtrim(vals[idx], width = strwidth), "...")
+            dat[[col]] <- vals
+        }
+    }
+    dat
+}
 
 #' @rdname print
 #' @export
@@ -118,7 +136,7 @@ print.pipeflow_pip <- function(
         )
         dat2print <- data.table::cbindlist(list(dat[, 1], sig, dat[, -1]))
         print(
-            dat2print,
+            .format_pip_data_table(dat2print),
             topn = topn,
             nrows = nrows,
             row.names = row.names,
