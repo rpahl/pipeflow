@@ -29,6 +29,28 @@ skipped unless \code{force = TRUE}.
 When \code{x} is a view, requested rows are run together with required
 upstream dependencies. If a step fails, the pipeline run state is set to
 \code{"failed"} and the error is re-thrown.
+\subsection{Runtime control flow via restart and stop}{
+
+A running pipeline can be interrupted via the \code{restart()} and \code{stop()}
+functions that are attached to every pipeline object. They are intended for
+advanced, self-modifying pipelines and are most often called from within a
+step function via the \code{.self} argument.
+\itemize{
+\item \code{.self$restart(force = TRUE, times = 1L)}: aborts the current run after the
+current step has finished and restarts it from the first step.
+The default parameters are \code{force = TRUE} and \code{times = 1L}, that is, the
+above call is the same as just invoking .self$restart().
+To skip steps that are already in state \code{"done"}, set \code{force = FALSE},
+and \code{times} parameter limits the number of consecutive restarts within a
+single \code{pip_run()} call.
+If a view is being run, a restart covers the view steps together with
+their upstream dependencies.
+\item \code{p$stop()}: aborts the current run after the current step has finished.
+}
+
+In both cases steps that have not been executed until the restart or stop
+happens are marked as \code{"outdated"}.
+}
 }
 \examples{
 p <- pip_new() |>
@@ -52,6 +74,17 @@ pip_run(p, force = TRUE)
 # upstream dependencies are automatically included
 v <- pip_view(p, step = "total")
 pip_run(v)
+
+# Stop or restart pipeline at runtime
+p <- pip_new("restart") |>
+  pip_add("load", \(n = 3) seq_len(n)) |>
+  pip_add("check", \(n = ~load) {
+      if (length(x) > 10L) .self$stop()
+  }) |>
+  pip_add("model", \(x = ~load) {
+      if (length(x) == 3L) .self$restart()
+      x * 2
+  })
 }
 \seealso{
 \code{vignette("v06-self-modify-pipeline", package = "pipeflow")}

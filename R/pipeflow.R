@@ -99,10 +99,9 @@
     }
 }
 
-# Convenience helper function to retrieve the shared inner environment.
-.pip_get_pipenv <- function(x) {
-    .subset2(x, "pipenv")
-}
+# -------
+# Wrapper
+# -------
 
 # Outer pipeline env wrapper that allows to create views as copied objects with
 # different names and view specifications, while sharing (i.e. pointing to) the
@@ -113,6 +112,16 @@
         class = "pipeflow"
     )
 }
+
+# Wrap a step function so that `.self` is available in its body. The wrapper
+# gets its own environment holding the pipeline reference, so the original
+# function object is never mutated.
+.wrap_self <- function(fun, self) {
+    env <- new.env(parent = environment(fun))
+    env[[".self"]] <- self
+    eval(call("function", formals(fun), body(fun)), envir = env)
+}
+
 
 # ------------------------------
 # Parameter & dependency parsing
@@ -189,6 +198,35 @@
     }
 
     unlist(depends)
+}
+
+# --------------
+# Step execution
+# --------------
+
+.pip_restart <- function(pipenv, force = TRUE, times = 1L) {
+    if (!.is_single(force, "logical")) {
+        stop("force must be a single logical value")
+    }
+    if (!.is_single(times, "numeric") || is.na(times) || times < 1L) {
+        stop("times must be a single integer value >= 1")
+    }
+
+    count <- pipenv[[".restart_count"]]
+    if (count >= times) {
+        pipenv[[".restart_count"]] <- 0L
+        return(invisible())
+    }
+
+    pipenv[[".run_state"]][] <- "restart"
+    pipenv[[".restart_count"]] <- count + 1L
+    pipenv[[".restart_force"]] <- force
+    invisible()
+}
+
+.pip_stop <- function(pipenv) {
+    pipenv[[".run_state"]][] <- "stop"
+    invisible()
 }
 
 
@@ -284,9 +322,14 @@
 }
 
 
-# --------------------
-# Pipeline data access
-# --------------------
+# ----------------------------------
+# Pipeline data access and filtering
+# ----------------------------------
+
+# Convenience helper function to retrieve the shared inner environment.
+.pip_get_pipenv <- function(x) {
+    .subset2(x, "pipenv")
+}
 
 # The rows covered by `x`: all pipeline rows for a full pipeline, or the
 # view's `rows` selector for a view.
@@ -330,7 +373,7 @@
             }
         }
 
-        # Scenario: x[[col]]
+        # case x[[col]]
         data <- .pip_view_data(x)
         col <- data[[i]]
         if (is.null(col)) {
@@ -352,13 +395,13 @@
 
     data <- .pip_view_data(x)
     if (is.character(i)) {
-        # Scenario: x[[stepName, col]]
+        # case x[[stepName, col]]
         row <- .pip_steps_to_rows(x, steps = i)
         if (row > nrow(data)) {
             stop("selected step not part of view: ", i)
         }
     } else {
-        # Scenario: x[[i, col]]
+        # case x[[i, col]]
         if (!is.finite(i) || i != as.integer(i)) {
             stop("row index must be a whole number")
         }
@@ -456,18 +499,9 @@
 }
 
 
-# -------
-# Step execution
-# -------
-
-# Wrap a step function so that `.self` is available in its body. The wrapper
-# gets its own environment holding the pipeline reference, so the original
-# function object is never mutated.
-.wrap_self <- function(fun, self) {
-    env <- new.env(parent = environment(fun))
-    env[[".self"]] <- self
-    eval(call("function", formals(fun), body(fun)), envir = env)
-}
+# -----------------
+# Pipeline addition
+# -----------------
 
 # Copy a step from another pipeline
 .pip_add_from <- function(x, y, step) {
@@ -1550,9 +1584,32 @@ pip_replace <- function(
 #' @param progress Optional callback of the form
 #' `function(value, detail)` called before each step.
 #' @return The updated pipeline or view, invisibly.
-#' @details When `x` is a view, requested rows are run together with required
+#' @details
+#' When `x` is a view, requested rows are run together with required
 #' upstream dependencies. If a step fails, the pipeline run state is set to
 #' `"failed"` and the error is re-thrown.
+#'
+#' ## Runtime control flow via restart and stop
+#'
+#' A running pipeline can be interrupted via the `restart()` and `stop()`
+#' functions that are attached to every pipeline object. They are intended for
+#' advanced, self-modifying pipelines and are most often called from within a
+#' step function via the `.self` argument.
+#'
+#' - `.self$restart(force = TRUE, times = 1L)`: aborts the current run after the
+#'   current step has finished and restarts it from the first step.
+#'   The default parameters are `force = TRUE` and `times = 1L`, that is, the
+#'   above call is the same as just invoking .self$restart().
+#'   To skip steps that are already in state `"done"`, set `force = FALSE`,
+#'   and `times` parameter limits the number of consecutive restarts within a
+#'   single `pip_run()` call.
+#'   If a view is being run, a restart covers the view steps together with
+#'   their upstream dependencies.
+#' - `p$stop()`: aborts the current run after the current step has finished.
+#'
+#' In both cases steps that have not been executed until the restart or stop
+#' happens are marked as `"outdated"`.
+#'
 #' @seealso `vignette("v06-self-modify-pipeline", package = "pipeflow")`
 #'   for an advanced example of dynamic pipelines.
 #' @examples
@@ -1577,6 +1634,17 @@ pip_replace <- function(
 #' # upstream dependencies are automatically included
 #' v <- pip_view(p, step = "total")
 #' pip_run(v)
+#'
+#' # Stop or restart pipeline at runtime
+#' p <- pip_new("restart") |>
+#'   pip_add("load", \(n = 3) seq_len(n)) |>
+#'   pip_add("check", \(n = ~load) {
+#'       if (length(x) > 10L) .self$stop()
+#'   }) |>
+#'   pip_add("model", \(x = ~load) {
+#'       if (length(x) == 3L) .self$restart()
+#'       x * 2
+#'   })
 #' @export
 pip_run <- function(
     x,
@@ -1712,87 +1780,6 @@ pip_run <- function(
             stop_no_call(e$message)
         }
     )
-}
-
-#' Restart a pipeline run
-#'
-#' Requests a restart of the current [pip_run()] execution. When called from
-#' within a step function (via the `.self` argument), the pipeline run is
-#' aborted and restarted from the first step. If a view was run, the view run
-#' is restarted together with its upstream dependencies.
-#'
-#' @param x A pipeflow pip or view.
-#' @param force Logical indicating if all steps should be forced to run on the
-#' restarted run. If `FALSE`, steps that are already in state `"done"` are
-#' skipped.
-#' @param times Maximum number of restarts to request. Once the pipeline has
-#' been restarted `times` times, further calls of `pip_restart()` are ignored
-#' until the next run.
-#'
-#' @return The updated pipeline or view, invisibly.
-#' @seealso `vignette("v06-self-modify-pipeline", package = "pipeflow")`
-#'   for an advanced example of dynamic pipelines.
-#' @examples
-#' p <- pip_new("restart") |>
-#'   pip_add("load", \(n = 3) seq_len(n)) |>
-#'   pip_add("model", \(x = ~load) {
-#'     if (length(x) == 3L) {
-#'       pip_restart(.self)
-#'     }
-#'     x * 2
-#'   })
-#'
-#' pip_run(p)
-#' p
-#' @noRd
-.pip_restart <- function(pipenv, force = TRUE, times = 1L) {
-    if (!.is_single(force, "logical")) {
-        stop("force must be a single logical value")
-    }
-    if (!.is_single(times, "numeric") || is.na(times) || times < 1L) {
-        stop("times must be a single integer value >= 1")
-    }
-
-    count <- pipenv[[".restart_count"]]
-    if (count >= times) {
-        pipenv[[".restart_count"]] <- 0L
-        return(invisible())
-    }
-
-    pipenv[[".run_state"]][] <- "restart"
-    pipenv[[".restart_count"]] <- count + 1L
-    pipenv[[".restart_force"]] <- force
-    invisible()
-}
-
-#' Stop a pipeline run
-#'
-#' Aborts the current [pip_run()] execution. When called from within a step
-#' function (via the `.self` argument), the pipeline run is stopped after the
-#' current step. Steps that were not executed are marked as `"outdated"`.
-#'
-#' @param x A pipeflow pip or view.
-#'
-#' @return The updated pipeline or view, invisibly.
-#' @seealso `vignette("v06-self-modify-pipeline", package = "pipeflow")`
-#'   for an advanced example of dynamic pipelines.
-#' @examples
-#' p <- pip_new("stop") |>
-#'   pip_add("load", \(n = 3) seq_len(n)) |>
-#'   pip_add("model", \(x = ~load) {
-#'     if (length(x) == 3L) {
-#'       pip_stop(.self)
-#'     }
-#'     x * 2
-#'   }) |>
-#'   pip_add("report", \(x = ~model) paste("result:", x))
-#'
-#' pip_run(p)
-#' p
-#' @noRd
-.pip_stop <- function(pipenv) {
-    pipenv[[".run_state"]][] <- "stop"
-    invisible()
 }
 
 

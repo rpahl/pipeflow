@@ -1,3 +1,6 @@
+# ---------------------
+# Pipeline construction
+# ---------------------
 describe(".empty_pipeline", {
     it("returns an empty data.table", {
         dt <- .empty_pipeline()
@@ -41,6 +44,9 @@ describe(".new_step", {
     })
 })
 
+# ------------------------------
+# Parameter & dependency parsing
+# ------------------------------
 
 describe(".extract_fun_params", {
     it("returns TRUE if function has no args", {
@@ -189,6 +195,343 @@ describe(".extract_depends", {
     })
 })
 
+# --------------
+# Step execution
+# --------------
+
+describe(".pip_restart", {
+    counter_env <- function(...) {
+        env <- new.env(parent = emptyenv())
+        vals <- list(...)
+        for (nm in names(vals)) {
+            env[[nm]] <- vals[[nm]]
+        }
+        env
+    }
+
+    it("signals invalid inputs", {
+        p <- pip_new()
+
+        expect_error(
+            p$restart(force = "yes"),
+            "force must be a single logical value"
+        )
+        expect_error(
+            p$restart(force = c(TRUE, FALSE)),
+            "force must be a single logical value"
+        )
+        expect_error(
+            p$restart(times = 0),
+            "times must be a single integer value >= 1"
+        )
+        expect_error(
+            p$restart(times = NA),
+            "times must be a single integer value >= 1"
+        )
+        expect_error(
+            p$restart(times = "a"),
+            "times must be a single integer value >= 1"
+        )
+        expect_error(
+            p$restart(times = c(1, 2)),
+            "times must be a single integer value >= 1"
+        )
+    })
+
+    it("restarts the pipeline when a step requests a restart", {
+        c <- counter_env(n = 0L)
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) {
+                c[["n"]] <- c[["n"]] + 1L
+                if (c[["n"]] == 1L) {
+                    .self$restart()
+                }
+                c[["n"]]
+            })
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(c[["n"]], 2L)
+        expect_equal(get_run_state(p), "ready")
+    })
+
+    it("stops recursive restarts after the announced times", {
+        c <- counter_env(n = 0L)
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) {
+                c[["n"]] <- c[["n"]] + 1L
+                .self$restart(times = 2L)
+                c[["n"]]
+            })
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(c[["n"]], 3L)
+        expect_equal(p[["pipenv"]][[".restart_count"]], 0L)
+    })
+
+    it("re-runs all steps on restart when force = TRUE", {
+        c <- counter_env(a = 0L, b = 0L, cc = 0L)
+        p <- pip_new() |>
+            pip_add("a", function(x = 1) {
+                c[["a"]] <- c[["a"]] + 1L
+                x
+            }) |>
+            pip_add("b", function(x = ~a) {
+                c[["b"]] <- c[["b"]] + 1L
+                if (c[["b"]] == 1L) {
+                    .self$restart(force = TRUE)
+                }
+                x + 1
+            }) |>
+            pip_add("cc", function(x = ~b) {
+                c[["cc"]] <- c[["cc"]] + 1L
+                x + 1
+            })
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(c[["a"]], 2L)
+        expect_equal(c[["b"]], 2L)
+        expect_equal(c[["cc"]], 1L)
+        expect_equal(p[["data"]][["out"]], list(1, 2, 3))
+    })
+
+    it("skips already done steps on restart when force = FALSE", {
+        c <- counter_env(a = 0L, b = 0L, cc = 0L)
+        p <- pip_new() |>
+            pip_add("a", function(x = 1) {
+                c[["a"]] <- c[["a"]] + 1L
+                x
+            }) |>
+            pip_add("b", function(x = ~a) {
+                c[["b"]] <- c[["b"]] + 1L
+                if (c[["b"]] == 1L) {
+                    .self$restart(force = FALSE)
+                }
+                x + 1
+            }) |>
+            pip_add("cc", function(x = ~b) {
+                c[["cc"]] <- c[["cc"]] + 1L
+                x + 1
+            })
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(c[["a"]], 1L)
+        expect_equal(c[["b"]], 1L)
+        expect_equal(c[["cc"]], 1L)
+        expect_equal(p[["data"]][["out"]], list(1, 2, 3))
+    })
+
+    it("marks the pipeline as restarting when called before a run", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x)
+
+        p$restart()
+        expect_equal(get_run_state(p), "restart")
+        expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
+
+        logs <- character(0)
+        lgr <- function(level, msg) logs <<- c(logs, msg)
+        pip_run(p, lgr = lgr)
+
+        expect_true(any(grepl("Restarting run", logs)))
+        expect_equal(get_run_state(p), "ready")
+    })
+
+    it("restarts the underlying pipeline when called on a view", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x)
+        v <- pip_view(p, step = "s1")
+
+        v$restart()
+
+        expect_equal(get_run_state(p), "restart")
+        expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
+        expect_identical(v[["data"]], p[["data"]])
+    })
+
+    it("restarts a view run when a step requests a restart", {
+        c <- counter_env(n = 0L)
+        p <- pip_new("view-pipeline") |>
+            pip_add("s1", function(x = 1) {
+                c[["n"]] <- c[["n"]] + 1L
+                if (c[["n"]] == 1L) {
+                    .self$restart()
+                }
+                x
+            }) |>
+            pip_add("s2", function(x = ~s1) x + 1)
+        v <- pip_view(p, step = "s2")
+
+        pip_run(v, lgr = NULL)
+
+        expect_equal(c[["n"]], 2L)
+        expect_equal(p[["data"]][["out"]], list(1, 2))
+        expect_equal(get_run_state(p), "ready")
+    })
+
+    it("restarts without declaring .self in the step signature", {
+        c <- counter_env(n = 0L)
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) {
+                c[["n"]] <- c[["n"]] + 1L
+                if (c[["n"]] == 1L) {
+                    .self$restart()
+                }
+                x
+            })
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(c[["n"]], 2L)
+        expect_equal(get_run_state(p), "ready")
+    })
+})
+
+describe(".pip_stop", {
+    it("marks the pipeline as stopping when called before a run", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x)
+
+        p$stop()
+
+        expect_equal(get_run_state(p), "stop")
+        expect_equal(get_run_state(p), "stop")
+    })
+
+    it("aborts the run at the stopping step and marks downstream outdated", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) x) |>
+            pip_add("s2", function(x = ~s1) {
+                .self$stop()
+                x + 1
+            }) |>
+            pip_add("s3", function(x = ~s2) x + 1)
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["data"]][["out"]], list(1, 2, NULL))
+        expect_equal(
+            p[["data"]][["state"]],
+            c("done", "done", "outdated")
+        )
+        expect_equal(get_run_state(p), "ready")
+    })
+
+    it("logs the manual stop message during the run", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) x) |>
+            pip_add("s2", function(x = ~s1) {
+                .self$stop()
+                x + 1
+            }) |>
+            pip_add("s3", function(x = ~s2) x + 1)
+
+        logs <- character(0)
+        lgr <- function(level, msg) logs <<- c(logs, msg)
+        pip_run(p, lgr = lgr)
+
+        expect_true(any(
+            grepl("Aborting pipeline execution on manual stop", logs)
+        ))
+        expect_true(any(grepl("Step 1/3 s1", logs)))
+        expect_true(any(grepl("Step 2/3 s2", logs)))
+        expect_false(any(grepl("Step 3/3 s3", logs)))
+    })
+
+    it("does not execute steps after the stopping step", {
+        ran <- character(0)
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) {
+                ran <<- c(ran, "s1")
+                x
+            }) |>
+            pip_add("s2", function(x = ~s1) {
+                ran <<- c(ran, "s2")
+                .self$stop()
+                x + 1
+            }) |>
+            pip_add("s3", function(x = ~s2) {
+                ran <<- c(ran, "s3")
+                x + 1
+            })
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(ran, c("s1", "s2"))
+    })
+
+    it("stops at the first step and marks all later steps outdated", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) {
+                .self$stop()
+                x
+            }) |>
+            pip_add("s2", function(x = ~s1) x + 1) |>
+            pip_add("s3", function(x = ~s2) x + 1)
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["data"]][["out"]], list(1, NULL, NULL))
+        expect_equal(
+            p[["data"]][["state"]],
+            c("done", "outdated", "outdated")
+        )
+    })
+
+    it("stops without declaring .self in the step signature", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) x) |>
+            pip_add("s2", function(x = ~s1) {
+                .self$stop()
+                x + 1
+            }) |>
+            pip_add("s3", function(x = ~s2) x + 1)
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["data"]][["out"]], list(1, 2, NULL))
+        expect_equal(
+            p[["data"]][["state"]],
+            c("done", "done", "outdated")
+        )
+    })
+
+    it("marks the underlying pipeline as stopping when called on a view", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x)
+        v <- pip_view(p, step = "s1")
+
+        v$stop()
+
+        expect_equal(get_run_state(p), "stop")
+        expect_identical(v[["data"]], p[["data"]])
+    })
+
+    it("aborts a view run at the stopping step", {
+        p <- pip_new("view-pipeline") |>
+            pip_add("s1", function(x = 1) x) |>
+            pip_add("s2", function(x = ~s1) {
+                .self$stop()
+                x + 1
+            }) |>
+            pip_add("s3", function(x = ~s2) x + 1) |>
+            pip_add("s4", function(x = ~s3) x + 1)
+        v <- pip_view(p, step = "s4")
+
+        pip_run(v, lgr = NULL)
+
+        expect_equal(p[["data"]][["out"]], list(1, 2, NULL, NULL))
+        expect_equal(
+            p[["data"]][["state"]],
+            c("done", "done", "outdated", "outdated")
+        )
+        expect_equal(get_run_state(p), "ready")
+    })
+})
+
 
 describe(".pip_steps_to_rows", {
     test_pip <- function() {
@@ -237,6 +580,10 @@ describe(".pip_steps_to_rows", {
     })
 })
 
+
+# -----------------
+# Pipeline addition
+# -----------------
 
 describe(".pip_add_from", {
     test_source <- function() {
@@ -1990,339 +2337,6 @@ describe("pip_run", {
     })
 })
 
-
-describe(".pip_restart", {
-    counter_env <- function(...) {
-        env <- new.env(parent = emptyenv())
-        vals <- list(...)
-        for (nm in names(vals)) {
-            env[[nm]] <- vals[[nm]]
-        }
-        env
-    }
-
-    it("signals invalid inputs", {
-        p <- pip_new()
-
-        expect_error(
-            p$restart(force = "yes"),
-            "force must be a single logical value"
-        )
-        expect_error(
-            p$restart(force = c(TRUE, FALSE)),
-            "force must be a single logical value"
-        )
-        expect_error(
-            p$restart(times = 0),
-            "times must be a single integer value >= 1"
-        )
-        expect_error(
-            p$restart(times = NA),
-            "times must be a single integer value >= 1"
-        )
-        expect_error(
-            p$restart(times = "a"),
-            "times must be a single integer value >= 1"
-        )
-        expect_error(
-            p$restart(times = c(1, 2)),
-            "times must be a single integer value >= 1"
-        )
-    })
-
-    it("restarts the pipeline when a step requests a restart", {
-        c <- counter_env(n = 0L)
-        p <- pip_new() |>
-            pip_add("s1", function(x = 1) {
-                c[["n"]] <- c[["n"]] + 1L
-                if (c[["n"]] == 1L) {
-                    .self$restart()
-                }
-                c[["n"]]
-            })
-
-        pip_run(p, lgr = NULL)
-
-        expect_equal(c[["n"]], 2L)
-        expect_equal(get_run_state(p), "ready")
-    })
-
-    it("stops recursive restarts after the announced times", {
-        c <- counter_env(n = 0L)
-        p <- pip_new() |>
-            pip_add("s1", function(x = 1) {
-                c[["n"]] <- c[["n"]] + 1L
-                .self$restart(times = 2L)
-                c[["n"]]
-            })
-
-        pip_run(p, lgr = NULL)
-
-        expect_equal(c[["n"]], 3L)
-        expect_equal(p[["pipenv"]][[".restart_count"]], 0L)
-    })
-
-    it("re-runs all steps on restart when force = TRUE", {
-        c <- counter_env(a = 0L, b = 0L, cc = 0L)
-        p <- pip_new() |>
-            pip_add("a", function(x = 1) {
-                c[["a"]] <- c[["a"]] + 1L
-                x
-            }) |>
-            pip_add("b", function(x = ~a) {
-                c[["b"]] <- c[["b"]] + 1L
-                if (c[["b"]] == 1L) {
-                    .self$restart(force = TRUE)
-                }
-                x + 1
-            }) |>
-            pip_add("cc", function(x = ~b) {
-                c[["cc"]] <- c[["cc"]] + 1L
-                x + 1
-            })
-
-        pip_run(p, lgr = NULL)
-
-        expect_equal(c[["a"]], 2L)
-        expect_equal(c[["b"]], 2L)
-        expect_equal(c[["cc"]], 1L)
-        expect_equal(p[["data"]][["out"]], list(1, 2, 3))
-    })
-
-    it("skips already done steps on restart when force = FALSE", {
-        c <- counter_env(a = 0L, b = 0L, cc = 0L)
-        p <- pip_new() |>
-            pip_add("a", function(x = 1) {
-                c[["a"]] <- c[["a"]] + 1L
-                x
-            }) |>
-            pip_add("b", function(x = ~a) {
-                c[["b"]] <- c[["b"]] + 1L
-                if (c[["b"]] == 1L) {
-                    .self$restart(force = FALSE)
-                }
-                x + 1
-            }) |>
-            pip_add("cc", function(x = ~b) {
-                c[["cc"]] <- c[["cc"]] + 1L
-                x + 1
-            })
-
-        pip_run(p, lgr = NULL)
-
-        expect_equal(c[["a"]], 1L)
-        expect_equal(c[["b"]], 1L)
-        expect_equal(c[["cc"]], 1L)
-        expect_equal(p[["data"]][["out"]], list(1, 2, 3))
-    })
-
-    it("marks the pipeline as restarting when called before a run", {
-        p <- pip_new() |>
-            pip_add("s1", \(x = 1) x)
-
-        p$restart()
-        expect_equal(get_run_state(p), "restart")
-        expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
-
-        logs <- character(0)
-        lgr <- function(level, msg) logs <<- c(logs, msg)
-        pip_run(p, lgr = lgr)
-
-        expect_true(any(grepl("Restarting run", logs)))
-        expect_equal(get_run_state(p), "ready")
-    })
-
-    it("restarts the underlying pipeline when called on a view", {
-        p <- pip_new() |>
-            pip_add("s1", \(x = 1) x)
-        v <- pip_view(p, step = "s1")
-
-        v$restart()
-
-        expect_equal(get_run_state(p), "restart")
-        expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
-        expect_identical(v[["data"]], p[["data"]])
-    })
-
-    it("restarts a view run when a step requests a restart", {
-        c <- counter_env(n = 0L)
-        p <- pip_new("view-pipeline") |>
-            pip_add("s1", function(x = 1) {
-                c[["n"]] <- c[["n"]] + 1L
-                if (c[["n"]] == 1L) {
-                    .self$restart()
-                }
-                x
-            }) |>
-            pip_add("s2", function(x = ~s1) x + 1)
-        v <- pip_view(p, step = "s2")
-
-        pip_run(v, lgr = NULL)
-
-        expect_equal(c[["n"]], 2L)
-        expect_equal(p[["data"]][["out"]], list(1, 2))
-        expect_equal(get_run_state(p), "ready")
-    })
-
-    it("restarts without declaring .self in the step signature", {
-        c <- counter_env(n = 0L)
-        p <- pip_new() |>
-            pip_add("s1", function(x = 1) {
-                c[["n"]] <- c[["n"]] + 1L
-                if (c[["n"]] == 1L) {
-                    .self$restart()
-                }
-                x
-            })
-
-        pip_run(p, lgr = NULL)
-
-        expect_equal(c[["n"]], 2L)
-        expect_equal(get_run_state(p), "ready")
-    })
-})
-
-describe(".pip_stop", {
-    it("marks the pipeline as stopping when called before a run", {
-        p <- pip_new() |>
-            pip_add("s1", \(x = 1) x)
-
-        p$stop()
-
-        expect_equal(get_run_state(p), "stop")
-        expect_equal(get_run_state(p), "stop")
-    })
-
-    it("aborts the run at the stopping step and marks downstream outdated", {
-        p <- pip_new() |>
-            pip_add("s1", function(x = 1) x) |>
-            pip_add("s2", function(x = ~s1) {
-                .self$stop()
-                x + 1
-            }) |>
-            pip_add("s3", function(x = ~s2) x + 1)
-
-        pip_run(p, lgr = NULL)
-
-        expect_equal(p[["data"]][["out"]], list(1, 2, NULL))
-        expect_equal(
-            p[["data"]][["state"]],
-            c("done", "done", "outdated")
-        )
-        expect_equal(get_run_state(p), "ready")
-    })
-
-    it("logs the manual stop message during the run", {
-        p <- pip_new() |>
-            pip_add("s1", function(x = 1) x) |>
-            pip_add("s2", function(x = ~s1) {
-                .self$stop()
-                x + 1
-            }) |>
-            pip_add("s3", function(x = ~s2) x + 1)
-
-        logs <- character(0)
-        lgr <- function(level, msg) logs <<- c(logs, msg)
-        pip_run(p, lgr = lgr)
-
-        expect_true(any(
-            grepl("Aborting pipeline execution on manual stop", logs)
-        ))
-        expect_true(any(grepl("Step 1/3 s1", logs)))
-        expect_true(any(grepl("Step 2/3 s2", logs)))
-        expect_false(any(grepl("Step 3/3 s3", logs)))
-    })
-
-    it("does not execute steps after the stopping step", {
-        ran <- character(0)
-        p <- pip_new() |>
-            pip_add("s1", function(x = 1) {
-                ran <<- c(ran, "s1")
-                x
-            }) |>
-            pip_add("s2", function(x = ~s1) {
-                ran <<- c(ran, "s2")
-                .self$stop()
-                x + 1
-            }) |>
-            pip_add("s3", function(x = ~s2) {
-                ran <<- c(ran, "s3")
-                x + 1
-            })
-
-        pip_run(p, lgr = NULL)
-
-        expect_equal(ran, c("s1", "s2"))
-    })
-
-    it("stops at the first step and marks all later steps outdated", {
-        p <- pip_new() |>
-            pip_add("s1", function(x = 1) {
-                .self$stop()
-                x
-            }) |>
-            pip_add("s2", function(x = ~s1) x + 1) |>
-            pip_add("s3", function(x = ~s2) x + 1)
-
-        pip_run(p, lgr = NULL)
-
-        expect_equal(p[["data"]][["out"]], list(1, NULL, NULL))
-        expect_equal(
-            p[["data"]][["state"]],
-            c("done", "outdated", "outdated")
-        )
-    })
-
-    it("stops without declaring .self in the step signature", {
-        p <- pip_new() |>
-            pip_add("s1", function(x = 1) x) |>
-            pip_add("s2", function(x = ~s1) {
-                .self$stop()
-                x + 1
-            }) |>
-            pip_add("s3", function(x = ~s2) x + 1)
-
-        pip_run(p, lgr = NULL)
-
-        expect_equal(p[["data"]][["out"]], list(1, 2, NULL))
-        expect_equal(
-            p[["data"]][["state"]],
-            c("done", "done", "outdated")
-        )
-    })
-
-    it("marks the underlying pipeline as stopping when called on a view", {
-        p <- pip_new() |>
-            pip_add("s1", \(x = 1) x)
-        v <- pip_view(p, step = "s1")
-
-        v$stop()
-
-        expect_equal(get_run_state(p), "stop")
-        expect_identical(v[["data"]], p[["data"]])
-    })
-
-    it("aborts a view run at the stopping step", {
-        p <- pip_new("view-pipeline") |>
-            pip_add("s1", function(x = 1) x) |>
-            pip_add("s2", function(x = ~s1) {
-                .self$stop()
-                x + 1
-            }) |>
-            pip_add("s3", function(x = ~s2) x + 1) |>
-            pip_add("s4", function(x = ~s3) x + 1)
-        v <- pip_view(p, step = "s4")
-
-        pip_run(v, lgr = NULL)
-
-        expect_equal(p[["data"]][["out"]], list(1, 2, NULL, NULL))
-        expect_equal(
-            p[["data"]][["state"]],
-            c("done", "done", "outdated", "outdated")
-        )
-        expect_equal(get_run_state(p), "ready")
-    })
-})
 
 describe("pip_reset", {
     it("resets states and outputs of all steps", {
