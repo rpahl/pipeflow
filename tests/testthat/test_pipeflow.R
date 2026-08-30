@@ -1867,7 +1867,7 @@ describe("pip_run", {
                                 ) |>
                                 pip_remove("f2")
 
-                            pip_restart(.self)
+                            .self$restart()
                         }
 
                         x + 2
@@ -1890,7 +1890,7 @@ describe("pip_run", {
             pip_add("f1", function(x = ~init) x + 1) |>
             pip_add("f2", function(x = ~f1) {
                 captured[[1]] <<- .self
-                pip_restart(.self)
+                .self$restart()
                 x + 2
             })
 
@@ -1911,7 +1911,7 @@ describe("pip_run", {
                     if (x > 10 && count < 3L) {
                         .self |>
                             pip_replace("f3", function(x = ~f1) x * 3)
-                        pip_restart(.self, times = 2L)
+                        .self$restart(times = 2L)
                     }
                     x + 2
                 }
@@ -1991,7 +1991,7 @@ describe("pip_run", {
 })
 
 
-describe("pip_restart", {
+describe(".pip_restart", {
     counter_env <- function(...) {
         env <- new.env(parent = emptyenv())
         vals <- list(...)
@@ -2004,29 +2004,28 @@ describe("pip_restart", {
     it("signals invalid inputs", {
         p <- pip_new()
 
-        expect_error(pip_restart(1), "x must be a pipeflow pip or view")
         expect_error(
-            pip_restart(p, force = "yes"),
+            p$restart(force = "yes"),
             "force must be a single logical value"
         )
         expect_error(
-            pip_restart(p, force = c(TRUE, FALSE)),
+            p$restart(force = c(TRUE, FALSE)),
             "force must be a single logical value"
         )
         expect_error(
-            pip_restart(p, times = 0),
+            p$restart(times = 0),
             "times must be a single integer value >= 1"
         )
         expect_error(
-            pip_restart(p, times = NA),
+            p$restart(times = NA),
             "times must be a single integer value >= 1"
         )
         expect_error(
-            pip_restart(p, times = "a"),
+            p$restart(times = "a"),
             "times must be a single integer value >= 1"
         )
         expect_error(
-            pip_restart(p, times = c(1, 2)),
+            p$restart(times = c(1, 2)),
             "times must be a single integer value >= 1"
         )
     })
@@ -2037,7 +2036,7 @@ describe("pip_restart", {
             pip_add("s1", function(x = 1) {
                 c[["n"]] <- c[["n"]] + 1L
                 if (c[["n"]] == 1L) {
-                    pip_restart(.self)
+                    .self$restart()
                 }
                 c[["n"]]
             })
@@ -2053,7 +2052,7 @@ describe("pip_restart", {
         p <- pip_new() |>
             pip_add("s1", function(x = 1) {
                 c[["n"]] <- c[["n"]] + 1L
-                pip_restart(.self, times = 2L)
+                .self$restart(times = 2L)
                 c[["n"]]
             })
 
@@ -2073,7 +2072,7 @@ describe("pip_restart", {
             pip_add("b", function(x = ~a) {
                 c[["b"]] <- c[["b"]] + 1L
                 if (c[["b"]] == 1L) {
-                    pip_restart(.self, force = TRUE)
+                    .self$restart(force = TRUE)
                 }
                 x + 1
             }) |>
@@ -2100,7 +2099,7 @@ describe("pip_restart", {
             pip_add("b", function(x = ~a) {
                 c[["b"]] <- c[["b"]] + 1L
                 if (c[["b"]] == 1L) {
-                    pip_restart(.self, force = FALSE)
+                    .self$restart(force = FALSE)
                 }
                 x + 1
             }) |>
@@ -2121,7 +2120,7 @@ describe("pip_restart", {
         p <- pip_new() |>
             pip_add("s1", \(x = 1) x)
 
-        pip_restart(p)
+        p$restart()
         expect_equal(get_run_state(p), "restart")
         expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
 
@@ -2138,7 +2137,7 @@ describe("pip_restart", {
             pip_add("s1", \(x = 1) x)
         v <- pip_view(p, step = "s1")
 
-        pip_restart(v)
+        v$restart()
 
         expect_equal(get_run_state(p), "restart")
         expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
@@ -2151,7 +2150,7 @@ describe("pip_restart", {
             pip_add("s1", function(x = 1) {
                 c[["n"]] <- c[["n"]] + 1L
                 if (c[["n"]] == 1L) {
-                    pip_restart(.self)
+                    .self$restart()
                 }
                 x
             }) |>
@@ -2171,7 +2170,7 @@ describe("pip_restart", {
             pip_add("s1", function(x = 1) {
                 c[["n"]] <- c[["n"]] + 1L
                 if (c[["n"]] == 1L) {
-                    pip_restart(.self)
+                    .self$restart()
                 }
                 x
             })
@@ -2183,16 +2182,12 @@ describe("pip_restart", {
     })
 })
 
-describe("pip_stop", {
-    it("signals invalid inputs", {
-        expect_error(pip_stop(1), "x must be a pipeflow pip or view")
-    })
-
+describe(".pip_stop", {
     it("marks the pipeline as stopping when called before a run", {
         p <- pip_new() |>
             pip_add("s1", \(x = 1) x)
 
-        pip_stop(p)
+        p$stop()
 
         expect_equal(get_run_state(p), "stop")
         expect_equal(get_run_state(p), "stop")
@@ -2202,7 +2197,7 @@ describe("pip_stop", {
         p <- pip_new() |>
             pip_add("s1", function(x = 1) x) |>
             pip_add("s2", function(x = ~s1) {
-                pip_stop(.self)
+                .self$stop()
                 x + 1
             }) |>
             pip_add("s3", function(x = ~s2) x + 1)
@@ -2221,7 +2216,7 @@ describe("pip_stop", {
         p <- pip_new() |>
             pip_add("s1", function(x = 1) x) |>
             pip_add("s2", function(x = ~s1) {
-                pip_stop(.self)
+                .self$stop()
                 x + 1
             }) |>
             pip_add("s3", function(x = ~s2) x + 1)
@@ -2247,7 +2242,7 @@ describe("pip_stop", {
             }) |>
             pip_add("s2", function(x = ~s1) {
                 ran <<- c(ran, "s2")
-                pip_stop(.self)
+                .self$stop()
                 x + 1
             }) |>
             pip_add("s3", function(x = ~s2) {
@@ -2263,7 +2258,7 @@ describe("pip_stop", {
     it("stops at the first step and marks all later steps outdated", {
         p <- pip_new() |>
             pip_add("s1", function(x = 1) {
-                pip_stop(.self)
+                .self$stop()
                 x
             }) |>
             pip_add("s2", function(x = ~s1) x + 1) |>
@@ -2282,7 +2277,7 @@ describe("pip_stop", {
         p <- pip_new() |>
             pip_add("s1", function(x = 1) x) |>
             pip_add("s2", function(x = ~s1) {
-                pip_stop(.self)
+                .self$stop()
                 x + 1
             }) |>
             pip_add("s3", function(x = ~s2) x + 1)
@@ -2301,7 +2296,7 @@ describe("pip_stop", {
             pip_add("s1", \(x = 1) x)
         v <- pip_view(p, step = "s1")
 
-        pip_stop(v)
+        v$stop()
 
         expect_equal(get_run_state(p), "stop")
         expect_identical(v[["data"]], p[["data"]])
@@ -2311,7 +2306,7 @@ describe("pip_stop", {
         p <- pip_new("view-pipeline") |>
             pip_add("s1", function(x = 1) x) |>
             pip_add("s2", function(x = ~s1) {
-                pip_stop(.self)
+                .self$stop()
                 x + 1
             }) |>
             pip_add("s3", function(x = ~s2) x + 1) |>

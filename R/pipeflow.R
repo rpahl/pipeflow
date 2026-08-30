@@ -744,6 +744,10 @@ pip_new <- function(name = "pipe") {
     # Restart tracking
     env[[".restart_count"]] <- 0L
     env[[".restart_force"]] <- TRUE
+    env[["restart"]] <- function(force = TRUE, times = 1L) {
+        .pip_restart(env, force = force, times = times)
+    }
+    env[["stop"]] <- function() .pip_stop(env)
 
     structure(
         list(pipenv = env, name = name, view = NULL),
@@ -793,11 +797,6 @@ pip_new <- function(name = "pipe") {
 #' * plain: single call, only valid with non-partitioned input
 #'
 #' @details
-#' Each step automatically has access to the pipeline object via `.self`,
-#' without needing to declare it as a parameter. This is useful for dynamic
-#' pipelines, e.g. to call [pip_restart()] or [pip_stop()] from within a
-#' step. `.self` is a reserved parameter name and must neither be declared
-#' in the step signature nor be passed via `params`.
 #' If `after` was specified, the new step will be inserted after the given
 #' step or position. Be aware that in contrast to adding a step at the end,
 #' inserting a step in the middle is a rather expensive operation as it
@@ -1745,9 +1744,8 @@ pip_run <- function(
 #'
 #' pip_run(p)
 #' p
-#' @export
-pip_restart <- function(x, force = TRUE, times = 1L) {
-    .assert_pip_or_view(x)
+#' @noRd
+.pip_restart <- function(pipenv, force = TRUE, times = 1L) {
     if (!.is_single(force, "logical")) {
         stop("force must be a single logical value")
     }
@@ -1755,18 +1753,16 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
         stop("times must be a single integer value >= 1")
     }
 
-    env <- .pip_get_pipenv(x)
-
-    count <- env[[".restart_count"]]
+    count <- pipenv[[".restart_count"]]
     if (count >= times) {
-        env[[".restart_count"]] <- 0L
-        return(invisible(x))
+        pipenv[[".restart_count"]] <- 0L
+        return(invisible())
     }
 
-    env[[".run_state"]][] <- "restart"
-    env[[".restart_count"]] <- count + 1L
-    env[[".restart_force"]] <- force
-    invisible(x)
+    pipenv[[".run_state"]][] <- "restart"
+    pipenv[[".restart_count"]] <- count + 1L
+    pipenv[[".restart_force"]] <- force
+    invisible()
 }
 
 #' Stop a pipeline run
@@ -1793,12 +1789,10 @@ pip_restart <- function(x, force = TRUE, times = 1L) {
 #'
 #' pip_run(p)
 #' p
-#' @export
-pip_stop <- function(x) {
-    .assert_pip_or_view(x)
-    env <- .pip_get_pipenv(x)
-    env[[".run_state"]][] <- "stop"
-    invisible(x)
+#' @noRd
+.pip_stop <- function(pipenv) {
+    pipenv[[".run_state"]][] <- "stop"
+    invisible()
 }
 
 
