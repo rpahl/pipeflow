@@ -195,9 +195,9 @@ describe(".extract_depends", {
     })
 })
 
-# --------------
-# Step execution
-# --------------
+# -------------
+# State updates
+# -------------
 
 describe(".pip_restart", {
     counter_env <- function(...) {
@@ -532,6 +532,57 @@ describe(".pip_stop", {
     })
 })
 
+describe(".pip_update_downstream", {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("a1", \(x = 1) x) |>
+            pip_add("a2", \(x = ~a1) x) |>
+            pip_add("b1", \(x = 1) x) |>
+            pip_add("a3", \(x = ~a1) x) |>
+            pip_add("b2", \(x = ~b1) x)
+    }
+
+    it("updates states downstream of single node as expected", {
+        p <- test_pip()
+
+        expect_true(all(p$data[["state"]] == "new"))
+        .pip_update_downstream(p, "a1", what = "state", value = "outdated")
+
+        expect_equal(
+            p$data[["state"]],
+            c("outdated", "outdated", "new", "outdated", "new")
+        )
+    })
+
+    it("can update states downstream of multiple nodes", {
+        p <- test_pip()
+        .pip_update_downstream(
+            p,
+            steps = c("a1", "b1"),
+            what = "state",
+            value = "outdated"
+        )
+        expect_true(all(p$data[["state"]] == "outdated"))
+
+        p <- test_pip()
+        .pip_update_downstream(
+            p,
+            steps = c("a1", "b2"),
+            what = "state",
+            value = "outdated"
+        )
+
+        expect_equal(
+            p$data[["state"]],
+            c("outdated", "outdated", "new", "outdated", "outdated")
+        )
+    })
+})
+
+
+# ---------------------------
+# Step lookup & DAG traversal
+# ---------------------------
 
 describe(".pip_steps_to_rows", {
     test_pip <- function() {
@@ -670,54 +721,6 @@ describe(".pip_add_from", {
             c("math", "core")
         )
         expect_equal(trg[["data"]][step == "calc", exec][[1]], "split")
-    })
-})
-
-
-describe(".pip_update_downstream", {
-    test_pip <- function() {
-        pip_new() |>
-            pip_add("a1", \(x = 1) x) |>
-            pip_add("a2", \(x = ~a1) x) |>
-            pip_add("b1", \(x = 1) x) |>
-            pip_add("a3", \(x = ~a1) x) |>
-            pip_add("b2", \(x = ~b1) x)
-    }
-
-    it("updates states downstream of single node as expected", {
-        p <- test_pip()
-
-        expect_true(all(p$data[["state"]] == "new"))
-        .pip_update_downstream(p, "a1", what = "state", value = "outdated")
-
-        expect_equal(
-            p$data[["state"]],
-            c("outdated", "outdated", "new", "outdated", "new")
-        )
-    })
-
-    it("can update states downstream of multiple nodes", {
-        p <- test_pip()
-        .pip_update_downstream(
-            p,
-            steps = c("a1", "b1"),
-            what = "state",
-            value = "outdated"
-        )
-        expect_true(all(p$data[["state"]] == "outdated"))
-
-        p <- test_pip()
-        .pip_update_downstream(
-            p,
-            steps = c("a1", "b2"),
-            what = "state",
-            value = "outdated"
-        )
-
-        expect_equal(
-            p$data[["state"]],
-            c("outdated", "outdated", "new", "outdated", "outdated")
-        )
     })
 })
 

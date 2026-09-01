@@ -122,7 +122,6 @@
     eval(call("function", formals(fun), body(fun)), envir = env)
 }
 
-
 # ------------------------------
 # Parameter & dependency parsing
 # ------------------------------
@@ -203,36 +202,6 @@
 # --------------
 # Step execution
 # --------------
-
-.pip_restart <- function(pipenv, force = TRUE, times = 1L) {
-    if (!.is_single(force, "logical")) {
-        stop("force must be a single logical value")
-    }
-    if (!.is_single(times, "numeric") || is.na(times) || times < 1L) {
-        stop("times must be a single integer value >= 1")
-    }
-
-    count <- pipenv[[".restart_count"]]
-    if (count >= times) {
-        pipenv[[".restart_count"]] <- 0L
-        return(invisible())
-    }
-
-    pipenv[[".run_state"]][] <- "restart"
-    pipenv[[".restart_count"]] <- count + 1L
-    pipenv[[".restart_force"]] <- force
-    invisible()
-}
-
-.pip_stop <- function(pipenv) {
-    pipenv[[".run_state"]][] <- "stop"
-    invisible()
-}
-
-
-# ---------------------
-# Partitioned execution
-# ---------------------
 .as_pipeflow_partitioned <- function(x) {
     if (!is.list(x)) {
         stop("split mode requires step output to be a list")
@@ -250,7 +219,6 @@
     class(x) <- c(class(x), "pipeflow_partitioned")
     x
 }
-
 
 .pip_execute_step_call <- function(fun, args, exec) {
     # A partitioned argument is a list of per-key values produced by a
@@ -319,6 +287,110 @@
     }
 
     .as_pipeflow_partitioned(out)
+}
+
+.pip_run_row <- function(x, i, lgr) {
+    if (!.is_pipeflow(x)) {
+        stop("x must be a pipeflow pip")
+    }
+    if (!.pip_is_indexed(x)) {
+        .pip_reindex(x)
+    }
+
+    dat <- x[["data"]]
+    fun <- dat[["fun"]][[i]]
+    args <- dat[["params"]][[i]]
+    depends <- dat[["depends"]][[i]]
+    exec <- dat[["exec"]][[i]]
+
+    # If calculation depends on results of earlier steps, get them from
+    # respective referenced output slots of the pipeline.
+    if (length(depends) > 0) {
+        refsOut <- .pip_filter(x, on = "step", values = depends)[["out"]]
+        args[names(depends)] <- refsOut
+    }
+
+    step <- dat[["step"]][[i]]
+
+    # Keep `.self` pointing at the pipeline object being run, so steps still
+    # reference the correct pipeline after cloning, subsetting or replacing.
+    environment(fun)[[".self"]] <- x
+
+    out <- withCallingHandlers(
+        .pip_execute_step_call(fun = fun, args = args, exec = exec),
+        error = function(e) {
+            data.table::set(
+                dat,
+                i = i,
+                j = "state",
+                value = .step_states[["failed"]][["name"]]
+            )
+            lgr(level = "error", msg = e$message)
+            stop_no_call(e$message)
+        },
+        warning = function(w) {
+            lgr(level = "warn", msg = w$message)
+        },
+        message = function(m) {
+            lgr(level = "info", msg = m$message)
+        }
+    )
+
+    # Re-read pipeline after execution to handle scenarios where the pipeline
+    # modified itself at runtime. Since we update by step name, if the current
+    # step does not exist anymore, we simply skip the update.
+    dat <- x[["data"]]
+    rowNow <- data.table::chmatch(step, dat[["step"]])
+    stepStillExists <- !is.na(rowNow)
+    if (stepStillExists) {
+        data.table::set(
+            dat,
+            i = rowNow,
+            j = c("out", "time", "state"),
+            value = list(
+                list(out),
+                Sys.time(),
+                .step_states[["done"]][["name"]]
+            )
+        )
+    }
+
+    out
+}
+
+# -------------
+# State updates
+# -------------
+.pip_restart <- function(pipenv, force = TRUE, times = 1L) {
+    if (!.is_single(force, "logical")) {
+        stop("force must be a single logical value")
+    }
+    if (!.is_single(times, "numeric") || is.na(times) || times < 1L) {
+        stop("times must be a single integer value >= 1")
+    }
+
+    count <- pipenv[[".restart_count"]]
+    if (count >= times) {
+        pipenv[[".restart_count"]] <- 0L
+        return(invisible())
+    }
+
+    pipenv[[".run_state"]][] <- "restart"
+    pipenv[[".restart_count"]] <- count + 1L
+    pipenv[[".restart_force"]] <- force
+    invisible()
+}
+
+.pip_stop <- function(pipenv) {
+    pipenv[[".run_state"]][] <- "stop"
+    invisible()
+}
+
+.pip_update_downstream <- function(x, steps, what, value) {
+    nodes <- .pip_get_reachable_nodes(x, steps)
+    x[["data"]][list(nodes), (what) := value, on = ".nodeId"]
+
+    invisible(x)
 }
 
 
@@ -643,88 +715,6 @@
 
     out
 }
-
-
-.pip_run_row <- function(x, i, lgr) {
-    if (!.is_pipeflow(x)) {
-        stop("x must be a pipeflow pip")
-    }
-    if (!.pip_is_indexed(x)) {
-        .pip_reindex(x)
-    }
-
-    dat <- x[["data"]]
-    fun <- dat[["fun"]][[i]]
-    args <- dat[["params"]][[i]]
-    depends <- dat[["depends"]][[i]]
-    exec <- dat[["exec"]][[i]]
-
-    # If calculation depends on results of earlier steps, get them from
-    # respective referenced output slots of the pipeline.
-    if (length(depends) > 0) {
-        refsOut <- .pip_filter(x, on = "step", values = depends)[["out"]]
-        args[names(depends)] <- refsOut
-    }
-
-    step <- dat[["step"]][[i]]
-
-    # Keep `.self` pointing at the pipeline object being run, so steps still
-    # reference the correct pipeline after cloning, subsetting or replacing.
-    environment(fun)[[".self"]] <- x
-
-    out <- withCallingHandlers(
-        .pip_execute_step_call(fun = fun, args = args, exec = exec),
-        error = function(e) {
-            data.table::set(
-                dat,
-                i = i,
-                j = "state",
-                value = .step_states[["failed"]][["name"]]
-            )
-            lgr(level = "error", msg = e$message)
-            stop_no_call(e$message)
-        },
-        warning = function(w) {
-            lgr(level = "warn", msg = w$message)
-        },
-        message = function(m) {
-            lgr(level = "info", msg = m$message)
-        }
-    )
-
-    # Re-read pipeline after execution to handle scenarios where the pipeline
-    # modified itself at runtime. Since we update by step name, if the current
-    # step does not exist anymore, we simply skip the update.
-    dat <- x[["data"]]
-    rowNow <- data.table::chmatch(step, dat[["step"]])
-    stepStillExists <- !is.na(rowNow)
-    if (stepStillExists) {
-        data.table::set(
-            dat,
-            i = rowNow,
-            j = c("out", "time", "state"),
-            value = list(
-                list(out),
-                Sys.time(),
-                .step_states[["done"]][["name"]]
-            )
-        )
-    }
-
-    out
-}
-
-
-# -------------
-# State updates
-# -------------
-.pip_update_downstream <- function(x, steps, what, value) {
-    nodes <- .pip_get_reachable_nodes(x, steps)
-    x[["data"]][list(nodes), (what) := value, on = ".nodeId"]
-
-    invisible(x)
-}
-
 
 # ---------------------------
 # Exported pipeline functions
