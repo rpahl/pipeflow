@@ -3028,73 +3028,99 @@ describe("extract operator [", {
         expect_silent(p[c("a1", "b1"), view = FALSE])
     })
 
-    describe("filter forwarding", {
-        it("can use custom filters as in pip_view", {
-            p <- test_pip()
-            res <- p["depends" = "a1", "state" = "new"]
+    describe("boolean expression filtering", {
+        filter_pip <- function() {
+            pip_new("pipe") |>
+                pip_add("load", \(x = 1) x, tags = c("io", "daily")) |>
+                pip_add("fit", \(x = ~load) x, tags = c("model", "daily")) |>
+                pip_add("eval", \(x = ~fit) x, tags = c("model", "report"))
+        }
 
-            expect_true(.is_pipeflow_view(res))
-            expect_equal(res[["view"]], unname(which(p[["depends"]] == "a1")))
-        })
+        set_state <- function(p, step, state = "done") {
+            p[["data"]][["state"]][p[["data"]][["step"]] == step] <- state
+            p
+        }
 
-        it("forwards a single filter to pip_view", {
-            p <- test_pip()
-            v1 <- p[state = "new"]
-            v2 <- pip_view(p, state = "new")
-
-            expect_true(.is_pipeflow_view(v1))
-            expect_equal(v1[["view"]], v2[["view"]])
-            expect_equal(v1[["name"]], v2[["name"]])
-        })
-
-        it("combines multiple filters by intersection", {
-            p <- test_pip()
-            v1 <- p[state = "new", depends = "a1"]
-            v2 <- pip_view(p, state = "new", depends = "a1")
-
-            expect_equal(v1[["view"]], v2[["view"]])
-            expect_equal(v1[["view"]], c(2L, 4L))
-        })
-
-        it("forwards join and fixed arguments to pip_view", {
-            p <- test_pip()
-            v1 <- p[step = "a", fixed = FALSE]
-            v2 <- pip_view(p, step = "a", fixed = FALSE)
-
-            expect_equal(v1[["view"]], v2[["view"]])
-            expect_equal(v1[["view"]], c(1L, 2L, 4L))
-
-            v3 <- p[step = "a1", state = "new", join = "union"]
-            expect_equal(
-                v3[["view"]],
-                pip_view(
-                    p,
-                    step = "a1",
-                    state = "new",
-                    join = "union"
-                )[["view"]]
-            )
-        })
-
-        it("filters by tags", {
-            p <- pip_new() |>
-                pip_add("load", \(x = 1) x, tags = c("io", "raw")) |>
-                pip_add("report", \(x = ~load) x, tags = c("io", "report")) |>
-                pip_add("other", \(x = 1) x, tags = "misc")
-
-            v <- p[tags = "io"]
+        it("selects steps matching a boolean expression", {
+            p <- set_state(filter_pip(), "load")
+            v <- p[state == "done"]
 
             expect_true(.is_pipeflow_view(v))
-            expect_equal(v[["step"]], c(load = "load", report = "report"))
+            expect_equal(unname(v[["step"]]), "load")
         })
 
-        it("returns a copy of the pipeline when no arguments are given", {
-            p <- test_pip()
-            res <- p[]
+        it("combines conditions with & and |", {
+            p <- set_state(filter_pip(), "load")
+            v <- p[tags %like% "model" & state == "new"]
 
-            expect_true(.is_pipeflow(res))
-            expect_false(.is_pipeflow_view(res))
-            expect_equal(res[["data"]][["step"]], p[["data"]][["step"]])
+            expect_equal(unname(v[["step"]]), c("fit", "eval"))
+
+            v2 <- p[state == "done" | step %like% "^eval$"]
+            expect_equal(unname(v2[["step"]]), c("load", "eval"))
+        })
+
+        it("supports %in% set membership", {
+            p <- filter_pip()
+            v <- p[step %in% c("load", "eval")]
+
+            expect_equal(v[["view"]], c(1L, 3L))
+        })
+
+        it("mirrors the data.table filter on the step table", {
+            p <- filter_pip()
+            v <- p[tags %like% "model"]
+
+            raw <- p[["data"]][tags %like% "model"]
+            expect_equal(unname(v[["step"]]), raw[["step"]])
+        })
+
+        it("recycles scalar logical filters", {
+            p <- filter_pip()
+
+            expect_equal(length(p[TRUE]), 3L)
+            expect_equal(length(p[FALSE]), 0L)
+        })
+
+        it("accepts a logical vector variable", {
+            p <- filter_pip()
+            keep <- p[["step"]] %in% c("load", "eval")
+            v <- p[keep]
+
+            expect_equal(v[["view"]], c(1L, 3L))
+        })
+
+        it("extracts upstream dependencies with view = FALSE", {
+            p <- filter_pip()
+            suppressMessages(sub <- p[tags %like% "report", view = FALSE])
+            expect_equal(sub[["data"]][["step"]], c("load", "fit", "eval"))
+        })
+
+        it("is restricted to full pipelines (use pip_view for views)", {
+            p <- filter_pip()
+            v <- pip_view(p, step = c("fit", "eval"))
+
+            expect_error(v[state == "new"], "full pipeline")
+            expect_error(v[1L], "full pipeline")
+        })
+
+        it("rejects named filters and stray arguments", {
+            p <- filter_pip()
+
+            expect_error(p[state = "new"], "pip_view")
+            expect_error(p[tags = "io"], "pip_view")
+        })
+
+        it("signals invalid logical filters", {
+            p <- filter_pip()
+
+            expect_error(p[c(TRUE, FALSE)], "logical filter has length")
+            expect_error(p[c(TRUE, NA, FALSE)], "must not contain NA")
+        })
+
+        it("signals unknown columns in boolean expressions", {
+            p <- filter_pip()
+
+            expect_error(p[not_a_column == 1], "not_a_column")
         })
     })
 })

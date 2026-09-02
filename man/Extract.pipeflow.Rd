@@ -9,16 +9,14 @@
 \arguments{
 \item{x}{A pipeflow pipeline object.}
 
-\item{i}{integer (row indices) or character vector (step names) of steps to
-select. If omitted, \code{...} filters are forwarded to \code{\link[=pip_view]{pip_view()}}.}
+\item{i}{Row selection: integer row indices, character step names, or a
+boolean filter expression evaluated in the context of the step table.}
 
 \item{view}{If \code{TRUE} (default), a view referencing the selected steps is
 returned. If \code{FALSE}, a new pipeline is returned that includes the selected
 steps and all their upstream dependencies.}
 
-\item{...}{Named filters forwarded to \code{\link[=pip_view]{pip_view()}}, used when \code{i} is
-omitted. Can be one or more of \code{step}, \code{params}, \code{depends}, \code{state},
-\code{tags}, \code{exec}.}
+\item{...}{Not used.}
 }
 \value{
 A pipeflow view (if \code{view = TRUE}) or a new pipeflow pipeline
@@ -31,33 +29,41 @@ returned that references the selected steps without copying them. Set
 all required upstream dependencies.
 }
 \details{
-If \code{i} is omitted, named arguments passed through \code{...} are forwarded to
-\code{\link[=pip_view]{pip_view()}}, so views can be defined directly with the extract operator:
-\code{p[state = "new", tags = "io"]}. With no arguments at all, a copy of the
-pipeline is returned.
+Three forms of row selection are supported:
+\itemize{
+\item \strong{row indices} (relative to the current selection), e.g. \code{p[2:3]},
+\item \strong{step names}, e.g. \code{p[c("load", "fit")]},
+\item a \strong{boolean filter} that is evaluated in the context of the pipeline's
+step table, e.g. \code{p[state == "new"]} or
+\code{p[step \%in\% c("load", "fit") & tags \%like\% "io"]}.
+}
+
+Boolean filters may reference the columns of the step table (\code{step}, \code{fun},
+\code{params}, \code{depends}, \code{tags}, \code{state}, ...) directly as variables, and the
+\link[=pipeflow-operators]{data.table filter operators} re-exported by pipeflow
+(e.g. \verb{\%like\%}, \verb{\%chin\%}, \verb{\%between\%}) are available. \code{p[]} returns a copy
+of the pipeline. For validated, programmatic filters with dedicated
+arguments (such as matching \emph{any} of a set of tags) use \code{\link[=pip_view]{pip_view()}}
+instead.
 }
 \examples{
 p <- pip_new() |>
-  pip_add("load", \(n = 5) seq_len(n), tags = "io") |>
-  pip_add("square", \(x = ~load) x^2) |>
-  pip_add("total", \(x = ~square) sum(x))
+  pip_add("load", \(n = 5) seq_len(n), tags = c("io", "daily")) |>
+  pip_add("square", \(x = ~load) x^2, tags = "model") |>
+  pip_add("total", \(x = ~square) sum(x), tags = c("model", "report"))
 
 # By default, `[` returns a view into the selected steps.
-sub <- p["total"]
-sub # pipeflow_view, references the underlying pipeline
+p["total"] # view with a single step
 
-# With view = FALSE, a self-contained pipeline including all upstream
-# dependencies is returned instead.
-sub <- p["total", view = FALSE]
-sub[["step"]] # "load", "square", "total"
+# Select by name vector or integer row index
+p[c("load", "square")][["step"]]  # view -> "load", "square"
+p[1:2, view = FALSE][["step"]]     # pipeline -> "load", "square"
 
-# Select a subset of steps by name vector or integer row index
-p[c("load", "square")][["step"]] # view -> "load", "square"
-p[1:2, view = FALSE][["step"]]    # pipeline -> "load", "square"
+# Boolean filters are evaluated against the step table
+p[tags \%like\% "model"][["step"]]  # "square", "total"
 
-# With i omitted, named arguments are forwarded to pip_view()
-v <- p[state = "new", tags = "io"]
-v[["step"]] # "load"
+# view = FALSE extracts a pipeline with all upstream dependencies
+p[tags \%like\% "report", view = FALSE][["step"]] # "load", "square", "total"
 
 # No arguments returns a copy of the pipeline
 length(p[]) # 3

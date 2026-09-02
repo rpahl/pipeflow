@@ -10,10 +10,14 @@
 \method{$}{pipeflow}(x, i)
 }
 \arguments{
+\item{x}{A pipeflow pipeline or view.}
+
 \item{i}{integer (row index) or character (step name) of the step to
 select}
 
 \item{j}{column name to select}
+
+\item{...}{Not used.}
 }
 \value{
 Extracted value(s), depending on \code{i} and \code{j}.

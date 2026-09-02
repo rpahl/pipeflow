@@ -56,43 +56,47 @@ dim.pipeflow <- function(x) {
 #' `view = FALSE` to instead get a new, self-contained pipeline that includes
 #' all required upstream dependencies.
 #'
-#' If `i` is omitted, named arguments passed through `...` are forwarded to
-#' [pip_view()], so views can be defined directly with the extract operator:
-#' `p[state = "new", tags = "io"]`. With no arguments at all, a copy of the
-#' pipeline is returned.
+#' Three forms of row selection are supported:
+#' * **row indices** (relative to the current selection), e.g. `p[2:3]`,
+#' * **step names**, e.g. `p[c("load", "fit")]`,
+#' * a **boolean filter** that is evaluated in the context of the pipeline's
+#'   step table, e.g. `p[state == "new"]` or
+#'   `p[step %in% c("load", "fit") & tags %like% "io"]`.
+#'
+#' Boolean filters may reference the columns of the step table (`step`, `fun`,
+#' `params`, `depends`, `tags`, `state`, ...) directly as variables, and the
+#' [data.table filter operators][pipeflow-operators] re-exported by pipeflow
+#' (e.g. `%like%`, `%chin%`, `%between%`) are available. `p[]` returns a copy
+#' of the pipeline. For validated, programmatic filters with dedicated
+#' arguments (such as matching *any* of a set of tags) use [pip_view()]
+#' instead.
 #' @param x A pipeflow pipeline object.
-#' @param i integer (row indices) or character vector (step names) of steps to
-#' select. If omitted, `...` filters are forwarded to [pip_view()].
+#' @param i Row selection: integer row indices, character step names, or a
+#' boolean filter expression evaluated in the context of the step table.
 #' @param view If `TRUE` (default), a view referencing the selected steps is
 #' returned. If `FALSE`, a new pipeline is returned that includes the selected
 #' steps and all their upstream dependencies.
-#' @param ... Named filters forwarded to [pip_view()], used when `i` is
-#' omitted. Can be one or more of `step`, `params`, `depends`, `state`,
-#' `tags`, `exec`.
+#' @param ... Not used.
 #' @return A pipeflow view (if `view = TRUE`) or a new pipeflow pipeline
 #' (if `view = FALSE`).
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("load", \(n = 5) seq_len(n), tags = "io") |>
-#'   pip_add("square", \(x = ~load) x^2) |>
-#'   pip_add("total", \(x = ~square) sum(x))
+#'   pip_add("load", \(n = 5) seq_len(n), tags = c("io", "daily")) |>
+#'   pip_add("square", \(x = ~load) x^2, tags = "model") |>
+#'   pip_add("total", \(x = ~square) sum(x), tags = c("model", "report"))
 #'
 #' # By default, `[` returns a view into the selected steps.
-#' sub <- p["total"]
-#' sub # pipeflow_view, references the underlying pipeline
+#' p["total"] # view with a single step
 #'
-#' # With view = FALSE, a self-contained pipeline including all upstream
-#' # dependencies is returned instead.
-#' sub <- p["total", view = FALSE]
-#' sub[["step"]] # "load", "square", "total"
+#' # Select by name vector or integer row index
+#' p[c("load", "square")][["step"]]  # view -> "load", "square"
+#' p[1:2, view = FALSE][["step"]]     # pipeline -> "load", "square"
 #'
-#' # Select a subset of steps by name vector or integer row index
-#' p[c("load", "square")][["step"]] # view -> "load", "square"
-#' p[1:2, view = FALSE][["step"]]    # pipeline -> "load", "square"
+#' # Boolean filters are evaluated against the step table
+#' p[tags %like% "model"][["step"]]  # "square", "total"
 #'
-#' # With i omitted, named arguments are forwarded to pip_view()
-#' v <- p[state = "new", tags = "io"]
-#' v[["step"]] # "load"
+#' # view = FALSE extracts a pipeline with all upstream dependencies
+#' p[tags %like% "report", view = FALSE][["step"]] # "load", "square", "total"
 #'
 #' # No arguments returns a copy of the pipeline
 #' length(p[]) # 3
@@ -100,52 +104,86 @@ dim.pipeflow <- function(x) {
 #' @export
 `[.pipeflow` <- function(x, i, view = TRUE, ...) {
     .assert_pip(x)
-    n <- length(x)
 
-    if (missing(i)) {
-        if (!missing(...)) {
-            # Allows views to be defined like x[state = "new", tags = "io"]
-            return(pip_view(x, ...))
-        } else {
-            # We land here if user calls x[]
-            return(pip_clone(x))
-        }
+    if (!missing(...)) {
+        stop(
+            "`...` is not supported in `[`. Select rows, step names, or a ",
+            "boolean expression, or use pip_view() for named filters."
+        )
     }
-
     if (!.is_single(view, "logical") || is.na(view)) {
         stop("view must be a single logical value")
     }
 
-    if (!(is.numeric(i) || is.character(i))) {
-        stop("i must be either numeric row indices or character step names")
-    }
-
-    # Verify and resolve row selection
-    if (is.character(i)) {
-        rows <- sort(unique(.pip_steps_to_rows(x, steps = i)))
-    } else {
-        if (anyNA(i)) {
-            stop("row indices in 'i' must not contain NA")
-        }
-        if (!all(is.finite(i)) || !all(i == as.integer(i))) {
-            stop("numeric indices in 'i' must be whole numbers")
-        }
-        rows <- sort(unique(as.integer(i)))
-        bad <- rows[rows < 1L | rows > n]
-        if (length(bad) > 0L) {
-            stop("Invalid row indices in 'i': ", toString(bad))
-        }
+    # x[] returns a copy of the pipeline
+    if (missing(i)) {
+        return(pip_clone(x))
     }
 
     pipenv <- .pip_get_pipenv(x)
     name <- x[["name"]]
-    data <- pipenv[["data"]]
+
+    # The step table provides the scope for boolean filters (data.table-style
+    # non-standard evaluation); `i` is evaluated against it, falling back to
+    # the calling environment for ordinary variables.
+    dat <- pipenv[["data"]]
+    i_expr <- substitute(i)
+    value <- eval(i_expr, envir = dat, enclos = parent.frame())
+
+    if (is.logical(value)) {
+        if (length(value) == 1L) {
+            value <- rep(value, nrow(dat))
+        }
+        if (length(value) != nrow(dat)) {
+            stop(sprintf(
+                "logical filter has length %d but the pipeline has %d rows",
+                length(value),
+                nrow(dat)
+            ))
+        }
+        if (anyNA(value)) {
+            stop("logical filter must not contain NA")
+        }
+        rows <- which(value)
+    } else if (is.numeric(value)) {
+        if (anyNA(value)) {
+            stop("row indices in 'i' must not contain NA")
+        }
+        if (!all(is.finite(value)) || !all(value == as.integer(value))) {
+            stop("numeric indices in 'i' must be whole numbers")
+        }
+        rows <- sort(unique(as.integer(value)))
+        bad <- rows[rows < 1L | rows > nrow(dat)]
+        if (length(bad) > 0L) {
+            stop("Invalid row indices in 'i': ", toString(bad))
+        }
+    } else if (is.character(value)) {
+        if (anyNA(value)) {
+            stop("step names must not contain NA")
+        }
+        if (!all(nzchar(value))) {
+            stop("step names must be non-empty strings")
+        }
+        m <- data.table::chmatch(value, dat[["step"]])
+        if (anyNA(m)) {
+            unknown <- unique(value[is.na(m)])
+            stop("Unknown step names: ", toString(unknown), call. = FALSE)
+        }
+        rows <- sort(unique(m))
+    } else {
+        stop(sprintf(
+            "`i` must evaluate to row indices, step names, or a logical ",
+            "filter, not %s",
+            typeof(value)
+        ))
+    }
 
     if (view) {
         # Return a view on the selected rows
         return(.wrap_pipenv(pipenv, name = paste(name, view), view = rows))
     }
 
+    data <- pipenv[["data"]]
     out <- pip_new(name = name)
     if (length(rows) == 0L) {
         return(out)
@@ -235,9 +273,11 @@ dim.pipeflow <- function(x) {
 #' view. Meta fields take priority over columns of the same name. The
 #' two-index form `p[[row, column]]` extracts a single cell, where `row` is
 #' an integer row index or a step name.
+#' @param x A pipeflow pipeline or view.
 #' @param i integer (row index) or character (step name) of the step to
 #' select
 #' @param j column name to select
+#' @param ... Not used.
 #' @return Extracted value(s), depending on `i` and `j`.
 #' @examples
 #' p <- pip_new() |>
@@ -303,6 +343,7 @@ dim.pipeflow <- function(x) {
 #' Print pipeflow objects
 #'
 #' @param x A pipeflow pipeline or view.
+#' @param object A pipeflow pipeline or view, for [utils::str()].
 #' @param rows Row indices to be printed. If empty, all rows are printed.
 #' @param cols The columns to be printed. Can be either one of
 #' `core` or `all` to print the core or all columns, respectively,
@@ -333,7 +374,7 @@ dim.pipeflow <- function(x) {
 #' @rdname print
 #' @export
 str.pipeflow <- function(object, ...) {
-    str(unclass(object), ...)
+    utils::str(unclass(object), ...)
 }
 
 
@@ -382,3 +423,38 @@ rbind.pipeflow <- function(..., deparse.level = 1) {
     }
     out
 }
+
+
+# ---------------------------------------------------------------------------
+# Re-exports: data.table row-filter operators
+# ---------------------------------------------------------------------------
+
+`%like%` <- data.table::`%like%`
+`%ilike%` <- data.table::`%ilike%`
+`%flike%` <- data.table::`%flike%`
+`%plike%` <- data.table::`%plike%`
+`%chin%` <- data.table::`%chin%`
+`%between%` <- data.table::`%between%`
+`%inrange%` <- data.table::`%inrange%`
+`%notin%` <- data.table::`%notin%`
+
+#' Row-filter operators re-exported from data.table
+#'
+#' pipeflow re-exports the row-filter operators of \pkg{data.table} so that
+#' they are available after attaching pipeflow and can be used in boolean
+#' filters passed to `[.pipeflow`, e.g. `p[tags %like% "daily"]`. They behave
+#' exactly as in \pkg{data.table}; see its documentation for details.
+#'
+#' @name pipeflow-operators
+#' @aliases %like% %ilike% %flike% %plike% %chin% %between% %inrange% %notin%
+#' @usage NULL
+#' @keywords internal
+#' @rawNamespace export("%like%")
+#' @rawNamespace export("%ilike%")
+#' @rawNamespace export("%flike%")
+#' @rawNamespace export("%plike%")
+#' @rawNamespace export("%chin%")
+#' @rawNamespace export("%between%")
+#' @rawNamespace export("%inrange%")
+#' @rawNamespace export("%notin%")
+NULL

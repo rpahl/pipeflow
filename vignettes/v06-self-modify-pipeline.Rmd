@@ -359,7 +359,7 @@ the structure does not change anymore.
 Luckily, with some minimal changes, this behaviour can be achieved
 with {pipeflow}.
 First, for any step where you want to restart the pipeline run, you
-need to call `pip_restart(.self)`, so we adapt the `f2` function as
+need to call `.self$restart()`, so we adapt the `f2` function as
 follows:
 
 ```{r}
@@ -390,7 +390,7 @@ pip <- pip_new("my-pipeline") |>
                         }
                     ) |>
                     pip_remove("f2")
-                pip_restart(.self)   # <-- restart the run
+                .self$restart()   # <-- restart the run
             }
             x + 2
         }
@@ -408,7 +408,7 @@ pip |>
 
 As you can see, the run is now automatically aborted right after
 the pipeline was modified and, since the step called
-`pip_restart(.self)`, the pipeline is also restarted automatically
+`.self$restart()`, the pipeline is also restarted automatically
 based on the new structure.
 As a result, the log now is fully aligned with the performed
 pipeline run.

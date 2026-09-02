@@ -20,6 +20,8 @@
 )
 }
 \arguments{
+\item{object}{A pipeflow pipeline or view, for \code{\link[utils:str]{utils::str()}}.}
+
 \item{...}{Other arguments passed to \code{print.data.table}}
 
 \item{x}{A pipeflow pipeline or view.}
