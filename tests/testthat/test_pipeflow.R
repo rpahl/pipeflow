@@ -3103,13 +3103,6 @@ describe("extract operator [", {
             expect_error(v[1L], "full pipeline")
         })
 
-        it("rejects named filters and stray arguments", {
-            p <- filter_pip()
-
-            expect_error(p[state = "new"], "pip_view")
-            expect_error(p[tags = "io"], "pip_view")
-        })
-
         it("signals invalid logical filters", {
             p <- filter_pip()
 

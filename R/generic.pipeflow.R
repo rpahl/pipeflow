@@ -76,7 +76,6 @@ dim.pipeflow <- function(x) {
 #' @param view If `TRUE` (default), a view referencing the selected steps is
 #' returned. If `FALSE`, a new pipeline is returned that includes the selected
 #' steps and all their upstream dependencies.
-#' @param ... Not used.
 #' @return A pipeflow view (if `view = TRUE`) or a new pipeflow pipeline
 #' (if `view = FALSE`).
 #' @examples
@@ -102,15 +101,9 @@ dim.pipeflow <- function(x) {
 #' length(p[]) # 3
 #' @rdname Extract.pipeflow
 #' @export
-`[.pipeflow` <- function(x, i, view = TRUE, ...) {
+`[.pipeflow` <- function(x, i, view = TRUE) {
     .assert_pip(x)
 
-    if (!missing(...)) {
-        stop(
-            "`...` is not supported in `[`. Select rows, step names, or a ",
-            "boolean expression, or use pip_view() for named filters."
-        )
-    }
     if (!.is_single(view, "logical") || is.na(view)) {
         stop("view must be a single logical value")
     }
