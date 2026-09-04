@@ -575,57 +575,6 @@
 # Pipeline addition
 # -----------------
 
-# Copy a step from another pipeline `y` to the end of pipeline `x`, rewiring
-# its dependencies in the target pipeline and preserving its runtime state.
-.pip_add_from <- function(x, y, step) {
-    yData <- y[["data"]]
-    iStep <- data.table::chmatch(step, yData[["step"]])
-    fun <- yData[["fun"]][[iStep]]
-    tags <- yData[["tags"]][[iStep]]
-    exec <- yData[["exec"]][[iStep]]
-
-    params <- yData[["params"]][[iStep]]
-    depends <- yData[["depends"]][[iStep]]
-    unbound <- yData[["unbound"]][[iStep]]
-
-    # Recreate defaults from stored params/dependencies so pip_add can
-    # resolve references and wire DAG updates in the target pipeline.
-    fml <- formals(fun)
-    for (nm in unbound) {
-        fml[[nm]] <- params[[nm]]
-    }
-
-    if (length(depends) > 0L) {
-        for (arg in names(depends)) {
-            fml[[arg]] <- stats::as.formula(paste("~", depends[[arg]]))
-        }
-    }
-
-    formals(fun) <- fml
-    pip_add(x, step = step, fun = fun, tags = tags, exec = exec)
-
-    # The colums entries for `step`, `fun`, `params`, `depends`, `unbound`,
-    # `tags`, `exec` were passed and thereby copied via pip_add, which also
-    # created the `.nodeId` entry. Lastly, we copy all remaining columns
-    # to preserve the runtime states.
-    done <- c("step", "fun", "params", "depends", "unbound", "tags", "exec")
-    remaining <- names(yData) |>
-        Filter(f = \(name) !startsWith(name, ".")) |>
-        setdiff(done)
-
-    iRow <- nrow(x[["data"]])
-    data.table::set(
-        x[["data"]],
-        i = iRow,
-        j = remaining,
-        value = lapply(remaining, function(col) {
-            cell <- yData[[col]][[iStep]]
-            if (is.list(yData[[col]])) list(cell) else cell
-        })
-    )
-    invisible(x)
-}
-
 .pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
     if (".self" %in% names(formals(fun))) {
         stop_no_call(
@@ -691,6 +640,66 @@
     x
 }
 
+# Copy a step from another pipeline `y` to the end of pipeline `x`, rewiring
+# its dependencies in the target pipeline and preserving its runtime state.
+.pip_append_from <- function(x, y, step) {
+    yData <- y[["data"]]
+    iStep <- data.table::chmatch(step, yData[["step"]])
+    fun <- yData[["fun"]][[iStep]]
+    tags <- yData[["tags"]][[iStep]]
+    exec <- yData[["exec"]][[iStep]]
+
+    params <- yData[["params"]][[iStep]]
+    depends <- yData[["depends"]][[iStep]]
+
+    # Make sure the recreate any formula dependencies in the new pipeline,
+    # so that they live in the new pipeline's environment.
+    for (arg in intersect(names(depends), names(params))) {
+        params[[arg]] <- stats::as.formula(paste("~", depends[[arg]]))
+    }
+
+    # Fold current param values into the defaults of the function args to ensure
+    # that values updated via pip_set_params() survive .pip_append()'s merge as
+    # function defaults take precedence there.
+    fml <- formals(fun)
+    formalNames <- setdiff(names(fml), "...")
+    for (name in intersect(names(params), formalNames)) {
+        fml[[name]] <- params[[name]]
+    }
+    formals(fun) <- fml
+
+    .pip_append(
+        x,
+        step = step,
+        fun = fun,
+        tags = tags,
+        params = params,
+        exec = exec
+    )
+
+    # The colums entries for `step`, `fun`, `params`, `depends`, `unbound`,
+    # `tags`, `exec` were passed and thereby copied via .pip_append, which also
+    # created the `.nodeId` entry. Last thing to do is to copy all remaining
+    # columns to preserve the runtime states.
+    done <- c("step", "fun", "params", "depends", "unbound", "tags", "exec")
+    remaining <- names(yData) |>
+        Filter(f = \(name) !startsWith(name, ".")) |>
+        setdiff(done)
+
+    iRow <- nrow(x[["data"]])
+    data.table::set(
+        x[["data"]],
+        i = iRow,
+        j = remaining,
+        value = lapply(remaining, function(col) {
+            cell <- yData[[col]][[iStep]]
+            if (is.list(yData[[col]])) list(cell) else cell
+        })
+    )
+    invisible(x)
+}
+
+
 # Bind two pipelines together by concatenating their steps.
 .pip_bind <- function(x, y) {
     out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
@@ -718,7 +727,7 @@
 
     # Add (potentially renamed) steps from y one by one
     for (k in seq_len(nrow(yyDat))) {
-        .pip_add_from(out, y = yy, step = yyDat[["step"]][[k]])
+        .pip_append_from(out, y = yy, step = yyDat[["step"]][[k]])
     }
 
     out
@@ -958,12 +967,11 @@ pip_add <- function(
     # 3) Add the new step at the end of the new pipeline
     pip_add(out, step = step, fun = fun, tags = tags, exec = exec)
 
-    # 4) Add all remaining steps to the end of the new pipeline. Runtime
-    # state is preserved by .pip_add_from().
+    # 4) Add all remaining steps to the end of the new pipeline.
     tailRows <- seq.int(pos + 1L, n)
     for (i in tailRows) {
         tailStep <- dat[["step"]][[i]]
-        .pip_add_from(out, y = src, step = tailStep)
+        .pip_append_from(out, y = src, step = tailStep)
     }
 
     x[["data"]] <- out[["data"]]
@@ -1511,7 +1519,7 @@ pip_replace <- function(
         tailRows <- seq.int(iStep + 1L, n)
         for (i in tailRows) {
             tailStep <- dat[["step"]][[i]]
-            .pip_add_from(out, y = src, step = tailStep)
+            .pip_append_from(out, y = src, step = tailStep)
         }
     }
 

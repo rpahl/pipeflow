@@ -636,7 +636,7 @@ describe(".pip_steps_to_rows", {
 # Pipeline addition
 # -----------------
 
-describe(".pip_add_from", {
+describe(".pip_append_from", {
     test_source <- function() {
         pip_new("src") |>
             pip_add("base", \(x = 2) x, tags = "g1") |>
@@ -647,21 +647,44 @@ describe(".pip_add_from", {
             )
     }
 
+    params_source <- function() {
+        pip_new("src") |>
+            pip_add("s1", function(x = 1) x) |>
+            pip_add(
+                "s2",
+                function(...) list(...),
+                params = list(a = ~s1, b = 2, c = 3)
+            ) |>
+            pip_add(
+                "s3",
+                function(x = 1, ...) x + 1,
+                params = list(k = 9)
+            )
+    }
+
+    copy_all <- function(y) {
+        x <- pip_new("dst")
+        for (step in y[["data"]][["step"]]) {
+            .pip_append_from(x, y = y, step = step)
+        }
+        x
+    }
+
     it("signals unknown steps", {
         src <- test_source()
         trg <- pip_new("target")
 
-        expect_error(.pip_add_from(trg, src, c("a", "b")))
-        expect_error(.pip_add_from(trg, src, NA_character_))
-        expect_error(.pip_add_from(trg, src, ""))
-        expect_error(.pip_add_from(trg, src, "unknown"))
+        expect_error(.pip_append_from(trg, src, c("a", "b")))
+        expect_error(.pip_append_from(trg, src, NA_character_))
+        expect_error(.pip_append_from(trg, src, ""))
+        expect_error(.pip_append_from(trg, src, "unknown"))
     })
 
     it("adds an independent step preserving tags", {
         src <- test_source()
         trg <- pip_new("target")
 
-        res <- .pip_add_from(trg, src, "base")
+        res <- .pip_append_from(trg, src, "base")
         expect_true(.is_pipeflow(res))
         expect_true("base" %in% trg[["data"]][["step"]])
 
@@ -674,7 +697,7 @@ describe(".pip_add_from", {
         trg <- pip_new("target") |>
             pip_add("base", \(x = 5) x)
 
-        .pip_add_from(trg, src, "calc")
+        .pip_append_from(trg, src, "calc")
         expect_true("calc" %in% trg[["data"]][["step"]])
 
         dep <- trg[["data"]][step == "calc", depends][[1]]
@@ -690,7 +713,7 @@ describe(".pip_add_from", {
         trg <- pip_new("target")
 
         expect_error(
-            .pip_add_from(trg, src, "calc"),
+            .pip_append_from(trg, src, "calc"),
             "cannot reference unknown steps: 'base'"
         )
     })
@@ -700,7 +723,7 @@ describe(".pip_add_from", {
             pip_add("self", \(x = 1) .self[["name"]])
         trg <- pip_new("target")
 
-        .pip_add_from(trg, src, "self")
+        .pip_append_from(trg, src, "self")
         pip_run(trg, lgr = NULL)
         expect_equal(trg[["data"]][["out"]][[1]], "target")
     })
@@ -715,12 +738,65 @@ describe(".pip_add_from", {
             )
         trg <- pip_new("target")
 
-        .pip_add_from(trg, src, "calc")
+        .pip_append_from(trg, src, "calc")
         expect_equal(
             trg[["data"]][step == "calc", tags][[1]],
             c("math", "core")
         )
         expect_equal(trg[["data"]][step == "calc", exec][[1]], "split")
+    })
+
+    it("preserves extra params and the depends/unbound metadata", {
+        y <- params_source()
+        x <- copy_all(y)
+
+        ys <- y[["data"]]
+        xs <- x[["data"]]
+        expect_equal(xs[["step"]], ys[["step"]])
+        for (k in seq_len(nrow(ys))) {
+            expect_equal(
+                xs[["params"]][[k]],
+                ys[["params"]][[k]],
+                ignore_attr = TRUE
+            )
+            expect_equal(xs[["depends"]][[k]], ys[["depends"]][[k]])
+            expect_equal(xs[["unbound"]][[k]], ys[["unbound"]][[k]])
+        }
+    })
+
+    it("does not alter the step function signature", {
+        y <- params_source()
+        x <- copy_all(y)
+
+        ys <- y[["data"]]
+        xs <- x[["data"]]
+        for (k in seq_len(nrow(ys))) {
+            expect_equal(
+                names(formals(xs[["fun"]][[k]])),
+                names(formals(ys[["fun"]][[k]]))
+            )
+        }
+    })
+
+    it("propagates parameter values updated via pip_set_params", {
+        y <- params_source()
+        pip_set_params(y, list(x = 7))
+        x <- copy_all(y)
+
+        expect_equal(x[["data"]][["params"]][[1]][["x"]], 7)
+    })
+
+    it("runs equivalently to the source pipeline", {
+        y <- params_source()
+        pip_run(y, lgr = NULL)
+        x <- copy_all(y)
+        pip_run(x, lgr = NULL)
+
+        ys <- y[["data"]]
+        xs <- x[["data"]]
+        for (k in seq_len(nrow(ys))) {
+            expect_equal(xs[["out"]][[k]], ys[["out"]][[k]])
+        }
     })
 })
 
