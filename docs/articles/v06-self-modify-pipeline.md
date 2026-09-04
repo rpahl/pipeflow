@@ -108,7 +108,7 @@ pip$pipeline
 # 2:                      fit <function[1]> <list[3]> (data = ~data, xVar = "x", yVar = "y")    data
 # 3: residual_shapiro_p_value <function[1]> <list[1]>                           (fit = ~fit)     fit
 # 4:                     plot <function[1]> <list[2]>     (fit = ~fit, pointColor = "black")     fit
-#       out  state   tags                time locked   exec .nodeId    .indeps
+#       out  state   tags                time locked   exec .nodeId    unbound
 #    <list> <char> <list>              <POSc> <lgcl> <char>   <int>     <list>
 # 1: [NULL]    new        2026-08-22 19:08:57  FALSE   auto       0       data
 # 2: [NULL]    new        2026-08-22 19:08:57  FALSE   auto       1  xVar,yVar

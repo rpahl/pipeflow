@@ -4,7 +4,7 @@
 \alias{[.pipeflow}
 \title{Extract or subset a pipeline}
 \usage{
-\method{[}{pipeflow}(x, i, view = TRUE, ...)
+\method{[}{pipeflow}(x, i, view = TRUE)
 }
 \arguments{
 \item{x}{A pipeflow pipeline object.}
@@ -15,8 +15,6 @@ boolean filter expression evaluated in the context of the step table.}
 \item{view}{If \code{TRUE} (default), a view referencing the selected steps is
 returned. If \code{FALSE}, a new pipeline is returned that includes the selected
 steps and all their upstream dependencies.}
-
-\item{...}{Not used.}
 }
 \value{
 A pipeflow view (if \code{view = TRUE}) or a new pipeflow pipeline
@@ -56,7 +54,7 @@ p <- pip_new() |>
 p["total"] # view with a single step
 
 # Select by name vector or integer row index
-p[c("load", "square")][["step"]]  # view -> "load", "square"
+p[c("load", "square")][["step"]]   # view -> "load", "square"
 p[1:2, view = FALSE][["step"]]     # pipeline -> "load", "square"
 
 # Boolean filters are evaluated against the step table
@@ -66,5 +64,8 @@ p[tags \%like\% "model"][["step"]]  # "square", "total"
 p[tags \%like\% "report", view = FALSE][["step"]] # "load", "square", "total"
 
 # No arguments returns a copy of the pipeline
-length(p[]) # 3
+p2 <- p[]
+pip_run(p2)
+p
+p2
 }

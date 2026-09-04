@@ -15,7 +15,7 @@ pip_set_params(x, params = list())
 The updated pipeline or view, invisibly.
 }
 \description{
-Updates the default values of tunable parameters across the pipeline
+Updates the default values of unbound parameters across the pipeline
 or a subset of steps defined by a view.
 Affected steps and their downstream dependents are automatically marked
 as outdated.

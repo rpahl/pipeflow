@@ -13,8 +13,7 @@ pip_view(x, ..., join = c("intersect", "union"), fixed = TRUE)
 \code{depends}, \code{state}, \code{tags} and \code{exec}. Each filter value is a character
 vector of values to keep, or - if \code{fixed} is \code{FALSE} - a regular
 expression. The \code{params} filter matches against the actual parameter
-names of each step (both independent and bound / dependency
-parameters). See examples for usage.}
+names of each step.}
 
 \item{join}{How individual filters are combined: \code{"intersect"} (the
 default) keeps steps that match \emph{all} filters, \code{"union"} keeps steps

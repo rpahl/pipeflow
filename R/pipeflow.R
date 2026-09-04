@@ -14,7 +14,7 @@
         locked = logical(0),
         exec = character(0),
         .nodeId = integer(),
-        .indeps = list() # names of independent parameters
+        unbound = list() # names of independent parameters
     )
 }
 
@@ -39,7 +39,7 @@
         locked = FALSE,
         exec = exec,
         .nodeId = .nodeId,
-        .indeps = list(setdiff(names(params), names(depends)))
+        unbound = list(setdiff(names(params), names(depends)))
     )
 }
 
@@ -575,20 +575,23 @@
 # Pipeline addition
 # -----------------
 
-# Copy a step from another pipeline
+# Copy a step from another pipeline `y` to the end of pipeline `x`, rewiring
+# its dependencies in the target pipeline and preserving its runtime state.
 .pip_add_from <- function(x, y, step) {
-    iStep <- data.table::chmatch(step, y[["data"]][["step"]])
-    fun <- y[["data"]][["fun"]][[iStep]]
-    tags <- y[["data"]][["tags"]][[iStep]]
-    exec <- y[["data"]][["exec"]][[iStep]]
-    params <- y[["data"]][["params"]][[iStep]]
-    depends <- y[["data"]][["depends"]][[iStep]]
-    indeps <- y[["data"]][[".indeps"]][[iStep]]
+    yData <- y[["data"]]
+    iStep <- data.table::chmatch(step, yData[["step"]])
+    fun <- yData[["fun"]][[iStep]]
+    tags <- yData[["tags"]][[iStep]]
+    exec <- yData[["exec"]][[iStep]]
+
+    params <- yData[["params"]][[iStep]]
+    depends <- yData[["depends"]][[iStep]]
+    unbound <- yData[["unbound"]][[iStep]]
 
     # Recreate defaults from stored params/dependencies so pip_add can
     # resolve references and wire DAG updates in the target pipeline.
     fml <- formals(fun)
-    for (nm in indeps) {
+    for (nm in unbound) {
         fml[[nm]] <- params[[nm]]
     }
 
@@ -600,8 +603,28 @@
 
     formals(fun) <- fml
     pip_add(x, step = step, fun = fun, tags = tags, exec = exec)
-}
 
+    # The colums entries for `step`, `fun`, `params`, `depends`, `unbound`,
+    # `tags`, `exec` were passed and thereby copied via pip_add, which also
+    # created the `.nodeId` entry. Lastly, we copy all remaining columns
+    # to preserve the runtime states.
+    done <- c("step", "fun", "params", "depends", "unbound", "tags", "exec")
+    remaining <- names(yData) |>
+        Filter(f = \(name) !startsWith(name, ".")) |>
+        setdiff(done)
+
+    iRow <- nrow(x[["data"]])
+    data.table::set(
+        x[["data"]],
+        i = iRow,
+        j = remaining,
+        value = lapply(remaining, function(col) {
+            cell <- yData[[col]][[iStep]]
+            if (is.list(yData[[col]])) list(cell) else cell
+        })
+    )
+    invisible(x)
+}
 
 .pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
     if (".self" %in% names(formals(fun))) {
@@ -693,24 +716,9 @@
         reserved <- c(reserved, yyDat[["step"]][[k]])
     }
 
-    # Add (potentially renamed) steps from y one by one via .pip_add_from.
+    # Add (potentially renamed) steps from y one by one
     for (k in seq_len(nrow(yyDat))) {
-        step <- yyDat[["step"]][[k]]
-        .pip_add_from(out, y = yy, step = step)
-
-        # Preserve runtime state from source pipeline.
-        iOut <- nrow(out[["data"]])
-        data.table::set(
-            out[["data"]],
-            i = iOut,
-            j = c("out", "time", "state", "locked"),
-            value = list(
-                list(yyDat[["out"]][[k]]),
-                yyDat[["time"]][[k]],
-                yyDat[["state"]][[k]],
-                yyDat[["locked"]][[k]]
-            )
-        )
+        .pip_add_from(out, y = yy, step = yyDat[["step"]][[k]])
     }
 
     out
@@ -950,24 +958,12 @@ pip_add <- function(
     # 3) Add the new step at the end of the new pipeline
     pip_add(out, step = step, fun = fun, tags = tags, exec = exec)
 
-    # 4) Add all remaining steps to the end of the new pipeline
+    # 4) Add all remaining steps to the end of the new pipeline. Runtime
+    # state is preserved by .pip_add_from().
     tailRows <- seq.int(pos + 1L, n)
     for (i in tailRows) {
         tailStep <- dat[["step"]][[i]]
         .pip_add_from(out, y = src, step = tailStep)
-
-        iOut <- nrow(out[["data"]])
-        data.table::set(
-            out[["data"]],
-            i = iOut,
-            j = c("out", "time", "state", "locked"),
-            value = list(
-                list(dat[["out"]][[i]]),
-                dat[["time"]][[i]],
-                dat[["state"]][[i]],
-                dat[["locked"]][[i]]
-            )
-        )
     }
 
     x[["data"]] <- out[["data"]]
@@ -1063,12 +1059,12 @@ pip_collect_out <- function(x) {
 
 #' Get independent parameters
 #'
-#' Returns the current default values of all tunable (non-dependency)
+#' Returns the current default values of all unbound (non-dependency)
 #' parameters across the pipeline. These are the parameters that can be
 #' updated via [pip_set_params()]. Parameters wired to another step's output
 #' via `~step_name` are excluded.
 #' @param x A pipeflow pip or view
-#' @return Named list of tunable parameter values. If the same parameter
+#' @return Named list of unbound parameter values. If the same parameter
 #' name appears in multiple steps, the first occurrence in pipeline order
 #' is returned.
 #' @examples
@@ -1089,8 +1085,8 @@ pip_get_params <- function(x) {
 
     params <- mapply(
         par = dat[["params"]],
-        indeps = dat[[".indeps"]],
-        FUN = \(par, indeps) par[indeps],
+        unbound = dat[["unbound"]],
+        FUN = \(par, unbound) par[unbound],
         SIMPLIFY = FALSE
     ) |>
         Filter(f = \(x) length(x) > 0)
@@ -1510,25 +1506,12 @@ pip_replace <- function(
         exec = exec
     )
 
-    # Re-append subsequent steps and preserve their runtime state.
+    # Re-append subsequent steps
     if (iStep < n) {
         tailRows <- seq.int(iStep + 1L, n)
         for (i in tailRows) {
             tailStep <- dat[["step"]][[i]]
             .pip_add_from(out, y = src, step = tailStep)
-
-            iOut <- nrow(out[["data"]])
-            data.table::set(
-                out[["data"]],
-                i = iOut,
-                j = c("out", "time", "state", "locked"),
-                value = list(
-                    list(dat[["out"]][[i]]),
-                    dat[["time"]][[i]],
-                    dat[["state"]][[i]],
-                    dat[["locked"]][[i]]
-                )
-            )
         }
     }
 
@@ -1731,7 +1714,7 @@ pip_run <- function(
                 }
 
                 # Always pass the full pipeline object (not a view) to the
-                #step function, so that it can modify itself if needed.
+                # step function, so that it can modify itself if needed.
                 self <- .wrap_pipenv(pipenv, pipname, view = NULL)
 
                 log_info(msg)
@@ -1844,7 +1827,7 @@ pip_reset <- function(x) {
 
 #' Set independent parameters
 #'
-#' Updates the default values of tunable parameters across the pipeline
+#' Updates the default values of unbound parameters across the pipeline
 #' or a subset of steps defined by a view.
 #' Affected steps and their downstream dependents are automatically marked
 #' as outdated.
@@ -1895,8 +1878,8 @@ pip_set_params <- function(x, params = list()) {
     }
 
     # Determine which steps/rows are affected, i.e. have intersecting params
-    indeps <- dat[[".indeps"]][rowsConsidered] # names of independent params
-    intersects <- lapply(indeps, FUN = intersect, y = parNames)
+    unbound <- dat[["unbound"]][rowsConsidered] # names of unbound params
+    intersects <- lapply(unbound, FUN = intersect, y = parNames)
     hasOverlap <- lengths(intersects) > 0
     namesAffected <- intersects[hasOverlap]
     rowsAffected <- rowsConsidered[hasOverlap]
@@ -2125,8 +2108,7 @@ pip_unlock <- function(x) {
 #' `depends`, `state`, `tags` and `exec`. Each filter value is a character
 #' vector of values to keep, or - if `fixed` is `FALSE` - a regular
 #' expression. The `params` filter matches against the actual parameter
-#' names of each step (both independent and bound / dependency
-#' parameters). See examples for usage.
+#' names of each step.
 #' @param join How individual filters are combined: `"intersect"` (the
 #' default) keeps steps that match *all* filters, `"union"` keeps steps
 #' that match *any* filter. Within a single filter, multiple values are
@@ -2203,11 +2185,10 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
     # Identity element for the join: TRUE for intersect, FALSE for union.
     keep <- rep(join == "intersect", nrow(sub))
 
-    # Resolve each filter name to the column it filters on. "params" is a
-    # special case: it matches against the actual parameter names of each
-    # step (both independent and bound/dependency parameters).
+    # Resolve each filter name to the column it filters on.
     for (name in names(filters)) {
         col <- if (name == "params") {
+            # Special case "params": it matches against the parameter *names*
             lapply(sub[["params"]], names)
         } else {
             sub[[name]]

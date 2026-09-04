@@ -31,7 +31,7 @@ describe(".new_step", {
         expect_true(inherits(step$time, "POSIXct"))
         expect_equal(step$locked, FALSE)
         expect_equal(step$.nodeId, 0)
-        expect_equal(step$.indeps, list("x"))
+        expect_equal(step$unbound, list("x"))
     })
 
     it("aligns with the empty pipeline", {
@@ -1032,7 +1032,7 @@ describe("pip_add", {
         )
 
         expect_equal(names(p[["data"]][["params"]][[2]]), c("y", "z"))
-        expect_equal(p[["data"]][[".indeps"]][[2]], "z") # y is a dependency
+        expect_equal(p[["data"]][["unbound"]][[2]], "z") # y is a dependency
         expect_equal(names(pip_get_params(p)), c("x", "z"))
     })
 

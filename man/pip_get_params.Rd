@@ -10,12 +10,12 @@ pip_get_params(x)
 \item{x}{A pipeflow pip or view}
 }
 \value{
-Named list of tunable parameter values. If the same parameter
+Named list of unbound parameter values. If the same parameter
 name appears in multiple steps, the first occurrence in pipeline order
 is returned.
 }
 \description{
-Returns the current default values of all tunable (non-dependency)
+Returns the current default values of all unbound (non-dependency)
 parameters across the pipeline. These are the parameters that can be
 updated via \code{\link[=pip_set_params]{pip_set_params()}}. Parameters wired to another step's output
 via \code{~step_name} are excluded.
