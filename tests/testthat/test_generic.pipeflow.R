@@ -247,8 +247,8 @@ describe("extract operator [", {
         it("rejects named filters and stray arguments", {
             p <- filter_pip()
 
-            expect_error(p[state = "new"], "pip_view")
-            expect_error(p[tags = "io"], "pip_view")
+            expect_error(p[state = "new"], "unused argument")
+            expect_error(p[tags = "io"], "unused argument")
         })
 
         it("signals invalid logical filters", {

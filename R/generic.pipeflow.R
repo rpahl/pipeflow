@@ -88,7 +88,7 @@ dim.pipeflow <- function(x) {
 #' p["total"] # view with a single step
 #'
 #' # Select by name vector or integer row index
-#' p[c("load", "square")][["step"]]  # view -> "load", "square"
+#' p[c("load", "square")][["step"]]   # view -> "load", "square"
 #' p[1:2, view = FALSE][["step"]]     # pipeline -> "load", "square"
 #'
 #' # Boolean filters are evaluated against the step table
@@ -98,7 +98,10 @@ dim.pipeflow <- function(x) {
 #' p[tags %like% "report", view = FALSE][["step"]] # "load", "square", "total"
 #'
 #' # No arguments returns a copy of the pipeline
-#' length(p[]) # 3
+#' p2 <- p[]
+#' pip_run(p2)
+#' p
+#' p2
 #' @rdname Extract.pipeflow
 #' @export
 `[.pipeflow` <- function(x, i, view = TRUE) {
