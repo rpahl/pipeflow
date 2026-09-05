@@ -49,6 +49,52 @@ dim.pipeflow <- function(x) {
     c(as.integer(length(.pip_view_rows(x))), ncol(x[["data"]]))
 }
 
+# Helper to build new pipeline from the steps of `x` whose `.nodeId` is
+# contained in `keepNodes`. The kept rows get a compact node id sequence,
+# and the DAG and the step->node lookup are re-built from the `depends`
+# values.
+.pip_compact <- function(x, keepNodes) {
+    pipenv <- .pip_get_pipenv(x)
+    data <- pipenv[["data"]]
+    out <- pip_new(name = x[["name"]])
+    rows <- which(data[[".nodeId"]] %in% keepNodes)
+    if (length(rows) == 0L) {
+        return(out)
+    }
+
+    subsetDat <- data.table::copy(data[rows])
+    subsetDat[[".nodeId"]] <- seq_along(subsetDat[[".nodeId"]]) - 1L
+
+    # Rebuild the step->node lookup table
+    stepsToNodes <- new.env(parent = emptyenv())
+    for (k in seq_len(nrow(subsetDat))) {
+        stepsToNodes[[subsetDat[["step"]][[k]]]] <- subsetDat[[".nodeId"]][[k]]
+    }
+
+    # Build a DAG that matches the kept rows
+    d <- dag_new()
+    for (k in seq_len(nrow(subsetDat))) {
+        dag_add_node(d)
+        deps <- subsetDat[["depends"]][[k]]
+        if (length(deps) == 0L) {
+            next
+        }
+        from <- as.integer(unname(unlist(mget(
+            deps,
+            envir = stepsToNodes,
+            inherits = FALSE
+        ))))
+        to <- as.integer(subsetDat[[".nodeId"]][[k]])
+        dag_add_edges_to(d, from = from, to = to)
+    }
+
+    data.table::setindexv(subsetDat, list("step", ".nodeId"))
+    out[["data"]] <- subsetDat
+    out[[".dag"]] <- d
+    out[[".steps_to_nodes"]] <- stepsToNodes
+    out
+}
+
 #' Extract or subset a pipeline
 #'
 #' Selects steps from a pipeline. By default, a lightweight [pip_view()] is
@@ -118,11 +164,10 @@ dim.pipeflow <- function(x) {
 
     pipenv <- .pip_get_pipenv(x)
     name <- x[["name"]]
-
-    # The step table provides the scope for boolean filters (data.table-style
-    # non-standard evaluation); `i` is evaluated against it, falling back to
-    # the calling environment for ordinary variables.
     dat <- pipenv[["data"]]
+
+    # Enable complex filter expressons similar to data.table, for example,
+    # `p[step == "foo" | tag %like% "io" & state == "new"]`.
     i_expr <- substitute(i)
     value <- eval(i_expr, envir = dat, enclos = parent.frame())
 
@@ -179,57 +224,15 @@ dim.pipeflow <- function(x) {
         return(.wrap_pipenv(pipenv, name = paste(name, view), view = rows))
     }
 
-    data <- pipenv[["data"]]
-    out <- pip_new(name = name)
-    if (length(rows) == 0L) {
-        return(out)
-    }
-
-    # Get all nodes that are reachable from the selected rows via upstream
-    startNodes <- data[[".nodeId"]][rows]
+    # Resolve all nodes reachable from the selected rows via upstream edges,
+    # then build a self-contained, compact pipeline from them.
     keepNodes <- dag_get_reachable_nodes_up(
         pipenv[[".dag"]],
-        as.integer(unique(startNodes))
+        as.integer(unique(dat[[".nodeId"]][rows]))
     )
-    subsetDat <- data[data[[".nodeId"]] %in% keepNodes]
-    subsetDat <- data.table::copy(subsetDat)
+    out <- .pip_compact(x, keepNodes)
 
-    # Re-map node ids to a compact sequence and rebuild lookup table
-    oldNodeIds <- subsetDat[[".nodeId"]]
-    newNodeIds <- seq_along(oldNodeIds) - 1L
-    nodeMap <- stats::setNames(newNodeIds, as.character(oldNodeIds))
-    subsetDat[[".nodeId"]] <- as.integer(newNodeIds)
-
-    stepsToNodes <- new.env(parent = emptyenv())
-    for (k in seq_len(nrow(subsetDat))) {
-        stepsToNodes[[subsetDat[["step"]][[k]]]] <- subsetDat[[".nodeId"]][[k]]
-    }
-
-    # Build a DAG that matches the extracted rows
-    d <- dag_new()
-    for (k in seq_len(nrow(subsetDat))) {
-        dag_add_node(d)
-    }
-    for (k in seq_len(nrow(subsetDat))) {
-        deps <- subsetDat[["depends"]][[k]]
-        if (length(deps) == 0L) {
-            next
-        }
-        from <- as.integer(unname(unlist(mget(
-            deps,
-            envir = stepsToNodes,
-            inherits = FALSE
-        ))))
-        to <- as.integer(subsetDat[[".nodeId"]][[k]])
-        dag_add_edges_to(d, from = from, to = to)
-    }
-
-    data.table::setindexv(subsetDat, list("step", ".nodeId"))
-    out[["data"]] <- subsetDat
-    out[[".dag"]] <- d
-    out[[".steps_to_nodes"]] <- stepsToNodes
-
-    nUpstream <- nrow(subsetDat) - length(rows)
+    nUpstream <- nrow(out[["data"]]) - length(rows)
     if (nUpstream > 0L) {
         message(sprintf(
             "pulled in %d upstream dependenc%s",
@@ -237,7 +240,6 @@ dim.pipeflow <- function(x) {
             if (nUpstream == 1L) "y" else "ies"
         ))
     }
-
     out
 }
 
