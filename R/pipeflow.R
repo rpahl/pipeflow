@@ -701,65 +701,6 @@
     x
 }
 
-# Copy a step from another pipeline `y` to the end of pipeline `x`, rewiring
-# its dependencies in the target pipeline and preserving its runtime state.
-.pip_append_from <- function(x, y, step) {
-    yData <- y[["data"]]
-    iStep <- data.table::chmatch(step, yData[["step"]])
-    fun <- yData[["fun"]][[iStep]]
-    tags <- yData[["tags"]][[iStep]]
-    exec <- yData[["exec"]][[iStep]]
-
-    params <- yData[["params"]][[iStep]]
-    depends <- yData[["depends"]][[iStep]]
-
-    # Make sure the recreate any formula dependencies in the new pipeline,
-    # so that they live in the new pipeline's environment.
-    for (arg in intersect(names(depends), names(params))) {
-        params[[arg]] <- stats::as.formula(paste("~", depends[[arg]]))
-    }
-
-    # Fold current param values into the defaults of the function args to ensure
-    # that values updated via pip_set_params() survive .pip_append()'s merge as
-    # function defaults take precedence there.
-    fml <- formals(fun)
-    formalNames <- setdiff(names(fml), "...")
-    for (name in intersect(names(params), formalNames)) {
-        fml[[name]] <- params[[name]]
-    }
-    formals(fun) <- fml
-
-    .pip_append(
-        x,
-        step = step,
-        fun = fun,
-        tags = tags,
-        params = params,
-        exec = exec
-    )
-
-    # The colums entries for `step`, `fun`, `params`, `depends`, `unbound`,
-    # `tags`, `exec` were passed and thereby copied via .pip_append, which also
-    # created the `.nodeId` entry. Last thing to do is to copy all remaining
-    # columns to preserve the runtime states.
-    done <- c("step", "fun", "params", "depends", "unbound", "tags", "exec")
-    remaining <- names(yData) |>
-        Filter(f = \(name) !startsWith(name, ".")) |>
-        setdiff(done)
-
-    iRow <- nrow(x[["data"]])
-    data.table::set(
-        x[["data"]],
-        i = iRow,
-        j = remaining,
-        value = lapply(remaining, function(col) {
-            cell <- yData[[col]][[iStep]]
-            if (is.list(yData[[col]])) list(cell) else cell
-        })
-    )
-    invisible(x)
-}
-
 
 # Bind two pipelines together by concatenating their steps.
 .pip_bind <- function(x, y) {
@@ -786,11 +727,70 @@
         reserved <- c(reserved, yyDat[["step"]][[k]])
     }
 
-    # Add (potentially renamed) steps from y one by one
+    # Append all (potentially renamed) steps of y in one pass: transform each
+    # row (re-create the formula dependencies after renaming and re-bind
+    # `.self` to the target), allocate a fresh node id, wire the DAG edges,
+    # and collect the rows for a single rbindlist.
+    outEnv <- .pip_get_pipenv(out)
+    d <- outEnv[[".dag"]]
+    stepsToNodes <- outEnv[[".steps_to_nodes"]]
+    rows <- vector("list", nrow(yyDat))
     for (k in seq_len(nrow(yyDat))) {
-        .pip_append_from(out, y = yy, step = yyDat[["step"]][[k]])
+        step <- yyDat[["step"]][[k]]
+        fun <- yyDat[["fun"]][[k]]
+        tags <- yyDat[["tags"]][[k]]
+        exec <- yyDat[["exec"]][[k]]
+        params <- yyDat[["params"]][[k]]
+        depends <- yyDat[["depends"]][[k]]
+
+        # Re-create the formula dependencies in the target pipeline's context
+        # so that they point to the (renamed) steps of y.
+        for (arg in intersect(names(depends), names(params))) {
+            params[[arg]] <- stats::as.formula(paste("~", depends[[arg]]))
+        }
+        # Fold current parameter values into the defaults of the existing
+        # function arguments.
+        fml <- formals(fun)
+        for (nm in intersect(names(params), setdiff(names(fml), "..."))) {
+            fml[[nm]] <- params[[nm]]
+        }
+        formals(fun) <- fml
+
+        fun <- .wrap_self(fun, out)
+
+        # Update DAG: allocate the node, register the step, add edges to its
+        # upstream steps (which are either in `out` or already appended).
+        .nodeId <- as.integer(dag_add_node(d))
+        stepsToNodes[[step]] <- .nodeId
+        if (length(depends) > 0L) {
+            refNodes <- as.integer(unlist(mget(
+                unname(depends),
+                envir = stepsToNodes,
+                inherits = FALSE
+            )))
+            dag_add_edges_to(d, from = refNodes, to = .nodeId)
+        }
+
+        row <- .new_step(step, fun, params, depends, .nodeId, tags, exec)
+        rows[[k]] <- row
     }
 
+    # rbind all appended rows at once and preserve the runtime state of the
+    # source steps.
+    appRows <- data.table::rbindlist(rows)
+    data.table::set(
+        appRows,
+        j = c("out", "state", "time", "locked"),
+        value = list(
+            yyDat[["out"]],
+            yyDat[["state"]],
+            yyDat[["time"]],
+            yyDat[["locked"]]
+        )
+    )
+    outEnv[["data"]] <- data.table::rbindlist(
+        list(outEnv[["data"]], appRows)
+    )
     out
 }
 
