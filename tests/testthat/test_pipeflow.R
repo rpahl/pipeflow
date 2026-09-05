@@ -1150,7 +1150,7 @@ describe("pip_add", {
         p <- pip_new()
         expect_error(
             pip_add(p, "s1", function(x = 1, .self = NULL) x),
-            "'.self' is a reserved parameter name"
+            "'.self' is a reserved parameter"
         )
     })
 

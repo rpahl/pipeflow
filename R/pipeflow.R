@@ -576,21 +576,6 @@
 # -----------------
 
 .pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
-    if (".self" %in% names(formals(fun))) {
-        stop_no_call(
-            "'.self' is a reserved parameter name and must not be declared ",
-            "in step '",
-            step,
-            "' - it is provided automatically"
-        )
-    }
-    if (".self" %in% names(params)) {
-        stop_no_call(
-            "'.self' is a reserved parameter name and must not be set via ",
-            "params - it is provided automatically"
-        )
-    }
-
     funParams <- .extract_fun_params(fun)
     params[names(funParams)] <- funParams
 
@@ -636,6 +621,82 @@
     )
 
     env[["data"]] <- data.table::rbindlist(list(env[["data"]], newStep))
+    env[[".steps_to_nodes"]][[step]] <- .nodeId
+    x
+}
+
+# Insert a step at position `pos` (0 <= pos < number of steps) of the
+# pipeline, i.e. after the first `pos` steps. The new row is inserted into
+# the data table (one O(n) rbindlist) and the node is added to the DAG at
+# the corresponding position of its topological order, leaving all existing
+# steps (and their runtime state) untouched.
+.pip_insert <- function(x, step, fun, tags, exec, params, pos) {
+    funParams <- .extract_fun_params(fun)
+    params[names(funParams)] <- funParams
+
+    # Provide `.self` to the step via a dedicated wrapper environment.
+    fun <- .wrap_self(fun, x)
+
+    env <- .pip_get_pipenv(x)
+    data <- env[["data"]]
+
+    # Dependencies may only point to steps that precede the insertion point
+    # (mirroring the previous step-by-step rebuild, this keeps the row order
+    # a valid topological order).
+    prefixSteps <- data[["step"]][seq_len(pos)]
+    steps <- c(prefixSteps, step)
+    depends <- .extract_depends(params = params, steps = steps)
+    if (length(depends) > 0L) {
+        forbidden <- depends[!(depends %in% prefixSteps)]
+        if (length(forbidden) > 0L) {
+            stop_no_call(
+                "while adding step '",
+                step,
+                "' - cannot reference unknown steps: ",
+                paste0("'", unname(forbidden), "'", collapse = ", ")
+            )
+        }
+    }
+
+    refNodes <- mget(
+        depends,
+        envir = env[[".steps_to_nodes"]],
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    )
+    if (anyNA(refNodes)) {
+        notFound <- Filter(is.na, refNodes)
+        stop_no_call(
+            "while adding step '",
+            step,
+            "' - cannot reference unknown steps: ",
+            paste0("'", names(notFound), "'", collapse = ", ")
+        )
+    }
+
+    # Update DAG: add the node at the insertion position of its order
+    d <- env[[".dag"]]
+    .nodeId <- as.integer(dag_add_node_at(d, pos))
+    if (length(refNodes) > 0) {
+        dag_add_edges_to(d, from = as.integer(refNodes), to = .nodeId)
+    }
+
+    # Create the new step and insert its row after the first `pos` steps
+    newStep <- .new_step(
+        step = step,
+        fun = fun,
+        params = params,
+        depends = depends,
+        tags = tags,
+        exec = exec,
+        .nodeId = .nodeId
+    )
+    n <- nrow(data)
+    env[["data"]] <- data.table::rbindlist(list(
+        data[seq_len(pos)],
+        newStep,
+        data[seq_len(n - pos) + pos]
+    ))
     env[[".steps_to_nodes"]][[step]] <- .nodeId
     x
 }
@@ -901,6 +962,16 @@ pip_add <- function(
     if (!is.function(fun)) {
         stop("fun must be a function")
     }
+    if (".self" %in% names(formals(fun))) {
+        stop_no_call(
+            "'.self' is a reserved parameter and cannot be used as a step name"
+        )
+    }
+    if (".self" %in% names(params)) {
+        stop_no_call(
+            "'.self' is a reserved parameter name and cannot be used in params"
+        )
+    }
     .assert_exec_mode(exec)
 
     n <- length(x)
@@ -935,7 +1006,6 @@ pip_add <- function(
     }
 
     if (pos == n) {
-        # Step is added at the end (simplest case)
         .pip_append(
             x,
             step = step,
@@ -944,40 +1014,17 @@ pip_add <- function(
             exec = exec,
             params = params
         )
-        return(invisible(x))
-    }
-
-    # The step is inserted in the middle of the pipeline, which would require
-    # to re-wire the DAG. Instead of trying to do that in place, we take a
-    # simpler approach and just 1) create a new pipeline, 2) copy all steps up
-    # to the insertion point, 3) add the new step, and then 4) re-add all
-    # remaining steps after that:
-    # 1) Copy the pipeline
-    src <- pip_clone(x)
-    dat <- src[["data"]]
-    n <- nrow(dat)
-
-    # 2) Create a new pipeline and copy all steps up to the insertion point
-    out <- if (pos > 0L) {
-        src[seq_len(pos), view = FALSE]
     } else {
-        pip_new(name = src[["name"]])
+        .pip_insert(
+            x,
+            step = step,
+            fun = fun,
+            tags = tags,
+            exec = exec,
+            params = params,
+            pos = pos
+        )
     }
-
-    # 3) Add the new step at the end of the new pipeline
-    pip_add(out, step = step, fun = fun, tags = tags, exec = exec)
-
-    # 4) Add all remaining steps to the end of the new pipeline.
-    tailRows <- seq.int(pos + 1L, n)
-    for (i in tailRows) {
-        tailStep <- dat[["step"]][[i]]
-        .pip_append_from(out, y = src, step = tailStep)
-    }
-
-    x[["data"]] <- out[["data"]]
-    env <- .pip_get_pipenv(x)
-    env[[".dag"]] <- .pip_get_pipenv(out)[[".dag"]]
-    env[[".steps_to_nodes"]] <- .pip_get_pipenv(out)[[".steps_to_nodes"]]
     invisible(x)
 }
 
