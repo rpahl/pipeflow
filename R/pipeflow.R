@@ -1575,7 +1575,7 @@ pip_replace <- function(
                 "while replacing step '",
                 step,
                 "' - cannot reference unknown steps: ",
-                toString(shQuote(bad))
+                paste0("'", bad, "'", collapse = ", ")
             )
         }
     }
@@ -1592,7 +1592,7 @@ pip_replace <- function(
             "while adding step '",
             step,
             "' - cannot reference unknown steps: ",
-            toString(shQuote(notFound))
+            paste0("'", notFound, "'", collapse = ", ")
         )
     }
 
