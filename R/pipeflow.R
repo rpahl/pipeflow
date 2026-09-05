@@ -1538,52 +1538,135 @@ pip_replace <- function(
     if (!is.function(fun)) {
         stop("fun must be a function")
     }
+    if (".self" %in% names(formals(fun))) {
+        stop_no_call(
+            "'.self' is a reserved parameter name and must not be declared ",
+            "in step '",
+            step,
+            "' - it is provided automatically"
+        )
+    }
+    if (".self" %in% names(params)) {
+        stop_no_call(
+            "'.self' is a reserved parameter name and must not be set via ",
+            "params - it is provided automatically"
+        )
+    }
     .assert_exec_mode(exec)
 
-    src <- pip_clone(x)
-    dat <- src[["data"]]
-    n <- nrow(dat)
-    iStep <- data.table::chmatch(step, dat[["step"]])
+    env <- .pip_get_pipenv(x)
+    data <- env[["data"]]
+    iStep <- data.table::chmatch(step, data[["step"]])
 
-    out <- if (iStep > 1L) {
-        src[seq_len(iStep - 1L), view = FALSE]
-    } else {
-        pip_new(name = src[["name"]])
-    }
+    funParams <- .extract_fun_params(fun)
+    params[names(funParams)] <- funParams
 
-    # Add replacement step at the original position.
-    pip_add(
-        out,
-        step = step,
-        fun = fun,
-        tags = tags,
-        params = params,
-        exec = exec
-    )
+    # Provide `.self` to the step via a dedicated wrapper environment.
+    fun <- .wrap_self(fun, x)
 
-    # Re-append subsequent steps
-    if (iStep < n) {
-        tailRows <- seq.int(iStep + 1L, n)
-        for (i in tailRows) {
-            tailStep <- dat[["step"]][[i]]
-            .pip_append_from(out, y = src, step = tailStep)
+    # Dependencies of the replacement may only point to earlier steps
+    prefixSteps <- data[["step"]][seq_len(iStep - 1L)]
+    steps <- c(prefixSteps, step)
+    depends <- .extract_depends(params = params, steps = steps)
+    if (length(depends) > 0L) {
+        bad <- depends[!(depends %in% prefixSteps)]
+        if (length(bad) > 0L) {
+            stop_no_call(
+                "while replacing step '",
+                step,
+                "' - cannot reference unknown steps: ",
+                toString(shQuote(bad))
+            )
         }
     }
 
+    refNodes <- mget(
+        depends,
+        envir = env[[".steps_to_nodes"]],
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    )
+    if (anyNA(refNodes)) {
+        notFound <- Filter(is.na, refNodes)
+        stop_no_call(
+            "while adding step '",
+            step,
+            "' - cannot reference unknown steps: ",
+            toString(shQuote(notFound))
+        )
+    }
+
+    # Update the incoming DAG edges of the replaced step (its node and all
+    # outgoing edges stay the same).
+    d <- env[[".dag"]]
+    nodeId <- env[[".steps_to_nodes"]][[step]]
+    oldDeps <- data[["depends"]][[iStep]]
+    oldRefs <- if (length(oldDeps) > 0L) {
+        as.integer(unlist(mget(
+            unname(oldDeps),
+            envir = env[[".steps_to_nodes"]],
+            inherits = FALSE
+        )))
+    } else {
+        integer()
+    }
+    newRefs <- as.integer(refNodes)
+
+    for (from in setdiff(oldRefs, newRefs)) {
+        dag_remove_edge(d, from = from, to = nodeId, force = TRUE)
+    }
+    toAdd <- setdiff(newRefs, oldRefs)
+    if (length(toAdd) > 0L) {
+        dag_add_edges_to(d, from = toAdd, to = nodeId)
+    }
+
+    # Reset the step row: new function, params, tags and exec, fresh runtime
+    # state (like a freshly added step).
+    data.table::set(
+        data,
+        i = iStep,
+        j = c(
+            "fun",
+            "params",
+            "depends",
+            "unbound",
+            "tags",
+            "exec",
+            "out",
+            "state",
+            "time",
+            "locked"
+        ),
+        value = list(
+            list(fun),
+            list(params),
+            list(depends),
+            list(setdiff(names(params), names(depends))),
+            list(tags),
+            exec,
+            list(NULL),
+            .step_states[["new"]][["name"]],
+            Sys.time(),
+            FALSE
+        )
+    )
+
     # Mark downstream dependent steps as outdated, but keep the replaced
     # step itself as "new".
-    downNodes <- .pip_get_reachable_nodes(out, step)
-    stepNode <- .pip_steps_to_nodes(out, step)[[1]]
-    downNodes <- unique(setdiff(as.integer(unlist(downNodes)), stepNode))
+    downNodes <- .pip_get_reachable_nodes(x, step)
+    downNodes <- unique(setdiff(
+        as.integer(unlist(downNodes)),
+        as.integer(nodeId)
+    ))
     if (length(downNodes) > 0L) {
-        rowsDown <- out[["data"]][
+        rowsDown <- data[
             list(downNodes),
             which = TRUE,
             on = ".nodeId"
         ]
         if (length(rowsDown) > 0L) {
             data.table::set(
-                out[["data"]],
+                data,
                 i = rowsDown,
                 j = "state",
                 value = .step_states[["outdated"]][["name"]]
@@ -1591,10 +1674,6 @@ pip_replace <- function(
         }
     }
 
-    x[["data"]] <- out[["data"]]
-    env <- .pip_get_pipenv(x)
-    env[[".dag"]] <- .pip_get_pipenv(out)[[".dag"]]
-    env[[".steps_to_nodes"]] <- .pip_get_pipenv(out)[[".steps_to_nodes"]]
     invisible(x)
 }
 
@@ -1715,11 +1794,17 @@ pip_run <- function(
         names(rowsToRun)[match(upstreamRows, rowsToRun)] <- "upstream"
     }
     processedSteps <- character()
+    restartDelegated <- FALSE
     on.exit({
         # At the end, mark all downstream dependent steps as outdated that
         # were *not* processed, which can happen in two different ways:
         # a) when running a view that does not cover the entire pipeline or
         # b) the run was aborted in the middle (due to an error or manual stop).
+        # When the run was restarted, a nested pip_run() has already handled
+        # the whole pipeline (including marking), so nothing to do here.
+        if (restartDelegated) {
+            return(NULL)
+        }
         processedNodes <- as.integer(.pip_steps_to_nodes(x, processedSteps))
         outdatedNodes <- .pip_get_reachable_nodes(x, processedSteps) |>
             unlist() |>
@@ -1780,6 +1865,7 @@ pip_run <- function(
                 if (stateAfterStep == "restart") {
                     log_info("Restarting pipeline execution.")
                     doForce <- pipenv[[".restart_force"]]
+                    restartDelegated <- TRUE
                     pip_run(
                         x,
                         lgr = lgr,
