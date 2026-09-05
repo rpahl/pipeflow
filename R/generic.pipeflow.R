@@ -49,47 +49,79 @@ dim.pipeflow <- function(x) {
     c(as.integer(length(.pip_view_rows(x))), ncol(x[["data"]]))
 }
 
-# Helper to build new pipeline from the steps of `x` whose `.nodeId` is
-# contained in `keepNodes`. The kept rows get a compact node id sequence,
-# and the DAG and the step->node lookup are re-built from the `depends`
-# values.
-.pip_compact <- function(x, keepNodes) {
+#' Compact a pipeline to a subset of steps
+#'
+#' Helper to build new pipeline from the steps of `x` whose `.nodeId` is
+#' contained in `keepNodes`. The kept rows get a compact node id sequence,
+#' and the DAG and the step->node lookup are re-built from the `depends`
+#' values.
+#' For a small number of kept steps, the DAG is built node by node in R. If
+#' roughly a third or more of the steps are kept, it is faster to clone the
+#' existing DAG, remove the excluded nodes in place, and compact the ids in
+#' C++ via dag_rebuild().
+#'
+#' @param x A pipeflow pipeline.
+#' @param keepNodes Integer vector of node ids to keep.
+#' @param rebuildFrac Fraction of steps to keep above which the DAG is rebuilt
+#' @return A new pipeflow pipeline with the selected steps and a compact
+#' node id sequence.
+#' @noRd
+.pip_compact <- function(x, keepNodes, rebuildFrac = 0.3) {
     pipenv <- .pip_get_pipenv(x)
     data <- pipenv[["data"]]
     out <- pip_new(name = x[["name"]])
+    keepNodes <- as.integer(keepNodes)
     rows <- which(data[[".nodeId"]] %in% keepNodes)
     if (length(rows) == 0L) {
         return(out)
     }
 
-    subsetDat <- data.table::copy(data[rows])
-    subsetDat[[".nodeId"]] <- seq_along(subsetDat[[".nodeId"]]) - 1L
+    subDat <- data.table::copy(data[rows])
+    useRebuild <- length(rows) / nrow(data) >= rebuildFrac
+
+    if (useRebuild) {
+        # Clone the existing DAG, drop all nodes that are not kept, and let
+        # the C++ side compact the node ids. Nodes that are still alive
+        # correspond to the current rows of `data`.
+        d <- dag_clone(pipenv[[".dag"]])
+        dead <- setdiff(data[[".nodeId"]], keepNodes)
+        for (id in dead) {
+            dag_remove_node(d, id, force = TRUE)
+        }
+        oldOrder <- dag_rebuild(d)
+        subDat[[".nodeId"]] <- match(subDat[[".nodeId"]], oldOrder) - 1L
+    } else {
+        # Re-map node ids to a compact sequence
+        subDat[[".nodeId"]] <- seq_along(subDat[[".nodeId"]]) - 1L
+    }
 
     # Rebuild the step->node lookup table
     stepsToNodes <- new.env(parent = emptyenv())
-    for (k in seq_len(nrow(subsetDat))) {
-        stepsToNodes[[subsetDat[["step"]][[k]]]] <- subsetDat[[".nodeId"]][[k]]
+    for (k in seq_len(nrow(subDat))) {
+        stepsToNodes[[subDat[["step"]][[k]]]] <- subDat[[".nodeId"]][[k]]
     }
 
-    # Build a DAG that matches the kept rows
-    d <- dag_new()
-    for (k in seq_len(nrow(subsetDat))) {
-        dag_add_node(d)
-        deps <- subsetDat[["depends"]][[k]]
-        if (length(deps) == 0L) {
-            next
+    if (!useRebuild) {
+        # Build a new DAG from scratch that matches the kept rows
+        d <- dag_new()
+        for (k in seq_len(nrow(subDat))) {
+            dag_add_node(d)
+            deps <- subDat[["depends"]][[k]]
+            if (length(deps) == 0L) {
+                next
+            }
+            from <- as.integer(unname(unlist(mget(
+                deps,
+                envir = stepsToNodes,
+                inherits = FALSE
+            ))))
+            to <- as.integer(subDat[[".nodeId"]][[k]])
+            dag_add_edges_to(d, from = from, to = to)
         }
-        from <- as.integer(unname(unlist(mget(
-            deps,
-            envir = stepsToNodes,
-            inherits = FALSE
-        ))))
-        to <- as.integer(subsetDat[[".nodeId"]][[k]])
-        dag_add_edges_to(d, from = from, to = to)
     }
 
-    data.table::setindexv(subsetDat, list("step", ".nodeId"))
-    out[["data"]] <- subsetDat
+    data.table::setindexv(subDat, list("step", ".nodeId"))
+    out[["data"]] <- subDat
     out[[".dag"]] <- d
     out[[".steps_to_nodes"]] <- stepsToNodes
     out

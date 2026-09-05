@@ -44,6 +44,149 @@ describe("nrow", {
     })
 })
 
+
+describe(".pip_compact", {
+    it("builds a compact self-contained pipeline from the kept nodes", {
+        p <- pip_new() |>
+            pip_add("a1", \(x = 1) x) |>
+            pip_add("a2", \(x = ~a1) x * 2) |>
+            pip_add("b1", \(x = 1) x) |>
+            pip_add("b2", \(x = ~b1) x + 1)
+        pip_run(p, lgr = NULL)
+
+        c <- .pip_compact(p, keepNodes = c(0L, 1L))
+
+        expect_equal(unname(c[["data"]][["step"]]), c("a1", "a2"))
+        expect_equal(c[["data"]][[".nodeId"]], 0:1)
+        expect_equal(unname(c[["data"]][["depends"]][[2]]), "a1")
+        expect_setequal(
+            .pip_filter_nodes(
+                c,
+                .pip_get_reachable_nodes(c, "a1")
+            )[["step"]],
+            c("a1", "a2")
+        )
+
+        # runtime state is preserved and re-running yields the same outputs
+        expect_equal(c[["data"]][["state"]], c("done", "done"))
+        suppressMessages(pip_run(c, lgr = NULL))
+        expect_equal(c[["data"]][["out"]], p[["data"]][["out"]][1:2])
+    })
+
+    it("returns an empty pipeline when no nodes are kept", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x)
+        c <- .pip_compact(p, keepNodes = integer())
+
+        expect_equal(nrow(c[["data"]]), 0L)
+    })
+
+    it("keeps a small subset via the node-by-node path", {
+        p <- pip_new() |>
+            pip_add("hub", \(x = 1) x)
+        for (i in 1:9) {
+            pip_add(p, sprintf("f%d", i), function(x = ~hub) x + 1)
+        }
+        # 2 of 10 steps -> below the rebuild fraction, from-scratch path
+        c <- .pip_compact(p, keepNodes = c(0L, 9L))
+
+        expect_equal(unname(c[["data"]][["step"]]), c("hub", "f9"))
+        expect_equal(c[["data"]][[".nodeId"]], 0:1)
+        expect_equal(unname(c[["data"]][["depends"]][[2]]), "hub")
+    })
+
+    it("compacts node ids also when the source has gaps", {
+        p <- pip_new() |>
+            pip_add("a1", \(x = 1) x) |>
+            pip_add("b1", \(x = 1) x) |>
+            pip_add("a2", \(x = ~a1) x) |>
+            pip_add("b2", \(x = ~b1) x)
+        pip_remove(p, "a2") # leaves .nodeId with a gap
+
+        c <- .pip_compact(p, keepNodes = p[["data"]][[".nodeId"]])
+
+        expect_equal(unname(c[["data"]][["step"]]), c("a1", "b1", "b2"))
+        expect_equal(c[["data"]][[".nodeId"]], 0:2)
+        expect_equal(unname(c[["data"]][["depends"]][[3]]), "b1")
+    })
+
+    it("gives identical results for any rebuildFrac", {
+        check_equal_compact <- function(a, b) {
+            expect_equal(
+                unname(a[["data"]][["step"]]),
+                unname(b[["data"]][["step"]])
+            )
+            expect_equal(a[["data"]][[".nodeId"]], b[["data"]][[".nodeId"]])
+            expect_equal(a[["data"]][["depends"]], b[["data"]][["depends"]])
+            expect_equal(a[["data"]][["unbound"]], b[["data"]][["unbound"]])
+            expect_equal(a[["data"]][["params"]], b[["data"]][["params"]])
+            expect_equal(a[["data"]][["out"]], b[["data"]][["out"]])
+            expect_equal(a[["data"]][["state"]], b[["data"]][["state"]])
+            expect_equal(a[["data"]][["locked"]], b[["data"]][["locked"]])
+
+            # DAG equivalence via downstream reachability per step
+            for (s in a[["data"]][["step"]]) {
+                ra <- .pip_filter_nodes(
+                    a,
+                    .pip_get_reachable_nodes(a, s)
+                )[["step"]]
+                rb <- .pip_filter_nodes(
+                    b,
+                    .pip_get_reachable_nodes(b, s)
+                )[["step"]]
+                expect_setequal(ra, rb)
+            }
+
+            # step -> node lookup is identical
+            nodesA <- a[["pipenv"]][[".steps_to_nodes"]]
+            nodesB <- b[["pipenv"]][[".steps_to_nodes"]]
+            expect_setequal(ls(nodesA), ls(nodesB))
+            expect_equal(
+                unname(unlist(mget(ls(nodesA), envir = nodesA))),
+                unname(unlist(mget(ls(nodesA), envir = nodesB)))
+            )
+        }
+
+        p <- pip_new() |>
+            pip_add("a1", \(x = 1) x) |>
+            pip_add("a2", \(x = ~a1) x * 2) |>
+            pip_add("b1", \(x = 1) x) |>
+            pip_add("a3", \(x = ~a1) x + 10) |>
+            pip_add("b2", \(x = ~b1) x + 1)
+        pip_run(p, lgr = NULL)
+
+        keepSets <- list(
+            c(0L, 1L), # small subset (from-scratch path)
+            c(0L, 1L, 3L), # intermediate subset (both paths)
+            0:4 # full set (rebuild path)
+        )
+        fracs <- c(0, 0.3, 0.6, 1, 2)
+
+        for (keep in keepSets) {
+            ref <- .pip_compact(p, keepNodes = keep, rebuildFrac = fracs[1])
+            for (frac in fracs[-1]) {
+                got <- .pip_compact(p, keepNodes = keep, rebuildFrac = frac)
+                check_equal_compact(ref, got)
+            }
+        }
+
+        # also on a pipeline whose node ids have gaps
+        q <- pip_new() |>
+            pip_add("a1", \(x = 1) x) |>
+            pip_add("b1", \(x = 1) x) |>
+            pip_add("a2", \(x = ~a1) x) |>
+            pip_add("b2", \(x = ~b1) x)
+        pip_remove(q, "a2")
+        keep <- q[["data"]][[".nodeId"]]
+
+        ref <- .pip_compact(q, keepNodes = keep, rebuildFrac = fracs[1])
+        for (frac in fracs[-1]) {
+            got <- .pip_compact(q, keepNodes = keep, rebuildFrac = frac)
+            check_equal_compact(ref, got)
+        }
+    })
+})
+
 describe("extract operator [", {
     test_pip <- function() {
         pip_new() |>
