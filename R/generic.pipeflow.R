@@ -85,7 +85,7 @@
 # Internal implementation of [[ for pipeflow objects. Views are pips with
 # a `rows` selector, so list fields and inner-env bindings are accessed
 # through the same dispatch.
-.pip_subset2 <- function(x, i, j = NULL, ...) {
+.pip_subset2 <- function(x, i, j = NULL) {
     if (is.null(j)) {
         if (missing(i)) {
             stop("i must be provided")
@@ -376,7 +376,6 @@ dim.pipeflow <- function(x) {
 #' @param i integer (row index) or character (step name) of the step to
 #' select
 #' @param j column name to select
-#' @param ... Not used.
 #' @return Extracted value(s), depending on `i` and `j`.
 #' @examples
 #' p <- pip_new() |>
@@ -409,21 +408,117 @@ dim.pipeflow <- function(x) {
 #' v[["fit", "out"]]        # output of the "fit" step
 #' @rdname Extract_value.pipeflow
 #' @export
-`[[.pipeflow` <- function(x, i, j = NULL, ...) {
-    .pip_subset2(x = x, i = i, j = j, ...)
+`[[.pipeflow` <- function(x, i, j = NULL) {
+    .pip_subset2(x = x, i = i, j = j)
 }
 
-# Assignment routes list fields (`pip`, `name`, `rows`) to the wrapper and all
-# other bindings to the shared inner environment.
+#' Assign values to pipeline meta fields or step properties
+#'
+#' `p[[field]] <- value` assigns one of the meta fields `pipenv`, `name`, or
+#' `view` on the wrapper object. The two-index form `p[[step, property]] <-`
+#' `value` provides interactive shortcuts for common step modifications:
+#'
+#' * `p[[step, "step"]] <- newName` — rename the step ([pip_rename()]).
+#' * `p[[step, "params"]] <- list(...)` (or `"param"`) — update the step's
+#'   parameters ([pip_set_params()]).
+#' * `p[[step, "fun"]] <- fun` — replace the step's function
+#'   ([pip_replace()]); tags and execution mode are kept.
+#' * `p[[step, "tags"]] <- tags` — set the step's tags to exactly `tags`
+#'   (a character vector); `NULL` clears all tags.
+#' * `p[[step, "locked"]] <- TRUE|FALSE` — lock or unlock the step
+#'   ([pip_lock()] / [pip_unlock()]).
+#'
+#' Finally, `p[[step]] <- NULL` removes the step from the pipeline
+#' ([pip_remove()]).
+#' @param x A pipeflow pipeline or view.
+#' @param i A meta field name, an integer row index, or a step name.
+#' @param j Optional step property; see 'Details'.
+#' @param value The value to assign.
+#' @return The updated pipeline, invisibly.
+#' @examples
+#' p <- pip_new() |>
+#'   pip_add("load", \(x = 1) x) |>
+#'   pip_add("fit", \(x = ~load) x + 1) |>
+#'   pip_add("report", \(x = 1) x)
+#'
+#' # Replace a step's function (tags and exec mode are kept)
+#' p[["fit", "fun"]] <- \(x = ~load) x * 2
+#' p[["fit", "tags"]] <- c("model", "daily")
+#' p[["fit", "locked"]] <- TRUE
+#' p[["fit", "locked"]] <- FALSE
+#'
+#' # Rename a step and remove an independent one
+#' p[["load", "step"]] <- "read"
+#' p[["report"]] <- NULL
+#' p
+#' @rdname Extract_value.pipeflow
 #' @export
-`[[<-.pipeflow` <- function(x, i, j = NULL, ..., value) {
-    if (i %in% c("pipenv", "name", "view")) {
+`[[<-.pipeflow` <- function(x, i, j, value) {
+    if (missing(i)) {
+        stop("i must be provided")
+    }
+    if (!is.character(i) && length(i) != 1L) {
+        stop("i must be a single character string")
+    }
+    if (i %in% names(unclass(x))) {
         unclass(x)[[i]] <- value
+        return(x)
+    }
+
+    if (missing(j)) {
+        stop("j must be provided when assigning to a step property")
+    }
+    if (!.pip_step_exists(x, i)) {
+        stop("element or step '", i, "' does not exist")
+    }
+
+    data <- x[["data"]]
+    step <- i
+    i <- data.table::chmatch(step, data[["step"]])
+
+    if (j == "step") {
+        pip_rename(x, from = step, to = value)
+    } else if (j == "fun") {
+        pip_replace(x, step = step, fun = value)
+    } else if (j == "params") {
+        pip_set_params(pip_view(x, step = step), params = value)
+    } else if (j == "tags") {
+        if (!is.null(value) && !is.character(value)) {
+            stop("tags must be a character vector")
+        }
+        data.table::set(
+            data,
+            i = i,
+            j = "tags",
+            value = as.character(value),
+            tags = data[["tags"]][[i]],
+            exec = data[["exec"]][[i]]
+        )
+    } else if (j == "locked") {
+        if (!.is_single(value, "logical") || is.na(value)) {
+            stop("locked must be a single logical value")
+        }
+        data.table::set(data, i = i, j = "locked", value = value)
+    } else if (j == "exec") {
+        .assert_exec_mode(value)
+        data.table::set(data, i = i, j = "exec", value = value)
     } else {
-        env <- .pip_get_pipenv(x)
-        env[[i]] <- value
+        if (j %in% colnames(data)) {
+            stop("direct assignment to column '", j, "' is not supported.")
+        } else {
+            stop("unknown step property: ", j)
+        }
     }
     x
+}
+
+
+`[<-.pipeflow` <- function(x, i, j, value) {
+    if (missing(j)) {
+        # same as p[step, "fun"] <- function(...) {}
+        pip_replace(x, step = i, fun = value)
+        return(x)
+    }
 }
 
 #' @rdname Extract_value.pipeflow

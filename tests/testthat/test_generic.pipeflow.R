@@ -544,6 +544,137 @@ describe("extract operator [[", {
         expect_error(v[[2L, "step"]], "row index out of bounds")
         expect_error(v[[length(v) + 1L, "step"]], "row index out of bounds")
     })
+
+    describe("assignment shortcuts", {
+        it("assigns step name, tags, locked, exec and wrapper fields", {
+            p <- test_pip()
+
+            p[["s2", "step"]] <- "s3"
+            expect_equal(unname(p[["data"]][["step"]]), c("s1", "s3"))
+            expect_equal(unname(p[["data"]][["depends"]][[2]]), "s1")
+
+            p[["s1", "tags"]] <- c("a", "b")
+            expect_equal(p[["data"]][["tags"]][[1]], c("a", "b"))
+            p[["s1", "tags"]] <- NULL
+            expect_equal(p[["data"]][["tags"]][[1]], character(0))
+
+            p[["s1", "locked"]] <- TRUE
+            expect_true(p[["data"]][["locked"]][[1]])
+            p[["s1", "locked"]] <- FALSE
+            expect_false(p[["data"]][["locked"]][[1]])
+
+            p[["s3", "exec"]] <- "plain"
+            expect_equal(p[["data"]][["exec"]][[2]], "plain")
+
+            p[["name"]] <- "renamed"
+            expect_equal(p[["name"]], "renamed")
+        })
+
+        it("supports assigning by row index", {
+            p <- test_pip()
+
+            p[[2, "tags"]] <- "byrow"
+            expect_equal(p[["data"]][["tags"]][[2]], "byrow")
+        })
+
+        it("replaces a step function while keeping tags and exec mode", {
+            p <- test_pip()
+            p[["s2", "tags"]] <- "model"
+            p[["s2", "exec"]] <- "plain"
+            pip_run(p, lgr = NULL)
+            expect_equal(p[["data"]][["out"]][[2]], 2)
+
+            p[["s2", "fun"]] <- \(x = ~s1) x * 3
+
+            expect_equal(p[["data"]][["tags"]][[2]], "model")
+            expect_equal(p[["data"]][["exec"]][[2]], "plain")
+            expect_equal(unname(p[["data"]][["depends"]][[2]]), "s1")
+            expect_equal(p[["data"]][["state"]][[2]], "new")
+
+            pip_run(p, lgr = NULL)
+            expect_equal(p[["data"]][["out"]][[2]], 3)
+        })
+
+        it("marks downstream steps outdated when replacing a function", {
+            p <- pip_new("pipe") |>
+                pip_add("s1", \(x = 1) x) |>
+                pip_add("s2", \(x = ~s1) x + 1) |>
+                pip_add("s3", \(x = ~s2) x + 1)
+            pip_run(p, lgr = NULL)
+
+            p[["s2", "fun"]] <- \(x = ~s1) x * 2
+
+            expect_equal(
+                p[["data"]][["state"]],
+                c("done", "new", "outdated")
+            )
+        })
+
+        it("updates the parameters of a single step", {
+            p <- pip_new() |>
+                pip_add("s1", \(x = 1) x) |>
+                pip_add("s2", \(x = ~s1, k = 2) x * k)
+
+            p[["s2", "params"]] <- list(k = 5)
+            expect_equal(p[["data"]][["params"]][[2]][["k"]], 5)
+        })
+
+        it("supports the single-index shorthand for replacing a function", {
+            p <- test_pip()
+
+            p["s2"] <- \(x = ~s1) x + 10
+            expect_equal(unname(p[["data"]][["depends"]][[2]]), "s1")
+
+            pip_run(p, lgr = NULL)
+            expect_equal(p[["data"]][["out"]][[2]], 11)
+
+            expect_error(
+                p["s1", "tags"] <- "a",
+                "step properties"
+            )
+        })
+
+        it("signals invalid shortcut assignments", {
+            p <- test_pip()
+
+            expect_error(
+                p[["unknown", "tags"]] <- "a",
+                "element or step 'unknown' does not exist"
+            )
+            expect_error(
+                p[["s1", "nope"]] <- 1,
+                "unknown step property: nope"
+            )
+            expect_error(
+                p[["s1", "state"]] <- "new",
+                "direct assignment to column 'state' is not supported"
+            )
+            expect_error(
+                p[["s1", "tags"]] <- 1,
+                "tags must be a character vector"
+            )
+            expect_error(
+                p[["s1", "locked"]] <- "yes",
+                "locked must be a single logical value"
+            )
+            expect_error(
+                p[["s1", "exec"]] <- "bogus",
+                "exec must be one of"
+            )
+            expect_error(
+                p[[99L, "tags"]] <- "a",
+                "i must be a single step name or row index"
+            )
+            expect_error(
+                p[[c("s1", "s2"), "tags"]] <- "a",
+                "i must be a single step name or row index"
+            )
+            expect_error(
+                p[["s1", c("tags", "locked")]] <- "a",
+                "j must be a single property name"
+            )
+        })
+    })
 })
 
 

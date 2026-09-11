@@ -2,30 +2,38 @@
 % Please edit documentation in R/generic.pipeflow.R
 \name{[[.pipeflow}
 \alias{[[.pipeflow}
+\alias{[[<-.pipeflow}
 \alias{$.pipeflow}
 \title{Extract values from a pipeline or view}
 \usage{
-\method{[[}{pipeflow}(x, i, j = NULL, ...)
+\method{[[}{pipeflow}(x, i, j = NULL)
+
+\method{[[}{pipeflow}(x, i, j) <- value
 
 \method{$}{pipeflow}(x, i)
 }
 \arguments{
 \item{x}{A pipeflow pipeline or view.}
 
-\item{i}{integer (row index) or character (step name) of the step to
-select}
+\item{i}{A meta field name, an integer row index, or a step name.}
 
-\item{j}{column name to select}
+\item{j}{Optional step property; see 'Details'.}
 
-\item{...}{Not used.}
+\item{value}{The value to assign.}
 }
 \value{
 Extracted value(s), depending on \code{i} and \code{j}.
+
+The updated pipeline, invisibly.
 }
 \description{
 A pipeline can be read like a data.frame of steps: \code{p[[column]]} returns a
 column of the step table, and \code{p[[row, column]]} extracts a single cell.
 In addition, a few meta fields are accessible by name.
+
+\code{p[[field]] <- value} assigns one of the meta fields \code{pipenv}, \code{name}, or
+\code{view} on the wrapper object. The two-index form \verb{p[[step, property]] <-}
+\code{value} provides interactive shortcuts for common step modifications:
 }
 \details{
 \subsection{Meta fields}{
@@ -52,6 +60,21 @@ view. Meta fields take priority over columns of the same name. The
 two-index form \code{p[[row, column]]} extracts a single cell, where \code{row} is
 an integer row index or a step name.
 }
+
+\itemize{
+\item \code{p[[step, "step"]] <- newName} — rename the step (\code{\link[=pip_rename]{pip_rename()}}).
+\item \code{p[[step, "params"]] <- list(...)} (or \code{"param"}) — update the step's
+parameters (\code{\link[=pip_set_params]{pip_set_params()}}).
+\item \code{p[[step, "fun"]] <- fun} — replace the step's function
+(\code{\link[=pip_replace]{pip_replace()}}); tags and execution mode are kept.
+\item \code{p[[step, "tags"]] <- tags} — set the step's tags to exactly \code{tags}
+(a character vector); \code{NULL} clears all tags.
+\item \code{p[[step, "locked"]] <- TRUE|FALSE} — lock or unlock the step
+(\code{\link[=pip_lock]{pip_lock()}} / \code{\link[=pip_unlock]{pip_unlock()}}).
+}
+
+Finally, \code{p[[step]] <- NULL} removes the step from the pipeline
+(\code{\link[=pip_remove]{pip_remove()}}).
 }
 \examples{
 p <- pip_new() |>
@@ -82,4 +105,19 @@ v[["view"]]              # row indices of the covered steps
 v[["step"]]              # c(load = "load", fit = "fit")
 v[["out"]]               # c(load = 1, fit = 2)
 v[["fit", "out"]]        # output of the "fit" step
+p <- pip_new() |>
+  pip_add("load", \(x = 1) x) |>
+  pip_add("fit", \(x = ~load) x + 1) |>
+  pip_add("report", \(x = 1) x)
+
+# Replace a step's function (tags and exec mode are kept)
+p[["fit", "fun"]] <- \(x = ~load) x * 2
+p[["fit", "tags"]] <- c("model", "daily")
+p[["fit", "locked"]] <- TRUE
+p[["fit", "locked"]] <- FALSE
+
+# Rename a step and remove an independent one
+p[["load", "step"]] <- "read"
+p[["report"]] <- NULL
+p
 }
