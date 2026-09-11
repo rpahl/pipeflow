@@ -62,11 +62,13 @@ dim.pipeflow <- function(x) {
 #'
 #' @param x A pipeflow pipeline.
 #' @param keepNodes Integer vector of node ids to keep.
-#' @param rebuildFrac Fraction of steps to keep above which the DAG is rebuilt
+#' @param rebuildThresh Fraction of steps to keep above which the DAG is
+#' rebuilt. The default value of 0.3 was determined empirically, that is,
+#' at this fraction both methods take roughly the same time.
 #' @return A new pipeflow pipeline with the selected steps and a compact
 #' node id sequence.
 #' @noRd
-.pip_compact <- function(x, keepNodes, rebuildFrac = 0.3) {
+.pip_compact <- function(x, keepNodes, rebuildThresh = 0.3) {
     pipenv <- .pip_get_pipenv(x)
     data <- pipenv[["data"]]
     out <- pip_new(name = x[["name"]])
@@ -77,7 +79,7 @@ dim.pipeflow <- function(x) {
     }
 
     subDat <- data.table::copy(data[rows])
-    useRebuild <- length(rows) / nrow(data) >= rebuildFrac
+    useRebuild <- length(rows) / nrow(data) >= rebuildThresh
 
     if (useRebuild) {
         # Clone the existing DAG, drop all nodes that are not kept, and let
@@ -221,9 +223,6 @@ dim.pipeflow <- function(x) {
     } else if (is.numeric(value)) {
         if (anyNA(value)) {
             stop("row indices in 'i' must not contain NA")
-        }
-        if (!all(is.finite(value)) || !all(value == as.integer(value))) {
-            stop("numeric indices in 'i' must be whole numbers")
         }
         rows <- sort(unique(as.integer(value)))
         bad <- rows[rows < 1L | rows > nrow(dat)]

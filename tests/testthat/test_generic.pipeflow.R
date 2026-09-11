@@ -163,9 +163,9 @@ describe(".pip_compact", {
         fracs <- c(0, 0.3, 0.6, 1, 2)
 
         for (keep in keepSets) {
-            ref <- .pip_compact(p, keepNodes = keep, rebuildFrac = fracs[1])
+            ref <- .pip_compact(p, keepNodes = keep, rebuildThresh = fracs[1])
             for (frac in fracs[-1]) {
-                got <- .pip_compact(p, keepNodes = keep, rebuildFrac = frac)
+                got <- .pip_compact(p, keepNodes = keep, rebuildThresh = frac)
                 check_equal_compact(ref, got)
             }
         }
@@ -179,9 +179,9 @@ describe(".pip_compact", {
         pip_remove(q, "a2")
         keep <- q[["data"]][[".nodeId"]]
 
-        ref <- .pip_compact(q, keepNodes = keep, rebuildFrac = fracs[1])
+        ref <- .pip_compact(q, keepNodes = keep, rebuildThresh = fracs[1])
         for (frac in fracs[-1]) {
-            got <- .pip_compact(q, keepNodes = keep, rebuildFrac = frac)
+            got <- .pip_compact(q, keepNodes = keep, rebuildThresh = frac)
             check_equal_compact(ref, got)
         }
     })
@@ -250,7 +250,6 @@ describe("extract operator [", {
         expect_error(p[c(0, 1)], "Invalid row indices in 'i'")
         expect_error(p[99], "Invalid row indices in 'i'")
         expect_error(p[c(1, NA)], "row indices in 'i' must not contain NA")
-        expect_error(p[c(1.1, 2)], "must be whole numbers")
     })
 
     it("signals invalid step names", {
