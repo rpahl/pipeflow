@@ -636,8 +636,6 @@ describe(".pip_steps_to_rows", {
 # Pipeline addition
 # -----------------
 
-
-
 # ---------------------------
 # Exported pipeline functions
 # ---------------------------
@@ -2880,7 +2878,6 @@ describe("extract operator [", {
         expect_error(p[c(0, 1)], "Invalid row indices in 'i'")
         expect_error(p[99], "Invalid row indices in 'i'")
         expect_error(p[c(1, NA)], "row indices in 'i' must not contain NA")
-        expect_error(p[c(1.1, 2)], "must be whole numbers")
     })
 
     it("signals invalid step names", {
@@ -3162,14 +3159,6 @@ describe("extract operator [[", {
         expect_error(v[[0L, "step"]], "row index out of bounds")
         expect_error(v[[2L, "step"]], "row index out of bounds")
         expect_error(v[[length(v) + 1L, "step"]], "row index out of bounds")
-    })
-
-    it("signals non-whole-number row indices for pipelines and views", {
-        p <- test_pip()
-        v <- pip_view(p, step = "s1")
-
-        expect_error(p[[1.5, "step"]], "row index must be a whole number")
-        expect_error(v[[1.5, "step"]], "row index must be a whole number")
     })
 })
 

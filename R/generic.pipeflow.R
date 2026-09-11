@@ -1,53 +1,6 @@
-# ------------------------------------
-# Implementation of generic S3 methods
-# ------------------------------------
-
-#' Length of a pipeflow pipeline or view
-#' @param x A pipeflow pipeline or view
-#' @return Number of steps as an integer.
-#' @examples
-#' p <- pip_new() |>
-#'   pip_add("s1", \(x = 1) x) |>
-#'   pip_add("s2", \(x = ~s1) x + 1) |>
-#'   pip_add("s3", \(x = ~s2) x * 2)
-#' length(p) # 3 — total steps in the pipeline
-#'
-#' # A view reports only the number of selected (visible) steps
-#' v <- pip_view(p, step = c("s2", "s3"))
-#' length(v) # 2
-#' @rdname length.pipeflow
-#' @export
-length.pipeflow <- function(x) {
-    as.integer(length(.pip_view_rows(x)))
-}
-
-#' Number of rows of a pipeflow pipeline or view
-#'
-#' Treats a pipeline as a table of steps: `nrow()` returns the number of
-#' steps, the same as [length.pipeflow] / `length()`, and `ncol()`
-#' returns the number of columns of the underlying step table. Views report
-#' only the number of covered steps as rows.
-#' @param x A pipeflow pipeline or view
-#' @return `nrow()` returns the number of steps as an integer; `ncol()`
-#' returns the number of columns of the step table.
-#' @details Base R's `nrow()` is implemented as `dim(x)[1L]`, so the number
-#' of rows and columns is provided through a `dim()` method for
-#' `pipeflow` objects.
-#' @examples
-#' p <- pip_new() |>
-#'   pip_add("s1", \(x = 1) x) |>
-#'   pip_add("s2", \(x = ~s1) x + 1)
-#' nrow(p) # 2
-#' ncol(p) # number of columns of the step table
-#' nrow(p) == length(p) # TRUE
-#'
-#' v <- pip_view(p, step = "s2")
-#' nrow(v) # 1
-#' @rdname nrow.pipeflow
-#' @export
-dim.pipeflow <- function(x) {
-    c(as.integer(length(.pip_view_rows(x))), ncol(x[["data"]]))
-}
+# ------
+# Helper
+# ------
 
 #' Compact a pipeline to a subset of steps
 #'
@@ -128,6 +81,123 @@ dim.pipeflow <- function(x) {
     out[[".steps_to_nodes"]] <- stepsToNodes
     out
 }
+
+# Internal implementation of [[ for pipeflow objects. Views are pips with
+# a `rows` selector, so list fields and inner-env bindings are accessed
+# through the same dispatch.
+.pip_subset2 <- function(x, i, j = NULL, ...) {
+    if (is.null(j)) {
+        if (missing(i)) {
+            stop("i must be provided")
+        }
+
+        # List fields of the wrapper have priority over column names.
+        if (is.character(i) && length(i) == 1L && !is.na(i)) {
+            if (i %in% c("pipenv", "name", "view")) {
+                # Scenario: x[["pipenv"]], x[["name"]] or x[["view"]]
+                return(.subset2(x, i))
+            }
+            # Public inner-env bindings like "data" are next. Hidden
+            # internals like ".dag" and ".steps_to_nodes" are deliberately
+            # not exposed. Advanced users still can access them "manually"
+            # from the inner environment if needed.
+            env <- .pip_get_pipenv(x)
+            if (i %in% ls(env)) {
+                # ls() by default does not list variables starting with a dot
+                return(get(i, envir = env, inherits = FALSE))
+            }
+        }
+
+        # case x[[col]]
+        data <- .pip_view_data(x)
+        col <- data[[i]]
+        if (is.null(col)) {
+            return(NULL)
+        }
+        return(stats::setNames(col, data[["step"]]))
+    }
+
+    # Two-index form extracts a single cell from a single row.
+    if (missing(i)) {
+        stop("i must be provided")
+    }
+    if (length(i) != 1L || is.na(i)) {
+        stop("i must be a single step name or row index")
+    }
+    if (!is.character(j) || length(j) != 1L || is.na(j)) {
+        stop("j must be a single column name")
+    }
+
+    data <- .pip_view_data(x)
+    if (is.character(i)) {
+        # case x[[stepName, col]]
+        row <- .pip_steps_to_rows(x, steps = i)
+        if (row > nrow(data)) {
+            stop("selected step not part of view: ", i)
+        }
+    } else {
+        # case x[[i, col]]
+        row <- as.integer(i)
+        if (row < 1L || row > nrow(data)) {
+            stop("row index out of bounds")
+        }
+    }
+
+    data[[j]][[row]]
+}
+
+
+# ------------------------------------
+# Implementation of generic S3 methods
+# ------------------------------------
+
+#' Length of a pipeflow pipeline or view
+#' @param x A pipeflow pipeline or view
+#' @return Number of steps as an integer.
+#' @examples
+#' p <- pip_new() |>
+#'   pip_add("s1", \(x = 1) x) |>
+#'   pip_add("s2", \(x = ~s1) x + 1) |>
+#'   pip_add("s3", \(x = ~s2) x * 2)
+#' length(p) # 3 — total steps in the pipeline
+#'
+#' # A view reports only the number of selected (visible) steps
+#' v <- pip_view(p, step = c("s2", "s3"))
+#' length(v) # 2
+#' @rdname length.pipeflow
+#' @export
+length.pipeflow <- function(x) {
+    as.integer(length(.pip_view_rows(x)))
+}
+
+#' Number of rows of a pipeflow pipeline or view
+#'
+#' Treats a pipeline as a table of steps: `nrow()` returns the number of
+#' steps, the same as [length.pipeflow] / `length()`, and `ncol()`
+#' returns the number of columns of the underlying step table. Views report
+#' only the number of covered steps as rows.
+#' @param x A pipeflow pipeline or view
+#' @return `nrow()` returns the number of steps as an integer; `ncol()`
+#' returns the number of columns of the step table.
+#' @details Base R's `nrow()` is implemented as `dim(x)[1L]`, so the number
+#' of rows and columns is provided through a `dim()` method for
+#' `pipeflow` objects.
+#' @examples
+#' p <- pip_new() |>
+#'   pip_add("s1", \(x = 1) x) |>
+#'   pip_add("s2", \(x = ~s1) x + 1)
+#' nrow(p) # 2
+#' ncol(p) # number of columns of the step table
+#' nrow(p) == length(p) # TRUE
+#'
+#' v <- pip_view(p, step = "s2")
+#' nrow(v) # 1
+#' @rdname nrow.pipeflow
+#' @export
+dim.pipeflow <- function(x) {
+    c(as.integer(length(.pip_view_rows(x))), ncol(x[["data"]]))
+}
+
 
 #' Extract or subset a pipeline
 #'

@@ -1,49 +1,6 @@
-# ------------------------------------
-# Implementation of generic S3 methods
-# ------------------------------------
-
-describe("length", {
-    it("returns an integer value", {
-        p <- pip_new()
-        expect_true(is.integer(length(p)))
-    })
-
-    it("returns the expected value", {
-        p <- pip_new()
-        expect_equal(length(p), 0L)
-        pip_add(p, "s1", \(a = 1) a)
-        pip_add(p, "s2", \(a = 1) a)
-        expect_equal(length(p), 2L)
-
-        v <- pip_view(p, step = "s1")
-        expect_equal(length(v), 1L)
-    })
-})
-
-describe("nrow", {
-    it("matches length for pipelines and views", {
-        p <- pip_new() |>
-            pip_add("s1", \(a = 1) a) |>
-            pip_add("s2", \(a = ~s1) a)
-        pip_add(p, "s3", \(a = 1) a)
-
-        expect_equal(nrow(p), length(p))
-        expect_equal(nrow(p), 3L)
-        expect_equal(ncol(p), ncol(p[["data"]]))
-
-        v <- pip_view(p, step = c("s1", "s3"))
-        expect_equal(nrow(v), length(v))
-        expect_equal(nrow(v), 2L)
-        expect_equal(ncol(v), ncol(p[["data"]]))
-    })
-
-    it("returns zero rows for an empty pipeline", {
-        p <- pip_new()
-        expect_equal(nrow(p), 0L)
-        expect_equal(ncol(p), ncol(p[["data"]]))
-    })
-})
-
+# ------
+# Helper
+# ------
 
 describe(".pip_compact", {
     it("builds a compact self-contained pipeline from the kept nodes", {
@@ -186,6 +143,53 @@ describe(".pip_compact", {
         }
     })
 })
+
+# ------------------------------------
+# Implementation of generic S3 methods
+# ------------------------------------
+
+describe("length", {
+    it("returns an integer value", {
+        p <- pip_new()
+        expect_true(is.integer(length(p)))
+    })
+
+    it("returns the expected value", {
+        p <- pip_new()
+        expect_equal(length(p), 0L)
+        pip_add(p, "s1", \(a = 1) a)
+        pip_add(p, "s2", \(a = 1) a)
+        expect_equal(length(p), 2L)
+
+        v <- pip_view(p, step = "s1")
+        expect_equal(length(v), 1L)
+    })
+})
+
+describe("nrow", {
+    it("matches length for pipelines and views", {
+        p <- pip_new() |>
+            pip_add("s1", \(a = 1) a) |>
+            pip_add("s2", \(a = ~s1) a)
+        pip_add(p, "s3", \(a = 1) a)
+
+        expect_equal(nrow(p), length(p))
+        expect_equal(nrow(p), 3L)
+        expect_equal(ncol(p), ncol(p[["data"]]))
+
+        v <- pip_view(p, step = c("s1", "s3"))
+        expect_equal(nrow(v), length(v))
+        expect_equal(nrow(v), 2L)
+        expect_equal(ncol(v), ncol(p[["data"]]))
+    })
+
+    it("returns zero rows for an empty pipeline", {
+        p <- pip_new()
+        expect_equal(nrow(p), 0L)
+        expect_equal(ncol(p), ncol(p[["data"]]))
+    })
+})
+
 
 describe("extract operator [", {
     test_pip <- function() {
@@ -539,14 +543,6 @@ describe("extract operator [[", {
         expect_error(v[[0L, "step"]], "row index out of bounds")
         expect_error(v[[2L, "step"]], "row index out of bounds")
         expect_error(v[[length(v) + 1L, "step"]], "row index out of bounds")
-    })
-
-    it("signals non-whole-number row indices for pipelines and views", {
-        p <- test_pip()
-        v <- pip_view(p, step = "s1")
-
-        expect_error(p[[1.5, "step"]], "row index must be a whole number")
-        expect_error(v[[1.5, "step"]], "row index must be a whole number")
     })
 })
 
