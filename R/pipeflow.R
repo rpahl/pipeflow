@@ -995,18 +995,19 @@ pip_clone <- function(x, name = NULL) {
 
     newName <- if (is.null(name)) x[["name"]] else name
     out <- pip_new(name = newName)
+    env <- .pip_get_pipenv(out)
 
-    out[[".dag"]] <- dag_clone(.pip_get_pipenv(x)[[".dag"]])
+    env[[".dag"]] <- dag_clone(.pip_get_pipenv(x)[[".dag"]])
     dat <- data.table::copy(x[["data"]])
-    out[["data"]] <- dat
 
     # Clone steps to nodes mapping
-    stepsToNodes <- .pip_get_pipenv(out)[[".steps_to_nodes"]]
+    stepsToNodes <- env[[".steps_to_nodes"]]
     for (k in seq_len(nrow(dat))) {
         step <- dat[["step"]][[k]]
         nodeId <- dat[[".nodeId"]][[k]]
         stepsToNodes[[step]] <- nodeId
     }
+    env[["data"]] <- dat
 
     out
 }

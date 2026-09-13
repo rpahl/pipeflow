@@ -76,9 +76,10 @@
     }
 
     data.table::setindexv(subDat, list("step", ".nodeId"))
-    out[["data"]] <- subDat
-    out[[".dag"]] <- d
-    out[[".steps_to_nodes"]] <- stepsToNodes
+    env <- .pip_get_pipenv(out)
+    env[["data"]] <- subDat
+    env[[".dag"]] <- d
+    env[[".steps_to_nodes"]] <- stepsToNodes
     out
 }
 

@@ -267,9 +267,10 @@ describe("extract operator [", {
     it("returns an independent copy with view = FALSE", {
         p <- test_pip()
         suppressMessages(sub <- p[c("a2"), view = FALSE])
+        env <- .pip_get_pipenv(sub)
 
-        sub[["data"]][["state"]][1] <- "done"
-        expect_equal(p[["data"]][["state"]][1], "new")
+        env[["data"]][["state"]][1] <- "done"
+        expect_equal(p[["pipenv"]][["data"]][["state"]][1], "new")
     })
 
     it("copies DAG edges for the extracted subset", {
@@ -323,7 +324,8 @@ describe("extract operator [", {
         }
 
         set_state <- function(p, step, state = "done") {
-            p[["data"]][["state"]][p[["data"]][["step"]] == step] <- state
+            env <- .pip_get_pipenv(p)
+            env[["data"]][["state"]][env[["data"]][["step"]] == step] <- state
             p
         }
 
