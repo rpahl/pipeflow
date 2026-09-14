@@ -15,9 +15,10 @@
 \arguments{
 \item{x}{A pipeflow pipeline or view.}
 
-\item{i}{A meta field name, an integer row index, or a step name.}
+\item{i}{\code{"name"} to assign the pipeline name, or a step name or integer
+row index to select the step to modify.}
 
-\item{j}{Optional step property; see 'Details'.}
+\item{j}{The step property to assign; see 'Details'.}
 
 \item{value}{The value to assign.}
 }
@@ -31,9 +32,10 @@ A pipeline can be read like a data.frame of steps: \code{p[[column]]} returns a
 column of the step table, and \code{p[[row, column]]} extracts a single cell.
 In addition, a few meta fields are accessible by name.
 
-\code{p[[field]] <- value} assigns one of the meta fields \code{pipenv}, \code{name}, or
-\code{view} on the wrapper object. The two-index form \verb{p[[step, property]] <-}
-\code{value} provides interactive shortcuts for common step modifications:
+\code{p[["name"]] <- value} sets the name of the pipeline, where \code{value} must be
+a non-empty string. The two-index form \code{p[[step, property]] <- value}
+provides interactive shortcuts for modifying a single step, where \code{step} is
+a step name or an integer row index and \code{property} selects what to update:
 }
 \details{
 \subsection{Meta fields}{
@@ -62,19 +64,24 @@ an integer row index or a step name.
 }
 
 \itemize{
-\item \code{p[[step, "step"]] <- newName} — rename the step (\code{\link[=pip_rename]{pip_rename()}}).
-\item \code{p[[step, "params"]] <- list(...)} (or \code{"param"}) — update the step's
-parameters (\code{\link[=pip_set_params]{pip_set_params()}}).
+\item \code{p[[step, "step"]] <- newName} — rename the step (\code{\link[=pip_rename]{pip_rename()}});
+references in dependent steps are updated as well.
 \item \code{p[[step, "fun"]] <- fun} — replace the step's function
-(\code{\link[=pip_replace]{pip_replace()}}); tags and execution mode are kept.
+(\code{\link[=pip_replace]{pip_replace()}}); the tags and the execution mode are kept and the
+downstream steps are marked as outdated.
+\item \code{p[[step, "params"]] <- list(...)} — update the step's parameters
+(\code{\link[=pip_set_params]{pip_set_params()}}).
 \item \code{p[[step, "tags"]] <- tags} — set the step's tags to exactly \code{tags}
 (a character vector); \code{NULL} clears all tags.
 \item \code{p[[step, "locked"]] <- TRUE|FALSE} — lock or unlock the step
 (\code{\link[=pip_lock]{pip_lock()}} / \code{\link[=pip_unlock]{pip_unlock()}}).
+\item \code{p[[step, "exec"]] <- mode} — set the step's execution mode.
+\item \code{p[[step, "state"]] <- state} — set the step's state.
+\item \code{p[[step, "out"]] <- value} — set the step's stored output.
 }
 
-Finally, \code{p[[step]] <- NULL} removes the step from the pipeline
-(\code{\link[=pip_remove]{pip_remove()}}).
+Assigning to any other step-table column, or to a meta field other than
+\code{name}, is not supported. To remove a step, use \code{\link[=pip_remove]{pip_remove()}}.
 }
 \examples{
 p <- pip_new() |>
@@ -105,19 +112,29 @@ v[["view"]]              # row indices of the covered steps
 v[["step"]]              # c(load = "load", fit = "fit")
 v[["out"]]               # c(load = 1, fit = 2)
 v[["fit", "out"]]        # output of the "fit" step
-p <- pip_new() |>
+p <- pip_new("pipe") |>
   pip_add("load", \(x = 1) x) |>
-  pip_add("fit", \(x = ~load) x + 1) |>
-  pip_add("report", \(x = 1) x)
+  pip_add("fit", \(x = ~load, k = 2) x * k) |>
+  pip_add("report", \(x = ~fit) x)
+
+# Assign the pipeline name via its meta field
+p[["name"]] <- "demo"
 
 # Replace a step's function (tags and exec mode are kept)
-p[["fit", "fun"]] <- \(x = ~load) x * 2
+p[["fit", "fun"]] <- \(x = ~load, k = 2) x * k
+
+# Update parameters, tags, locking and the execution mode
+p[["fit", "params"]] <- list(k = 5)
 p[["fit", "tags"]] <- c("model", "daily")
 p[["fit", "locked"]] <- TRUE
 p[["fit", "locked"]] <- FALSE
+p[["fit", "exec"]] <- "plain"
 
-# Rename a step and remove an independent one
+# Rename a step; dependent steps are updated as well
 p[["load", "step"]] <- "read"
-p[["report"]] <- NULL
+
+# Assign by row index to set the state or the stored output
+p[[2, "state"]] <- "outdated"
+p[[2, "out"]] <- 42
 p
 }

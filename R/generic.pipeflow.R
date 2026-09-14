@@ -415,42 +415,59 @@ dim.pipeflow <- function(x) {
 
 #' Assign values to pipeline meta fields or step properties
 #'
-#' `p[[field]] <- value` assigns one of the meta fields `pipenv`, `name`, or
-#' `view` on the wrapper object. The two-index form `p[[step, property]] <-`
-#' `value` provides interactive shortcuts for common step modifications:
+#' `p[["name"]] <- value` sets the name of the pipeline, where `value` must be
+#' a non-empty string. The two-index form `p[[step, property]] <- value`
+#' provides interactive shortcuts for modifying a single step, where `step` is
+#' a step name or an integer row index and `property` selects what to update:
 #'
-#' * `p[[step, "step"]] <- newName` — rename the step ([pip_rename()]).
-#' * `p[[step, "params"]] <- list(...)` (or `"param"`) — update the step's
-#'   parameters ([pip_set_params()]).
+#' * `p[[step, "step"]] <- newName` — rename the step ([pip_rename()]);
+#'   references in dependent steps are updated as well.
 #' * `p[[step, "fun"]] <- fun` — replace the step's function
-#'   ([pip_replace()]); tags and execution mode are kept.
+#'   ([pip_replace()]); the tags and the execution mode are kept and the
+#'   downstream steps are marked as outdated.
+#' * `p[[step, "params"]] <- list(...)` — update the step's parameters
+#'   ([pip_set_params()]).
 #' * `p[[step, "tags"]] <- tags` — set the step's tags to exactly `tags`
 #'   (a character vector); `NULL` clears all tags.
 #' * `p[[step, "locked"]] <- TRUE|FALSE` — lock or unlock the step
 #'   ([pip_lock()] / [pip_unlock()]).
+#' * `p[[step, "exec"]] <- mode` — set the step's execution mode.
+#' * `p[[step, "state"]] <- state` — set the step's state.
+#' * `p[[step, "out"]] <- value` — set the step's stored output.
 #'
-#' Finally, `p[[step]] <- NULL` removes the step from the pipeline
-#' ([pip_remove()]).
+#' Assigning to any other step-table column, or to a meta field other than
+#' `name`, is not supported. To remove a step, use [pip_remove()].
 #' @param x A pipeflow pipeline or view.
-#' @param i A meta field name, an integer row index, or a step name.
-#' @param j Optional step property; see 'Details'.
+#' @param i `"name"` to assign the pipeline name, or a step name or integer
+#' row index to select the step to modify.
+#' @param j The step property to assign; see 'Details'.
 #' @param value The value to assign.
 #' @return The updated pipeline, invisibly.
 #' @examples
-#' p <- pip_new() |>
+#' p <- pip_new("pipe") |>
 #'   pip_add("load", \(x = 1) x) |>
-#'   pip_add("fit", \(x = ~load) x + 1) |>
-#'   pip_add("report", \(x = 1) x)
+#'   pip_add("fit", \(x = ~load, k = 2) x * k) |>
+#'   pip_add("report", \(x = ~fit) x)
+#'
+#' # Assign the pipeline name via its meta field
+#' p[["name"]] <- "demo"
 #'
 #' # Replace a step's function (tags and exec mode are kept)
-#' p[["fit", "fun"]] <- \(x = ~load) x * 2
+#' p[["fit", "fun"]] <- \(x = ~load, k = 2) x * k
+#'
+#' # Update parameters, tags, locking and the execution mode
+#' p[["fit", "params"]] <- list(k = 5)
 #' p[["fit", "tags"]] <- c("model", "daily")
 #' p[["fit", "locked"]] <- TRUE
 #' p[["fit", "locked"]] <- FALSE
+#' p[["fit", "exec"]] <- "plain"
 #'
-#' # Rename a step and remove an independent one
+#' # Rename a step; dependent steps are updated as well
 #' p[["load", "step"]] <- "read"
-#' p[["report"]] <- NULL
+#'
+#' # Assign by row index to set the state or the stored output
+#' p[[2, "state"]] <- "outdated"
+#' p[[2, "out"]] <- 42
 #' p
 #' @rdname Extract_value.pipeflow
 #' @export
