@@ -1238,11 +1238,20 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
 #' `TRUE`. In force mode, the selected step and all downstream
 #' dependent steps are removed together.
 #'
-#' @param x A pipeflow pip
+#' A view can be passed as well; the step must then be part of the view.
+#' Because removing steps drops rows from the pipeline, the row positions
+#' that a view selects are shifted. For views, `pip_remove()` therefore
+#' remaps the selector to the remaining steps and returns the updated view,
+#' so assign the result back: `v <- pip_remove(v, ...)`. Views that are not
+#' reassigned, and other views over the same pipeline, keep their old row
+#' positions and therefore can become invalid after a step removal.
+#'
+#' @param x A pipeflow pip or view
 #' @param step `string` the name of the step to be removed.
 #' @param force `logical` if `TRUE` the step is removed together
 #' with all its downstream dependencies.
-#' @return The updated pipeline, invisibly.
+#' @return The updated pipeline, invisibly. For a view, the view with its
+#' remapped selector.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(x = 1) x) |>
@@ -1256,12 +1265,19 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
 #' # Trying to remove a step that others depend on raises an error:
 #' # pip_remove(p, "load")  # Error!
 #'
+#' # If a view is passed as well, the step must be part of the view.
+#' v <- pip_view(p, step = "transform")
+#' try(pip_remove(v, "load"))  # Error: "load" is not part of the view
+#' v <- pip_remove(v, "transform")
+#' v[["step"]]              # view is remapped and stays valid
+#' p                        # "load"
+#'
 #' # force = TRUE removes the step and all its downstream dependents
 #' pip_remove(p, "load", force = TRUE)
 #' p                        # pipeline is now empty
 #' @export
 pip_remove <- function(x, step, force = FALSE) {
-    .assert_pip(x)
+    .assert_pip_or_view(x)
     if (!.is_single(step, "character")) {
         stop("step must be a single string")
     }
@@ -1271,6 +1287,9 @@ pip_remove <- function(x, step, force = FALSE) {
     if (!.pip_step_exists(x, step)) {
         stop("step '", step, "' does not exist")
     }
+    if (!.pip_step_in_view(x, step)) {
+        stop("step '", step, "' is not part of the view")
+    }
     if (!is.logical(force) || length(force) != 1L || is.na(force)) {
         stop("force must be a single logical value")
     }
@@ -1278,6 +1297,12 @@ pip_remove <- function(x, step, force = FALSE) {
     pipenv <- .pip_get_pipenv(x)
     dat <- pipenv[["data"]]
     `%chin%` <- data.table::`%chin%`
+
+    # For views, remember the covered steps so that the view can be remapped.
+    isView <- .is_pipeflow_view(x)
+    if (isView) {
+        viewSteps <- dat[["step"]][.pip_view_rows(x)]
+    }
 
     directDeps <- dat[["step"]][
         vapply(
@@ -1344,6 +1369,13 @@ pip_remove <- function(x, step, force = FALSE) {
     )
 
     data.table::setindexv(pipenv[["data"]], list("step", ".nodeId"))
+
+    # Remap the view to the shifted (and potentially dropped) row positions.
+    if (isView) {
+        remaining <- pipenv[["data"]][["step"]]
+        newRows <- as.integer(which(remaining %chin% viewSteps))
+        x <- .wrap_pipenv(pipenv, name = x[["name"]], view = newRows)
+    }
     invisible(x)
 }
 

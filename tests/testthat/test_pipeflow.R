@@ -1234,6 +1234,33 @@ describe("pip_remove", {
             )
         )
     })
+
+    it("removes a step through a view and remaps the selector", {
+        p <- test_pip()
+        v <- pip_view(p, step = c("f4", "g1"))
+        expect_equal(v[["view"]], c(4L, 5L))
+
+        expect_error(
+            pip_remove(v, "f1"),
+            "step 'f1' is not part of the view"
+        )
+
+        v <- pip_remove(v, "f4")
+
+        expect_equal(p[["data"]][["step"]], c("f1", "f2", "f3", "g1"))
+        expect_equal(v[["step"]], c(g1 = "g1"))
+        expect_equal(v[["view"]], 4L)
+    })
+
+    it("force-removes downstream steps through a view", {
+        p <- test_pip()
+        v <- pip_view(p, step = c("f1", "f2"))
+
+        suppressMessages(v <- pip_remove(v, "f1", force = TRUE))
+
+        expect_equal(p[["data"]][["step"]], "g1")
+        expect_equal(length(v), 0L)
+    })
 })
 
 
