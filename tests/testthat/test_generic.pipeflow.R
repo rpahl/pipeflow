@@ -553,35 +553,59 @@ describe("assignment operator [[<-", {
     test_pip <- function() {
         pip_new("pipe") |>
             pip_add("s1", \(x = 1) x, tags = "init") |>
-            pip_add("s2", \(x = ~s1) x + 1)
+            pip_add("s2", \(x = ~s1) x + 1) |>
+            pip_add("s3", \(x = ~s2) x + 1)
     }
 
-    it("assigns step name, tags, locked, exec and wrapper fields", {
+    it("can assign a new name", {
         p <- test_pip()
+        p[["name"]] <- "renamed"
+        expect_equal(p[["name"]], "renamed")
+    })
 
-        p[["s2", "step"]] <- "s3"
-        expect_equal(unname(p[["data"]][["step"]]), c("s1", "s3"))
+    it("can rename a step", {
+        p <- test_pip()
+        p[["s2", "step"]] <- "s2_renamed"
+        expect_equal(unname(p[["data"]][["step"]]), c("s1", "s2_renamed", "s3"))
         expect_equal(unname(p[["data"]][["depends"]][[2]]), "s1")
+    })
 
+    it("can assign and clear tags", {
+        p <- test_pip()
         p[["s1", "tags"]] <- c("a", "b")
         expect_equal(p[["data"]][["tags"]][[1]], c("a", "b"))
         p[["s1", "tags"]] <- NULL
         expect_equal(p[["data"]][["tags"]][[1]], character(0))
+    })
 
+    it("can assign locked status", {
+        p <- test_pip()
         p[["s1", "locked"]] <- TRUE
         expect_true(p[["data"]][["locked"]][[1]])
         p[["s1", "locked"]] <- FALSE
         expect_false(p[["data"]][["locked"]][[1]])
+    })
 
-        p[["s3", "exec"]] <- "plain"
+    it("can assign execution mode", {
+        p <- test_pip()
+        p[["s2", "exec"]] <- "plain"
         expect_equal(p[["data"]][["exec"]][[2]], "plain")
 
-        p[["name"]] <- "renamed"
-        expect_equal(p[["name"]], "renamed")
+        expect_error(p[["s2", "exec"]] <- "bad_mode", "exec must be one of")
+        expect_error(p[["s2", "exec"]] <- NULL, "must be a single string")
+    })
 
+    it("can assign states", {
+        p <- test_pip()
         p[["s1", "state"]] <- "outdated"
         expect_equal(p[["data"]][["state"]][[1]], "outdated")
 
+        expect_error(p[["s2", "state"]] <- "bad_state", "state must be one of")
+        expect_error(p[["s2", "state"]] <- NULL, "must be a single string")
+    })
+
+    it("can assign output values", {
+        p <- test_pip()
         p[["s1", "out"]] <- 10
         expect_equal(p[["data"]][["out"]][[1]], 10)
     })
@@ -660,7 +684,7 @@ describe("assignment operator [[<-", {
         )
         expect_error(
             p[[99L, "tags"]] <- "a",
-            "row index 99 out of bounds [1, 2]",
+            "row index 99 out of bounds [1, 3]",
             fixed = TRUE
         )
         expect_error(
