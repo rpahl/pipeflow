@@ -72,6 +72,7 @@
     if (!(exec %in% allowed)) {
         stop("exec must be one of: ", toString(allowed))
     }
+    invisible(exec)
 }
 
 .assert_logger <- function(lgr) {
@@ -81,12 +82,14 @@
     if (!all(c("level", "msg") %in% names(formals(lgr)))) {
         stop("lgr must be a function with arguments 'level' and 'msg'")
     }
+    invisible(lgr)
 }
 
 .assert_pip_or_view <- function(x) {
     if (!.is_pipeflow(x)) {
         stop_no_call("x must be a pipeflow pip or view")
     }
+    invisible(x)
 }
 
 # Structural operations require a full pipeline, not a view.
@@ -97,6 +100,18 @@
     if (.is_pipeflow_view(x)) {
         stop_no_call("x must be a full pipeline, not a view")
     }
+    invisible(x)
+}
+
+.assert_state <- function(state) {
+    if (!.is_single(state, "character") || is.na(state)) {
+        stop("state must be a single string")
+    }
+    allowed <- names(.step_states)
+    if (!(state %in% allowed)) {
+        stop("state must be one of: ", toString(allowed))
+    }
+    invisible(state)
 }
 
 # -------

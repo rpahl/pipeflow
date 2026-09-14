@@ -458,31 +458,61 @@ dim.pipeflow <- function(x) {
     if (missing(i)) {
         stop("i must be provided")
     }
-    if (!is.character(i) && length(i) != 1L) {
-        stop("i must be a single character string")
+    if (length(i) != 1L) {
+        stop("i must be of length 1")
     }
-    if (i %in% names(unclass(x))) {
-        unclass(x)[[i]] <- value
-        return(x)
+    if (identical(i, "name")) {
+        if (!.is_single(value, "character") || is.na(value) || !nzchar(value)) {
+            stop("name must be a non-empty string")
+        }
+        return(replace(x, "name", value))
+    }
+
+    env <- .pip_get_pipenv(x)
+    data <- env[["data"]]
+
+    # Determine the row index of the step to modify, either by name or by index.
+    if (is.character(i)) {
+        step <- i
+        if (!.pip_step_exists(x, step)) {
+            stop("element or step '", step, "' does not exist")
+        }
+        i <- data.table::chmatch(step, data[["step"]])
+    } else if (is.numeric(i)) {
+        i <- as.integer(i)
+        if (i < 1L || i > nrow(x)) {
+            stop(sprintf("row index %d out of bounds [%d, %d]", i, 1, nrow(x)))
+        }
+        step <- data[["step"]][[i]]
+    } else {
+        stop("i must be a step name or row index")
     }
 
     if (missing(j)) {
         stop("j must be provided when assigning to a step property")
     }
-    if (!.pip_step_exists(x, i)) {
-        stop("element or step '", i, "' does not exist")
+    if (length(j) != 1L) {
+        stop("j must be a single step property name")
     }
 
-    data <- x[["data"]]
-    step <- i
-    i <- data.table::chmatch(step, data[["step"]])
-
+    # Dispatch the step modification function based on the property name.
     if (j == "step") {
         pip_rename(x, from = step, to = value)
     } else if (j == "fun") {
-        pip_replace(x, step = step, fun = value)
+        pip_replace(
+            x,
+            step = step,
+            fun = value,
+            tags = data[["tags"]][[i]],
+            exec = data[["exec"]][[i]]
+        )
     } else if (j == "params") {
         pip_set_params(pip_view(x, step = step), params = value)
+    } else if (j == "out") {
+        data.table::set(data, i = i, j = "out", value = list(value))
+    } else if (j == "state") {
+        .assert_state(value)
+        data.table::set(data, i = i, j = "state", value = value)
     } else if (j == "tags") {
         if (!is.null(value) && !is.character(value)) {
             stop("tags must be a character vector")
@@ -491,9 +521,7 @@ dim.pipeflow <- function(x) {
             data,
             i = i,
             j = "tags",
-            value = as.character(value),
-            tags = data[["tags"]][[i]],
-            exec = data[["exec"]][[i]]
+            value = list(as.character(value))
         )
     } else if (j == "locked") {
         if (!.is_single(value, "logical") || is.na(value)) {
