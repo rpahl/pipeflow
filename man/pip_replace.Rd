@@ -7,7 +7,7 @@
 pip_replace(x, step, fun, tags = character(0), params = list(), exec = "auto")
 }
 \arguments{
-\item{x}{A pipeflow pipeline object.}
+\item{x}{A pipeflow pipeline or view object.}
 
 \item{step}{Step name.}
 
@@ -64,4 +64,11 @@ p
 # Re-run to bring everything up to date
 pip_run(p)
 p
+
+# If a view is passed, the step must be part of the view
+v <- pip_view(p, step = "double")
+pip_replace(v, "double", \(x = ~load) x * 3)
+p[["state"]]                                # "double" is "new" again
+
+try(pip_replace(v, "load", \(n = 2) seq_len(n)))
 }

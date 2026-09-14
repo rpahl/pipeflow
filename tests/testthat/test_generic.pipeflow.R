@@ -672,14 +672,58 @@ describe("assignment operator [[<-", {
             "j must be a single step property name"
         )
     })
-})
 
-describe("extract operator [[", {
-    test_pip <- function() {
-        pip_new("pipe") |>
-            pip_add("s1", \(x = 1) x, tags = "init") |>
-            pip_add("s2", \(x = ~s1) x + 1)
-    }
+    it("supports views with view-relative indices and step names", {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x, tags = "a") |>
+            pip_add("s2", \(x = ~s1) x + 1) |>
+            pip_add("s3", \(x = ~s2) x + 1, tags = "c")
+
+        v <- pip_view(p, step = c("s2", "s3"))
+
+        # Integer indices refer to the visible steps of the view
+        v[[1, "tags"]] <- "b"
+        expect_equal(p[["data"]][["tags"]][[2]], "b")
+        expect_equal(p[["data"]][["tags"]][[1]], "a")
+
+        # Step names must be covered by the view
+        expect_error(
+            v[["s1", "tags"]] <- "x",
+            "step 's1' is not part of the view"
+        )
+
+        # Bounds are relative to the view
+        expect_error(
+            v[[3, "tags"]] <- "x",
+            "row index 3 out of bounds [1, 2]",
+            fixed = TRUE
+        )
+
+        # Assignments are shared with the originating pipeline
+        v[[2, "state"]] <- "outdated"
+        expect_equal(p[["data"]][["state"]][[3]], "outdated")
+    })
+
+    it("supports rename, replace and params through views", {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1, k = 2) x * k) |>
+            pip_add("s3", \(x = ~s2) x + 1)
+
+        v <- pip_view(p, step = c("s2", "s3"))
+
+        v[["s2", "params"]] <- list(k = 5)
+        expect_equal(p[["data"]][["params"]][[2]][["k"]], 5)
+
+        v[["s2", "step"]] <- "renamed"
+        expect_equal(unname(p[["data"]][["step"]]), c("s1", "renamed", "s3"))
+        expect_equal(unname(p[["data"]][["depends"]][[3]]), "renamed")
+
+        v <- pip_view(p, step = c("renamed", "s3"))
+        v[["renamed", "fun"]] <- \(x = ~s1, k = 2) x * k
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["data"]][["out"]][[2]], 2)
+    })
 })
 
 

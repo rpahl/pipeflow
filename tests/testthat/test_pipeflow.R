@@ -1094,6 +1094,28 @@ describe("pip_rename", {
         steps <- .pip_filter_nodes(p, nodes)[["step"]]
         expect_setequal(steps, c("first", "f2", "f3"))
     })
+
+    it("renames a step through a view", {
+        p <- test_pip()
+        v <- pip_view(p, step = c("f2", "f3"))
+
+        expect_error(
+            pip_rename(v, from = "f1", to = "first"),
+            "step 'f1' is not part of the view"
+        )
+
+        pip_rename(v, from = "f2", to = "second")
+
+        expect_equal(p[["data"]][["step"]], c("f1", "second", "f3"))
+        expect_equal(
+            p[["data"]][["depends"]],
+            list(
+                character(0),
+                c(b = "f1"),
+                c(a = "f1", b = "second")
+            )
+        )
+    })
 })
 
 
@@ -1305,6 +1327,23 @@ describe("pip_replace", {
 
         i <- match("a2", p[["data"]][["step"]])
         expect_equal(p[["data"]][["tags"]][[i]], c("updated", "core"))
+    })
+
+    it("replaces a step through a view", {
+        p <- test_pip()
+        v <- pip_view(p, step = c("f2", "f3"))
+
+        expect_error(
+            pip_replace(v, "f1", \(x = 1) x),
+            "step 'f1' is not part of the view"
+        )
+
+        pip_replace(v, "f2", \(x = 4) x * 2)
+
+        expect_equal(p[["data"]][["step"]], c("f1", "f2", "f3"))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["data"]][step == "f2", out][[1]], 8)
+        expect_equal(p[["data"]][step == "f3", out][[1]], 9)
     })
 })
 

@@ -434,6 +434,17 @@
     .pip_get_pipenv(x)[["data"]][rows, ]
 }
 
+# TRUE if `step` is covered by the rows of `x`. Always TRUE for a full
+# pipeline (where all rows are covered) and FALSE for a view that does not
+# cover the step.
+.pip_step_in_view <- function(x, step) {
+    absRow <- data.table::chmatch(step, x[["data"]][["step"]])
+    if (is.na(absRow)) {
+        return(FALSE)
+    }
+    absRow %in% .pip_view_rows(x)
+}
+
 .pip_filter <- function(x, on, values) {
     x[["data"]][list(values), on = on]
 }
@@ -1341,7 +1352,7 @@ pip_remove <- function(x, step, force = FALSE) {
 #'
 #' Renames the selected step and updates dependency references in
 #' downstream steps.
-#' @param x A pipeflow pip
+#' @param x A pipeflow pip or view
 #' @param from Existing step name
 #' @param to New step name
 #' @return The updated pipeline, invisibly.
@@ -1354,11 +1365,19 @@ pip_remove <- function(x, step, force = FALSE) {
 #' pip_rename(p, from = "s1", to = "load_data")
 #' p
 #'
-#' #' # Trying to rename to an existing step name raises an error:
+#' # Trying to rename to an existing step name raises an error:
 #' try(pip_rename(p, "load_data", to = "s2"))  # step 's2' already exists!
+#'
+#' # If a view is passed, the step must be part of the view
+#' v <- pip_view(p, step = c("load_data", "s2"))
+#' pip_rename(v, from = "load_data", to = "input")
+#' p[["step"]]                                 # "input", "s2"
+
+#' v2 <- pip_view(p, step = "s2")
+#' try(pip_rename(v2, from = "input", to = "data"))
 #' @export
 pip_rename <- function(x, from, to) {
-    .assert_pip(x)
+    .assert_pip_or_view(x)
 
     if (!.is_single(from, "character")) {
         stop("from must be a single string")
@@ -1382,6 +1401,9 @@ pip_rename <- function(x, from, to) {
 
     if (!.pip_step_exists(x, from)) {
         stop("step '", from, "' does not exist")
+    }
+    if (!.pip_step_in_view(x, from)) {
+        stop("step '", from, "' is not part of the view")
     }
     if (.pip_step_exists(x, to)) {
         stop("step '", to, "' already exists")
@@ -1422,7 +1444,7 @@ pip_rename <- function(x, from, to) {
 #' pipeline. Downstream steps are automatically marked as outdated and will
 #' re-run on the next [pip_run()].
 #'
-#' @param x A pipeflow pipeline object.
+#' @param x A pipeflow pipeline or view object.
 #' @param step Step name.
 #' @param fun Function to execute for the step.
 #' @param tags Optional character vector of tags belonging to the step.
@@ -1462,6 +1484,13 @@ pip_rename <- function(x, from, to) {
 #' # Re-run to bring everything up to date
 #' pip_run(p)
 #' p
+#'
+#' # If a view is passed, the step must be part of the view
+#' v <- pip_view(p, step = "double")
+#' pip_replace(v, "double", \(x = ~load) x * 3)
+#' p[["state"]]                                # "double" is "new" again
+#'
+#' try(pip_replace(v, "load", \(n = 2) seq_len(n)))
 #' @export
 pip_replace <- function(
     x,
@@ -1471,7 +1500,7 @@ pip_replace <- function(
     params = list(),
     exec = "auto"
 ) {
-    .assert_pip(x)
+    .assert_pip_or_view(x)
     if (!.is_single(step, "character")) {
         stop("step must be a single string")
     }
@@ -1483,6 +1512,9 @@ pip_replace <- function(
     }
     if (!.pip_step_exists(x, step)) {
         stop("step '", step, "' does not exist")
+    }
+    if (!.pip_step_in_view(x, step)) {
+        stop("step '", step, "' is not part of the view")
     }
     if (!is.function(fun)) {
         stop("fun must be a function")

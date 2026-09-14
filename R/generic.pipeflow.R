@@ -437,9 +437,16 @@ dim.pipeflow <- function(x) {
 #'
 #' Assigning to any other step-table column, or to a meta field other than
 #' `name`, is not supported. To remove a step, use [pip_remove()].
+#'
+#' Views are supported as well. For a view, `i` is interpreted relative to the
+#' steps covered by the view: an integer refers to the n-th visible step, and a
+#' step name must be part of the view. Because views share the pipeline
+#' environment, step properties are written through to the originating
+#' pipeline, while `name` only renames the view itself.
 #' @param x A pipeflow pipeline or view.
 #' @param i `"name"` to assign the pipeline name, or a step name or integer
-#' row index to select the step to modify.
+#' row index to select the step to modify. For a view, the row index is
+#' relative to the covered steps and the step name must be part of the view.
 #' @param j The step property to assign; see 'Details'.
 #' @param value The value to assign.
 #' @return The updated pipeline, invisibly.
@@ -487,19 +494,27 @@ dim.pipeflow <- function(x) {
 
     env <- .pip_get_pipenv(x)
     data <- env[["data"]]
+    rows <- .pip_view_rows(x)
 
-    # Determine the row index of the step to modify, either by name or by index.
+    # Determine the absolute row index of the step to modify. For a view, `i`
+    # is interpreted relative to the covered rows and step names must be part
+    # of the view.
     if (is.character(i)) {
         step <- i
         if (!.pip_step_exists(x, step)) {
             stop("element or step '", step, "' does not exist")
         }
         i <- data.table::chmatch(step, data[["step"]])
+        if (!i %in% rows) {
+            stop("step '", step, "' is not part of the view")
+        }
     } else if (is.numeric(i)) {
         i <- as.integer(i)
-        if (i < 1L || i > nrow(x)) {
-            stop(sprintf("row index %d out of bounds [%d, %d]", i, 1, nrow(x)))
+        if (i < 1L || i > length(rows)) {
+            fmt <- "row index %d out of bounds [%d, %d]"
+            stop(sprintf(fmt, i, 1, length(rows)))
         }
+        i <- rows[[i]]
         step <- data[["step"]][[i]]
     } else {
         stop("i must be a step name or row index")
@@ -516,13 +531,9 @@ dim.pipeflow <- function(x) {
     if (j == "step") {
         pip_rename(x, from = step, to = value)
     } else if (j == "fun") {
-        pip_replace(
-            x,
-            step = step,
-            fun = value,
-            tags = data[["tags"]][[i]],
-            exec = data[["exec"]][[i]]
-        )
+        tags <- data[["tags"]][[i]]
+        exec <- data[["exec"]][[i]]
+        pip_replace(x, step = step, fun = value, tags = tags, exec = exec)
     } else if (j == "params") {
         pip_set_params(pip_view(x, step = step), params = value)
     } else if (j == "out") {
@@ -534,12 +545,8 @@ dim.pipeflow <- function(x) {
         if (!is.null(value) && !is.character(value)) {
             stop("tags must be a character vector")
         }
-        data.table::set(
-            data,
-            i = i,
-            j = "tags",
-            value = list(as.character(value))
-        )
+        value <- list(as.character(value))
+        data.table::set(data, i = i, j = "tags", value = value)
     } else if (j == "locked") {
         if (!.is_single(value, "logical") || is.na(value)) {
             stop("locked must be a single logical value")

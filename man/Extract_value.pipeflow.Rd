@@ -16,7 +16,8 @@
 \item{x}{A pipeflow pipeline or view.}
 
 \item{i}{\code{"name"} to assign the pipeline name, or a step name or integer
-row index to select the step to modify.}
+row index to select the step to modify. For a view, the row index is
+relative to the covered steps and the step name must be part of the view.}
 
 \item{j}{The step property to assign; see 'Details'.}
 
@@ -82,6 +83,12 @@ downstream steps are marked as outdated.
 
 Assigning to any other step-table column, or to a meta field other than
 \code{name}, is not supported. To remove a step, use \code{\link[=pip_remove]{pip_remove()}}.
+
+Views are supported as well. For a view, \code{i} is interpreted relative to the
+steps covered by the view: an integer refers to the n-th visible step, and a
+step name must be part of the view. Because views share the pipeline
+environment, step properties are written through to the originating
+pipeline, while \code{name} only renames the view itself.
 }
 \examples{
 p <- pip_new() |>
