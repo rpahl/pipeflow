@@ -445,6 +445,79 @@
     absRow %in% .pip_view_rows(x)
 }
 
+# Resolve the `i` selector of `[.pipeflow` to absolute row indices. `i_expr`
+# is the unevaluated `i` expression; it is evaluated in the context of the
+# covered rows, i.e. the data of a view or the full step table of a pipeline.
+# `enclos` is used as the enclosing environment for boolean filter expressions.
+.pip_select_rows <- function(x, i_expr, enclos) {
+    dat <- .pip_get_pipenv(x)[["data"]]
+    view <- .is_pipeflow_view(x)
+    rows <- .pip_view_rows(x)
+    sub <- if (view) dat[rows] else dat
+
+    value <- eval(i_expr, envir = sub, enclos = enclos)
+
+    if (is.logical(value)) {
+        if (length(value) == 1L) {
+            value <- rep(value, nrow(sub))
+        }
+        if (length(value) != nrow(sub)) {
+            stop(sprintf(
+                "logical filter has length %d but the %s has %d rows",
+                length(value),
+                if (view) "view" else "pipeline",
+                nrow(sub)
+            ))
+        }
+        if (anyNA(value)) {
+            stop("logical filter must not contain NA")
+        }
+        return(rows[which(value)])
+    }
+
+    if (is.numeric(value)) {
+        if (anyNA(value)) {
+            stop("row indices in 'i' must not contain NA")
+        }
+        idx <- sort(unique(as.integer(value)))
+        bad <- idx[idx < 1L | idx > nrow(sub)]
+        if (length(bad) > 0L) {
+            stop("Invalid row indices in 'i': ", toString(bad))
+        }
+        return(rows[idx])
+    }
+
+    if (is.character(value)) {
+        if (anyNA(value)) {
+            stop("step names must not contain NA")
+        }
+        if (!all(nzchar(value))) {
+            stop("step names must be non-empty strings")
+        }
+        m <- data.table::chmatch(value, dat[["step"]])
+        if (anyNA(m)) {
+            unknown <- unique(value[is.na(m)])
+            stop("Unknown step names: ", toString(unknown), call. = FALSE)
+        }
+        m <- sort(unique(m))
+        outside <- m[!(m %in% rows)]
+        if (length(outside) > 0L) {
+            stop(
+                "step '",
+                dat[["step"]][[outside[[1L]]]],
+                "' is not part of the view"
+            )
+        }
+        return(m)
+    }
+
+    stop(sprintf(
+        "`i` must evaluate to row indices, step names, or a logical filter, ",
+        "not %s",
+        typeof(value)
+    ))
+}
+
 .pip_filter <- function(x, on, values) {
     x[["data"]][list(values), on = on]
 }

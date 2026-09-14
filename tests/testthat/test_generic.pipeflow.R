@@ -384,12 +384,17 @@ describe("extract operator [", {
             expect_equal(sub[["data"]][["step"]], c("load", "fit", "eval"))
         })
 
-        it("is restricted to full pipelines (use pip_view for views)", {
-            p <- filter_pip()
+        it("selects relative to the steps covered by a view", {
+            p <- set_state(filter_pip(), "fit")
             v <- pip_view(p, step = c("fit", "eval"))
 
-            expect_error(v[state == "new"], "full pipeline")
-            expect_error(v[1L], "full pipeline")
+            expect_true(.is_pipeflow_view(v[1L]))
+            expect_equal(v[1L][["view"]], 2L)
+            expect_equal(v[][["view"]], c(2L, 3L))
+            expect_equal(unname(v[state == "done"][["step"]]), "fit")
+
+            expect_error(v["load"], "not part of the view")
+            expect_error(v[3L], "Invalid row indices")
         })
 
         it("rejects named filters and stray arguments", {
@@ -410,6 +415,73 @@ describe("extract operator [", {
             p <- filter_pip()
 
             expect_error(p[not_a_column == 1], "not_a_column")
+        })
+    })
+
+    describe("two-index extraction", {
+        it("extracts columns from the full step table with p[, j]", {
+            p <- test_pip()
+
+            expect_s3_class(p[, "step"], "data.table")
+            expect_equal(
+                p[, "step"][["step"]],
+                c("a1", "a2", "b1", "a3", "b2")
+            )
+            expect_equal(nrow(p[, "step"]), 5L)
+            expect_equal(
+                names(p[, c("step", "tags")]),
+                c("step", "tags")
+            )
+        })
+
+        it("extracts columns for the rows selected by i", {
+            p <- test_pip()
+
+            expect_equal(p[c("a2", "b2"), "step"][["step"]], c("a2", "b2"))
+            expect_equal(
+                p[tags %like% "unused", "step"][["step"]],
+                character(0)
+            )
+            expect_error(p[1:2, "nope"], "nope")
+        })
+
+        it("requires j to be a character vector", {
+            p <- test_pip()
+
+            expect_error(p[, 1L], "character vector of column names")
+            expect_error(p[, TRUE], "character vector of column names")
+            expect_error(
+                p[1:2, list("step")],
+                "character vector of column names"
+            )
+        })
+
+        it("warns and ignores view when j is specified", {
+            p <- test_pip()
+
+            expect_warning(
+                p[1:2, "step", view = FALSE],
+                "is ignored when 'j' is specified"
+            )
+        })
+
+        it("accepts a column-name vector from the calling scope", {
+            p <- test_pip()
+            cols <- c("step", "tags")
+
+            out <- p[, cols]
+            expect_equal(names(out), c("step", "tags"))
+            expect_equal(nrow(out), 5L)
+        })
+
+        it("extracts from views relative to the covered rows", {
+            p <- test_pip()
+            v <- pip_view(p, step = c("a2", "b2"))
+
+            expect_equal(v[, "step"][["step"]], c("a2", "b2"))
+            expect_equal(v[1L, "step"][["step"]], "a2")
+            expect_error(v[3L, "step"], "Invalid row indices")
+            expect_error(v["a1", "step"], "not part of the view")
         })
     })
 })

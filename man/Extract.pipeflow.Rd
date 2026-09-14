@@ -4,21 +4,26 @@
 \alias{[.pipeflow}
 \title{Extract or subset a pipeline}
 \usage{
-\method{[}{pipeflow}(x, i, view = TRUE)
+\method{[}{pipeflow}(x, i, j, view = TRUE)
 }
 \arguments{
-\item{x}{A pipeflow pipeline object.}
+\item{x}{A pipeflow pipeline or view object.}
 
 \item{i}{Row selection: integer row indices, character step names, or a
-boolean filter expression evaluated in the context of the step table.}
+boolean filter expression evaluated in the context of the step table. For a
+view, indices are relative to the covered steps and step names must be part
+of the view.}
+
+\item{j}{Optional character vector of step-table column names to extract.}
 
 \item{view}{If \code{TRUE} (default), a view referencing the selected steps is
 returned. If \code{FALSE}, a new pipeline is returned that includes the selected
-steps and all their upstream dependencies.}
+steps and all their upstream dependencies. Ignored when \code{j} is provided.}
 }
 \value{
 A pipeflow view (if \code{view = TRUE}) or a new pipeflow pipeline
-(if \code{view = FALSE}).
+(if \code{view = FALSE}). If \code{j} is provided, a \code{data.table} with the selected
+rows and columns.
 }
 \description{
 Selects steps from a pipeline. By default, a lightweight \code{\link[=pip_view]{pip_view()}} is
@@ -40,9 +45,18 @@ Boolean filters may reference the columns of the step table (\code{step}, \code{
 \code{params}, \code{depends}, \code{tags}, \code{state}, ...) directly as variables, and the
 \link[=pipeflow-operators]{data.table filter operators} re-exported by pipeflow
 (e.g. \verb{\%like\%}, \verb{\%chin\%}, \verb{\%between\%}) are available. \code{p[]} returns a copy
-of the pipeline. For validated, programmatic filters with dedicated
-arguments (such as matching \emph{any} of a set of tags) use \code{\link[=pip_view]{pip_view()}}
-instead.
+of the pipeline.
+
+When \code{j} is provided, the selected steps are returned as a step-table
+extraction rather than a pipeline. \code{j} must be a character vector of column
+names: \code{p[, j]} keeps those columns for all steps and \code{p[i, j]} first
+selects the rows and then keeps those columns. The result in this case is a
+\code{data.table}.
+
+If done on a view, row selection is relative to the covered steps, and step
+names must be part of the view. For validated,
+programmatic filters with dedicated arguments (such as matching \emph{any} of a
+set of tags) use \code{\link[=pip_view]{pip_view()}} instead.
 }
 \examples{
 p <- pip_new() |>
@@ -68,4 +82,13 @@ p2 <- p[]
 pip_run(p2)
 p
 p2
+
+# Two-index extraction selects step-table columns by name
+p[, "step"]                     # one-column data.table
+p[c("load", "square"), "out"]   # selected rows, one column
+
+# Works with views - selection is relative to the covered steps
+v <- pip_view(p, tags = "model")
+v[1L, "out"]
+v[, "step"]
 }
