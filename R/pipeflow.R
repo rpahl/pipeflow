@@ -2341,13 +2341,20 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
 
     # Resolve each filter name to the column it filters on.
     for (name in names(filters)) {
+        values <- filters[[name]]
+        if (!is.character(values)) {
+            stop(sprintf(
+                "filter '%s' must be a character vector, not %s",
+                name,
+                typeof(values)
+            ))
+        }
         col <- if (name == "params") {
             # Special case "params": it matches against the parameter *names*
             lapply(sub[["params"]], names)
         } else {
             sub[[name]]
         }
-        values <- filters[[name]]
         matchFun <- if (fixed) {
             function(x) any(x %in% values)
         } else {

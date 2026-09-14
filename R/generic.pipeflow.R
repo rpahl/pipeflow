@@ -416,9 +416,12 @@ dim.pipeflow <- function(x) {
 #' Assign values to pipeline meta fields or step properties
 #'
 #' `p[["name"]] <- value` sets the name of the pipeline, where `value` must be
-#' a non-empty string. The two-index form `p[[step, property]] <- value`
-#' provides interactive shortcuts for modifying a single step, where `step` is
-#' a step name or an integer row index and `property` selects what to update:
+#' a non-empty string, and `p[["view"]] <- steps` restricts the pipeline to a
+#' view covering `steps` (a character vector of step names). Assigning
+#' `p[["view"]] <- NULL` clears the view and returns a full pipeline. The
+#' two-index form `p[[step, property]] <- value` provides interactive
+#' shortcuts for modifying a single step, where `step` is a step name or an
+#' integer row index and `property` selects what to update:
 #'
 #' * `p[[step, "step"]] <- newName` — rename the step ([pip_rename()]);
 #'   references in dependent steps are updated as well.
@@ -436,7 +439,7 @@ dim.pipeflow <- function(x) {
 #' * `p[[step, "out"]] <- value` — set the step's stored output.
 #'
 #' Assigning to any other step-table column, or to a meta field other than
-#' `name`, is not supported. To remove a step, use [pip_remove()].
+#' `name` and `view`, is not supported. To remove a step, use [pip_remove()].
 #'
 #' Views are supported as well. For a view, `i` is interpreted relative to the
 #' steps covered by the view: an integer refers to the n-th visible step, and a
@@ -444,9 +447,10 @@ dim.pipeflow <- function(x) {
 #' environment, step properties are written through to the originating
 #' pipeline, while `name` only renames the view itself.
 #' @param x A pipeflow pipeline or view.
-#' @param i `"name"` to assign the pipeline name, or a step name or integer
-#' row index to select the step to modify. For a view, the row index is
-#' relative to the covered steps and the step name must be part of the view.
+#' @param i `"name"` or `"view"` to assign the respective meta field, or a
+#' step name or integer row index to select the step to modify. For a view, the
+#' row index is relative to the covered steps and the step name must be part of
+#' the view.
 #' @param j The step property to assign; see 'Details'.
 #' @param value The value to assign.
 #' @return The updated pipeline, invisibly.
@@ -476,6 +480,12 @@ dim.pipeflow <- function(x) {
 #' p[[2, "state"]] <- "outdated"
 #' p[[2, "out"]] <- 42
 #' p
+#'
+#' # Restrict to a view covering selected steps, then clear it again
+#' p[["view"]] <- c("read", "fit")
+#' p[["step"]]                  # view -> "read", "fit"
+#' p[["view"]] <- NULL
+#' p[["step"]]                  # full pipeline again
 #' @rdname Extract_value.pipeflow
 #' @export
 `[[<-.pipeflow` <- function(x, i, j, value) {
@@ -490,6 +500,19 @@ dim.pipeflow <- function(x) {
             stop("name must be a non-empty string")
         }
         return(replace(x, "name", value))
+    }
+    if (identical(i, "view")) {
+        # Build a full wrapper over the shared environment and, if requested,
+        # derive a new view from it.
+        x <- .wrap_pipenv(
+            .pip_get_pipenv(x),
+            name = x[["name"]],
+            view = NULL
+        )
+        if (is.null(value)) {
+            return(x)
+        }
+        return(pip_view(x, step = value))
     }
 
     env <- .pip_get_pipenv(x)

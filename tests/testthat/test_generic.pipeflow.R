@@ -563,6 +563,41 @@ describe("assignment operator [[<-", {
         expect_equal(p[["name"]], "renamed")
     })
 
+    it("can assign or remove a view", {
+        p <- test_pip()
+        p[["view"]] <- c("s1", "s3")
+
+        expect_true(inherits(p, "pipeflow"))
+        expect_true(.is_pipeflow_view(p))
+        expect_equal(p[["view"]], c(1L, 3L))
+        expect_equal(unname(p[["step"]]), c("s1", "s3"))
+        expect_equal(nrow(p), 2L)
+
+        # Re-assigning replaces the current view
+        p[["view"]] <- "s2"
+        expect_equal(p[["view"]], 2L)
+        expect_equal(unname(p[["step"]]), "s2")
+
+        # Clearing the view turns it back into a full pipeline
+        p[["view"]] <- NULL
+        expect_false(.is_pipeflow_view(p))
+        expect_null(p[["view"]])
+        expect_equal(nrow(p), 3L)
+    })
+
+    it("signals invalid view assignments", {
+        p <- test_pip()
+
+        expect_error(
+            p[["view"]] <- 2L,
+            "filter 'step' must be a character vector"
+        )
+        expect_error(
+            p[["view"]] <- list("s1"),
+            "filter 'step' must be a character vector"
+        )
+    })
+
     it("can rename a step", {
         p <- test_pip()
         p[["s2", "step"]] <- "s2_renamed"
@@ -663,8 +698,28 @@ describe("assignment operator [[<-", {
         p <- test_pip()
 
         expect_error(
+            p[["name"]] <- 1,
+            "name must be a non-empty string"
+        )
+        expect_error(
+            p[["name"]] <- "",
+            "name must be a non-empty string"
+        )
+        expect_error(
             p[["unknown", "tags"]] <- "a",
             "element or step 'unknown' does not exist"
+        )
+        expect_error(
+            p[[TRUE, "tags"]] <- "a",
+            "i must be a step name or row index"
+        )
+        expect_error(
+            p[["s1"]] <- \(x = 1) x,
+            "j must be provided"
+        )
+        expect_error(
+            p[["s1", "time"]] <- 1,
+            "direct assignment to column 'time' is not supported"
         )
         expect_error(
             p[["s1", "nope"]] <- 1,

@@ -2837,6 +2837,24 @@ describe("pip_view", {
             "Invalid filter name"
         )
     })
+
+    it("signals non-character filter values", {
+        p <- pip_new()
+        pip_add(p, "s1", \(x = 1) x)
+
+        expect_error(
+            pip_view(p, step = 2L),
+            "filter 'step' must be a character vector, not integer"
+        )
+        expect_error(
+            pip_view(p, tags = 1L),
+            "filter 'tags' must be a character vector, not integer"
+        )
+        expect_error(
+            pip_view(p, params = TRUE),
+            "filter 'params' must be a character vector, not logical"
+        )
+    })
 })
 
 

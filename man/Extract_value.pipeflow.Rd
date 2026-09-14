@@ -15,9 +15,10 @@
 \arguments{
 \item{x}{A pipeflow pipeline or view.}
 
-\item{i}{\code{"name"} to assign the pipeline name, or a step name or integer
-row index to select the step to modify. For a view, the row index is
-relative to the covered steps and the step name must be part of the view.}
+\item{i}{\code{"name"} or \code{"view"} to assign the respective meta field, or a
+step name or integer row index to select the step to modify. For a view, the
+row index is relative to the covered steps and the step name must be part of
+the view.}
 
 \item{j}{The step property to assign; see 'Details'.}
 
@@ -34,9 +35,12 @@ column of the step table, and \code{p[[row, column]]} extracts a single cell.
 In addition, a few meta fields are accessible by name.
 
 \code{p[["name"]] <- value} sets the name of the pipeline, where \code{value} must be
-a non-empty string. The two-index form \code{p[[step, property]] <- value}
-provides interactive shortcuts for modifying a single step, where \code{step} is
-a step name or an integer row index and \code{property} selects what to update:
+a non-empty string, and \code{p[["view"]] <- steps} restricts the pipeline to a
+view covering \code{steps} (a character vector of step names). Assigning
+\code{p[["view"]] <- NULL} clears the view and returns a full pipeline. The
+two-index form \code{p[[step, property]] <- value} provides interactive
+shortcuts for modifying a single step, where \code{step} is a step name or an
+integer row index and \code{property} selects what to update:
 }
 \details{
 \subsection{Meta fields}{
@@ -82,7 +86,7 @@ downstream steps are marked as outdated.
 }
 
 Assigning to any other step-table column, or to a meta field other than
-\code{name}, is not supported. To remove a step, use \code{\link[=pip_remove]{pip_remove()}}.
+\code{name} and \code{view}, is not supported. To remove a step, use \code{\link[=pip_remove]{pip_remove()}}.
 
 Views are supported as well. For a view, \code{i} is interpreted relative to the
 steps covered by the view: an integer refers to the n-th visible step, and a
@@ -144,4 +148,10 @@ p[["load", "step"]] <- "read"
 p[[2, "state"]] <- "outdated"
 p[[2, "out"]] <- 42
 p
+
+# Restrict to a view covering selected steps, then clear it again
+p[["view"]] <- c("read", "fit")
+p[["step"]]                  # view -> "read", "fit"
+p[["view"]] <- NULL
+p[["step"]]                  # full pipeline again
 }
