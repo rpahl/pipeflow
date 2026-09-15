@@ -582,13 +582,10 @@ dim.pipeflow <- function(x) {
 }
 
 
-`[<-.pipeflow` <- function(x, i, j, value) {
-    if (missing(j)) {
-        # same as p[step, "fun"] <- function(...) {}
-        pip_replace(x, step = i, fun = value)
-        return(x)
-    }
-}
+#' @rdname Extract_value.pipeflow
+#' @export
+`[<-.pipeflow` <- function(x, i, j, value) {}
+
 
 #' @rdname Extract_value.pipeflow
 #' @export
