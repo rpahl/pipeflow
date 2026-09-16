@@ -3,12 +3,15 @@
 \name{[[.pipeflow}
 \alias{[[.pipeflow}
 \alias{[[<-.pipeflow}
+\alias{[<-.pipeflow}
 \alias{$.pipeflow}
 \title{Extract values from a pipeline or view}
 \usage{
 \method{[[}{pipeflow}(x, i, j = NULL)
 
 \method{[[}{pipeflow}(x, i, j) <- value
+
+\method{[}{pipeflow}(x, i, j) <- value
 
 \method{$}{pipeflow}(x, i)
 }
@@ -47,15 +50,13 @@ integer row index and \code{property} selects what to update:
 
 The following meta fields are available via \code{p[["..."]]} (or \code{p$...}):
 \itemize{
-\item \code{data} — the step table, a \code{data.table} with one row per step. Columns
-include \code{step}, \code{fun}, \code{params}, \code{depends}, \code{tags},
-\code{exec}, \code{state}, \code{out}, \code{time}, and \code{locked}.
 \item \code{name} — the name of the pipeline.
 \item \code{view} — the absolute row indices of the steps covered by a view, or
 \code{NULL} for a full pipeline.
 \item \code{pipenv} — the shared inner environment holding the pipeline's state.
 All views and extracted subsets reference the same environment, so
-mutations are shared.
+mutations are shared. The step table is available as
+\code{p[["pipenv"]][["data"]]}.
 }
 }
 
@@ -101,10 +102,10 @@ p <- pip_new() |>
 pip_run(p)
 
 # Meta fields
-p[["data"]]              # the underlying step table
 p[["name"]]              # "pipe"
 p[["view"]]              # NULL — not a view
 p[["pipenv"]]            # the inner pipeline environment
+p[["pipenv"]][["data"]]  # the underlying step table
 
 # Column access, named by steps
 p[["step"]]   # c(load = "load", fit = "fit")
@@ -116,7 +117,6 @@ p[[2, "state"]]          # state of the second step
 
 # Views behave analogously:
 v <- pip_view(p, step = c("load", "fit"))
-v[["data"]]              # the underlying filtered step table
 v[["name"]]              # "pipe view"
 v[["view"]]              # row indices of the covered steps
 

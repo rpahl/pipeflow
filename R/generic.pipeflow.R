@@ -87,25 +87,26 @@
 # a `rows` selector, so list fields and inner-env bindings are accessed
 # through the same dispatch.
 .pip_subset2 <- function(x, i, j = NULL) {
+    if (missing(i)) {
+        stop("i must be provided")
+    }
+    if (length(i) != 1L || is.na(i)) {
+        stop("i must be a single step name or row index")
+    }
     if (is.null(j)) {
-        if (missing(i)) {
-            stop("i must be provided")
-        }
-
         # List fields of the wrapper have priority over column names.
         if (is.character(i) && length(i) == 1L && !is.na(i)) {
-            if (i %in% c("pipenv", "name", "view")) {
-                # Scenario: x[["pipenv"]], x[["name"]] or x[["view"]]
+            if (i %in% names(x)) {
                 return(.subset2(x, i))
             }
-            # Public inner-env bindings like "data" are next. Hidden
-            # internals like ".dag" and ".steps_to_nodes" are deliberately
-            # not exposed. Advanced users still can access them "manually"
-            # from the inner environment if needed.
-            env <- .pip_get_pipenv(x)
-            if (i %in% ls(env)) {
-                # ls() by default does not list variables starting with a dot
-                return(get(i, envir = env, inherits = FALSE))
+            # Runtime control functions live in the shared inner environment
+            # and are exposed explicitly (they are part of the public API).
+            if (i %in% c("restart", "stop")) {
+                return(get(
+                    i,
+                    envir = .pip_get_pipenv(x),
+                    inherits = FALSE
+                ))
             }
         }
 
@@ -119,12 +120,6 @@
     }
 
     # Two-index form extracts a single cell from a single row.
-    if (missing(i)) {
-        stop("i must be provided")
-    }
-    if (length(i) != 1L || is.na(i)) {
-        stop("i must be a single step name or row index")
-    }
     if (!is.character(j) || length(j) != 1L || is.na(j)) {
         stop("j must be a single column name")
     }
@@ -196,7 +191,12 @@ length.pipeflow <- function(x) {
 #' @rdname nrow.pipeflow
 #' @export
 dim.pipeflow <- function(x) {
-    c(as.integer(length(.pip_view_rows(x))), ncol(x[["data"]]))
+    c(
+        as.integer(length(.pip_view_rows(x))),
+        ncol(
+            .pip_get_pipenv(x)[["data"]]
+        )
+    )
 }
 
 
@@ -327,7 +327,7 @@ dim.pipeflow <- function(x) {
     )
     out <- .pip_compact(x, keepNodes)
 
-    nUpstream <- nrow(out[["data"]]) - length(rows)
+    nUpstream <- nrow(.pip_get_pipenv(out)[["data"]]) - length(rows)
     if (nUpstream > 0L) {
         message(sprintf(
             "pulled in %d upstream dependenc%s",
@@ -349,15 +349,13 @@ dim.pipeflow <- function(x) {
 #'
 #' The following meta fields are available via `p[["..."]]` (or `p$...`):
 #'
-#' * `data` — the step table, a `data.table` with one row per step. Columns
-#'   include `step`, `fun`, `params`, `depends`, `tags`,
-#'   `exec`, `state`, `out`, `time`, and `locked`.
 #' * `name` — the name of the pipeline.
 #' * `view` — the absolute row indices of the steps covered by a view, or
 #'   `NULL` for a full pipeline.
 #' * `pipenv` — the shared inner environment holding the pipeline's state.
 #'   All views and extracted subsets reference the same environment, so
-#'   mutations are shared.
+#'   mutations are shared. The step table is available as
+#'   `p[["pipenv"]][["data"]]`.
 #'
 #' ## Step-table columns
 #'
@@ -378,10 +376,10 @@ dim.pipeflow <- function(x) {
 #' pip_run(p)
 #'
 #' # Meta fields
-#' p[["data"]]              # the underlying step table
 #' p[["name"]]              # "pipe"
 #' p[["view"]]              # NULL — not a view
 #' p[["pipenv"]]            # the inner pipeline environment
+#' p[["pipenv"]][["data"]]  # the underlying step table
 #'
 #' # Column access, named by steps
 #' p[["step"]]   # c(load = "load", fit = "fit")
@@ -393,7 +391,6 @@ dim.pipeflow <- function(x) {
 #'
 #' # Views behave analogously:
 #' v <- pip_view(p, step = c("load", "fit"))
-#' v[["data"]]              # the underlying filtered step table
 #' v[["name"]]              # "pipe view"
 #' v[["view"]]              # row indices of the covered steps
 #'
@@ -492,7 +489,11 @@ dim.pipeflow <- function(x) {
         if (!.is_single(value, "character") || is.na(value) || !nzchar(value)) {
             stop("name must be a non-empty string")
         }
-        return(replace(x, "name", value))
+        return(.wrap_pipenv(
+            .pip_get_pipenv(x),
+            name = value,
+            view = .subset2(x, "view")
+        ))
     }
     if (identical(i, "view")) {
         # Build a full wrapper over the shared environment and, if requested,
@@ -584,7 +585,12 @@ dim.pipeflow <- function(x) {
 
 #' @rdname Extract_value.pipeflow
 #' @export
-`[<-.pipeflow` <- function(x, i, j, value) {}
+`[<-.pipeflow` <- function(x, i, j, value) {
+    stop(
+        "`[<-` is not supported for pipeflow objects - use `[[<-` or ",
+        "the pip_*() functions instead"
+    )
+}
 
 
 #' @rdname Extract_value.pipeflow

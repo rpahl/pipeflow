@@ -312,7 +312,7 @@
         .pip_reindex(x)
     }
 
-    dat <- x[["data"]]
+    dat <- .pip_get_pipenv(x)[["data"]]
     fun <- dat[["fun"]][[i]]
     args <- dat[["params"]][[i]]
     depends <- dat[["depends"]][[i]]
@@ -354,7 +354,7 @@
     # Re-read pipeline after execution to handle scenarios where the pipeline
     # modified itself at runtime. Since we update by step name, if the current
     # step does not exist anymore, we simply skip the update.
-    dat <- x[["data"]]
+    dat <- .pip_get_pipenv(x)[["data"]]
     rowNow <- data.table::chmatch(step, dat[["step"]])
     stepStillExists <- !is.na(rowNow)
     if (stepStillExists) {
@@ -403,7 +403,7 @@
 
 .pip_update_downstream <- function(x, steps, what, value) {
     nodes <- .pip_get_reachable_nodes(x, steps)
-    x[["data"]][list(nodes), (what) := value, on = ".nodeId"]
+    .pip_get_pipenv(x)[["data"]][list(nodes), (what) := value, on = ".nodeId"]
 
     invisible(x)
 }
@@ -438,7 +438,7 @@
 # pipeline (where all rows are covered) and FALSE for a view that does not
 # cover the step.
 .pip_step_in_view <- function(x, step) {
-    absRow <- data.table::chmatch(step, x[["data"]][["step"]])
+    absRow <- data.table::chmatch(step, .pip_get_pipenv(x)[["data"]][["step"]])
     if (is.na(absRow)) {
         return(FALSE)
     }
@@ -519,11 +519,11 @@
 }
 
 .pip_filter <- function(x, on, values) {
-    x[["data"]][list(values), on = on]
+    .pip_get_pipenv(x)[["data"]][list(values), on = on]
 }
 
 .pip_filter_nodes <- function(x, nodes) {
-    x[["data"]][list(nodes), on = ".nodeId"]
+    .pip_get_pipenv(x)[["data"]][list(nodes), on = ".nodeId"]
 }
 
 
@@ -531,11 +531,11 @@
 # Indexing
 # -------.
 .pip_is_indexed <- function(x) {
-    !is.null(data.table::indices(x[["data"]]))
+    !is.null(data.table::indices(.pip_get_pipenv(x)[["data"]]))
 }
 
 .pip_reindex <- function(x) {
-    data.table::setindexv(x[["data"]], list("step", ".nodeId"))
+    data.table::setindexv(.pip_get_pipenv(x)[["data"]], list("step", ".nodeId"))
 }
 
 
@@ -560,7 +560,7 @@
 }
 
 .pip_steps_to_rows <- function(x, steps) {
-    data <- x[["data"]]
+    data <- .pip_get_pipenv(x)[["data"]]
 
     if (anyNA(steps)) {
         stop("step names must not contain NA", call. = FALSE)
@@ -738,10 +738,10 @@
 .pip_bind <- function(x, y) {
     out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
     yy <- pip_clone(y)
-    yyDat <- yy[["data"]]
+    yyDat <- .pip_get_pipenv(yy)[["data"]]
 
     # Resolve all name clashes directly on the cloned source pipeline.
-    reserved <- out[["data"]][["step"]]
+    reserved <- .pip_get_pipenv(out)[["data"]][["step"]]
 
     `%chin%` <- data.table::`%chin%`
     for (k in seq_len(nrow(yyDat))) {
@@ -1018,9 +1018,12 @@ pip_add <- function(
         # Most of the time the new step is added at the end, so we check that
         # first to avoid the more expensive match() call in the common case.
         pos <- n
-        last <- x[["data"]][["step"]][n]
+        last <- .pip_get_pipenv(x)[["data"]][["step"]][n]
         if (after != last) {
-            pos <- data.table::chmatch(after, x[["data"]][["step"]])
+            pos <- data.table::chmatch(
+                after,
+                .pip_get_pipenv(x)[["data"]][["step"]]
+            )
         }
     } else if (is.numeric(after)) {
         if (length(after) != 1 || is.na(after)) {
@@ -1097,7 +1100,7 @@ pip_clone <- function(x, name = NULL) {
     env <- .pip_get_pipenv(out)
 
     env[[".dag"]] <- dag_clone(.pip_get_pipenv(x)[[".dag"]])
-    dat <- data.table::copy(x[["data"]])
+    dat <- data.table::copy(.pip_get_pipenv(x)[["data"]])
 
     # Clone steps to nodes mapping
     stepsToNodes <- env[[".steps_to_nodes"]]
@@ -2005,18 +2008,18 @@ pip_run <- function(
 #'   pip_add("square", \(x = ~load) x^2)
 #'
 #' pip_run(p)
-#' p[["data"]][["state"]] # "done", "done"
+#' p[["state"]] # "done", "done"
 #'
 #' # Locked steps keep their state and output when resetting
 #' pip_lock(pip_view(p, step = "square"))
 #' pip_reset(p)
-#' p[["data"]][["state"]] # "new", "done"
-#' p[["data"]][["out"]]   # NULL, (x^2 result)
+#' p[["state"]] # "new", "done"
+#' p[["out"]]   # NULL, (x^2 result)
 #'
 #' pip_unlock(p)
 #' pip_reset(p)
-#' p[["data"]][["state"]] # "new", "new"
-#' p[["data"]][["out"]]   # NULL, NULL
+#' p[["state"]] # "new", "new"
+#' p[["out"]]   # NULL, NULL
 #' @export
 pip_reset <- function(x) {
     .assert_pip_or_view(x)
@@ -2160,12 +2163,12 @@ pip_set_params <- function(x, params = list()) {
 #'
 #' # Tag every step in the pipeline at once
 #' pip_tag(p, tags = c("daily", "core"))
-#' p[["data"]][["tags"]] # both steps have c("daily", "core")
+#' p[["tags"]] # both steps have c("daily", "core")
 #'
 #' # Add an extra tag to only one step via a view
 #' v <- pip_view(p, step = "fit")
 #' pip_tag(v, tags = "model")
-#' p[["data"]][["tags"]] # "fit" also has "model"
+#' p[["tags"]] # "fit" also has "model"
 #' @export
 pip_tag <- function(x, tags = character()) {
     .assert_pip_or_view(x)
@@ -2210,7 +2213,7 @@ pip_tag <- function(x, tags = character()) {
 #' # Remove "daily" from all steps
 #' pip_untag(p, tags = "daily")
 #' # "load" retains "core"; "fit" retains "model"
-#' p[["data"]][["tags"]]
+#' p[["tags"]]
 #' @export
 pip_untag <- function(x, tags = character()) {
     .assert_pip_or_view(x)
@@ -2302,10 +2305,10 @@ pip_lock <- function(x) {
 #'
 #' # Lock all steps, then unlock to restore normal execution
 #' pip_lock(p)
-#' p[["data"]][["locked"]] # TRUE, TRUE
+#' p[["locked"]] # TRUE, TRUE
 #'
 #' pip_unlock(p)
-#' p[["data"]][["locked"]] # FALSE, FALSE
+#' p[["locked"]] # FALSE, FALSE
 #' @export
 pip_unlock <- function(x) {
     .assert_pip_or_view(x)

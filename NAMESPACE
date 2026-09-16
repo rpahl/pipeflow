@@ -3,6 +3,7 @@
 S3method("$",pipeflow)
 S3method("$<-",pipeflow)
 S3method("[",pipeflow)
+S3method("[<-",pipeflow)
 S3method("[[",pipeflow)
 S3method("[[<-",pipeflow)
 S3method(dim,pipeflow)

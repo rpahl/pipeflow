@@ -26,5 +26,5 @@ p <- pip_new() |>
 # Remove "daily" from all steps
 pip_untag(p, tags = "daily")
 # "load" retains "core"; "fit" retains "model"
-p[["data"]][["tags"]]
+p[["tags"]]
 }

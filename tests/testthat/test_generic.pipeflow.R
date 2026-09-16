@@ -13,9 +13,9 @@ describe(".pip_compact", {
 
         c <- .pip_compact(p, keepNodes = c(0L, 1L))
 
-        expect_equal(unname(c[["data"]][["step"]]), c("a1", "a2"))
-        expect_equal(c[["data"]][[".nodeId"]], 0:1)
-        expect_equal(unname(c[["data"]][["depends"]][[2]]), "a1")
+        expect_equal(unname(c[["step"]]), c("a1", "a2"))
+        expect_equal(c[[".nodeId"]], c(a1 = 0, a2 = 1))
+        expect_equal(unname(c[["depends"]][[2]]), "a1")
         expect_setequal(
             .pip_filter_nodes(
                 c,
@@ -25,9 +25,12 @@ describe(".pip_compact", {
         )
 
         # runtime state is preserved and re-running yields the same outputs
-        expect_equal(c[["data"]][["state"]], c("done", "done"))
+        expect_equal(unname(c[["state"]]), c("done", "done"))
         suppressMessages(pip_run(c, lgr = NULL))
-        expect_equal(c[["data"]][["out"]], p[["data"]][["out"]][1:2])
+        expect_equal(
+            c[["out"]],
+            p[["out"]][1:2]
+        )
     })
 
     it("returns an empty pipeline when no nodes are kept", {
@@ -35,7 +38,7 @@ describe(".pip_compact", {
             pip_add("s1", \(x = 1) x)
         c <- .pip_compact(p, keepNodes = integer())
 
-        expect_equal(nrow(c[["data"]]), 0L)
+        expect_equal(nrow(c[["pipenv"]][["data"]]), 0L)
     })
 
     it("keeps a small subset via the node-by-node path", {
@@ -47,9 +50,9 @@ describe(".pip_compact", {
         # 2 of 10 steps -> below the rebuild fraction, from-scratch path
         c <- .pip_compact(p, keepNodes = c(0L, 9L))
 
-        expect_equal(unname(c[["data"]][["step"]]), c("hub", "f9"))
-        expect_equal(c[["data"]][[".nodeId"]], 0:1)
-        expect_equal(unname(c[["data"]][["depends"]][[2]]), "hub")
+        expect_equal(unname(c[["step"]]), c("hub", "f9"))
+        expect_equal(unname(c[[".nodeId"]]), 0:1)
+        expect_equal(unname(c[["depends"]][[2]]), "hub")
     })
 
     it("compacts node ids also when the source has gaps", {
@@ -60,29 +63,53 @@ describe(".pip_compact", {
             pip_add("b2", \(x = ~b1) x)
         pip_remove(p, "a2") # leaves .nodeId with a gap
 
-        c <- .pip_compact(p, keepNodes = p[["data"]][[".nodeId"]])
+        c <- .pip_compact(p, keepNodes = p[[".nodeId"]])
 
-        expect_equal(unname(c[["data"]][["step"]]), c("a1", "b1", "b2"))
-        expect_equal(c[["data"]][[".nodeId"]], 0:2)
-        expect_equal(unname(c[["data"]][["depends"]][[3]]), "b1")
+        expect_equal(
+            unname(c[["step"]]),
+            c("a1", "b1", "b2")
+        )
+        expect_equal(unname(c[[".nodeId"]]), 0:2)
+        expect_equal(unname(c[["depends"]][[3]]), "b1")
     })
 
     it("gives identical results for any rebuildFrac", {
         check_equal_compact <- function(a, b) {
             expect_equal(
-                unname(a[["data"]][["step"]]),
-                unname(b[["data"]][["step"]])
+                unname(a[["step"]]),
+                unname(b[["step"]])
             )
-            expect_equal(a[["data"]][[".nodeId"]], b[["data"]][[".nodeId"]])
-            expect_equal(a[["data"]][["depends"]], b[["data"]][["depends"]])
-            expect_equal(a[["data"]][["unbound"]], b[["data"]][["unbound"]])
-            expect_equal(a[["data"]][["params"]], b[["data"]][["params"]])
-            expect_equal(a[["data"]][["out"]], b[["data"]][["out"]])
-            expect_equal(a[["data"]][["state"]], b[["data"]][["state"]])
-            expect_equal(a[["data"]][["locked"]], b[["data"]][["locked"]])
+            expect_equal(
+                a[[".nodeId"]],
+                b[[".nodeId"]]
+            )
+            expect_equal(
+                a[["depends"]],
+                b[["depends"]]
+            )
+            expect_equal(
+                a[["unbound"]],
+                b[["unbound"]]
+            )
+            expect_equal(
+                a[["params"]],
+                b[["params"]]
+            )
+            expect_equal(
+                a[["out"]],
+                b[["out"]]
+            )
+            expect_equal(
+                a[["state"]],
+                b[["state"]]
+            )
+            expect_equal(
+                a[["locked"]],
+                b[["locked"]]
+            )
 
             # DAG equivalence via downstream reachability per step
-            for (s in a[["data"]][["step"]]) {
+            for (s in a[["step"]]) {
                 ra <- .pip_filter_nodes(
                     a,
                     .pip_get_reachable_nodes(a, s)
@@ -134,7 +161,7 @@ describe(".pip_compact", {
             pip_add("a2", \(x = ~a1) x) |>
             pip_add("b2", \(x = ~b1) x)
         pip_remove(q, "a2")
-        keep <- q[["data"]][[".nodeId"]]
+        keep <- q[[".nodeId"]]
 
         ref <- .pip_compact(q, keepNodes = keep, rebuildThresh = fracs[1])
         for (frac in fracs[-1]) {
@@ -175,18 +202,18 @@ describe("nrow", {
 
         expect_equal(nrow(p), length(p))
         expect_equal(nrow(p), 3L)
-        expect_equal(ncol(p), ncol(p[["data"]]))
+        expect_equal(ncol(p), ncol(p[["pipenv"]][["data"]]))
 
         v <- pip_view(p, step = c("s1", "s3"))
         expect_equal(nrow(v), length(v))
         expect_equal(nrow(v), 2L)
-        expect_equal(ncol(v), ncol(p[["data"]]))
+        expect_equal(ncol(v), ncol(p[["pipenv"]][["data"]]))
     })
 
     it("returns zero rows for an empty pipeline", {
         p <- pip_new()
         expect_equal(nrow(p), 0L)
-        expect_equal(ncol(p), ncol(p[["data"]]))
+        expect_equal(ncol(p), ncol(p[["pipenv"]][["data"]]))
     })
 })
 
@@ -207,7 +234,7 @@ describe("extract operator [", {
 
         expect_true(.is_pipeflow_view(v))
         expect_equal(v[["view"]], 5L)
-        expect_identical(v[["data"]], p[["data"]])
+        expect_identical(v[["pipenv"]][["data"]], p[["pipenv"]][["data"]])
     })
 
     it("returns a view by step names by default", {
@@ -223,7 +250,7 @@ describe("extract operator [", {
         suppressMessages(sub <- p[5L, view = FALSE])
 
         expect_true(.is_pipeflow(sub))
-        expect_equal(sub[["data"]][["step"]], c("b1", "b2"))
+        expect_equal(unname(sub[["step"]]), c("b1", "b2"))
     })
 
     it("returns a pipeline by step names with view = FALSE", {
@@ -231,14 +258,20 @@ describe("extract operator [", {
         suppressMessages(sub <- p[c("a2", "b2"), view = FALSE])
 
         expect_true(.is_pipeflow(sub))
-        expect_equal(sub[["data"]][["step"]], c("a1", "a2", "b1", "b2"))
+        expect_equal(
+            unname(sub[["step"]]),
+            c("a1", "a2", "b1", "b2")
+        )
     })
 
     it("returns the full pipeline when i is missing", {
         p <- test_pip()
         sub <- p[]
 
-        expect_equal(sub[["data"]][["step"]], p[["data"]][["step"]])
+        expect_equal(
+            sub[["step"]],
+            p[["step"]]
+        )
     })
 
     it("returns an empty pipeline for empty selectors with view = FALSE", {
@@ -270,7 +303,7 @@ describe("extract operator [", {
         env <- .pip_get_pipenv(sub)
 
         env[["data"]][["state"]][1] <- "done"
-        expect_equal(p[["pipenv"]][["data"]][["state"]][1], "new")
+        expect_equal(unname(p[["state"]][1]), "new")
     })
 
     it("copies DAG edges for the extracted subset", {
@@ -358,7 +391,7 @@ describe("extract operator [", {
             p <- set_state(filter_pip(), "load")
             v <- p[tags %like% "model"]
 
-            raw <- p[["data"]][tags %like% "model"]
+            raw <- p[["pipenv"]][["data"]][tags %like% "model"]
             expect_equal(unname(v[["step"]]), raw[["step"]])
         })
 
@@ -381,7 +414,10 @@ describe("extract operator [", {
             p <- set_state(filter_pip(), "load")
             suppressMessages(sub <- p[tags %like% "report", view = FALSE])
 
-            expect_equal(sub[["data"]][["step"]], c("load", "fit", "eval"))
+            expect_equal(
+                unname(sub[["step"]]),
+                c("load", "fit", "eval")
+            )
         })
 
         it("selects relative to the steps covered by a view", {
@@ -494,11 +530,16 @@ describe("extract operator [[", {
             pip_add("s2", \(x = ~s1) x + 1)
     }
 
-    it("keeps environment-style extraction for internal bindings", {
+    it("does not forward inner-env bindings", {
         p <- test_pip()
         expect_equal(p[["name"]], "pipe")
-        expect_true(data.table::is.data.table(p[["data"]]))
+        expect_true(data.table::is.data.table(p[["pipenv"]][["data"]]))
         expect_false(is.null(p[["pipenv"]][[".dag"]]))
+
+        # Inner-env bindings are not exposed through `[[`
+        expect_null(p[["data"]])
+        expect_null(p[[".dag"]])
+        expect_null(p[[".steps_to_nodes"]])
     })
 
     it("extracts full columns when j is missing", {
@@ -543,8 +584,8 @@ describe("extract operator [[", {
 
     it(
         paste(
-            "can distinguish between steps called 'name' and 'pipeline'",
-            "and the internal 'name' and 'pipeline' elements"
+            "can distinguish between steps called 'name' and 'data'",
+            "and the internal 'name' element"
         ),
         {
             p <- pip_new("pipe") |>
@@ -552,7 +593,8 @@ describe("extract operator [[", {
                 pip_add("data", \(x = ~name, y = "world") paste(x, y))
 
             expect_equal(p[["name"]], "pipe")
-            expect_equal(p[["data"]], p$data)
+            expect_null(p[["data"]])
+            expect_null(p$data)
 
             expect_equal(p[["name", "params"]], p[[1, "params"]])
             expect_equal(p[["data", "params"]], p[[2, "params"]])
@@ -581,7 +623,7 @@ describe("extract operator [[", {
         p <- test_pip() |> pip_run(lgr = NULL)
         v <- pip_view(p, step = c("s1", "s2"))
 
-        expect_identical(v[["data"]], p[["data"]])
+        expect_identical(v[["pipenv"]][["data"]], p[["pipenv"]][["data"]])
         expect_equal(v[["view"]], c(1L, 2L))
         expect_equal(v[["step"]], c(s1 = "s1", s2 = "s2"))
         expect_equal(v[["out"]], list(s1 = 1, s2 = 2))
@@ -611,7 +653,7 @@ describe("extract operator [[", {
 
         expect_error(p[[0L, "step"]], "row index out of bounds")
         expect_error(
-            p[[nrow(p[["data"]]) + 1L, "step"]],
+            p[[nrow(p[["pipenv"]][["data"]]) + 1L, "step"]],
             "row index out of bounds"
         )
         expect_error(v[[0L, "step"]], "row index out of bounds")
@@ -673,30 +715,33 @@ describe("assignment operator [[<-", {
     it("can rename a step", {
         p <- test_pip()
         p[["s2", "step"]] <- "s2_renamed"
-        expect_equal(unname(p[["data"]][["step"]]), c("s1", "s2_renamed", "s3"))
-        expect_equal(unname(p[["data"]][["depends"]][[2]]), "s1")
+        expect_equal(
+            unname(p[["step"]]),
+            c("s1", "s2_renamed", "s3")
+        )
+        expect_equal(unname(p[["depends"]][[2]]), "s1")
     })
 
     it("can assign and clear tags", {
         p <- test_pip()
         p[["s1", "tags"]] <- c("a", "b")
-        expect_equal(p[["data"]][["tags"]][[1]], c("a", "b"))
+        expect_equal(p[["tags"]][[1]], c("a", "b"))
         p[["s1", "tags"]] <- NULL
-        expect_equal(p[["data"]][["tags"]][[1]], character(0))
+        expect_equal(p[["tags"]][[1]], character(0))
     })
 
     it("can assign locked status", {
         p <- test_pip()
         p[["s1", "locked"]] <- TRUE
-        expect_true(p[["data"]][["locked"]][[1]])
+        expect_true(p[["locked"]][[1]])
         p[["s1", "locked"]] <- FALSE
-        expect_false(p[["data"]][["locked"]][[1]])
+        expect_false(p[["locked"]][[1]])
     })
 
     it("can assign execution mode", {
         p <- test_pip()
         p[["s2", "exec"]] <- "plain"
-        expect_equal(p[["data"]][["exec"]][[2]], "plain")
+        expect_equal(p[["exec"]][[2]], "plain")
 
         expect_error(p[["s2", "exec"]] <- "bad_mode", "exec must be one of")
         expect_error(p[["s2", "exec"]] <- NULL, "must be a single string")
@@ -705,7 +750,7 @@ describe("assignment operator [[<-", {
     it("can assign states", {
         p <- test_pip()
         p[["s1", "state"]] <- "outdated"
-        expect_equal(p[["data"]][["state"]][[1]], "outdated")
+        expect_equal(p[["state"]][[1]], "outdated")
 
         expect_error(p[["s2", "state"]] <- "bad_state", "state must be one of")
         expect_error(p[["s2", "state"]] <- NULL, "must be a single string")
@@ -714,14 +759,14 @@ describe("assignment operator [[<-", {
     it("can assign output values", {
         p <- test_pip()
         p[["s1", "out"]] <- 10
-        expect_equal(p[["data"]][["out"]][[1]], 10)
+        expect_equal(p[["out"]][[1]], 10)
     })
 
     it("supports assigning by row index", {
         p <- test_pip()
 
         p[[2, "tags"]] <- "byrow"
-        expect_equal(p[["data"]][["tags"]][[2]], "byrow")
+        expect_equal(p[["tags"]][[2]], "byrow")
     })
 
     it("replaces a step function while keeping tags and exec mode", {
@@ -729,17 +774,17 @@ describe("assignment operator [[<-", {
         p[["s2", "tags"]] <- "model"
         p[["s2", "exec"]] <- "plain"
         pip_run(p, lgr = NULL)
-        expect_equal(p[["data"]][["out"]][[2]], 2)
+        expect_equal(p[["out"]][[2]], 2)
 
         p[["s2", "fun"]] <- \(x = ~s1) x * 3
 
-        expect_equal(p[["data"]][["tags"]][[2]], "model")
-        expect_equal(p[["data"]][["exec"]][[2]], "plain")
-        expect_equal(unname(p[["data"]][["depends"]][[2]]), "s1")
-        expect_equal(p[["data"]][["state"]][[2]], "new")
+        expect_equal(p[["tags"]][[2]], "model")
+        expect_equal(p[["exec"]][[2]], "plain")
+        expect_equal(unname(p[["depends"]][[2]]), "s1")
+        expect_equal(p[["state"]][[2]], "new")
 
         pip_run(p, lgr = NULL)
-        expect_equal(p[["data"]][["out"]][[2]], 3)
+        expect_equal(p[["out"]][[2]], 3)
     })
 
     it("marks downstream steps outdated when replacing a function", {
@@ -752,7 +797,7 @@ describe("assignment operator [[<-", {
         p[["s2", "fun"]] <- \(x = ~s1) x * 2
 
         expect_equal(
-            p[["data"]][["state"]],
+            unname(p[["state"]]),
             c("done", "new", "outdated")
         )
     })
@@ -763,7 +808,7 @@ describe("assignment operator [[<-", {
             pip_add("s2", \(x = ~s1, k = 2) x * k)
 
         p[["s2", "params"]] <- list(k = 5)
-        expect_equal(p[["data"]][["params"]][[2]][["k"]], 5)
+        expect_equal(p[["params"]][[2]][["k"]], 5)
     })
 
     it("signals invalid shortcut assignments", {
@@ -834,8 +879,8 @@ describe("assignment operator [[<-", {
 
         # Integer indices refer to the visible steps of the view
         v[[1, "tags"]] <- "b"
-        expect_equal(p[["data"]][["tags"]][[2]], "b")
-        expect_equal(p[["data"]][["tags"]][[1]], "a")
+        expect_equal(p[["tags"]][[2]], "b")
+        expect_equal(p[["tags"]][[1]], "a")
 
         # Step names must be covered by the view
         expect_error(
@@ -852,7 +897,7 @@ describe("assignment operator [[<-", {
 
         # Assignments are shared with the originating pipeline
         v[[2, "state"]] <- "outdated"
-        expect_equal(p[["data"]][["state"]][[3]], "outdated")
+        expect_equal(p[["state"]][[3]], "outdated")
     })
 
     it("supports rename, replace and params through views", {
@@ -864,16 +909,22 @@ describe("assignment operator [[<-", {
         v <- pip_view(p, step = c("s2", "s3"))
 
         v[["s2", "params"]] <- list(k = 5)
-        expect_equal(p[["data"]][["params"]][[2]][["k"]], 5)
+        expect_equal(p[["params"]][[2]][["k"]], 5)
 
         v[["s2", "step"]] <- "renamed"
-        expect_equal(unname(p[["data"]][["step"]]), c("s1", "renamed", "s3"))
-        expect_equal(unname(p[["data"]][["depends"]][[3]]), "renamed")
+        expect_equal(
+            unname(p[["step"]]),
+            c("s1", "renamed", "s3")
+        )
+        expect_equal(
+            unname(p[["depends"]][[3]]),
+            "renamed"
+        )
 
         v <- pip_view(p, step = c("renamed", "s3"))
         v[["renamed", "fun"]] <- \(x = ~s1, k = 2) x * k
         pip_run(p, lgr = NULL)
-        expect_equal(p[["data"]][["out"]][[2]], 2)
+        expect_equal(p[["out"]][[2]], 2)
     })
 })
 
@@ -937,11 +988,14 @@ describe("rbind", {
         out <- rbind(p1, p2)
         expect_true(.is_pipeflow(out))
         expect_equal(out[["name"]], "left-right")
-        expect_equal(out[["data"]][["step"]], c("s1", "s2", "t1", "t2"))
+        expect_equal(
+            unname(out[["step"]]),
+            c("s1", "s2", "t1", "t2")
+        )
 
         pip_add(out, "extra", \(x = ~t2) x)
-        expect_false("extra" %in% p1[["data"]][["step"]])
-        expect_false("extra" %in% p2[["data"]][["step"]])
+        expect_false("extra" %in% p1[["step"]])
+        expect_false("extra" %in% p2[["step"]])
     })
 
     it("binds any number of pipelines and returns a single one unchanged", {
@@ -950,7 +1004,7 @@ describe("rbind", {
 
         out <- rbind(p1, p2, p2)
         expect_equal(out[["name"]], "left-right-right")
-        steps <- out[["data"]][["step"]]
+        steps <- out[["step"]]
         expect_true(all(c("s1", "s2", "s12", "s22", "s13", "s23") %in% steps))
         expect_identical(anyDuplicated(steps), 0L)
 
@@ -962,11 +1016,11 @@ describe("rbind", {
         p2 <- test_pip("right")
 
         out <- rbind(p1, p2)
-        steps <- out[["data"]][["step"]]
+        steps <- out[["step"]]
         expect_identical(anyDuplicated(steps), 0L)
         expect_true(all(c("s1", "s2", "s12", "s22") %in% steps))
 
-        dep_new_s2 <- out[["data"]][step == "s22", depends][[1]]
+        dep_new_s2 <- out[["pipenv"]][["data"]][step == "s22", depends][[1]]
         expect_equal(unname(dep_new_s2), "s12")
     })
 
@@ -978,7 +1032,7 @@ describe("rbind", {
             pip_add("s1", \(x = 3) x)
 
         out <- rbind(p1, p2)
-        expect_true("s13" %in% out[["data"]][["step"]])
+        expect_true("s13" %in% out[["step"]])
     })
 
     it("rebuilds DAG and keeps dependencies valid in result", {
@@ -1004,7 +1058,7 @@ describe("rbind", {
         out <- rbind(p1, p2)
         pip_run(out, lgr = NULL)
         expect_equal(
-            out[["data"]][["out"]],
+            unname(out[["out"]]),
             list("left-right", "left-right")
         )
     })
@@ -1012,19 +1066,19 @@ describe("rbind", {
     it("preserves runtime state from both source pipelines", {
         p1 <- test_pip("left")
         data.table::set(
-            p1[["data"]],
+            p1[["pipenv"]][["data"]],
             i = 1L,
             j = "out",
             value = list(10)
         )
         data.table::set(
-            p1[["data"]],
+            p1[["pipenv"]][["data"]],
             i = 1L,
             j = "state",
             value = "done"
         )
         data.table::set(
-            p1[["data"]],
+            p1[["pipenv"]][["data"]],
             i = 1L,
             j = "locked",
             value = TRUE
@@ -1035,31 +1089,31 @@ describe("rbind", {
             pip_add("t2", \(x = ~t1) x + 2)
 
         data.table::set(
-            p2[["data"]],
+            p2[["pipenv"]][["data"]],
             j = "out",
             value = list(7, 9)
         )
         data.table::set(
-            p2[["data"]],
+            p2[["pipenv"]][["data"]],
             j = "state",
             value = c("done", "outdated")
         )
         data.table::set(
-            p2[["data"]],
+            p2[["pipenv"]][["data"]],
             j = "locked",
             value = c(FALSE, TRUE)
         )
 
         out <- rbind(p1, p2)
-        actualOut <- out[["data"]][["out"]]
+        actualOut <- unname(out[["out"]])
         expectedOut <- list(10, NULL, 7, 9)
         expect_equal(actualOut, expectedOut)
         expect_equal(
-            out[["data"]][["state"]],
+            unname(out[["state"]]),
             c("done", "new", "done", "outdated")
         )
         expect_equal(
-            out[["data"]][["locked"]],
+            unname(out[["locked"]]),
             c(TRUE, FALSE, FALSE, TRUE)
         )
     })

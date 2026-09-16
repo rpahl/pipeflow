@@ -72,7 +72,7 @@ print.pipeflow <- function(
     header = TRUE,
     ...
 ) {
-    data <- x[["data"]]
+    data <- .pip_get_pipenv(x)[["data"]]
     n <- nrow(data)
     isView <- .is_pipeflow_view(x)
 

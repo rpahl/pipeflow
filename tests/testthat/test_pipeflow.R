@@ -294,7 +294,7 @@ describe(".pip_restart", {
         expect_equal(c[["a"]], 2L)
         expect_equal(c[["b"]], 2L)
         expect_equal(c[["cc"]], 1L)
-        expect_equal(p[["data"]][["out"]], list(1, 2, 3))
+        expect_equal(unname(p[["out"]]), list(1, 2, 3))
     })
 
     it("skips already done steps on restart when force = FALSE", {
@@ -321,7 +321,7 @@ describe(".pip_restart", {
         expect_equal(c[["a"]], 1L)
         expect_equal(c[["b"]], 1L)
         expect_equal(c[["cc"]], 1L)
-        expect_equal(p[["data"]][["out"]], list(1, 2, 3))
+        expect_equal(unname(p[["out"]]), list(1, 2, 3))
     })
 
     it("marks the pipeline as restarting when called before a run", {
@@ -349,7 +349,7 @@ describe(".pip_restart", {
 
         expect_equal(get_run_state(p), "restart")
         expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
-        expect_identical(v[["data"]], p[["data"]])
+        expect_identical(v[["pipenv"]][["data"]], p[["pipenv"]][["data"]])
     })
 
     it("restarts a view run when a step requests a restart", {
@@ -368,7 +368,7 @@ describe(".pip_restart", {
         pip_run(v, lgr = NULL)
 
         expect_equal(c[["n"]], 2L)
-        expect_equal(p[["data"]][["out"]], list(1, 2))
+        expect_equal(unname(p[["out"]]), list(1, 2))
         expect_equal(get_run_state(p), "ready")
     })
 
@@ -412,9 +412,9 @@ describe(".pip_stop", {
 
         pip_run(p, lgr = NULL)
 
-        expect_equal(p[["data"]][["out"]], list(1, 2, NULL))
+        expect_equal(unname(p[["out"]]), list(1, 2, NULL))
         expect_equal(
-            p[["data"]][["state"]],
+            unname(p[["state"]]),
             c("done", "done", "outdated")
         )
         expect_equal(get_run_state(p), "ready")
@@ -474,9 +474,9 @@ describe(".pip_stop", {
 
         pip_run(p, lgr = NULL)
 
-        expect_equal(p[["data"]][["out"]], list(1, NULL, NULL))
+        expect_equal(unname(p[["out"]]), list(1, NULL, NULL))
         expect_equal(
-            p[["data"]][["state"]],
+            unname(p[["state"]]),
             c("done", "outdated", "outdated")
         )
     })
@@ -492,9 +492,9 @@ describe(".pip_stop", {
 
         pip_run(p, lgr = NULL)
 
-        expect_equal(p[["data"]][["out"]], list(1, 2, NULL))
+        expect_equal(unname(p[["out"]]), list(1, 2, NULL))
         expect_equal(
-            p[["data"]][["state"]],
+            unname(p[["state"]]),
             c("done", "done", "outdated")
         )
     })
@@ -507,7 +507,7 @@ describe(".pip_stop", {
         v$stop()
 
         expect_equal(get_run_state(p), "stop")
-        expect_identical(v[["data"]], p[["data"]])
+        expect_identical(v[["pipenv"]][["data"]], p[["pipenv"]][["data"]])
     })
 
     it("aborts a view run at the stopping step", {
@@ -523,9 +523,9 @@ describe(".pip_stop", {
 
         pip_run(v, lgr = NULL)
 
-        expect_equal(p[["data"]][["out"]], list(1, 2, NULL, NULL))
+        expect_equal(unname(p[["out"]]), list(1, 2, NULL, NULL))
         expect_equal(
-            p[["data"]][["state"]],
+            unname(p[["state"]]),
             c("done", "done", "outdated", "outdated")
         )
         expect_equal(get_run_state(p), "ready")
@@ -545,11 +545,11 @@ describe(".pip_update_downstream", {
     it("updates states downstream of single node as expected", {
         p <- test_pip()
 
-        expect_true(all(p$data[["state"]] == "new"))
+        expect_true(all(p[["state"]] == "new"))
         .pip_update_downstream(p, "a1", what = "state", value = "outdated")
 
         expect_equal(
-            p$data[["state"]],
+            unname(p[["state"]]),
             c("outdated", "outdated", "new", "outdated", "new")
         )
     })
@@ -562,7 +562,7 @@ describe(".pip_update_downstream", {
             what = "state",
             value = "outdated"
         )
-        expect_true(all(p$data[["state"]] == "outdated"))
+        expect_true(all(p[["state"]] == "outdated"))
 
         p <- test_pip()
         .pip_update_downstream(
@@ -573,7 +573,7 @@ describe(".pip_update_downstream", {
         )
 
         expect_equal(
-            p$data[["state"]],
+            unname(p[["state"]]),
             c("outdated", "outdated", "new", "outdated", "outdated")
         )
     })
@@ -649,8 +649,8 @@ describe("pip_new", {
         expect_equal(p[["name"]], "pipe")
         expect_null(p[["view"]])
         expect_true(is.environment(p[["pipenv"]]))
-        expect_true(data.table::is.data.table(p[["data"]]))
-        expect_equal(nrow(p[["data"]]), 0L)
+        expect_true(data.table::is.data.table(p[["pipenv"]][["data"]]))
+        expect_equal(nrow(p[["pipenv"]][["data"]]), 0L)
         expect_true(is.environment(p[["pipenv"]][[".steps_to_nodes"]]))
         expect_equal(
             ls(envir = p[["pipenv"]][[".steps_to_nodes"]]),
@@ -706,7 +706,7 @@ describe("pip_add", {
         pip_add(p, "s1", \(a = 5) a)
         pip_add(p, "s2", \(x = ~ -1) 2 * x)
 
-        expect_equal(p$data$depends[[2]], c(x = "s1"))
+        expect_equal(p[["pipenv"]][["data"]]$depends[[2]], c(x = "s1"))
     })
 
     it("a bad relative step referal is signalled", {
@@ -733,7 +733,7 @@ describe("pip_add", {
 
         pip_run(p, lgr = NULL)
 
-        expect_true(identical(p$data[["out"]][[1]], p))
+        expect_true(identical(p[["out"]][[1]], p))
     })
 
     it("allows functions with wildcard arguments", {
@@ -742,7 +742,7 @@ describe("pip_add", {
 
         pip_set_params(p, list(x = 2))
         pip_run(p, lgr = NULL)
-        expect_equal(p$data[["out"]][[1]], 2)
+        expect_equal(p[["out"]][[1]], 2)
     })
 
     test_pip <- function() {
@@ -755,26 +755,26 @@ describe("pip_add", {
         p <- test_pip()
         pip_add(p, "f3", \(x = ~f1) x + 10, after = "f1")
 
-        expect_equal(p[["data"]][["step"]], c("f1", "f3", "f2"))
-        expect_equal(p[["data"]][["depends"]][[2]], c(x = "f1"))
-        expect_equal(p[["data"]][["depends"]][[3]], c(x = "f1"))
+        expect_equal(unname(p[["step"]]), c("f1", "f3", "f2"))
+        expect_equal(p[["depends"]][[2]], c(x = "f1"))
+        expect_equal(p[["depends"]][[3]], c(x = "f1"))
     })
 
     it("can insert by numeric index and supports insertion at beginning", {
         p <- test_pip()
         pip_add(p, "f0", \(x = 0) x, after = 0)
 
-        expect_equal(p[["data"]][["step"]], c("f0", "f1", "f2"))
-        expect_equal(p[["data"]][["depends"]][[2]], character(0))
-        expect_equal(p[["data"]][["depends"]][[3]], c(x = "f1"))
+        expect_equal(unname(p[["step"]]), c("f0", "f1", "f2"))
+        expect_equal(p[["depends"]][[2]], character(0))
+        expect_equal(p[["depends"]][[3]], c(x = "f1"))
     })
 
     it("uses default insertion position at end", {
         p <- test_pip()
         pip_add(p, "f3", \(x = ~f2) x + 1)
 
-        expect_equal(p[["data"]][["step"]], c("f1", "f2", "f3"))
-        expect_equal(p[["data"]][["depends"]][[3]], c(x = "f2"))
+        expect_equal(unname(p[["step"]]), c("f1", "f2", "f3"))
+        expect_equal(p[["depends"]][[3]], c(x = "f2"))
     })
 
     it("returns invisibly also for default append path", {
@@ -792,8 +792,8 @@ describe("pip_add", {
             pip_add(p, "f3", \(x = ~f2) x + 1)
         )
 
-        expect_equal(p[["data"]][["step"]], c("f1", "f2", "f3"))
-        expect_equal(p[["data"]][["depends"]][[3]], c(x = "f2"))
+        expect_equal(unname(p[["step"]]), c("f1", "f2", "f3"))
+        expect_equal(p[["depends"]][[3]], c(x = "f2"))
     })
 
     it("can insert a step after pipeline was run", {
@@ -804,21 +804,31 @@ describe("pip_add", {
             pip_add(p, "f3", \(x = ~f1) x + 10, after = "f1")
         )
 
-        expect_equal(p[["data"]][["step"]], c("f1", "f3", "f2"))
-        expect_equal(p[["data"]][["depends"]][[2]], c(x = "f1"))
-        expect_equal(p[["data"]][["depends"]][[3]], c(x = "f1"))
+        expect_equal(unname(p[["step"]]), c("f1", "f3", "f2"))
+        expect_equal(p[["depends"]][[2]], c(x = "f1"))
+        expect_equal(p[["depends"]][[3]], c(x = "f1"))
     })
 
     it("keeps existing step state and output for appended tail steps", {
         p <- test_pip()
-        data.table::set(p[["data"]], i = 2, j = "out", value = list(42))
-        data.table::set(p[["data"]], i = 2, j = "state", value = "done")
+        data.table::set(
+            p[["pipenv"]][["data"]],
+            i = 2,
+            j = "out",
+            value = list(42)
+        )
+        data.table::set(
+            p[["pipenv"]][["data"]],
+            i = 2,
+            j = "state",
+            value = "done"
+        )
 
         pip_add(p, "f3", \(x = ~f1) x + 10, after = "f1")
 
-        i <- match("f2", p[["data"]][["step"]])
-        expect_equal(p[["data"]][["out"]][[i]], 42)
-        expect_equal(p[["data"]][["state"]][[i]], "done")
+        i <- match("f2", p[["step"]])
+        expect_equal(p[["out"]][[i]], 42)
+        expect_equal(p[["state"]][[i]], "done")
     })
 
     it("signals invalid insertion position and unknown step reference", {
@@ -863,7 +873,7 @@ describe("pip_add", {
             params = list(x = 10, y = 20, z = 99)
         )
 
-        pars <- p[["data"]][["params"]][[1]]
+        pars <- p[["params"]][[1]]
         expect_equal(pars[["x"]], 1) # fun default takes precedence
         expect_equal(pars[["y"]], 2)
         expect_equal(pars[["z"]], 99) # extra param carried through
@@ -878,12 +888,12 @@ describe("pip_add", {
             params = list(size = 42)
         )
 
-        pars <- p[["data"]][["params"]][[1]]
+        pars <- p[["params"]][[1]]
         expect_equal(pars[["x"]], 1)
         expect_equal(pars[["size"]], 42)
 
         pip_run(p, lgr = NULL)
-        expect_equal(unname(p[["data"]][["out"]][[1]]), c(1, 42))
+        expect_equal(unname(p[["out"]][[1]]), c(1, 42))
     })
 
     it("resolves step references given via params", {
@@ -896,11 +906,11 @@ describe("pip_add", {
             params = list(y = ~s1)
         )
 
-        expect_equal(unname(p[["data"]][["depends"]][[2]]), "s1")
-        expect_equal(names(p[["data"]][["depends"]][[2]]), "y")
+        expect_equal(unname(p[["depends"]][[2]]), "s1")
+        expect_equal(names(p[["depends"]][[2]]), "y")
 
         pip_run(p, lgr = NULL)
-        expect_equal(p[["data"]][["out"]][[2]]$y, 1)
+        expect_equal(p[["out"]][[2]]$y, 1)
     })
 
     it("resolves relative step references given via params", {
@@ -913,10 +923,10 @@ describe("pip_add", {
             params = list(y = ~ -1)
         )
 
-        expect_equal(unname(p[["data"]][["depends"]][[2]]), "s1")
+        expect_equal(unname(p[["depends"]][[2]]), "s1")
 
         pip_run(p, lgr = NULL)
-        expect_equal(p[["data"]][["out"]][[2]]$y, 5)
+        expect_equal(p[["out"]][[2]]$y, 5)
     })
 
     it("signals unknown steps referenced via params", {
@@ -942,8 +952,12 @@ describe("pip_add", {
             params = list(y = ~s1, z = 2)
         )
 
-        expect_equal(names(p[["data"]][["params"]][[2]]), c("y", "z"))
-        expect_equal(p[["data"]][["unbound"]][[2]], "z") # y is a dependency
+        expect_equal(
+            names(p[["params"]][[2]]),
+            c("y", "z")
+        )
+        # y is a dependency, so it is not unbound
+        expect_equal(p[["unbound"]][[2]], "z")
         expect_equal(names(pip_get_params(p)), c("x", "z"))
     })
 
@@ -957,9 +971,9 @@ describe("pip_add", {
         )
         pip_run(p, lgr = NULL)
 
-        expect_equal(p[["data"]][["state"]][[1]], "done")
+        expect_equal(p[["state"]][[1]], "done")
         pip_set_params(p, list(z = 100))
-        expect_equal(p[["data"]][["state"]][[1]], "outdated")
+        expect_equal(p[["state"]][[1]], "outdated")
     })
 
     it("signals parameter without default value", {
@@ -976,9 +990,13 @@ describe("pip_add", {
 
         pip_run(p, lgr = NULL)
 
-        expect_true(identical(p[["data"]][["out"]][[1]], p))
-        expect_false(".self" %in% names(p[["data"]][["params"]][[1]]))
-        expect_false(".self" %in% names(formals(p[["data"]][["fun"]][[1]])))
+        expect_true(identical(p[["out"]][[1]], p))
+        expect_false(
+            ".self" %in% names(p[["params"]][[1]])
+        )
+        expect_false(
+            ".self" %in% names(formals(p[["fun"]][[1]]))
+        )
     })
 
     it("signals if .self is declared as a step parameter", {
@@ -1005,8 +1023,8 @@ describe("pip_add", {
         p2 <- pip_clone(p)
         pip_run(p2, lgr = NULL, force = TRUE)
 
-        expect_true(identical(p2[["data"]][["out"]][[1]], p2))
-        expect_true(identical(p[["data"]][["out"]][[1]], p))
+        expect_true(identical(p2[["out"]][[1]], p2))
+        expect_true(identical(p[["out"]][[1]], p))
     })
 })
 
@@ -1031,7 +1049,7 @@ describe("pip_add exec modes", {
         for (mode in c("auto", "split", "reduce", "plain")) {
             p <- pip_new()
             expect_no_error(pip_add(p, "s1", \(x = 1) x, exec = mode))
-            expect_equal(p[["data"]][["exec"]][[1]], mode)
+            expect_equal(p[["exec"]][[1]], mode)
         }
     })
 })
@@ -1072,9 +1090,9 @@ describe("pip_rename", {
         p <- test_pip()
         pip_rename(p, from = "f1", to = "first")
 
-        expect_equal(p[["data"]][["step"]], c("first", "f2", "f3"))
+        expect_equal(unname(p[["step"]]), c("first", "f2", "f3"))
         expect_equal(
-            p[["data"]][["depends"]],
+            unname(p[["depends"]]),
             list(
                 character(0),
                 c(b = "first"),
@@ -1106,9 +1124,9 @@ describe("pip_rename", {
 
         pip_rename(v, from = "f2", to = "second")
 
-        expect_equal(p[["data"]][["step"]], c("f1", "second", "f3"))
+        expect_equal(unname(p[["step"]]), c("f1", "second", "f3"))
         expect_equal(
-            p[["data"]][["depends"]],
+            unname(p[["depends"]]),
             list(
                 character(0),
                 c(b = "f1"),
@@ -1169,7 +1187,10 @@ describe("pip_remove", {
             .pip_get_reachable_nodes(p, "f1")
         )[["step"]]
 
-        expect_equal(p[["data"]][["step"]], c("f1", "f2", "f3", "f4"))
+        expect_equal(
+            unname(p[["step"]]),
+            c("f1", "f2", "f3", "f4")
+        )
         expect_true(is.na(.pip_steps_to_nodes(p, "g1")[[1]]))
         expect_false(dag_has_node(p[["pipenv"]][[".dag"]], node))
         expect_false(node %in% afterOrder)
@@ -1213,8 +1234,8 @@ describe("pip_remove", {
         afterOrder <- dag_get_nodes_order(dag)
         remainingNode <- as.integer(nodeMap[["g1"]])
 
-        expect_equal(p[["data"]][["step"]], "g1")
-        expect_equal(p[["data"]][[".nodeId"]], remainingNode)
+        expect_equal(unname(p[["step"]]), "g1")
+        expect_equal(unname(p[[".nodeId"]]), remainingNode)
         expect_equal(afterOrder, remainingNode)
         expect_equal(length(afterOrder), length(beforeOrder) - 4L)
         expect_true(dag_has_node(dag, remainingNode))
@@ -1247,7 +1268,10 @@ describe("pip_remove", {
 
         v <- pip_remove(v, "f4")
 
-        expect_equal(p[["data"]][["step"]], c("f1", "f2", "f3", "g1"))
+        expect_equal(
+            unname(p[["step"]]),
+            c("f1", "f2", "f3", "g1")
+        )
         expect_equal(v[["step"]], c(g1 = "g1"))
         expect_equal(v[["view"]], 4L)
     })
@@ -1258,7 +1282,7 @@ describe("pip_remove", {
 
         suppressMessages(v <- pip_remove(v, "f1", force = TRUE))
 
-        expect_equal(p[["data"]][["step"]], "g1")
+        expect_equal(unname(p[["step"]]), "g1")
         expect_equal(length(v), 0L)
     })
 })
@@ -1301,14 +1325,14 @@ describe("pip_replace", {
     it("replaces a step in-place while keeping the original order", {
         p <- test_pip()
         pip_run(p, lgr = NULL)
-        expect_equal(p[["data"]][step == "f3", out][[1]], 3)
+        expect_equal(p[["pipenv"]][["data"]][step == "f3", out][[1]], 3)
 
         pip_replace(p, "f2", \(x = 4) x * 2)
-        expect_equal(p[["data"]][["step"]], c("f1", "f2", "f3"))
+        expect_equal(unname(p[["step"]]), c("f1", "f2", "f3"))
 
         pip_run(p, lgr = NULL)
-        expect_equal(p[["data"]][step == "f2", out][[1]], 8)
-        expect_equal(p[["data"]][step == "f3", out][[1]], 9)
+        expect_equal(p[["pipenv"]][["data"]][step == "f2", out][[1]], 8)
+        expect_equal(p[["pipenv"]][["data"]][step == "f3", out][[1]], 9)
     })
 
     it("verifies replacement dependencies against earlier steps only", {
@@ -1335,7 +1359,7 @@ describe("pip_replace", {
         pip_replace(p, "a2", \(x = ~a1) x + 2)
 
         expect_equal(
-            p[["data"]][["state"]],
+            unname(p[["state"]]),
             c("done", "new", "done", "outdated")
         )
     })
@@ -1352,8 +1376,11 @@ describe("pip_replace", {
             tags = c("updated", "core")
         )
 
-        i <- match("a2", p[["data"]][["step"]])
-        expect_equal(p[["data"]][["tags"]][[i]], c("updated", "core"))
+        i <- match("a2", p[["step"]])
+        expect_equal(
+            p[["tags"]][[i]],
+            c("updated", "core")
+        )
     })
 
     it("replaces a step through a view", {
@@ -1367,10 +1394,10 @@ describe("pip_replace", {
 
         pip_replace(v, "f2", \(x = 4) x * 2)
 
-        expect_equal(p[["data"]][["step"]], c("f1", "f2", "f3"))
+        expect_equal(unname(p[["step"]]), c("f1", "f2", "f3"))
         pip_run(p, lgr = NULL)
-        expect_equal(p[["data"]][step == "f2", out][[1]], 8)
-        expect_equal(p[["data"]][step == "f3", out][[1]], 9)
+        expect_equal(p[["pipenv"]][["data"]][step == "f2", out][[1]], 8)
+        expect_equal(p[["pipenv"]][["data"]][step == "f3", out][[1]], 9)
     })
 })
 
@@ -1401,10 +1428,13 @@ describe("pip_clone", {
         expect_true(.is_pipeflow(p2))
         expect_false(identical(p2, p))
         expect_equal(p2[["name"]], p[["name"]])
-        expect_equal(p2[["data"]][["step"]], p[["data"]][["step"]])
         expect_equal(
-            p2[["data"]][["depends"]],
-            p[["data"]][["depends"]]
+            p2[["step"]],
+            p[["step"]]
+        )
+        expect_equal(
+            p2[["depends"]],
+            p[["depends"]]
         )
     })
 
@@ -1421,11 +1451,11 @@ describe("pip_clone", {
 
         env <- p2[["pipenv"]]
         env[["data"]][["state"]][1] <- "done"
-        expect_equal(p[["pipenv"]][["data"]][["state"]][1], "new")
+        expect_equal(unname(p[["state"]][1]), "new")
 
         pip_add(p2, "s3", \(x = ~s2) x)
-        expect_false("s3" %in% p[["data"]][["step"]])
-        expect_true("s3" %in% p2[["data"]][["step"]])
+        expect_false("s3" %in% p[["step"]])
+        expect_true("s3" %in% p2[["step"]])
     })
 
     it("rebinds .self params to the cloned pipeline", {
@@ -1433,11 +1463,11 @@ describe("pip_clone", {
         p2 <- pip_clone(p)
 
         pip_run(p2, lgr = NULL)
-        expect_equal(p2[["data"]][["out"]][[1]], "p1")
+        expect_equal(p2[["out"]][[1]], "p1")
 
         # The original pipeline still points at itself.
         pip_run(p, lgr = NULL, force = TRUE)
-        expect_equal(p[["data"]][["out"]][[1]], "p1")
+        expect_equal(p[["out"]][[1]], "p1")
     })
 
     it("clones an empty pipeline", {
@@ -1462,7 +1492,11 @@ describe("pip_collect_out", {
         pip_add(p, "s1", \(x = 1) x, tags = "data")
         pip_add(p, "s2", \(x = ~ -1) x + 1, tags = "model")
 
-        data.table::set(p[["data"]], j = "out", value = list(10, 20))
+        data.table::set(
+            p[["pipenv"]][["data"]],
+            j = "out",
+            value = list(10, 20)
+        )
 
         out <- pip_collect_out(p)
         expect_equal(names(out), c("s1", "s2"))
@@ -1476,7 +1510,7 @@ describe("pip_collect_out", {
         pip_add(p, "s3", \(x = ~ -1) x + 1, tags = "model")
 
         data.table::set(
-            p[["data"]],
+            p[["pipenv"]][["data"]],
             j = "out",
             value = list("o1", "o2", "o3")
         )
@@ -1603,7 +1637,7 @@ describe("pip_get_graph", {
         expect_true(all(edges[["arrows"]] == "to"))
 
         expectedColors <- vapply(
-            p[["data"]][["state"]],
+            p[["state"]],
             FUN = \(st) .step_states[[st]][["color"]],
             FUN.VALUE = character(1)
         )
@@ -1656,8 +1690,11 @@ describe("pip_run", {
         it("runs all steps of the pipeline and marks them as done", {
             p <- test_pip()
             pip_run(p, lgr = NULL)
-            expect_equal(p$data[["out"]], list(1, 2, 2, "blabla"))
-            expect_equal(p$data[["state"]], rep("done", 4))
+            expect_equal(
+                unname(p[["out"]]),
+                list(1, 2, 2, "blabla")
+            )
+            expect_equal(unname(p[["state"]]), rep("done", 4))
         })
 
         it("marks downstream steps not reached due to abort as outdated", {
@@ -1668,7 +1705,7 @@ describe("pip_run", {
 
             expect_error(pip_run(p, lgr = NULL), "io error")
             expect_equal(
-                p$data[["state"]],
+                unname(p[["state"]]),
                 c("failed", "outdated", "outdated")
             )
         })
@@ -1704,14 +1741,17 @@ describe("pip_run", {
             p <- test_pip()
             v <- pip_view(p, tags = "bla")
             pip_run(v, lgr = NULL)
-            expect_equal(p$data[["out"]], list(NULL, NULL, NULL, "blabla"))
+            expect_equal(
+                unname(p[["out"]]),
+                list(NULL, NULL, NULL, "blabla")
+            )
         })
 
         it("runs all steps of the view plus upstream dependencies", {
             p <- test_pip()
             v <- pip_view(p, tags = "model")
             pip_run(v, lgr = NULL)
-            expect_equal(p$data[["out"]], list(1, 2, 2, NULL))
+            expect_equal(unname(p[["out"]]), list(1, 2, 2, NULL))
 
             p <- pip_new() |>
                 pip_add("f1", \(x = 1) x) |>
@@ -1722,11 +1762,17 @@ describe("pip_run", {
 
             v <- pip_view(p, step = "f2")
             pip_run(v, lgr = NULL)
-            expect_equal(p$data[["out"]], list(1, 2, NULL, NULL, NULL))
+            expect_equal(
+                unname(p[["out"]]),
+                list(1, 2, NULL, NULL, NULL)
+            )
 
             v <- pip_view(p, step = "f5")
             pip_run(v, lgr = NULL)
-            expect_equal(p$data[["out"]], list(1, 2, NULL, 3, 4))
+            expect_equal(
+                unname(p[["out"]]),
+                list(1, 2, NULL, 3, 4)
+            )
         })
 
         it("marks downstream steps outside the view as outdated", {
@@ -1734,7 +1780,7 @@ describe("pip_run", {
             v <- pip_view(p, tags = "io")
             pip_run(v, lgr = NULL)
             expect_equal(
-                p$data[["state"]],
+                unname(p[["state"]]),
                 c("done", "outdated", "outdated", "new")
             )
         })
@@ -1794,9 +1840,9 @@ describe("pip_run", {
             p <- test_pip_partitioned()
             pip_run(p, lgr = NULL)
 
-            splitOut <- p$data$out[[2]]
-            meanOut <- p$data$out[[3]]
-            plusOneOut <- p$data$out[[4]]
+            splitOut <- p[["pipenv"]][["data"]]$out[[2]]
+            meanOut <- p[["pipenv"]][["data"]]$out[[3]]
+            plusOneOut <- p[["pipenv"]][["data"]]$out[[4]]
 
             expect_true(inherits(splitOut, "pipeflow_partitioned"))
             expect_true(inherits(meanOut, "pipeflow_partitioned"))
@@ -1806,7 +1852,7 @@ describe("pip_run", {
             expect_equal(meanOut[["b"]], 15)
             expect_equal(plusOneOut[["a"]], 3)
             expect_equal(plusOneOut[["b"]], 16)
-            expect_equal(p$data$out[[5]], 9.5)
+            expect_equal(p[["pipenv"]][["data"]]$out[[5]], 9.5)
         })
 
         it("errors when reduce mode receives only non-partitioned inputs", {
@@ -1894,7 +1940,7 @@ describe("pip_run", {
 
             pip_run(p, lgr = NULL)
 
-            out <- p$data$out[[6]]
+            out <- p[["pipenv"]][["data"]]$out[[6]]
             expect_true(inherits(out, "pipeflow_partitioned"))
             expect_equal(out[["a"]], 105)
             expect_equal(out[["b"]], 122)
@@ -2115,7 +2161,7 @@ describe("pip_run", {
                     body(function(x = ~f1) x * 3)
                 )
                 expect_equal(
-                    pip[["data"]][step == "f4", state][[1]],
+                    pip[["pipenv"]][["data"]][step == "f4", state][[1]],
                     "outdated"
                 )
 
@@ -2250,10 +2296,10 @@ describe("pip_run", {
         p |> pip_set_params(list(xInit = 11)) |> pip_run(lgr = NULL)
 
         expect_equal(count, 3L)
-        expect_equal(p[["data"]][["out"]], list(11, 12, 14, 36))
-        expect_equal(p[["data"]][["state"]], rep("done", 4))
+        expect_equal(unname(p[["out"]]), list(11, 12, 14, 36))
+        expect_equal(unname(p[["state"]]), rep("done", 4))
         expect_equal(
-            body(p[["data"]][["fun"]][[4]]),
+            body(p[["fun"]][[4]]),
             body(function(x = ~f1) x * 3)
         )
     })
@@ -2266,8 +2312,8 @@ describe("pip_run", {
         env[["data"]][["out"]] <- list(99, 99, 99, 99)
         pip_run(p, lgr = NULL, force = TRUE)
 
-        expect_equal(p[["data"]][["out"]], list(1, 2, 2, "blabla"))
-        expect_equal(p[["data"]][["state"]], rep("done", 4))
+        expect_equal(unname(p[["out"]]), list(1, 2, 2, "blabla"))
+        expect_equal(unname(p[["state"]]), rep("done", 4))
     })
 
     it("calls the progress callback before each step", {
@@ -2284,23 +2330,41 @@ describe("pip_run", {
 
     it("skips locked steps during run", {
         p <- test_pip()
-        data.table::set(p[["data"]], i = 2, j = "locked", value = TRUE)
+        data.table::set(
+            p[["pipenv"]][["data"]],
+            i = 2,
+            j = "locked",
+            value = TRUE
+        )
 
         pip_run(p, lgr = NULL)
         expect_equal(
-            p[["data"]][["state"]],
+            unname(p[["state"]]),
             c("done", "new", "done", "done")
         )
-        expect_equal(p[["data"]][["out"]], list(1, NULL, NULL, "blabla"))
+        expect_equal(
+            unname(p[["out"]]),
+            list(1, NULL, NULL, "blabla")
+        )
     })
 
     it("skips locked steps even with force = TRUE", {
         p <- test_pip()
-        data.table::set(p[["data"]], i = 2, j = "locked", value = TRUE)
-        data.table::set(p[["data"]], i = 2, j = "out", value = list(99))
+        data.table::set(
+            p[["pipenv"]][["data"]],
+            i = 2,
+            j = "locked",
+            value = TRUE
+        )
+        data.table::set(
+            p[["pipenv"]][["data"]],
+            i = 2,
+            j = "out",
+            value = list(99)
+        )
 
         pip_run(p, lgr = NULL, force = TRUE)
-        expect_equal(p[["data"]][["out"]][[2]], 99)
+        expect_equal(p[["out"]][[2]], 99)
     })
 
     it("forwards warnings and messages from steps to the logger", {
@@ -2328,12 +2392,16 @@ describe("pip_reset", {
             pip_add("b", \(x = ~a) x + 1)
         pip_run(p, lgr = NULL)
 
-        expect_equal(p[["data"]][["state"]], c("done", "done"))
+        expect_equal(unname(p[["state"]]), c("done", "done"))
 
         pip_reset(p)
 
-        expect_equal(p[["data"]][["state"]], c("new", "new"))
-        expect_true(all(vapply(p[["data"]][["out"]], is.null, logical(1))))
+        expect_equal(unname(p[["state"]]), c("new", "new"))
+        expect_true(all(vapply(
+            p[["out"]],
+            is.null,
+            logical(1)
+        )))
         expect_equal(get_run_state(p), "ready")
     })
 
@@ -2345,8 +2413,8 @@ describe("pip_reset", {
 
         pip_reset(p)
 
-        expect_equal(p[["data"]][["params"]][[1]][["n"]], 10)
-        expect_equal(p[["data"]][["tags"]][[1]], "io")
+        expect_equal(p[["params"]][[1]][["n"]], 10)
+        expect_equal(p[["tags"]][[1]], "io")
     })
 
     it("resets only the steps covered by a view", {
@@ -2358,7 +2426,7 @@ describe("pip_reset", {
         v <- pip_view(p, step = "b")
         pip_reset(v)
 
-        expect_equal(p[["data"]][["state"]], c("done", "new"))
+        expect_equal(unname(p[["state"]]), c("done", "new"))
     })
 
     it("allows re-running the pipeline from scratch after reset", {
@@ -2370,7 +2438,7 @@ describe("pip_reset", {
         pip_reset(p)
         pip_run(p, lgr = NULL)
 
-        expect_equal(p[["data"]][["out"]], list(1, 2))
+        expect_equal(unname(p[["out"]]), list(1, 2))
         expect_equal(get_run_state(p), "ready")
     })
 
@@ -2383,10 +2451,10 @@ describe("pip_reset", {
         pip_lock(pip_view(p, step = "b"))
         pip_reset(p)
 
-        expect_equal(p[["data"]][["state"]], c("new", "done"))
-        expect_null(p[["data"]][["out"]][[1]])
-        expect_equal(p[["data"]][["out"]][[2]], 2)
-        expect_equal(p[["data"]][["locked"]], c(FALSE, TRUE))
+        expect_equal(unname(p[["state"]]), c("new", "done"))
+        expect_null(p[["out"]][[1]])
+        expect_equal(p[["out"]][[2]], 2)
+        expect_equal(unname(p[["locked"]]), c(FALSE, TRUE))
     })
 
     it("warns when all selected steps are locked", {
@@ -2397,8 +2465,8 @@ describe("pip_reset", {
         pip_lock(p)
 
         expect_message(pip_reset(p), "all selected steps are locked")
-        expect_equal(p[["data"]][["state"]], "done")
-        expect_equal(p[["data"]][["out"]][[1]], 1)
+        expect_equal(unname(p[["state"]]), "done")
+        expect_equal(p[["out"]][[1]], 1)
     })
 })
 
@@ -2416,7 +2484,7 @@ describe("pip_set_params", {
         params <- list(x = 11, z = 33, data = data.frame(b = 3:4))
 
         pip_set_params(p, params = params)
-        after <- p[["data"]][["params"]]
+        after <- p[["params"]]
         expect_equal(after[[1]][["x"]], 11)
         expect_equal(after[[1]][["data"]], data.frame(b = 3:4))
         expect_equal(after[[2]][["y"]], 2)
@@ -2440,7 +2508,7 @@ describe("pip_set_params", {
         env <- p[["pipenv"]]
         env[["data"]][["locked"]][[1]] <- TRUE
         pip_set_params(p, params = list(x = 99))
-        after <- p[["data"]][["params"]]
+        after <- p[["params"]]
         expect_equal(after[[1]][["x"]], 1)
     })
 
@@ -2462,7 +2530,7 @@ describe("pip_set_params", {
             pip_set_params(v, params = list(z = 33, x = 11, y = 22)),
             "Trying to set parameters not defined in the target: y"
         )
-        after <- p[["data"]][["params"]]
+        after <- p[["params"]]
 
         expect_equal(after[[1]][["x"]], 1)
         expect_equal(after[[2]][["y"]], 2)
@@ -2474,21 +2542,21 @@ describe("pip_set_params", {
         p <- test_pip()
         pip_set_params(p, params = list(x = 5))
         expect_equal(
-            p[["data"]][["state"]],
+            unname(p[["state"]]),
             c("outdated", "outdated", "outdated", "outdated")
         )
 
         p <- test_pip()
         pip_set_params(p, params = list(y = 5))
         expect_equal(
-            p[["data"]][["state"]],
+            unname(p[["state"]]),
             c("new", "outdated", "new", "new")
         )
 
         p <- test_pip()
         pip_set_params(p, params = list(z = 5))
         expect_equal(
-            p[["data"]][["state"]],
+            unname(p[["state"]]),
             c("new", "new", "outdated", "outdated")
         )
     })
@@ -2496,7 +2564,7 @@ describe("pip_set_params", {
     it("no-ops on empty params list", {
         p <- test_pip()
         pip_set_params(p, params = list())
-        expect_equal(p[["data"]][["state"]], rep("new", 4))
+        expect_equal(unname(p[["state"]]), rep("new", 4))
     })
 
     it("no-ops if all considered steps are locked, with a warning", {
@@ -2547,22 +2615,30 @@ describe("pip_tag", {
         p <- tag_lock_test_pip()
         pip_tag(p, tags = c("daily", "core"))
 
-        expect_equal(p[["data"]][["tags"]][[1]], c("init", "daily", "core"))
         expect_equal(
-            p[["data"]][["tags"]][[2]],
+            p[["tags"]][[1]],
+            c("init", "daily", "core")
+        )
+        expect_equal(
+            p[["tags"]][[2]],
             c("daily", "model", "core")
         )
         expect_equal(
-            p[["data"]][["tags"]][[3]],
+            p[["tags"]][[3]],
             c("report", "daily", "core")
         )
     })
 
     it("updates only rows in a view and skips locked steps", {
         p <- tag_lock_test_pip()
-        data.table::set(p[["data"]], i = 2, j = "locked", value = TRUE)
         data.table::set(
-            p[["data"]],
+            p[["pipenv"]][["data"]],
+            i = 2,
+            j = "locked",
+            value = TRUE
+        )
+        data.table::set(
+            p[["pipenv"]][["data"]],
             i = 2,
             j = "tags",
             value = list("keep")
@@ -2571,9 +2647,12 @@ describe("pip_tag", {
         v <- pip_view(p, step = c("s2", "s3"))
         pip_tag(v, tags = "view")
 
-        expect_equal(p[["data"]][["tags"]][[1]], c("init", "daily"))
-        expect_equal(p[["data"]][["tags"]][[2]], "keep")
-        expect_equal(p[["data"]][["tags"]][[3]], c("report", "view"))
+        expect_equal(p[["tags"]][[1]], c("init", "daily"))
+        expect_equal(p[["tags"]][[2]], "keep")
+        expect_equal(
+            p[["tags"]][[3]],
+            c("report", "view")
+        )
     })
 })
 
@@ -2589,16 +2668,21 @@ describe("pip_untag", {
         p <- tag_lock_test_pip()
         pip_untag(p, tags = c("daily", "report"))
 
-        expect_equal(p[["data"]][["tags"]][[1]], "init")
-        expect_equal(p[["data"]][["tags"]][[2]], "model")
-        expect_equal(p[["data"]][["tags"]][[3]], character(0))
+        expect_equal(p[["tags"]][[1]], "init")
+        expect_equal(p[["tags"]][[2]], "model")
+        expect_equal(p[["tags"]][[3]], character(0))
     })
 
     it("updates only rows in a view and skips locked steps", {
         p <- tag_lock_test_pip()
-        data.table::set(p[["data"]], i = 2, j = "locked", value = TRUE)
         data.table::set(
-            p[["data"]],
+            p[["pipenv"]][["data"]],
+            i = 2,
+            j = "locked",
+            value = TRUE
+        )
+        data.table::set(
+            p[["pipenv"]][["data"]],
             i = 2,
             j = "tags",
             value = list(c("daily", "model"))
@@ -2607,9 +2691,12 @@ describe("pip_untag", {
         v <- pip_view(p, step = c("s2", "s3"))
         pip_untag(v, tags = "daily")
 
-        expect_equal(p[["data"]][["tags"]][[1]], c("init", "daily"))
-        expect_equal(p[["data"]][["tags"]][[2]], c("daily", "model"))
-        expect_equal(p[["data"]][["tags"]][[3]], "report")
+        expect_equal(p[["tags"]][[1]], c("init", "daily"))
+        expect_equal(
+            p[["tags"]][[2]],
+            c("daily", "model")
+        )
+        expect_equal(p[["tags"]][[3]], "report")
     })
 })
 
@@ -2622,7 +2709,7 @@ describe("pip_lock", {
     it("locks selected steps", {
         p <- tag_lock_test_pip()
         pip_lock(p)
-        expect_true(all(p[["data"]][["locked"]]))
+        expect_true(all(p[["locked"]]))
     })
 
     it("locks only rows covered by a view", {
@@ -2630,9 +2717,9 @@ describe("pip_lock", {
         v <- pip_view(p, step = c("s2", "s3"))
         pip_lock(v)
 
-        expect_false(p[["data"]][["locked"]][[1]])
-        expect_true(p[["data"]][["locked"]][[2]])
-        expect_true(p[["data"]][["locked"]][[3]])
+        expect_false(p[["locked"]][[1]])
+        expect_true(p[["locked"]][[2]])
+        expect_true(p[["locked"]][[3]])
     })
 })
 
@@ -2654,17 +2741,17 @@ describe("pip_unlock", {
     it("unlocks only rows covered by a view", {
         p <- tag_lock_test_pip()
         data.table::set(
-            p[["data"]],
+            p[["pipenv"]][["data"]],
             j = "locked",
-            value = rep(TRUE, nrow(p[["data"]]))
+            value = rep(TRUE, nrow(p[["pipenv"]][["data"]]))
         )
 
         v <- pip_view(p, step = c("s2", "s3"))
         pip_unlock(v)
 
-        expect_true(p[["data"]][["locked"]][[1]])
-        expect_false(p[["data"]][["locked"]][[2]])
-        expect_false(p[["data"]][["locked"]][[3]])
+        expect_true(p[["locked"]][[1]])
+        expect_false(p[["locked"]][[2]])
+        expect_false(p[["locked"]][[3]])
     })
 })
 
@@ -2677,7 +2764,7 @@ describe("pip_view", {
         v <- pip_view(p)
         expect_true(.is_pipeflow_view(v))
         expect_true("view" %in% names(v))
-        expect_identical(v[["data"]], p[["data"]])
+        expect_identical(v[["pipenv"]][["data"]], p[["pipenv"]][["data"]])
         expect_identical(v[["name"]], "test_pipeline view")
     })
 
@@ -2687,7 +2774,7 @@ describe("pip_view", {
         pip_add(p, "fit", \(x = ~ -1) x + 1, tags = "model")
         pip_add(p, "eval", \(x = ~fit) x, tags = "model")
 
-        p[["data"]][2, state := "done"]
+        p[["pipenv"]][["data"]][2, state := "done"]
 
         v <- pip_view(p, tags = "model", state = "done")
 

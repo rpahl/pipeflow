@@ -31,16 +31,16 @@ p <- pip_new() |>
   pip_add("square", \(x = ~load) x^2)
 
 pip_run(p)
-p[["data"]][["state"]] # "done", "done"
+p[["state"]] # "done", "done"
 
 # Locked steps keep their state and output when resetting
 pip_lock(pip_view(p, step = "square"))
 pip_reset(p)
-p[["data"]][["state"]] # "new", "done"
-p[["data"]][["out"]]   # NULL, (x^2 result)
+p[["state"]] # "new", "done"
+p[["out"]]   # NULL, (x^2 result)
 
 pip_unlock(p)
 pip_reset(p)
-p[["data"]][["state"]] # "new", "new"
-p[["data"]][["out"]]   # NULL, NULL
+p[["state"]] # "new", "new"
+p[["out"]]   # NULL, NULL
 }
