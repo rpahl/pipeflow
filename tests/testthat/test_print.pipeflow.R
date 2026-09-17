@@ -92,7 +92,7 @@ describe(".format_pip_data_table", {
         options(pipeflow.prettyprint.strwidth = strwidth)
         data.table::data.table(
             step = c("s1", "s2"),
-            signature = c(paste(rep("a", 60), collapse = ""), "short"),
+            params = c(paste(rep("a", 60), collapse = ""), "short"),
             state = c(paste(rep("x", 60), collapse = ""), "new"),
             exec = c(paste(rep("y", 60), collapse = ""), "auto"),
             tags = list(rep("t", 60), "s2")
@@ -107,7 +107,7 @@ describe(".format_pip_data_table", {
         out <- .format_pip_data_table(dt)
 
         expect_equal(
-            out[["signature"]],
+            out[["params"]],
             c(paste0(paste(rep("a", 50), collapse = ""), "..."), "short")
         )
     })
@@ -119,7 +119,7 @@ describe(".format_pip_data_table", {
         dt <- make_dt()
         out <- .format_pip_data_table(dt)
 
-        expect_equal(out[["signature"]][[2]], "short")
+        expect_equal(out[["params"]][[2]], "short")
         expect_equal(out[["step"]], c("s1", "s2"))
     })
 
@@ -152,7 +152,7 @@ describe(".format_pip_data_table", {
         out <- .format_pip_data_table(dt)
 
         expect_equal(
-            out[["signature"]],
+            out[["params"]],
             c(paste0(paste(rep("a", 10), collapse = ""), "..."), "short")
         )
     })
@@ -163,7 +163,7 @@ describe(".format_pip_data_table", {
 
         dt <- data.table::data.table(
             step = c("s1", "s2"),
-            signature = c("x=1", "x=~s1"),
+            params = c("x=1", "x=~s1"),
             state = c("new", "new")
         )
         out <- .format_pip_data_table(dt)
@@ -185,7 +185,7 @@ describe("print.pipeflow", {
         out[grepl(pattern, out)][1]
     }
 
-    it("shows signature after step and hides 'out' without results", {
+    it("shows params after step and hides 'out' without results", {
         op <- options(width = 1000L)
         on.exit(options(op))
 
@@ -195,7 +195,7 @@ describe("print.pipeflow", {
 
         expect_equal(
             get_print_header(p),
-            c("step", "signature", "depends", "state")
+            c("step", "params", "depends", "state")
         )
     })
 
@@ -210,7 +210,7 @@ describe("print.pipeflow", {
         expect_false("nodeId" %in% get_print_header(p))
         expect_equal(
             get_print_header(p, cols = "all")[seq_len(4L)],
-            c("step", "signature", "nodeId", "fun")
+            c("step", "nodeId", "fun", "params")
         )
     })
 
@@ -227,11 +227,11 @@ describe("print.pipeflow", {
         pip_run(p, lgr = NULL)
         expect_equal(
             get_print_header(p),
-            c("step", "signature", "depends", "state", "out")
+            c("step", "params", "depends", "state", "out")
         )
     })
 
-    it("prints one signature per step", {
+    it("prints the params of each step", {
         op <- options(width = 1000L)
         on.exit(options(op))
 
@@ -243,7 +243,7 @@ describe("print.pipeflow", {
         expect_true(grepl("y=\"hi\", x=~s1", get_step_line(p, "s2")))
     })
 
-    it("abbreviates long signatures with the maxchar option", {
+    it("abbreviates long params with the maxchar option", {
         op <- options(width = 1000L, pipeflow.print.param.maxchar = 4L)
         on.exit(options(op))
 
@@ -253,7 +253,7 @@ describe("print.pipeflow", {
         expect_true(grepl("x=<list>", get_step_line(p, "s1")))
     })
 
-    it("shows the class abbreviation for long signatures", {
+    it("shows the class abbreviation for long params", {
         op <- options(width = 1000L)
         on.exit(options(op))
 
@@ -263,7 +263,7 @@ describe("print.pipeflow", {
         expect_true(grepl("x=<data.frame>", get_step_line(p, "s1")))
     })
 
-    it("truncates over-long signatures in the printed table", {
+    it("truncates over-long params in the printed table", {
         op <- options(
             width = 1000L,
             pipeflow.prettyprint.strwidth = 10L,
@@ -289,7 +289,7 @@ describe("print.pipeflow", {
 
         expect_equal(
             header,
-            c("step", "signature", "depends", "state", "tags")
+            c("step", "params", "depends", "state", "tags")
         )
     })
 
@@ -305,7 +305,7 @@ describe("print.pipeflow", {
 
         expect_equal(
             header,
-            c("step", "signature", "depends", "state", "tags")
+            c("step", "params", "depends", "state", "tags")
         )
     })
 
@@ -321,7 +321,7 @@ describe("print.pipeflow", {
 
         expect_equal(
             header,
-            c("step", "signature", "depends", "state", "tags", "exec")
+            c("step", "params", "depends", "state", "tags", "exec")
         )
     })
 
@@ -338,7 +338,7 @@ describe("print.pipeflow", {
 
         expect_equal(
             header,
-            c("step", "signature", "depends", "state", "locked")
+            c("step", "params", "depends", "state", "locked")
         )
     })
 
@@ -415,7 +415,7 @@ describe("print.pipeflow_view", {
         expect_true(any(grepl("<pipeflow_view>", out)))
         expect_equal(
             get_view_header(v),
-            c("step", "signature", "depends", "state", "tags")
+            c("step", "params", "depends", "state", "tags")
         )
     })
 
@@ -431,7 +431,7 @@ describe("print.pipeflow_view", {
 
         expect_equal(
             get_view_header(v),
-            c("step", "signature", "depends", "state", "tags")
+            c("step", "params", "depends", "state", "tags")
         )
     })
 
@@ -447,11 +447,11 @@ describe("print.pipeflow_view", {
 
         expect_equal(
             get_view_header(v),
-            c("step", "signature", "depends", "state", "tags", "exec")
+            c("step", "params", "depends", "state", "tags", "exec")
         )
     })
 
-    it("prints a signature for the selected steps", {
+    it("prints the params for the selected steps", {
         op <- options(width = 1000L)
         on.exit(options(op))
 

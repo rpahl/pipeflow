@@ -1118,6 +1118,22 @@ describe("pip_rename", {
         )
     })
 
+    it("updates the formula references in params", {
+        p <- test_pip()
+        pip_rename(p, from = "f1", to = "first")
+
+        expect_equal(
+            lapply(unname(p[["params"]]), \(par) {
+                vapply(par, deparse1, character(1))
+            }),
+            list(
+                c(a = "1"),
+                c(b = "~first"),
+                c(a = "~first", b = "~f2")
+            )
+        )
+    })
+
     it("keeps DAG and step mapping consistent", {
         p <- test_pip()
         pip_rename(p, from = "f1", to = "first")

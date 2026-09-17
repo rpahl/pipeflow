@@ -77,7 +77,7 @@ print.pipeflow <- function(
     isView <- .is_pipeflow_view(x)
 
     if (identical(cols, "core")) {
-        cols <- c("step", "depends", "state")
+        cols <- c("step", "params", "depends", "state")
         if (any(lengths(data[["out"]]) > 0L)) {
             cols <- append(cols, "out")
         }
@@ -126,16 +126,17 @@ print.pipeflow <- function(
         cat("Empty pipeline\n")
     } else {
         dat <- data[rows, cols, with = FALSE]
-        sig <- data.table::data.table(
-            signature = vapply(
-                data[["params"]][rows],
+        if ("params" %in% names(dat)) {
+            # We print params as a compact string of the form `name=value`
+            params_str <- vapply(
+                dat[["params"]],
                 FUN = .param_list_to_string,
                 character(1)
             )
-        )
-        dat2print <- data.table::cbindlist(list(dat[, 1], sig, dat[, -1]))
+            data.table::set(dat, j = "params", value = params_str)
+        }
         print(
-            .format_pip_data_table(dat2print),
+            .format_pip_data_table(dat),
             topn = topn,
             nrows = nrows,
             row.names = row.names,

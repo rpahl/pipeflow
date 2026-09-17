@@ -613,7 +613,9 @@ dim.pipeflow <- function(x) {
 #' @param rows Row indices to be printed. If empty, all rows are printed.
 #' @param cols The columns to be printed. Can be either one of
 #' `core` or `all` to print the core or all columns, respectively,
-#' or an explicit character vector of columns to be printed.
+#' or an explicit character vector of columns to be printed. The `params`
+#' column is shown in a compact `name=value` form, abbreviating long values
+#' by their class.
 #' @param topn The number of rows to be printed from the beginning
 #' and end of tables with more than `nrows` rows.
 #' @param nrows The number of rows printed before truncation is enforced.
@@ -631,7 +633,7 @@ dim.pipeflow <- function(x) {
 #'   pip_add("square", \(x = ~load) x^2, tags = "compute") |>
 #'   pip_add("total", \(x = ~square) sum(x), tags = "compute")
 #'
-#' print(p) # core columns: step, signature, depends, state, tags
+#' print(p) # core columns: step, params, depends, state, tags
 #' print(p, cols = "all") # all step-table columns
 #' print(p, rows = 2:3) # print only steps 2 and 3
 #'

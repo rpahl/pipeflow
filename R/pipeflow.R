@@ -1533,8 +1533,30 @@ pip_rename <- function(x, from, to) {
             dep
         }
     )
+
+    # Keep the formula references in params in sync with the renamed steps.
+    # The formulas are informational (step resolution uses `depends`), but
+    # they are user visible (e.g. when printing the params column).
+    newParams <- dat[["params"]]
+    for (i in seq_along(newParams)) {
+        dep <- newDepends[[i]]
+        if (length(dep) == 0L) {
+            next
+        }
+        for (arg in names(dep)) {
+            fml <- newParams[[i]][[arg]]
+            if (inherits(fml, "formula")) {
+                # Only swap the referenced name to keep the formula's
+                # environment (as.formula() would attach this frame).
+                fml[[2L]] <- as.name(dep[[arg]])
+                newParams[[i]][[arg]] <- fml
+            }
+        }
+    }
+
     data.table::set(dat, j = "step", value = newSteps)
     data.table::set(dat, j = "depends", value = newDepends)
+    data.table::set(dat, j = "params", value = newParams)
 
     stepsToNodes <- env[[".steps_to_nodes"]]
     nodeId <- stepsToNodes[[from]]

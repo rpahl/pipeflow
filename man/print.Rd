@@ -30,7 +30,9 @@
 
 \item{cols}{The columns to be printed. Can be either one of
 \code{core} or \code{all} to print the core or all columns, respectively,
-or an explicit character vector of columns to be printed.}
+or an explicit character vector of columns to be printed. The \code{params}
+column is shown in a compact \code{name=value} form, abbreviating long values
+by their class.}
 
 \item{topn}{The number of rows to be printed from the beginning
 and end of tables with more than \code{nrows} rows.}
@@ -58,7 +60,7 @@ p <- pip_new("demo") |>
   pip_add("square", \(x = ~load) x^2, tags = "compute") |>
   pip_add("total", \(x = ~square) sum(x), tags = "compute")
 
-print(p) # core columns: step, signature, depends, state, tags
+print(p) # core columns: step, params, depends, state, tags
 print(p, cols = "all") # all step-table columns
 print(p, rows = 2:3) # print only steps 2 and 3
 
