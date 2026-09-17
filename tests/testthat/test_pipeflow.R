@@ -6,6 +6,23 @@ describe(".empty_pipeline", {
         dt <- .empty_pipeline()
         expect_true(data.table::is.data.table(dt))
         expect_equal(nrow(dt), 0)
+        expect_equal(
+            names(dt),
+            c(
+                "step",
+                "nodeId",
+                "fun",
+                "params",
+                "depends",
+                "unbound",
+                "out",
+                "state",
+                "tags",
+                "time",
+                "locked",
+                "exec"
+            )
+        )
     })
 })
 
@@ -17,7 +34,7 @@ describe(".new_step", {
         params = list(x = 1, y = ~step1),
         depends = c(y = "step1"),
         tags = c("t1", "t2"),
-        .nodeId = 0
+        nodeId = 0
     )
 
     it("contains the expected elements", {
@@ -30,7 +47,7 @@ describe(".new_step", {
         expect_equal(step$state, "new")
         expect_true(inherits(step$time, "POSIXct"))
         expect_equal(step$locked, FALSE)
-        expect_equal(step$.nodeId, 0)
+        expect_equal(step$nodeId, 0)
         expect_equal(step$unbound, list("x"))
     })
 
@@ -1235,7 +1252,7 @@ describe("pip_remove", {
         remainingNode <- as.integer(nodeMap[["g1"]])
 
         expect_equal(unname(p[["step"]]), "g1")
-        expect_equal(unname(p[[".nodeId"]]), remainingNode)
+        expect_equal(unname(p[["nodeId"]]), remainingNode)
         expect_equal(afterOrder, remainingNode)
         expect_equal(length(afterOrder), length(beforeOrder) - 4L)
         expect_true(dag_has_node(dag, remainingNode))

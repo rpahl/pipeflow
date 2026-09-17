@@ -4,17 +4,17 @@
 .empty_pipeline <- function() {
     data.table::data.table(
         step = character(0),
+        nodeId = integer(),
         fun = list(),
         params = list(),
         depends = list(),
+        unbound = list(), # names of independent parameters
         out = list(),
         state = character(0),
         tags = list(),
         time = as.POSIXct(character(0)),
         locked = logical(0),
-        exec = character(0),
-        .nodeId = integer(),
-        unbound = list() # names of independent parameters
+        exec = character(0)
     )
 }
 
@@ -23,23 +23,23 @@
     fun,
     params,
     depends,
-    .nodeId,
+    nodeId,
     tags = character(0),
     exec = "auto"
 ) {
     list(
         step = step,
+        nodeId = nodeId,
         fun = list(fun),
         params = list(params),
         depends = list(depends),
+        unbound = list(setdiff(names(params), names(depends))),
         out = list(NULL),
         state = .step_states[["new"]][["name"]],
         tags = list(tags),
         time = Sys.time(),
         locked = FALSE,
-        exec = exec,
-        .nodeId = .nodeId,
-        unbound = list(setdiff(names(params), names(depends)))
+        exec = exec
     )
 }
 
@@ -403,7 +403,7 @@
 
 .pip_update_downstream <- function(x, steps, what, value) {
     nodes <- .pip_get_reachable_nodes(x, steps)
-    .pip_get_pipenv(x)[["data"]][list(nodes), (what) := value, on = ".nodeId"]
+    .pip_get_pipenv(x)[["data"]][list(nodes), (what) := value, on = "nodeId"]
 
     invisible(x)
 }
@@ -523,7 +523,7 @@
 }
 
 .pip_filter_nodes <- function(x, nodes) {
-    .pip_get_pipenv(x)[["data"]][list(nodes), on = ".nodeId"]
+    .pip_get_pipenv(x)[["data"]][list(nodes), on = "nodeId"]
 }
 
 
@@ -535,7 +535,7 @@
 }
 
 .pip_reindex <- function(x) {
-    data.table::setindexv(.pip_get_pipenv(x)[["data"]], list("step", ".nodeId"))
+    data.table::setindexv(.pip_get_pipenv(x)[["data"]], list("step", "nodeId"))
 }
 
 
@@ -636,9 +636,9 @@
 
     # Update DAG
     d <- env[[".dag"]]
-    .nodeId <- as.integer(dag_add_node(d))
+    nodeId <- as.integer(dag_add_node(d))
     if (length(refNodes) > 0) {
-        dag_add_edges_to(d, from = as.integer(refNodes), to = .nodeId)
+        dag_add_edges_to(d, from = as.integer(refNodes), to = nodeId)
     }
 
     # Create and append step
@@ -649,11 +649,11 @@
         depends = depends,
         tags = tags,
         exec = exec,
-        .nodeId = .nodeId
+        nodeId = nodeId
     )
 
     env[["data"]] <- data.table::rbindlist(list(env[["data"]], newStep))
-    env[[".steps_to_nodes"]][[step]] <- .nodeId
+    env[[".steps_to_nodes"]][[step]] <- nodeId
     x
 }
 
@@ -708,9 +708,9 @@
 
     # Update DAG: add the node at the insertion position of its order
     d <- env[[".dag"]]
-    .nodeId <- as.integer(dag_add_node_at(d, pos))
+    nodeId <- as.integer(dag_add_node_at(d, pos))
     if (length(refNodes) > 0) {
-        dag_add_edges_to(d, from = as.integer(refNodes), to = .nodeId)
+        dag_add_edges_to(d, from = as.integer(refNodes), to = nodeId)
     }
 
     # Create the new step and insert its row after the first `pos` steps
@@ -721,7 +721,7 @@
         depends = depends,
         tags = tags,
         exec = exec,
-        .nodeId = .nodeId
+        nodeId = nodeId
     )
     n <- nrow(data)
     env[["data"]] <- data.table::rbindlist(list(
@@ -729,7 +729,7 @@
         newStep,
         data[seq_len(n - pos) + pos]
     ))
-    env[[".steps_to_nodes"]][[step]] <- .nodeId
+    env[[".steps_to_nodes"]][[step]] <- nodeId
     x
 }
 
@@ -792,18 +792,18 @@
 
         # Update DAG: allocate the node, register the step, add edges to its
         # upstream steps (which are either in `out` or already appended).
-        .nodeId <- as.integer(dag_add_node(d))
-        stepsToNodes[[step]] <- .nodeId
+        nodeId <- as.integer(dag_add_node(d))
+        stepsToNodes[[step]] <- nodeId
         if (length(depends) > 0L) {
             refNodes <- as.integer(unlist(mget(
                 unname(depends),
                 envir = stepsToNodes,
                 inherits = FALSE
             )))
-            dag_add_edges_to(d, from = refNodes, to = .nodeId)
+            dag_add_edges_to(d, from = refNodes, to = nodeId)
         }
 
-        row <- .new_step(step, fun, params, depends, .nodeId, tags, exec)
+        row <- .new_step(step, fun, params, depends, nodeId, tags, exec)
         rows[[k]] <- row
     }
 
@@ -1106,7 +1106,7 @@ pip_clone <- function(x, name = NULL) {
     stepsToNodes <- env[[".steps_to_nodes"]]
     for (k in seq_len(nrow(dat))) {
         step <- dat[["step"]][[k]]
-        nodeId <- dat[[".nodeId"]][[k]]
+        nodeId <- dat[["nodeId"]][[k]]
         stepsToNodes[[step]] <- nodeId
     }
     env[["data"]] <- dat
@@ -1237,12 +1237,12 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
     rows <- sort(unique(rows))
 
     if (isView && include_upstream && length(rows) > 0L) {
-        startNodes <- dat[[".nodeId"]][rows]
+        startNodes <- dat[["nodeId"]][rows]
         keepNodes <- dag_get_reachable_nodes_up(
             dag,
             as.integer(unique(startNodes))
         )
-        rows <- which(dat[[".nodeId"]] %in% keepNodes)
+        rows <- which(dat[["nodeId"]] %in% keepNodes)
         rows <- sort(unique(as.integer(rows)))
     }
 
@@ -1255,7 +1255,7 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
         FUN.VALUE = character(1)
     )
 
-    ids <- as.integer(sub[[".nodeId"]])
+    ids <- as.integer(sub[["nodeId"]])
     shape <- rep("hexagon", nrow(sub))
     if ("exec" %in% names(sub)) {
         shape[sub[["exec"]] %in% "split"] <- "star"
@@ -1406,7 +1406,7 @@ pip_remove <- function(x, step, force = FALSE) {
         stepNode <- as.integer(.pip_steps_to_nodes(x, step)[[1]])
 
         downDeps <- dat[["step"]][
-            dat[[".nodeId"]] %in% setdiff(downNodes, stepNode)
+            dat[["nodeId"]] %in% setdiff(downNodes, stepNode)
         ]
         if (length(downDeps) > 0L) {
             stepsString <- paste0("'", downDeps, "'", collapse = ", ")
@@ -1418,7 +1418,7 @@ pip_remove <- function(x, step, force = FALSE) {
             )
         }
 
-        stepsToRemove <- dat[["step"]][dat[[".nodeId"]] %in% downNodes]
+        stepsToRemove <- dat[["step"]][dat[["nodeId"]] %in% downNodes]
     }
 
     nodesToRemove <- as.integer(unname(unlist(
@@ -1444,7 +1444,7 @@ pip_remove <- function(x, step, force = FALSE) {
         )
     )
 
-    data.table::setindexv(pipenv[["data"]], list("step", ".nodeId"))
+    data.table::setindexv(pipenv[["data"]], list("step", "nodeId"))
 
     # Remap the view to the shifted (and potentially dropped) row positions.
     if (isView) {
@@ -1541,7 +1541,7 @@ pip_rename <- function(x, from, to) {
     stepsToNodes[[to]] <- nodeId
     rm(list = from, envir = stepsToNodes, inherits = FALSE)
 
-    data.table::setindexv(dat, list("step", ".nodeId"))
+    data.table::setindexv(dat, list("step", "nodeId"))
     invisible(x)
 }
 
@@ -1751,7 +1751,7 @@ pip_replace <- function(
         rowsDown <- data[
             list(downNodes),
             which = TRUE,
-            on = ".nodeId"
+            on = "nodeId"
         ]
         if (length(rowsDown) > 0L) {
             data.table::set(
@@ -1876,7 +1876,7 @@ pip_run <- function(
             reqSteps,
             downstream = FALSE
         )
-        upRows <- as.integer(dat[list(upNodes), which = TRUE, on = ".nodeId"])
+        upRows <- as.integer(dat[list(upNodes), which = TRUE, on = "nodeId"])
         rowsToRun <- as.integer(sort(unique(c(requested, upRows))))
         upstreamRows <- setdiff(rowsToRun, requested)
         names(rowsToRun)[match(requested, rowsToRun)] <- "view"
@@ -1900,7 +1900,7 @@ pip_run <- function(
             unique() |>
             setdiff(processedNodes)
         if (length(outdatedNodes) > 0L) {
-            iOut <- dat[list(outdatedNodes), which = TRUE, on = ".nodeId"]
+            iOut <- dat[list(outdatedNodes), which = TRUE, on = "nodeId"]
             if (length(iOut) > 0L) {
                 data.table::set(dat, i = iOut, j = "state", value = "outdated")
             }

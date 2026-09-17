@@ -4,7 +4,7 @@
 
 #' Compact a pipeline to a subset of steps
 #'
-#' Helper to build new pipeline from the steps of `x` whose `.nodeId` is
+#' Helper to build new pipeline from the steps of `x` whose `nodeId` is
 #' contained in `keepNodes`. The kept rows get a compact node id sequence,
 #' and the DAG and the step->node lookup are re-built from the `depends`
 #' values.
@@ -26,7 +26,7 @@
     data <- pipenv[["data"]]
     out <- pip_new(name = x[["name"]])
     keepNodes <- as.integer(keepNodes)
-    rows <- which(data[[".nodeId"]] %in% keepNodes)
+    rows <- which(data[["nodeId"]] %in% keepNodes)
     if (length(rows) == 0L) {
         return(out)
     }
@@ -39,21 +39,21 @@
         # the C++ side compact the node ids. Nodes that are still alive
         # correspond to the current rows of `data`.
         d <- dag_clone(pipenv[[".dag"]])
-        dead <- setdiff(data[[".nodeId"]], keepNodes)
+        dead <- setdiff(data[["nodeId"]], keepNodes)
         for (id in dead) {
             dag_remove_node(d, id, force = TRUE)
         }
         oldOrder <- dag_rebuild(d)
-        subDat[[".nodeId"]] <- match(subDat[[".nodeId"]], oldOrder) - 1L
+        subDat[["nodeId"]] <- match(subDat[["nodeId"]], oldOrder) - 1L
     } else {
         # Re-map node ids to a compact sequence
-        subDat[[".nodeId"]] <- seq_along(subDat[[".nodeId"]]) - 1L
+        subDat[["nodeId"]] <- seq_along(subDat[["nodeId"]]) - 1L
     }
 
     # Rebuild the step->node lookup table
     stepsToNodes <- new.env(parent = emptyenv())
     for (k in seq_len(nrow(subDat))) {
-        stepsToNodes[[subDat[["step"]][[k]]]] <- subDat[[".nodeId"]][[k]]
+        stepsToNodes[[subDat[["step"]][[k]]]] <- subDat[["nodeId"]][[k]]
     }
 
     if (!useRebuild) {
@@ -70,12 +70,12 @@
                 envir = stepsToNodes,
                 inherits = FALSE
             ))))
-            to <- as.integer(subDat[[".nodeId"]][[k]])
+            to <- as.integer(subDat[["nodeId"]][[k]])
             dag_add_edges_to(d, from = from, to = to)
         }
     }
 
-    data.table::setindexv(subDat, list("step", ".nodeId"))
+    data.table::setindexv(subDat, list("step", "nodeId"))
     env <- .pip_get_pipenv(out)
     env[["data"]] <- subDat
     env[[".dag"]] <- d
@@ -323,7 +323,7 @@ dim.pipeflow <- function(x) {
     # then build a self-contained, compact pipeline from them.
     keepNodes <- dag_get_reachable_nodes_up(
         pipenv[[".dag"]],
-        as.integer(unique(dat[[".nodeId"]][rows]))
+        as.integer(unique(dat[["nodeId"]][rows]))
     )
     out <- .pip_compact(x, keepNodes)
 
@@ -631,8 +631,8 @@ dim.pipeflow <- function(x) {
 #'   pip_add("square", \(x = ~load) x^2, tags = "compute") |>
 #'   pip_add("total", \(x = ~square) sum(x), tags = "compute")
 #'
-#' print(p) # core columns: step, depends, tags, out, state
-#' print(p, cols = "all") # all non-hidden columns
+#' print(p) # core columns: step, signature, depends, state, tags
+#' print(p, cols = "all") # all step-table columns
 #' print(p, rows = 2:3) # print only steps 2 and 3
 #'
 #' v <- pip_view(p, tags = "compute")

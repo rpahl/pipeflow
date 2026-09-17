@@ -429,7 +429,7 @@ of course, you can get even more hacky, but be aware that some
 additional operations are done under the hood when steps are added
 or removed. It is therefore not recommended to "manually" manipulate
 the internal data.table object in terms of removing or adding rows,
-or changing important columns such as `depends` or `.nodeId` as
+or changing important columns such as `depends` or `nodeId` as
 this immediately would invalidate the internal consistency of the
 dependency graph.
 

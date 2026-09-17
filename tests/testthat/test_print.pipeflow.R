@@ -199,6 +199,21 @@ describe("print.pipeflow", {
         )
     })
 
+    it("shows the nodeId column only in the printed 'all' view", {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1)
+
+        expect_false("nodeId" %in% get_print_header(p))
+        expect_equal(
+            get_print_header(p, cols = "all")[seq_len(4L)],
+            c("step", "signature", "nodeId", "fun")
+        )
+    })
+
     it("shows the 'out' column only when a step has a result", {
         op <- options(width = 1000L)
         on.exit(options(op))

@@ -92,8 +92,7 @@ print.pipeflow <- function(
         }
     }
     if (identical(cols, "all")) {
-        isHidden <- function(name) startsWith(name, ".")
-        cols <- Filter(Negate(isHidden), colnames(data))
+        cols <- colnames(data)
     }
 
     if (header) {

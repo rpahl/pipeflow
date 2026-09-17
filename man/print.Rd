@@ -58,8 +58,8 @@ p <- pip_new("demo") |>
   pip_add("square", \(x = ~load) x^2, tags = "compute") |>
   pip_add("total", \(x = ~square) sum(x), tags = "compute")
 
-print(p) # core columns: step, depends, tags, out, state
-print(p, cols = "all") # all non-hidden columns
+print(p) # core columns: step, signature, depends, state, tags
+print(p, cols = "all") # all step-table columns
 print(p, rows = 2:3) # print only steps 2 and 3
 
 v <- pip_view(p, tags = "compute")

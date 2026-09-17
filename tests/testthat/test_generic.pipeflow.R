@@ -14,7 +14,7 @@ describe(".pip_compact", {
         c <- .pip_compact(p, keepNodes = c(0L, 1L))
 
         expect_equal(unname(c[["step"]]), c("a1", "a2"))
-        expect_equal(c[[".nodeId"]], c(a1 = 0, a2 = 1))
+        expect_equal(c[["nodeId"]], c(a1 = 0, a2 = 1))
         expect_equal(unname(c[["depends"]][[2]]), "a1")
         expect_setequal(
             .pip_filter_nodes(
@@ -51,7 +51,7 @@ describe(".pip_compact", {
         c <- .pip_compact(p, keepNodes = c(0L, 9L))
 
         expect_equal(unname(c[["step"]]), c("hub", "f9"))
-        expect_equal(unname(c[[".nodeId"]]), 0:1)
+        expect_equal(unname(c[["nodeId"]]), 0:1)
         expect_equal(unname(c[["depends"]][[2]]), "hub")
     })
 
@@ -61,15 +61,15 @@ describe(".pip_compact", {
             pip_add("b1", \(x = 1) x) |>
             pip_add("a2", \(x = ~a1) x) |>
             pip_add("b2", \(x = ~b1) x)
-        pip_remove(p, "a2") # leaves .nodeId with a gap
+        pip_remove(p, "a2") # leaves nodeId with a gap
 
-        c <- .pip_compact(p, keepNodes = p[[".nodeId"]])
+        c <- .pip_compact(p, keepNodes = p[["nodeId"]])
 
         expect_equal(
             unname(c[["step"]]),
             c("a1", "b1", "b2")
         )
-        expect_equal(unname(c[[".nodeId"]]), 0:2)
+        expect_equal(unname(c[["nodeId"]]), 0:2)
         expect_equal(unname(c[["depends"]][[3]]), "b1")
     })
 
@@ -80,8 +80,8 @@ describe(".pip_compact", {
                 unname(b[["step"]])
             )
             expect_equal(
-                a[[".nodeId"]],
-                b[[".nodeId"]]
+                a[["nodeId"]],
+                b[["nodeId"]]
             )
             expect_equal(
                 a[["depends"]],
@@ -161,7 +161,7 @@ describe(".pip_compact", {
             pip_add("a2", \(x = ~a1) x) |>
             pip_add("b2", \(x = ~b1) x)
         pip_remove(q, "a2")
-        keep <- q[[".nodeId"]]
+        keep <- q[["nodeId"]]
 
         ref <- .pip_compact(q, keepNodes = keep, rebuildThresh = fracs[1])
         for (frac in fracs[-1]) {
