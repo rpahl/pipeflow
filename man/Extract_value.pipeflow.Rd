@@ -83,6 +83,8 @@ downstream steps are marked as outdated.
 (\code{\link[=pip_lock]{pip_lock()}} / \code{\link[=pip_unlock]{pip_unlock()}}).
 \item \code{p[[step, "exec"]] <- mode} — set the step's execution mode.
 \item \code{p[[step, "state"]] <- state} — set the step's state.
+\item \code{p[[step, "time"]] <- time} — set the step's time stamp (a single
+\code{POSIXct} value).
 \item \code{p[[step, "out"]] <- value} — set the step's stored output.
 }
 
@@ -144,8 +146,9 @@ p[["fit", "exec"]] <- "plain"
 # Rename a step; dependent steps are updated as well
 p[["load", "step"]] <- "read"
 
-# Assign by row index to set the state or the stored output
+# Assign by row index to set the state, time stamp or stored output
 p[[2, "state"]] <- "outdated"
+p[[2, "time"]] <- Sys.time() - 3600
 p[[2, "out"]] <- 42
 p
 

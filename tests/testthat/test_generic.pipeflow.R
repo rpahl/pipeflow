@@ -756,6 +756,29 @@ describe("assignment operator [[<-", {
         expect_error(p[["s2", "state"]] <- NULL, "must be a single string")
     })
 
+    it("can assign time stamps", {
+        p <- test_pip()
+        when <- as.POSIXct("2020-01-01 12:00:00", tz = "UTC")
+        p[["s1", "time"]] <- when
+        expect_equal(
+            format(p[["time"]][[1]], tz = "UTC"),
+            "2020-01-01 12:00:00"
+        )
+
+        expect_error(
+            p[["s2", "time"]] <- 1,
+            "time must be a single POSIXct value"
+        )
+        expect_error(
+            p[["s2", "time"]] <- as.Date("2020-01-01"),
+            "time must be a single POSIXct value"
+        )
+        expect_error(
+            p[["s2", "time"]] <- as.POSIXct(NA),
+            "time must be a single POSIXct value"
+        )
+    })
+
     it("can assign output values", {
         p <- test_pip()
         p[["s1", "out"]] <- 10
@@ -835,8 +858,8 @@ describe("assignment operator [[<-", {
             "j must be provided"
         )
         expect_error(
-            p[["s1", "time"]] <- 1,
-            "direct assignment to column 'time' is not supported"
+            p[["s1", "depends"]] <- 1,
+            "direct assignment to column 'depends' is not supported"
         )
         expect_error(
             p[["s1", "nope"]] <- 1,

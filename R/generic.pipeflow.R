@@ -426,6 +426,8 @@ dim.pipeflow <- function(x) {
 #'   ([pip_lock()] / [pip_unlock()]).
 #' * `p[[step, "exec"]] <- mode` — set the step's execution mode.
 #' * `p[[step, "state"]] <- state` — set the step's state.
+#' * `p[[step, "time"]] <- time` — set the step's time stamp (a single
+#'   `POSIXct` value).
 #' * `p[[step, "out"]] <- value` — set the step's stored output.
 #'
 #' Assigning to any other step-table column, or to a meta field other than
@@ -466,8 +468,9 @@ dim.pipeflow <- function(x) {
 #' # Rename a step; dependent steps are updated as well
 #' p[["load", "step"]] <- "read"
 #'
-#' # Assign by row index to set the state or the stored output
+#' # Assign by row index to set the state, time stamp or stored output
 #' p[[2, "state"]] <- "outdated"
+#' p[[2, "time"]] <- Sys.time() - 3600
 #' p[[2, "out"]] <- 42
 #' p
 #'
@@ -558,6 +561,11 @@ dim.pipeflow <- function(x) {
     } else if (j == "state") {
         .assert_state(value)
         data.table::set(data, i = i, j = "state", value = value)
+    } else if (j == "time") {
+        if (!.is_single(value, "POSIXct") || is.na(value)) {
+            stop("time must be a single POSIXct value")
+        }
+        data.table::set(data, i = i, j = "time", value = value)
     } else if (j == "tags") {
         if (!is.null(value) && !is.character(value)) {
             stop("tags must be a character vector")
