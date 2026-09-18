@@ -1518,6 +1518,9 @@ pip_rename <- function(x, from, to) {
     if (!.pip_step_in_view(x, from)) {
         stop("step '", from, "' is not part of the view")
     }
+    if (identical(from, to)) {
+        return(invisible(x))
+    }
     if (.pip_step_exists(x, to)) {
         stop("step '", to, "' already exists")
     }

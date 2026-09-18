@@ -1167,6 +1167,21 @@ describe("pip_rename", {
             )
         )
     })
+
+    it("returns the pipeline as-is if from and to are identical", {
+        p <- test_pip()
+        pip_rename(p, from = "f1", to = "f1")
+
+        expect_equal(unname(p[["step"]]), c("f1", "f2", "f3"))
+        expect_equal(
+            unname(p[["depends"]]),
+            list(
+                character(0),
+                c(b = "f1"),
+                c(a = "f1", b = "f2")
+            )
+        )
+    })
 })
 
 

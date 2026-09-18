@@ -2,6 +2,88 @@
 # Helper
 # ------
 
+# Copy step properties of the selected rows of one pipeline/view to
+# the selected rows of another. The rows of `x` and `q` are aligned by
+# position and must have equal length. The structural columns
+# (`nodeId`, `depends`, `unbound`) are never copied:
+# - `depends` is recomputed when the function is replaced and
+# - `nodeId`/`unbound` are also derived.
+.pip_copy_from <- function(x, i, q, enclos) {
+    rowsP <- .pip_select_rows(x, i, enclos, keep_order = TRUE)
+    n <- length(rowsP)
+    if (n == 0L) {
+        return(x)
+    }
+
+    envQ <- .pip_get_pipenv(q)
+    dataQ <- envQ[["data"]]
+    rowsQ <- .pip_view_rows(q)
+    if (length(rowsQ) != n) {
+        stop(sprintf(
+            "cannot assign from a pipeline with %d step%s to %d selected row%s",
+            length(rowsQ),
+            if (length(rowsQ) == 1L) "" else "s",
+            n,
+            if (n == 1L) "" else "s"
+        ))
+    }
+
+    dataP <- .pip_get_pipenv(x)[["data"]]
+    viewRowsP <- .pip_view_rows(x)
+    iSelP <- if (.is_pipeflow_view(x)) match(rowsP, viewRowsP) else rowsP
+
+    props <- c(
+        "step",
+        "fun",
+        "params",
+        "out",
+        "state",
+        "time",
+        "tags",
+        "locked",
+        "exec"
+    )
+
+    # Since the source can be `x` itself, we will work on a snapshot to
+    # prevent that any writes below would alter rows that are still to be
+    # copied (e.g. pip_replace() marking downstream steps as outdated).
+    qSnapshot <- dataQ[rowsQ, props, with = FALSE]
+
+    for (k in seq_len(n)) {
+        pRow <- rowsP[[k]]
+
+        qVals <- lapply(props, function(prop) qSnapshot[[prop]][[k]])
+        names(qVals) <- props
+
+        # 1) Step name (a no-op when both pipelines use the same names).
+        x[[dataP[["step"]][[pRow]], "step"]] <- qVals[["step"]]
+
+        # 2) Function. pip_replace() resets the params to the function
+        #    defaults and recomputes `depends` against the steps of `x`.
+        x[[iSelP[[k]], "fun"]] <- qVals[["fun"]]
+
+        # 3) Take over all unbound param values from q. Bound (formula)
+        #    params are pipeline-context specific and stay as recomputed.
+        parsP <- x[[iSelP[[k]], "params"]]
+        dep <- x[[iSelP[[k]], "depends"]]
+        unboundP <- setdiff(names(parsP), names(dep))
+        pars <- qVals[["params"]][
+            intersect(names(qVals[["params"]]), unboundP)
+        ]
+        if (length(pars) > 0L) {
+            x[[iSelP[[k]], "params"]] <- pars
+        }
+
+        # 4) Runtime state and annotation columns.
+        for (prop in c("out", "state", "time", "tags", "locked", "exec")) {
+            x[[iSelP[[k]], prop]] <- qVals[[prop]]
+        }
+    }
+
+    x
+}
+
+
 #' Compact a pipeline to a subset of steps
 #'
 #' Helper to build new pipeline from the steps of `x` whose `nodeId` is
@@ -611,6 +693,23 @@ dim.pipeflow <- function(x) {
 #' must itself be a list (e.g. `p[1:2, "params"] <- list(list(a = 1),
 #' list(b = 2))`). Assigning to a read-only column such as `depends`,
 #' `nodeId` or `unbound` raises an error.
+#'
+#' If `value` is a `pipeflow` pipeline or view, the writable step properties
+#' of its steps are copied to the selected rows: `p[i, ] <- q[i, ]` copies
+#' the steps of `q` selected by `i` into the steps of `p` selected by `i`
+#' (the rows of both sides are aligned by position and must have the same
+#' length). In this form, `i` is required and `j` must be omitted. The
+#' properties are copied in the order `step`, `fun`, `params`, `out`,
+#' `state`, `time`, `tags`, `locked`, `exec`: the step is renamed to the
+#' source name (a no-op when it is unchanged), the function is replaced with
+#' the source function ([pip_replace()]; its dependencies are recomputed
+#' against the steps of `p`), the unbound parameters of the source are
+#' applied on top of the new function defaults, and the runtime state and
+#' annotation columns are overwritten (locked steps included). The
+#' structural columns `nodeId`, `depends` and `unbound` are not copied.
+#' Instead of `p[i, j] <- q`, use `p[i, j] <- q[i, j]` to copy the values of
+#' a single property; the one-column table returned by the extraction form
+#' is unwrapped and assigned element-wise.
 #' @examples
 #' p <- pip_new("pipe") |>
 #'   pip_add("load", \(n = 5) seq_len(n)) |>
@@ -625,10 +724,30 @@ dim.pipeflow <- function(x) {
 #' # All steps at once; read-only columns are rejected
 #' p[, "state"] <- "outdated"
 #' try(p[c("load", "fit"), "depends"] <- "load")  # read-only
+#'
+#' # Copy the writable properties from another pipeline
+#' q <- pip_clone(p)
+#' q[c("load", "fit"), "out"] <- list(1:5, 6:10)
+#' p[c("load", "fit"), ] <- q[c("load", "fit"), ]
+#' p[c("load", "fit"), "tags"] <- q[c("load", "fit"), "tags"]
 #' @rdname Extract_value.pipeflow
 #' @export
 `[<-.pipeflow` <- function(x, i, j, value) {
     .assert_pip_or_view(x)
+
+    # Case x[i, ] <- q[i, ] - basically a cross-pipeline copy from q to x
+    if (inherits(value, "pipeflow")) {
+        if (missing(i)) {
+            stop("i must be provided when assigning from a pipeline")
+        }
+        if (!missing(j)) {
+            stop(
+                "j must not be provided when assigning from a pipeline - ",
+                "use p[i, j] <- q[i, j] to copy a single property"
+            )
+        }
+        return(.pip_copy_from(x, substitute(i), value, parent.frame()))
+    }
 
     if (missing(j)) {
         stop("j must be provided when assigning step properties")
@@ -637,7 +756,6 @@ dim.pipeflow <- function(x) {
         stop("j must be a single step property name")
     }
 
-    data <- .pip_get_pipenv(x)[["data"]]
     rows <- if (missing(i)) {
         .pip_view_rows(x)
     } else {
@@ -649,10 +767,30 @@ dim.pipeflow <- function(x) {
         return(x)
     }
 
-    # A single selected row stores the value as-is, mirroring `[[<-`.
+    # Convert absolute row indices to the view-relative indexing used by `[[<-`
+    viewRows <- .pip_view_rows(x)
+    iSel <- if (.is_pipeflow_view(x)) match(rows, viewRows) else rows
+
+    hasOneColumnTable <- is.data.frame(value) &&
+        ncol(value) == 1L &&
+        identical(colnames(value), j)
+
     if (n == 1L) {
-        x[[data[["step"]][[rows]], j]] <- value
+        # If we get here, i and j are single entries
+        if (hasOneColumnTable) {
+            # case p[i, j] <- q[i, j] => double-unwrap q[[1]][[1]]
+            value <- value[[1L]][[1L]]
+        }
+
+        # case p[i, j] <- some_value => no unwrap
+        x[[iSel, j]] <- value
         return(x)
+    }
+
+    if (hasOneColumnTable) {
+        # If we get here, i is multi-row, e.g. value == q[1:3, "state"], so we
+        # unwrap and assign element-wise to the selected rows.
+        value <- value[[1L]]
     }
 
     # Determine the value for each selected row.
@@ -676,17 +814,11 @@ dim.pipeflow <- function(x) {
         }
     }
 
-    # Convert the absolute row indices to the view-relative indexing used
-    # by `[[<-`.
-    viewRows <- .pip_view_rows(x)
-    iSel <- if (.is_pipeflow_view(x)) match(rows, viewRows) else rows
-
     for (k in seq_len(n)) {
         x[[iSel[[k]], j]] <- values[[k]]
     }
     x
 }
-
 
 #' @rdname Extract_value.pipeflow
 #' @export

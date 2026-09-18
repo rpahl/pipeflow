@@ -112,6 +112,23 @@ steps covered by the view: an integer refers to the n-th visible step, and a
 step name must be part of the view. Because views share the pipeline
 environment, step properties are written through to the originating
 pipeline, while \code{name} only renames the view itself.
+
+If \code{value} is a \code{pipeflow} pipeline or view, the writable step properties
+of its steps are copied to the selected rows: \code{p[i, ] <- q[i, ]} copies
+the steps of \code{q} selected by \code{i} into the steps of \code{p} selected by \code{i}
+(the rows of both sides are aligned by position and must have the same
+length). In this form, \code{i} is required and \code{j} must be omitted. The
+properties are copied in the order \code{step}, \code{fun}, \code{params}, \code{out},
+\code{state}, \code{time}, \code{tags}, \code{locked}, \code{exec}: the step is renamed to the
+source name (a no-op when it is unchanged), the function is replaced with
+the source function (\code{\link[=pip_replace]{pip_replace()}}; its dependencies are recomputed
+against the steps of \code{p}), the unbound parameters of the source are
+applied on top of the new function defaults, and the runtime state and
+annotation columns are overwritten (locked steps included). The
+structural columns \code{nodeId}, \code{depends} and \code{unbound} are not copied.
+Instead of \code{p[i, j] <- q}, use \code{p[i, j] <- q[i, j]} to copy the values of
+a single property; the one-column table returned by the extraction form
+is unwrapped and assigned element-wise.
 }
 \examples{
 p <- pip_new() |>
@@ -186,4 +203,10 @@ p[1:2, "tags"] <- list(c("new", "tag"))  # same tags for both steps
 # All steps at once; read-only columns are rejected
 p[, "state"] <- "outdated"
 try(p[c("load", "fit"), "depends"] <- "load")  # read-only
+
+# Copy the writable properties from another pipeline
+q <- pip_clone(p)
+q[c("load", "fit"), "out"] <- list(1:5, 6:10)
+p[c("load", "fit"), ] <- q[c("load", "fit"), ]
+p[c("load", "fit"), "tags"] <- q[c("load", "fit"), "tags"]
 }

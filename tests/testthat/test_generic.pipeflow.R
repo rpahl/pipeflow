@@ -1155,6 +1155,180 @@ describe("[<-.pipeflow", {
 })
 
 
+describe("cross-pipeline assignment", {
+    test_pip <- function(name = "p") {
+        pip_new(name) |>
+            pip_add("s1", \(x = 1, k = 2) x + k) |>
+            pip_add("s2", \(x = ~s1) x * 2)
+    }
+
+    it("copies the runtime state and annotation columns", {
+        p <- test_pip()
+        q <- pip_clone(p)
+        q[1:2, "out"] <- list(10, 20)
+        q[1:2, "tags"] <- c("a", "b")
+        q[1:2, "state"] <- "done"
+        q[1:2, "locked"] <- TRUE
+        q[1:2, "exec"] <- "plain"
+
+        p[1:2, ] <- q[1:2, ]
+
+        expect_equal(unname(p[["out"]]), list(10, 20))
+        expect_equal(p[["tags"]], q[["tags"]])
+        expect_equal(unname(p[["state"]]), c("done", "done"))
+        expect_equal(unname(p[["locked"]]), c(TRUE, TRUE))
+        expect_equal(unname(p[["exec"]]), c("plain", "plain"))
+    })
+
+    it("copies the function and the unbound params, then runs", {
+        p <- test_pip()
+        q <- pip_clone(p)
+        q[["s1", "fun"]] <- \(x = 1, k = 2) x * k
+        q[["s2", "fun"]] <- \(x = ~s1, k = 2) x * k
+        q[["s2", "params"]] <- list(k = 3)
+
+        p[1:2, ] <- q[1:2, ]
+
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["out"]][[1]], 2)
+        expect_equal(p[["out"]][[2]], 6)
+    })
+
+    it("keeps the step names when both pipelines use the same names", {
+        p <- test_pip()
+        q <- pip_clone(p)
+        q[1:2, "tags"] <- c("x", "y")
+
+        p[1:2, ] <- q[1:2, ]
+
+        expect_equal(unname(p[["step"]]), c("s1", "s2"))
+        expect_equal(p[["tags"]], q[["tags"]])
+    })
+
+    it("renames the target steps to the source names", {
+        p <- test_pip()
+        q <- pip_clone(p)
+        pip_rename(q, "s1", "first")
+        pip_rename(q, "s2", "second")
+        # Function defaults still reference the old names; point the renamed
+        # step at the renamed upstream so the replacement resolves in `p`.
+        q[["second", "fun"]] <- \(x = ~first, k = 2) x * k
+
+        p[1:2, ] <- q[1:2, ]
+
+        expect_equal(unname(p[["step"]]), c("first", "second"))
+        expect_equal(unname(p[["depends"]][[2]]), "first")
+    })
+
+    it("errors when the source has a different number of steps", {
+        p <- test_pip()
+        q <- pip_clone(p)
+        pip_add(q, "s3", \(x = ~s2) x)
+
+        expect_error(
+            p[1:2, ] <- q,
+            "cannot assign from a pipeline with 3 steps to 2 selected rows"
+        )
+    })
+
+    it("requires i and forbids j when assigning from a pipeline", {
+        p <- test_pip()
+        q <- pip_clone(p)
+
+        expect_error(p[, ] <- q, "i must be provided")
+        expect_error(
+            p[1:2, "tags"] <- q,
+            "j must not be provided when assigning from a pipeline"
+        )
+    })
+
+    it("copies a single property via p[i, j] <- q[i, j]", {
+        p <- test_pip()
+        q <- pip_clone(p)
+        q[1:2, "tags"] <- list(c("t1"), c("t2", "t3"))
+        q[1:2, "state"] <- c("outdated", "done")
+
+        p[1:2, "tags"] <- q[1:2, "tags"]
+        p[1:2, "state"] <- q[1:2, "state"]
+
+        expect_equal(p[["tags"]][[1]], "t1")
+        expect_equal(p[["tags"]][[2]], c("t2", "t3"))
+        expect_equal(unname(p[["state"]]), c("outdated", "done"))
+    })
+
+    it("copies a single-cell value via p[i, j] <- q[i, j]", {
+        p <- test_pip()
+        q <- pip_clone(p)
+        q["s1", "out"] <- data.frame(a = 1:3)
+
+        p["s1", "out"] <- q["s1", "out"]
+
+        expect_equal(p[["out"]][[1]], data.frame(a = 1:3))
+    })
+
+    it("overwrites locked target steps", {
+        p <- test_pip()
+        q <- pip_clone(p)
+        q[1:2, "locked"] <- c(TRUE, FALSE)
+        p[1:2, "locked"] <- TRUE
+
+        p[1:2, ] <- q[1:2, ]
+
+        expect_equal(unname(p[["locked"]]), c(TRUE, FALSE))
+    })
+
+    it("is a no-op when copying a pipeline onto itself", {
+        p <- test_pip()
+        pip_run(p, lgr = NULL)
+
+        p[1:2, ] <- p[1:2, ]
+
+        expect_equal(unname(p[["out"]]), list(3, 6))
+        expect_equal(unname(p[["state"]]), c("done", "done"))
+    })
+
+    it("is a no-op for an empty row selection", {
+        p <- test_pip()
+        q <- pip_clone(p)
+
+        p[integer(0), ] <- q[integer(0), ]
+
+        expect_equal(unname(p[["step"]]), c("s1", "s2"))
+    })
+
+    it("errors when the source function references unknown steps", {
+        p <- test_pip()
+        q <- pip_new("q") |>
+            pip_add("other", \(x = 1) x) |>
+            pip_add("a", \(x = ~other) x)
+
+        expect_error(
+            p[1, ] <- q[2, ],
+            "cannot reference unknown steps: 'other'"
+        )
+    })
+
+    it("writes through views on both sides", {
+        p <- test_pip()
+        q <- pip_clone(p)
+        q[1:2, "tags"] <- c("x", "y")
+        q[["s2", "out"]] <- 99
+
+        # View target: writes through to the underlying pipeline.
+        vp <- pip_view(p, step = "s2")
+        vp[1, ] <- q[2, ]
+        expect_equal(p[["tags"]][[2]], "y")
+        expect_equal(p[["out"]][[2]], 99)
+
+        # View source: the copied rows are the covered steps.
+        vq <- pip_view(q, step = "s1")
+        vp <- pip_view(p, step = "s1")
+        vp[1, ] <- vq[1, ]
+        expect_equal(p[["tags"]][[1]], "x")
+    })
+})
+
+
 describe("benchmarking", {
     skip("benchmarking tests are skipped by default")
     v <- c("hello", "world")
