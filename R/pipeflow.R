@@ -449,7 +449,7 @@
 # is the unevaluated `i` expression; it is evaluated in the context of the
 # covered rows, i.e. the data of a view or the full step table of a pipeline.
 # `enclos` is used as the enclosing environment for boolean filter expressions.
-.pip_select_rows <- function(x, i_expr, enclos) {
+.pip_select_rows <- function(x, i_expr, enclos, keep_order = FALSE) {
     dat <- .pip_get_pipenv(x)[["data"]]
     view <- .is_pipeflow_view(x)
     rows <- .pip_view_rows(x)
@@ -479,7 +479,10 @@
         if (anyNA(value)) {
             stop("row indices in 'i' must not contain NA")
         }
-        idx <- sort(unique(as.integer(value)))
+        idx <- as.integer(value)
+        if (!keep_order) {
+            idx <- sort(unique(idx))
+        }
         bad <- idx[idx < 1L | idx > nrow(sub)]
         if (length(bad) > 0L) {
             stop("Invalid row indices in 'i': ", toString(bad))
@@ -499,7 +502,9 @@
             unknown <- unique(value[is.na(m)])
             stop("Unknown step names: ", toString(unknown), call. = FALSE)
         }
-        m <- sort(unique(m))
+        if (!keep_order) {
+            m <- sort(unique(m))
+        }
         outside <- m[!(m %in% rows)]
         if (length(outside) > 0L) {
             stop(

@@ -952,6 +952,209 @@ describe("assignment operator [[<-", {
 })
 
 
+describe("[<-.pipeflow", {
+    test_pip <- function() {
+        pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1) |>
+            pip_add("s3", \(x = ~s2) x + 1)
+    }
+
+    it("assigns element-wise by step name", {
+        p <- test_pip()
+        p[c("s1", "s3"), "tags"] <- c("io", "report")
+        expect_equal(p[["tags"]][[1]], "io")
+        expect_equal(p[["tags"]][[2]], character(0))
+        expect_equal(p[["tags"]][[3]], "report")
+    })
+
+    it("replicates a length-1 value to all selected rows", {
+        p <- test_pip()
+        p[1:2, "state"] <- "outdated"
+        expect_equal(unname(p[["state"]][1:2]), c("outdated", "outdated"))
+        expect_equal(p[["state"]][[3]], "new")
+    })
+
+    it("replicates a single list value (e.g. tags) to all rows", {
+        p <- test_pip()
+        p[c("s1", "s2"), "tags"] <- list(c("a", "b"))
+        expect_equal(p[["tags"]][[1]], c("a", "b"))
+        expect_equal(p[["tags"]][[2]], c("a", "b"))
+        expect_equal(p[["tags"]][[3]], character(0))
+    })
+
+    it("assigns list values element-wise", {
+        p <- test_pip()
+        p[c("s1", "s2"), "tags"] <- list("a", c("b", "c"))
+        expect_equal(p[["tags"]][[1]], "a")
+        expect_equal(p[["tags"]][[2]], c("b", "c"))
+    })
+
+    it("preserves the order of the selected rows", {
+        p <- test_pip()
+        p[c(3, 1), "state"] <- c("done", "new")
+        expect_equal(unname(p[["state"]]), c("new", "new", "done"))
+    })
+
+    it("applies the last write for duplicated row indices", {
+        p <- test_pip()
+        p[c(1, 1), "tags"] <- c("a", "b")
+        expect_equal(p[["tags"]][[1]], "b")
+    })
+
+    it("recycles a divisor-length value", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x) |>
+            pip_add("c", \(x = ~b) x) |>
+            pip_add("d", \(x = ~c) x)
+        p[1:4, "state"] <- c("done", "new")
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "new", "done", "new")
+        )
+    })
+
+    it("errors on a non-multiple replacement length", {
+        p <- test_pip()
+        expect_error(
+            p[1:3, "tags"] <- c("a", "b"),
+            "replacement has length 2, data has 3",
+            fixed = TRUE
+        )
+    })
+
+    it("stores an arbitrary value as-is for a single row", {
+        p <- test_pip()
+        p["s1", "out"] <- data.frame(a = 1:3)
+        expect_equal(p[["out"]][[1]], data.frame(a = 1:3))
+
+        p["s2", "tags"] <- c("x", "y")
+        expect_equal(p[["tags"]][[2]], c("x", "y"))
+    })
+
+    it("clears tags with a NULL value", {
+        p <- test_pip()
+        p[c("s1", "s2"), "tags"] <- NULL
+        expect_equal(p[["tags"]][[1]], character(0))
+        expect_equal(p[["tags"]][[2]], character(0))
+    })
+
+    it("assigns all rows with a missing index", {
+        p <- test_pip()
+        p[, "state"] <- "outdated"
+        expect_equal(unname(p[["state"]]), rep("outdated", 3))
+    })
+
+    it("is a no-op for an empty row selection", {
+        p <- test_pip()
+        p[integer(0), "state"] <- "outdated"
+        expect_equal(unname(p[["state"]]), rep("new", 3))
+    })
+
+    it("supports boolean row filters", {
+        p <- test_pip()
+        p[step %like% "^s[12]$", "locked"] <- TRUE
+        expect_equal(
+            unname(p[["locked"]]),
+            c(TRUE, TRUE, FALSE)
+        )
+    })
+
+    it("supports the full set of writable properties", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1, k = 2) x + k) |>
+            pip_add("s2", \(x = ~s1, k = 3) x + k)
+        when <- as.POSIXct(
+            c("2020-01-01 12:00:00", "2020-01-02 12:00:00"),
+            tz = "UTC"
+        )
+
+        p[1:2, "exec"] <- "plain"
+        p[1:2, "time"] <- when
+        p[1:2, "out"] <- list(1, 2)
+        p[1:2, "params"] <- list(list(k = 5), list(k = 6))
+        p[1:2, "locked"] <- TRUE
+
+        expect_true(all(p[["locked"]]))
+        expect_equal(unname(p[["exec"]]), c("plain", "plain"))
+        expect_equal(
+            format(unname(p[["time"]]), tz = "UTC", usetz = FALSE),
+            c("2020-01-01 12:00:00", "2020-01-02 12:00:00")
+        )
+        expect_equal(unname(p[["out"]]), list(1, 2))
+        expect_equal(p[["params"]][[1]][["k"]], 5)
+        expect_equal(p[["params"]][[2]][["k"]], 6)
+    })
+
+    it("replicates a single function to all selected rows", {
+        p <- test_pip()
+        p[1:2, "fun"] <- \(x = 5) x
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["out"]][[1]], 5)
+        expect_equal(p[["out"]][[2]], 5)
+    })
+
+    it("renames multiple steps element-wise", {
+        p <- test_pip()
+        p[c("s2", "s3"), "step"] <- c("x", "y")
+        expect_equal(unname(p[["step"]]), c("s1", "x", "y"))
+    })
+
+    it("fails on step name clashes during bulk renames", {
+        p <- test_pip()
+        expect_error(
+            p[c("s1", "s2"), "step"] <- c("s2", "s1"),
+            "step 's2' already exists"
+        )
+    })
+
+    it("writes through views with view-relative indices", {
+        p <- test_pip()
+        v <- pip_view(p, step = c("s2", "s3"))
+
+        v[1:2, "tags"] <- c("a", "b")
+        expect_equal(p[["tags"]][[2]], "a")
+        expect_equal(p[["tags"]][[3]], "b")
+
+        expect_error(
+            v[["s1", "tags"]] <- "x",
+            "step 's1' is not part of the view"
+        )
+        expect_error(
+            v[3, "tags"] <- "x",
+            "Invalid row indices in 'i': 3"
+        )
+    })
+
+    it("signals invalid inputs", {
+        p <- test_pip()
+
+        expect_error(p[1:2] <- 5, "j must be provided")
+        expect_error(
+            p[1:2, c("a", "b")] <- 5,
+            "j must be a single step property name"
+        )
+        expect_error(
+            p[1:2, ""] <- 5,
+            "j must be a single step property name"
+        )
+        expect_error(
+            p[1:2, NA_character_] <- 5,
+            "j must be a single step property name"
+        )
+        expect_error(
+            p[1:2, "depends"] <- "s1",
+            "direct assignment to column 'depends' is not supported."
+        )
+        expect_error(
+            p[1:2, "nope"] <- 1,
+            "unknown step property: nope"
+        )
+    })
+})
+
+
 describe("benchmarking", {
     skip("benchmarking tests are skipped by default")
     v <- c("hello", "world")

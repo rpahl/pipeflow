@@ -316,7 +316,7 @@ dim.pipeflow <- function(x) {
 
     if (view) {
         # Return a view on the selected rows
-        return(.wrap_pipenv(pipenv, name = paste(name, view), view = rows))
+        return(.wrap_pipenv(pipenv, name = paste(name, "view"), view = rows))
     }
 
     # Resolve all nodes reachable from the selected rows via upstream edges,
@@ -557,7 +557,9 @@ dim.pipeflow <- function(x) {
     } else if (j == "params") {
         pip_set_params(pip_view(x, step = step), params = value)
     } else if (j == "out") {
-        data.table::set(data, i = i, j = "out", value = list(value))
+        # wrap value in list of list to enable arbitrary objects
+        # (e.g. a data.frame) to be stored as-is.
+        data.table::set(data, i = i, j = "out", value = list(list(value)))
     } else if (j == "state") {
         .assert_state(value)
         data.table::set(data, i = i, j = "state", value = value)
@@ -591,13 +593,98 @@ dim.pipeflow <- function(x) {
 }
 
 
+#' Bulk assignment of step properties
+#'
+#' `p[i, j] <- value` assigns the step property `j` to the selected steps
+#' (see [`[[<-.pipeflow`] for the supported properties), mirroring the row
+#' and column selection of the extraction form `p[i, j]`. `i` selects rows
+#' like in the extraction form and `j` must be a single property name;
+#' `p[, j] <- value` selects all steps. With more than one selected row, a
+#' value of length 1 is replicated to all selected rows and a value whose
+#' length equals the number of selected rows is assigned element-wise
+#' (`p[i, j] <- value` behaves like `p[[i[k], j]] <- value[[k]]`). As in
+#' base R, longer values are recycled if the number of selected rows is a
+#' multiple of the value length, otherwise an error is raised. To assign
+#' the same list value (e.g. a set of tags) to all rows, wrap it in
+#' `list(...)`. With a single selected row, `value` is stored as-is (like
+#' `p[[i, j]] <- value`). For the `params` property, the value of each row
+#' must itself be a list (e.g. `p[1:2, "params"] <- list(list(a = 1),
+#' list(b = 2))`). Assigning to a read-only column such as `depends`,
+#' `nodeId` or `unbound` raises an error.
+#' @examples
+#' p <- pip_new("pipe") |>
+#'   pip_add("load", \(n = 5) seq_len(n)) |>
+#'   pip_add("fit", \(x = ~load, k = 2) x * k) |>
+#'   pip_add("report", \(x = ~fit) x)
+#'
+#' # Assign a property element-wise or replicated to selected steps
+#' p[c("load", "fit"), "state"] <- c("outdated", "done")
+#' p[1:2, "tags"] <- c("io", "model")
+#' p[1:2, "tags"] <- list(c("new", "tag"))  # same tags for both steps
+#'
+#' # All steps at once; read-only columns are rejected
+#' p[, "state"] <- "outdated"
+#' try(p[c("load", "fit"), "depends"] <- "load")  # read-only
 #' @rdname Extract_value.pipeflow
 #' @export
 `[<-.pipeflow` <- function(x, i, j, value) {
-    stop(
-        "`[<-` is not supported for pipeflow objects - use `[[<-` or ",
-        "the pip_*() functions instead"
-    )
+    .assert_pip_or_view(x)
+
+    if (missing(j)) {
+        stop("j must be provided when assigning step properties")
+    }
+    if (!.is_single(j, "character") || is.na(j) || !nzchar(j)) {
+        stop("j must be a single step property name")
+    }
+
+    data <- .pip_get_pipenv(x)[["data"]]
+    rows <- if (missing(i)) {
+        .pip_view_rows(x)
+    } else {
+        .pip_select_rows(x, substitute(i), parent.frame(), keep_order = TRUE)
+    }
+
+    n <- length(rows)
+    if (n == 0L) {
+        return(x)
+    }
+
+    # A single selected row stores the value as-is, mirroring `[[<-`.
+    if (n == 1L) {
+        x[[data[["step"]][[rows]], j]] <- value
+        return(x)
+    }
+
+    # Determine the value for each selected row.
+    if (is.null(value)) {
+        values <- rep(list(NULL), n)
+    } else {
+        k <- length(value)
+        if (k == 1L) {
+            val <- if (is.atomic(value) || is.list(value)) {
+                value[[1L]]
+            } else {
+                value
+            }
+            values <- rep(list(val), n)
+        } else if (k == n) {
+            values <- as.list(value)
+        } else if (k > 1L && n %% k == 0L) {
+            values <- as.list(rep(value, length.out = n))
+        } else {
+            stop(sprintf("replacement has length %d, data has %d", k, n))
+        }
+    }
+
+    # Convert the absolute row indices to the view-relative indexing used
+    # by `[[<-`.
+    viewRows <- .pip_view_rows(x)
+    iSel <- if (.is_pipeflow_view(x)) match(rows, viewRows) else rows
+
+    for (k in seq_len(n)) {
+        x[[iSel[[k]], j]] <- values[[k]]
+    }
+    x
 }
 
 

@@ -44,6 +44,22 @@ view covering \code{steps} (a character vector of step names). Assigning
 two-index form \code{p[[step, property]] <- value} provides interactive
 shortcuts for modifying a single step, where \code{step} is a step name or an
 integer row index and \code{property} selects what to update:
+
+\code{p[i, j] <- value} assigns the step property \code{j} to the selected steps
+(see [\verb{[[<-.pipeflow}] for the supported properties), mirroring the row
+and column selection of the extraction form \code{p[i, j]}. \code{i} selects rows
+like in the extraction form and \code{j} must be a single property name;
+\code{p[, j] <- value} selects all steps. With more than one selected row, a
+value of length 1 is replicated to all selected rows and a value whose
+length equals the number of selected rows is assigned element-wise
+(\code{p[i, j] <- value} behaves like \code{p[[i[k], j]] <- value[[k]]}). As in
+base R, longer values are recycled if the number of selected rows is a
+multiple of the value length, otherwise an error is raised. To assign
+the same list value (e.g. a set of tags) to all rows, wrap it in
+\code{list(...)}. With a single selected row, \code{value} is stored as-is (like
+\code{p[[i, j]] <- value}). For the \code{params} property, the value of each row
+must itself be a list (e.g. \code{p[1:2, "params"] <- list(list(a = 1), list(b = 2))}). Assigning to a read-only column such as \code{depends},
+\code{nodeId} or \code{unbound} raises an error.
 }
 \details{
 \subsection{Meta fields}{
@@ -157,4 +173,17 @@ p[["view"]] <- c("read", "fit")
 p[["step"]]                  # view -> "read", "fit"
 p[["view"]] <- NULL
 p[["step"]]                  # full pipeline again
+p <- pip_new("pipe") |>
+  pip_add("load", \(n = 5) seq_len(n)) |>
+  pip_add("fit", \(x = ~load, k = 2) x * k) |>
+  pip_add("report", \(x = ~fit) x)
+
+# Assign a property element-wise or replicated to selected steps
+p[c("load", "fit"), "state"] <- c("outdated", "done")
+p[1:2, "tags"] <- c("io", "model")
+p[1:2, "tags"] <- list(c("new", "tag"))  # same tags for both steps
+
+# All steps at once; read-only columns are rejected
+p[, "state"] <- "outdated"
+try(p[c("load", "fit"), "depends"] <- "load")  # read-only
 }
