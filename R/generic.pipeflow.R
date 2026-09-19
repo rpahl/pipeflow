@@ -181,15 +181,6 @@
             if (i %in% names(x)) {
                 return(.subset2(x, i))
             }
-            # Runtime control functions live in the shared inner environment
-            # and are exposed explicitly (they are part of the public API).
-            if (i %in% c("restart", "stop")) {
-                return(get(
-                    i,
-                    envir = .pip_get_pipenv(x),
-                    inherits = FALSE
-                ))
-            }
         }
 
         # case x[[col]]
@@ -440,6 +431,12 @@ dim.pipeflow <- function(x) {
 #'   All views and extracted subsets reference the same environment, so
 #'   mutations are shared. The step table is available as
 #'   `p[["pipenv"]][["data"]]`.
+#' * `restart()` — request to restart the current run after the current step
+#'   (call it as `p[["restart"]]()` or `p$restart()`); see the runtime
+#'   control section in [pip_run()].
+#' * `stop()` — request to stop the current run after the current step (call
+#'   it as `p[["stop"]]()` or `p$stop()`); see the runtime control section in
+#'   [pip_run()].
 #'
 #' ## Step-table columns
 #'
@@ -464,6 +461,8 @@ dim.pipeflow <- function(x) {
 #' p[["view"]]              # NULL — not a view
 #' p[["pipenv"]]            # the inner pipeline environment
 #' p[["pipenv"]][["data"]]  # the underlying step table
+#' p$restart                # runtime control: call p$restart() to restart
+#' p$stop                   # runtime control: call p$stop() to stop
 #'
 #' # Column access, named by steps
 #' p[["step"]]   # c(load = "load", fit = "fit")

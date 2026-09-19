@@ -122,8 +122,15 @@
 # different names and view specifications, while sharing (i.e. pointing to) the
 # same underlying pipeline environment.
 .wrap_pipenv <- function(pipenv, name, view = NULL) {
+    controls <- pipenv[[".runtime_controls"]]
     structure(
-        list(pipenv = pipenv, name = name, view = view),
+        list(
+            pipenv = pipenv,
+            name = name,
+            view = view,
+            restart = controls[["restart"]],
+            stop = controls[["stop"]]
+        ),
         class = "pipeflow"
     )
 }
@@ -896,13 +903,25 @@ pip_new <- function(name = "pipe") {
     # Restart tracking
     env[[".restart_count"]] <- 0L
     env[[".restart_force"]] <- TRUE
-    env[["restart"]] <- function(force = TRUE, times = 1L) {
-        .pip_restart(env, force = force, times = times)
-    }
-    env[["stop"]] <- function() .pip_stop(env)
+
+    # Runtime control functions are defined once per pipeline and shared by
+    # reference from all pipeflow objects wrapping this environment, so that
+    # a `.self` captured at run time stays identical to the outer pipeline.
+    env[[".runtime_controls"]] <- list(
+        restart = function(force = TRUE, times = 1L) {
+            .pip_restart(env, force = force, times = times)
+        },
+        stop = function() .pip_stop(env)
+    )
 
     structure(
-        list(pipenv = env, name = name, view = NULL),
+        list(
+            pipenv = env,
+            name = name,
+            view = NULL,
+            restart = env[[".runtime_controls"]][["restart"]],
+            stop = env[[".runtime_controls"]][["stop"]]
+        ),
         class = "pipeflow"
     )
 }
@@ -2622,8 +2641,5 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
     }
 
     rows <- parent_rows[which(keep)]
-    structure(
-        list(pipenv = env, name = sprintf("%s view", x[["name"]]), view = rows),
-        class = "pipeflow"
-    )
+    .wrap_pipenv(env, name = sprintf("%s view", x[["name"]]), view = rows)
 }

@@ -74,6 +74,12 @@ The following meta fields are available via \code{p[["..."]]} (or \code{p$...}):
 All views and extracted subsets reference the same environment, so
 mutations are shared. The step table is available as
 \code{p[["pipenv"]][["data"]]}.
+\item \code{restart()} — request to restart the current run after the current step
+(call it as \code{p[["restart"]]()} or \code{p$restart()}); see the runtime
+control section in \code{\link[=pip_run]{pip_run()}}.
+\item \code{stop()} — request to stop the current run after the current step (call
+it as \code{p[["stop"]]()} or \code{p$stop()}); see the runtime control section in
+\code{\link[=pip_run]{pip_run()}}.
 }
 }
 
@@ -144,6 +150,8 @@ p[["name"]]              # "pipe"
 p[["view"]]              # NULL — not a view
 p[["pipenv"]]            # the inner pipeline environment
 p[["pipenv"]][["data"]]  # the underlying step table
+p$restart                # runtime control: call p$restart() to restart
+p$stop                   # runtime control: call p$stop() to stop
 
 # Column access, named by steps
 p[["step"]]   # c(load = "load", fit = "fit")
