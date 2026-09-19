@@ -1129,25 +1129,36 @@ pip_clone <- function(x, name = NULL) {
 
 #' Collect step outputs
 #'
-#' Returns the outputs of the pipeline steps as a named list keyed by step
-#' name. Grouping by `step` (the default) collects the outputs flat, since
-#' step names are unique. With any other column, the outputs are grouped by
-#' the values of that column (typically `"tags"`): each step contributes its
-#' output to every group its key belongs to, and steps without a key (e.g.
-#' untagged steps) are omitted. Use [pip_view()] to narrow the selection
-#' before collecting. With `as.table = TRUE` the same result is returned as
-#' a `data.table` instead of a named list.
+#' Returns the outputs of the steps in a pipeline or view. With
+#' `by = "step"` (the default) the result is a named list of step outputs.
+#' With any other column, the outputs are grouped by the values of that
+#' column (typically `"tags"`).
+#'
+#' The result always takes one of two shapes:
+#'
+#' * **Flat**: a named list whose elements are the step outputs directly,
+#'   e.g. `list(s1 = 1, s2 = 2)`.
+#' * **Grouped**: a named list whose elements are themselves named lists of
+#'   step outputs, one per group, e.g.
+#'   `list(io = list(s1 = 1, s2 = 2), model = list(s3 = 4))`.
+#'
+#' With `simplify = TRUE` (the default) the result is *flat* whenever every
+#' group contains exactly one step, which, for example, is always the case
+#' for `by = "step"` as step names are unique.
+#' If any group contains more than one step (or `simplify = FALSE`) the
+#' result is *grouped*. For list columns such as `tags`, a step with
+#' several entries contributes its output to every
+#' corresponding group, and steps without an entry (e.g. untagged steps)
+#' are omitted.
+#' You can use [pip_view()] to further narrow the selection before collecting.
+#'
 #' @param x A pipeflow pip or view.
-#' @param by Single step-table column name to group by; defaults to
-#' `"step"` (the identity grouping, i.e. the flat collection). Scalar
-#' columns group by value; the list column `tags` is expanded so that each
-#' tag element forms a group. Other list columns cannot be used.
+#' @param by Single step-table column name to group by.
 #' @param as.table If TRUE, return a `data.table` instead of a named list.
-#' @return By default a named list, one element per step (or one named list
-#' per group when `by` is not `"step"`). With `as.table = TRUE` a
-#' `data.table` with the columns `step` (or the grouping column) and `out`,
-#' where `out` is a list column holding the same values as the named-list
-#' result.
+#' @param simplify If TRUE (default), if the list of collected outputs
+#' contains exactly one step per group, the result is flattened by one level,
+#' otherwise it is returned as a grouped list.
+#' @return A named list of outputs
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(x = 1) x, tags = "io") |>
@@ -1172,11 +1183,24 @@ pip_clone <- function(x, name = NULL) {
 #'
 #' # Grouped table output
 #' pip_collect_out(p, by = "tags", as.table = TRUE)
+#'
+#' # Keep single-step groups nested
+#' pip_collect_out(p, simplify = FALSE)
+#'
+#' # Collect output from a view
+#' v <- p[step %in% c("clean", "model"), ]
+#' pip_collect_out(v)
+#' pip_collect_out(v, as.table = TRUE)
+#'
+#'
 #' @export
-pip_collect_out <- function(x, by = "step", as.table = FALSE) {
+pip_collect_out <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
     .assert_pip_or_view(x)
     if (!.is_single(as.table, "logical") || is.na(as.table)) {
         stop("as.table must be a single logical value")
+    }
+    if (!.is_single(simplify, "logical") || is.na(simplify)) {
+        stop("simplify must be a single logical value")
     }
     if (is.null(by)) {
         by <- "step"
@@ -1255,7 +1279,7 @@ pip_collect_out <- function(x, by = "step", as.table = FALSE) {
     collected <- res[["collect"]]
 
     # If all groups have a single element ...
-    if (all(lengths(collected) == 1L)) {
+    if (simplify && all(lengths(collected) == 1L)) {
         # ... list(grpA = list(x = 1), grpB = list(y = 2)) can be flattened
         # to  list(grpA = 1, grpB = 2)
         collected <- unlist1(collected)

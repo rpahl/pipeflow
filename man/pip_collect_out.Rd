@@ -4,34 +4,47 @@
 \alias{pip_collect_out}
 \title{Collect step outputs}
 \usage{
-pip_collect_out(x, by = "step", as.table = FALSE)
+pip_collect_out(x, by = "step", as.table = FALSE, simplify = TRUE)
 }
 \arguments{
 \item{x}{A pipeflow pip or view.}
 
-\item{by}{Single step-table column name to group by; defaults to
-\code{"step"} (the identity grouping, i.e. the flat collection). Scalar
-columns group by value; the list column \code{tags} is expanded so that each
-tag element forms a group. Other list columns cannot be used.}
+\item{by}{Single step-table column name to group by.}
 
 \item{as.table}{If TRUE, return a \code{data.table} instead of a named list.}
+
+\item{simplify}{If TRUE (default), if the list of collected outputs
+contains exactly one step per group, the result is flattened by one level,
+otherwise it is returned as a grouped list.}
 }
 \value{
-By default a named list, one element per step (or one named list
-per group when \code{by} is not \code{"step"}). With \code{as.table = TRUE} a
-\code{data.table} with the columns \code{step} (or the grouping column) and \code{out},
-where \code{out} is a list column holding the same values as the named-list
-result.
+A named list of outputs
 }
 \description{
-Returns the outputs of the pipeline steps as a named list keyed by step
-name. Grouping by \code{step} (the default) collects the outputs flat, since
-step names are unique. With any other column, the outputs are grouped by
-the values of that column (typically \code{"tags"}): each step contributes its
-output to every group its key belongs to, and steps without a key (e.g.
-untagged steps) are omitted. Use \code{\link[=pip_view]{pip_view()}} to narrow the selection
-before collecting. With \code{as.table = TRUE} the same result is returned as
-a \code{data.table} instead of a named list.
+Returns the outputs of the steps in a pipeline or view. With
+\code{by = "step"} (the default) the result is a named list of step outputs.
+With any other column, the outputs are grouped by the values of that
+column (typically \code{"tags"}).
+}
+\details{
+The result always takes one of two shapes:
+\itemize{
+\item \strong{Flat}: a named list whose elements are the step outputs directly,
+e.g. \code{list(s1 = 1, s2 = 2)}.
+\item \strong{Grouped}: a named list whose elements are themselves named lists of
+step outputs, one per group, e.g.
+\code{list(io = list(s1 = 1, s2 = 2), model = list(s3 = 4))}.
+}
+
+With \code{simplify = TRUE} (the default) the result is \emph{flat} whenever every
+group contains exactly one step, which, for example, is always the case
+for \code{by = "step"} as step names are unique.
+If any group contains more than one step (or \code{simplify = FALSE}) the
+result is \emph{grouped}. For list columns such as \code{tags}, a step with
+several entries contributes its output to every
+corresponding group, and steps without an entry (e.g. untagged steps)
+are omitted.
+You can use \code{\link[=pip_view]{pip_view()}} to further narrow the selection before collecting.
 }
 \examples{
 p <- pip_new() |>
@@ -57,4 +70,14 @@ list(
 
 # Grouped table output
 pip_collect_out(p, by = "tags", as.table = TRUE)
+
+# Keep single-step groups nested
+pip_collect_out(p, simplify = FALSE)
+
+# Collect output from a view
+v <- p[step \%in\% c("clean", "model"), ]
+pip_collect_out(v)
+pip_collect_out(v, as.table = TRUE)
+
+
 }

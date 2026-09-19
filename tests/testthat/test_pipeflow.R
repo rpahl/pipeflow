@@ -1666,6 +1666,21 @@ describe("pip_collect_out", {
         )
     })
 
+    it("keeps single-step groups nested with simplify = FALSE", {
+        p <- test_group_pip()
+        v <- pip_view(p, step = "s3")  # single tag: "model"
+
+        expect_equal(pip_collect_out(v, by = "tags"), list(model = "o3"))
+        expect_equal(
+            pip_collect_out(v, by = "tags", simplify = FALSE),
+            list(model = list(s3 = "o3"))
+        )
+        expect_error(
+            pip_collect_out(v, by = "tags", simplify = "yes"),
+            "simplify must be a single logical value"
+        )
+    })
+
     it("groups by scalar columns", {
         p <- test_group_pip()
         out <- pip_collect_out(p, by = "state")
