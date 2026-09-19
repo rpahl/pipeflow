@@ -289,6 +289,25 @@ describe("extract operator [", {
         expect_error(p[c(1, NA)], "row indices in 'i' must not contain NA")
     })
 
+    it("supports negative row indices", {
+        p <- test_pip()
+
+        expect_equal(
+            unname(p[-2][["step"]]),
+            c("a1", "b1", "a3", "b2")
+        )
+        expect_equal(
+            unname(p[-(1:2)][["step"]]),
+            c("b1", "a3", "b2")
+        )
+        expect_equal(
+            unname(p[c(-5, -2)][["step"]]),
+            c("a1", "b1", "a3")
+        )
+        expect_equal(length(p[-c(1:9)]), 0L)
+        expect_error(p[c(-1, 2)], "only 0's may be mixed with negative")
+    })
+
     it("signals invalid step names", {
         p <- test_pip()
 
@@ -996,6 +1015,37 @@ describe("[<-.pipeflow", {
         expect_equal(unname(p[["state"]]), c("new", "new", "done"))
     })
 
+    it("supports negative row indices", {
+        p <- test_pip()
+
+        p[-1, "tags"] <- "x"
+        expect_equal(p[["tags"]][[1]], character(0))
+        expect_equal(p[["tags"]][[2]], "x")
+        expect_equal(p[["tags"]][[3]], "x")
+
+        p[-c(1, 3), "state"] <- "outdated"
+        expect_equal(unname(p[["state"]]), c("new", "outdated", "new"))
+
+        expect_error(
+            p[c(-1, 2), "tags"] <- "y",
+            "only 0's may be mixed with negative"
+        )
+
+        # Excluding all rows is a no-op
+        p[-(1:3), "tags"] <- "z"
+        expect_equal(p[["tags"]][[2]], "x")
+    })
+
+    it("supports negative row indices on views", {
+        p <- test_pip()
+        v <- pip_view(p, step = c("s2", "s3"))
+
+        # Negative indices are relative to the covered rows
+        v[-1, "tags"] <- "y"
+        expect_equal(p[["tags"]][[2]], character(0))
+        expect_equal(p[["tags"]][[3]], "y")
+    })
+
     it("applies the last write for duplicated row indices", {
         p <- test_pip()
         p[c(1, 1), "tags"] <- c("a", "b")
@@ -1235,7 +1285,7 @@ describe("cross-pipeline assignment", {
         p <- test_pip()
         q <- pip_clone(p)
 
-        expect_error(p[, ] <- q, "i must be provided")
+        expect_error(p[] <- q, "i must be provided")
         expect_error(
             p[1:2, "tags"] <- q,
             "j must not be provided when assigning from a pipeline"

@@ -480,6 +480,13 @@
             stop("row indices in 'i' must not contain NA")
         }
         idx <- as.integer(value)
+        if (any(idx < 0L)) {
+            # Negative indices exclude the corresponding rows like in base R
+            if (any(idx > 0L)) {
+                stop("only 0's may be mixed with negative subscripts")
+            }
+            idx <- seq_len(nrow(sub))[idx]
+        }
         if (!keep_order) {
             idx <- sort(unique(idx))
         }

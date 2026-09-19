@@ -10,9 +10,11 @@
 \item{x}{A pipeflow pipeline or view object.}
 
 \item{i}{Row selection: integer row indices, character step names, or a
-boolean filter expression evaluated in the context of the step table. For a
-view, indices are relative to the covered steps and step names must be part
-of the view.}
+boolean filter expression evaluated in the context of the step table.
+Negative row indices select all rows but the excluded ones, like in base
+R (e.g. \code{p[-2]}), and are relative to the covered steps for a view. For a
+view, indices are relative to the covered steps and step names must be
+part of the view.}
 
 \item{j}{Optional character vector of step-table column names to extract.}
 

@@ -314,9 +314,11 @@ dim.pipeflow <- function(x) {
 #' set of tags) use [pip_view()] instead.
 #' @param x A pipeflow pipeline or view object.
 #' @param i Row selection: integer row indices, character step names, or a
-#' boolean filter expression evaluated in the context of the step table. For a
-#' view, indices are relative to the covered steps and step names must be part
-#' of the view.
+#' boolean filter expression evaluated in the context of the step table.
+#' Negative row indices select all rows but the excluded ones, like in base
+#' R (e.g. `p[-2]`), and are relative to the covered steps for a view. For a
+#' view, indices are relative to the covered steps and step names must be
+#' part of the view.
 #' @param j Optional character vector of step-table column names to extract.
 #' @param view If `TRUE` (default), a view referencing the selected steps is
 #' returned. If `FALSE`, a new pipeline is returned that includes the selected
@@ -680,14 +682,15 @@ dim.pipeflow <- function(x) {
 #' `p[i, j] <- value` assigns the step property `j` to the selected steps
 #' (see [`[[<-.pipeflow`] for the supported properties), mirroring the row
 #' and column selection of the extraction form `p[i, j]`. `i` selects rows
-#' like in the extraction form and `j` must be a single property name;
-#' `p[, j] <- value` selects all steps. With more than one selected row, a
-#' value of length 1 is replicated to all selected rows and a value whose
-#' length equals the number of selected rows is assigned element-wise
-#' (`p[i, j] <- value` behaves like `p[[i[k], j]] <- value[[k]]`). As in
-#' base R, longer values are recycled if the number of selected rows is a
-#' multiple of the value length, otherwise an error is raised. To assign
-#' the same list value (e.g. a set of tags) to all rows, wrap it in
+#' like in the extraction form (including negative row indices, which
+#' select all rows but the excluded ones) and `j` must be a single
+#' property name; `p[, j] <- value` selects all steps. With more than one
+#' selected row, a value of length 1 is replicated to all selected rows and
+#' a value whose length equals the number of selected rows is assigned
+#' element-wise (`p[i, j] <- value` behaves like `p[[i[k], j]] <- value[[k]]`).
+#' As in base R, longer values are recycled if the number of selected rows
+#' is a multiple of the value length, otherwise an error is raised. To
+#' assign the same list value (e.g. a set of tags) to all rows, wrap it in
 #' `list(...)`. With a single selected row, `value` is stored as-is (like
 #' `p[[i, j]] <- value`). For the `params` property, the value of each row
 #' must itself be a list (e.g. `p[1:2, "params"] <- list(list(a = 1),
