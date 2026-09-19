@@ -1635,7 +1635,7 @@ describe("pip_collect_out", {
         )
     })
 
-    it("returns the flat table with as.table = TRUE", {
+    it("returns a flat table with if groups are of size 1", {
         p <- test_group_pip()
         out <- pip_collect_out(p, as.table = TRUE)
 
@@ -1643,6 +1643,27 @@ describe("pip_collect_out", {
         expect_equal(colnames(out), c("step", "out"))
         expect_equal(out[["step"]], c("s1", "s2", "s3", "s4"))
         expect_equal(out[["out"]], list("o1", "o2", "o3", "o4"))
+
+        out <- pip_collect_out(p, by = "nodeId", as.table = TRUE)
+        expect_true(data.table::is.data.table(out))
+        expect_equal(colnames(out), c("nodeId", "out"))
+        expect_equal(out[["nodeId"]], 0:3)
+        expect_equal(out[["out"]], list("o1", "o2", "o3", "o4"))
+    })
+
+    it("returns a flat list with if groups are of size 1", {
+        p <- test_group_pip()
+        out <- pip_collect_out(p)
+        expect_equal(
+            out,
+            list(s1 = "o1", s2 = "o2", s3 = "o3", s4 = "o4")
+        )
+
+        out <- pip_collect_out(p, by = "nodeId")
+        expect_equal(
+            out,
+            list(`0` = "o1", `1` = "o2", `2` = "o3", `3` = "o4")
+        )
     })
 
     it("groups by scalar columns", {

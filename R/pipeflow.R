@@ -1130,21 +1130,24 @@ pip_clone <- function(x, name = NULL) {
 #' Collect step outputs
 #'
 #' Returns the outputs of the pipeline steps as a named list keyed by step
-#' name. Use [pip_view()] to narrow the selection before collecting. With
-#' `by`, the outputs are grouped by the values of a step-table column
-#' (typically `"tags"`): each step contributes its output to every group its
-#' key belongs to, and steps without a key (e.g. untagged steps) are
-#' omitted. With `as.table = TRUE` the same result is returned as a
-#' `data.table` instead of a named list.
+#' name. Grouping by `step` (the default) collects the outputs flat, since
+#' step names are unique. With any other column, the outputs are grouped by
+#' the values of that column (typically `"tags"`): each step contributes its
+#' output to every group its key belongs to, and steps without a key (e.g.
+#' untagged steps) are omitted. Use [pip_view()] to narrow the selection
+#' before collecting. With `as.table = TRUE` the same result is returned as
+#' a `data.table` instead of a named list.
 #' @param x A pipeflow pip or view.
-#' @param by Optional single step-table column name to group by. Scalar
+#' @param by Single step-table column name to group by; defaults to
+#' `"step"` (the identity grouping, i.e. the flat collection). Scalar
 #' columns group by value; the list column `tags` is expanded so that each
 #' tag element forms a group. Other list columns cannot be used.
 #' @param as.table If TRUE, return a `data.table` instead of a named list.
 #' @return By default a named list, one element per step (or one named list
-#' per group when `by` is given). With `as.table = TRUE` a `data.table`
-#' with the columns `step` (or the grouping column) and `out`, where `out`
-#' is a list column holding the same values as the named-list result.
+#' per group when `by` is not `"step"`). With `as.table = TRUE` a
+#' `data.table` with the columns `step` (or the grouping column) and `out`,
+#' where `out` is a list column holding the same values as the named-list
+#' result.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(x = 1) x, tags = "io") |>
@@ -1152,10 +1155,10 @@ pip_clone <- function(x, name = NULL) {
 #'   pip_add("model", \(x = ~clean) x * 2, tags = "model")
 #' pip_run(p)
 #'
-#' # Flat named list with one entry per step
+#' # By default, a flat named list with one entry per step
 #' pip_collect_out(p)
 #'
-#' # Same output as a data.table
+#' # The same output as a data.table
 #' pip_collect_out(p, as.table = TRUE)
 #'
 #' # Group the outputs by tag ...
@@ -1170,55 +1173,59 @@ pip_clone <- function(x, name = NULL) {
 #' # Grouped table output
 #' pip_collect_out(p, by = "tags", as.table = TRUE)
 #' @export
-pip_collect_out <- function(x, by = NULL, as.table = FALSE) {
+pip_collect_out <- function(x, by = "step", as.table = FALSE) {
     .assert_pip_or_view(x)
     if (!.is_single(as.table, "logical") || is.na(as.table)) {
         stop("as.table must be a single logical value")
     }
-    if (!is.null(by)) {
-        if (!.is_single(by, "character") || is.na(by) || !nzchar(by)) {
-            stop("by must be a single column name")
-        }
+    if (is.null(by)) {
+        by <- "step"
+    }
+    if (!.is_single(by, "character") || is.na(by) || !nzchar(by)) {
+        stop("by must be a single column name")
     }
 
     dat <- .pip_view_data(x)
 
-    # Flat collection of the outputs.
-    if (is.null(by)) {
-        if (!as.table) {
-            if (nrow(dat) == 0L) {
-                return(list())
-            }
-            return(stats::setNames(dat[["out"]], dat[["step"]]))
-        }
-        return(data.table::data.table(step = dat[["step"]], out = dat[["out"]]))
-    }
-
     if (!(by %in% colnames(dat))) {
         stop("unknown column: ", by)
     }
-    if (by %in% c("out", "fun", "params", "depends", "unbound")) {
-        stop("'", by, "' cannot be used as a grouping column")
+    # fmt: skip
+    allowedBy <- c(
+        "step", "state", "tags", "time", "locked", "exec",
+        "depends", "unbound", "nodeId"
+    )
+    if (!by %in% allowedBy) {
+        stop(sprintf(
+            "'%s' cannot be used as a grouping column - must be one of %s",
+            by,
+            toString(allowedBy)
+        ))
     }
+
+    byCol <- dat[[by]]
+    steps <- dat[["step"]]
+    outs <- dat[["out"]]
 
     emptyResult <- function() {
         if (!as.table) {
             return(list())
         }
-        key0 <- if (is.list(dat[[by]])) character(0) else dat[[by]][0]
-        tbl <- data.table::data.table(grp = key0, out = vector("list", 0L))
-        data.table::setnames(tbl, c(by, "out"))
-        tbl
+        key0 <- if (is.list(byCol)) character(0) else byCol[0]
+        data.table::data.table(grp = key0, out = vector("list", 0L)) |>
+            data.table::setnames(new = c(by, "out"))
     }
 
     if (nrow(dat) == 0L) {
         return(emptyResult())
     }
 
-    if (is.list(dat[[by]])) {
-        # List columns (like tags) are expanded so that each step contributes
-        # one row per tag element.
-        keysAll <- dat[[by]]
+    tab <- if (is.list(byCol)) {
+        # For list columns (like tags) the table is expanded by duplicating
+        # rows with multiple entries so that each row contains one entry.
+        # For example, tags = c("a", "b") will produce two rows, one for
+        # tags = "a" and one for tags = "b".
+        keysAll <- byCol
         lens <- lengths(keysAll)
         has <- which(lens > 0L)
         idx <- rep(has, lens[has])
@@ -1227,39 +1234,39 @@ pip_collect_out <- function(x, by = NULL, as.table = FALSE) {
         } else {
             character(0)
         }
-        exp <- data.table::data.table(
-            grp = grp,
-            step = dat[["step"]][idx],
-            out = dat[["out"]][idx]
-        )
+        data.table::data.table(grp = grp, step = steps[idx], out = outs[idx])
     } else {
-        # Scalar columns (like step) are used as-is.
-        exp <- data.table::data.table(
-            grp = dat[[by]],
-            step = dat[["step"]],
-            out = dat[["out"]]
-        )
+        # Scalar columns (like step) can stay as-is.
+        data.table::data.table(grp = byCol, step = steps, out = outs)
     }
-    exp <- exp[!is.na(grp)]
 
-    if (nrow(exp) == 0L) {
+    tab <- tab[!is.na(grp)]
+    if (nrow(tab) == 0L) {
         return(emptyResult())
     }
 
-    # Delegate the actual grouping to data.table, collecting the outputs of
-    # each group as a named list keyed by step name.
-    res <- exp[, .(collect = list(stats::setNames(out, step))), by = grp]
+    # Delegate the actual grouping to data.table
+    res <- tab[, .(collect = list(stats::setNames(out, step))), by = grp]
 
     # Keep the first-appearance order of the groups.
-    first <- match(unique(exp[["grp"]]), res[["grp"]])
+    groupNames <- res[["grp"]]
+    first <- match(unique(tab[["grp"]]), groupNames)
     res <- res[first]
+    collected <- res[["collect"]]
 
-    if (!as.table) {
-        return(stats::setNames(res[["collect"]], res[["grp"]]))
+    # If all groups have a single element ...
+    if (all(lengths(collected) == 1L)) {
+        # ... list(grpA = list(x = 1), grpB = list(y = 2)) can be flattened
+        # to  list(grpA = 1, grpB = 2)
+        collected <- unlist1(collected)
     }
-    tbl <- data.table::data.table(grp = res[["grp"]], out = res[["collect"]])
-    data.table::setnames(tbl, c(by, "out"))
-    tbl
+
+    if (as.table) {
+        data.table::data.table(grp = groupNames, out = collected) |>
+            data.table::setnames(new = c(by, "out"))
+    } else {
+        stats::setNames(collected, nm = groupNames)
+    }
 }
 
 #' Get independent parameters
@@ -1507,8 +1514,7 @@ pip_remove <- function(x, step, force = FALSE) {
         stop(
             "cannot remove step '",
             step,
-            "' because the following ",
-            "steps depend on it: ",
+            "' because the following steps depend on it: ",
             stepsString
         )
     }
