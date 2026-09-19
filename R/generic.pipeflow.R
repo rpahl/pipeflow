@@ -653,11 +653,6 @@ dim.pipeflow <- function(x) {
     } else if (j == "state") {
         .assert_state(value)
         data.table::set(data, i = i, j = "state", value = value)
-    } else if (j == "time") {
-        if (!.is_single(value, "POSIXct") || is.na(value)) {
-            stop("time must be a single POSIXct value")
-        }
-        data.table::set(data, i = i, j = "time", value = value)
     } else if (j == "tags") {
         if (!is.null(value) && !is.character(value)) {
             stop("tags must be a character vector")
@@ -672,6 +667,11 @@ dim.pipeflow <- function(x) {
     } else if (j == "exec") {
         .assert_exec_mode(value)
         data.table::set(data, i = i, j = "exec", value = value)
+    } else if (j == "time") {
+        if (!.is_single(value, "POSIXct") || is.na(value)) {
+            stop("time must be a single POSIXct value")
+        }
+        data.table::set(data, i = i, j = "time", value = value)
     } else {
         if (j %in% colnames(data)) {
             stop("direct assignment to column '", j, "' is not supported.")

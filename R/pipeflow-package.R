@@ -5,11 +5,6 @@
 "_PACKAGE"
 
 
-# data.table group-by expressions (`.` and the column names in `j`) are
-# non-standard evaluation and are not visible to codetools.
-utils::globalVariables(c(".", "step", "out"))
-
-
 .env <- new.env(parent = emptyenv())
 
 .step_states <- new.env(parent = emptyenv())

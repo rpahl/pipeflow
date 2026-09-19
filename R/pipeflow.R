@@ -1271,6 +1271,7 @@ pip_collect_out <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
     }
 
     # Delegate the actual grouping to data.table
+    . <- out <- step <- NULL # silence R CMD check
     res <- tab[, .(collect = list(stats::setNames(out, step))), by = grp]
 
     # Keep the first-appearance order of the groups.
