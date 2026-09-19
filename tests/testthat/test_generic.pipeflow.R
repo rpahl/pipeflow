@@ -682,6 +682,88 @@ describe("extract operator [[", {
 })
 
 
+describe("virtual methods", {
+    test_pip <- function() {
+        pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x, tags = "init") |>
+            pip_add("s2", \(x = ~s1) x + 1)
+    }
+
+    it("exposes methods via $ and [[ but not as stored fields", {
+        p <- test_pip()
+
+        expect_true(is.function(p$add))
+        expect_true(is.function(p[["run"]]))
+        expect_true(is.function(p$restart))
+        expect_true(is.function(p$stop))
+        expect_false(any(c("add", "run", "restart", "stop") %in% names(p)))
+    })
+
+    it("adds steps through the virtual method", {
+        p <- test_pip()$add("s3", \(x = ~s2) x * 10)
+
+        expect_equal(unname(p[["step"]]), c("s1", "s2", "s3"))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["out"]][[3]], 20)
+    })
+
+    it("chains mutating methods", {
+        p <- pip_new("pipe")$add("s1", \(x = 1) x)$add("s2", \(x = ~s1) x + 1)
+
+        expect_equal(unname(p[["step"]]), c("s1", "s2"))
+    })
+
+    it("runs the pipeline through the virtual method", {
+        p <- test_pip()$run(lgr = NULL)
+
+        expect_equal(p[["out"]][[1]], 1)
+        expect_equal(p[["out"]][[2]], 2)
+    })
+
+    it("renames and collects outputs through virtual methods", {
+        p <- test_pip()$rename("s1", "first")$run(lgr = NULL)
+
+        expect_equal(unname(p[["step"]]), c("first", "s2"))
+        expect_equal(p$collect_out(), list(first = 1, s2 = 2))
+    })
+
+    it("applies methods to views", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        v <- pip_view(p, step = "s2")
+
+        expect_equal(v$collect_out(), list(s2 = 2))
+        expect_true(is.function(v$restart))
+    })
+
+    it("keeps the same pipeline when chaining on a view", {
+        p <- test_pip()
+        v <- pip_view(p, step = "s2")
+
+        expect_identical(v$pipenv, p$pipenv)
+    })
+
+    it("does not shadow step-table columns", {
+        p <- test_pip()
+
+        expect_equal(p[["step"]], c(s1 = "s1", s2 = "s2"))
+        expect_equal(p[["state"]], c(s1 = "new", s2 = "new"))
+        expect_null(p[["unknown"]])
+    })
+
+    it("signals restart and stop on the underlying pipeline", {
+        p <- test_pip()
+        v <- pip_view(p, step = "s2")
+
+        p$restart()
+        expect_equal(as.character(p[["pipenv"]][[".run_state"]]), "restart")
+        expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
+
+        v$stop()
+        expect_equal(as.character(p[["pipenv"]][[".run_state"]]), "stop")
+    })
+})
+
+
 describe("assignment operator [[<-", {
     test_pip <- function() {
         pip_new("pipe") |>

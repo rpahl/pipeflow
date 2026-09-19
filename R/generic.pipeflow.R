@@ -168,6 +168,37 @@
 # Internal implementation of [[ for pipeflow objects. Views are pips with
 # a `rows` selector, so list fields and inner-env bindings are accessed
 # through the same dispatch.
+#
+# Virtual methods are exposed via [[ / $ (e.g. `p$add(...)`): the methods
+# are not stored on the object but bound on demand to the current pipeline,
+# which keeps wrappers of the same pipeline identical to each other.
+.pip_methods <- function(x) {
+    list(
+        add = function(...) pip_add(x, ...),
+        remove = function(...) pip_remove(x, ...),
+        rename = function(...) pip_rename(x, ...),
+        replace = function(...) pip_replace(x, ...),
+        run = function(...) pip_run(x, ...),
+        reset = function(...) pip_reset(x, ...),
+        tag = function(...) pip_tag(x, ...),
+        untag = function(...) pip_untag(x, ...),
+        lock = function(...) pip_lock(x, ...),
+        unlock = function(...) pip_unlock(x, ...),
+        set_params = function(...) pip_set_params(x, ...),
+        get_params = function(...) pip_get_params(x, ...),
+        collect_out = function(...) pip_collect_out(x, ...),
+        clone = function(...) pip_clone(x, ...),
+        graph = function(...) pip_get_graph(x, ...),
+        restart = function(force = TRUE, times = 1L) {
+            .pip_restart(.pip_get_pipenv(x), force = force, times = times)
+        },
+        stop = function() .pip_stop(.pip_get_pipenv(x))
+    )
+}
+
+# Method names are derived once at load time from a dummy closure set.
+.pip_method_names <- names(.pip_methods(NULL))
+
 .pip_subset2 <- function(x, i, j = NULL) {
     if (missing(i)) {
         stop("i must be provided")
@@ -180,6 +211,13 @@
         if (is.character(i) && length(i) == 1L && !is.na(i)) {
             if (i %in% names(x)) {
                 return(.subset2(x, i))
+            }
+        }
+
+        # Virtual methods
+        if (is.character(i) && length(i) == 1L && !is.na(i)) {
+            if (i %in% .pip_method_names) {
+                return(.pip_methods(x)[[i]])
             }
         }
 
@@ -431,12 +469,13 @@ dim.pipeflow <- function(x) {
 #'   All views and extracted subsets reference the same environment, so
 #'   mutations are shared. The step table is available as
 #'   `p[["pipenv"]][["data"]]`.
-#' * `restart()` — request to restart the current run after the current step
-#'   (call it as `p[["restart"]]()` or `p$restart()`); see the runtime
-#'   control section in [pip_run()].
-#' * `stop()` — request to stop the current run after the current step (call
-#'   it as `p[["stop"]]()` or `p$stop()`); see the runtime control section in
-#'   [pip_run()].
+#'
+#' ## Virtual methods
+#'
+#' All pipeline functions are exposed as *virtual* methods via `p$...`
+#' (or `p[["..."]]`). For example, `p$add(...)` is shorthand for
+#' `pip_add(p, ...)` and returns the updated pipeline, which allows
+#' chaining: `p$add("s1", ...) |> p$add("s2", ...)`.
 #'
 #' ## Step-table columns
 #'
@@ -461,8 +500,12 @@ dim.pipeflow <- function(x) {
 #' p[["view"]]              # NULL — not a view
 #' p[["pipenv"]]            # the inner pipeline environment
 #' p[["pipenv"]][["data"]]  # the underlying step table
-#' p$restart                # runtime control: call p$restart() to restart
-#' p$stop                   # runtime control: call p$stop() to stop
+#'
+#' # Virtual methods
+#' p$add("s3", \(x = ~fit) x * 10)
+#' p$run()
+#' p$restart   # a function; call p$restart() to request a restart
+#' p$stop      # a function; call p$stop() to stop the current run
 #'
 #' # Column access, named by steps
 #' p[["step"]]   # c(load = "load", fit = "fit")

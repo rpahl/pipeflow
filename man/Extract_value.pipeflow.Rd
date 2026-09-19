@@ -74,13 +74,15 @@ The following meta fields are available via \code{p[["..."]]} (or \code{p$...}):
 All views and extracted subsets reference the same environment, so
 mutations are shared. The step table is available as
 \code{p[["pipenv"]][["data"]]}.
-\item \code{restart()} — request to restart the current run after the current step
-(call it as \code{p[["restart"]]()} or \code{p$restart()}); see the runtime
-control section in \code{\link[=pip_run]{pip_run()}}.
-\item \code{stop()} — request to stop the current run after the current step (call
-it as \code{p[["stop"]]()} or \code{p$stop()}); see the runtime control section in
-\code{\link[=pip_run]{pip_run()}}.
 }
+}
+
+\subsection{Virtual methods}{
+
+All pipeline functions are exposed as \emph{virtual} methods via \code{p$...}
+(or \code{p[["..."]]}). For example, \code{p$add(...)} is shorthand for
+\code{pip_add(p, ...)} and returns the updated pipeline, which allows
+chaining: \code{p$add("s1", ...) |> p$add("s2", ...)}.
 }
 
 \subsection{Step-table columns}{
@@ -150,8 +152,12 @@ p[["name"]]              # "pipe"
 p[["view"]]              # NULL — not a view
 p[["pipenv"]]            # the inner pipeline environment
 p[["pipenv"]][["data"]]  # the underlying step table
-p$restart                # runtime control: call p$restart() to restart
-p$stop                   # runtime control: call p$stop() to stop
+
+# Virtual methods
+p$add("s3", \(x = ~fit) x * 10)
+p$run()
+p$restart   # a function; call p$restart() to request a restart
+p$stop      # a function; call p$stop() to stop the current run
 
 # Column access, named by steps
 p[["step"]]   # c(load = "load", fit = "fit")

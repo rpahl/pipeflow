@@ -122,15 +122,8 @@
 # different names and view specifications, while sharing (i.e. pointing to) the
 # same underlying pipeline environment.
 .wrap_pipenv <- function(pipenv, name, view = NULL) {
-    controls <- pipenv[[".runtime_controls"]]
     structure(
-        list(
-            pipenv = pipenv,
-            name = name,
-            view = view,
-            restart = controls[["restart"]],
-            stop = controls[["stop"]]
-        ),
+        list(pipenv = pipenv, name = name, view = view),
         class = "pipeflow"
     )
 }
@@ -904,24 +897,8 @@ pip_new <- function(name = "pipe") {
     env[[".restart_count"]] <- 0L
     env[[".restart_force"]] <- TRUE
 
-    # Runtime control functions are defined once per pipeline and shared by
-    # reference from all pipeflow objects wrapping this environment, so that
-    # a `.self` captured at run time stays identical to the outer pipeline.
-    env[[".runtime_controls"]] <- list(
-        restart = function(force = TRUE, times = 1L) {
-            .pip_restart(env, force = force, times = times)
-        },
-        stop = function() .pip_stop(env)
-    )
-
     structure(
-        list(
-            pipenv = env,
-            name = name,
-            view = NULL,
-            restart = env[[".runtime_controls"]][["restart"]],
-            stop = env[[".runtime_controls"]][["stop"]]
-        ),
+        list(pipenv = env, name = name, view = NULL),
         class = "pipeflow"
     )
 }
