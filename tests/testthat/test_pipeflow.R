@@ -1206,7 +1206,7 @@ describe("pip_rename", {
             pip_add("a", \(x = 1) x)
 
         out <- rbind(p, a, b)
-        pip_run(out)
+        pip_run(out, lgr = NULL)
 
         expect_equal(
             pip_collect_out(out),
