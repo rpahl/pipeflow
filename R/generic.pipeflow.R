@@ -187,7 +187,7 @@
                 unlock = pip_unlock,
                 set_params = pip_set_params,
                 get_params = pip_get_params,
-                collect_out = pip_collect_out,
+                collect = pip_collect,
                 clone = pip_clone,
                 graph = pip_graph,
                 restart = function(x, force = TRUE, times = 1L) {

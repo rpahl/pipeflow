@@ -83,7 +83,7 @@ p
 
 pip_run(p)
 
-pip_collect_out(p)
+pip_collect(p)
 ```
 
 ### Getting Started

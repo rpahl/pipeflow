@@ -149,13 +149,13 @@ pip[["model_plot", "out"]]
 
 ### Flat output collection
 
-`pip_collect_out()` returns all step outputs as a flat named list^[
+`pip_collect()` returns all step outputs as a flat named list^[
     Below, we only show the names of the list elements, to keep
     the vignette concise.
 ].
 
 ```{r}
-out <- pip_collect_out(pip)
+out <- pip_collect(pip)
 
 names(out)
 ```
@@ -165,7 +165,7 @@ names(out)
 
 To collect only the output of steps with a specific tag, we use
 `pip_view()`, which is {pipeflow}'s general-purpose function for filtering
-pipelines, and then call `pip_collect_out()` on the filtered pipeline view.
+pipelines, and then call `pip_collect()` on the filtered pipeline view.
 For example, to collect only the plots, we can filter by the `plot` tag.
 
 ```{r}
@@ -175,7 +175,7 @@ pip_view(pip, tags = "plot")
 ```{r grouped-plots, message = FALSE, warning = FALSE}
 pip |>
     pip_view(tags = "plot") |>
-    pip_collect_out() |>
+    pip_collect() |>
     gridExtra::grid.arrange(grobs = _, nrow = 2)
 ```
 
@@ -183,13 +183,13 @@ pip |>
 ### Grouped output via views
 
 Grouped output is achieved by composing `pip_view()` with
-`pip_collect_out()`. For example, to collect outputs grouped by topic
+`pip_collect()`. For example, to collect outputs grouped by topic
 (`"data"` and `"model"`):
 
 ```{r}
 grouped <- list(
-    data  = pip_view(pip, tags = "data")  |> pip_collect_out(),
-    model = pip_view(pip, tags = "model") |> pip_collect_out()
+    data  = pip_view(pip, tags = "data")  |> pip_collect(),
+    model = pip_view(pip, tags = "model") |> pip_collect()
 )
 
 names(grouped[["data"]])

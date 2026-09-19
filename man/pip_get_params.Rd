@@ -30,5 +30,5 @@ pip_get_params(p) # list(n = 100, seed = 42, lambda = 0.1)
 
 # Useful as a guide for pip_set_params()
 pip_set_params(p, params = list(n = 20, lambda = 0.5))
-pip_run(p) |> pip_collect_out()
+pip_run(p) |> pip_collect()
 }

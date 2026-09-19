@@ -724,14 +724,14 @@ describe("virtual methods", {
         p <- test_pip()$rename("s1", "first")$run(lgr = NULL)
 
         expect_equal(unname(p[["step"]]), c("first", "s2"))
-        expect_equal(p$collect_out(), list(first = 1, s2 = 2))
+        expect_equal(p$collect(), list(first = 1, s2 = 2))
     })
 
     it("applies methods to views", {
         p <- test_pip() |> pip_run(lgr = NULL)
         v <- pip_view(p, step = "s2")
 
-        expect_equal(v$collect_out(), list(s2 = 2))
+        expect_equal(v$collect(), list(s2 = 2))
         expect_true(is.function(v$restart))
     })
 

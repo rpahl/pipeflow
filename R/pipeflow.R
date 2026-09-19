@@ -1169,34 +1169,34 @@ pip_clone <- function(x, name = NULL) {
 #' pip_run(p)
 #'
 #' # By default, a flat named list with one entry per step
-#' pip_collect_out(p)
+#' pip_collect(p)
 #'
 #' # The same output as a data.table
-#' pip_collect_out(p, as.table = TRUE)
+#' pip_collect(p, as.table = TRUE)
 #'
 #' # Group the outputs by tag ...
-#' pip_collect_out(p, by = "tags")
+#' pip_collect(p, by = "tags")
 #'
 #' # ... which is equivalent to
 #' list(
-#'   io = pip_view(p, tags = "io") |> pip_collect_out(),
-#'   model = pip_view(p, tags = "model") |> pip_collect_out()
+#'   io = pip_view(p, tags = "io") |> pip_collect(),
+#'   model = pip_view(p, tags = "model") |> pip_collect()
 #' )
 #'
 #' # Grouped table output
-#' pip_collect_out(p, by = "tags", as.table = TRUE)
+#' pip_collect(p, by = "tags", as.table = TRUE)
 #'
 #' # Keep single-step groups nested
-#' pip_collect_out(p, simplify = FALSE)
+#' pip_collect(p, simplify = FALSE)
 #'
 #' # Collect output from a view
 #' v <- p[step %in% c("clean", "model"), ]
-#' pip_collect_out(v)
-#' pip_collect_out(v, as.table = TRUE)
+#' pip_collect(v)
+#' pip_collect(v, as.table = TRUE)
 #'
 #'
 #' @export
-pip_collect_out <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
+pip_collect <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
     .assert_pip_or_view(x)
     if (!.is_single(as.table, "logical") || is.na(as.table)) {
         stop("as.table must be a single logical value")
@@ -1298,6 +1298,28 @@ pip_collect_out <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
     }
 }
 
+
+#' @rdname pip_collect
+#' @section Lifecycle: Deprecated
+#'
+#' `pip_collect_out()` is a legacy alias for [pip_collect()]. It raises a
+#' deprecation warning and will be removed in a future release.
+#' @export
+pip_collect_out <- function(
+    x,
+    by = "step",
+    as.table = FALSE,
+    simplify = TRUE
+) {
+    .Deprecated(
+        new = "pip_collect",
+        old = "pip_collect_out",
+        package = "pipeflow"
+    )
+    pip_collect(x, by = by, as.table = as.table, simplify = simplify)
+}
+
+
 #' Get independent parameters
 #'
 #' Returns the current default values of all unbound (non-dependency)
@@ -1318,7 +1340,7 @@ pip_collect_out <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
 #'
 #' # Useful as a guide for pip_set_params()
 #' pip_set_params(p, params = list(n = 20, lambda = 0.5))
-#' pip_run(p) |> pip_collect_out()
+#' pip_run(p) |> pip_collect()
 #' @export
 pip_get_params <- function(x) {
     .assert_pip_or_view(x)

@@ -1209,7 +1209,7 @@ describe("pip_rename", {
         pip_run(out, lgr = NULL)
 
         expect_equal(
-            pip_collect_out(out),
+            pip_collect(out),
             list(a = 1, b = 2, a2 = 10, a3 = 1)
         )
     })
@@ -1560,10 +1560,10 @@ describe("pip_clone", {
 })
 
 
-describe("pip_collect_out", {
+describe("pip_collect", {
     it("returns empty list for empty pipeline", {
         p <- pip_new()
-        expect_equal(pip_collect_out(p), list())
+        expect_equal(pip_collect(p), list())
     })
 
     it("returns named flat list", {
@@ -1577,7 +1577,7 @@ describe("pip_collect_out", {
             value = list(10, 20)
         )
 
-        out <- pip_collect_out(p)
+        out <- pip_collect(p)
         expect_equal(names(out), c("s1", "s2"))
         expect_equal(unname(out), list(10, 20))
     })
@@ -1595,7 +1595,7 @@ describe("pip_collect_out", {
         )
 
         v <- pip_view(p, tags = "model")
-        out <- pip_collect_out(v)
+        out <- pip_collect(v)
 
         expect_equal(names(out), c("s2", "s3"))
         expect_equal(unname(out), list("o2", "o3"))
@@ -1608,17 +1608,17 @@ describe("pip_collect_out", {
             pip_add("s3", \(x = ~s2, factor = 2) x * factor) |>
             pip_add("s4", \(x = ~s2) x^2, tags = "g4")
 
-        out <- pip_collect_out(p)
+        out <- pip_collect(p)
         expect_equal(out, list(s1 = NULL, s2 = NULL, s3 = NULL, s4 = NULL))
 
         pip_run(p, lgr = NULL)
-        out <- pip_collect_out(p)
+        out <- pip_collect(p)
         expect_equal(out, list(s1 = NULL, s2 = 3, s3 = 2 * 3, s4 = 3^2))
     })
 
     it("signals invalid arguments", {
         p <- pip_new()
-        expect_error(pip_collect_out(1), "x must be a pipeflow pip or view")
+        expect_error(pip_collect(1), "x must be a pipeflow pip or view")
     })
 
     test_group_pip <- function() {
@@ -1637,7 +1637,7 @@ describe("pip_collect_out", {
 
     it("groups outputs by tag", {
         p <- test_group_pip()
-        out <- pip_collect_out(p, by = "tags")
+        out <- pip_collect(p, by = "tags")
 
         expect_equal(
             out,
@@ -1651,7 +1651,7 @@ describe("pip_collect_out", {
 
     it("returns the grouped table with as.table = TRUE", {
         p <- test_group_pip()
-        out <- pip_collect_out(p, by = "tags", as.table = TRUE)
+        out <- pip_collect(p, by = "tags", as.table = TRUE)
 
         expect_true(data.table::is.data.table(out))
         expect_equal(colnames(out), c("tags", "out"))
@@ -1670,23 +1670,23 @@ describe("pip_collect_out", {
         p <- test_group_pip()
 
         expect_true(withVisible(
-            pip_collect_out(p, by = "tags", as.table = TRUE)
+            pip_collect(p, by = "tags", as.table = TRUE)
         )[["visible"]])
         expect_true(withVisible(
-            pip_collect_out(p, as.table = TRUE)
+            pip_collect(p, as.table = TRUE)
         )[["visible"]])
     })
 
     it("returns a flat table with if groups are of size 1", {
         p <- test_group_pip()
-        out <- pip_collect_out(p, as.table = TRUE)
+        out <- pip_collect(p, as.table = TRUE)
 
         expect_true(data.table::is.data.table(out))
         expect_equal(colnames(out), c("step", "out"))
         expect_equal(out[["step"]], c("s1", "s2", "s3", "s4"))
         expect_equal(out[["out"]], list("o1", "o2", "o3", "o4"))
 
-        out <- pip_collect_out(p, by = "nodeId", as.table = TRUE)
+        out <- pip_collect(p, by = "nodeId", as.table = TRUE)
         expect_true(data.table::is.data.table(out))
         expect_equal(colnames(out), c("nodeId", "out"))
         expect_equal(out[["nodeId"]], 0:3)
@@ -1695,13 +1695,13 @@ describe("pip_collect_out", {
 
     it("returns a flat list with if groups are of size 1", {
         p <- test_group_pip()
-        out <- pip_collect_out(p)
+        out <- pip_collect(p)
         expect_equal(
             out,
             list(s1 = "o1", s2 = "o2", s3 = "o3", s4 = "o4")
         )
 
-        out <- pip_collect_out(p, by = "nodeId")
+        out <- pip_collect(p, by = "nodeId")
         expect_equal(
             out,
             list(`0` = "o1", `1` = "o2", `2` = "o3", `3` = "o4")
@@ -1712,20 +1712,20 @@ describe("pip_collect_out", {
         p <- test_group_pip()
         v <- pip_view(p, step = "s3") # single tag: "model"
 
-        expect_equal(pip_collect_out(v, by = "tags"), list(model = "o3"))
+        expect_equal(pip_collect(v, by = "tags"), list(model = "o3"))
         expect_equal(
-            pip_collect_out(v, by = "tags", simplify = FALSE),
+            pip_collect(v, by = "tags", simplify = FALSE),
             list(model = list(s3 = "o3"))
         )
         expect_error(
-            pip_collect_out(v, by = "tags", simplify = "yes"),
+            pip_collect(v, by = "tags", simplify = "yes"),
             "simplify must be a single logical value"
         )
     })
 
     it("groups by scalar columns", {
         p <- test_group_pip()
-        out <- pip_collect_out(p, by = "state")
+        out <- pip_collect(p, by = "state")
 
         expect_equal(
             out,
@@ -1736,7 +1736,7 @@ describe("pip_collect_out", {
     it("groups within a view", {
         p <- test_group_pip()
         v <- pip_view(p, tags = "io")
-        out <- pip_collect_out(v, by = "tags")
+        out <- pip_collect(v, by = "tags")
 
         expect_equal(
             out,
@@ -1751,15 +1751,15 @@ describe("pip_collect_out", {
         p <- pip_new() |>
             pip_add("s1", \(x = 1) x)
 
-        expect_equal(pip_collect_out(p, by = "tags"), list())
-        tbl <- pip_collect_out(p, by = "tags", as.table = TRUE)
+        expect_equal(pip_collect(p, by = "tags"), list())
+        tbl <- pip_collect(p, by = "tags", as.table = TRUE)
         expect_true(data.table::is.data.table(tbl))
         expect_equal(colnames(tbl), c("tags", "out"))
         expect_equal(nrow(tbl), 0L)
 
         e <- pip_new()
-        expect_equal(pip_collect_out(e, by = "state"), list())
-        flat <- pip_collect_out(e, as.table = TRUE)
+        expect_equal(pip_collect(e, by = "state"), list())
+        flat <- pip_collect(e, as.table = TRUE)
         expect_true(data.table::is.data.table(flat))
         expect_equal(colnames(flat), c("step", "out"))
         expect_equal(nrow(flat), 0L)
@@ -1769,25 +1769,44 @@ describe("pip_collect_out", {
         p <- test_group_pip()
 
         expect_error(
-            pip_collect_out(p, by = 1),
+            pip_collect(p, by = 1),
             "by must be a single column name"
         )
         expect_error(
-            pip_collect_out(p, by = c("tags", "state")),
+            pip_collect(p, by = c("tags", "state")),
             "by must be a single column name"
         )
-        expect_error(pip_collect_out(p, by = "nope"), "unknown column: nope")
+        expect_error(pip_collect(p, by = "nope"), "unknown column: nope")
         expect_error(
-            pip_collect_out(p, by = "out"),
+            pip_collect(p, by = "out"),
             "cannot be used as a grouping column"
         )
         expect_error(
-            pip_collect_out(p, by = "params"),
+            pip_collect(p, by = "params"),
             "cannot be used as a grouping column"
         )
         expect_error(
-            pip_collect_out(p, as.table = "yes"),
+            pip_collect(p, as.table = "yes"),
             "as.table must be a single logical value"
+        )
+    })
+
+    it("keeps pip_collect_out as a deprecated alias", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x, tags = "io") |>
+            pip_add("s2", \(x = ~s1) x + 1, tags = "model")
+        pip_run(p, lgr = NULL)
+
+        expect_warning(
+            out <- pip_collect_out(p),
+            "pip_collect_out"
+        )
+        expect_equal(out, pip_collect(p))
+        expect_equal(
+            suppressWarnings(
+                pip_collect_out(p, by = "tags", as.table = TRUE)
+            ),
+            pip_collect(p, by = "tags", as.table = TRUE)
         )
     })
 })
