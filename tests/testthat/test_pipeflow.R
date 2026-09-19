@@ -1589,6 +1589,129 @@ describe("pip_collect_out", {
         p <- pip_new()
         expect_error(pip_collect_out(1), "x must be a pipeflow pip or view")
     })
+
+    test_group_pip <- function() {
+        p <- pip_new()
+        pip_add(p, "s1", \(x = 1) x, tags = c("io", "daily"))
+        pip_add(p, "s2", \(x = ~ -1) x + 1, tags = "io")
+        pip_add(p, "s3", \(x = ~ -1) x + 1, tags = "model")
+        pip_add(p, "s4", \(x = ~ -1) x + 1)
+        data.table::set(
+            p[["pipenv"]][["data"]],
+            j = "out",
+            value = list("o1", "o2", "o3", "o4")
+        )
+        p
+    }
+
+    it("groups outputs by tag", {
+        p <- test_group_pip()
+        out <- pip_collect_out(p, by = "tags")
+
+        expect_equal(
+            out,
+            list(
+                io = list(s1 = "o1", s2 = "o2"),
+                daily = list(s1 = "o1"),
+                model = list(s3 = "o3")
+            )
+        )
+    })
+
+    it("returns the grouped table with as.table = TRUE", {
+        p <- test_group_pip()
+        out <- pip_collect_out(p, by = "tags", as.table = TRUE)
+
+        expect_true(data.table::is.data.table(out))
+        expect_equal(colnames(out), c("tags", "out"))
+        expect_equal(out[["tags"]], c("io", "daily", "model"))
+        expect_equal(
+            out[["out"]],
+            list(
+                list(s1 = "o1", s2 = "o2"),
+                list(s1 = "o1"),
+                list(s3 = "o3")
+            )
+        )
+    })
+
+    it("returns the flat table with as.table = TRUE", {
+        p <- test_group_pip()
+        out <- pip_collect_out(p, as.table = TRUE)
+
+        expect_true(data.table::is.data.table(out))
+        expect_equal(colnames(out), c("step", "out"))
+        expect_equal(out[["step"]], c("s1", "s2", "s3", "s4"))
+        expect_equal(out[["out"]], list("o1", "o2", "o3", "o4"))
+    })
+
+    it("groups by scalar columns", {
+        p <- test_group_pip()
+        out <- pip_collect_out(p, by = "state")
+
+        expect_equal(
+            out,
+            list(new = list(s1 = "o1", s2 = "o2", s3 = "o3", s4 = "o4"))
+        )
+    })
+
+    it("groups within a view", {
+        p <- test_group_pip()
+        v <- pip_view(p, tags = "io")
+        out <- pip_collect_out(v, by = "tags")
+
+        expect_equal(
+            out,
+            list(
+                io = list(s1 = "o1", s2 = "o2"),
+                daily = list(s1 = "o1")
+            )
+        )
+    })
+
+    it("returns an empty result for untagged or empty pipelines", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x)
+
+        expect_equal(pip_collect_out(p, by = "tags"), list())
+        tbl <- pip_collect_out(p, by = "tags", as.table = TRUE)
+        expect_true(data.table::is.data.table(tbl))
+        expect_equal(colnames(tbl), c("tags", "out"))
+        expect_equal(nrow(tbl), 0L)
+
+        e <- pip_new()
+        expect_equal(pip_collect_out(e, by = "state"), list())
+        flat <- pip_collect_out(e, as.table = TRUE)
+        expect_true(data.table::is.data.table(flat))
+        expect_equal(colnames(flat), c("step", "out"))
+        expect_equal(nrow(flat), 0L)
+    })
+
+    it("signals invalid by and as.table arguments", {
+        p <- test_group_pip()
+
+        expect_error(
+            pip_collect_out(p, by = 1),
+            "by must be a single column name"
+        )
+        expect_error(
+            pip_collect_out(p, by = c("tags", "state")),
+            "by must be a single column name"
+        )
+        expect_error(pip_collect_out(p, by = "nope"), "unknown column: nope")
+        expect_error(
+            pip_collect_out(p, by = "out"),
+            "cannot be used as a grouping column"
+        )
+        expect_error(
+            pip_collect_out(p, by = "params"),
+            "cannot be used as a grouping column"
+        )
+        expect_error(
+            pip_collect_out(p, as.table = "yes"),
+            "as.table must be a single logical value"
+        )
+    })
 })
 
 

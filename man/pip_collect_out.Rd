@@ -4,18 +4,31 @@
 \alias{pip_collect_out}
 \title{Collect step outputs}
 \usage{
-pip_collect_out(x)
+pip_collect_out(x, by = NULL, as.table = FALSE)
 }
 \arguments{
 \item{x}{A pipeflow pip or view.}
+
+\item{by}{Optional single step-table column name to group by. Scalar
+columns group by value; the list column \code{tags} is expanded so that each
+tag element forms a group. Other list columns cannot be used.}
+
+\item{as.table}{If TRUE, return a \code{data.table} instead of a named list.}
 }
 \value{
-A named list of outputs, one element per step.
+By default a named list, one element per step (or one named list
+per group when \code{by} is given). With \code{as.table = TRUE} a \code{data.table}
+with the columns \code{step} (or the grouping column) and \code{out}, where \code{out}
+is a list column holding the same values as the named-list result.
 }
 \description{
-Returns the outputs of all pipeline steps as a flat named list keyed by
-step name. Use \code{\link[=pip_view]{pip_view()}} to narrow the selection before collecting,
-and compose calls if grouped output is needed.
+Returns the outputs of the pipeline steps as a named list keyed by step
+name. Use \code{\link[=pip_view]{pip_view()}} to narrow the selection before collecting. With
+\code{by}, the outputs are grouped by the values of a step-table column
+(typically \code{"tags"}): each step contributes its output to every group its
+key belongs to, and steps without a key (e.g. untagged steps) are
+omitted. With \code{as.table = TRUE} the same result is returned as a
+\code{data.table} instead of a named list.
 }
 \examples{
 p <- pip_new() |>
@@ -27,10 +40,18 @@ pip_run(p)
 # Flat named list with one entry per step
 pip_collect_out(p)
 
-# Combine with pip_view to collect output for specific tags
-grouped <- list(
+# Same output as a data.table
+pip_collect_out(p, as.table = TRUE)
+
+# Group the outputs by tag ...
+pip_collect_out(p, by = "tags")
+
+# ... which is equivalent to
+list(
   io = pip_view(p, tags = "io") |> pip_collect_out(),
   model = pip_view(p, tags = "model") |> pip_collect_out()
 )
-grouped
+
+# Grouped table output
+pip_collect_out(p, by = "tags", as.table = TRUE)
 }
