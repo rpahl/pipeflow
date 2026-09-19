@@ -741,6 +741,39 @@ describe("assignment operator [[<-", {
         expect_equal(unname(p[["depends"]][[2]]), "s1")
     })
 
+    it("removes a step by assigning NULL to the step property", {
+        p <- test_pip()
+
+        p[["s3", "step"]] <- NULL
+
+        expect_equal(unname(p[["step"]]), c("s1", "s2"))
+        expect_equal(unname(p[["depends"]][[2]]), "s1")
+    })
+
+    it("removes a step and its downstream steps via NULL", {
+        p <- test_pip()
+
+        expect_message(
+            p[["s2", "step"]] <- NULL,
+            "Removing step 's2' and its downstream dependencies"
+        )
+        expect_equal(unname(p[["step"]]), "s1")
+    })
+
+    it("remaps views when removing a step via NULL", {
+        p <- test_pip()
+        v <- pip_view(p, step = c("s1", "s2"))
+
+        expect_message(
+            v[["s2", "step"]] <- NULL,
+            "Removing step 's2' and its downstream dependencies"
+        )
+
+        expect_equal(unname(p[["step"]]), "s1")
+        expect_equal(unname(v[["step"]]), "s1")
+        expect_equal(v[["view"]], 1L)
+    })
+
     it("can assign and clear tags", {
         p <- test_pip()
         p[["s1", "tags"]] <- c("a", "b")
@@ -1157,6 +1190,18 @@ describe("[<-.pipeflow", {
             p[c("s1", "s2"), "step"] <- c("s2", "s1"),
             "step 's2' already exists"
         )
+    })
+
+    it("removes multiple steps via NULL on the step property", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = 2) x) |>
+            pip_add("s3", \(x = 3) x) |>
+            pip_add("s4", \(x = 4) x)
+
+        p[c("s2", "s4"), "step"] <- NULL
+
+        expect_equal(unname(p[["step"]]), c("s1", "s3"))
     })
 
     it("writes through views with view-relative indices", {

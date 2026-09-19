@@ -88,7 +88,9 @@ an integer row index or a step name.
 
 \itemize{
 \item \code{p[[step, "step"]] <- newName} — rename the step (\code{\link[=pip_rename]{pip_rename()}});
-references in dependent steps are updated as well.
+references in dependent steps are updated as well. Assigning \code{NULL}
+removes the step, together with its downstream steps
+(\code{\link[=pip_remove]{pip_remove()}} with \code{force = TRUE}).
 \item \code{p[[step, "fun"]] <- fun} — replace the step's function
 (\code{\link[=pip_replace]{pip_replace()}}); the tags and the execution mode are kept and the
 downstream steps are marked as outdated.

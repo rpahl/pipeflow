@@ -498,7 +498,9 @@ dim.pipeflow <- function(x) {
 #' integer row index and `property` selects what to update:
 #'
 #' * `p[[step, "step"]] <- newName` — rename the step ([pip_rename()]);
-#'   references in dependent steps are updated as well.
+#'   references in dependent steps are updated as well. Assigning `NULL`
+#'   removes the step, together with its downstream steps
+#'   ([pip_remove()] with `force = TRUE`).
 #' * `p[[step, "fun"]] <- fun` — replace the step's function
 #'   ([pip_replace()]); the tags and the execution mode are kept and the
 #'   downstream steps are marked as outdated.
@@ -633,7 +635,11 @@ dim.pipeflow <- function(x) {
 
     # Dispatch the step modification function based on the property name.
     if (j == "step") {
-        pip_rename(x, from = step, to = value)
+        if (is.null(value)) {
+            x <- pip_remove(x, step = step, force = TRUE)
+        } else {
+            pip_rename(x, from = step, to = value)
+        }
     } else if (j == "fun") {
         tags <- data[["tags"]][[i]]
         exec <- data[["exec"]][[i]]
@@ -817,8 +823,23 @@ dim.pipeflow <- function(x) {
         }
     }
 
+    # The step names are resolved up front: removing steps shifts the row
+    # indices, and force-removing one step may already remove its
+    # downstream steps.
+    stepNames <- if (j == "step") {
+        .pip_get_pipenv(x)[["data"]][["step"]][rows]
+    } else {
+        character(0)
+    }
+
     for (k in seq_len(n)) {
-        x[[iSel[[k]], j]] <- values[[k]]
+        if (j == "step") {
+            if (.pip_step_exists(x, stepNames[[k]])) {
+                x[[stepNames[[k]], j]] <- values[[k]]
+            }
+        } else {
+            x[[iSel[[k]], j]] <- values[[k]]
+        }
     }
     x
 }
