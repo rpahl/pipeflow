@@ -319,7 +319,7 @@ describe("extract operator [", {
     it("returns an independent copy with view = FALSE", {
         p <- test_pip()
         suppressMessages(sub <- p[c("a2"), view = FALSE])
-        env <- .pip_get_pipenv(sub)
+        env <- .pip_pipenv(sub)
 
         env[["data"]][["state"]][1] <- "done"
         expect_equal(unname(p[["state"]][1]), "new")
@@ -376,7 +376,7 @@ describe("extract operator [", {
         }
 
         set_state <- function(p, step, state = "done") {
-            env <- .pip_get_pipenv(p)
+            env <- .pip_pipenv(p)
             env[["data"]][["state"]][env[["data"]][["step"]] == step] <- state
             p
         }

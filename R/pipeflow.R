@@ -312,7 +312,7 @@
         .pip_reindex(x)
     }
 
-    dat <- .pip_get_pipenv(x)[["data"]]
+    dat <- .pip_pipenv(x)[["data"]]
     fun <- dat[["fun"]][[i]]
     args <- dat[["params"]][[i]]
     depends <- dat[["depends"]][[i]]
@@ -354,7 +354,7 @@
     # Re-read pipeline after execution to handle scenarios where the pipeline
     # modified itself at runtime. Since we update by step name, if the current
     # step does not exist anymore, we simply skip the update.
-    dat <- .pip_get_pipenv(x)[["data"]]
+    dat <- .pip_pipenv(x)[["data"]]
     rowNow <- data.table::chmatch(step, dat[["step"]])
     stepStillExists <- !is.na(rowNow)
     if (stepStillExists) {
@@ -403,7 +403,7 @@
 
 .pip_update_downstream <- function(x, steps, what, value) {
     nodes <- .pip_get_reachable_nodes(x, steps)
-    .pip_get_pipenv(x)[["data"]][list(nodes), (what) := value, on = "nodeId"]
+    .pip_pipenv(x)[["data"]][list(nodes), (what) := value, on = "nodeId"]
 
     invisible(x)
 }
@@ -414,7 +414,7 @@
 # ----------------------------------
 
 # Convenience helper function to retrieve the shared inner environment.
-.pip_get_pipenv <- function(x) {
+.pip_pipenv <- function(x) {
     .subset2(x, "pipenv")
 }
 
@@ -423,7 +423,7 @@
 .pip_view_rows <- function(x) {
     view <- .subset2(x, "view")
     if (is.null(view)) {
-        seq_len(nrow(.pip_get_pipenv(x)[["data"]]))
+        seq_len(nrow(.pip_pipenv(x)[["data"]]))
     } else {
         as.integer(view)
     }
@@ -431,14 +431,14 @@
 
 .pip_view_data <- function(x) {
     rows <- .pip_view_rows(x)
-    .pip_get_pipenv(x)[["data"]][rows, ]
+    .pip_pipenv(x)[["data"]][rows, ]
 }
 
 # TRUE if `step` is covered by the rows of `x`. Always TRUE for a full
 # pipeline (where all rows are covered) and FALSE for a view that does not
 # cover the step.
 .pip_step_in_view <- function(x, step) {
-    absRow <- data.table::chmatch(step, .pip_get_pipenv(x)[["data"]][["step"]])
+    absRow <- data.table::chmatch(step, .pip_pipenv(x)[["data"]][["step"]])
     if (is.na(absRow)) {
         return(FALSE)
     }
@@ -450,7 +450,7 @@
 # covered rows, i.e. the data of a view or the full step table of a pipeline.
 # `enclos` is used as the enclosing environment for boolean filter expressions.
 .pip_select_rows <- function(x, i_expr, enclos, keep_order = FALSE) {
-    dat <- .pip_get_pipenv(x)[["data"]]
+    dat <- .pip_pipenv(x)[["data"]]
     view <- .is_pipeflow_view(x)
     rows <- .pip_view_rows(x)
     sub <- if (view) dat[rows] else dat
@@ -531,11 +531,11 @@
 }
 
 .pip_filter <- function(x, on, values) {
-    .pip_get_pipenv(x)[["data"]][list(values), on = on]
+    .pip_pipenv(x)[["data"]][list(values), on = on]
 }
 
 .pip_filter_nodes <- function(x, nodes) {
-    .pip_get_pipenv(x)[["data"]][list(nodes), on = "nodeId"]
+    .pip_pipenv(x)[["data"]][list(nodes), on = "nodeId"]
 }
 
 
@@ -543,11 +543,11 @@
 # Indexing
 # -------.
 .pip_is_indexed <- function(x) {
-    !is.null(data.table::indices(.pip_get_pipenv(x)[["data"]]))
+    !is.null(data.table::indices(.pip_pipenv(x)[["data"]]))
 }
 
 .pip_reindex <- function(x) {
-    data.table::setindexv(.pip_get_pipenv(x)[["data"]], list("step", "nodeId"))
+    data.table::setindexv(.pip_pipenv(x)[["data"]], list("step", "nodeId"))
 }
 
 
@@ -557,7 +557,7 @@
 .pip_step_exists <- function(x, step) {
     exists(
         step,
-        where = .pip_get_pipenv(x)[[".steps_to_nodes"]],
+        where = .pip_pipenv(x)[[".steps_to_nodes"]],
         inherits = FALSE
     )
 }
@@ -565,14 +565,14 @@
 .pip_steps_to_nodes <- function(x, steps) {
     mget(
         steps,
-        envir = .pip_get_pipenv(x)[[".steps_to_nodes"]],
+        envir = .pip_pipenv(x)[[".steps_to_nodes"]],
         ifnotfound = NA_integer_,
         inherits = FALSE
     )
 }
 
 .pip_steps_to_rows <- function(x, steps) {
-    data <- .pip_get_pipenv(x)[["data"]]
+    data <- .pip_pipenv(x)[["data"]]
 
     if (anyNA(steps)) {
         stop("step names must not contain NA", call. = FALSE)
@@ -590,7 +590,7 @@
 }
 
 .pip_get_reachable_nodes <- function(x, steps, downstream = TRUE) {
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     known <- intersect(steps, names(env[[".steps_to_nodes"]]))
     if (length(known) == 0L) {
         return(integer(0))
@@ -627,7 +627,7 @@
     fun <- .wrap_self(fun, x)
 
     # Determine and verify potential links to existing steps
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     steps <- c(env[["data"]][["step"]], step)
     depends <- .extract_depends(params = params, steps = steps)
     refNodes <- mget(
@@ -684,7 +684,7 @@
     # Provide `.self` to the step via a dedicated wrapper environment.
     fun <- .wrap_self(fun, x)
 
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     data <- env[["data"]]
 
     # Dependencies may only point to steps that precede the insertion point
@@ -756,10 +756,10 @@
 .pip_bind <- function(x, y) {
     out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
     yy <- pip_clone(y)
-    yyDat <- .pip_get_pipenv(yy)[["data"]]
+    yyDat <- .pip_pipenv(yy)[["data"]]
 
     # Resolve all name clashes directly on the cloned source pipeline.
-    reserved <- .pip_get_pipenv(out)[["data"]][["step"]]
+    reserved <- .pip_pipenv(out)[["data"]][["step"]]
 
     `%chin%` <- data.table::`%chin%`
     for (k in seq_len(nrow(yyDat))) {
@@ -781,7 +781,7 @@
     # row (re-create the formula dependencies after renaming and re-bind
     # `.self` to the target), allocate a fresh node id, wire the DAG edges,
     # and collect the rows for a single rbindlist.
-    outEnv <- .pip_get_pipenv(out)
+    outEnv <- .pip_pipenv(out)
     d <- outEnv[[".dag"]]
     stepsToNodes <- outEnv[[".steps_to_nodes"]]
     rows <- vector("list", nrow(yyDat))
@@ -1032,11 +1032,11 @@ pip_add <- function(
         # Most of the time the new step is added at the end, so we check that
         # first to avoid the more expensive match() call in the common case.
         pos <- n
-        last <- .pip_get_pipenv(x)[["data"]][["step"]][n]
+        last <- .pip_pipenv(x)[["data"]][["step"]][n]
         if (after != last) {
             pos <- data.table::chmatch(
                 after,
-                .pip_get_pipenv(x)[["data"]][["step"]]
+                .pip_pipenv(x)[["data"]][["step"]]
             )
         }
     } else if (is.numeric(after)) {
@@ -1111,10 +1111,10 @@ pip_clone <- function(x, name = NULL) {
 
     newName <- if (is.null(name)) x[["name"]] else name
     out <- pip_new(name = newName)
-    env <- .pip_get_pipenv(out)
+    env <- .pip_pipenv(out)
 
-    env[[".dag"]] <- dag_clone(.pip_get_pipenv(x)[[".dag"]])
-    dat <- data.table::copy(.pip_get_pipenv(x)[["data"]])
+    env[[".dag"]] <- dag_clone(.pip_pipenv(x)[[".dag"]])
+    dat <- data.table::copy(.pip_pipenv(x)[["data"]])
 
     # Clone steps to nodes mapping
     stepsToNodes <- env[[".steps_to_nodes"]]
@@ -1379,7 +1379,7 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
     }
 
     isView <- .is_pipeflow_view(x)
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     dat <- env[["data"]]
     dag <- env[[".dag"]]
 
@@ -1520,7 +1520,7 @@ pip_remove <- function(x, step, force = FALSE) {
         stop("force must be a single logical value")
     }
 
-    pipenv <- .pip_get_pipenv(x)
+    pipenv <- .pip_pipenv(x)
     dat <- pipenv[["data"]]
     `%chin%` <- data.table::`%chin%`
 
@@ -1669,7 +1669,7 @@ pip_rename <- function(x, from, to) {
         stop("step '", to, "' already exists")
     }
 
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     dat <- env[["data"]]
     `%chin%` <- data.table::`%chin%`
     newSteps <- dat[["step"]]
@@ -1817,7 +1817,7 @@ pip_replace <- function(
     }
     .assert_exec_mode(exec)
 
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     data <- env[["data"]]
     iStep <- data.table::chmatch(step, data[["step"]])
 
@@ -2037,7 +2037,7 @@ pip_run <- function(
     log_info <- function(msg) lgr(level = "info", msg = msg)
 
     isView <- .is_pipeflow_view(x)
-    pipenv <- .pip_get_pipenv(x)
+    pipenv <- .pip_pipenv(x)
     pipname <- x[["name"]]
     dat <- pipenv[["data"]]
     rowsToRun <- seq_len(nrow(dat))
@@ -2197,7 +2197,7 @@ pip_run <- function(
 #' @export
 pip_reset <- function(x) {
     .assert_pip_or_view(x)
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     dat <- env[["data"]]
 
     rows <- .pip_view_rows(x)
@@ -2271,7 +2271,7 @@ pip_set_params <- function(x, params = list()) {
     }
 
     # Narrow down the considered rows
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     dat <- env[["data"]]
     rows <- .pip_view_rows(x)
     rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
@@ -2350,7 +2350,7 @@ pip_tag <- function(x, tags = character()) {
         stop("tags must be a character vector")
     }
 
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     dat <- env[["data"]]
     rows <- .pip_view_rows(x)
 
@@ -2395,7 +2395,7 @@ pip_untag <- function(x, tags = character()) {
         stop("tags must be a character vector")
     }
 
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     dat <- env[["data"]]
     rows <- .pip_view_rows(x)
 
@@ -2454,7 +2454,7 @@ pip_untag <- function(x, tags = character()) {
 pip_lock <- function(x) {
     .assert_pip_or_view(x)
 
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     dat <- env[["data"]]
     rows <- .pip_view_rows(x)
 
@@ -2487,7 +2487,7 @@ pip_lock <- function(x) {
 pip_unlock <- function(x) {
     .assert_pip_or_view(x)
 
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     dat <- env[["data"]]
     rows <- .pip_view_rows(x)
 

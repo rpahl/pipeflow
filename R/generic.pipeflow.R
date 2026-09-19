@@ -15,7 +15,7 @@
         return(x)
     }
 
-    envQ <- .pip_get_pipenv(q)
+    envQ <- .pip_pipenv(q)
     dataQ <- envQ[["data"]]
     rowsQ <- .pip_view_rows(q)
     if (length(rowsQ) != n) {
@@ -28,7 +28,7 @@
         ))
     }
 
-    dataP <- .pip_get_pipenv(x)[["data"]]
+    dataP <- .pip_pipenv(x)[["data"]]
     viewRowsP <- .pip_view_rows(x)
     iSelP <- if (.is_pipeflow_view(x)) match(rowsP, viewRowsP) else rowsP
 
@@ -104,7 +104,7 @@
 #' node id sequence.
 #' @noRd
 .pip_compact <- function(x, keepNodes, rebuildThresh = 0.3) {
-    pipenv <- .pip_get_pipenv(x)
+    pipenv <- .pip_pipenv(x)
     data <- pipenv[["data"]]
     out <- pip_new(name = x[["name"]])
     keepNodes <- as.integer(keepNodes)
@@ -158,7 +158,7 @@
     }
 
     data.table::setindexv(subDat, list("step", "nodeId"))
-    env <- .pip_get_pipenv(out)
+    env <- .pip_pipenv(out)
     env[["data"]] <- subDat
     env[[".dag"]] <- d
     env[[".steps_to_nodes"]] <- stepsToNodes
@@ -192,12 +192,12 @@
                 graph = pip_get_graph,
                 restart = function(x, force = TRUE, times = 1L) {
                     .pip_restart(
-                        .pip_get_pipenv(x),
+                        .pip_pipenv(x),
                         force = force,
                         times = times
                     )
                 },
-                stop = function(x) .pip_stop(.pip_get_pipenv(x))
+                stop = function(x) .pip_stop(.pip_pipenv(x))
             )
             for (nm in names(values)) {
                 table[[nm]] <- values[[nm]]
@@ -316,7 +316,7 @@ dim.pipeflow <- function(x) {
     c(
         as.integer(length(.pip_view_rows(x))),
         ncol(
-            .pip_get_pipenv(x)[["data"]]
+            .pip_pipenv(x)[["data"]]
         )
     )
 }
@@ -416,7 +416,7 @@ dim.pipeflow <- function(x) {
         if (!is.character(j)) {
             stop("j must be a character vector of column names")
         }
-        dat <- .pip_get_pipenv(x)[["data"]]
+        dat <- .pip_pipenv(x)[["data"]]
         rows <- if (missing(i)) {
             .pip_view_rows(x)
         } else {
@@ -433,7 +433,7 @@ dim.pipeflow <- function(x) {
         return(pip_clone(x))
     }
 
-    pipenv <- .pip_get_pipenv(x)
+    pipenv <- .pip_pipenv(x)
     name <- x[["name"]]
     dat <- pipenv[["data"]]
     rows <- .pip_select_rows(x, substitute(i), parent.frame())
@@ -451,7 +451,7 @@ dim.pipeflow <- function(x) {
     )
     out <- .pip_compact(x, keepNodes)
 
-    nUpstream <- nrow(.pip_get_pipenv(out)[["data"]]) - length(rows)
+    nUpstream <- nrow(.pip_pipenv(out)[["data"]]) - length(rows)
     if (nUpstream > 0L) {
         message(sprintf(
             "pulled in %d upstream dependenc%s",
@@ -632,7 +632,7 @@ dim.pipeflow <- function(x) {
             stop("name must be a non-empty string")
         }
         return(.wrap_pipenv(
-            .pip_get_pipenv(x),
+            .pip_pipenv(x),
             name = value,
             view = .subset2(x, "view")
         ))
@@ -641,7 +641,7 @@ dim.pipeflow <- function(x) {
         # Build a full wrapper over the shared environment and, if requested,
         # derive a new view from it.
         x <- .wrap_pipenv(
-            .pip_get_pipenv(x),
+            .pip_pipenv(x),
             name = x[["name"]],
             view = NULL
         )
@@ -651,7 +651,7 @@ dim.pipeflow <- function(x) {
         return(pip_view(x, step = value))
     }
 
-    env <- .pip_get_pipenv(x)
+    env <- .pip_pipenv(x)
     data <- env[["data"]]
     rows <- .pip_view_rows(x)
 
@@ -880,7 +880,7 @@ dim.pipeflow <- function(x) {
     # indices, and force-removing one step may already remove its
     # downstream steps.
     stepNames <- if (j == "step") {
-        .pip_get_pipenv(x)[["data"]][["step"]][rows]
+        .pip_pipenv(x)[["data"]][["step"]][rows]
     } else {
         character(0)
     }

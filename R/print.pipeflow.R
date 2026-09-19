@@ -72,7 +72,7 @@ print.pipeflow <- function(
     header = TRUE,
     ...
 ) {
-    data <- .pip_get_pipenv(x)[["data"]]
+    data <- .pip_pipenv(x)[["data"]]
     n <- nrow(data)
     isView <- .is_pipeflow_view(x)
 
@@ -147,7 +147,7 @@ print.pipeflow <- function(
 
     if (header) {
         # Add footer with run state infos
-        runState <- as.character(.pip_get_pipenv(x)[[".run_state"]])
+        runState <- as.character(.pip_pipenv(x)[[".run_state"]])
         lastRun <- x[["pipenv"]][[".last_run"]]
         lastRunStr <- if (is.null(lastRun)) {
             "never"
