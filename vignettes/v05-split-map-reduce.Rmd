@@ -77,14 +77,14 @@ Or graphically:
 
 ```{r, eval = FALSE}
 library(visNetwork)
-do.call(visNetwork, args = pip_get_graph(pip))
+do.call(visNetwork, args = pip_graph(pip))
 ```
 
 ```{r, echo = FALSE}
 library(visNetwork)
 do.call(
     visNetwork,
-    args = c(pip_get_graph(pip), list(height = 100, width = 500))
+    args = c(pip_graph(pip), list(height = 100, width = 500))
 ) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
@@ -190,13 +190,13 @@ column `exec` marking the `split` execution mode for the `split_data` step.
 This also can be inspected in the graph:
 
 ```{r, eval = FALSE}
-do.call(visNetwork, args = pip_get_graph(pip))
+do.call(visNetwork, args = pip_graph(pip))
 ```
 
 ```{r, echo = FALSE}
 do.call(
     visNetwork,
-    args = c(pip_get_graph(pip), list(height = 100, width = 500))
+    args = c(pip_graph(pip), list(height = 100, width = 500))
 ) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
@@ -272,13 +272,13 @@ Again, we see that the new step is marked with the execution mode (`reduce`)
 in the overview. Graphically, this mode is represented by a circle.
 
 ```{r, eval = FALSE}
-do.call(visNetwork, args = pip_get_graph(pip))
+do.call(visNetwork, args = pip_graph(pip))
 ```
 
 ```{r, echo = FALSE}
 do.call(
     visNetwork,
-    args = c(pip_get_graph(pip), list(height = 100, width = 650))
+    args = c(pip_graph(pip), list(height = 100, width = 650))
 ) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```

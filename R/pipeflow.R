@@ -1361,18 +1361,18 @@ pip_get_params <- function(x) {
 #' pip_add(p, "clean", \(x = ~load) x + 1, tags = "io")
 #' pip_add(p, "fit", \(x = ~clean) x * 2, tags = "model")
 #'
-#' graph <- pip_get_graph(p)
+#' graph <- pip_graph(p)
 #' graph$nodes # data.frame: id, label, shape, color
 #' graph$edges # data.frame: from, to, arrows
 #'
 #' # For a view, include_upstream = TRUE adds upstream deps to the graph
 #' v <- pip_view(p, step = "fit")
-#' pip_get_graph(v, include_upstream = TRUE)
+#' pip_graph(v, include_upstream = TRUE)
 #'
 #' if (require("visNetwork", quietly = TRUE)) {
 #'   do.call(what = visNetwork::visNetwork, args = graph)
 #' }
-pip_get_graph <- function(x, include_upstream = FALSE) {
+pip_graph <- function(x, include_upstream = FALSE) {
     .assert_pip_or_view(x)
     if (!.is_single(include_upstream, "logical")) {
         stop("include_upstream must be a single logical value")
@@ -1454,6 +1454,18 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
     }
 
     list(nodes = nodes, edges = edges)
+}
+
+
+#' @rdname pip_graph
+#' @section Lifecycle: Deprecated
+#'
+#' `pip_get_graph()` is a legacy alias for [pip_graph()]. It raises a
+#' deprecation warning and will be removed in a future release.
+#' @export
+pip_get_graph <- function(x, include_upstream = FALSE) {
+    .Deprecated(new = "pip_graph", old = "pip_get_graph", package = "pipeflow")
+    pip_graph(x, include_upstream = include_upstream)
 }
 
 

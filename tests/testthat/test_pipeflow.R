@@ -1845,7 +1845,7 @@ describe("pip_get_params", {
 })
 
 
-describe("pip_get_graph", {
+describe("pip_graph", {
     test_pip <- function() {
         pip_new() |>
             pip_add("s1", \(x = 1) x, tags = "io", exec = "split") |>
@@ -1870,7 +1870,7 @@ describe("pip_get_graph", {
         env <- p[["pipenv"]]
         env[["data"]][["state"]] <- c("new", "done", "failed")
 
-        g <- pip_get_graph(p)
+        g <- pip_graph(p)
         nodes <- g[["nodes"]]
         edges <- g[["edges"]]
 
@@ -1898,11 +1898,11 @@ describe("pip_get_graph", {
         p <- test_pip()
         v <- pip_view(p, step = "s3")
 
-        gView <- pip_get_graph(v, include_upstream = FALSE)
+        gView <- pip_graph(v, include_upstream = FALSE)
         expect_equal(gView[["nodes"]][["label"]], "s3")
         expect_equal(nrow(gView[["edges"]]), 0L)
 
-        gUp <- pip_get_graph(v, include_upstream = TRUE)
+        gUp <- pip_graph(v, include_upstream = TRUE)
         expect_setequal(gUp[["nodes"]][["label"]], c("s1", "s2", "s3"))
         expect_setequal(map_edge_labels(gUp), c("s1->s2", "s2->s3"))
     })
@@ -1910,18 +1910,33 @@ describe("pip_get_graph", {
     it("signals invalid inputs", {
         p <- test_pip()
 
-        expect_error(pip_get_graph(1), "x must be a pipeflow pip or view")
+        expect_error(pip_graph(1), "x must be a pipeflow pip or view")
         expect_error(
-            pip_get_graph(p, include_upstream = c(TRUE, FALSE)),
+            pip_graph(p, include_upstream = c(TRUE, FALSE)),
             "include_upstream must be a single logical value"
         )
     })
 
     it("returns empty nodes and edges for empty pipeline", {
-        g <- pip_get_graph(pip_new())
+        g <- pip_graph(pip_new())
         expect_equal(nrow(g[["nodes"]]), 0L)
         expect_equal(nrow(g[["edges"]]), 0L)
         expect_named(g, c("nodes", "edges"))
+    })
+
+    it("keeps pip_get_graph as a deprecated alias", {
+        p <- test_pip()
+
+        expect_warning(
+            g <- pip_get_graph(p),
+            "pip_get_graph"
+        )
+        expect_equal(pip_graph(p), g)
+
+        expect_error(
+            suppressWarnings(pip_get_graph(1)),
+            "x must be a pipeflow pip or view"
+        )
     })
 })
 

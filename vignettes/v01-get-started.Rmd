@@ -154,12 +154,12 @@ pip
 
 In addition to the tabular output, {pipeflow} also provides a graphical
 representation that is compatible with the `visNetwork` package.
-In particular, the `pip_get_graph()` function returns a list of arguments
+In particular, the `pip_graph()` function returns a list of arguments
 that can be feed directly to `visNetwork::visNetwork()`.
 
 ```{r, eval = FALSE}
 library(visNetwork)
-do.call(visNetwork, args = pip_get_graph(pip)) |>
+do.call(visNetwork, args = pip_graph(pip)) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
@@ -167,7 +167,7 @@ do.call(visNetwork, args = pip_get_graph(pip)) |>
 library(visNetwork)
 do.call(
     visNetwork,
-    args = c(pip_get_graph(pip), list(height = 100, width = 600))
+    args = c(pip_graph(pip), list(height = 100, width = 600))
 ) |>
     visHierarchicalLayout(direction = "LR")
 ```
@@ -215,7 +215,7 @@ pip
 ```{r, echo = FALSE}
 do.call(
     visNetwork,
-    args = c(pip_get_graph(pip), list(height = 100, width = 600))
+    args = c(pip_graph(pip), list(height = 100, width = 600))
 ) |>
     visHierarchicalLayout(direction = "LR")
 ```
@@ -281,7 +281,7 @@ pip
 library(visNetwork)
 do.call(
     visNetwork,
-    args = c(pip_get_graph(pip), list(height = 100, width = 600))
+    args = c(pip_graph(pip), list(height = 100, width = 600))
 ) |>
     visHierarchicalLayout(direction = "LR")
 ```

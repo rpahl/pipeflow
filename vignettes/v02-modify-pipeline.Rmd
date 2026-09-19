@@ -120,13 +120,13 @@ pip
 
 ```{r, eval = FALSE, echo = nzchar(Sys.getenv("IN_PKGDOWN"))}
 library(visNetwork)
-do.call(visNetwork, args = pip_get_graph(pip)) |>
+do.call(visNetwork, args = pip_graph(pip)) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
 ```{r, echo = FALSE, eval = nzchar(Sys.getenv("IN_PKGDOWN"))}
 library(visNetwork)
-do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 300))) |>
+do.call(visNetwork, args = c(pip_graph(pip), list(height = 300))) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
@@ -187,7 +187,7 @@ pip
 ```
 
 ```{r, echo = FALSE, eval = nzchar(Sys.getenv("IN_PKGDOWN"))}
-do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100))) |>
+do.call(visNetwork, args = c(pip_graph(pip), list(height = 100))) |>
     visHierarchicalLayout(direction = "LR")
 ```
 

@@ -137,7 +137,7 @@ Now, as can be also seen from the graphical representation of the pipeline,
 
 ```{r, eval = FALSE}
 library(visNetwork)
-do.call(visNetwork, args = pip_get_graph(pip)) |>
+do.call(visNetwork, args = pip_graph(pip)) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
@@ -145,7 +145,7 @@ do.call(visNetwork, args = pip_get_graph(pip)) |>
 library(visNetwork)
 do.call(
     visNetwork,
-    args = c(pip_get_graph(pip), list(height = 250, width = 500))
+    args = c(pip_graph(pip), list(height = 250, width = 500))
 ) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
@@ -166,7 +166,7 @@ pip
 ```{r, echo = FALSE}
 do.call(
     visNetwork,
-    args = c(pip_get_graph(pip), list(height = 100, width = 700))
+    args = c(pip_graph(pip), list(height = 100, width = 700))
 ) |>
     visHierarchicalLayout(direction = "LR")
 ```
@@ -213,7 +213,7 @@ pip_set_params(pip, params = list(xVar = "Temp.Celsius"))
 library(visNetwork)
 do.call(
     visNetwork,
-    args = c(pip_get_graph(pip), list(height = 100, width = 700))
+    args = c(pip_graph(pip), list(height = 100, width = 700))
 ) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
