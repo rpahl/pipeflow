@@ -673,7 +673,7 @@ dim.pipeflow <- function(x) {
         }
         data.table::set(data, i = i, j = "time", value = value)
     } else {
-        if (j %in% colnames(data)) {
+        if (j %in% .derived_cols) {
             stop("direct assignment to column '", j, "' is not supported.")
         } else {
             stop("unknown step property: ", j)

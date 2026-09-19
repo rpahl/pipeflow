@@ -4,17 +4,17 @@
 .empty_pipeline <- function() {
     data.table::data.table(
         step = character(0),
-        nodeId = integer(),
         fun = list(),
         params = list(),
-        depends = list(),
-        unbound = list(), # names of independent parameters
         out = list(),
         state = character(0),
         tags = list(),
-        time = as.POSIXct(character(0)),
         locked = logical(0),
-        exec = character(0)
+        exec = character(0),
+        time = as.POSIXct(character(0)),
+        depends = list(),
+        unbound = list(), # names of independent parameters
+        nodeId = integer()
     )
 }
 
@@ -29,17 +29,17 @@
 ) {
     list(
         step = step,
-        nodeId = nodeId,
         fun = list(fun),
         params = list(params),
-        depends = list(depends),
-        unbound = list(setdiff(names(params), names(depends))),
         out = list(NULL),
         state = .step_states[["new"]][["name"]],
         tags = list(tags),
-        time = Sys.time(),
         locked = FALSE,
-        exec = exec
+        exec = exec,
+        time = Sys.time(),
+        depends = list(depends),
+        unbound = list(setdiff(names(params), names(depends))),
+        nodeId = nodeId
     )
 }
 
@@ -664,7 +664,10 @@
         nodeId = nodeId
     )
 
-    env[["data"]] <- data.table::rbindlist(list(env[["data"]], newStep))
+    env[["data"]] <- data.table::rbindlist(
+        list(env[["data"]], newStep),
+        use.names = TRUE
+    )
     env[[".steps_to_nodes"]][[step]] <- nodeId
     x
 }
@@ -736,11 +739,14 @@
         nodeId = nodeId
     )
     n <- nrow(data)
-    env[["data"]] <- data.table::rbindlist(list(
-        data[seq_len(pos)],
-        newStep,
-        data[seq_len(n - pos) + pos]
-    ))
+    env[["data"]] <- data.table::rbindlist(
+        list(
+            data[seq_len(pos)],
+            newStep,
+            data[seq_len(n - pos) + pos]
+        ),
+        use.names = TRUE
+    )
     env[[".steps_to_nodes"]][[step]] <- nodeId
     x
 }
@@ -819,9 +825,8 @@
         rows[[k]] <- row
     }
 
-    # rbind all appended rows at once and preserve the runtime state of the
-    # source steps.
-    appRows <- data.table::rbindlist(rows)
+    # rbind all appended rows and preserve runtime state of the source steps
+    appRows <- data.table::rbindlist(rows, use.names = TRUE)
     data.table::set(
         appRows,
         j = c("out", "state", "time", "locked"),
@@ -833,7 +838,8 @@
         )
     )
     outEnv[["data"]] <- data.table::rbindlist(
-        list(outEnv[["data"]], appRows)
+        list(outEnv[["data"]], appRows),
+        use.names = TRUE
     )
     out
 }
@@ -1706,7 +1712,7 @@ pip_rename <- function(x, from, to) {
 
     data.table::set(dat, j = "step", value = newSteps)
     data.table::set(dat, j = "depends", value = newDepends)
-    data.table::set(dat, j = "params", value = newParams)
+    data.table::set(dat, j = "params", value = list(newParams))
 
     stepsToNodes <- env[[".steps_to_nodes"]]
     nodeId <- stepsToNodes[[from]]

@@ -10,17 +10,17 @@ describe(".empty_pipeline", {
             names(dt),
             c(
                 "step",
-                "nodeId",
                 "fun",
                 "params",
-                "depends",
-                "unbound",
                 "out",
                 "state",
                 "tags",
-                "time",
                 "locked",
-                "exec"
+                "exec",
+                "time",
+                "depends",
+                "unbound",
+                "nodeId"
             )
         )
     })
@@ -1180,6 +1180,37 @@ describe("pip_rename", {
                 c(b = "f1"),
                 c(a = "f1", b = "f2")
             )
+        )
+    })
+
+    it("keeps the params of a single-step pipeline intact", {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 5) x * 2)
+
+        pip_rename(p, from = "s1", to = "first")
+
+        expect_equal(p[["params"]][[1]], list(x = 5))
+        expect_equal(
+            p[["pipenv"]][["data"]][["params"]][[1]],
+            list(x = 5)
+        )
+    })
+
+    it("runs a bound pipeline whose steps were renamed", {
+        p <- pip_new("pipe") |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1)
+        a <- pip_new("a") |>
+            pip_add("a", \(x = 5) x * 2)
+        b <- pip_new("b") |>
+            pip_add("a", \(x = 1) x)
+
+        out <- rbind(p, a, b)
+        pip_run(out)
+
+        expect_equal(
+            pip_collect_out(out),
+            list(a = 1, b = 2, a2 = 10, a3 = 1)
         )
     })
 })

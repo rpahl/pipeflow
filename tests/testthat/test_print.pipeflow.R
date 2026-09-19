@@ -210,7 +210,7 @@ describe("print.pipeflow", {
         expect_false("nodeId" %in% get_print_header(p))
         expect_equal(
             get_print_header(p, cols = "all")[seq_len(4L)],
-            c("step", "nodeId", "fun", "params")
+            c("step", "fun", "params", "out")
         )
     })
 
