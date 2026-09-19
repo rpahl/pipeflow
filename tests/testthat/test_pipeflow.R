@@ -1635,6 +1635,17 @@ describe("pip_collect_out", {
         )
     })
 
+    it("returns the table results visibly", {
+        p <- test_group_pip()
+
+        expect_true(withVisible(
+            pip_collect_out(p, by = "tags", as.table = TRUE)
+        )[["visible"]])
+        expect_true(withVisible(
+            pip_collect_out(p, as.table = TRUE)
+        )[["visible"]])
+    })
+
     it("returns a flat table with if groups are of size 1", {
         p <- test_group_pip()
         out <- pip_collect_out(p, as.table = TRUE)
@@ -1668,7 +1679,7 @@ describe("pip_collect_out", {
 
     it("keeps single-step groups nested with simplify = FALSE", {
         p <- test_group_pip()
-        v <- pip_view(p, step = "s3")  # single tag: "model"
+        v <- pip_view(p, step = "s3") # single tag: "model"
 
         expect_equal(pip_collect_out(v, by = "tags"), list(model = "o3"))
         expect_equal(

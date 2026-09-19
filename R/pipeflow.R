@@ -1236,8 +1236,9 @@ pip_collect_out <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
             return(list())
         }
         key0 <- if (is.list(byCol)) character(0) else byCol[0]
-        data.table::data.table(grp = key0, out = vector("list", 0L)) |>
-            data.table::setnames(new = c(by, "out"))
+        tbl <- data.table::data.table(grp = key0, out = vector("list", 0L))
+        data.table::setnames(tbl, new = c(by, "out"))
+        tbl
     }
 
     if (nrow(dat) == 0L) {
@@ -1286,8 +1287,9 @@ pip_collect_out <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
     }
 
     if (as.table) {
-        data.table::data.table(grp = groupNames, out = collected) |>
-            data.table::setnames(new = c(by, "out"))
+        tbl <- data.table::data.table(grp = groupNames, out = collected)
+        data.table::setnames(tbl, new = c(by, "out"))
+        tbl
     } else {
         stats::setNames(collected, nm = groupNames)
     }
