@@ -165,40 +165,49 @@
     out
 }
 
-# Internal implementation of [[ for pipeflow objects. Views are pips with
-# a `rows` selector, so list fields and inner-env bindings are accessed
-# through the same dispatch.
-#
-# Virtual methods are exposed via [[ / $ (e.g. `p$add(...)`): the methods
-# are not stored on the object but bound on demand to the current pipeline,
-# which keeps wrappers of the same pipeline identical to each other.
-.pip_methods <- function(x) {
-    list(
-        add = function(...) pip_add(x, ...),
-        remove = function(...) pip_remove(x, ...),
-        rename = function(...) pip_rename(x, ...),
-        replace = function(...) pip_replace(x, ...),
-        run = function(...) pip_run(x, ...),
-        reset = function(...) pip_reset(x, ...),
-        tag = function(...) pip_tag(x, ...),
-        untag = function(...) pip_untag(x, ...),
-        lock = function(...) pip_lock(x, ...),
-        unlock = function(...) pip_unlock(x, ...),
-        set_params = function(...) pip_set_params(x, ...),
-        get_params = function(...) pip_get_params(x, ...),
-        collect_out = function(...) pip_collect_out(x, ...),
-        clone = function(...) pip_clone(x, ...),
-        graph = function(...) pip_get_graph(x, ...),
-        restart = function(force = TRUE, times = 1L) {
-            .pip_restart(.pip_get_pipenv(x), force = force, times = times)
-        },
-        stop = function() .pip_stop(.pip_get_pipenv(x))
-    )
-}
+# The method registry maps method names to the (unbound) backend functions and
+# is built lazily, so dispatch is an O(1) hash lookup followed by binding
+# exactly one closure to the current object.
+.pip_method_table <- local({
+    table <- NULL
+    function() {
+        if (is.null(table)) {
+            # Build table
+            table <<- new.env(parent = emptyenv())
+            values <- list(
+                add = pip_add,
+                remove = pip_remove,
+                rename = pip_rename,
+                replace = pip_replace,
+                run = pip_run,
+                reset = pip_reset,
+                tag = pip_tag,
+                untag = pip_untag,
+                lock = pip_lock,
+                unlock = pip_unlock,
+                set_params = pip_set_params,
+                get_params = pip_get_params,
+                collect_out = pip_collect_out,
+                clone = pip_clone,
+                graph = pip_get_graph,
+                restart = function(x, force = TRUE, times = 1L) {
+                    .pip_restart(
+                        .pip_get_pipenv(x),
+                        force = force,
+                        times = times
+                    )
+                },
+                stop = function(x) .pip_stop(.pip_get_pipenv(x))
+            )
+            for (nm in names(values)) {
+                table[[nm]] <- values[[nm]]
+            }
+        }
+        table
+    }
+})
 
-# Method names are derived once at load time from a dummy closure set.
-.pip_method_names <- names(.pip_methods(NULL))
-
+# Internal implementation of [[ for pipeflow objects.
 .pip_subset2 <- function(x, i, j = NULL) {
     if (missing(i)) {
         stop("i must be provided")
@@ -214,10 +223,12 @@
             }
         }
 
-        # Virtual methods
+        # Virtual methods (an O(1) lookup followed by a single closure that
+        # binds the backend to the current object).
         if (is.character(i) && length(i) == 1L && !is.na(i)) {
-            if (i %in% .pip_method_names) {
-                return(.pip_methods(x)[[i]])
+            fn <- get0(i, envir = .pip_method_table(), inherits = FALSE)
+            if (!is.null(fn)) {
+                return(function(...) fn(x, ...))
             }
         }
 

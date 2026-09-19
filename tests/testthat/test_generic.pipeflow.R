@@ -761,6 +761,19 @@ describe("virtual methods", {
         v$stop()
         expect_equal(as.character(p[["pipenv"]][[".run_state"]]), "stop")
     })
+
+    it("builds the method table lazily and caches it", {
+        expect_identical(
+            .pip_method_table(),
+            .pip_method_table()
+        )
+        expect_true(
+            exists("add", envir = .pip_method_table(), inherits = FALSE)
+        )
+        expect_false(
+            exists("view", envir = .pip_method_table(), inherits = FALSE)
+        )
+    })
 })
 
 
