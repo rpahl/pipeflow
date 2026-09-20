@@ -271,6 +271,7 @@
 # Implementation of generic S3 methods
 # ------------------------------------
 
+#' @name dim.pipeflow
 #' @rdname dim.pipeflow
 #' @export
 length.pipeflow <- function(x) {
