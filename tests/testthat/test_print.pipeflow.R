@@ -1,19 +1,3 @@
-describe(".param_list_to_string", {
-    it("returns the parameter names as a comma separated string", {
-        params <- list(a = 1, b = ~s2, c = list(a = 1, b = 2))
-        expect_equal(.param_list_to_string(params), "a, b, c")
-    })
-
-    it("returns an empty string for an empty parameter list", {
-        expect_equal(.param_list_to_string(list()), "")
-    })
-
-    it("returns long parameter names as-is", {
-        params <- list(data = ~data_prep, xVar = "Temp.Celsius")
-        expect_equal(.param_list_to_string(params), "data, xVar")
-    })
-})
-
 describe("print.pipeflow", {
     get_print_header <- function(x, ...) {
         out <- capture.output(print(x, ...))
@@ -83,7 +67,7 @@ describe("print.pipeflow", {
 
         expect_true(grepl("^\\s*\\d+:\\s+s1\\s+x\\s", get_step_line(p, "s1")))
         expect_true(grepl(
-            "^\\s*\\d+:\\s+s2\\s+y, x\\s",
+            "^\\s*\\d+:\\s+s2\\s+y,x\\s",
             get_step_line(p, "s2")
         ))
     })

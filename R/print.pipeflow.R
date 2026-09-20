@@ -1,7 +1,3 @@
-.param_list_to_string <- function(x) {
-    toString(names(x))
-}
-
 #' @rdname print
 #' @export
 print.pipeflow <- function(
@@ -70,13 +66,10 @@ print.pipeflow <- function(
     } else {
         dat <- data[rows, cols, with = FALSE]
         if ("params" %in% names(dat)) {
-            # We print the parameter names of each step, compactly.
-            params_str <- vapply(
-                dat[["params"]],
-                FUN = .param_list_to_string,
-                character(1)
-            )
-            data.table::set(dat, j = "params", value = params_str)
+            # We print the parameter names of each step as a list column, so
+            # that data.table renders and truncates them like `depends`.
+            params_names <- lapply(dat[["params"]], \(p) as.character(names(p)))
+            data.table::set(dat, j = "params", value = params_names)
         }
         print(
             dat,
