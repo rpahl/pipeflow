@@ -31,8 +31,7 @@
 \item{cols}{The columns to be printed. Can be either one of
 \code{core} or \code{all} to print the core or all columns, respectively,
 or an explicit character vector of columns to be printed. The \code{params}
-column is shown in a compact \code{name=value} form, abbreviating long values
-by their class.}
+column lists the names of the step's parameters.}
 
 \item{topn}{The number of rows to be printed from the beginning
 and end of tables with more than \code{nrows} rows.}

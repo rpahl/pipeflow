@@ -1,89 +1,16 @@
-describe(".class_abb", {
-    it("abbreviates known classes", {
-        expect_equal(
-            .class_abb(list(
-                1,
-                1L,
-                TRUE,
-                1 + 1i,
-                "x",
-                as.Date("2020-01-01"),
-                factor("a"),
-                ordered("b"),
-                as.POSIXct("2020-01-01"),
-                as.raw(1),
-                list(1),
-                expression(1)
-            )),
-            c(
-                "<num>",
-                "<num>",
-                "<lgcl>",
-                "<cplx>",
-                "<char>",
-                "<Date>",
-                "<fctr>",
-                "<ord>",
-                "<POSc>",
-                "<raw>",
-                "<list>",
-                "<expr>"
-            )
-        )
-    })
-
-    it("wraps classes without an abbreviation in angle brackets", {
-        expect_equal(
-            .class_abb(list(structure(1, class = "myclass"))),
-            "<myclass>"
-        )
-    })
-
-    it("returns one abbreviation per element, unnamed", {
-        x <- c(a = 1, b = 2)
-        abbs <- .class_abb(x)
-        expect_length(abbs, 2L)
-        expect_null(names(abbs))
-    })
-})
-
 describe(".param_list_to_string", {
-    it("converts a param list to a comma separated string", {
+    it("returns the parameter names as a comma separated string", {
         params <- list(a = 1, b = ~s2, c = list(a = 1, b = 2))
-        expect_equal(
-            .param_list_to_string(params),
-            "a=1, b=~s2, c=<list>"
-        )
+        expect_equal(.param_list_to_string(params), "a, b, c")
     })
 
-    it("abbreviates params whose string exceeds maxchar", {
-        params <- list(data = 1:100000, label = "some long label")
-        expect_equal(
-            .param_list_to_string(params),
-            "data=<num>, label=<char>"
-        )
+    it("returns an empty string for an empty parameter list", {
+        expect_equal(.param_list_to_string(list()), "")
     })
 
-    it("keeps params whose string does not exceed maxchar", {
-        params <- list(a = 1, b = TRUE, c = "hi")
-        expect_equal(
-            .param_list_to_string(params),
-            "a=1, b=TRUE, c=\"hi\""
-        )
-    })
-
-    it("respects a custom maxchar", {
-        params <- list(a = 1)
-        expect_equal(.param_list_to_string(params, maxchar = 1), "a=1")
-        expect_equal(.param_list_to_string(params, maxchar = 0), "a=<num>")
-    })
-
-    it("uses the class abbreviation of the value, not the deparsed string", {
-        params <- list(x = data.frame(a = 1:2), f = factor(letters[1:3]))
-        expect_equal(
-            .param_list_to_string(params),
-            "x=<data.frame>, f=<fctr>"
-        )
+    it("returns long parameter names as-is", {
+        params <- list(data = ~data_prep, xVar = "Temp.Celsius")
+        expect_equal(.param_list_to_string(params), "data, xVar")
     })
 })
 
@@ -231,7 +158,7 @@ describe("print.pipeflow", {
         )
     })
 
-    it("prints the params of each step", {
+    it("prints the parameter names of each step", {
         op <- options(width = 1000L)
         on.exit(options(op))
 
@@ -239,42 +166,11 @@ describe("print.pipeflow", {
             pip_add("s1", \(x = 1) x) |>
             pip_add("s2", \(x = ~s1) x + 1, params = list(y = "hi"))
 
-        expect_true(grepl("x=1", get_step_line(p, "s1")))
-        expect_true(grepl("y=\"hi\", x=~s1", get_step_line(p, "s2")))
-    })
-
-    it("abbreviates long params with the maxchar option", {
-        op <- options(width = 1000L, pipeflow.print.param.maxchar = 4L)
-        on.exit(options(op))
-
-        p <- pip_new("pipe") |>
-            pip_add("s1", \(x = list(a = 1, b = 2)) x)
-
-        expect_true(grepl("x=<list>", get_step_line(p, "s1")))
-    })
-
-    it("shows the class abbreviation for long params", {
-        op <- options(width = 1000L)
-        on.exit(options(op))
-
-        p <- pip_new("pipe") |>
-            pip_add("s1", \(x = data.frame(a = 1:2)) x)
-
-        expect_true(grepl("x=<data.frame>", get_step_line(p, "s1")))
-    })
-
-    it("truncates over-long params in the printed table", {
-        op <- options(
-            width = 1000L,
-            pipeflow.prettyprint.strwidth = 10L,
-            pipeflow.print.param.maxchar = 100L
-        )
-        on.exit(options(op))
-
-        p <- pip_new("pipe") |>
-            pip_add("s1", \(x = list(alpha = 1, beta = 2, gamma = 3)) x)
-
-        expect_true(grepl("x=list\\(alp\\.\\.\\.", get_step_line(p, "s1")))
+        expect_true(grepl("^\\s*\\d+:\\s+s1\\s+x\\s", get_step_line(p, "s1")))
+        expect_true(grepl(
+            "^\\s*\\d+:\\s+s2\\s+y, x\\s",
+            get_step_line(p, "s2")
+        ))
     })
 
     it("shows tags when at least one step has tags", {
@@ -463,8 +359,9 @@ describe("print.pipeflow_view", {
         v <- pip_view(p, step = c("s2", "s3"))
         out <- capture.output(print(v))
 
-        expect_true(any(grepl("x=~s1", out)))
-        expect_true(any(grepl("x=~s2", out)))
-        expect_false(any(grepl("^s1\\b", out)))
+        stepLines <- grep("^\\s*\\d+:", out, value = TRUE)
+        expect_equal(length(stepLines), 2L)
+        expect_true(any(grepl("s2\\s+x\\s+s1", stepLines)))
+        expect_true(any(grepl("s3\\s+x\\s+s2", stepLines)))
     })
 })

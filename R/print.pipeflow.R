@@ -1,48 +1,10 @@
-.class_abb <- function(x) {
-    # Abbreviations for common classes as also defined in the data.table package
-    classes <- vapply(x, data.class, character(1))
-    class_abb <- c(
-        character = "<char>",
-        complex = "<cplx>",
-        Date = "<Date>",
-        expression = "<expr>",
-        factor = "<fctr>",
-        IDate = "<IDat>",
-        integer = "<int>",
-        integer64 = "<i64>",
-        list = "<list>",
-        logical = "<lgcl>",
-        numeric = "<num>",
-        ordered = "<ord>",
-        POSIXct = "<POSc>",
-        raw = "<raw>"
-    )
-
-    abbs <- unname(class_abb[classes])
-
-    if (length(idx <- which(is.na(abbs)))) {
-        # If not in above abbreviation list, use original class name
-        abbs[idx] <- paste0("<", classes[idx], ">")
-    }
-
-    abbs
-}
-
-.param_list_to_string <- function(
-    x,
-    maxchar = getOption("pipeflow.print.param.maxchar", default = 6)
-) {
-    chars <- trimws(sapply(x, deparse1))
-    if (length(idx <- which(nchar(chars) > maxchar))) {
-        chars[idx] <- .class_abb(x[idx])
-    }
-
-    toString(paste0(names(x), "=", chars))
+.param_list_to_string <- function(x) {
+    toString(names(x))
 }
 
 .format_pip_data_table <- function(
     dat,
-    strwidth = getOption("pipeflow.prettyprint.strwidth", default = 50L)
+    strwidth = getOption("pipeflow.prettyprint.strwidth", default = 30L)
 ) {
     charCols <- setdiff(
         names(Filter(f = is.character, x = dat)),
@@ -127,7 +89,7 @@ print.pipeflow <- function(
     } else {
         dat <- data[rows, cols, with = FALSE]
         if ("params" %in% names(dat)) {
-            # We print params as a compact string of the form `name=value`
+            # We print the parameter names of each step, compactly.
             params_str <- vapply(
                 dat[["params"]],
                 FUN = .param_list_to_string,
