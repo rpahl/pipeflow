@@ -2422,12 +2422,14 @@ pip_set_params <- function(x, params = list()) {
 }
 
 
-#' Add tags to selected steps
+#' Add or remove tags
 #'
-#' Adds tags to existing tags for all steps of a pipeline or a subset
-#' of steps defined by a view.
+#' Adds tags to, or removes tags from, all steps of a pipeline or a subset
+#' of steps defined by a view. Tagged steps can later be selected via
+#' [pip_view()].
 #' @param x A pipeflow pip or view.
-#' @param tags Character vector of tags to add for each selected step.
+#' @param tags Character vector of tags to add to or remove from each
+#' selected step.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |>
@@ -2443,6 +2445,10 @@ pip_set_params <- function(x, params = list()) {
 #' p[step == "fit"] |> pip_tag("model")
 #' p
 #' p[, "tags"] # "fit" also has "model"
+#'
+#' # Remove "daily" from all steps
+#' pip_untag(p, "daily")
+#' p[, "tags"]
 #' @export
 pip_tag <- function(x, tags = character()) {
     .assert_pip_or_view(x)
@@ -2472,22 +2478,7 @@ pip_tag <- function(x, tags = character()) {
 }
 
 
-#' Remove tags from selected steps
-#'
-#' Removes tags from existing tags for all steps of a pipeline or a subset
-#' of steps defined by a view.
-#' @param x A pipeflow pip or view.
-#' @param tags Character vector of tags to remove for each selected step.
-#' @return The updated pipeline or view, invisibly.
-#' @examples
-#' p <- pip_new() |>
-#'   pip_add("load", \(x = 1) x, tags = c("daily", "core")) |>
-#'   pip_add("fit", \(x = ~load) x + 1, tags = c("daily", "model"))
-#' p
-#'
-#' # Remove "daily" from all steps
-#' pip_untag(p, "daily")
-#' p[, "tags"]
+#' @rdname pip_tag
 #' @export
 pip_untag <- function(x, tags = character()) {
     .assert_pip_or_view(x)
