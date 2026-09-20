@@ -1940,36 +1940,22 @@ pip_replace <- function(
         dag_add_edges_to(d, from = toAdd, to = nodeId)
     }
 
+    # fmt: skip
     # Reset the step row: new function, params, tags and exec, fresh runtime
     # state (like a freshly added step).
-    data.table::set(
-        data,
-        i = iStep,
-        j = c(
-            "fun",
-            "params",
-            "depends",
-            "unbound",
-            "tags",
-            "exec",
-            "out",
-            "state",
-            "time",
-            "locked"
-        ),
-        value = list(
-            list(fun),
-            list(params),
-            list(depends),
-            list(setdiff(names(params), names(depends))),
-            list(tags),
-            exec,
-            list(NULL),
-            .step_states[["new"]][["name"]],
-            Sys.time(),
-            FALSE
-        )
+    values <- list(
+        "fun" = list(fun),
+        "params" = list(params),
+        "out" = list(NULL),
+        "state" = .step_states[["new"]][["name"]],
+        "tags" = list(tags),
+        "locked" = FALSE,
+        "exec" = exec,
+        "time" = Sys.time(),
+        "depends" = list(depends),
+        "unbound" = list(setdiff(names(params), names(depends)))
     )
+    data.table::set(data, i = iStep, j = names(values), value = values)
 
     # Mark downstream dependent steps as outdated, but keep the replaced
     # step itself as "new".
