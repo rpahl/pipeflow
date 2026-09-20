@@ -1364,6 +1364,7 @@ pip_data <- function(x) {
 }
 
 
+#' @name pip_set_params
 #' @rdname pip_set_params
 #' @export
 pip_get_params <- function(x) {

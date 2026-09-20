@@ -967,6 +967,7 @@ dim.pipeflow <- function(x) {
 #'
 #' v <- pip_view(p, tags = "compute")
 #' print(v)
+#' @name print.pipeflow
 #' @rdname print
 #' @export
 str.pipeflow <- function(object, ...) {
