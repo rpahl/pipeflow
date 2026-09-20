@@ -9,9 +9,13 @@ pip_replace(x, step, fun, tags = character(0), params = list(), exec = "auto")
 \arguments{
 \item{x}{A pipeflow pipeline or view object.}
 
-\item{step}{Step name.}
+\item{step}{Unique step name.}
 
-\item{fun}{Function to execute for the step.}
+\item{fun}{Function to execute for the step. Each function parameter must
+have a default value. Default values that are simple constants are resolved
+immediately. Default values that are formulas like \code{~other_step} are
+treated as dependencies to those steps and resolved to the respective output
+values at runtime once the step is executed.}
 
 \item{tags}{Optional character vector of tags belonging to the step.
 Can also be adjusted later using \verb{[pip_tag()]}.}
@@ -21,9 +25,10 @@ with the defaults of \code{fun} (if overlapping names, the default values in \co
 take precedence). There are two use cases for \code{params}:
 \enumerate{
 \item Provide param values programmatically when adding steps at runtime
-\item Provide extra param values that are defined in pipelines nested in a
-step, which ensures that the step (and with that the pipeline in the step)
-is re-executed when one of the respective param values change.
+\item Provide extra param values to "mark" dependencies that are defined in
+pipelines nested in a step, which ensures that the step (and with that
+the pipeline in the step) is re-executed when one of the respective
+param values change.
 }}
 
 \item{exec}{Execution mode for this step. One of "auto", "split",
@@ -37,7 +42,7 @@ mode only accepts non-partitioned input and always intends to execute
 a single call. In summary:
 \itemize{
 \item auto: map if partitioned input appears, otherwise single call
-\item split: always split
+\item split: single call, then mark output as partitioned
 \item reduce: single call, but only valid with partitioned input
 \item plain: single call, only valid with non-partitioned input
 }}

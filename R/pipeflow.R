@@ -1806,31 +1806,8 @@ pip_rename <- function(x, from, to) {
 #' pipeline. Downstream steps are automatically marked as outdated and will
 #' re-run on the next [pip_run()].
 #'
+#' @inheritParams pip_add
 #' @param x A pipeflow pipeline or view object.
-#' @param step Step name.
-#' @param fun Function to execute for the step.
-#' @param tags Optional character vector of tags belonging to the step.
-#' Can also be adjusted later using `[pip_tag()]`.
-#' @param params Optional named list of parameter values, which will be merged
-#' with the defaults of `fun` (if overlapping names, the default values in `fun`
-#' take precedence). There are two use cases for `params`:
-#' 1. Provide param values programmatically when adding steps at runtime
-#' 2. Provide extra param values that are defined in pipelines nested in a
-#'   step, which ensures that the step (and with that the pipeline in the step)
-#'   is re-executed when one of the respective param values change.
-#' @param exec Execution mode for this step. One of "auto", "split",
-#' "reduce" or "plain".
-#' Using execution mode `exec = split`, the output of the step is marked as
-#' partitioned output. In this mode, any step that depends on the split step
-#' (directly or indirectly) will have its output automatically mapped
-#' partition-wise during step execution. The `reduce` mode expects
-#' partitioned input and passes it through without mapping, while `plain`
-#' mode only accepts non-partitioned input and always intends to execute
-#' a single call. In summary:
-#' * auto: map if partitioned input appears, otherwise single call
-#' * split: always split
-#' * reduce: single call, but only valid with partitioned input
-#' * plain: single call, only valid with non-partitioned input
 #' @return The updated pipeline, invisibly.
 #' @examples
 #' p <- pip_new() |>
