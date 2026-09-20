@@ -2571,62 +2571,55 @@ pip_unlock <- function(x) {
 #' Creates a filtered view showing only a selected subset of steps.
 #' A view references the underlying pipeline without copying it, so
 #' operations like [pip_run()] and [pip_set_params()] applied to a view
-#' affect only the selected steps.
+#' work directly on the underlying pipeline, but are restricted to the
+#' the steps defined by the view.
 #'
 #' @param x A pipeflow pipeline or view.
-#' @param ... Named filters. Supported filter names are `step`, `params`,
-#' `depends`, `state`, `tags` and `exec`. Each filter value is a character
+#' @param ... Named filters, which can be one or more of `step`, `params`,
+#' `state`, `tags`, `exec`, and `depends`. Each filter value is a character
 #' vector of values to keep, or - if `fixed` is `FALSE` - a regular
 #' expression. The `params` filter matches against the actual parameter
 #' names of each step.
-#' @param join How individual filters are combined: `"intersect"` (the
-#' default) keeps steps that match *all* filters, `"union"` keeps steps
-#' that match *any* filter. Within a single filter, multiple values are
-#' always treated as alternatives (OR).
+#' @param join How individual filters are combined:
+#' * `"intersect"` (the default) keeps steps that match *all* filters,
+#' * `"union"` keeps steps that match *any* filter. Within a single
+#'    filter, multiple values are always treated as alternatives (OR).
 #' @param fixed If TRUE, values in `...` are treated as fixed strings,
 #' otherwise they are treated as regular expressions.
 #'
 #' @return A `pipeflow_view` object.
 #' @export
 #' @examples
+#' p <- pip_new() |>
+#'   pip_add("load", \(a = 1) a, tags = c("io", "core", "daily")) |>
+#'   pip_add("fit", \(b = 2) b + 1, tags = c("model")) |>
+#'   pip_add("eval_fit", \(fit = ~fit) fit, tags = c("model", "daily", "report"))
+#' p
 #'
-#' p <- pip_new()
-#' pip_add(p, "load_raw", \(x = 1) x,
-#'   tags = c("io", "core", "daily")
-#' )
-#' pip_add(p, "fit_model", \(x = 2) x + 1,
-#'   tags = c("model")
-#' )
-#' pip_add(p, "eval_model", \(x = ~fit_model) x,
-#'   tags = c("model", "daily", "report")
-#' )
-#'
-#' # Filter by a fixed column value (one or more states)
+#' # Filter by one or more column values
 #' pip_view(p, state = "new")
-#'
-#' # Combine filters: step pattern AND state (logical AND)
-#' pip_view(p, step = "model", state = "new")
-#'
-#' # Combine filters as a union (step OR state)
-#' pip_view(p, step = "load_raw", state = "done", join = "union")
+#' pip_view(p, step = c("load", "fit"))
 #'
 #' # Filter by tag — keeps steps that have *any* of the given tags
 #' pip_view(p, tags = "daily")
 #'
-#' # Filter by step name
-#' pip_view(p, step = c("load_raw", "fit_model"))
+#' # Combine filters: step pattern AND state (logical AND)
+#' pip_view(p, step = "fit", state = "new")
 #'
-#' # Use a regex pattern to match step names
-#' pip_view(p, step = "_model$", fixed = FALSE)
+#' # Combine filters as a union (step OR state)
+#' pip_view(p, step = "load", tags = "report", join = "union")
+#'
+#' # Use a regex pattern
+#' pip_view(p, step = "fit$", fixed = FALSE)
 #'
 #' # Filter by parameter names — steps with any of the given parameters
-#' pip_view(p, params = c("x", "n"))
+#' pip_view(p, params = c("a", "fit"))
 #'
 #' # Views are composable: create a view-of-view for progressive narrowing
 #' v1 <- pip_view(p, tags = "daily")
-#' print(v1) # load_raw, eval_model
+#' print(v1) # load, eval_fit
 #' v2 <- pip_view(v1, tags = "report")
-#' print(v2) # eval_model only
+#' print(v2) # eval_fit only
 pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
     .assert_pip_or_view(x)
     join <- match.arg(join)
