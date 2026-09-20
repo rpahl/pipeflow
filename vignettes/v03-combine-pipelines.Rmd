@@ -37,7 +37,7 @@ duplication^[
 ### Two pipelines
 
 As a simple example, let's define one pipeline that is used for data
-preprocessing and one that does the modeling.
+preprocessing and one that does the modelling.
 
 Data preprocessing pipeline:
 ```{r define-prepocessing-pipeline}
@@ -49,17 +49,16 @@ pip1 <- pip_new("preprocessing") |>
         function(data = airquality) data
     ) |>
     pip_add(
-        "data_prep",
-        function(data = ~data) {
-            replace(data, "Temp.Celsius", (data[, "Temp"] - 32) * 5 / 9)
+        "prep",
+        function(df = ~data) {
+            df[, "Temp.Celsius"] <- (df[, "Temp"] - 32) * 5 / 9
+            df
         }
     ) |>
     pip_add(
         "standardize",
-        function(
-            data = ~data_prep,
-            yVar = "Ozone"
-        ) {
+        function(data = ~prep,
+                 yVar = "Ozone") {
             data[, yVar] <- scale(data[, yVar])
             data
         }
@@ -71,31 +70,27 @@ pip1
 ```
 
 Modelling pipeline:
-```{r define-modeling-pipeline}
-pip2 <- pip_new("modeling") |>
+```{r define-modelling-pipeline}
+pip2 <- pip_new("modelling") |>
     pip_add(
         "data",
         function(data = airquality) data
     ) |>
     pip_add(
         "fit",
-        function(
-            data = ~data,
-            xVar = "Temp",
-            yVar = "Ozone"
-        ) {
+        function(data = ~data,
+                 xVar = "Temp",
+                 yVar = "Ozone") {
             lm(paste(yVar, "~", xVar), data = data)
         }
     ) |>
     pip_add(
         "plot",
-        function(
-            model = ~fit,
-            data = ~data,
-            xVar = "Temp",
-            yVar = "Ozone",
-            title = "Linear model fit"
-        ) {
+        function(model = ~fit,
+                 data = ~data,
+                 xVar = "Temp",
+                 yVar = "Ozone",
+                 title = "Linear model fit") {
             require(ggplot2, quietly = TRUE)
             coeffs <- coefficients(model)
             ggplot(data) +
@@ -122,11 +117,11 @@ pip <- rbind(pip1, pip2)
 pip
 ```
 
-First of all, note that the `data` step of the second pipeline
+Note that the `data` step of the second pipeline
 has been renamed automatically to `data2`
 (see line 4 in the `step` column), which is necessary to
 avoid name clashes.
-Of course, the data-dependencies of the second pipeline were automatically
+Also, the data-dependencies of the second pipeline were automatically
 updated as well (see lines 5-6 in the `depends` column).
 
 Generally, when binding two pipelines, {pipeflow} ensures that the
@@ -163,6 +158,9 @@ pip |> pip_replace("data2", function(data = ~standardize) data)
 pip
 ```
 
+The `data2` step points to the output of the `standardize` step,
+so that both pipelines are now connected.
+
 ```{r, echo = FALSE}
 do.call(
     visNetwork,
@@ -176,7 +174,8 @@ do.call(
 Since the name of the re-routed step might not always be known^[A typical
 example would be appending several pipelines in a programmatic context.],
 the {pipeflow} package also provides a relative position indexing mechanism,
-which allows to rewrite the above command as follows:
+which allows to rewrite the above command using a number (instead of the
+step name `standardize`) as follows:
 
 ```{r}
 pip |> pip_replace("data2", function(data = ~ -1) data)
