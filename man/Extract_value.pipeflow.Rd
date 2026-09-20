@@ -157,7 +157,7 @@ p[["pipenv"]][["data"]]  # the underlying step table
 p$add("s3", \(x = ~fit) x * 10)
 p$run()
 p$restart   # a function; call p$restart() to request a restart
-p$stop      # a function; call p$stop() to stop the current run
+p$halt      # a function; call p$halt() to halt the current run
 
 # Column access, named by steps
 p[["step"]]   # c(load = "load", fit = "fit")

@@ -199,7 +199,7 @@
                         times = times
                     )
                 },
-                stop = function(x) .pip_stop(.pip_pipenv(x))
+                halt = function(x) .pip_halt(.pip_pipenv(x))
             )
             for (nm in names(values)) {
                 table[[nm]] <- values[[nm]]
@@ -518,7 +518,7 @@ dim.pipeflow <- function(x) {
 #' p$add("s3", \(x = ~fit) x * 10)
 #' p$run()
 #' p$restart   # a function; call p$restart() to request a restart
-#' p$stop      # a function; call p$stop() to stop the current run
+#' p$halt      # a function; call p$halt() to halt the current run
 #'
 #' # Column access, named by steps
 #' p[["step"]]   # c(load = "load", fit = "fit")

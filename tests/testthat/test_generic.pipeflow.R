@@ -699,8 +699,8 @@ describe("virtual methods", {
         expect_true(is.function(p$add))
         expect_true(is.function(p[["run"]]))
         expect_true(is.function(p$restart))
-        expect_true(is.function(p$stop))
-        expect_false(any(c("add", "run", "restart", "stop") %in% names(p)))
+        expect_true(is.function(p$halt))
+        expect_false(any(c("add", "run", "restart", "halt") %in% names(p)))
     })
 
     it("adds steps through the virtual method", {
@@ -754,7 +754,7 @@ describe("virtual methods", {
         expect_null(p[["unknown"]])
     })
 
-    it("signals restart and stop on the underlying pipeline", {
+    it("signals restart and halt on the underlying pipeline", {
         p <- test_pip()
         v <- pip_view(p, step = "s2")
 
@@ -762,8 +762,8 @@ describe("virtual methods", {
         expect_equal(as.character(p[["pipenv"]][[".run_state"]]), "restart")
         expect_equal(p[["pipenv"]][[".restart_count"]], 1L)
 
-        v$stop()
-        expect_equal(as.character(p[["pipenv"]][[".run_state"]]), "stop")
+        v$halt()
+        expect_equal(as.character(p[["pipenv"]][[".run_state"]]), "halted")
     })
 
     it("builds the method table lazily and caches it", {

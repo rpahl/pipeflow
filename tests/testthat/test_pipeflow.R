@@ -407,22 +407,22 @@ describe(".pip_restart", {
     })
 })
 
-describe(".pip_stop", {
-    it("marks the pipeline as stopping when called before a run", {
+describe(".pip_halt", {
+    it("marks the pipeline as halted when called before a run", {
         p <- pip_new() |>
             pip_add("s1", \(x = 1) x)
 
-        p$stop()
+        p$halt()
 
-        expect_equal(get_run_state(p), "stop")
-        expect_equal(get_run_state(p), "stop")
+        expect_equal(get_run_state(p), "halted")
+        expect_equal(get_run_state(p), "halted")
     })
 
-    it("aborts the run at the stopping step and marks downstream outdated", {
+    it("aborts the run at the halting step and marks downstream outdated", {
         p <- pip_new() |>
             pip_add("s1", function(x = 1) x) |>
             pip_add("s2", function(x = ~s1) {
-                .self$stop()
+                .self$halt()
                 x + 1
             }) |>
             pip_add("s3", function(x = ~s2) x + 1)
@@ -437,11 +437,11 @@ describe(".pip_stop", {
         expect_equal(get_run_state(p), "ready")
     })
 
-    it("logs the manual stop message during the run", {
+    it("logs the manual halt message during the run", {
         p <- pip_new() |>
             pip_add("s1", function(x = 1) x) |>
             pip_add("s2", function(x = ~s1) {
-                .self$stop()
+                .self$halt()
                 x + 1
             }) |>
             pip_add("s3", function(x = ~s2) x + 1)
@@ -451,14 +451,14 @@ describe(".pip_stop", {
         pip_run(p, lgr = lgr)
 
         expect_true(any(
-            grepl("Aborting pipeline execution on manual stop", logs)
+            grepl("Aborting pipeline execution on manual halt", logs)
         ))
         expect_true(any(grepl("Step 1/3 s1", logs)))
         expect_true(any(grepl("Step 2/3 s2", logs)))
         expect_false(any(grepl("Step 3/3 s3", logs)))
     })
 
-    it("does not execute steps after the stopping step", {
+    it("does not execute steps after the halting step", {
         ran <- character(0)
         p <- pip_new() |>
             pip_add("s1", function(x = 1) {
@@ -467,7 +467,7 @@ describe(".pip_stop", {
             }) |>
             pip_add("s2", function(x = ~s1) {
                 ran <<- c(ran, "s2")
-                .self$stop()
+                .self$halt()
                 x + 1
             }) |>
             pip_add("s3", function(x = ~s2) {
@@ -480,10 +480,10 @@ describe(".pip_stop", {
         expect_equal(ran, c("s1", "s2"))
     })
 
-    it("stops at the first step and marks all later steps outdated", {
+    it("halts at the first step and marks all later steps outdated", {
         p <- pip_new() |>
             pip_add("s1", function(x = 1) {
-                .self$stop()
+                .self$halt()
                 x
             }) |>
             pip_add("s2", function(x = ~s1) x + 1) |>
@@ -498,11 +498,11 @@ describe(".pip_stop", {
         )
     })
 
-    it("stops without declaring .self in the step signature", {
+    it("halts without declaring .self in the step signature", {
         p <- pip_new() |>
             pip_add("s1", function(x = 1) x) |>
             pip_add("s2", function(x = ~s1) {
-                .self$stop()
+                .self$halt()
                 x + 1
             }) |>
             pip_add("s3", function(x = ~s2) x + 1)
@@ -516,22 +516,22 @@ describe(".pip_stop", {
         )
     })
 
-    it("marks the underlying pipeline as stopping when called on a view", {
+    it("marks the underlying pipeline as halted when called on a view", {
         p <- pip_new() |>
             pip_add("s1", \(x = 1) x)
         v <- pip_view(p, step = "s1")
 
-        v$stop()
+        v$halt()
 
-        expect_equal(get_run_state(p), "stop")
+        expect_equal(get_run_state(p), "halted")
         expect_identical(v[["pipenv"]][["data"]], p[["pipenv"]][["data"]])
     })
 
-    it("aborts a view run at the stopping step", {
+    it("aborts a view run at the halting step", {
         p <- pip_new("view-pipeline") |>
             pip_add("s1", function(x = 1) x) |>
             pip_add("s2", function(x = ~s1) {
-                .self$stop()
+                .self$halt()
                 x + 1
             }) |>
             pip_add("s3", function(x = ~s2) x + 1) |>

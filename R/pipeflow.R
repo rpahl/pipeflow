@@ -396,8 +396,8 @@
     invisible()
 }
 
-.pip_stop <- function(pipenv) {
-    pipenv[[".run_state"]][] <- "stop"
+.pip_halt <- function(pipenv) {
+    pipenv[[".run_state"]][] <- "halted"
     invisible()
 }
 
@@ -889,7 +889,7 @@ pip_new <- function(name = "pipe") {
     # Pipeline states
     env[[".run_state"]] <- factor(
         "ready",
-        levels = c("ready", "restart", "running", "stop", "failed")
+        levels = c("ready", "restart", "running", "halted", "failed")
     )
     env[[".last_run"]] <- NULL
 
@@ -1940,7 +1940,6 @@ pip_replace <- function(
         dag_add_edges_to(d, from = toAdd, to = nodeId)
     }
 
-    # fmt: skip
     # Reset the step row: new function, params, tags and exec, fresh runtime
     # state (like a freshly added step).
     values <- list(
@@ -1986,8 +1985,10 @@ pip_replace <- function(
 
 #' Run a pipeline
 #'
-#' Executes all pending steps in order. Steps already in state `"done"` are
-#' skipped unless `force = TRUE`.
+#' Executes all pending steps in order. On repeated runs, steps that are
+#' already `"done"` are skipped and only steps that are still `"new"` or were
+#' marked `"outdated"` (because one of their dependencies changed) are
+#' executed. Use `force = TRUE` to re-execute every step.
 #'
 #' @param x A pipeflow pip or view
 #' @param lgr A logging function of the form `function(level, msg, ...)`.
@@ -1997,67 +1998,114 @@ pip_replace <- function(
 #' @param progress Optional callback of the form
 #' `function(value, detail)` called before each step.
 #' @return The updated pipeline or view, invisibly.
+#'
 #' @details
-#' When `x` is a view, requested rows are run together with required
-#' upstream dependencies. If a step fails, the pipeline run state is set to
-#' `"failed"` and the error is re-thrown.
 #'
-#' ## Runtime control flow via restart and stop
+#' ## Step states
 #'
-#' A running pipeline can be interrupted via the `restart()` and `stop()`
-#' functions that are attached to every pipeline object. They are intended for
-#' advanced, self-modifying pipelines and are most often called from within a
-#' step function via the `.self` argument.
+#' A step can take the following states:
+#'
+#' * new: the step has been added but not yet executed, or was reset via
+#'   [pip_reset()].
+#' * outdated: a step can get outdated in the following scenarios:
+#'   - one of the step's parameters were changed (e.g. via [pip_set_params()])
+#'   - a step it depends on was re-executed or replaced
+#'   - the last run did not reach it either on purpose (see section 'Running
+#'     views below) or because a run was aborted early due to failed step
+#' * done: the step was executed successfully with its current inputs
+#' * failed: the step raised an error during its last execution
+#'
+#' A "done" step is skipped unless `force = TRUE` was set. For all other
+#' states, the step will be re-executed in the next [pip_run()].
+#'
+#' ## Running views
+#' When `x` is a view, the requested rows are run together with their
+#' upstream dependencies, so the steps covered by the view are brought up to
+#' date even if their inputs come from steps outside the view. The rest of
+#' the pipeline is not executed; downstream steps that were not processed
+#' are marked `"outdated"`.
+#'
+#' ## Runtime errors
+#' If a step fails with an error, the failing step's state is set to
+#' `"failed"`, the run is aborted (no further steps are executed), and the
+#' pipeline run state is set to `"failed"`. Steps that have not been
+#' executed are marked `"outdated"`, so a subsequent run retries them.
+#'
+#' ## Runtime control flow via restart and halt
+#'
+#' A running pipeline can be interrupted via the `restart()` and `halt()`
+#' virtual methods. They are intended for advanced, self-modifying pipelines
+#' and are most often called from within a step function via the `.self`
+#' argument.
 #'
 #' - `.self$restart(force = TRUE, times = 1L)`: aborts the current run after the
 #'   current step has finished and restarts it from the first step.
 #'   The default parameters are `force = TRUE` and `times = 1L`, that is, the
 #'   above call is the same as just invoking .self$restart().
-#'   To skip steps that are already in state `"done"`, set `force = FALSE`,
-#'   and `times` parameter limits the number of consecutive restarts within a
+#'   To skip steps that are already in state `"done"`, set `force = FALSE`.
+#'   The `times` parameter limits the number of consecutive restarts within a
 #'   single `pip_run()` call.
 #'   If a view is being run, a restart covers the view steps together with
 #'   their upstream dependencies.
-#' - `p$stop()`: aborts the current run after the current step has finished.
+#' - `p$halt()`: aborts the current run after the current step has finished.
+#'   This is a *controlled halt* and deliberately distinct from [base::stop()]:
+#'   no error is raised and the pipeline is not marked as `"failed"`. The run
+#'   simply ends, the steps that have not been executed are marked
+#'   `"outdated"`, and a subsequent [pip_run()] will continue where the run
+#'   left off.
 #'
-#' In both cases steps that have not been executed until the restart or stop
+#' In both cases steps that have not been executed until the restart or halt
 #' happens are marked as `"outdated"`.
 #'
 #' @seealso `vignette("v06-self-modify-pipeline", package = "pipeflow")`
 #'   for an advanced example of dynamic pipelines.
 #' @examples
 #' p <- pip_new() |>
-#'   pip_add("load", \(n = 3) seq_len(n)) |>
-#'   pip_add("square", \(x = ~load) x^2) |>
+#' pip_add("load", \(n = 3) seq_len(n)) |>
+#'   pip_add("prep", \(x = ~load, weight = 1) x * weight) |>
+#'   pip_add("square", \(x = ~prep) x^2) |>
 #'   pip_add("total", \(x = ~square) sum(x))
 #'
 #' pip_run(p)
 #' p
 #'
+#' pip_set_params(p, list(weight = 2))
+#' p
+#'
 #' # Already-done steps are skipped on a second run
-#' pip_run(p) # all steps skipped
+#' pip_run(p) # first step skipped
 #'
 #' # lgr = NULL suppresses log output
 #' pip_run(p, lgr = NULL)
 #'
 #' # force = TRUE re-executes every step regardless of state
 #' pip_run(p, force = TRUE)
+#' p
 #'
 #' # Run only a subset of steps via a view;
 #' # upstream dependencies are automatically included
 #' v <- pip_view(p, step = "total")
 #' pip_run(v)
 #'
-#' # Stop or restart pipeline at runtime
+#' # Halt or restart pipeline at runtime (for advanced usage)
 #' p <- pip_new("restart") |>
 #'   pip_add("load", \(n = 3) seq_len(n)) |>
-#'   pip_add("check", \(n = ~load) {
-#'       if (length(x) > 10L) .self$stop()
+#'   pip_add("check", \(x = ~load) {
+#'     if (length(x) > 10L) .self$halt()
 #'   }) |>
 #'   pip_add("model", \(x = ~load) {
-#'       if (length(x) == 3L) .self$restart()
-#'       x * 2
+#'     if (length(x) == 3L) {
+#'       .self$set_params(list(n = 5))
+#'       .self$restart()
+#'     }
+#'     x * 2
 #'   })
+#'
+#' pip_run(p)
+#' p
+#'
+#' pip_set_params(p, list(n = 15)) # now halt() in 'check' step is triggered
+#' pip_run(p)
 #' @export
 pip_run <- function(
     x,
@@ -2105,21 +2153,25 @@ pip_run <- function(
         # At the end, mark all downstream dependent steps as outdated that
         # were *not* processed, which can happen in two different ways:
         # a) when running a view that does not cover the entire pipeline or
-        # b) the run was aborted in the middle (due to an error or manual stop).
+        # b) the run was aborted in the middle (due to an error or manual halt).
         # When the run was restarted, a nested pip_run() has already handled
         # the whole pipeline (including marking), so nothing to do here.
-        if (restartDelegated) {
-            return(NULL)
-        }
-        processedNodes <- as.integer(.pip_steps_to_nodes(x, processedSteps))
-        outdatedNodes <- .pip_get_reachable_nodes(x, processedSteps) |>
-            unlist() |>
-            unique() |>
-            setdiff(processedNodes)
-        if (length(outdatedNodes) > 0L) {
-            iOut <- dat[list(outdatedNodes), which = TRUE, on = "nodeId"]
-            if (length(iOut) > 0L) {
-                data.table::set(dat, i = iOut, j = "state", value = "outdated")
+        if (!restartDelegated) {
+            processedNodes <- as.integer(.pip_steps_to_nodes(x, processedSteps))
+            outdatedNodes <- .pip_get_reachable_nodes(x, processedSteps) |>
+                unlist() |>
+                unique() |>
+                setdiff(processedNodes)
+            if (length(outdatedNodes) > 0L) {
+                iOut <- dat[list(outdatedNodes), which = TRUE, on = "nodeId"]
+                if (length(iOut) > 0L) {
+                    data.table::set(
+                        dat,
+                        i = iOut,
+                        j = "state",
+                        value = "outdated"
+                    )
+                }
             }
         }
     })
@@ -2181,8 +2233,8 @@ pip_run <- function(
                     return(invisible(x))
                 }
 
-                if (stateAfterStep == "stop") {
-                    log_info("Aborting pipeline execution on manual stop.")
+                if (stateAfterStep == "halted") {
+                    log_info("Aborting pipeline execution on manual halt.")
                     break
                 }
             }

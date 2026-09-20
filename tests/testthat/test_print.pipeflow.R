@@ -358,7 +358,7 @@ describe("print.pipeflow", {
         env <- p[["pipenv"]]
         env[[".run_state"]] <- factor(
             "failed",
-            levels = c("ready", "restart", "running", "stop", "failed")
+            levels = c("ready", "restart", "running", "halted", "failed")
         )
         out <- capture.output(print(p))
         expect_true(any(grepl("<failed> last run:", out)))
