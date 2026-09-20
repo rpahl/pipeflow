@@ -24,11 +24,12 @@ p <- pip_new() |>
   pip_add("fit", \(x = ~load) x + 1)
 
 # Tag every step in the pipeline at once
-pip_tag(p, tags = c("daily", "core"))
-p[["tags"]] # both steps have c("daily", "core")
+pip_tag(p, c("daily", "core"))
+p
+p[, "tags"] # both steps have c("daily", "core")
 
 # Add an extra tag to only one step via a view
-v <- pip_view(p, step = "fit")
-pip_tag(v, tags = "model")
-p[["tags"]] # "fit" also has "model"
+p[step == "fit"] |> pip_tag("model")
+p
+p[, "tags"] # "fit" also has "model"
 }

@@ -2259,9 +2259,9 @@ pip_run <- function(
 #'
 #' Resets all unlocked steps of a pipeline (or a subset of steps defined by a
 #' view) to state `"new"` and clears their outputs, so a subsequent
-#' [pip_run()] re-executes the cleaned steps from scratch. The run state is
-#' reset to `"ready"` and any pending restart counter is cleared. Parameters,
-#' tags, and locked flags are left unchanged.
+#' [pip_run()] re-executes the cleaned steps from scratch.
+#' Any pending restart counters are cleared, but parameters, tags, and
+#' locked flags are left unchanged.
 #'
 #' @details Locked steps are skipped: their state and output are preserved.
 #' If all selected steps are locked, a warning is issued and nothing is
@@ -2282,11 +2282,13 @@ pip_run <- function(
 #' # Locked steps keep their state and output when resetting
 #' pip_lock(pip_view(p, step = "square"))
 #' pip_reset(p)
+#' p
 #' p[["state"]] # "new", "done"
 #' p[["out"]]   # NULL, (x^2 result)
 #'
 #' pip_unlock(p)
 #' pip_reset(p)
+#' p
 #' p[["state"]] # "new", "new"
 #' p[["out"]]   # NULL, NULL
 #' @export
@@ -2330,8 +2332,10 @@ pip_reset <- function(x) {
 #' or a subset of steps defined by a view.
 #' Affected steps and their downstream dependents are automatically marked
 #' as outdated.
-#' @details Parameters of locked steps are never changed and their state
+#'
+#' @note Parameters of locked steps are never changed and their state
 #' remains unchanged.
+#'
 #' @param x A pipeflow pip or view
 #' @param params Named list of parameters to set.
 #' @return The updated pipeline or view, invisibly.
@@ -2340,7 +2344,7 @@ pip_reset <- function(x) {
 #'   pip_add("load", \(n = 10) seq_len(n)) |>
 #'   pip_add("scale", \(x = ~load, factor = 0.5) x * factor)
 #'
-#' # See all adjustable parameters before running
+#' # See all unbound/adjustable parameters before running
 #' pip_get_params(p) # list(n = 10, factor = 0.5)
 #'
 #' # Updating params marks affected steps (and their dependents) outdated
@@ -2431,13 +2435,14 @@ pip_set_params <- function(x, params = list()) {
 #'   pip_add("fit", \(x = ~load) x + 1)
 #'
 #' # Tag every step in the pipeline at once
-#' pip_tag(p, tags = c("daily", "core"))
-#' p[["tags"]] # both steps have c("daily", "core")
+#' pip_tag(p, c("daily", "core"))
+#' p
+#' p[, "tags"] # both steps have c("daily", "core")
 #'
 #' # Add an extra tag to only one step via a view
-#' v <- pip_view(p, step = "fit")
-#' pip_tag(v, tags = "model")
-#' p[["tags"]] # "fit" also has "model"
+#' p[step == "fit"] |> pip_tag("model")
+#' p
+#' p[, "tags"] # "fit" also has "model"
 #' @export
 pip_tag <- function(x, tags = character()) {
     .assert_pip_or_view(x)
@@ -2478,11 +2483,11 @@ pip_tag <- function(x, tags = character()) {
 #' p <- pip_new() |>
 #'   pip_add("load", \(x = 1) x, tags = c("daily", "core")) |>
 #'   pip_add("fit", \(x = ~load) x + 1, tags = c("daily", "model"))
+#' p
 #'
 #' # Remove "daily" from all steps
-#' pip_untag(p, tags = "daily")
-#' # "load" retains "core"; "fit" retains "model"
-#' p[["tags"]]
+#' pip_untag(p, "daily")
+#' p[, "tags"]
 #' @export
 pip_untag <- function(x, tags = character()) {
     .assert_pip_or_view(x)
@@ -2512,18 +2517,19 @@ pip_untag <- function(x, tags = character()) {
 }
 
 
-#' Lock steps against updates
+#' Lock or unlock steps
 #'
-#' Locks all steps of a pipeline or a subset of steps defined by a view.
-#' Locked steps are skipped during [pip_run()] and cannot be modified by
-#' [pip_set_params()], [pip_tag()] or [pip_untag()].
+#' Locks or unlocks all steps of a pipeline, or a subset of steps defined by
+#' a view. Locked steps are skipped during [pip_run()] and are protected
+#' against modification from [pip_set_params()], [pip_tag()] or
+#' [pip_untag()]. Calling [pip_unlock()] removes the lock again.
 #' @param x A pipeflow pip or view.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |>
-#'     pip_add("x", \(x = 1) x) |>
-#'     pip_add("y", \(y = 2) y) |>
-#'     pip_add("sum", \(x = 1, y = 2) x + y)
+#'   pip_add("x", \(x = 1) x) |>
+#'   pip_add("y", \(y = 2) y) |>
+#'   pip_add("sum", \(x = 1, y = 2) x + y)
 #' (pip_run(p))
 #' p[["sum", "out"]] # 3
 #'
@@ -2539,12 +2545,11 @@ pip_untag <- function(x, tags = character()) {
 #' p[["x", "params"]] # x = 100
 #' p[["y", "params"]] # y = 200
 #' p[["sum", "params"]] # still x = 10, y = 20
-
-# Unlock everything to allow updates again
+#'
+#' # Unlock everything to allow updates again
 #' pip_unlock(p)
 #' pip_set_params(p, params = list(x = 100, y = 200))
 #' (pip_run(p))
-#' p[["sum", "out"]] # 300
 #' @export
 pip_lock <- function(x) {
     .assert_pip_or_view(x)
@@ -2562,22 +2567,7 @@ pip_lock <- function(x) {
 }
 
 
-#' Unlock steps
-#'
-#' Unlocks all steps of a pipeline or a subset of steps defined by a view.
-#' @param x A pipeflow pip or view.
-#' @return The updated pipeline or view, invisibly.
-#' @examples
-#' p <- pip_new() |>
-#'   pip_add("load", \(x = 1) x) |>
-#'   pip_add("fit", \(x = ~load) x * 2)
-#'
-#' # Lock all steps, then unlock to restore normal execution
-#' pip_lock(p)
-#' p[["locked"]] # TRUE, TRUE
-#'
-#' pip_unlock(p)
-#' p[["locked"]] # FALSE, FALSE
+#' @rdname pip_lock
 #' @export
 pip_unlock <- function(x) {
     .assert_pip_or_view(x)

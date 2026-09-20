@@ -22,9 +22,9 @@ of steps defined by a view.
 p <- pip_new() |>
   pip_add("load", \(x = 1) x, tags = c("daily", "core")) |>
   pip_add("fit", \(x = ~load) x + 1, tags = c("daily", "model"))
+p
 
 # Remove "daily" from all steps
-pip_untag(p, tags = "daily")
-# "load" retains "core"; "fit" retains "model"
-p[["tags"]]
+pip_untag(p, "daily")
+p[, "tags"]
 }

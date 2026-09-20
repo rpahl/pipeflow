@@ -20,7 +20,7 @@ or a subset of steps defined by a view.
 Affected steps and their downstream dependents are automatically marked
 as outdated.
 }
-\details{
+\note{
 Parameters of locked steps are never changed and their state
 remains unchanged.
 }
@@ -29,7 +29,7 @@ p <- pip_new() |>
   pip_add("load", \(n = 10) seq_len(n)) |>
   pip_add("scale", \(x = ~load, factor = 0.5) x * factor)
 
-# See all adjustable parameters before running
+# See all unbound/adjustable parameters before running
 pip_get_params(p) # list(n = 10, factor = 0.5)
 
 # Updating params marks affected steps (and their dependents) outdated

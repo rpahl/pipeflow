@@ -2,9 +2,12 @@
 % Please edit documentation in R/pipeflow.R
 \name{pip_lock}
 \alias{pip_lock}
-\title{Lock steps against updates}
+\alias{pip_unlock}
+\title{Lock or unlock steps}
 \usage{
 pip_lock(x)
+
+pip_unlock(x)
 }
 \arguments{
 \item{x}{A pipeflow pip or view.}
@@ -13,15 +16,16 @@ pip_lock(x)
 The updated pipeline or view, invisibly.
 }
 \description{
-Locks all steps of a pipeline or a subset of steps defined by a view.
-Locked steps are skipped during \code{\link[=pip_run]{pip_run()}} and cannot be modified by
-\code{\link[=pip_set_params]{pip_set_params()}}, \code{\link[=pip_tag]{pip_tag()}} or \code{\link[=pip_untag]{pip_untag()}}.
+Locks or unlocks all steps of a pipeline, or a subset of steps defined by
+a view. Locked steps are skipped during \code{\link[=pip_run]{pip_run()}} and are protected
+against modification from \code{\link[=pip_set_params]{pip_set_params()}}, \code{\link[=pip_tag]{pip_tag()}} or
+\code{\link[=pip_untag]{pip_untag()}}. Calling \code{\link[=pip_unlock]{pip_unlock()}} removes the lock again.
 }
 \examples{
 p <- pip_new() |>
-    pip_add("x", \(x = 1) x) |>
-    pip_add("y", \(y = 2) y) |>
-    pip_add("sum", \(x = 1, y = 2) x + y)
+  pip_add("x", \(x = 1) x) |>
+  pip_add("y", \(y = 2) y) |>
+  pip_add("sum", \(x = 1, y = 2) x + y)
 (pip_run(p))
 p[["sum", "out"]] # 3
 
@@ -37,8 +41,9 @@ pip_set_params(p, params = list(x = 100, y = 200))
 p[["x", "params"]] # x = 100
 p[["y", "params"]] # y = 200
 p[["sum", "params"]] # still x = 10, y = 20
+
+# Unlock everything to allow updates again
 pip_unlock(p)
 pip_set_params(p, params = list(x = 100, y = 200))
 (pip_run(p))
-p[["sum", "out"]] # 300
 }
