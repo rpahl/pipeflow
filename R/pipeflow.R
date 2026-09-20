@@ -2593,7 +2593,9 @@ pip_unlock <- function(x) {
 #' p <- pip_new() |>
 #'   pip_add("load", \(a = 1) a, tags = c("io", "core", "daily")) |>
 #'   pip_add("fit", \(b = 2) b + 1, tags = c("model")) |>
-#'   pip_add("eval_fit", \(fit = ~fit) fit, tags = c("model", "daily", "report"))
+#'   pip_add("eval_fit", \(fit = ~fit) fit,
+#'     tags = c("model", "daily", "report")
+#'   )
 #' p
 #'
 #' # Filter by one or more column values
