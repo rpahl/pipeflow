@@ -271,48 +271,42 @@
 # Implementation of generic S3 methods
 # ------------------------------------
 
-#' Length of a pipeflow pipeline or view
-#' @param x A pipeflow pipeline or view
-#' @return Number of steps as an integer.
-#' @examples
-#' p <- pip_new() |>
-#'   pip_add("s1", \(x = 1) x) |>
-#'   pip_add("s2", \(x = ~s1) x + 1) |>
-#'   pip_add("s3", \(x = ~s2) x * 2)
-#' length(p) # 3 — total steps in the pipeline
-#'
-#' # A view reports only the number of selected (visible) steps
-#' v <- pip_view(p, step = c("s2", "s3"))
-#' length(v) # 2
-#' @rdname length.pipeflow
+#' @rdname dim.pipeflow
 #' @export
 length.pipeflow <- function(x) {
     as.integer(length(.pip_view_rows(x)))
 }
 
-#' Number of rows of a pipeflow pipeline or view
+#' Dimensions of a pipeflow pipeline or view
 #'
-#' Treats a pipeline as a table of steps: `nrow()` returns the number of
-#' steps, the same as [length.pipeflow] / `length()`, and `ncol()`
-#' returns the number of columns of the underlying step table. Views report
-#' only the number of covered steps as rows.
+#' Treats a pipeline as a table of steps: `length()` and `nrow()` return the
+#' number of steps, `ncol()` returns the number of columns of the underlying
+#' step table, and `dim()` returns both. Views report only the steps covered
+#' by the view.
 #' @param x A pipeflow pipeline or view
-#' @return `nrow()` returns the number of steps as an integer; `ncol()`
-#' returns the number of columns of the step table.
-#' @details Base R's `nrow()` is implemented as `dim(x)[1L]`, so the number
-#' of rows and columns is provided through a `dim()` method for
-#' `pipeflow` objects.
+#' @return
+#' * `length()`, `nrow()`: the number of steps
+#' * `ncol()`: the number of columns of the step table
+#' * `dim()`: vector with the number of steps and columns.
+#'
+#' @seealso [base::dim()], [base::nrow()], [base::length()]
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("s1", \(x = 1) x) |>
-#'   pip_add("s2", \(x = ~s1) x + 1)
-#' nrow(p) # 2
-#' ncol(p) # number of columns of the step table
-#' nrow(p) == length(p) # TRUE
+#'   pip_add("s2", \(x = ~s1) x + 1) |>
+#'   pip_add("s3", \(x = ~s2) x * 2)
 #'
-#' v <- pip_view(p, step = "s2")
-#' nrow(v) # 1
-#' @rdname nrow.pipeflow
+#' dim(p)
+#' nrow(p)
+#' ncol(p)
+#' length(p)
+#' length(p) == nrow(p) # TRUE
+#'
+#' # A view reports only the number of selected (visible) steps
+#' v <- pip_view(p, step = c("s2", "s3"))
+#' length(v) # 2
+#' nrow(v) # 2
+#' @rdname dim.pipeflow
 #' @export
 dim.pipeflow <- function(x) {
     c(
