@@ -7,7 +7,7 @@
 pip_new(name = "pipe")
 }
 \arguments{
-\item{name}{Single name used for printing and for derived view names.}
+\item{name}{The name of the pipeline used for display and logging.}
 }
 \value{
 A pipeflow pipeline object.

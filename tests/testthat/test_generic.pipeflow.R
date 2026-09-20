@@ -555,8 +555,9 @@ describe("extract operator [[", {
         expect_true(data.table::is.data.table(p[["pipenv"]][["data"]]))
         expect_false(is.null(p[["pipenv"]][[".dag"]]))
 
-        # Inner-env bindings are not exposed through `[[`
-        expect_null(p[["data"]])
+        # Inner-env bindings are not exposed through `[[`; the step table is
+        # available via the `data` virtual method (and pip_data()).
+        expect_true(data.table::is.data.table(p[["data"]]()))
         expect_null(p[[".dag"]])
         expect_null(p[[".steps_to_nodes"]])
     })
@@ -612,8 +613,11 @@ describe("extract operator [[", {
                 pip_add("data", \(x = ~name, y = "world") paste(x, y))
 
             expect_equal(p[["name"]], "pipe")
-            expect_null(p[["data"]])
-            expect_null(p$data)
+            # "data" is a virtual method (the step-table accessor), not a
+            # column; a step of that name stays reachable via p[[step, col]]
+            expect_true(is.function(p[["data"]]))
+            expect_true(is.function(p$data))
+            expect_equal(pip_data(p)[["step"]], c("name", "data"))
 
             expect_equal(p[["name", "params"]], p[[1, "params"]])
             expect_equal(p[["data", "params"]], p[[2, "params"]])

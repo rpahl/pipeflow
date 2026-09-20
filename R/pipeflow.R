@@ -853,9 +853,9 @@
 #' Creates a new, empty pipeline. Add steps with [pip_add()] and execute
 #' them with [pip_run()].
 #'
-#' @param name Single name used for printing and for derived view names.
-#'
+#' @param name The name of the pipeline used for display and logging.
 #' @return A pipeflow pipeline object.
+#'
 #' @examples
 #' p <- pip_new("demo") |>
 #'     pip_add("numbers", \(n = 5) seq_len(n)) |>
@@ -1317,6 +1317,32 @@ pip_collect_out <- function(
         package = "pipeflow"
     )
     pip_collect(x, by = by, as.table = as.table, simplify = simplify)
+}
+
+
+#' Access the underlying step table
+#'
+#' This is a convenience wrapper for accessing the internal `data.table`,
+#' which normally is reachable via `p[["pipenv"]][["data"]]`.
+#'
+#' @details The internal `data.table` is holding the pipeline steps, one row
+#' per step. Unless you know what you are doing, this table should not be
+#' modified directly, as this can corrupt the pipeline including any views
+#' that are derived from it. If you want to experiment, consider cloning the
+#' pipeline first with [pip_clone()].
+#'
+#' @param x A pipeflow pipeline or view.
+#' @return The underlying step table as a `data.table`.
+#' @export
+#' @examples
+#' p <- pip_new() |>
+#'   pip_add("load", \(n = 5) seq_len(n)) |>
+#'   pip_add("model", \(x = ~load) sum(x))
+#'
+#' pip_data(p)
+pip_data <- function(x) {
+    .assert_pip_or_view(x)
+    .pip_pipenv(x)[["data"]]
 }
 
 

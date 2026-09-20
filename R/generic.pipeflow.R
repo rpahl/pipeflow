@@ -165,9 +165,10 @@
     out
 }
 
-# The method registry maps method names to the (unbound) backend functions and
-# is built lazily, so dispatch is an O(1) hash lookup followed by binding
-# exactly one closure to the current object.
+# Method registry (built lazily) maps method names to API functions. The
+# map is then used to implement the virtual method dispatch via
+# `[[.pipeflow` and `$`, i.e. to allow stuff like `p$add(...)` as a
+# shorthand for `pip_add(p, ...)`.
 .pip_method_table <- local({
     table <- NULL
     function() {
@@ -190,6 +191,7 @@
                 collect = pip_collect,
                 clone = pip_clone,
                 graph = pip_graph,
+                data = pip_data,
                 restart = function(x, force = TRUE, times = 1L) {
                     .pip_restart(
                         .pip_pipenv(x),

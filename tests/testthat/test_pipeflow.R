@@ -1960,6 +1960,42 @@ describe("pip_graph", {
 })
 
 
+describe("pip_data", {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1)
+    }
+
+    it("returns the underlying step table", {
+        p <- test_pip()
+        d <- pip_data(p)
+
+        expect_true(data.table::is.data.table(d))
+        expect_equal(nrow(d), 2L)
+        expect_equal(d[["step"]], c("s1", "s2"))
+    })
+
+    it("returns the full table for views", {
+        p <- test_pip()
+        v <- pip_view(p, step = "s2")
+
+        expect_equal(nrow(pip_data(v)), 2L)
+    })
+
+    it("is exposed as a virtual method", {
+        p <- test_pip()
+
+        expect_true(data.table::is.data.table(p$data()))
+        expect_true(data.table::is.data.table(p[["data"]]()))
+    })
+
+    it("signals invalid inputs", {
+        expect_error(pip_data(1), "x must be a pipeflow pip or view")
+    })
+})
+
+
 describe("pip_run", {
     test_pip <- function() {
         pip_new() |>
