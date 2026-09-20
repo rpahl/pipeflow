@@ -1364,27 +1364,7 @@ pip_data <- function(x) {
 }
 
 
-#' Get unbound parameters
-#'
-#' Returns the current default values of all unbound (non-dependency)
-#' parameters across the pipeline. These are the parameters that can be
-#' updated via [pip_set_params()]. Parameters wired to another step's output
-#' via `~step_name` are excluded.
-#' @param x A pipeflow pip or view
-#' @return Named list of unbound parameter values. If the same parameter
-#' name appears in multiple steps, the first occurrence in pipeline order
-#' is returned.
-#' @examples
-#' p <- pip_new() |>
-#'   pip_add("load", \(n = 100, seed = 42) seq_len(n)) |>
-#'   pip_add("model", \(x = ~load, lambda = 0.1) x * lambda)
-#'
-#' # ~load is a dependency — only non-dependency params are returned
-#' pip_get_params(p) # list(n = 100, seed = 42, lambda = 0.1)
-#'
-#' # Useful as a guide for pip_set_params()
-#' pip_set_params(p, params = list(n = 20, lambda = 0.5))
-#' pip_run(p) |> pip_collect()
+#' @rdname pip_set_params
 #' @export
 pip_get_params <- function(x) {
     .assert_pip_or_view(x)
@@ -2326,19 +2306,25 @@ pip_reset <- function(x) {
 }
 
 
-#' Set unbound parameters
+#' Get or set unbound parameters
 #'
-#' Updates the default values of unbound parameters across the pipeline
-#' or a subset of steps defined by a view.
-#' Affected steps and their downstream dependents are automatically marked
+#' [pip_get_params()] returns the current default values of all unbound
+#' parameters of a pipeline or view, that is, parameters wired to another
+#' step's output via `~step_name` are excluded.
+#' [pip_set_params()] updates these parameters for the whole pipeline or
+#' or view and marks the affected steps and their downstream dependents
 #' as outdated.
 #'
 #' @note Parameters of locked steps are never changed and their state
 #' remains unchanged.
 #'
-#' @param x A pipeflow pip or view
-#' @param params Named list of parameters to set.
-#' @return The updated pipeline or view, invisibly.
+#' @param x A pipeflow pip or view.
+#' @param params Named list of parameters to set (only used by
+#' [pip_set_params()]).
+#' @return For [pip_get_params()], a named list of unbound parameter values;
+#' if the same parameter name appears in multiple steps, the first
+#' occurrence in pipeline order is returned. For [pip_set_params()], the
+#' updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(n = 10) seq_len(n)) |>
@@ -2346,13 +2332,17 @@ pip_reset <- function(x) {
 #'
 #' # See all unbound/adjustable parameters before running
 #' pip_get_params(p) # list(n = 10, factor = 0.5)
+#' (pip_run(p))
 #'
 #' # Updating params marks affected steps (and their dependents) outdated
 #' pip_set_params(p, params = list(n = 5, factor = 2.0))
 #' p
+#' (pip_run(p))
 #'
-#' pip_run(p)
-#' p
+#' # Setting a parameter that is not defined in the pipeline yields a warning
+#' \donttest{
+#' pip_set_params(p, params = list(nope = 1))
+#' }
 #' @export
 pip_set_params <- function(x, params = list()) {
     # Input checking
