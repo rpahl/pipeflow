@@ -19,19 +19,20 @@ The updated pipeline, invisibly. For a view, the view with its
 remapped selector.
 }
 \description{
-If other steps depend on the step to be removed, an error is
-given and the removal is blocked, unless \code{force} was set to
-\code{TRUE}. In force mode, the selected step and all downstream
-dependent steps are removed together.
+Removes a pipeline step by its name. If other steps depend on it,
+an error is given and the removal of the step is blocked, unless
+\code{force} was set to \code{TRUE}, which will remove the selected step
+together with all its downstream dependent steps.
 }
-\details{
-A view can be passed as well; the step must then be part of the view.
-Because removing steps drops rows from the pipeline, the row positions
-that a view selects are shifted. For views, \code{pip_remove()} therefore
-remaps the selector to the remaining steps and returns the updated view,
-so assign the result back: \code{v <- pip_remove(v, ...)}. Views that are not
-reassigned, and other views over the same pipeline, keep their old row
-positions and therefore can become invalid after a step removal.
+\note{
+If called on a view, the step to be removed must be part of the view,
+since removing steps drops rows from the pipeline, the row positions
+of the view will be shifted after the removal operation.
+For views, you therefore need to assign the result back to the view:
+\code{v <- pip_remove(v, ...)}.
+Views that are not reassigned (or other views on the same pipeline),
+keep their old row positions and therefore can become invalid after a
+step removal.
 }
 \examples{
 p <- pip_new() |>
@@ -46,7 +47,7 @@ p                        # "load", "transform"
 # Trying to remove a step that others depend on raises an error:
 # pip_remove(p, "load")  # Error!
 
-# If a view is passed as well, the step must be part of the view.
+# If a view is passed, the step must be part of the view.
 v <- pip_view(p, step = "transform")
 try(pip_remove(v, "load"))  # Error: "load" is not part of the view
 v <- pip_remove(v, "transform")

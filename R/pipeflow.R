@@ -10,11 +10,11 @@
         state = character(0),
         tags = list(),
         locked = logical(0),
-        exec = character(0),
+        exec = character(0), # execution mode
         time = as.POSIXct(character(0)),
-        depends = list(),
-        unbound = list(), # names of independent parameters
-        nodeId = integer()
+        depends = list(), # names of parameters referencing other steps
+        unbound = list(), # names of unbound parameters
+        nodeId = integer() # the unique node ID in the internal DAG
     )
 }
 
@@ -1213,8 +1213,6 @@ pip_clone <- function(x, name = NULL) {
 #' v <- p[step %in% c("clean", "model"), ]
 #' pip_collect(v)
 #' pip_collect(v, as.table = TRUE)
-#'
-#'
 #' @export
 pip_collect <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
     .assert_pip_or_view(x)
@@ -1366,7 +1364,7 @@ pip_data <- function(x) {
 }
 
 
-#' Get independent parameters
+#' Get unbound parameters
 #'
 #' Returns the current default values of all unbound (non-dependency)
 #' parameters across the pipeline. These are the parameters that can be
@@ -1539,18 +1537,20 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
 
 #' Remove a step
 #'
-#' If other steps depend on the step to be removed, an error is
-#' given and the removal is blocked, unless `force` was set to
-#' `TRUE`. In force mode, the selected step and all downstream
-#' dependent steps are removed together.
+#' Removes a pipeline step by its name. If other steps depend on it,
+#' an error is given and the removal of the step is blocked, unless
+#' `force` was set to `TRUE`, which will remove the selected step
+#' together with all its downstream dependent steps.
 #'
-#' A view can be passed as well; the step must then be part of the view.
-#' Because removing steps drops rows from the pipeline, the row positions
-#' that a view selects are shifted. For views, `pip_remove()` therefore
-#' remaps the selector to the remaining steps and returns the updated view,
-#' so assign the result back: `v <- pip_remove(v, ...)`. Views that are not
-#' reassigned, and other views over the same pipeline, keep their old row
-#' positions and therefore can become invalid after a step removal.
+#' @note
+#' If called on a view, the step to be removed must be part of the view,
+#' since removing steps drops rows from the pipeline, the row positions
+#' of the view will be shifted after the removal operation.
+#' For views, you therefore need to assign the result back to the view:
+#' `v <- pip_remove(v, ...)`.
+#' Views that are not reassigned (or other views on the same pipeline),
+#' keep their old row positions and therefore can become invalid after a
+#' step removal.
 #'
 #' @param x A pipeflow pip or view
 #' @param step `string` the name of the step to be removed.
@@ -1571,7 +1571,7 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
 #' # Trying to remove a step that others depend on raises an error:
 #' # pip_remove(p, "load")  # Error!
 #'
-#' # If a view is passed as well, the step must be part of the view.
+#' # If a view is passed, the step must be part of the view.
 #' v <- pip_view(p, step = "transform")
 #' try(pip_remove(v, "load"))  # Error: "load" is not part of the view
 #' v <- pip_remove(v, "transform")
@@ -2309,7 +2309,7 @@ pip_reset <- function(x) {
 }
 
 
-#' Set independent parameters
+#' Set unbound parameters
 #'
 #' Updates the default values of unbound parameters across the pipeline
 #' or a subset of steps defined by a view.

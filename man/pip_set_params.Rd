@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeflow.R
 \name{pip_set_params}
 \alias{pip_set_params}
-\title{Set independent parameters}
+\title{Set unbound parameters}
 \usage{
 pip_set_params(x, params = list())
 }

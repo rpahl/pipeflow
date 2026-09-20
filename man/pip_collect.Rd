@@ -88,6 +88,4 @@ pip_collect(p, simplify = FALSE)
 v <- p[step \%in\% c("clean", "model"), ]
 pip_collect(v)
 pip_collect(v, as.table = TRUE)
-
-
 }

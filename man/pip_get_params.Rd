@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeflow.R
 \name{pip_get_params}
 \alias{pip_get_params}
-\title{Get independent parameters}
+\title{Get unbound parameters}
 \usage{
 pip_get_params(x)
 }
