@@ -123,7 +123,7 @@
 # same underlying pipeline environment.
 .wrap_pipenv <- function(pipenv, name, view = NULL) {
     structure(
-        list(pipenv = pipenv, name = name, view = view),
+        list(name = name, view = view, pipenv = pipenv),
         class = "pipeflow"
     )
 }
@@ -863,7 +863,7 @@
 #'     pip_add("total",   \(x = ~squared) sum(x))
 #' p
 #' str(p)
-#' p[["name"]]
+#' p[["name"]]  # "demo"
 #' p[["view"]]  # initially NULL
 #'
 #' # Inner pipeline environment (for advanced usage)
@@ -898,7 +898,7 @@ pip_new <- function(name = "pipe") {
     env[[".restart_force"]] <- TRUE
 
     structure(
-        list(pipenv = env, name = name, view = NULL),
+        list(name = name, view = NULL, pipenv = env),
         class = "pipeflow"
     )
 }
@@ -927,9 +927,10 @@ pip_new <- function(name = "pipe") {
 #' with the defaults of `fun` (if overlapping names, the default values in `fun`
 #' take precedence). There are two use cases for `params`:
 #' 1. Provide param values programmatically when adding steps at runtime
-#' 2. Provide extra param values that are defined in pipelines nested in a
-#'   step, which ensures that the step (and with that the pipeline in the step)
-#'   is re-executed when one of the respective param values change.
+#' 2. Provide extra param values to "mark" dependencies that are defined in
+#'   pipelines nested in a step, which ensures that the step (and with that
+#'   the pipeline in the step) is re-executed when one of the respective
+#'   param values change.
 #' @param exec Execution mode for this step. One of "auto", "split",
 #' "reduce" or "plain".
 #' Using execution mode `exec = split`, the output of the step is marked as
@@ -982,6 +983,25 @@ pip_new <- function(name = "pipe") {
 #' pip_run(q)
 #' q[["stats", "out"]]   # partitioned list — one summary per species
 #' q[["combine", "out"]] # combined table
+#'
+#' # --- Insert a step at a specific position with 'after' ---
+#' p2 <- pip_new("insert-demo") |>
+#'   pip_add("load", \(x = 1) x) |>
+#'   pip_add("fit", \(x = ~load) x + 1)
+#' p2
+#' pip_add(p2, "clean", \(x = ~load) x * 2, after = "load")
+#' p2  # "load", "clean", "fit" — inserted after "load"
+#'
+#' # after = 0 inserts the new step at the very beginning
+#' pip_add(p2, "preload", \(x = 1) x, after = 0)
+#' p2
+#'
+#' # --- Provide parameter values programmatically with 'params' ---
+#' p3 <- pip_new("params-demo") |>
+#'   pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
+#' pip_run(p3)
+#' p3
+#' p3[["load", "out"]] # c(1, size = 42) — extra params passed via `...`
 #' @export
 pip_add <- function(
     x,

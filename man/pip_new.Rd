@@ -23,7 +23,7 @@ p <- pip_new("demo") |>
     pip_add("total",   \(x = ~squared) sum(x))
 p
 str(p)
-p[["name"]]
+p[["name"]]  # "demo"
 p[["view"]]  # initially NULL
 
 # Inner pipeline environment (for advanced usage)

@@ -37,9 +37,10 @@ with the defaults of \code{fun} (if overlapping names, the default values in \co
 take precedence). There are two use cases for \code{params}:
 \enumerate{
 \item Provide param values programmatically when adding steps at runtime
-\item Provide extra param values that are defined in pipelines nested in a
-step, which ensures that the step (and with that the pipeline in the step)
-is re-executed when one of the respective param values change.
+\item Provide extra param values to "mark" dependencies that are defined in
+pipelines nested in a step, which ensures that the step (and with that
+the pipeline in the step) is re-executed when one of the respective
+param values change.
 }}
 
 \item{exec}{Execution mode for this step. One of "auto", "split",
@@ -104,4 +105,23 @@ q <- pip_new("split-demo") |>
 pip_run(q)
 q[["stats", "out"]]   # partitioned list — one summary per species
 q[["combine", "out"]] # combined table
+
+# --- Insert a step at a specific position with 'after' ---
+p2 <- pip_new("insert-demo") |>
+  pip_add("load", \(x = 1) x) |>
+  pip_add("fit", \(x = ~load) x + 1)
+p2
+pip_add(p2, "clean", \(x = ~load) x * 2, after = "load")
+p2  # "load", "clean", "fit" — inserted after "load"
+
+# after = 0 inserts the new step at the very beginning
+pip_add(p2, "preload", \(x = 1) x, after = 0)
+p2
+
+# --- Provide parameter values programmatically with 'params' ---
+p3 <- pip_new("params-demo") |>
+  pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
+pip_run(p3)
+p3
+p3[["load", "out"]] # c(1, size = 42) — extra params passed via `...`
 }
