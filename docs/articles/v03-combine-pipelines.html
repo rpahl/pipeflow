@@ -60,13 +60,13 @@
     <li><h6 class="dropdown-header" data-toc-skip>Get started</h6></li>
     <li><a class="dropdown-item" href="../articles/v01-get-started.html">Get started with pipeflow</a></li>
     <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modifying existing pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v02a-pipeline-views.html">Working with pipeline views</a></li>
     <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combining pipelines</a></li>
     <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collecting and grouping output</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
-    <li><a class="dropdown-item" href="../articles/v02a-pipeline-views.html">Working with pipeline views</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
     <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
@@ -279,14 +279,14 @@ on.</p>
 <p>Let’s now run the combined pipeline and inspect the plot.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-22 06:07:43.481 UTC]: Starting run of pipeflow 'preprocessing-modelling'</span></span>
-<span><span class="co"># info [2026-09-22 06:07:43.481 UTC]: Step 1/6 data</span></span>
-<span><span class="co"># info [2026-09-22 06:07:43.482 UTC]: Step 2/6 prep</span></span>
-<span><span class="co"># info [2026-09-22 06:07:43.483 UTC]: Step 3/6 standardize</span></span>
-<span><span class="co"># info [2026-09-22 06:07:43.484 UTC]: Step 4/6 data2</span></span>
-<span><span class="co"># info [2026-09-22 06:07:43.485 UTC]: Step 5/6 fit</span></span>
-<span><span class="co"># info [2026-09-22 06:07:43.491 UTC]: Step 6/6 plot</span></span>
-<span><span class="co"># info [2026-09-22 06:07:43.957 UTC]: Finished run of pipeflow 'preprocessing-modelling'</span></span></code></pre></div>
+<span><span class="co"># info [2026-09-22 09:12:16.352 UTC]: Starting run of pipeflow 'preprocessing-modelling'</span></span>
+<span><span class="co"># info [2026-09-22 09:12:16.353 UTC]: Step 1/6 data</span></span>
+<span><span class="co"># info [2026-09-22 09:12:16.353 UTC]: Step 2/6 prep</span></span>
+<span><span class="co"># info [2026-09-22 09:12:16.354 UTC]: Step 3/6 standardize</span></span>
+<span><span class="co"># info [2026-09-22 09:12:16.356 UTC]: Step 4/6 data2</span></span>
+<span><span class="co"># info [2026-09-22 09:12:16.356 UTC]: Step 5/6 fit</span></span>
+<span><span class="co"># info [2026-09-22 09:12:16.359 UTC]: Step 6/6 plot</span></span>
+<span><span class="co"># info [2026-09-22 09:12:16.813 UTC]: Finished run of pipeflow 'preprocessing-modelling'</span></span></code></pre></div>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co"># Warning: Removed 37 rows containing missing values or values outside the scale range</span></span>
@@ -300,24 +300,22 @@ x-variable of the model and rerun the pipeline.</p>
 <div id="htmlwidget-36aa3d2a04d42bbc2145" style="width:700px;height:100px;" class="visNetwork html-widget"></div>
 <script type="application/json" data-for="htmlwidget-36aa3d2a04d42bbc2145">{"x":{"nodes":{"id":[0,1,2,3,4,5],"label":["data","prep","standardize","data2","fit","plot"],"shape":["hexagon","hexagon","hexagon","hexagon","hexagon","hexagon"],"color":["#87ff6fff","#87ff6fff","#87ff6fff","#87ff6fff","#ffa040ff","#ffa040ff"]},"edges":{"from":[0,1,2,3,4,3],"to":[1,2,3,4,5,5],"arrows":["to","to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":null,"width":700,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-22 06:07:44.482 UTC]: Starting run of pipeflow 'preprocessing-modelling'</span></span>
-<span><span class="co"># info [2026-09-22 06:07:44.482 UTC]: Step 1/6 data - skipping done step</span></span>
-<span><span class="co"># info [2026-09-22 06:07:44.482 UTC]: Step 2/6 prep - skipping done step</span></span>
-<span><span class="co"># info [2026-09-22 06:07:44.482 UTC]: Step 3/6 standardize - skipping done step</span></span>
-<span><span class="co"># info [2026-09-22 06:07:44.482 UTC]: Step 4/6 data2 - skipping done step</span></span>
-<span><span class="co"># info [2026-09-22 06:07:44.482 UTC]: Step 5/6 fit</span></span>
-<span><span class="co"># info [2026-09-22 06:07:44.484 UTC]: Step 6/6 plot</span></span>
-<span><span class="co"># info [2026-09-22 06:07:44.492 UTC]: Finished run of pipeflow 'preprocessing-modelling'</span></span></code></pre></div>
+<span><span class="co"># info [2026-09-22 09:12:17.323 UTC]: Starting run of pipeflow 'preprocessing-modelling'</span></span>
+<span><span class="co"># info [2026-09-22 09:12:17.323 UTC]: Step 1/6 data - skipping done step</span></span>
+<span><span class="co"># info [2026-09-22 09:12:17.323 UTC]: Step 2/6 prep - skipping done step</span></span>
+<span><span class="co"># info [2026-09-22 09:12:17.324 UTC]: Step 3/6 standardize - skipping done step</span></span>
+<span><span class="co"># info [2026-09-22 09:12:17.324 UTC]: Step 4/6 data2 - skipping done step</span></span>
+<span><span class="co"># info [2026-09-22 09:12:17.324 UTC]: Step 5/6 fit</span></span>
+<span><span class="co"># info [2026-09-22 09:12:17.325 UTC]: Step 6/6 plot</span></span>
+<span><span class="co"># info [2026-09-22 09:12:17.334 UTC]: Finished run of pipeflow 'preprocessing-modelling'</span></span></code></pre></div>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co"># Warning: Removed 37 rows containing missing values or values outside the scale range</span></span>
 <span><span class="co"># (`geom_point()`).</span></span></code></pre></div>
 <p><img src="v03-combine-pipelines_files/figure-html/unnamed-chunk-14-1.png" class="r-plt" alt="model-plot" width="700"></p>
-<p>Generally, when creating these pipelines, there will be a lot of
-steps calculating intermediate results and only a few steps contain the
-final output we are interested in (e.g. the <code>plot</code> output in
-the above example). To see how {pipeflow} allows to conveniently tag,
-collect and possibly group those final outputs, see the next vignette <a href="v04-collect-output.html">Collecting and grouping output</a>.</p>
+<p>Whether you combine them or not, in practice pipelines can get long
+quickly. The next vignette shows how you can easily focus on certain
+parts of your entire analysis workflow by <a href="v03a-pipeline-views.html">Working with pipeline views</a>.</p>
 </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

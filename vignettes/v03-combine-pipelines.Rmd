@@ -219,12 +219,10 @@ pip_run(pip)
 pip[["plot", "out"]]
 ```
 
-Generally, when creating these pipelines, there will be a lot of steps calculating
-intermediate results and only a few steps contain the final output we are
-interested in (e.g. the `plot` output in the above example).
-To see how {pipeflow} allows to conveniently tag, collect and possibly group
-those final outputs,
-see the next vignette [Collecting and grouping output](v04-collect-output.html).
+Whether you combine them or not, in practice pipelines can get long quickly.
+The next vignette shows how you can easily focus on certain parts of your
+entire analysis workflow by
+[Working with pipeline views](v03a-pipeline-views.html).
 
 ```{r, include = FALSE}
 options(old)
