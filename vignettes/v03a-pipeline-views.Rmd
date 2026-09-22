@@ -192,19 +192,10 @@ pip_run(pip_view(pip, step = "report"))
 
 Afterwards, the original pipeline is up to date for the covered steps.
 
-## Collecting output from views
-
-Combine views with `pip_collect()` to collect only the outputs you are
-interested in:
-
-```{r}
-pip |>
-    pip_view(tags = "core") |>
-    pip_collect()
-```
-
-See the `vignette("v04-collect-output")` vignette for more on collecting
-output.
+Pipeline views are not only useful to inspect or run certain parts
+of the pipeline but also to filter and collect the final output of
+your analysis run. For more details on this see the next vignette
+[Collecting and grouping output](v04-collect-output.html).
 
 ```{r, include = FALSE}
 options(old)

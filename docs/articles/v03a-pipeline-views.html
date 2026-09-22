@@ -133,7 +133,7 @@ set tags to add some meta information.</p>
 <span><span class="co"># 3:    fit      x   clean  done             30 model,core</span></span>
 <span><span class="co"># 4: report      x     fit  done     result: 30     report</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span></code></pre></div>
 <p>We will use this meta information below to filter certain steps by
 topic and/or output type.</p>
 </div>
@@ -150,7 +150,7 @@ contains only the steps matching the given filters:</p>
 <span><span class="co"># 1: clean      x    load  done  2, 4, 6, 8,10    io,core</span></span>
 <span><span class="co"># 2:   fit      x   clean  done             30 model,core</span></span>
 <span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span></code></pre></div>
 <p>Filters can be combined. By default, steps must match <em>all</em>
 filters (logical AND), while the values within a single filter are
 treated as alternatives (OR):</p>
@@ -162,7 +162,7 @@ treated as alternatives (OR):</p>
 <span><span class="co"># 1: clean      x    load  done  2, 4, 6, 8,10    io,core</span></span>
 <span><span class="co"># 2:   fit      x   clean  done             30 model,core</span></span>
 <span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">pip</span>, step <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"clean"</span>, <span class="st">"fit"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co"># &lt;pipeflow_view&gt; my-pip view (2 of 4 steps)</span></span>
@@ -171,7 +171,7 @@ treated as alternatives (OR):</p>
 <span><span class="co"># 1: clean      x    load  done  2, 4, 6, 8,10    io,core</span></span>
 <span><span class="co"># 2:   fit      x   clean  done             30 model,core</span></span>
 <span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span></code></pre></div>
 <p><code>join = "union"</code> keeps steps that match <em>any</em>
 filter:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
@@ -182,7 +182,7 @@ filter:</p>
 <span><span class="co"># 1:  clean      x    load  done  2, 4, 6, 8,10 io,core</span></span>
 <span><span class="co"># 2: report      x     fit  done     result: 30  report</span></span>
 <span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span></code></pre></div>
 <p>With <code>fixed = FALSE</code>, filter values are interpreted as
 regular expressions:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
@@ -192,7 +192,7 @@ regular expressions:</p>
 <span><span class="co">#    step params depends state out       tags</span></span>
 <span><span class="co"># 1:  fit      x   clean  done  30 model,core</span></span>
 <span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span></code></pre></div>
 <p>The available filters are <code>step</code>, <code>params</code>,
 <code>state</code>, <code>exec</code>, <code>tags</code>, and
 <code>depends</code>. For example, to find all steps that depend on
@@ -222,7 +222,7 @@ selecting steps. It returns a view by default:</p>
 <span><span class="co"># 1: load      n          done 1,2,3,4,5   io,daily</span></span>
 <span><span class="co"># 2:  fit      x   clean  done        30 model,core</span></span>
 <span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span>
 <span></span>
 <span><span class="va">pip</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">]</span></span>
 <span><span class="co"># &lt;pipeflow_view&gt; my-pip view (3 of 4 steps)</span></span>
@@ -232,7 +232,7 @@ selecting steps. It returns a view by default:</p>
 <span><span class="co"># 2: clean      x    load  done  2, 4, 6, 8,10    io,core</span></span>
 <span><span class="co"># 3:   fit      x   clean  done             30 model,core</span></span>
 <span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span></code></pre></div>
 <p>Boolean filters are evaluated in the context of the step table, so
 the same columns as in <code><a href="../reference/pip_view.html">pip_view()</a></code> are available as
 variables:</p>
@@ -244,7 +244,7 @@ variables:</p>
 <span><span class="co"># 1: clean      x    load  done  2, 4, 6, 8,10    io,core</span></span>
 <span><span class="co"># 2:   fit      x   clean  done             30 model,core</span></span>
 <span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span>
 <span></span>
 <span><span class="va">pip</span><span class="op">[</span><span class="va">step</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"clean"</span>, <span class="st">"fit"</span><span class="op">)</span> <span class="op">&amp;</span> <span class="va">state</span> <span class="op">==</span> <span class="st">"done"</span><span class="op">]</span></span>
 <span><span class="co"># &lt;pipeflow_view&gt; my-pip view (2 of 4 steps)</span></span>
@@ -253,7 +253,7 @@ variables:</p>
 <span><span class="co"># 1: clean      x    load  done  2, 4, 6, 8,10    io,core</span></span>
 <span><span class="co"># 2:   fit      x   clean  done             30 model,core</span></span>
 <span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span></code></pre></div>
 <p>Negative indices select all steps except the excluded ones:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[</span><span class="op">-</span><span class="fl">2</span><span class="op">]</span></span>
@@ -264,7 +264,7 @@ variables:</p>
 <span><span class="co"># 2:    fit      x   clean  done         30 model,core</span></span>
 <span><span class="co"># 3: report      x     fit  done result: 30     report</span></span>
 <span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span></code></pre></div>
 <p><code>p[]</code> returns a copy of the pipeline, and using two
 indices (<code>p[i, j]</code>) extracts a the given rows and columns as
 a <code>data.table</code>:</p>
@@ -317,7 +317,7 @@ upstream dependencies.</p>
 <span><span class="co"># 1:  load      n          done      1,2,3,4,5 io,daily</span></span>
 <span><span class="co"># 2: clean      x    load  done  2, 4, 6, 8,10  io,core</span></span>
 <span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span>
 <span></span>
 <span><span class="va">v2</span> <span class="op">&lt;-</span> <span class="va">v1</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span>tags <span class="op">=</span> <span class="st">"core"</span><span class="op">)</span> <span class="co"># clean only</span></span>
 <span><span class="va">v2</span></span>
@@ -326,7 +326,7 @@ upstream dependencies.</p>
 <span><span class="co">#     step params depends state            out    tags</span></span>
 <span><span class="co"># 1: clean      x    load  done  2, 4, 6, 8,10 io,core</span></span>
 <span><span class="co"># -----------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="the-view-meta-field">The <code>view</code> meta field<a class="anchor" aria-label="anchor" href="#the-view-meta-field"></a>
@@ -349,7 +349,7 @@ meta field:</p>
 <span><span class="co"># 1:  load      n          done      1,2,3,4,5 io,daily</span></span>
 <span><span class="co"># 2: clean      x    load  done  2, 4, 6, 8,10  io,core</span></span>
 <span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span>
 <span></span>
 <span><span class="va">w</span><span class="op">[[</span><span class="st">"view"</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="cn">NULL</span> <span class="co"># back to the full pipeline</span></span>
 <span><span class="va">w</span></span>
@@ -361,7 +361,7 @@ meta field:</p>
 <span><span class="co"># 3:    fit      x   clean  done             30 model,core</span></span>
 <span><span class="co"># 4: report      x     fit  done     result: 30     report</span></span>
 <span><span class="co"># --------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:00:27</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:21:01</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="running-views">Running views<a class="anchor" aria-label="anchor" href="#running-views"></a>
@@ -373,31 +373,17 @@ as dependencies as <code>[upstream]</code>:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_reset.html">pip_reset</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">pip</span>, step <span class="op">=</span> <span class="st">"report"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-22 09:00:28.103 UTC]: Starting run of pipeflow 'my-pip view'</span></span>
-<span><span class="co"># info [2026-09-22 09:00:28.103 UTC]: Step 1/4 [upstream] load</span></span>
-<span><span class="co"># info [2026-09-22 09:00:28.103 UTC]: Step 2/4 [upstream] clean</span></span>
-<span><span class="co"># info [2026-09-22 09:00:28.104 UTC]: Step 3/4 [upstream] fit</span></span>
-<span><span class="co"># info [2026-09-22 09:00:28.105 UTC]: Step 4/4 [view] report</span></span>
-<span><span class="co"># info [2026-09-22 09:00:28.106 UTC]: Finished run of pipeflow 'my-pip view'</span></span></code></pre></div>
+<span><span class="co"># info [2026-09-22 09:21:02.101 UTC]: Starting run of pipeflow 'my-pip view'</span></span>
+<span><span class="co"># info [2026-09-22 09:21:02.101 UTC]: Step 1/4 [upstream] load</span></span>
+<span><span class="co"># info [2026-09-22 09:21:02.101 UTC]: Step 2/4 [upstream] clean</span></span>
+<span><span class="co"># info [2026-09-22 09:21:02.102 UTC]: Step 3/4 [upstream] fit</span></span>
+<span><span class="co"># info [2026-09-22 09:21:02.103 UTC]: Step 4/4 [view] report</span></span>
+<span><span class="co"># info [2026-09-22 09:21:02.104 UTC]: Finished run of pipeflow 'my-pip view'</span></span></code></pre></div>
 <p>Afterwards, the original pipeline is up to date for the covered
 steps.</p>
-</div>
-<div class="section level2">
-<h2 id="collecting-output-from-views">Collecting output from views<a class="anchor" aria-label="anchor" href="#collecting-output-from-views"></a>
-</h2>
-<p>Combine views with <code><a href="../reference/pip_collect.html">pip_collect()</a></code> to collect only the
-outputs you are interested in:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span>tags <span class="op">=</span> <span class="st">"core"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># $clean</span></span>
-<span><span class="co"># [1]  2  4  6  8 10</span></span>
-<span><span class="co"># </span></span>
-<span><span class="co"># $fit</span></span>
-<span><span class="co"># [1] 30</span></span></code></pre></div>
-<p>See the <code><a href="../articles/v04-collect-output.html">vignette("v04-collect-output")</a></code> vignette for more
-on collecting output.</p>
+<p>Pipeline views are not only useful to inspect or run certain parts of
+the pipeline but also to filter and collect the final output of your
+analysis run. For more details on this see the next vignette <a href="v04-collect-output.html">Collecting and grouping output</a>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

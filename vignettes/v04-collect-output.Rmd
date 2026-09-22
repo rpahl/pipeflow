@@ -37,8 +37,8 @@ this feels rather easy^[
 Following this principle, most of the pipeline steps will carry intermediate
 results while only a few steps contain the final output we are interested in.
 
-This vignette shows how to conveniently tag and collect those final outputs
-as well as how to filter pipelines via {pipeflow}s view functionality.
+This vignette shows how to conveniently tag, collect, and group those final
+outputs.
 
 ### Tagging steps
 
