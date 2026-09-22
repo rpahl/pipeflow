@@ -111,6 +111,8 @@ navbar:
         href: articles/v01-get-started.html
       - text: "Modifying existing pipelines"
         href: articles/v02-modify-pipeline.html
+      - text: "Working with pipeline views"
+        href: articles/v02a-pipeline-views.html
       - text: "Combining pipelines"
         href: articles/v03-combine-pipelines.html
       - text: "Collecting and filtering output"

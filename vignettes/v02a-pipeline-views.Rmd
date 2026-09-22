@@ -1,0 +1,202 @@
+---
+title: "Working with pipeline views"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+description: >
+  How to filter pipelines with `pip_view()` and the `[` operator, compose
+  views, and run only a subset of steps.
+vignette: >
+  %\VignetteIndexEntry{Working with pipeline views}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r knitr-setup, include = FALSE}
+knitr::opts_chunk$set(
+    comment = "#",
+    prompt = FALSE,
+    tidy = FALSE,
+    cache = FALSE,
+    collapse = TRUE
+)
+
+old <- options(width = 100L)
+```
+
+Pipelines can get long, and often you want to focus on a subset of steps:
+a topic, a stage, or the steps that produce the outputs you care about.
+*Views* are {pipeflow}'s way of working on a subset of steps without
+copying anything. A view references the underlying pipeline, so every
+operation applied to a view (running it, updating parameters, tagging,
+locking, ...) writes through to the original pipeline, restricted to the
+steps covered by the view.
+
+This vignette shows how to create and combine views, how to select steps
+with the `[` operator, and how to run only part of a pipeline.
+
+## Setup
+
+We use the same example pipeline as in the
+`vignette("v04-collect-output")` vignette, tagging steps by topic and
+output type.
+
+```{r setup-pipeline}
+library(pipeflow)
+
+pip <- pip_new("my-pip") |>
+    pip_add("load", \(n = 5) seq_len(n), tags = c("io", "daily")) |>
+    pip_add("clean", \(x = ~load) x * 2, tags = c("io", "core")) |>
+    pip_add("fit", \(x = ~clean) sum(x), tags = c("model", "core")) |>
+    pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
+
+pip_run(pip, lgr = NULL)
+```
+
+## Creating views
+
+`pip_view()` returns a *view* of the pipeline that contains only the
+steps matching the given filters:
+
+```{r}
+pip_view(pip, tags = "core")
+```
+
+Filters can be combined. By default, steps must match *all* filters
+(logical AND), while the values within a single filter are treated as
+alternatives (OR):
+
+```{r}
+pip_view(pip, tags = "core", state = "done")
+pip_view(pip, step = c("clean", "fit"))
+```
+
+`join = "union"` keeps steps that match *any* filter:
+
+```{r}
+pip_view(pip, tags = "report", step = "clean", join = "union")
+```
+
+With `fixed = FALSE`, filter values are interpreted as regular
+expressions:
+
+```{r}
+pip_view(pip, step = "^f", fixed = FALSE)
+```
+
+The available filters are `step`, `params`, `state`, `exec`, `tags`, and
+`depends`. For example, to find all steps that depend on `load` and are
+still `new`:
+
+```{r}
+pip_reset(pip)
+pip_view(pip, depends = "load", state = "new")
+pip_run(pip, lgr = NULL)
+```
+
+## Selecting steps with `[`
+
+The extract operator `[` provides a data.table-like way of selecting
+steps. It returns a view by default:
+
+```{r}
+pip[c("load", "fit")]
+pip[1:3]
+```
+
+Boolean filters are evaluated in the context of the step table, so the
+same columns as in `pip_view()` are available as variables:
+
+```{r}
+pip[tags %like% "core"]
+pip[step %in% c("clean", "fit") & state == "done"]
+```
+
+Negative indices select all steps except the excluded ones:
+
+```{r}
+pip[-2]
+```
+
+`p[]` returns a copy of the pipeline, and the two-index form extracts
+step-table columns as a `data.table`:
+
+```{r}
+pip2 <- pip[]
+pip[, c("step", "tags")]
+pip[c("load", "fit"), "out"]
+```
+
+While `[` returns a view by default, `view = FALSE` builds a new,
+self-contained pipeline containing the selected steps together with all
+their upstream dependencies:
+
+```{r}
+pip[c("fit", "report"), view = FALSE]
+```
+
+The printed message tells you how many steps were pulled in as upstream
+dependencies.
+
+## Composing views
+
+Views can be nested: applying `pip_view()` (or `[`) to a view narrows
+the view further.
+
+```{r}
+v1 <- pip_view(pip, tags = "io")    # load, clean
+v1
+
+v2 <- v1 |> pip_view(tags = "core") # clean only
+v2
+```
+
+## The `view` meta field
+
+The `view` meta field stores the absolute row indices covered by the
+view (`NULL` for a full pipeline). You can restrict a pipeline to a view
+by assigning to the meta field, and clear the view again with `NULL`:
+
+```{r}
+pip[["view"]]          # NULL — not a view
+
+w <- pip
+w[["view"]] <- c("load", "clean")
+w
+
+w[["view"]] <- NULL    # back to the full pipeline
+w
+```
+
+## Running views
+
+Running a view executes the covered steps together with any upstream
+dependencies that are not up to date. The run log marks steps that belong
+to the view as `[view]` and steps that were pulled in as dependencies as
+`[upstream]`:
+
+```{r}
+pip_reset(pip)
+pip_run(pip_view(pip, step = "report"))
+```
+
+Afterwards, the original pipeline is up to date for the covered steps.
+
+## Collecting output from views
+
+Combine views with `pip_collect()` to collect only the outputs you are
+interested in:
+
+```{r}
+pip |>
+    pip_view(tags = "core") |>
+    pip_collect()
+```
+
+See the `vignette("v04-collect-output")` vignette for more on collecting
+output.
+
+```{r, include = FALSE}
+options(old)
+```
