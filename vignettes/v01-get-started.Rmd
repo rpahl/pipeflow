@@ -61,9 +61,9 @@ pip <- pip_add(
 )
 ```
 
-For each step to add, at minimum we specify the name of the step and a function
-that defines what is computed in that step. Let's take a first look at the
-pipeline.
+For each step, at minimum we specify the name of the step (here `step = "data`)
+and a function (`fun`) that defines what is computed in that step.
+Let's take a first look at the pipeline.
 
 ```{r show-initial-pipeline}
 pip
@@ -72,16 +72,15 @@ pip
 Each step is represented by one row in the table, which currently shows four columns:
 
 * `step` the name of the step
-* `params` names of function parameters
-* `depends` the dependencies of a step (more on dependencies below)
-* `state` the current state, which initially is always set to `new`
+* `params` the names of the function parameters
+* `depends` the dependencies of a step (more on that below)
+* `state` the state of each step, which initially is always set to `new`
 
-Next, we add a step called `prep`, which consists of a function that
-takes the output of the `data` step as its first argument, adds a new column
-and returns the modified data. To refer to the output of an
-earlier pipeline step, we just write the name of the step preceded with the
-tilde (~) operator, that is, the output of the `data` step can be
-referred to via `~data`.
+Next, we want to add a step called `prep`, which prepares our original
+data by adding the new column `"Temp.Celsius"`.
+This means, our `prep` step will have to use the output of the `data` step.
+To refer to the output of an earlier pipeline step, we just write its name
+preceded with the tilde (~) operator, which in this case means `~data`.
 
 Since `pip_add` works "by reference", we can add the step as follows:
 
@@ -95,16 +94,19 @@ pip |> pip_add(
 )
 ```
 
+To reiterate: `function(df = ~data)` basically means that once this function
+gets called `df` will contain whatever was produced last by the `data` step.
+
 So, a second step called `prep` was added and it depends on the `data`
-step, which is also marked in column `depends`.
+step, which is also marked in the 2nd row in column `depends`.
 
 ```{r}
 pip
 ```
 
 Next, we want to add a step called `fit` that fits a linear model to the
-data. The function takes the output of the `prep` and defines a
-parameter `xVar`, which is used to specify the variable that is used as
+data. The function is using the `prep`ared data and defines a
+parameter `xVar`, which determines the variable that is used as
 predictor in the linear model.
 
 ```{r}
@@ -120,7 +122,7 @@ pip
 ```
 
 Lastly, we add a step called `plot`, which plots the data and the
-linear model fit. The function uses the output from both the
+linear model fit. This function references both the
 `fit` and `prep` step. As in the previous step, it defines the
 `xVar` parameter plus two more plot-specific parameters `xLab` and `title`.
 
@@ -142,8 +144,8 @@ pip |> pip_add(
 )
 ```
 
-In the last line, we see that the `plot` step depends on both
-the `fit` and `prep` step.
+In the `depends` column of row `4:`, we see that the `plot` step depends
+on both the `fit` and the `prep` step.
 
 ```{r}
 pip
@@ -252,9 +254,9 @@ pip_get_params(pip) |> str()
 
 It returns a list of all *unbound* parameters (here
 ``r toString(names(pip_get_params(pip)))``).
-By *unbound* we mean that these parameters don't depend
-on other steps (i.e. steps defined with the `~` operator) and therefore
-can be adjusted freely.
+By *unbound* we mean that the values of these parameters don't depend
+on other steps (i.e. parameters defined with the `~` operator) and
+therefore can be adjusted freely.
 
 Also note that each parameter is only listed once, even if it's used in
 multiple steps^[For example, the `xVar` parameter is used in both the `fit`
@@ -268,8 +270,8 @@ pip |>
 pip_get_params(pip) |> str()
 ```
 
-{pipeflow} automatically propagates the new values to all steps that
-use the respective parameter. In addition, it will recognize which steps are
+{pipeflow} automatically propagates new parameter values to all steps that
+use it. In addition, it will recognize which steps are
 affected by the parameter change and mark them as `outdated` (see column
 `state`).
 
@@ -287,30 +289,31 @@ do.call(
 ```
 
 We can see that the `fit` and `plot` steps are now in state
-`outdated` (graphically indicated by the orange color).
+`outdated`, because the `xVar` and `xLab` parameters were updated.
 To update the results, we just run the pipeline again.
 
 ```{r run-pipeline-again}
 pip_run(pip)
 ```
 
-The outdated steps were re-run as expected and the output was
-updated accordingly now showing the new x-variable `Solar.R`.
+A closer look at the run log shows that the pipeline skipped the first
+two steps and ran only the steps that were outdated, which basically
+can be thought of caching or mimicking the behavior of `make` in software
+development.
+That is, {pipeflow} always keeps track of the step states and only re-runs
+those where its necessary.
+This can be a huge time saver in larger pipelines^[
+    Another use case is backend computation in interactive shiny applications,
+    where users change parameters dynamically and want quick updates.
+].
+
+After the re-run, we can see that the output was updated accordingly now
+showing the new x-variable `Solar.R`.
 
 ```{r inspect-plot-again, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
 pip[["plot", "out"]]
 ```
 
-A closer look at the run log shows that the pipeline skipped the first
-two steps and ran only the steps that were outdated, which basically
-can be thought of caching or mimicking the behavior of `make` in software
-development.
-That is, {pipeflow} always keeps track of which steps are outdated and
-only re-runs those together with their downstream dependencies.
-This can be a huge time saver in larger pipelines^[
-    Another use case is backend computation in interactive shiny applications,
-    where users change parameters dynamically and want quick updates.
-].
 
 Let's visit some more examples of parameter changes and their effects on
 the pipeline. To just change the title of the plot, only the `plot` step
