@@ -1,5 +1,5 @@
 ---
-title: "Collecting and filtering output"
+title: "Collecting and grouping output"
 output:
   rmarkdown::html_vignette:
     toc: true
@@ -7,7 +7,7 @@ output:
 description: >
   Shows how to tag, filter, and collect pipeline output.
 vignette: >
-  %\VignetteIndexEntry{Collecting and filtering output}
+  %\VignetteIndexEntry{Collecting and grouping output}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -210,79 +210,6 @@ pip_collect(pip, by = "tags", as.table = TRUE)
 ```
 
 For more details see `?pip_collect`.
-
-### More on views
-
-To make the example a bit more interesting, we reset the output and change
-some parameters.
-
-```{r}
-pip_reset(pip)
-pip_set_params(pip, params = list(xVar = "Solar.R", yVar = "Wind"))
-
-pip
-```
-
-{pipeflow} views provide a variety of filtering options. In the previous
-section, the filtering was done based on tags, but you can also filter
-based on other properties, for example, to select all `outdated` steps
-that depend on the `model_fit` step:
-
-```{r}
-pip |> pip_view(depends = "model_fit", state = "outdated")
-```
-
-Since version `0.4.0`, {pipeflow} also supports filtering known from the
-{data.table} package so that you can achieve the same as follows:
-
-```{r}
-pip[depends %like% "model_fit" & state == "outdated"]
-```
-
-By default, multiple filters are combined with a logical AND, i.e. a step
-must match all of them. Alternatively, `join = "union"` keeps steps that
-match any of the filters:
-
-```{r}
-pip |> pip_view(tags = "data", depends = "model_fit", join = "union")
-
-# or equivalently:
-pip[tags %like% "data" | depends %like% "model_fit"]
-```
-
-Regex-based filtering is also supported, for example, to filter all outdated
-steps starting with `data`, we can do
-
-```{r}
-pip |> pip_view(step = "^data", state = "outdated", fixed = FALSE)
-```
-
-Views can also be chained together:
-
-```{r}
-v <- pip |> pip_view(state = "outdated")
-v
-
-v2 <- v |> pip_view(tags = "plot")
-v2
-```
-
-Last but not least, views can be run as pipelines themselves, which allows to
-conveniently re-run only the filtered steps, while {pipeflow} ensures that
-any upstream dependencies are run first if needed.
-
-```{r}
-v2 |> pip_run()
-```
-
-Having a closer look at the run log, you'll see which steps were re-run as
-part of the `[view]` and which were re-run as `[upstream]` dependencies.
-Since all views work by reference on the given pipeline, the original pipeline
-is now up-to-date for the filtered steps.
-
-```{r}
-pip
-```
 
 ```{r, include = FALSE}
 options(old)

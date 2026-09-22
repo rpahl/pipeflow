@@ -115,7 +115,7 @@ navbar:
         href: articles/v02a-pipeline-views.html
       - text: "Combining pipelines"
         href: articles/v03-combine-pipelines.html
-      - text: "Collecting and filtering output"
+      - text: "Collecting and grouping output"
         href: articles/v04-collect-output.html
       - text: ----
       - text: "Advanced"

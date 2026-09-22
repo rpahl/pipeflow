@@ -118,15 +118,10 @@ pip
 ```
 
 Note that the `data` step of the second pipeline
-has been renamed automatically to `data2`
-(see line 4 in the `step` column), which is necessary to
-avoid name clashes.
-Also, the data-dependencies of the second pipeline were automatically
-updated as well (see lines 5-6 in the `depends` column).
-
-Generally, when binding two pipelines, {pipeflow} ensures that the
-step names remain unique in the resulting combined pipeline and thereby
-automatically renames duplicated step names if necessary.
+has been renamed to `data2`in both the `step` and the `depends` columns
+(see line 4 above). That is, when "rbinding" pipelines, {pipeflow}
+automatically ensures that all step names stay unique by renaming
+any duplicates accordingly.
 
 Now, as can be also seen from the graphical representation of the pipeline,
 
@@ -145,10 +140,9 @@ do.call(
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
-the two pipelines are not yet connected. To make actual use of the combined
-pipeline, we have to use the output of the first pipeline as input of
-the second pipeline, that is, we want to use the output of the
-`standardize` step as the data parameter input in the `data2` step.
+the two pipelines are not yet connected. To make sense of the combined
+pipeline, we want to use the output of the `standardize` step as the data
+parameter input in the `data2` step.
 To achieve this, we apply the `replace` function, which was introduced
 in the previous vignette [modify the pipeline](v02-modify-pipeline.html):
 
@@ -175,7 +169,7 @@ Since the name of the re-routed step might not always be known^[A typical
 example would be appending several pipelines in a programmatic context.],
 the {pipeflow} package also provides a relative position indexing mechanism,
 which allows to rewrite the above command using a number (instead of the
-step name `standardize`) as follows:
+step name `standardize`) while having the same effect as above.
 
 ```{r}
 pip |> pip_replace("data2", function(data = ~ -1) data)
@@ -183,7 +177,7 @@ pip |> pip_replace("data2", function(data = ~ -1) data)
 pip
 ```
 
-Generally speaking, the relative indexing mechanism allows to refer to steps positioned
+The relative indexing mechanism allows to refer to steps positioned
 above the current step. The index `~-1` can be interpreted as "go one step back", `~-2`
 as "go two steps back", and so on.
 
@@ -227,10 +221,10 @@ pip[["plot", "out"]]
 
 Generally, when creating these pipelines, there will be a lot of steps calculating
 intermediate results and only a few steps contain the final output we are
-interested in (see e.g. the `plot` output in the above example).
+interested in (e.g. the `plot` output in the above example).
 To see how {pipeflow} allows to conveniently tag, collect and possibly group
 those final outputs,
-see the next vignette [Collecting and filtering output](v04-collect-output.html).
+see the next vignette [Collecting and grouping output](v04-collect-output.html).
 
 ```{r, include = FALSE}
 options(old)

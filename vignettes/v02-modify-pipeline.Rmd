@@ -144,8 +144,8 @@ a fixed y-variable in the model, let's pass it as a parameter.
 pip |> pip_replace(
     "fit",
     function(data = ~standardize, # <- changed data reference
-             xVar = "Temp.Celsius",
-             yVar = "Ozone" # <- new y-variable
+        xVar = "Temp.Celsius",
+        yVar = "Ozone" # <- new y-variable
     ) {
         lm(paste(yVar, "~", xVar), data = data)
     }

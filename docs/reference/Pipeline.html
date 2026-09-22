@@ -49,7 +49,7 @@ within each pipeline."><meta property="og:image" content="https://github.com/rpa
     <li><a class="dropdown-item" href="../articles/v01-get-started.html">Get started with pipeflow</a></li>
     <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modifying existing pipelines</a></li>
     <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combining pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collecting and filtering output</a></li>
+    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collecting and grouping output</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
@@ -2621,7 +2621,15 @@ the command is ignored.</p><div class="section">
 <span class="r-in"><span>   <span class="fu"><a href="https://rdrr.io/r/utils/txtProgressBar.html" class="external-link">setTxtProgressBar</a></span><span class="op">(</span><span class="va">pb</span>, <span class="va">value</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span>progress <span class="op">=</span> <span class="va">fprogress</span>, showLog <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   |                                                                              |                                                                      |   0%  |                                                                              |=======================                                               |  33%  |                                                                              |===============================================                       |  67%  |                                                                              |======================================================================| 100%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>
+  |
+  |                                                                      |   0%
+  |
+  |=======================                                               |  33%
+  |
+  |===============================================                       |  67%
+  |
+  |======================================================================| 100%</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## ------------------------------------------------</span></span></span>
 <span class="r-in"><span><span class="co">## Method `Pipeline$run_step()`</span></span></span>

@@ -7,13 +7,13 @@ output: github_document
 ```{r, include = FALSE}
 require(badger)
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#",
-  prompt = F,
-  fig.path = "images/README-",
-  tidy = FALSE,
-  cache = FALSE,
-  out.width = "100%"
+    collapse = TRUE,
+    comment = "#",
+    prompt = F,
+    fig.path = "images/README-",
+    tidy = FALSE,
+    cache = FALSE,
+    out.width = "100%"
 )
 
 old <- options(width = 100L)
@@ -77,7 +77,7 @@ library(pipeflow)
 p <- pip_new("demo") |>
     pip_add("numbers", \(n = 5) seq_len(n)) |>
     pip_add("squared", \(x = ~numbers) x^2) |>
-    pip_add("total",   \(x = ~squared) sum(x))
+    pip_add("total", \(x = ~squared) sum(x))
 
 p
 
@@ -93,7 +93,7 @@ It is recommended to read the vignettes in the order they are listed below:
 * [Get started with pipeflow](https://rpahl.github.io/pipeflow/articles/v01-get-started.html)
 * [Modifying existing pipelines](https://rpahl.github.io/pipeflow/articles/v02-modify-pipeline.html)
 * [Combining pipelines](https://rpahl.github.io/pipeflow/articles/v03-combine-pipelines.html)
-* [Collecting and filtering output](https://rpahl.github.io/pipeflow/articles/v04-collect-output.html)
+* [Collecting and grouping output](https://rpahl.github.io/pipeflow/articles/v04-collect-output.html)
 
 
 ### Advanced topics
