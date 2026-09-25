@@ -38,8 +38,7 @@ with the `[` operator, and how to run only part of a pipeline.
 
 ## Setup
 
-Here we use a very simplified example of a pipeline. Besides `step` and `fun`,
-when adding a step, we can also set tags to add some meta information.
+Again, we use a very simplified example of a pipeline.
 
 ```{r setup-pipeline}
 library(pipeflow)
@@ -49,12 +48,15 @@ pip <- pip_new("my-pip") |>
     pip_add("clean", \(x = ~load) x * 2, tags = c("io", "core")) |>
     pip_add("fit", \(x = ~clean) sum(x), tags = c("model", "core")) |>
     pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
-
-(pip_run(pip, lgr = NULL))
 ```
 
-We will use this meta information below to filter certain steps by
-topic and/or output type.
+As you see above, besides `step` and `fun`, `pip_add()` also allows to set
+tags. We will use these tags as meta information to filter certain steps by
+topic and/or output type. Let's do a first run before we move on.
+
+```{r}
+(pip_run(pip, lgr = NULL))
+```
 
 ## Creating views
 
@@ -165,7 +167,10 @@ v2
 Under the hood, a view is defined by a vector of row indices covered by the
 view (`NULL` for a "no view"). This vector is stored in the `view` meta
 field of the pipeline object, so in principle you can also manipulate
-the view directly by assigning to the meta field:
+the view directly by assigning to the meta field^[
+    Direct manipulation of the view usually is not needed and probably
+    mostly useful for debugging.
+].
 
 ```{r}
 pip[["view"]] # NULL — not a view

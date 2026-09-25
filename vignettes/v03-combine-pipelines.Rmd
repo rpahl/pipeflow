@@ -28,82 +28,34 @@ The possibility to combine pipelines basically allows to modularize the
 pipeline creation process. This is especially useful when you have a set of
 pipelines that are used in different contexts and you want to avoid code
 duplication^[
-    Note that code duplication is not bad per se. For example, it naturally
-    reduces entanglement and improves local readability. On the other hand,
-    there are certainly scenarios where code duplication should be avoided,
-    specifically if duplicated multiple times, or if the code is complex.
+    Note that code duplication is not bad per se and can even be
+    preferable, since it reduces entanglement and improves local
+    readability, or as Sandi Metz put it, "duplication is far cheaper than
+    the wrong abstraction".
 ].
 
 ### Two pipelines
 
-As a simple example, let's define one pipeline that is used for data
-preprocessing and one that does the modelling.
+Let's define one pipeline that is used for data preprocessing and one that
+does the modelling^[
+    The step functions in these pipelines are minimal to keep the focus
+    on the combine functionality.
+].
 
-Data preprocessing pipeline:
 ```{r define-prepocessing-pipeline}
 library(pipeflow)
 
-pip1 <- pip_new("preprocessing") |>
-    pip_add(
-        "data",
-        function(data = airquality) data
-    ) |>
-    pip_add(
-        "prep",
-        function(df = ~data) {
-            df[, "Temp.Celsius"] <- (df[, "Temp"] - 32) * 5 / 9
-            df
-        }
-    ) |>
-    pip_add(
-        "standardize",
-        function(data = ~prep,
-                 yVar = "Ozone") {
-            data[, yVar] <- scale(data[, yVar])
-            data
-        }
-    )
+pip1 <- pip_new("preprocess") |>
+    pip_add("data", \(x = 1:5) x) |>
+    pip_add("prep", \(x = ~data) x + 1) |>
+    pip_add("standardize", \(x = ~prep, scale = 2) x * scale)
 ```
 
-```{r}
-pip1
-```
-
-Modelling pipeline:
 ```{r define-modelling-pipeline}
-pip2 <- pip_new("modelling") |>
-    pip_add(
-        "data",
-        function(data = airquality) data
-    ) |>
-    pip_add(
-        "fit",
-        function(data = ~data,
-                 xVar = "Temp",
-                 yVar = "Ozone") {
-            lm(paste(yVar, "~", xVar), data = data)
-        }
-    ) |>
-    pip_add(
-        "plot",
-        function(model = ~fit,
-                 data = ~data,
-                 xVar = "Temp",
-                 yVar = "Ozone",
-                 title = "Linear model fit") {
-            require(ggplot2, quietly = TRUE)
-            coeffs <- coefficients(model)
-            ggplot(data) +
-                geom_point(aes(.data[[xVar]], .data[[yVar]])) +
-                geom_abline(intercept = coeffs[1], slope = coeffs[2]) +
-                labs(title = title)
-        }
-    )
-```
-
-
-```{r}
-pip2
+pip2 <- pip_new("model") |>
+    pip_add("data", \(x = 1:5) x) |>
+    pip_add("fit", \(x = ~data, k = 2, b = 0) x * k + b) |>
+    pip_add("predict", \(x = ~fit) paste0("pred: ", x))
 ```
 
 
@@ -118,12 +70,12 @@ pip
 ```
 
 Note that the `data` step of the second pipeline
-has been renamed to `data2`in both the `step` and the `depends` columns
+has been renamed to `data2` in both the `step` and the `depends` columns
 (see line 4 above). That is, when "rbinding" pipelines, {pipeflow}
 automatically ensures that all step names stay unique by renaming
 any duplicates accordingly.
 
-Now, as can be also seen from the graphical representation of the pipeline,
+As is also visible from the graphical representation of the pipeline,
 
 ```{r, eval = FALSE}
 library(visNetwork)
@@ -141,13 +93,14 @@ do.call(
 ```
 
 the two pipelines are not yet connected. To make sense of the combined
-pipeline, we want to use the output of the `standardize` step as the data
-parameter input in the `data2` step.
-To achieve this, we apply the `replace` function, which was introduced
-in the previous vignette [modify the pipeline](v02-modify-pipeline.html):
+pipeline, we want to use the output of the `standardize` step as the input of
+the `data2` step, which we can do by applying the `replace` function,
+which was introduced in the previous vignette
+[modify the pipeline](v02-modify-pipeline.html),
+as follows:
 
 ```{r}
-pip |> pip_replace("data2", function(data = ~standardize) data)
+pip |> pip_replace("data2", \(x = ~standardize) x)
 
 pip
 ```
@@ -172,7 +125,7 @@ which allows to rewrite the above command using a number (instead of the
 step name `standardize`) while having the same effect as above.
 
 ```{r}
-pip |> pip_replace("data2", function(data = ~ -1) data)
+pip |> pip_replace("data2", \(x = ~ -1) x)
 
 pip
 ```
@@ -184,22 +137,22 @@ as "go two steps back", and so on.
 
 ### Combined pipeline results
 
-Let's now run the combined pipeline and inspect the plot.
+Let's now run the combined pipeline and inspect the results of the final step.
 
 ```{r}
 pip_run(pip)
 ```
 
-```{r, fig.alt = "model-plot"}
-pip[["plot", "out"]]
+```{r}
+pip[["predict", "out"]]
 ```
 
-As we can see, the plot shows the linear model fit of the standardized data.
-We can now go ahead and for example change the x-variable of the model and rerun
-the pipeline.
+As we can see, the outputs of the preprocessing pipeline flow into the
+modelling pipeline. We can now go ahead and for example change the multiplier
+of the `fit` step and rerun the pipeline.
 
 ```{r}
-pip_set_params(pip, params = list(xVar = "Temp.Celsius"))
+pip_set_params(pip, params = list(k = 3))
 ```
 
 ```{r, echo = FALSE}
@@ -215,8 +168,8 @@ do.call(
 pip_run(pip)
 ```
 
-```{r, fig.alt = "model-plot"}
-pip[["plot", "out"]]
+```{r}
+pip[["predict", "out"]]
 ```
 
 Whether you combine them or not, in practice pipelines can get long quickly.
