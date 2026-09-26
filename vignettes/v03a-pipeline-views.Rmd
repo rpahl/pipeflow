@@ -1,5 +1,5 @@
 ---
-title: "Working with pipeline views"
+title: "Pipeline views"
 output:
   rmarkdown::html_vignette:
     toc: true
@@ -8,7 +8,7 @@ description: >
   How to filter pipelines with `pip_view()` and the `[` operator, compose
   views, and run only a subset of steps.
 vignette: >
-  %\VignetteIndexEntry{Working with pipeline views}
+  %\VignetteIndexEntry{Pipeline views}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -200,7 +200,7 @@ Afterwards, the original pipeline is up to date for the covered steps.
 Pipeline views are not only useful to inspect or run certain parts
 of the pipeline but also to filter and collect the final output of
 your analysis run. For more details on this see the next vignette
-[Collecting and grouping output](v04-collect-output.html).
+[Collect and group output](v04-collect-output.html).
 
 ```{r, include = FALSE}
 options(old)

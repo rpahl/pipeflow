@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Collecting and grouping output • pipeflow</title>
+<title>Collect and group output • pipeflow</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -16,10 +16,10 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
-<meta property="og:title" content="Collecting and grouping output">
-<meta name="description" content="Shows how to tag, filter, and collect pipeline output.
+<meta property="og:title" content="Collect and group output">
+<meta name="description" content="How to collect and group pipeline output.
 ">
-<meta property="og:description" content="Shows how to tag, filter, and collect pipeline output.
+<meta property="og:description" content="How to collect and group pipeline output.
 ">
 <meta property="og:image" content="https://github.com/rpahl/pipeflow/logo.png">
 </head>
@@ -59,10 +59,10 @@
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Get started</h6></li>
     <li><a class="dropdown-item" href="../articles/v01-get-started.html">Get started with pipeflow</a></li>
-    <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modifying existing pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v02a-pipeline-views.html">Working with pipeline views</a></li>
-    <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combining pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collecting and grouping output</a></li>
+    <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modify existing pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combine pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v03a-pipeline-views.html">Pipeline views</a></li>
+    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collect and group output</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
@@ -90,7 +90,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Collecting and grouping output</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Collect and group output</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/v04-collect-output.Rmd"><code>vignettes/v04-collect-output.Rmd</code></a></small>
@@ -99,229 +99,176 @@
 
     
     
-<p>Generally speaking, one should keep pipeline steps as simple as
-possible, basically following the principle <em>“one step, one
-task”</em>. While splitting up analysis steps into multiple functions
-naturally becomes hard to manage with a growing number of functions,
-with {pipeflow}, which manages all function and parameter dependencies
-for you, this feels rather easy<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt; The linearly organized set of functions as enforced by
-the pipeline design also helps.&lt;/p&gt;"><sup>1</sup></a>.</p>
-<p>Following this principle, most of the pipeline steps will carry
-intermediate results while only a few steps contain the final output we
-are interested in.</p>
-<p>This vignette shows how to conveniently tag, collect, and group those
-final outputs.</p>
+<p>{pipeflow} manages all functions and parameter dependencies for you,
+thereby enabling you to create a lot of pipeline steps without losing
+track<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt; The linear/sequential structure of a pipeline design
+also helps!&lt;/p&gt;"><sup>1</sup></a>.
+You therefore can (and should) basically follow the principle <em>“one
+step, one task”</em>, which on the other hand means that most steps will
+be helpers and only a few of them contain the final output we are
+interested in.</p>
+<p>This vignette shows how to conveniently collect and group those final
+outputs.</p>
 <div class="section level3">
-<h3 id="tagging-steps">Tagging steps<a class="anchor" aria-label="anchor" href="#tagging-steps"></a>
+<h3 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a>
 </h3>
-<p>Tags let you label steps with meaningful keywords so you can later
-filter the pipeline by topic, stage, or output type. Tags can be set
-during pipeline creation or later using <code>pip_set_tags()</code>.</p>
+<p>Again, to keep the focus on the displayed functionality, the step
+functions are kept very basic.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpahl.github.io/pipeflow/" class="external-link">pipeflow</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"my-pip"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"data"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="va">airquality</span><span class="op">)</span> <span class="va">data</span></span>
-<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"data_prep"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">df</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="va">df</span><span class="op">[</span>, <span class="st">"Temp.Celsius"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="va">df</span><span class="op">[</span>, <span class="st">"Temp"</span><span class="op">]</span> <span class="op">-</span> <span class="fl">32</span><span class="op">)</span> <span class="op">*</span> <span class="fl">5</span> <span class="op">/</span> <span class="fl">9</span></span>
-<span>            <span class="va">df</span></span>
-<span>        <span class="op">}</span>,</span>
-<span>        tags <span class="op">=</span> <span class="st">"data"</span> <span class="co"># &lt;-- set 'data' tag</span></span>
-<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"data_summary"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data_prep</span>,</span>
-<span>                 <span class="va">xVar</span> <span class="op">=</span> <span class="st">"Temp.Celsius"</span>,</span>
-<span>                 <span class="va">yVar</span> <span class="op">=</span> <span class="st">"Ozone"</span><span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/format.html" class="external-link">format</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">data</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">xVar</span>, <span class="va">yVar</span><span class="op">)</span><span class="op">]</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>                <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span>row.names <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span></span>
-<span>        <span class="op">}</span>,</span>
-<span>        tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data"</span>, <span class="st">"summary"</span><span class="op">)</span> <span class="co"># &lt;-- set 'data' and 'summary' tags</span></span>
-<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"data_plot"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data_prep</span>,</span>
-<span>                 <span class="va">xVar</span> <span class="op">=</span> <span class="st">"Temp.Celsius"</span>,</span>
-<span>                 <span class="va">yVar</span> <span class="op">=</span> <span class="st">"Ozone"</span><span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>            <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span> <span class="op">+</span></span>
-<span>                <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span><span class="va">.data</span><span class="op">[[</span><span class="va">xVar</span><span class="op">]</span><span class="op">]</span>, <span class="va">.data</span><span class="op">[[</span><span class="va">yVar</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>                <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Data"</span><span class="op">)</span></span>
-<span>        <span class="op">}</span>,</span>
-<span>        tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data"</span>, <span class="st">"plot"</span><span class="op">)</span> <span class="co"># &lt;-- set 'data' and 'plot' tags</span></span>
-<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"model_fit"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data_prep</span>,</span>
-<span>                 <span class="va">xVar</span> <span class="op">=</span> <span class="st">"Temp.Celsius"</span>,</span>
-<span>                 <span class="va">yVar</span> <span class="op">=</span> <span class="st">"Ozone"</span><span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">yVar</span>, <span class="st">"~"</span>, <span class="va">xVar</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
-<span>        <span class="op">}</span>,</span>
-<span>        tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"fit"</span><span class="op">)</span> <span class="co"># &lt;-- set 'model' and 'fit' tags</span></span>
-<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"model_summary"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">fit</span> <span class="op">=</span> <span class="op">~</span><span class="va">model_fit</span><span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>                <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>                <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>        <span class="op">}</span>,</span>
-<span>        tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"summary"</span><span class="op">)</span> <span class="co"># &lt;-- set 'model' and 'summary' tags</span></span>
-<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"model_plot"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">model</span> <span class="op">=</span> <span class="op">~</span><span class="va">model_fit</span>,</span>
-<span>                 <span class="va">data_plot</span> <span class="op">=</span> <span class="op">~</span><span class="va">data_plot</span>,</span>
-<span>                 <span class="va">xVar</span> <span class="op">=</span> <span class="st">"Temp.Celsius"</span>,</span>
-<span>                 <span class="va">yVar</span> <span class="op">=</span> <span class="st">"Ozone"</span><span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="va">coeffs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span>
-<span>            <span class="va">data_plot</span> <span class="op">+</span></span>
-<span>                <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_abline</a></span><span class="op">(</span>intercept <span class="op">=</span> <span class="va">coeffs</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, slope <span class="op">=</span> <span class="va">coeffs</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span> <span class="op">+</span></span>
-<span>                <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Linear model fit"</span><span class="op">)</span></span>
-<span>        <span class="op">}</span>,</span>
-<span>        tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"plot"</span><span class="op">)</span> <span class="co"># &lt;-- set 'model' and 'plot' tags</span></span>
-<span>    <span class="op">)</span></span></code></pre></div>
-<p>We used two families of tags:
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"data"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span> <span class="va">x</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"prep"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="fl">2</span>, tags <span class="op">=</span> <span class="st">"data"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"data_summary"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">prep</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data"</span>, <span class="st">"summary"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"model_fit"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">prep</span>, <span class="va">k</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="va">k</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"fit"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"model_summary"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">model_fit</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"summary"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>As introduced in the <a href="v03a-pipeline-views.html">previous
+vignette</a>, we use tags to label steps, specifically,
 <code>"data"</code>/<code>"model"</code> to distinguish the topic, and
-<code>"summary"</code>/<code>"plot"</code>/<code>"fit"</code> for the
-output type. Whenever tags are defined, they are shown in the pipeline
-overview (see rightmost column):</p>
+<code>"summary"</code>/<code>"fit"</code> for the output type. Let’s
+briefly run the pipeline and see what’s in the <code>out</code>
+column.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow&gt; my-pip (7 steps)</span></span>
+<code class="sourceCode R"><span><span class="op">(</span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># &lt;pipeflow&gt; my-pip (5 steps)</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co">#             step                    params             depends state          tags</span></span>
-<span><span class="co"># 1:          data                      data                       new              </span></span>
-<span><span class="co"># 2:     data_prep                        df                data   new          data</span></span>
-<span><span class="co"># 3:  data_summary            data,xVar,yVar           data_prep   new  data,summary</span></span>
-<span><span class="co"># 4:     data_plot            data,xVar,yVar           data_prep   new     data,plot</span></span>
-<span><span class="co"># 5:     model_fit            data,xVar,yVar           data_prep   new     model,fit</span></span>
-<span><span class="co"># 6: model_summary                       fit           model_fit   new model,summary</span></span>
-<span><span class="co"># 7:    model_plot model,data_plot,xVar,yVar model_fit,data_plot   new    model,plot</span></span>
+<span><span class="co">#             step params   depends state            out          tags</span></span>
+<span><span class="co"># 1:          data      x            done      1,2,3,4,5              </span></span>
+<span><span class="co"># 2:          prep      x      data  done  2, 4, 6, 8,10          data</span></span>
+<span><span class="co"># 3:  data_summary      x      prep  done           2,10  data,summary</span></span>
+<span><span class="co"># 4:     model_fit    x,k      prep  done  4, 8,12,16,20     model,fit</span></span>
+<span><span class="co"># 5: model_summary      x model_fit  done             60 model,summary</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: never</span></span></code></pre></div>
-<p>Before showing how to make use of the tags, let’s run the pipeline
-and inspect the output individually as we did in the previous
-vignettes.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-22 09:20:34.098 UTC]: Starting run of pipeflow 'my-pip'</span></span>
-<span><span class="co"># info [2026-09-22 09:20:34.098 UTC]: Step 1/7 data</span></span>
-<span><span class="co"># info [2026-09-22 09:20:34.099 UTC]: Step 2/7 data_prep</span></span>
-<span><span class="co"># info [2026-09-22 09:20:34.101 UTC]: Step 3/7 data_summary</span></span>
-<span><span class="co"># info [2026-09-22 09:20:34.103 UTC]: Step 4/7 data_plot</span></span>
-<span><span class="co"># info [2026-09-22 09:20:34.637 UTC]: Step 5/7 model_fit</span></span>
-<span><span class="co"># info [2026-09-22 09:20:34.640 UTC]: Step 6/7 model_summary</span></span>
-<span><span class="co"># info [2026-09-22 09:20:34.642 UTC]: Step 7/7 model_plot</span></span>
-<span><span class="co"># info [2026-09-22 09:20:34.648 UTC]: Finished run of pipeflow 'my-pip'</span></span>
-<span></span>
-<span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow&gt; my-pip (7 steps)</span></span>
-<span><span class="co"># ---------------------------</span></span>
-<span><span class="co">#             step                    params             depends state                 out</span></span>
-<span><span class="co"># 1:          data                      data                      done &lt;data.frame[153x6]&gt;</span></span>
-<span><span class="co"># 2:     data_prep                        df                data  done &lt;data.frame[153x7]&gt;</span></span>
-<span><span class="co"># 3:  data_summary            data,xVar,yVar           data_prep  done   &lt;data.frame[7x2]&gt;</span></span>
-<span><span class="co"># 4:     data_plot            data,xVar,yVar           data_prep  done   &lt;ggplot2::ggplot&gt;</span></span>
-<span><span class="co"># 5:     model_fit            data,xVar,yVar           data_prep  done            &lt;lm[13]&gt;</span></span>
-<span><span class="co"># 6: model_summary                       fit           model_fit  done   &lt;data.frame[2x4]&gt;</span></span>
-<span><span class="co"># 7:    model_plot model,data_plot,xVar,yVar model_fit,data_plot  done   &lt;ggplot2::ggplot&gt;</span></span>
-<span><span class="co">#             tags</span></span>
-<span><span class="co"># 1:              </span></span>
-<span><span class="co"># 2:          data</span></span>
-<span><span class="co"># 3:  data,summary</span></span>
-<span><span class="co"># 4:     data,plot</span></span>
-<span><span class="co"># 5:     model,fit</span></span>
-<span><span class="co"># 6: model,summary</span></span>
-<span><span class="co"># 7:    model,plot</span></span>
-<span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:20:34</span></span></code></pre></div>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"data_plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
-<p><img src="v04-collect-output_files/figure-html/unnamed-chunk-3-1.png" class="r-plt" alt="" width="700"></p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"model_plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
-<p><img src="v04-collect-output_files/figure-html/unnamed-chunk-4-1.png" class="r-plt" alt="" width="700"></p>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-26 10:12:33</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="flat-output-collection">Flat output collection<a class="anchor" aria-label="anchor" href="#flat-output-collection"></a>
 </h3>
-<p><code><a href="../reference/pip_collect.html">pip_collect()</a></code> returns all step outputs as a flat named
-list<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt; Below, we only show the names of the list elements, to
-keep the vignette concise.&lt;/p&gt;"><sup>2</sup></a>.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">out</span><span class="op">)</span></span>
-<span><span class="co"># [1] "data"          "data_prep"     "data_summary"  "data_plot"     "model_fit"     "model_summary"</span></span>
-<span><span class="co"># [7] "model_plot"</span></span></code></pre></div>
+<p>To collect output from a pipeline we use <code><a href="../reference/pip_collect.html">pip_collect()</a></code>,
+which by default returns all step outputs as a flat named list.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
+<span><span class="co"># $data</span></span>
+<span><span class="co"># [1] 1 2 3 4 5</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $prep</span></span>
+<span><span class="co"># [1]  2  4  6  8 10</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $data_summary</span></span>
+<span><span class="co"># [1]  2 10</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $model_fit</span></span>
+<span><span class="co"># [1]  4  8 12 16 20</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $model_summary</span></span>
+<span><span class="co"># [1] 60</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="filtered-output-using-tags">Filtered output using tags<a class="anchor" aria-label="anchor" href="#filtered-output-using-tags"></a>
 </h3>
-<p>To collect only the output of steps with a specific tag, we use
-<code><a href="../reference/pip_view.html">pip_view()</a></code>, which is {pipeflow}’s general-purpose function
-for filtering pipelines, and then call <code><a href="../reference/pip_collect.html">pip_collect()</a></code> on the
-filtered pipeline view. For example, to collect only the plots, we can
-filter by the <code>plot</code> tag.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">pip</span>, tags <span class="op">=</span> <span class="st">"plot"</span><span class="op">)</span> <span class="co"># or pip[tags %like% "plot"]</span></span>
-<span><span class="co"># &lt;pipeflow_view&gt; my-pip view (2 of 7 steps)</span></span>
-<span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co">#          step                    params             depends state               out       tags</span></span>
-<span><span class="co"># 1:  data_plot            data,xVar,yVar           data_prep  done &lt;ggplot2::ggplot&gt;  data,plot</span></span>
-<span><span class="co"># 2: model_plot model,data_plot,xVar,yVar model_fit,data_plot  done &lt;ggplot2::ggplot&gt; model,plot</span></span>
-<span><span class="co"># ------------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-22 11:20:34</span></span></code></pre></div>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span>tags <span class="op">=</span> <span class="st">"plot"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu">gridExtra</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/gridExtra/man/arrangeGrob.html" class="external-link">grid.arrange</a></span><span class="op">(</span>grobs <span class="op">=</span> <span class="va">_</span>, nrow <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
-<p><img src="v04-collect-output_files/figure-html/grouped-plots-1.png" class="r-plt" alt="" width="700"></p>
+<p>To collect only the output of steps with a specific tag, we filter
+the pipeline with <code><a href="../reference/pip_view.html">pip_view()</a></code> and then call
+<code><a href="../reference/pip_collect.html">pip_collect()</a></code> on the resulting view. For example, to
+collect just the summaries or model output, we filter by their
+respective tags:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">pip</span>, tags <span class="op">=</span> <span class="st">"summary"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="co"># or pip[tags %like% "summary"]</span></span>
+<span>    <span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># $data_summary</span></span>
+<span><span class="co"># [1]  2 10</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $model_summary</span></span>
+<span><span class="co"># [1] 60</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">pip</span>, tags <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># $model_fit</span></span>
+<span><span class="co"># [1]  4  8 12 16 20</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $model_summary</span></span>
+<span><span class="co"># [1] 60</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="grouped-output-via-views">Grouped output via views<a class="anchor" aria-label="anchor" href="#grouped-output-via-views"></a>
+<h3 id="grouped-output">Grouped output<a class="anchor" aria-label="anchor" href="#grouped-output"></a>
 </h3>
-<p>Grouped output could be achieved by composing <code><a href="../reference/pip_view.html">pip_view()</a></code>
-with <code><a href="../reference/pip_collect.html">pip_collect()</a></code>. For example, to collect outputs grouped
-by topic (<code>"data"</code> and <code>"model"</code>):</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">grouped</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    data  <span class="op">=</span> <span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">pip</span>, tags <span class="op">=</span> <span class="st">"data"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>    model <span class="op">=</span> <span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">pip</span>, tags <span class="op">=</span> <span class="st">"model"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="op">)</span></span>
+<p>Often the output often different groups will be further combined.
+Let’s add some more tags to represent section titles of a statistical
+report.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span><span class="op">[</span><span class="va">step</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data"</span>, <span class="st">"prep"</span><span class="op">)</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_tag.html">pip_tag</a></span><span class="op">(</span><span class="st">"Introduction"</span><span class="op">)</span></span>
+<span><span class="va">pip</span><span class="op">[</span><span class="va">step</span> <span class="op">==</span> <span class="st">"model_fit"</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_tag.html">pip_tag</a></span><span class="op">(</span><span class="st">"Model"</span><span class="op">)</span></span>
+<span><span class="va">pip</span><span class="op">[</span><span class="va">step</span> <span class="op"><a href="../reference/pipeflow-operators.html">%like%</a></span> <span class="st">"summary"</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_tag.html">pip_tag</a></span><span class="op">(</span><span class="st">"Summary"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">pip</span></span>
+<span><span class="co"># &lt;pipeflow&gt; my-pip (5 steps)</span></span>
+<span><span class="co"># ---------------------------</span></span>
+<span><span class="co">#             step params   depends state            out                  tags</span></span>
+<span><span class="co"># 1:          data      x            done      1,2,3,4,5          Introduction</span></span>
+<span><span class="co"># 2:          prep      x      data  done  2, 4, 6, 8,10     data,Introduction</span></span>
+<span><span class="co"># 3:  data_summary      x      prep  done           2,10  data,summary,Summary</span></span>
+<span><span class="co"># 4:     model_fit    x,k      prep  done  4, 8,12,16,20       model,fit,Model</span></span>
+<span><span class="co"># 5: model_summary      x model_fit  done             60 model,summary,Summary</span></span>
+<span><span class="co"># ---------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-26 10:12:33</span></span></code></pre></div>
+<p>Naturally, we then would group the output as follows:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">report</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    Introduction <span class="op">=</span> <span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">pip</span>, tags <span class="op">=</span> <span class="st">"Introduction"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>    Model <span class="op">=</span> <span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">pip</span>, tags <span class="op">=</span> <span class="st">"Model"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>    Summary <span class="op">=</span> <span class="fu"><a href="../reference/pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">pip</span>, tags <span class="op">=</span> <span class="st">"Summary"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">grouped</span><span class="op">[[</span><span class="st">"data"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co"># [1] "data_prep"    "data_summary" "data_plot"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">grouped</span><span class="op">[[</span><span class="st">"model"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co"># [1] "model_fit"     "model_summary" "model_plot"</span></span></code></pre></div>
-<p>However, since this scenario is so common, since version
-<code>0.4.0</code> the <code>pip_collect</code> function natively
-supports grouping via a <code>by</code> parameter, which allows to
-simplify the above call as follows.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">grouped</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="va">pip</span>, by <span class="op">=</span> <span class="st">"tags"</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data"</span>, <span class="st">"model"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">report</span><span class="op">)</span></span>
+<span><span class="co"># List of 3</span></span>
+<span><span class="co">#  $ Introduction:List of 2</span></span>
+<span><span class="co">#   ..$ data: int [1:5] 1 2 3 4 5</span></span>
+<span><span class="co">#   ..$ prep: num [1:5] 2 4 6 8 10</span></span>
+<span><span class="co">#  $ Model       :List of 1</span></span>
+<span><span class="co">#   ..$ model_fit: num [1:5] 4 8 12 16 20</span></span>
+<span><span class="co">#  $ Summary     :List of 2</span></span>
+<span><span class="co">#   ..$ data_summary : num [1:2] 2 10</span></span>
+<span><span class="co">#   ..$ model_summary: num 60</span></span></code></pre></div>
+<p>As this use case is so common, since version <code>0.4.0</code> the
+<code>pip_collect</code> function natively supports grouping via a
+<code>by</code> parameter, which allows to simplify the above call as
+follows:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">byTags</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="va">pip</span>, by <span class="op">=</span> <span class="st">"tags"</span><span class="op">)</span></span>
+<span><span class="va">report2</span> <span class="op">&lt;-</span> <span class="va">byTags</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Introduction"</span>, <span class="st">"Model"</span>, <span class="st">"Summary"</span><span class="op">)</span><span class="op">]</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">grouped</span><span class="op">[[</span><span class="st">"data"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co"># [1] "data_prep"    "data_summary" "data_plot"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">grouped</span><span class="op">[[</span><span class="st">"model"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co"># [1] "model_fit"     "model_summary" "model_plot"</span></span></code></pre></div>
-<p>In addition, you can now also return the results as a compact
-table.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">report2</span><span class="op">)</span></span>
+<span><span class="co"># List of 3</span></span>
+<span><span class="co">#  $ Introduction:List of 2</span></span>
+<span><span class="co">#   ..$ data: int [1:5] 1 2 3 4 5</span></span>
+<span><span class="co">#   ..$ prep: num [1:5] 2 4 6 8 10</span></span>
+<span><span class="co">#  $ Model       :List of 1</span></span>
+<span><span class="co">#   ..$ model_fit: num [1:5] 4 8 12 16 20</span></span>
+<span><span class="co">#  $ Summary     :List of 2</span></span>
+<span><span class="co">#   ..$ data_summary : num [1:2] 2 10</span></span>
+<span><span class="co">#   ..$ model_summary: num 60</span></span></code></pre></div>
+<p>You now also can return the collected results as a compact table
+…</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="va">pip</span>, by <span class="op">=</span> <span class="st">"tags"</span>, as.table <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="co">#       tags       out</span></span>
-<span><span class="co">#     &lt;char&gt;    &lt;list&gt;</span></span>
-<span><span class="co"># 1:    data &lt;list[3]&gt;</span></span>
-<span><span class="co"># 2: summary &lt;list[2]&gt;</span></span>
-<span><span class="co"># 3:    plot &lt;list[2]&gt;</span></span>
-<span><span class="co"># 4:   model &lt;list[3]&gt;</span></span>
-<span><span class="co"># 5:     fit &lt;list[1]&gt;</span></span></code></pre></div>
+<span><span class="co">#            tags       out</span></span>
+<span><span class="co">#          &lt;char&gt;    &lt;list&gt;</span></span>
+<span><span class="co"># 1: Introduction &lt;list[2]&gt;</span></span>
+<span><span class="co"># 2:         data &lt;list[2]&gt;</span></span>
+<span><span class="co"># 3:      summary &lt;list[2]&gt;</span></span>
+<span><span class="co"># 4:      Summary &lt;list[2]&gt;</span></span>
+<span><span class="co"># 5:        model &lt;list[2]&gt;</span></span>
+<span><span class="co"># 6:          fit &lt;list[1]&gt;</span></span>
+<span><span class="co"># 7:        Model &lt;list[1]&gt;</span></span></code></pre></div>
+<p>… and of course <code>by</code> can be based on other variables, for
+example, by all the dependencies.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="va">pip</span>, by <span class="op">=</span> <span class="st">"depends"</span>, as.table <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="co">#      depends       out</span></span>
+<span><span class="co">#       &lt;char&gt;    &lt;list&gt;</span></span>
+<span><span class="co"># 1:      data &lt;list[1]&gt;</span></span>
+<span><span class="co"># 2:      prep &lt;list[2]&gt;</span></span>
+<span><span class="co"># 3: model_fit &lt;list[1]&gt;</span></span></code></pre></div>
 <p>For more details see <code><a href="../reference/pip_collect.html">?pip_collect</a></code>.</p>
 </div>
 

@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Working with pipeline views • pipeflow</title>
+<title>Pipeline views • pipeflow</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -16,7 +16,7 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
-<meta property="og:title" content="Working with pipeline views">
+<meta property="og:title" content="Pipeline views">
 <meta name="description" content="How to filter pipelines with `pip_view()` and the `[` operator, compose views, and run only a subset of steps.
 ">
 <meta property="og:description" content="How to filter pipelines with `pip_view()` and the `[` operator, compose views, and run only a subset of steps.
@@ -59,14 +59,14 @@
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Get started</h6></li>
     <li><a class="dropdown-item" href="../articles/v01-get-started.html">Get started with pipeflow</a></li>
-    <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modifying existing pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combining pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collecting and grouping output</a></li>
+    <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modify existing pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combine pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collect and group output</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
-    <li><a class="dropdown-item" href="../articles/v02a-pipeline-views.html">Working with pipeline views</a></li>
+    <li><a class="dropdown-item" href="../articles/v02a-pipeline-views.html">Pipeline views</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
     <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
@@ -90,15 +90,15 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Working with pipeline views</h1>
-            
-      
+      <img src="../logo.png" class="logo" alt=""><h1>Pipeline views</h1>
+
+
       <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/v02a-pipeline-views.Rmd"><code>vignettes/v02a-pipeline-views.Rmd</code></a></small>
       <div class="d-none name"><code>v02a-pipeline-views.Rmd</code></div>
     </div>
 
-    
-    
+
+
 <p>Pipelines can get long, and often you want to focus on a subset of
 steps: a topic, a stage, or the steps that produce the outputs you care
 about. <em>Views</em> are {pipeflow}’s way of working on a subset of

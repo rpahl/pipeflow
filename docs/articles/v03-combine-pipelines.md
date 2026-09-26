@@ -1,4 +1,4 @@
-# Combining pipelines
+# Combine pipelines
 
 The possibility to combine pipelines basically allows to modularize the
 pipeline creation process. This is especially useful when you have a set

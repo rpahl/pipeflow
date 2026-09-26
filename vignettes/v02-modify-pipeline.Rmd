@@ -1,13 +1,13 @@
 ---
-title: "Modifying existing pipelines"
+title: "Modify existing pipelines"
 output:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 4
 description: >
-  Shows how to insert, replace, and remove steps in a pipeline.
+  How to insert, replace, and remove steps in a pipeline.
 vignette: >
-  %\VignetteIndexEntry{Modifying existing pipelines}
+  %\VignetteIndexEntry{Modify existing pipelines}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -144,8 +144,8 @@ a fixed y-variable in the model, let's pass it as a parameter.
 pip |> pip_replace(
     "fit",
     function(data = ~standardize, # <- changed data reference
-        xVar = "Temp.Celsius",
-        yVar = "Ozone" # <- new y-variable
+             xVar = "Temp.Celsius",
+             yVar = "Ozone" # <- new y-variable
     ) {
         lm(paste(yVar, "~", xVar), data = data)
     }
@@ -241,7 +241,7 @@ pip
 Replacing steps in a pipeline as shown in this vignette will allow to re-use existing
 pipelines and adapt them programmatically to new requirements.
 Another way of re-using pipelines is to combine them, which is shown in the
-[Combining pipelines](v03-combine-pipelines.html) vignette.
+[Combine pipelines](v03-combine-pipelines.html) vignette.
 
 ```{r, include = FALSE}
 options(old)

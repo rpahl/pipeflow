@@ -1,4 +1,4 @@
-# Modifying existing pipelines
+# Modify existing pipelines
 
 ### Existing pipeline
 

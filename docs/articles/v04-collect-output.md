@@ -1,4 +1,4 @@
-# Collecting and grouping output
+# Collect and group output
 
 Generally speaking, one should keep pipeline steps as simple as
 possible, basically following the principle *“one step, one task”*.

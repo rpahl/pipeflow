@@ -1,13 +1,13 @@
 ---
-title: "Combining pipelines"
+title: "Combine pipelines"
 output:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 4
 description: >
-  Shows how to combine different pipelines to a single pipeline.
+  How to combine different pipelines to a single pipeline.
 vignette: >
-  %\VignetteIndexEntry{Combining pipelines}
+  %\VignetteIndexEntry{Combine pipelines}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -175,7 +175,7 @@ pip[["predict", "out"]]
 Whether you combine them or not, in practice pipelines can get long quickly.
 The next vignette shows how you can easily focus on certain parts of your
 entire analysis workflow by
-[Working with pipeline views](v03a-pipeline-views.html).
+[Pipeline views](v03a-pipeline-views.html).
 
 ```{r, include = FALSE}
 options(old)

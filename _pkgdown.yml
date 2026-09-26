@@ -109,13 +109,13 @@ navbar:
       - text: "Get started"
       - text: "Get started with pipeflow"
         href: articles/v01-get-started.html
-      - text: "Modifying existing pipelines"
+      - text: "Modify existing pipelines"
         href: articles/v02-modify-pipeline.html
-      - text: "Combining pipelines"
+      - text: "Combine pipelines"
         href: articles/v03-combine-pipelines.html
-      - text: "Working with pipeline views"
+      - text: "Pipeline views"
         href: articles/v03a-pipeline-views.html
-      - text: "Collecting and grouping output"
+      - text: "Collect and group output"
         href: articles/v04-collect-output.html
       - text: ----
       - text: "Advanced"

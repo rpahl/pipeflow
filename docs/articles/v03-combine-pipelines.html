@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Combining pipelines • pipeflow</title>
+<title>Combine pipelines • pipeflow</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -16,10 +16,10 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
-<meta property="og:title" content="Combining pipelines">
-<meta name="description" content="Shows how to combine different pipelines to a single pipeline.
+<meta property="og:title" content="Combine pipelines">
+<meta name="description" content="How to combine different pipelines to a single pipeline.
 ">
-<meta property="og:description" content="Shows how to combine different pipelines to a single pipeline.
+<meta property="og:description" content="How to combine different pipelines to a single pipeline.
 ">
 <meta property="og:image" content="https://github.com/rpahl/pipeflow/logo.png">
 </head>
@@ -59,10 +59,10 @@
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Get started</h6></li>
     <li><a class="dropdown-item" href="../articles/v01-get-started.html">Get started with pipeflow</a></li>
-    <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modifying existing pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combining pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v03a-pipeline-views.html">Working with pipeline views</a></li>
-    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collecting and grouping output</a></li>
+    <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modify existing pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combine pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v03a-pipeline-views.html">Pipeline views</a></li>
+    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collect and group output</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
@@ -90,7 +90,7 @@
 <script src="v03-combine-pipelines_files/htmlwidgets-1.6.4/htmlwidgets.js"></script><link href="v03-combine-pipelines_files/vis-9.1.0/vis-network.min.css" rel="stylesheet">
 <script src="v03-combine-pipelines_files/vis-9.1.0/vis-network.min.js"></script><script src="v03-combine-pipelines_files/visNetwork-binding-2.1.4/visNetwork.js"></script><div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Combining pipelines</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Combine pipelines</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/v03-combine-pipelines.Rmd"><code>vignettes/v03-combine-pipelines.Rmd</code></a></small>
@@ -217,14 +217,14 @@ on.</p>
 final step.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.630 UTC]: Starting run of pipeflow 'preprocess-model'</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.630 UTC]: Step 1/6 data</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.631 UTC]: Step 2/6 prep</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.632 UTC]: Step 3/6 standardize</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.633 UTC]: Step 4/6 data2</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.634 UTC]: Step 5/6 fit</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.634 UTC]: Step 6/6 predict</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.635 UTC]: Finished run of pipeflow 'preprocess-model'</span></span></code></pre></div>
+<span><span class="co"># info [2026-09-25 12:29:13.499 UTC]: Starting run of pipeflow 'preprocess-model'</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.499 UTC]: Step 1/6 data</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.500 UTC]: Step 2/6 prep</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.501 UTC]: Step 3/6 standardize</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.502 UTC]: Step 4/6 data2</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.503 UTC]: Step 5/6 fit</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.504 UTC]: Step 6/6 predict</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.504 UTC]: Finished run of pipeflow 'preprocess-model'</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"predict"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co"># [1] "pred: 8"  "pred: 12" "pred: 16" "pred: 20" "pred: 24"</span></span></code></pre></div>
@@ -236,20 +236,20 @@ multiplier of the <code>fit</code> step and rerun the pipeline.</p>
 <div id="htmlwidget-36aa3d2a04d42bbc2145" style="width:700px;height:100px;" class="visNetwork html-widget"></div>
 <script type="application/json" data-for="htmlwidget-36aa3d2a04d42bbc2145">{"x":{"nodes":{"id":[0,1,2,3,4,5],"label":["data","prep","standardize","data2","fit","predict"],"shape":["hexagon","hexagon","hexagon","hexagon","hexagon","hexagon"],"color":["#87ff6fff","#87ff6fff","#87ff6fff","#87ff6fff","#ffa040ff","#ffa040ff"]},"edges":{"from":[0,1,2,3,4],"to":[1,2,3,4,5],"arrows":["to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR","sortMethod":"directed"}}},"groups":null,"width":700,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.854 UTC]: Starting run of pipeflow 'preprocess-model'</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.854 UTC]: Step 1/6 data - skipping done step</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.854 UTC]: Step 2/6 prep - skipping done step</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.854 UTC]: Step 3/6 standardize - skipping done step</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.854 UTC]: Step 4/6 data2 - skipping done step</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.854 UTC]: Step 5/6 fit</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.855 UTC]: Step 6/6 predict</span></span>
-<span><span class="co"># info [2026-09-25 07:01:31.856 UTC]: Finished run of pipeflow 'preprocess-model'</span></span></code></pre></div>
+<span><span class="co"># info [2026-09-25 12:29:13.724 UTC]: Starting run of pipeflow 'preprocess-model'</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.724 UTC]: Step 1/6 data - skipping done step</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.724 UTC]: Step 2/6 prep - skipping done step</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.724 UTC]: Step 3/6 standardize - skipping done step</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.724 UTC]: Step 4/6 data2 - skipping done step</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.724 UTC]: Step 5/6 fit</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.725 UTC]: Step 6/6 predict</span></span>
+<span><span class="co"># info [2026-09-25 12:29:13.726 UTC]: Finished run of pipeflow 'preprocess-model'</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"predict"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co"># [1] "pred: 12" "pred: 18" "pred: 24" "pred: 30" "pred: 36"</span></span></code></pre></div>
 <p>Whether you combine them or not, in practice pipelines can get long
 quickly. The next vignette shows how you can easily focus on certain
-parts of your entire analysis workflow by <a href="v03a-pipeline-views.html">Working with pipeline views</a>.</p>
+parts of your entire analysis workflow by <a href="v03a-pipeline-views.html">Pipeline views</a>.</p>
 </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
