@@ -45,10 +45,11 @@ overview of your project.
 - All parameters managed in one place
 - Pipeline verified at definition time
 - Filter pipeline steps via views
-  ![](https://img.shields.io/badge/-new-orange)
 - Branch and merge pipeline steps
-  ![](https://img.shields.io/badge/-new-orange)
 - Fast dependency resolution (C++-powered DAG)
+- Subset pipelines with data.table-style `[` filters
+  ![](https://img.shields.io/badge/-new-orange)
+- Embed reusable workflows in steps (nested pipelines)
   ![](https://img.shields.io/badge/-new-orange)
 
 ### Installation
@@ -82,11 +83,11 @@ p
 # <ready> last run: never
 
 pip_run(p)
-# info [2026-09-27 11:37:02.691 UTC]: Starting run of pipeflow 'demo'
-# info [2026-09-27 11:37:02.691 UTC]: Step 1/3 numbers
-# info [2026-09-27 11:37:02.693 UTC]: Step 2/3 squared
-# info [2026-09-27 11:37:02.694 UTC]: Step 3/3 total
-# info [2026-09-27 11:37:02.695 UTC]: Finished run of pipeflow 'demo'
+# info [2026-09-27 14:59:46.748 UTC]: Starting run of pipeflow 'demo'
+# info [2026-09-27 14:59:46.748 UTC]: Step 1/3 numbers
+# info [2026-09-27 14:59:46.750 UTC]: Step 2/3 squared
+# info [2026-09-27 14:59:46.752 UTC]: Step 3/3 total
+# info [2026-09-27 14:59:46.753 UTC]: Finished run of pipeflow 'demo'
 
 pip_collect(p)
 # $numbers
@@ -109,18 +110,20 @@ below:
 - [Modify existing
   pipelines](https://rpahl.github.io/pipeflow/articles/v02-modify-pipeline.html)
 - [Combine
-  pipelines](https://rpahl.github.io/pipeflow/articles/v03-combine-pipelines.html)
+  pipelines](https://rpahl.github.io/pipeflow/articles/v03a-combine-pipelines.html)
+- [Pipeline
+  views](https://rpahl.github.io/pipeflow/articles/v03b-pipeline-views.html)
 - [Collect and group
   output](https://rpahl.github.io/pipeflow/articles/v04-collect-output.html)
 
 ### Advanced workflows
 
 - [Split, map, and
-  reduce](https://rpahl.github.io/pipeflow/articles/v05-split-map-reduce.html)
+  reduce](https://rpahl.github.io/pipeflow/articles/v05a-split-map-reduce.html)
 - [Nested
-  pipelines](https://rpahl.github.io/pipeflow/articles/v05a-nested-pipeline.html)
-- [Recursive
-  self-modification](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
+  pipelines](https://rpahl.github.io/pipeflow/articles/v05b-nested-pipeline.html)
+- [Self-modifying
+  pipelines](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
 
 ### Benchmarks
 

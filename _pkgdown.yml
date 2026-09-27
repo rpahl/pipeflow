@@ -47,7 +47,7 @@ reference:
   - pip_clone
 
 - title: "Running pipelines"
-  desc: Execute pipelines and control runs dynamically from within steps.
+  desc: Execute pipeline steps or views.
   contents:
   - pip_run
 

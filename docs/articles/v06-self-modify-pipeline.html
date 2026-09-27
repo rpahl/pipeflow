@@ -121,7 +121,7 @@ pipeline object.</p>
 <span><span class="co"># List of 3</span></span>
 <span><span class="co">#  $ name  : chr "my-pipeline"</span></span>
 <span><span class="co">#  $ view  : NULL</span></span>
-<span><span class="co">#  $ pipenv:&lt;environment: 0x55bced479228&gt;</span></span></code></pre></div>
+<span><span class="co">#  $ pipenv:&lt;environment: 0x5565409ca5a8&gt;</span></span></code></pre></div>
 <p>There is the <code>name</code> of the pipeline, which is just a
 character string, as well as a <code>view</code> entry, which is
 undefined initially.</p>
@@ -142,10 +142,10 @@ row per step:</p>
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="va">pipenv</span><span class="op">$</span><span class="va">data</span> <span class="co"># or pip_data(pip)</span></span>
 <span><span class="co">#      step           fun    params    out  state   tags locked   exec                time depends unbound nodeId</span></span>
 <span><span class="co">#    &lt;char&gt;        &lt;list&gt;    &lt;list&gt; &lt;list&gt; &lt;char&gt; &lt;list&gt; &lt;lgcl&gt; &lt;char&gt;              &lt;POSc&gt;  &lt;list&gt;  &lt;list&gt;  &lt;int&gt;</span></span>
-<span><span class="co"># 1:   init &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto 2026-09-27 16:48:39           xInit      0</span></span>
-<span><span class="co"># 2:     f1 &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto 2026-09-27 16:48:39    init              1</span></span>
-<span><span class="co"># 3:     f2 &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto 2026-09-27 16:48:39      f1              2</span></span>
-<span><span class="co"># 4:     f3 &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto 2026-09-27 16:48:39      f2              3</span></span></code></pre></div>
+<span><span class="co"># 1:   init &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto 2026-09-27 17:20:06           xInit      0</span></span>
+<span><span class="co"># 2:     f1 &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto 2026-09-27 17:20:06    init              1</span></span>
+<span><span class="co"># 3:     f2 &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto 2026-09-27 17:20:06      f1              2</span></span>
+<span><span class="co"># 4:     f3 &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto 2026-09-27 17:20:06      f2              3</span></span></code></pre></div>
 <p>Many of the columns should be already familar to you and most of them
 can be manipulated safely via the <code>[&lt;-</code> and
 <code>[[&lt;-</code> operators, for example:</p>
@@ -221,12 +221,12 @@ pipeline structure at runtime.</p>
 <span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f3"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">3</span><span class="op">)</span></span>
 <span></span>
 <span><span class="op">(</span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.418 UTC]: Starting run of pipeflow 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.418 UTC]: Step 1/4 init</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.419 UTC]: Step 2/4 f1</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.421 UTC]: Step 3/4 f2</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.422 UTC]: Step 4/4 f3</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.423 UTC]: Finished run of pipeflow 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.182 UTC]: Starting run of pipeflow 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.182 UTC]: Step 1/4 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.183 UTC]: Step 2/4 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.185 UTC]: Step 3/4 f2</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.186 UTC]: Step 4/4 f3</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.187 UTC]: Finished run of pipeflow 'my-pipeline'</span></span>
 <span><span class="co"># &lt;pipeflow&gt; my-pipeline (4 steps)</span></span>
 <span><span class="co"># --------------------------------</span></span>
 <span><span class="co">#    step params depends state out</span></span>
@@ -235,7 +235,7 @@ pipeline structure at runtime.</p>
 <span><span class="co"># 3:   f2      x      f1  done   3</span></span>
 <span><span class="co"># 4:   f3      x      f2  done   6</span></span>
 <span><span class="co"># --------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 16:48:40</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 17:20:07</span></span></code></pre></div>
 <p>This pipeline just adds 1, 2, and 3 to the initial value,
 respectively. Let’s modify step <code>f2</code> that in turn will modify
 <code>f3</code> at runtime based on the interim result passed into
@@ -263,12 +263,12 @@ referencing <code>f1</code> that multiplies the input passed from
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xInit <span class="op">=</span> <span class="fl">15</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.534 UTC]: Starting run of pipeflow 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.534 UTC]: Step 1/4 init</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.534 UTC]: Step 2/4 f1</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.535 UTC]: Step 3/4 f2</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.538 UTC]: Step 4/4 f3</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.539 UTC]: Finished run of pipeflow 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.298 UTC]: Starting run of pipeflow 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.298 UTC]: Step 1/4 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.299 UTC]: Step 2/4 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.300 UTC]: Step 3/4 f2</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.302 UTC]: Step 4/4 f3</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.303 UTC]: Finished run of pipeflow 'my-pipeline'</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow&gt; my-pipeline (4 steps)</span></span>
@@ -279,7 +279,7 @@ referencing <code>f1</code> that multiplies the input passed from
 <span><span class="co"># 3:   f2      x      f1  done   8</span></span>
 <span><span class="co"># 4:   f3      x      f1  done  48</span></span>
 <span><span class="co"># --------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 16:48:40</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 17:20:07</span></span></code></pre></div>
 <p>We see that both the output of the pipeline and the dependencies of
 the last step have changed. Let’s confirm by inspecting the function of
 the last step.</p>
@@ -287,7 +287,7 @@ the last step.</p>
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"f3"</span>, <span class="st">"fun"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co"># function (x = ~f1) </span></span>
 <span><span class="co"># x * 3</span></span>
-<span><span class="co"># &lt;environment: 0x55bcf2627e08&gt;</span></span></code></pre></div>
+<span><span class="co"># &lt;environment: 0x556545b4f5f8&gt;</span></span></code></pre></div>
 </div>
 <div class="section level4">
 <h4 id="insert-and-remove-steps">Insert and remove steps<a class="anchor" aria-label="anchor" href="#insert-and-remove-steps"></a>
@@ -320,12 +320,12 @@ as follows:</p>
 original output.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.703 UTC]: Starting run of pipeflow 'hicky-hacky'</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.703 UTC]: Step 1/4 init</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.703 UTC]: Step 2/4 f1</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.704 UTC]: Step 3/4 f2</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.705 UTC]: Step 4/4 f3</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.706 UTC]: Finished run of pipeflow 'hicky-hacky'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.468 UTC]: Starting run of pipeflow 'hicky-hacky'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.469 UTC]: Step 1/4 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.469 UTC]: Step 2/4 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.470 UTC]: Step 3/4 f2</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.471 UTC]: Step 4/4 f3</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.472 UTC]: Finished run of pipeflow 'hicky-hacky'</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow&gt; hicky-hacky (4 steps)</span></span>
@@ -336,18 +336,18 @@ original output.</p>
 <span><span class="co"># 3:   f2      x      f1  done   3</span></span>
 <span><span class="co"># 4:   f3      x      f2  done   6</span></span>
 <span><span class="co"># --------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 16:48:40</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 17:20:07</span></span></code></pre></div>
 <p>Next, we set the initial value to 11 to trigger the changes.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xInit <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.763 UTC]: Starting run of pipeflow 'hicky-hacky'</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.763 UTC]: Step 1/4 init</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.763 UTC]: Step 2/4 f1</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.770 UTC]: Step 3/4 f2</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.773 UTC]: Step 4/4 f3</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.774 UTC]: Finished run of pipeflow 'hicky-hacky'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.530 UTC]: Starting run of pipeflow 'hicky-hacky'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.530 UTC]: Step 1/4 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.530 UTC]: Step 2/4 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.538 UTC]: Step 3/4 f2</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.542 UTC]: Step 4/4 f3</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.543 UTC]: Finished run of pipeflow 'hicky-hacky'</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow&gt; hicky-hacky (5 steps)</span></span>
@@ -359,7 +359,7 @@ original output.</p>
 <span><span class="co"># 4:  f2b      x     f2a  done       </span></span>
 <span><span class="co"># 5:   f3      x     f2b   new [NULL]</span></span>
 <span><span class="co"># --------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 16:48:40</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 17:20:07</span></span></code></pre></div>
 <p>While the structure has changed as expected, some steps were not yet
 run. In fact, since originally step <code>f3</code>came after
 <code>f2</code>, and in contrast to what the log is showing, instead of
@@ -372,13 +372,13 @@ need to re-run the pipeline.</p>
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xInit <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.830 UTC]: Starting run of pipeflow 'hicky-hacky'</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.830 UTC]: Step 1/5 init</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.830 UTC]: Step 2/5 f1</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.831 UTC]: Step 3/5 f2a</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.832 UTC]: Step 4/5 f2b</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.833 UTC]: Step 5/5 f3</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.834 UTC]: Finished run of pipeflow 'hicky-hacky'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.599 UTC]: Starting run of pipeflow 'hicky-hacky'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.599 UTC]: Step 1/5 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.599 UTC]: Step 2/5 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.600 UTC]: Step 3/5 f2a</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.601 UTC]: Step 4/5 f2b</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.602 UTC]: Step 5/5 f3</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.602 UTC]: Finished run of pipeflow 'hicky-hacky'</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow&gt; hicky-hacky (5 steps)</span></span>
@@ -390,7 +390,7 @@ need to re-run the pipeline.</p>
 <span><span class="co"># 4:  f2b      x     f2a  done  55</span></span>
 <span><span class="co"># 5:   f3      x     f2b  done  85</span></span>
 <span><span class="co"># --------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 16:48:40</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 17:20:07</span></span></code></pre></div>
 <p>Now the output of all steps is as expected. If we want to use
 {pipeflow} in production, obviously, having to re-run the pipeline and
 temporarily showing a wrong log is not ideal. That is, ideally, the
@@ -431,18 +431,18 @@ the <code>f2</code> function as follows:</p>
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xInit <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.942 UTC]: Starting run of pipeflow 'hacky-with-restart'</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.942 UTC]: Step 1/4 init</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.943 UTC]: Step 2/4 f1</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.944 UTC]: Step 3/4 f2</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.947 UTC]: Restarting pipeline execution.</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.947 UTC]: Restarting run of pipeflow 'hacky-with-restart'</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.947 UTC]: Step 1/5 init</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.947 UTC]: Step 2/5 f1</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.948 UTC]: Step 3/5 f2a</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.949 UTC]: Step 4/5 f2b</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.950 UTC]: Step 5/5 f3</span></span>
-<span><span class="co"># info [2026-09-27 14:48:40.951 UTC]: Finished run of pipeflow 'hacky-with-restart'</span></span></code></pre></div>
+<span><span class="co"># info [2026-09-27 15:20:07.711 UTC]: Starting run of pipeflow 'hacky-with-restart'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.711 UTC]: Step 1/4 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.711 UTC]: Step 2/4 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.712 UTC]: Step 3/4 f2</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.716 UTC]: Restarting pipeline execution.</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.716 UTC]: Restarting run of pipeflow 'hacky-with-restart'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.716 UTC]: Step 1/5 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.716 UTC]: Step 2/5 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.717 UTC]: Step 3/5 f2a</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.718 UTC]: Step 4/5 f2b</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.719 UTC]: Step 5/5 f3</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.719 UTC]: Finished run of pipeflow 'hacky-with-restart'</span></span></code></pre></div>
 <p>As you can see, the run was aborted right after step <code>f2</code>
 and re-run from the start based on the new structure. As a result, the
 log now is fully aligned with the performed pipeline run.</p>
@@ -459,7 +459,7 @@ matches the expected output of the modified pipeline.</p>
 <span><span class="co"># 4:  f2b      x     f2a  done  55</span></span>
 <span><span class="co"># 5:   f3      x     f2b  done  85</span></span>
 <span><span class="co"># ---------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 16:48:40</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 17:20:07</span></span></code></pre></div>
 <p>Of course, this was just a toy example to show some possibilities,
 but I have made use of this feature already in various projects and may
 present one of them in a more sophisticated example in the future.</p>

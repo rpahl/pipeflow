@@ -57,10 +57,10 @@ pip_add(
 
   1.  Provide param values programmatically when adding steps at runtime
 
-  2.  Provide extra param values that are defined in pipelines nested in
-      a step, which ensures that the step (and with that the pipeline in
-      the step) is re-executed when one of the respective param values
-      change.
+  2.  Provide extra param values to "mark" dependencies that are defined
+      in pipelines nested in a step, which ensures that the step (and
+      with that the pipeline in the step) is re-executed when one of the
+      respective param values change.
 
 - exec:
 
@@ -87,15 +87,7 @@ The updated pipeline, invisibly.
 
 ## Details
 
-Each step automatically has access to the pipeline object via `.self`,
-without needing to declare it as a parameter. This is useful for dynamic
-pipelines, e.g. to call
-[`pip_restart()`](https://github.com/rpahl/pipeflow/reference/pip_restart.md)
-or
-[`pip_stop()`](https://github.com/rpahl/pipeflow/reference/pip_stop.md)
-from within a step. `.self` is a reserved parameter name and must
-neither be declared in the step signature nor be passed via `params`. If
-`after` was specified, the new step will be inserted after the given
+If `after` was specified, the new step will be inserted after the given
 step or position. Be aware that in contrast to adding a step at the end,
 inserting a step in the middle is a rather expensive operation as it
 requires re-wiring parts of the internal pipeline structure, especially
@@ -112,38 +104,46 @@ p <- pip_new("analysis") |>
   pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
 
 pip_run(p)
-#> info [2026-08-22 17:08:00.632 UTC]: Starting run of pipeflow 'analysis'
-#> info [2026-08-22 17:08:00.632 UTC]: Step 1/4 load
-#> info [2026-08-22 17:08:00.633 UTC]: Step 2/4 clean
-#> info [2026-08-22 17:08:00.635 UTC]: Step 3/4 fit
-#> info [2026-08-22 17:08:00.636 UTC]: Step 4/4 report
-#> info [2026-08-22 17:08:00.636 UTC]: Finished run of pipeflow 'analysis'
+#> info [2026-09-27 15:19:37.115 UTC]: Starting run of pipeflow 'analysis'
+#> info [2026-09-27 15:19:37.115 UTC]: Step 1/4 load
+#> info [2026-09-27 15:19:37.115 UTC]: Step 2/4 clean
+#> info [2026-09-27 15:19:37.116 UTC]: Step 3/4 fit
+#> info [2026-09-27 15:19:37.117 UTC]: Step 4/4 report
+#> info [2026-09-27 15:19:37.118 UTC]: Finished run of pipeflow 'analysis'
 p
 #> <pipeflow> analysis (4 steps)
-#> ---------------------------------
-#>      step depends            out state             tags
-#> 1:   load              1,2,3,4,5  done           io,raw
-#> 2:  clean    load  2, 4, 6, 8,10  done       io,process
-#> 3:    fit   clean             30  done model,core,daily
-#> 4: report     fit     result: 30  done           report
+#> -----------------------------
+#>      step params depends state            out             tags
+#> 1:   load      n          done      1,2,3,4,5           io,raw
+#> 2:  clean      x    load  done  2, 4, 6, 8,10       io,process
+#> 3:    fit      x   clean  done             30 model,core,daily
+#> 4: report      x     fit  done     result: 30           report
+#> -----------------------------
+#> <ready> last run: 2026-09-27 17:19:37
 
 # Filter by tag using pip_view — keeps steps with any matching tag
 pip_view(p, tags = "daily")
 #> <pipeflow_view> analysis view (1 of 4 steps)
 #> --------------------------------------------
-#>  step depends out state             tags
-#>   fit   clean  30  done model,core,daily
+#>    step params depends state out             tags
+#> 1:  fit      x   clean  done  30 model,core,daily
+#> --------------------------------------------
+#> <ready> last run: 2026-09-27 17:19:37
 pip_view(p, tags = "core")
 #> <pipeflow_view> analysis view (1 of 4 steps)
 #> --------------------------------------------
-#>  step depends out state             tags
-#>   fit   clean  30  done model,core,daily
+#>    step params depends state out             tags
+#> 1:  fit      x   clean  done  30 model,core,daily
+#> --------------------------------------------
+#> <ready> last run: 2026-09-27 17:19:37
 pip_view(p, tags = c("raw", "report"))
 #> <pipeflow_view> analysis view (2 of 4 steps)
 #> --------------------------------------------
-#>    step depends        out state   tags
-#>    load          1,2,3,4,5  done io,raw
-#>  report     fit result: 30  done report
+#>      step params depends state        out   tags
+#> 1:   load      n          done  1,2,3,4,5 io,raw
+#> 2: report      x     fit  done result: 30 report
+#> --------------------------------------------
+#> <ready> last run: 2026-09-27 17:19:37
 
 # --- Split / reduce execution modes ---
 q <- pip_new("split-demo") |>
@@ -157,58 +157,58 @@ q <- pip_new("split-demo") |>
   )
 
 pip_run(q)
-#> info [2026-08-22 17:08:00.647 UTC]: Starting run of pipeflow 'split-demo'
-#> info [2026-08-22 17:08:00.647 UTC]: Step 1/4 data
-#> info [2026-08-22 17:08:00.648 UTC]: Step 2/4 split
-#> info [2026-08-22 17:08:00.649 UTC]: Step 3/4 stats
-#> info [2026-08-22 17:08:00.653 UTC]: Step 4/4 combine
-#> info [2026-08-22 17:08:00.654 UTC]: Finished run of pipeflow 'split-demo'
+#> info [2026-09-27 15:19:37.133 UTC]: Starting run of pipeflow 'split-demo'
+#> info [2026-09-27 15:19:37.133 UTC]: Step 1/4 data
+#> info [2026-09-27 15:19:37.133 UTC]: Step 2/4 split
+#> info [2026-09-27 15:19:37.135 UTC]: Step 3/4 stats
+#> info [2026-09-27 15:19:37.139 UTC]: Step 4/4 combine
+#> info [2026-09-27 15:19:37.140 UTC]: Finished run of pipeflow 'split-demo'
 q[["stats", "out"]]   # partitioned list — one summary per species
 #> $setosa
-#>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width
-#>  Min.   :4.300   Min.   :2.300   Min.   :1.000   Min.   :0.100
-#>  1st Qu.:4.800   1st Qu.:3.200   1st Qu.:1.400   1st Qu.:0.200
-#>  Median :5.000   Median :3.400   Median :1.500   Median :0.200
-#>  Mean   :5.006   Mean   :3.428   Mean   :1.462   Mean   :0.246
-#>  3rd Qu.:5.200   3rd Qu.:3.675   3rd Qu.:1.575   3rd Qu.:0.300
-#>  Max.   :5.800   Max.   :4.400   Max.   :1.900   Max.   :0.600
-#>        Species
-#>  setosa    :50
-#>  versicolor: 0
-#>  virginica : 0
-#>
-#>
-#>
-#>
+#>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   
+#>  Min.   :4.300   Min.   :2.300   Min.   :1.000   Min.   :0.100  
+#>  1st Qu.:4.800   1st Qu.:3.200   1st Qu.:1.400   1st Qu.:0.200  
+#>  Median :5.000   Median :3.400   Median :1.500   Median :0.200  
+#>  Mean   :5.006   Mean   :3.428   Mean   :1.462   Mean   :0.246  
+#>  3rd Qu.:5.200   3rd Qu.:3.675   3rd Qu.:1.575   3rd Qu.:0.300  
+#>  Max.   :5.800   Max.   :4.400   Max.   :1.900   Max.   :0.600  
+#>        Species  
+#>  setosa    :50  
+#>  versicolor: 0  
+#>  virginica : 0  
+#>                 
+#>                 
+#>                 
+#> 
 #> $versicolor
-#>   Sepal.Length    Sepal.Width     Petal.Length   Petal.Width          Species
-#>  Min.   :4.900   Min.   :2.000   Min.   :3.00   Min.   :1.000   setosa    : 0
-#>  1st Qu.:5.600   1st Qu.:2.525   1st Qu.:4.00   1st Qu.:1.200   versicolor:50
-#>  Median :5.900   Median :2.800   Median :4.35   Median :1.300   virginica : 0
-#>  Mean   :5.936   Mean   :2.770   Mean   :4.26   Mean   :1.326
-#>  3rd Qu.:6.300   3rd Qu.:3.000   3rd Qu.:4.60   3rd Qu.:1.500
-#>  Max.   :7.000   Max.   :3.400   Max.   :5.10   Max.   :1.800
-#>
+#>   Sepal.Length    Sepal.Width     Petal.Length   Petal.Width          Species  
+#>  Min.   :4.900   Min.   :2.000   Min.   :3.00   Min.   :1.000   setosa    : 0  
+#>  1st Qu.:5.600   1st Qu.:2.525   1st Qu.:4.00   1st Qu.:1.200   versicolor:50  
+#>  Median :5.900   Median :2.800   Median :4.35   Median :1.300   virginica : 0  
+#>  Mean   :5.936   Mean   :2.770   Mean   :4.26   Mean   :1.326                  
+#>  3rd Qu.:6.300   3rd Qu.:3.000   3rd Qu.:4.60   3rd Qu.:1.500                  
+#>  Max.   :7.000   Max.   :3.400   Max.   :5.10   Max.   :1.800                  
+#> 
 #> $virginica
-#>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width
-#>  Min.   :4.900   Min.   :2.200   Min.   :4.500   Min.   :1.400
-#>  1st Qu.:6.225   1st Qu.:2.800   1st Qu.:5.100   1st Qu.:1.800
-#>  Median :6.500   Median :3.000   Median :5.550   Median :2.000
-#>  Mean   :6.588   Mean   :2.974   Mean   :5.552   Mean   :2.026
-#>  3rd Qu.:6.900   3rd Qu.:3.175   3rd Qu.:5.875   3rd Qu.:2.300
-#>  Max.   :7.900   Max.   :3.800   Max.   :6.900   Max.   :2.500
-#>        Species
-#>  setosa    : 0
-#>  versicolor: 0
-#>  virginica :50
-#>
-#>
-#>
-#>
+#>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   
+#>  Min.   :4.900   Min.   :2.200   Min.   :4.500   Min.   :1.400  
+#>  1st Qu.:6.225   1st Qu.:2.800   1st Qu.:5.100   1st Qu.:1.800  
+#>  Median :6.500   Median :3.000   Median :5.550   Median :2.000  
+#>  Mean   :6.588   Mean   :2.974   Mean   :5.552   Mean   :2.026  
+#>  3rd Qu.:6.900   3rd Qu.:3.175   3rd Qu.:5.875   3rd Qu.:2.300  
+#>  Max.   :7.900   Max.   :3.800   Max.   :6.900   Max.   :2.500  
+#>        Species  
+#>  setosa    : 0  
+#>  versicolor: 0  
+#>  virginica :50  
+#>                 
+#>                 
+#>                 
+#> 
 #> attr(,"class")
 #> [1] "list"                 "pipeflow_partitioned"
 q[["combine", "out"]] # combined table
-#>   Sepal.Length      Sepal.Width       Petal.Length      Petal.Width
+#>   Sepal.Length      Sepal.Width       Petal.Length      Petal.Width     
 #>  "Min.   :4.300  " "Min.   :2.300  " "Min.   :1.000  " "Min.   :0.100  "
 #>  "1st Qu.:4.800  " "1st Qu.:3.200  " "1st Qu.:1.400  " "1st Qu.:0.200  "
 #>  "Median :5.000  " "Median :3.400  " "Median :1.500  " "Median :0.200  "
@@ -227,23 +227,77 @@ q[["combine", "out"]] # combined table
 #>  "Mean   :6.588  " "Mean   :2.974  " "Mean   :5.552  " "Mean   :2.026  "
 #>  "3rd Qu.:6.900  " "3rd Qu.:3.175  " "3rd Qu.:5.875  " "3rd Qu.:2.300  "
 #>  "Max.   :7.900  " "Max.   :3.800  " "Max.   :6.900  " "Max.   :2.500  "
-#>        Species
+#>        Species    
 #>  "setosa    :50  "
 #>  "versicolor: 0  "
 #>  "virginica : 0  "
-#>  NA
-#>  NA
-#>  NA
+#>  NA               
+#>  NA               
+#>  NA               
 #>  "setosa    : 0  "
 #>  "versicolor:50  "
 #>  "virginica : 0  "
-#>  NA
-#>  NA
-#>  NA
+#>  NA               
+#>  NA               
+#>  NA               
 #>  "setosa    : 0  "
 #>  "versicolor: 0  "
 #>  "virginica :50  "
-#>  NA
-#>  NA
-#>  NA
+#>  NA               
+#>  NA               
+#>  NA               
+
+# --- Insert a step at a specific position with 'after' ---
+p2 <- pip_new("insert-demo") |>
+  pip_add("load", \(x = 1) x) |>
+  pip_add("fit", \(x = ~load) x + 1)
+p2
+#> <pipeflow> insert-demo (2 steps)
+#> --------------------------------
+#>    step params depends state
+#> 1: load      x           new
+#> 2:  fit      x    load   new
+#> --------------------------------
+#> <ready> last run: never
+pip_add(p2, "clean", \(x = ~load) x * 2, after = "load")
+p2  # "load", "clean", "fit" — inserted after "load"
+#> <pipeflow> insert-demo (3 steps)
+#> --------------------------------
+#>     step params depends state
+#> 1:  load      x           new
+#> 2: clean      x    load   new
+#> 3:   fit      x    load   new
+#> --------------------------------
+#> <ready> last run: never
+
+# after = 0 inserts the new step at the very beginning
+pip_add(p2, "preload", \(x = 1) x, after = 0)
+p2
+#> <pipeflow> insert-demo (4 steps)
+#> --------------------------------
+#>       step params depends state
+#> 1: preload      x           new
+#> 2:    load      x           new
+#> 3:   clean      x    load   new
+#> 4:     fit      x    load   new
+#> --------------------------------
+#> <ready> last run: never
+
+# --- Provide parameter values programmatically with 'params' ---
+p3 <- pip_new("params-demo") |>
+  pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
+pip_run(p3)
+#> info [2026-09-27 15:19:37.151 UTC]: Starting run of pipeflow 'params-demo'
+#> info [2026-09-27 15:19:37.151 UTC]: Step 1/1 load
+#> info [2026-09-27 15:19:37.152 UTC]: Finished run of pipeflow 'params-demo'
+p3
+#> <pipeflow> params-demo (1 step)
+#> -------------------------------
+#>    step params depends state   out
+#> 1: load size,x          done  1,42
+#> -------------------------------
+#> <ready> last run: 2026-09-27 17:19:37
+p3[["load", "out"]] # c(1, size = 42) — extra params passed via `...`
+#>      size 
+#>    1   42 
 ```

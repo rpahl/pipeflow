@@ -6,6 +6,9 @@ Print pipeflow objects
 
 ``` r
 # S3 method for class 'pipeflow'
+str(object, ...)
+
+# S3 method for class 'pipeflow'
 print(
   x,
   rows = integer(),
@@ -17,12 +20,18 @@ print(
   header = TRUE,
   ...
 )
-
-# S3 method for class 'pipeflow_view'
-print(x, header = TRUE, ...)
 ```
 
 ## Arguments
+
+- object:
+
+  A pipeflow pipeline or view, for
+  [`utils::str()`](https://rdrr.io/r/utils/str.html).
+
+- ...:
+
+  Other arguments passed to `print.data.table`
 
 - x:
 
@@ -36,7 +45,8 @@ print(x, header = TRUE, ...)
 
   The columns to be printed. Can be either one of `core` or `all` to
   print the core or all columns, respectively, or an explicit character
-  vector of columns to be printed.
+  vector of columns to be printed. The `params` column lists the names
+  of the step's parameters.
 
 - topn:
 
@@ -58,12 +68,9 @@ print(x, header = TRUE, ...)
 
 - header:
 
-  If TRUE, a header with the pipeline name and number of steps will be
+  If TRUE, a header with the pipeline name and number of steps, and a
+  footer with the run state and the time of the last run, will be
   printed.
-
-- ...:
-
-  Other arguments passed to `print.data.table`
 
 ## Value
 
@@ -77,39 +84,44 @@ p <- pip_new("demo") |>
   pip_add("square", \(x = ~load) x^2, tags = "compute") |>
   pip_add("total", \(x = ~square) sum(x), tags = "compute")
 
-print(p) # core columns: step, depends, tags, out, state
+print(p) # core columns: step, params, depends, state, tags
 #> <pipeflow> demo (3 steps)
-#> -----------------------------
-#>      step depends    out state    tags
-#> 1:   load         [NULL]   new  io,raw
-#> 2: square    load [NULL]   new compute
-#> 3:  total  square [NULL]   new compute
-print(p, cols = "all") # all non-hidden columns
+#> -------------------------
+#>      step params depends state    tags
+#> 1:   load      n           new  io,raw
+#> 2: square      x    load   new compute
+#> 3:  total      x  square   new compute
+#> -------------------------
+#> <ready> last run: never
+print(p, cols = "all") # all step-table columns
 #> <pipeflow> demo (3 steps)
-#> -----------------------------
-#>      step           fun    params     signature depends    out state    tags
-#> 1:   load <function[1]> <list[1]>       (n = 5)         [NULL]   new  io,raw
-#> 2: square <function[1]> <list[1]>   (x = ~load)    load [NULL]   new compute
-#> 3:  total <function[1]> <list[1]> (x = ~square)  square [NULL]   new compute
-#>                   time locked exec
-#> 1: 2026-08-22 19:08:04  FALSE auto
-#> 2: 2026-08-22 19:08:04  FALSE auto
-#> 3: 2026-08-22 19:08:04  FALSE auto
+#> -------------------------
+#>      step           fun params    out state    tags locked exec
+#> 1:   load <function[1]>      n [NULL]   new  io,raw  FALSE auto
+#> 2: square <function[1]>      x [NULL]   new compute  FALSE auto
+#> 3:  total <function[1]>      x [NULL]   new compute  FALSE auto
+#>                   time depends unbound nodeId
+#> 1: 2026-09-27 17:19:40               n      0
+#> 2: 2026-09-27 17:19:40    load              1
+#> 3: 2026-09-27 17:19:40  square              2
+#> -------------------------
+#> <ready> last run: never
 print(p, rows = 2:3) # print only steps 2 and 3
 #> <pipeflow> demo (3 steps)
-#> -----------------------------
-#>      step depends    out state    tags
-#> 1: square    load [NULL]   new compute
-#> 2:  total  square [NULL]   new compute
-p <- pip_new() |>
-  pip_add("s1", \(x = 1) x, tags = "io") |>
-  pip_add("s2", \(x = ~s1) x + 1, tags = "model")
+#> -------------------------
+#>      step params depends state    tags
+#> 1: square      x    load   new compute
+#> 2:  total      x  square   new compute
+#> -------------------------
+#> <ready> last run: never
 
-# A view header shows how many steps are selected out of the total
-v <- pip_view(p, tags = "model")
-print(v) # "<pipeflow_view> pipe view (1 of 2 steps)"
-#> <pipeflow_view> pipe view (1 of 2 steps)
+v <- pip_view(p, tags = "compute")
+print(v)
+#> <pipeflow_view> demo view (2 of 3 steps)
 #> ----------------------------------------
-#>  step depends    out state  tags
-#>    s2      s1 [NULL]   new model
+#>      step params depends state    tags
+#> 1: square      x    load   new compute
+#> 2:  total      x  square   new compute
+#> ----------------------------------------
+#> <ready> last run: never
 ```

@@ -48,8 +48,8 @@ pip_run(dst)
 pip_collect_out(dst)
 #> $load
 #> [1] 1 2 3
-#>
+#> 
 #> $square
 #> [1] 1 4 9
-#>
+#> 
 ```

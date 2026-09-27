@@ -45,9 +45,9 @@ CRAN release: 2026-06-15
   [`pip_run()`](https://github.com/rpahl/pipeflow/reference/pip_run.md),
   [`pip_replace()`](https://github.com/rpahl/pipeflow/reference/pip_replace.md),
   [`pip_clone()`](https://github.com/rpahl/pipeflow/reference/pip_clone.md),
-  [`pip_bind()`](https://github.com/rpahl/pipeflow/reference/pip_bind.md),
+  `pip_bind()`,
   [`pip_view()`](https://github.com/rpahl/pipeflow/reference/pip_view.md),
-  [`pip_tag()`](https://github.com/rpahl/pipeflow/reference/pip_tag.md)/[`pip_untag()`](https://github.com/rpahl/pipeflow/reference/pip_untag.md),
+  [`pip_tag()`](https://github.com/rpahl/pipeflow/reference/pip_tag.md)/[`pip_untag()`](https://github.com/rpahl/pipeflow/reference/pip_tag.md),
   etc.
 - **Execution modes** (`auto`/`split`/`reduce`/`plain`): Native support
   for map-reduce style workflows where steps split output into named
@@ -66,7 +66,7 @@ CRAN release: 2026-06-15
 
 - Legacy `pipe_*` functions and `Pipeline` R6 class are deprecated
   (preserved as aliases in `R/aliases.R`, `R/pipelineR6.R`).
-- [`pip_collect_out()`](https://github.com/rpahl/pipeflow/reference/pip_collect_out.md)
+- [`pip_collect_out()`](https://github.com/rpahl/pipeflow/reference/pip_collect.md)
   no longer accepts `grouped` or `by` parameters. It returns a flat
   named list of step outputs. Use
   [`pip_view()`](https://github.com/rpahl/pipeflow/reference/pip_view.md)
