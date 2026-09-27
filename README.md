@@ -112,7 +112,7 @@ below:
 - [Collecting and filtering
   output](https://rpahl.github.io/pipeflow/articles/v04-collect-output.html)
 
-### Advanced topics
+### Advanced workflows
 
 - [Split, map, and
   reduce](https://rpahl.github.io/pipeflow/articles/v05-split-map-reduce.html)

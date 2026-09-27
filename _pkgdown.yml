@@ -118,7 +118,7 @@ navbar:
       - text: "Collect and group output"
         href: articles/v04-collect-output.html
       - text: ----
-      - text: "Advanced"
+      - text: "Advanced workflows"
       - text: "Split, map, and reduce"
         href: articles/v05-split-map-reduce.html
       - text: "Nested pipelines"
