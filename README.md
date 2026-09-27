@@ -1,6 +1,5 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-
 <!-- badges: start -->
 
 [![CRAN
@@ -70,30 +69,32 @@ library(pipeflow)
 p <- pip_new("demo") |>
     pip_add("numbers", \(n = 5) seq_len(n)) |>
     pip_add("squared", \(x = ~numbers) x^2) |>
-    pip_add("total",   \(x = ~squared) sum(x))
+    pip_add("total", \(x = ~squared) sum(x))
 
 p
 # <pipeflow> demo (3 steps)
-# -----------------------------
-#       step depends    out state
-# 1: numbers         [NULL]   new
-# 2: squared numbers [NULL]   new
-# 3:   total squared [NULL]   new
+# -------------------------
+#       step params depends state
+# 1: numbers      n           new
+# 2: squared      x numbers   new
+# 3:   total      x squared   new
+# -------------------------
+# <ready> last run: never
 
 pip_run(p)
-# info [2026-06-20 19:16:29.615 UTC]: Start run of pipeflow 'demo'
-# info [2026-06-20 19:16:29.616 UTC]: Step 1/3 numbers
-# info [2026-06-20 19:16:29.618 UTC]: Step 2/3 squared
-# info [2026-06-20 19:16:29.620 UTC]: Step 3/3 total
-# info [2026-06-20 19:16:29.622 UTC]: Finished run of pipeflow 'demo'
+# info [2026-09-27 11:37:02.691 UTC]: Starting run of pipeflow 'demo'
+# info [2026-09-27 11:37:02.691 UTC]: Step 1/3 numbers
+# info [2026-09-27 11:37:02.693 UTC]: Step 2/3 squared
+# info [2026-09-27 11:37:02.694 UTC]: Step 3/3 total
+# info [2026-09-27 11:37:02.695 UTC]: Finished run of pipeflow 'demo'
 
-pip_collect_out(p)
+pip_collect(p)
 # $numbers
 # [1] 1 2 3 4 5
-#
+# 
 # $squared
 # [1]  1  4  9 16 25
-#
+# 
 # $total
 # [1] 55
 ```
@@ -105,17 +106,19 @@ below:
 
 - [Get started with
   pipeflow](https://rpahl.github.io/pipeflow/articles/v01-get-started.html)
-- [Modifying existing
+- [Modify existing
   pipelines](https://rpahl.github.io/pipeflow/articles/v02-modify-pipeline.html)
-- [Combining
+- [Combine
   pipelines](https://rpahl.github.io/pipeflow/articles/v03-combine-pipelines.html)
-- [Collecting and filtering
+- [Collect and group
   output](https://rpahl.github.io/pipeflow/articles/v04-collect-output.html)
 
 ### Advanced workflows
 
 - [Split, map, and
   reduce](https://rpahl.github.io/pipeflow/articles/v05-split-map-reduce.html)
+- [Nested
+  pipelines](https://rpahl.github.io/pipeflow/articles/v05a-nested-pipeline.html)
 - [Recursive
   self-modification](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
 
