@@ -44,7 +44,7 @@ to change parameters based on intermediate results or even to modify the
 pipeline structure itself during a pipeline run.
 In this vignette, we will present some basic examples of how this can be done.
 
-### The pipeline object
+### The pipeline
 
 Let's first define a pipeline, which fits a linear model, checks it's
 residuals for normality using the Shapiro-Wilk test, and plots the
@@ -53,37 +53,23 @@ residuals.
 ```{r}
 library(pipeflow)
 
-pip <- pip_new("my-pipeline") |>
+pip <- pip_new("residual-analysis") |>
+    pip_add("data", \(data = NULL) data) |>
+    pip_add("fit", \(data = ~data, xVar = "x", yVar = "y") {
+        lm(paste(yVar, "~", xVar), data = data)
+    }) |>
     pip_add(
-        "data",
-        \(data = NULL) data
-    ) |>
-    pip_add(
-        "fit",
-        \(data = ~data,
-            xVar = "x",
-            yVar = "y") {
-            lm(paste(yVar, "~", xVar), data = data)
-        }
-    ) |>
-    pip_add(
-        "residual_shapiro_p_value",
+        "shapiro",
         \(fit = ~fit) {
-            residuals <- residuals(fit)
-            shapiro.test(residuals)$p.value
+            shapiro.test(residuals(fit))$p.value
         }
     ) |>
     pip_add(
         "plot",
-        \(fit = ~fit,
-            pointColor = "black") {
+        \(fit = ~fit, pointColor = "black") {
             require(ggplot2, quietly = TRUE)
-            data <- data.frame(
-                fitted = predict(fit),
-                residuals = residuals(fit)
-            )
-
-            ggplot(data, aes(x = fitted, y = residuals)) +
+            data <- data.frame(fitted = predict(fit), resids = residuals(fit))
+            ggplot(data, aes(x = fitted, y = resids)) +
                 geom_point(shape = 21, color = pointColor) +
                 geom_hline(yintercept = 0, linetype = "dashed") +
                 theme_minimal()
@@ -91,39 +77,69 @@ pip <- pip_new("my-pipeline") |>
     )
 ```
 
-If you have followed the previous vignettes, you by now are used to the pipeline
-overview.
+By now, you should be familar with the pipeline's overview.
 
 ```{r}
 pip
 ```
 
-To inspect the internal structure, let's start with the class.
+#### Internal pipeline structure
+
+Before we move on, let's briefly inspect the internal structure of a
+pipeline object.
 
 ```{r}
-class(pip)
+str(pip)
 ```
 
-As we can see, the pipeline object is stored in an environment.
+There is the `name` of the pipeline, which is just a character string,
+as well as a `view` entry, which is currently undefined.
+
+The most "interesting" part is the `pipenv`: an environment that holds the
+pipeline's actual state. It is shared by the pipeline and all of its views,
+which is why operations on a view write through to the underlying pipeline.
 
 ```{r}
-ls(pip)
+ls(pip$pipenv)
 ```
 
-There is the "name" of the pipeline, which is just a
-character string. The most interesting object is the "pipeline",
-object, which under the hood is a `data.table` object
-containing all the information about the steps, their
-dependencies, meta information, and so on.
+Listing the `pipenv`^[
+    By default, `ls()` hides names starting with a dot. The internal
+    entries, which become visible via `ls(pip$pipenv, all.names = TRUE)`,
+    are not considered in this vignette.
+] reveals the `data`entry, which contains the pipeline's step table as a
+`data.table` with one row per step:
 
 ```{r}
-data.class(pip$pipeline)
-
-pip$pipeline
+pip$pipenv$data
 ```
 
+```{r}
+str(pip$pipenv$data, max.level = 1)
+```
 
-### Changing pipeline parameters at runtime
+Its columns describe a step and its last result:
+
+* `step`, `fun`, `params`, `out`, `state`, `tags`, `locked`, `exec`, and
+  `time`: the step's name, function, parameters, last output, state, tags,
+  lock flag, execution mode, and time stamp,
+* `depends`: the names of the steps this step depends on,
+* `unbound`: the names of the step's adjustable (non-dependency) parameters,
+* `nodeId`: the step's node id in the internal dependency graph.
+
+The last three columns are derived from the step definition. {pipeflow}
+recomputes them, and they cannot be assigned to directly.
+
+Instead of reaching into `pip$pipenv$data` yourself, you can use
+`pip_data(pip)` to retrieve the step table, or the `[` and `[[` operators and
+`print(pip)` to inspect selected parts. This internal structure is what the
+following examples modify at runtime; note that changing the step table
+directly can easily invalidate the internal dependency graph, so for
+structural changes prefer the dedicated functions such as `pip_add()`,
+`pip_replace()`, and `pip_remove()`.
+
+
+### Changing parameters at runtime
 
 First, we set some data and parameters and run the pipeline as usual.
 
@@ -140,12 +156,12 @@ depending on the Shapiro-Wilk test result. The obvious way to do this
 would be to change the `plot` step by passing the test result to the
 `plot` step function and change the color there.
 
-However, here we are interested in another way that would keep the
-`plot` function unchanged.
-For example, we could run the pipeline a second time as follows:
+However, here we are interested in a solution that keeps the `plot`
+function unchanged.
+Naively, we could run the pipeline a second time as follows:
 
 ```{r, fig.alt = "residual-plot"}
-if (pip[["residual_shapiro_p_value", "out"]] < 0.05) {
+if (pip[["shapiro", "out"]] < 0.05) {
     pip |>
         pip_set_params(list(pointColor = "red")) |>
         pip_run()
@@ -154,26 +170,26 @@ if (pip[["residual_shapiro_p_value", "out"]] < 0.05) {
 pip[["plot", "out"]]
 ```
 
-As was mentioned in another vignette, this solution is not ideal,
-as it requires to run additional code around the pipeline.
-We rather want to set the parameter from within the
+This solution is not ideal, as it requires to run additional code around
+the pipeline. We rather want to set the parameter from within the
 pipeline during execution.
 
 For this, the pipeline by default provides a self-reference in the
 form of the `.self` object that is automatically made available in
 any step function.
-With this in mind, we can update the `residual_shapiro_p_value`
+With this in mind, we can update the `shapiro`
 step to change the `pointColor` parameter on the fly.
 
 ```{r}
 pip |> pip_replace(
-    "residual_shapiro_p_value",
+    "shapiro",
     \(fit = ~fit) {
         residuals <- residuals(fit)
         p <- shapiro.test(residuals)$p.value
 
         if (p < 0.05) {
-            .self |> pip_set_params(list(pointColor = "blue"))
+            .self$set_params(list(pointColor = "blue"))
+            # or: .pip_set_params(.self, list(pointColor = "blue"))
         }
 
         p
@@ -194,11 +210,11 @@ As we will show in the next section, modications of the pipeline at
 runtime are not limited to changing parameters but can also be used
 to modify the very own pipeline structure.
 
-### Changing pipeline structure at runtime
+### Changing the pipeline structure at runtime
 
-Subsequently, the pipeline steps will be comprised only of very basic functions
-in order to keep matters simple. The focus here should be on the pipeline
-structure and how it is modified.
+Subsequently, the pipeline steps will be comprised of very basic
+functions to keep the focus on the pipeline structure and how it is
+modified.
 
 ```{r}
 pip <- pip_new("my-pipeline") |>
@@ -227,7 +243,8 @@ pip |> pip_replace(
     "f2",
     \(x = ~f1) {
         if (x > 10) {
-            .self |> pip_replace("f3", \(x = ~f1) x * 3)
+            .self$replace("f3", \(x = ~f1) x * 3)
+            # or: pip_replace(.self, "f3", \(x = ~f1) x * 3)
             return(x / 2)
         }
         x + 2
@@ -273,22 +290,9 @@ pip <- pip_new("my-pipeline") |>
         \(x = ~f1) {
             if (x > 10) {
                 .self |>
-                    pip_add(
-                        "f2a",
-                        \(x = ~f1) x + 21,
-                        after = "f1",
-                    ) |>
-                    pip_add(
-                        "f2b",
-                        \(x = ~f2a) x + 22,
-                        after = "f2a"
-                    ) |>
-                    pip_replace(
-                        "f3",
-                        \(x = ~f2b) {
-                            x + 30
-                        }
-                    ) |>
+                    pip_add("f2a", \(x = ~f1) x + 21, after = "f1") |>
+                    pip_add("f2b", \(x = ~f2a) x + 22, after = "f2a") |>
+                    pip_replace("f3", \(x = ~f2b) x + 30) |>
                     pip_remove("f2")
             }
             x + 2
@@ -361,22 +365,9 @@ pip <- pip_new("my-pipeline") |>
         \(x = ~f1) {
             if (x > 10) {
                 .self |>
-                    pip_add(
-                        "f2a",
-                        \(x = ~f1) x + 21,
-                        after = "f1",
-                    ) |>
-                    pip_add(
-                        "f2b",
-                        \(x = ~f2a) x + 22,
-                        after = "f2a"
-                    ) |>
-                    pip_replace(
-                        "f3",
-                        \(x = ~f2b) {
-                            x + 30
-                        }
-                    ) |>
+                    pip_add("f2a", \(x = ~f1) x + 21, after = "f1") |>
+                    pip_add("f2b", \(x = ~f2a) x + 22, after = "f2a") |>
+                    pip_replace("f3", \(x = ~f2b) x + 30) |>
                     pip_remove("f2")
                 .self$restart() # <-- restart the run
             }
