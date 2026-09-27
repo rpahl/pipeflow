@@ -256,6 +256,28 @@ With the above pattern, you can now change both the inner and outer pipeline,
 adding and/or removing any steps or parameters, without having to worry
 about parameter synchronization.
 
+### Built-in exec modes vs. nested pipelines
+
+Both this and the [previous vignette](v05-split-map-reduce.html) solve the
+same "split, apply, and combine" problem. The built-in execution modes
+(`exec = "split"`/`"reduce"`) are the recommended default whenever they fit
+while nested pipelines can be considered the more general tool.
+As a rule of thumb:
+
+* **Code**: the built-in modes are declarative and need no extra code, while
+  the nested pattern requires cloning, mapping, and forwarding parameters.
+* **Map shape**: the built-in modes handle a single split point in the
+  pipeline, while nested pipelines can map over arbitrary inputs (e.g.
+  cross-validation folds, several data sets, or per-group settings) and
+  multiple levels (nested splits).
+* **Reuse**: with nested pipelines the inner pipeline is a standalone,
+  reusable artifact, whereas with the built-in modes the steps live in a
+  single pipeline.
+* **Run log and state**: the built-in modes produce one unified run over all
+  partitions, while nested pipelines are run separately.
+* **Parallelism**: the built-in modes are handled by {pipeflow}, whereas with
+  nested pipelines you control the loop and can parallelize it yourself.
+
 ```{r, include = FALSE}
 options(old)
 ```

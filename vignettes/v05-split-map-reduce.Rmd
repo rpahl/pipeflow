@@ -263,7 +263,13 @@ pip_run(pip)
 pip[["combine_coefs", "out"]]
 ```
 
-There you go :-)
+The `split` and `reduce` execution modes cover the common case where the
+pipeline itself performs the split. Whenever they fit, they are the simplest
+way to express such a workflow. If you instead need to map over inputs that
+are not a single split point (for example cross-validation folds or nested
+splits) or want to
+reuse a standalone pipeline as a self-contained building block, see the
+[next vignette on nested pipelines](v05a-nested-pipeline.html).
 
 ```{r, include = FALSE}
 options(old)
