@@ -124,14 +124,14 @@ step.
 
 ``` r
 pip_run(pip)
-# info [2026-09-27 15:19:53.249 UTC]: Starting run of pipeflow 'preprocess-model'
-# info [2026-09-27 15:19:53.249 UTC]: Step 1/6 data
-# info [2026-09-27 15:19:53.250 UTC]: Step 2/6 prep
-# info [2026-09-27 15:19:53.251 UTC]: Step 3/6 standardize
-# info [2026-09-27 15:19:53.252 UTC]: Step 4/6 data2
-# info [2026-09-27 15:19:53.253 UTC]: Step 5/6 fit
-# info [2026-09-27 15:19:53.254 UTC]: Step 6/6 predict
-# info [2026-09-27 15:19:53.255 UTC]: Finished run of pipeflow 'preprocess-model'
+# info [2026-09-27 17:53:23.096 UTC]: Starting run of pipeflow 'preprocess-model'
+# info [2026-09-27 17:53:23.096 UTC]: Step 1/6 data
+# info [2026-09-27 17:53:23.097 UTC]: Step 2/6 prep
+# info [2026-09-27 17:53:23.098 UTC]: Step 3/6 standardize
+# info [2026-09-27 17:53:23.099 UTC]: Step 4/6 data2
+# info [2026-09-27 17:53:23.100 UTC]: Step 5/6 fit
+# info [2026-09-27 17:53:23.101 UTC]: Step 6/6 predict
+# info [2026-09-27 17:53:23.102 UTC]: Finished run of pipeflow 'preprocess-model'
 ```
 
 ``` r
@@ -149,14 +149,14 @@ pip_set_params(pip, params = list(k = 3))
 
 ``` r
 pip_run(pip)
-# info [2026-09-27 15:19:53.476 UTC]: Starting run of pipeflow 'preprocess-model'
-# info [2026-09-27 15:19:53.476 UTC]: Step 1/6 data - skipping done step
-# info [2026-09-27 15:19:53.476 UTC]: Step 2/6 prep - skipping done step
-# info [2026-09-27 15:19:53.476 UTC]: Step 3/6 standardize - skipping done step
-# info [2026-09-27 15:19:53.476 UTC]: Step 4/6 data2 - skipping done step
-# info [2026-09-27 15:19:53.476 UTC]: Step 5/6 fit
-# info [2026-09-27 15:19:53.477 UTC]: Step 6/6 predict
-# info [2026-09-27 15:19:53.478 UTC]: Finished run of pipeflow 'preprocess-model'
+# info [2026-09-27 17:53:23.328 UTC]: Starting run of pipeflow 'preprocess-model'
+# info [2026-09-27 17:53:23.328 UTC]: Step 1/6 data - skipping done step
+# info [2026-09-27 17:53:23.328 UTC]: Step 2/6 prep - skipping done step
+# info [2026-09-27 17:53:23.328 UTC]: Step 3/6 standardize - skipping done step
+# info [2026-09-27 17:53:23.328 UTC]: Step 4/6 data2 - skipping done step
+# info [2026-09-27 17:53:23.328 UTC]: Step 5/6 fit
+# info [2026-09-27 17:53:23.329 UTC]: Step 6/6 predict
+# info [2026-09-27 17:53:23.330 UTC]: Finished run of pipeflow 'preprocess-model'
 ```
 
 ``` r

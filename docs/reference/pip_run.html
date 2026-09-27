@@ -13,7 +13,7 @@ executed. Use force = TRUE to re-execute every step.'><meta property="og:image" 
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9004</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -188,12 +188,12 @@ for an advanced example of dynamic pipelines.</p></div>
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"total"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">square</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu">pip_run</span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.376 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.376 UTC]: Step 1/4 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.376 UTC]: Step 2/4 prep</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.377 UTC]: Step 3/4 square</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.378 UTC]: Step 4/4 total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.379 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.417 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.417 UTC]: Step 1/4 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.417 UTC]: Step 2/4 prep</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.418 UTC]: Step 3/4 square</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.419 UTC]: Step 4/4 total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.420 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (4 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
@@ -203,7 +203,7 @@ for an advanced example of dynamic pipelines.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3: square        x    prep  done 1,4,9</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4:  total        x  square  done    14</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 17:19:39</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:08</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>weight <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span></span></span>
@@ -215,28 +215,28 @@ for an advanced example of dynamic pipelines.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3: square        x    prep outdated 1,4,9</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4:  total        x  square outdated    14</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 17:19:39</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:08</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Already-done steps are skipped on a second run</span></span></span>
 <span class="r-in"><span><span class="fu">pip_run</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="co"># first step skipped</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.384 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.384 UTC]: Step 1/4 load - skipping done step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.384 UTC]: Step 2/4 prep</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.385 UTC]: Step 3/4 square</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.386 UTC]: Step 4/4 total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.387 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.426 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.426 UTC]: Step 1/4 load - skipping done step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.426 UTC]: Step 2/4 prep</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.427 UTC]: Step 3/4 square</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.428 UTC]: Step 4/4 total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.429 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># lgr = NULL suppresses log output</span></span></span>
 <span class="r-in"><span><span class="fu">pip_run</span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># force = TRUE re-executes every step regardless of state</span></span></span>
 <span class="r-in"><span><span class="fu">pip_run</span><span class="op">(</span><span class="va">p</span>, force <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.389 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.389 UTC]: Step 1/4 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.389 UTC]: Step 2/4 prep</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.390 UTC]: Step 3/4 square</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.391 UTC]: Step 4/4 total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.392 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.430 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.430 UTC]: Step 1/4 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.430 UTC]: Step 2/4 prep</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.431 UTC]: Step 3/4 square</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.432 UTC]: Step 4/4 total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.433 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (4 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
@@ -246,18 +246,18 @@ for an advanced example of dynamic pipelines.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3: square        x    prep  done  4,16,36</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4:  total        x  square  done       56</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 17:19:39</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:08</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Run only a subset of steps via a view;</span></span></span>
 <span class="r-in"><span><span class="co"># upstream dependencies are automatically included</span></span></span>
 <span class="r-in"><span><span class="va">v</span> <span class="op">&lt;-</span> <span class="fu"><a href="pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">p</span>, step <span class="op">=</span> <span class="st">"total"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">pip_run</span><span class="op">(</span><span class="va">v</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.396 UTC]: Starting run of pipeflow 'pipe view'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.396 UTC]: Step 1/4 [upstream] load - skipping done step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.396 UTC]: Step 2/4 [upstream] prep - skipping done step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.396 UTC]: Step 3/4 [upstream] square - skipping done step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.396 UTC]: Step 4/4 [view] total - skipping done step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.396 UTC]: Finished run of pipeflow 'pipe view'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.437 UTC]: Starting run of pipeflow 'pipe view'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.437 UTC]: Step 1/4 [upstream] load - skipping done step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.438 UTC]: Step 2/4 [upstream] prep - skipping done step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.438 UTC]: Step 3/4 [upstream] square - skipping done step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.438 UTC]: Step 4/4 [view] total - skipping done step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.438 UTC]: Finished run of pipeflow 'pipe view'</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Halt or restart pipeline at runtime (for advanced usage)</span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"restart"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
@@ -274,16 +274,16 @@ for an advanced example of dynamic pipelines.</p></div>
 <span class="r-in"><span>  <span class="op">}</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu">pip_run</span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.399 UTC]: Starting run of pipeflow 'restart'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.399 UTC]: Step 1/3 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.400 UTC]: Step 2/3 check</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.401 UTC]: Step 3/3 model</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.403 UTC]: Restarting pipeline execution.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.403 UTC]: Restarting run of pipeflow 'restart'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.403 UTC]: Step 1/3 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.403 UTC]: Step 2/3 check</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.404 UTC]: Step 3/3 model</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.405 UTC]: Finished run of pipeflow 'restart'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.440 UTC]: Starting run of pipeflow 'restart'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.440 UTC]: Step 1/3 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.441 UTC]: Step 2/3 check</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.442 UTC]: Step 3/3 model</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.448 UTC]: Restarting pipeline execution.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.448 UTC]: Restarting run of pipeflow 'restart'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.448 UTC]: Step 1/3 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.448 UTC]: Step 2/3 check</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.449 UTC]: Step 3/3 model</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.450 UTC]: Finished run of pipeflow 'restart'</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; restart (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------</span>
@@ -292,15 +292,15 @@ for an advanced example of dynamic pipelines.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: check      x    load  done         [NULL]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3: model      x    load  done  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 17:19:39</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:08</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">15</span><span class="op">)</span><span class="op">)</span> <span class="co"># now halt() in 'check' step is triggered</span></span></span>
 <span class="r-in"><span><span class="fu">pip_run</span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.408 UTC]: Starting run of pipeflow 'restart'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.409 UTC]: Step 1/3 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.409 UTC]: Step 2/3 check</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.410 UTC]: Aborting pipeline execution on manual halt.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:39.410 UTC]: Finished run of pipeflow 'restart'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.454 UTC]: Starting run of pipeflow 'restart'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.454 UTC]: Step 1/3 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.454 UTC]: Step 2/3 check</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.455 UTC]: Aborting pipeline execution on manual halt.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.455 UTC]: Finished run of pipeflow 'restart'</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

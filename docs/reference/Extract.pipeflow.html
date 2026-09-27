@@ -13,7 +13,7 @@ their properties) in place."><meta property="og:image" content="https://github.c
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9004</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -349,11 +349,11 @@ and the virtual methods (e.g. <code>p$add(...)</code> or <code>p$run()</code>).<
 <span class="r-in"><span><span class="co"># No arguments returns a copy of the pipeline</span></span></span>
 <span class="r-in"><span><span class="va">p2</span> <span class="op">&lt;-</span> <span class="va">p</span><span class="op">[</span><span class="op">]</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p2</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.280 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.280 UTC]: Step 1/3 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.281 UTC]: Step 2/3 square</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.283 UTC]: Step 3/3 total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.285 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.693 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.693 UTC]: Step 1/3 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.694 UTC]: Step 2/3 square</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.699 UTC]: Step 3/3 total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.700 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
@@ -371,7 +371,7 @@ and the virtual methods (e.g. <code>p$add(...)</code> or <code>p$run()</code>).<
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: square      x    load  done  1, 4, 9,16,25        model</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  total      x  square  done             55 model,report</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 17:19:36</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:04</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Two-index extraction selects step-table columns by name</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[</span>, <span class="st">"step"</span><span class="op">]</span>                     <span class="co"># one-column data.table</span></span></span>
@@ -401,10 +401,10 @@ and the virtual methods (e.g. <code>p$add(...)</code> or <code>p$run()</code>).<
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"load"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">x</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"fit"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">load</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.295 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.295 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.296 UTC]: Step 2/2 fit</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.297 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.716 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.716 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.716 UTC]: Step 2/2 fit</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.717 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Meta fields</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"name"</span><span class="op">]</span><span class="op">]</span>              <span class="co"># "pipe"</span></span></span>
@@ -412,7 +412,7 @@ and the virtual methods (e.g. <code>p$add(...)</code> or <code>p$run()</code>).<
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"view"</span><span class="op">]</span><span class="op">]</span>              <span class="co"># NULL - not a view</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"pipenv"</span><span class="op">]</span><span class="op">]</span>            <span class="co"># the inner pipeline environment</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x559204e91600&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x559e078da340&gt;</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"pipenv"</span><span class="op">]</span><span class="op">]</span><span class="op">[[</span><span class="st">"data"</span><span class="op">]</span><span class="op">]</span>  <span class="co"># the underlying step table</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Indices: &lt;step&gt;, &lt;nodeId&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      step           fun    params    out  state   tags locked   exec</span>
@@ -421,27 +421,27 @@ and the virtual methods (e.g. <code>p$add(...)</code> or <code>p$run()</code>).<
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:    fit &lt;function[1]&gt; &lt;list[1]&gt;      2   done         FALSE   auto</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                   time depends unbound nodeId</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                 &lt;POSc&gt;  &lt;list&gt;  &lt;list&gt;  &lt;int&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 2026-09-27 17:19:36               x      0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 2026-09-27 17:19:36    load              1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 2026-09-27 19:53:04               x      0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 2026-09-27 19:53:04    load              1</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Virtual methods</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"s3"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.302 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.302 UTC]: Step 1/3 load - skipping done step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.302 UTC]: Step 2/3 fit - skipping done step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.302 UTC]: Step 3/3 s3</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 15:19:36.304 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.723 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.723 UTC]: Step 1/3 load - skipping done step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.723 UTC]: Step 2/3 fit - skipping done step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.723 UTC]: Step 3/3 s3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:04.724 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="va">restart</span>   <span class="co"># a function; call p$restart() to request a restart</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> function (...) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> fn(x, ...)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x559202cb5260&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x5592071eb070&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x559e09bff290&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x559e06238500&gt;</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="va">halt</span>      <span class="co"># a function; call p$halt() to halt the current run</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> function (...) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> fn(x, ...)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x559202cb5260&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x559207389f60&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x559e09bff290&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x559e06024b68&gt;</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Column access, named by steps</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"step"</span><span class="op">]</span><span class="op">]</span>   <span class="co"># c(load = "load", fit = "fit")</span></span></span>
@@ -563,8 +563,8 @@ and the virtual methods (e.g. <code>p$add(...)</code> or <code>p$run()</code>).<
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="va">run</span>                 <span class="co"># a virtual method; call p$run() to run the pipeline</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> function (...) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> fn(x, ...)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x559202cb5260&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x559205a5ce20&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x559e09bff290&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x559e09d8afa0&gt;</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -42,6 +42,6 @@ pip_data(p)
 #> 2:  model <function[1]> <list[1]> [NULL]    new         FALSE   auto
 #>                   time depends unbound nodeId
 #>                 <POSc>  <list>  <list>  <int>
-#> 1: 2026-09-27 17:19:37               n      0
-#> 2: 2026-09-27 17:19:37    load              1
+#> 1: 2026-09-27 19:53:06               n      0
+#> 2: 2026-09-27 19:53:06    load              1
 ```

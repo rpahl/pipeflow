@@ -41,7 +41,7 @@ str(p)
 #> List of 3
 #>  $ name  : chr "demo"
 #>  $ view  : NULL
-#>  $ pipenv:<environment: 0x559204ac61a0> 
+#>  $ pipenv:<environment: 0x559e08de5088> 
 p[["name"]]  # "demo"
 #> [1] "demo"
 p[["view"]]  # initially NULL
