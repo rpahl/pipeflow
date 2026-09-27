@@ -1,7 +1,3 @@
-if (identical(Sys.getenv("TESTTHAT"), "true")) {
-    lgr::suspend_logging()
-}
-
 expect_equivalent <- function(...) {
     testthat::expect_equal(..., ignore_attr = TRUE)
 }
@@ -16,4 +12,8 @@ expect_no_error <- function(...) {
 
 expect_no_warning <- function(...) {
     testthat::expect_warning(..., regexp = NA)
+}
+
+get_run_state <- function(x) {
+    as.character(.pip_pipenv(x)[[".run_state"]])
 }

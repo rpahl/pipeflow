@@ -1,5 +1,6 @@
 #' @keywords internal
 #' @useDynLib pipeflow, .registration = TRUE
+#' @import data.table
 #' @importFrom Rcpp evalCpp
 "_PACKAGE"
 
@@ -13,13 +14,7 @@
 .step_states[["failed"]] <- c(name = "failed", color = "#ff4c4cff")
 
 
-.this_package_name <- function() {
-    methods::getPackageName()
-}
-
-
-.this_package_path <- function(...) {
-    system.file(package = .this_package_name()) |>
-        file.path(...) |>
-        normalizePath(winslash = "/", mustWork = FALSE)
-}
+# These columns are recomputed whenever a function, its parameters,
+# or the step name change, and they cannot be assigned to directly
+# (see e.g. `[[<-.pipeflow`).
+.derived_cols <- c("depends", "unbound", "nodeId")

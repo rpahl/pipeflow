@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Recursive self-modification • pipeflow</title>
+<title>Self-modifying pipelines • pipeflow</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -15,7 +15,8 @@
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Recursive self-modification">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<meta property="og:title" content="Self-modifying pipelines">
 <meta name="description" content="Shows how you can setup pipelines to modify themselves at runtime, which, for example, allows for changing pipeline parameters based on intermediate results or even dynamically modify the pipeline's own structure during a pipeline run.
 ">
 <meta property="og:description" content="Shows how you can setup pipelines to modify themselves at runtime, which, for example, allows for changing pipeline parameters based on intermediate results or even dynamically modify the pipeline's own structure during a pipeline run.
@@ -30,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9001</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9004</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -58,13 +59,15 @@
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Get started</h6></li>
     <li><a class="dropdown-item" href="../articles/v01-get-started.html">Get started with pipeflow</a></li>
-    <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modifying existing pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combining pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collecting and filtering output</a></li>
+    <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modify existing pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v03a-combine-pipelines.html">Combine pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v03b-pipeline-views.html">Pipeline views</a></li>
+    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collect and group output</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
-    <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
-    <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced workflows</h6></li>
+    <li><a class="dropdown-item" href="../articles/v05a-split-map-reduce.html">Split, map, and reduce</a></li>
+    <li><a class="dropdown-item" href="../articles/v05b-nested-pipeline.html">Nested pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
     <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
@@ -88,7 +91,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Recursive self-modification</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Self-modifying pipelines</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/v06-self-modify-pipeline.Rmd"><code>vignettes/v06-self-modify-pipeline.Rmd</code></a></small>
@@ -97,238 +100,155 @@
 
     
     
-<p>The {pipeflow} package aims to offer a lean and intuitive interface
-that enables new users to get started quickly without having to learn a
-lot of new concepts and functions.</p>
-<p>At the same time, it was also designed to provide easy access to the
-underlying data structures to allow advanced users to modify the
-pipeline basically in any way they want. As such pipelines not only can
-be modified before but also during execution, respectively. This opens
-up a wide range of possibilities, for example, to change parameters
-based on intermediate results or even to modify the pipeline structure
-itself during a pipeline run. In the following, we will show some
-examples of how this can be done.</p>
 <div class="section level3">
-<h3 id="the-pipeline-object">The pipeline object<a class="anchor" aria-label="anchor" href="#the-pipeline-object"></a>
+<h3 id="internal-pipeline-structure">Internal pipeline structure<a class="anchor" aria-label="anchor" href="#internal-pipeline-structure"></a>
 </h3>
-<p>Let’s first define a pipeline, which fits a linear model, checks it’s
-residuals for normality using the Shapiro-Wilk test, and plots the
-residuals.</p>
+<p>{pipeflow} aims to offer a lean and intuitive interface that enables
+new users to get started quickly without having to learn a lot of new
+functions. At the same time, it was designed to provide easy access to
+the underlying data structures to allow advanced users to modify the
+pipeline basically in any way they want.</p>
+<p>To see this, let’s briefly inspect the internal structure of a
+pipeline object.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpahl.github.io/pipeflow/" class="external-link">pipeflow</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"data"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="va">data</span></span>
-<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"fit"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span></span>
-<span>            <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>,</span>
-<span>            <span class="va">xVar</span> <span class="op">=</span> <span class="st">"x"</span>,</span>
-<span>            <span class="va">yVar</span> <span class="op">=</span> <span class="st">"y"</span></span>
-<span>        <span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">yVar</span>, <span class="st">"~"</span>, <span class="va">xVar</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
-<span>        <span class="op">}</span></span>
-<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"residual_shapiro_p_value"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">fit</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span><span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="va">residuals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/residuals.html" class="external-link">residuals</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/stats/shapiro.test.html" class="external-link">shapiro.test</a></span><span class="op">(</span><span class="va">residuals</span><span class="op">)</span><span class="op">$</span><span class="va">p.value</span></span>
-<span>        <span class="op">}</span></span>
-<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"plot"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span></span>
-<span>            <span class="va">fit</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span>,</span>
-<span>            <span class="va">pointColor</span> <span class="op">=</span> <span class="st">"black"</span></span>
-<span>        <span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span>            <span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>                fitted <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>,</span>
-<span>                residuals <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/residuals.html" class="external-link">residuals</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
-<span>            <span class="op">)</span></span>
-<span></span>
-<span>            <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">data</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">fitted</span>, y <span class="op">=</span> <span class="va">residuals</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>                <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>shape <span class="op">=</span> <span class="fl">21</span>, color <span class="op">=</span> <span class="va">pointColor</span><span class="op">)</span> <span class="op">+</span></span>
-<span>                <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_hline</a></span><span class="op">(</span>yintercept <span class="op">=</span> <span class="fl">0</span>, linetype <span class="op">=</span> <span class="st">"dashed"</span><span class="op">)</span> <span class="op">+</span></span>
-<span>                <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_minimal</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>        <span class="op">}</span></span>
-<span>    <span class="op">)</span></span></code></pre></div>
-<p>If you have followed the previous vignettes, you by now are used to
-the pipeline overview.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow_pip&gt; my-pipeline (4 steps)</span></span>
-<span><span class="co"># ------------------------------------</span></span>
-<span><span class="co">#                        step depends    out state</span></span>
-<span><span class="co"># 1:                     data         [NULL]   new</span></span>
-<span><span class="co"># 2:                      fit    data [NULL]   new</span></span>
-<span><span class="co"># 3: residual_shapiro_p_value     fit [NULL]   new</span></span>
-<span><span class="co"># 4:                     plot     fit [NULL]   new</span></span></code></pre></div>
-<p>To inspect the internal structure, let’s start with the class.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># [1] "pipeflow_pip" "environment"</span></span></code></pre></div>
-<p>As we can see, the pipeline object is stored in an environment.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># [1] "name"     "pipeline"</span></span></code></pre></div>
-<p>There is the “name” of the pipeline, which is just a character
-string. The most interesting object is the “pipeline”, object, which
-under the hood is a <code>data.table</code> object containing all the
-information about the steps, their dependencies, meta information, and
-so on.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/data.class.html" class="external-link">data.class</a></span><span class="op">(</span><span class="va">pip</span><span class="op">$</span><span class="va">pipeline</span><span class="op">)</span></span>
-<span><span class="co"># [1] "data.table"</span></span>
-<span></span>
-<span><span class="va">pip</span><span class="op">$</span><span class="va">pipeline</span></span>
-<span><span class="co">#                        step           fun    params                              signature depends</span></span>
-<span><span class="co">#                      &lt;char&gt;        &lt;list&gt;    &lt;list&gt;                                 &lt;char&gt;  &lt;list&gt;</span></span>
-<span><span class="co"># 1:                     data &lt;function[1]&gt; &lt;list[1]&gt;                          (data = NULL)        </span></span>
-<span><span class="co"># 2:                      fit &lt;function[1]&gt; &lt;list[3]&gt; (data = ~data, xVar = "x", yVar = "y")    data</span></span>
-<span><span class="co"># 3: residual_shapiro_p_value &lt;function[1]&gt; &lt;list[1]&gt;                           (fit = ~fit)     fit</span></span>
-<span><span class="co"># 4:                     plot &lt;function[1]&gt; &lt;list[2]&gt;     (fit = ~fit, pointColor = "black")     fit</span></span>
-<span><span class="co">#       out  state   tags                time locked   exec .nodeId    .indeps</span></span>
-<span><span class="co">#    &lt;list&gt; &lt;char&gt; &lt;list&gt;              &lt;POSc&gt; &lt;lgcl&gt; &lt;char&gt;   &lt;int&gt;     &lt;list&gt;</span></span>
-<span><span class="co"># 1: [NULL]    new        2026-06-27 20:21:01  FALSE   auto       0       data</span></span>
-<span><span class="co"># 2: [NULL]    new        2026-06-27 20:21:01  FALSE   auto       1  xVar,yVar</span></span>
-<span><span class="co"># 3: [NULL]    new        2026-06-27 20:21:01  FALSE   auto       2           </span></span>
-<span><span class="co"># 4: [NULL]    new        2026-06-27 20:21:01  FALSE   auto       3 pointColor</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="changing-pipeline-parameters-at-runtime">Changing pipeline parameters at runtime<a class="anchor" aria-label="anchor" href="#changing-pipeline-parameters-at-runtime"></a>
-</h3>
-<p>First, we set some data and parameters and run the pipeline as
-usual.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">airquality</span>, xVar <span class="op">=</span> <span class="st">"Ozone"</span>, yVar <span class="op">=</span> <span class="st">"Temp"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-27 18:21:01.705 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-27 18:21:01.706 UTC]: Step 1/4 data</span></span>
-<span><span class="co"># info [2026-06-27 18:21:01.707 UTC]: Step 2/4 fit</span></span>
-<span><span class="co"># info [2026-06-27 18:21:01.711 UTC]: Step 3/4 residual_shapiro_p_value</span></span>
-<span><span class="co"># info [2026-06-27 18:21:01.713 UTC]: Step 4/4 plot</span></span>
-<span><span class="co"># info [2026-06-27 18:21:02.553 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
-<span></span>
-<span><span class="va">pip</span><span class="op">[[</span><span class="st">"plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
-<p><img src="v06-self-modify-pipeline_files/figure-html/unnamed-chunk-6-1.png" class="r-plt" alt="residual-plot" width="700"></p>
-<p>Now let’s imagine, we want to change the color of the points in the
-plot depending on the Shapiro-Wilk test result. The obvious way to do
-this would be to change the <code>plot</code> step by passing the test
-result to the <code>plot</code> step function and change the color
-there.</p>
-<p>However, here we are interested in another way that would keep the
-<code>plot</code> function unchanged. For example, we could run the
-pipeline a second time as follows:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="va">pip</span><span class="op">[[</span><span class="st">"residual_shapiro_p_value"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;</span> <span class="fl">0.05</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">pip</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>pointColor <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span><span class="co"># info [2026-06-27 18:21:02.891 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-27 18:21:02.892 UTC]: Step 1/4 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-27 18:21:02.892 UTC]: Step 2/4 fit - skipping done step</span></span>
-<span><span class="co"># info [2026-06-27 18:21:02.892 UTC]: Step 3/4 residual_shapiro_p_value - skipping done step</span></span>
-<span><span class="co"># info [2026-06-27 18:21:02.892 UTC]: Step 4/4 plot</span></span>
-<span><span class="co"># info [2026-06-27 18:21:02.934 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
-<span></span>
-<span><span class="va">pip</span><span class="op">[[</span><span class="st">"plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
-<p><img src="v06-self-modify-pipeline_files/figure-html/unnamed-chunk-7-1.png" class="r-plt" alt="residual-plot" width="700"></p>
-<p>As was mentioned in another vignette, this solution is not ideal, as
-it requires to run additional code around the pipeline. We rather want
-to set the parameter from within the pipeline during execution.</p>
-<p>Luckily, the pipeline by default provides a self-reference in the
-form of the <code>.self</code> parameter that potentially can be used in
-any step function. With this in mind, we can update the
-<code>residual_shapiro_p_value</code> step to change the
-<code>pointColor</code> parameter on the fly.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_replace.html">pip_replace</a></span><span class="op">(</span></span>
-<span>    <span class="st">"residual_shapiro_p_value"</span>,</span>
-<span>    <span class="kw">function</span><span class="op">(</span></span>
-<span>        <span class="va">fit</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span>,</span>
-<span>        <span class="va">.self</span> <span class="op">=</span> <span class="cn">NULL</span></span>
-<span>    <span class="op">)</span> <span class="op">{</span></span>
-<span>        <span class="va">residuals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/residuals.html" class="external-link">residuals</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
-<span>        <span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/shapiro.test.html" class="external-link">shapiro.test</a></span><span class="op">(</span><span class="va">residuals</span><span class="op">)</span><span class="op">$</span><span class="va">p.value</span></span>
-<span></span>
-<span>        <span class="kw">if</span> <span class="op">(</span><span class="va">p</span> <span class="op">&lt;</span> <span class="fl">0.05</span><span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="va">.self</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>pointColor <span class="op">=</span> <span class="st">"blue"</span><span class="op">)</span><span class="op">)</span></span>
-<span>        <span class="op">}</span></span>
-<span></span>
-<span>        <span class="va">p</span></span>
-<span>    <span class="op">}</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Now we can run the pipeline again and see that the color of the
-points has changed.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.275 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.275 UTC]: Step 1/4 data - skipping done step</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.275 UTC]: Step 2/4 fit - skipping done step</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.276 UTC]: Step 3/4 residual_shapiro_p_value</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.280 UTC]: Step 4/4 plot</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.384 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
-<span></span>
-<span><span class="va">pip</span><span class="op">[[</span><span class="st">"plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
-<p><img src="v06-self-modify-pipeline_files/figure-html/unnamed-chunk-9-1.png" class="r-plt" alt="residual-plot2" width="700"></p>
-<p>As we will show in the next section, modications of the pipeline at
-runtime are not limited to changing parameters but can also be used to
-modify the very own pipeline structure.</p>
-</div>
-<div class="section level3">
-<h3 id="changing-pipeline-structure-at-runtime">Changing pipeline structure at runtime<a class="anchor" aria-label="anchor" href="#changing-pipeline-structure-at-runtime"></a>
-</h3>
-<p>Subsequently, the pipeline steps will be comprised only of very basic
-functions in order to keep matters simple. The focus here should be on
-the pipeline structure and how it is modified.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"init"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">xInit</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="va">xInit</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f1"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">init</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f2"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">2</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f3"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
-<p>This pipeline just adds 1, 2, and 3 to the initial value,
-respectively.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.792 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.792 UTC]: Step 1/4 init</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.794 UTC]: Step 2/4 f1</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.796 UTC]: Step 3/4 f2</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.801 UTC]: Step 4/4 f3</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.803 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"init"</span>, \<span class="op">(</span><span class="va">xInit</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="va">xInit</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f1"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">init</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f2"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">2</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f3"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">3</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
+<span><span class="co"># List of 3</span></span>
+<span><span class="co">#  $ name  : chr "my-pipeline"</span></span>
+<span><span class="co">#  $ view  : NULL</span></span>
+<span><span class="co">#  $ pipenv:&lt;environment: 0x5565409ca5a8&gt;</span></span></code></pre></div>
+<p>There is the <code>name</code> of the pipeline, which is just a
+character string, as well as a <code>view</code> entry, which is
+undefined initially.</p>
+<p>The most “interesting” part is the <code>pipenv</code>: an
+environment that holds the pipeline’s actual state. It is shared by the
+pipeline and all of its views, which is why operations on a view write
+through to the underlying pipeline.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="va">pip</span><span class="op">$</span><span class="va">pipenv</span><span class="op">)</span></span>
+<span><span class="co"># [1] "data"</span></span></code></pre></div>
+<p>Listing the <code>pipenv</code><a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content='&lt;p&gt; By default, &lt;code&gt;&lt;a href="https://rdrr.io/r/base/ls.html" class="external-link"&gt;ls()&lt;/a&gt;&lt;/code&gt; hides names starting with
+a dot. The internal entries, which become visible via
+&lt;code&gt;ls(pip$pipenv, all.names = TRUE)&lt;/code&gt;, are not considered in
+this vignette.&lt;/p&gt;'><sup>1</sup></a> reveals the <code>data</code>entry, which
+contains the pipeline’s step table as a <code>data.table</code> with one
+row per step:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span><span class="op">$</span><span class="va">pipenv</span><span class="op">$</span><span class="va">data</span> <span class="co"># or pip_data(pip)</span></span>
+<span><span class="co">#      step           fun    params    out  state   tags locked   exec                time depends unbound nodeId</span></span>
+<span><span class="co">#    &lt;char&gt;        &lt;list&gt;    &lt;list&gt; &lt;list&gt; &lt;char&gt; &lt;list&gt; &lt;lgcl&gt; &lt;char&gt;              &lt;POSc&gt;  &lt;list&gt;  &lt;list&gt;  &lt;int&gt;</span></span>
+<span><span class="co"># 1:   init &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto 2026-09-27 17:20:06           xInit      0</span></span>
+<span><span class="co"># 2:     f1 &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto 2026-09-27 17:20:06    init              1</span></span>
+<span><span class="co"># 3:     f2 &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto 2026-09-27 17:20:06      f1              2</span></span>
+<span><span class="co"># 4:     f3 &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto 2026-09-27 17:20:06      f2              3</span></span></code></pre></div>
+<p>Many of the columns should be already familar to you and most of them
+can be manipulated safely via the <code>[&lt;-</code> and
+<code>[[&lt;-</code> operators, for example:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"f2"</span>, <span class="st">"step"</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"my_pretty_f2"</span> <span class="co"># updates downstream 'depends'</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow_pip&gt; my-pipeline (4 steps)</span></span>
-<span><span class="co"># ------------------------------------</span></span>
-<span><span class="co">#    step depends out state</span></span>
-<span><span class="co"># 1: init           0  done</span></span>
-<span><span class="co"># 2:   f1    init   1  done</span></span>
-<span><span class="co"># 3:   f2      f1   3  done</span></span>
-<span><span class="co"># 4:   f3      f2   6  done</span></span></code></pre></div>
-<p>The <code>out</code> column in the table shows the output of each
-step. Now let’s modify step <code>f2</code> that in turn will modify
+<span><span class="co"># &lt;pipeflow&gt; my-pipeline (4 steps)</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co">#            step params      depends state</span></span>
+<span><span class="co"># 1:         init  xInit                new</span></span>
+<span><span class="co"># 2:           f1      x         init   new</span></span>
+<span><span class="co"># 3: my_pretty_f2      x           f1   new</span></span>
+<span><span class="co"># 4:           f3      x my_pretty_f2   new</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: never</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span><span class="op">[</span><span class="va">step</span> <span class="op"><a href="../reference/pipeflow-operators.html">%like%</a></span> <span class="st">"f"</span>, <span class="st">"locked"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="cn">TRUE</span></span>
+<span></span>
+<span><span class="va">pip</span></span>
+<span><span class="co"># &lt;pipeflow&gt; my-pipeline (4 steps)</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co">#            step params      depends state locked</span></span>
+<span><span class="co"># 1:         init  xInit                new  FALSE</span></span>
+<span><span class="co"># 2:           f1      x         init   new   TRUE</span></span>
+<span><span class="co"># 3: my_pretty_f2      x           f1   new   TRUE</span></span>
+<span><span class="co"># 4:           f3      x my_pretty_f2   new   TRUE</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: never</span></span></code></pre></div>
+<p>An exception are the last three columns (<code>depends</code>,
+<code>unbound</code>, <code>nodeId</code>): these are usually derived
+indirectly from the step definition and therefore protected against
+direct assignment.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"init"</span>, <span class="st">"nodeId"</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">99L</span></span>
+<span><span class="co"># <span style="color: #BBBB00; font-weight: bold;">Error</span><span style="font-weight: bold;"> in `[[&lt;-.pipeflow`:</span></span></span>
+<span><span class="co"># <span style="color: #BBBB00;">!</span> direct assignment to column 'nodeId' is not supported.</span></span></code></pre></div>
+<p>Of course, you can even skip the <code>[&lt;-</code> and
+<code>[[&lt;-</code> operators and work directly on the
+<code>data.table</code> object, but with an increased risk to invalidate
+the internal consistency of the overall pipeline structure, for
+example:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="va">pip</span><span class="op">$</span><span class="va">pipenv</span><span class="op">$</span><span class="va">data</span></span>
+<span><span class="va">dat</span><span class="op">[</span><span class="fl">2</span>, <span class="st">"step"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="st">"new f1 name"</span> <span class="co"># fails to update downstream 'depends'</span></span>
+<span><span class="va">dat</span><span class="op">[</span><span class="fl">3</span>, <span class="st">"nodeId"</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">99L</span> <span class="co"># breaks link to internal DAG node</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/assign.html" class="external-link">assign</a></span><span class="op">(</span><span class="st">"data"</span>, <span class="va">dat</span>, envir <span class="op">=</span> <span class="va">pip</span><span class="op">$</span><span class="va">pipenv</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">pip</span></span>
+<span><span class="co"># &lt;pipeflow&gt; my-pipeline (4 steps)</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co">#            step params      depends state locked</span></span>
+<span><span class="co"># 1:         init  xInit                new  FALSE</span></span>
+<span><span class="co"># 2:  new f1 name      x         init   new   TRUE</span></span>
+<span><span class="co"># 3: my_pretty_f2      x           f1   new   TRUE</span></span>
+<span><span class="co"># 4:           f3      x my_pretty_f2   new   TRUE</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: never</span></span></code></pre></div>
+<p>For this reason, direct manipulation is useful during debugging and
+you should mostly stick to the provided operators or functions unless
+you really know what you are doing.</p>
+</div>
+<div class="section level3">
+<h3 id="changing-the-pipeline-structure-at-runtime">Changing the pipeline structure at runtime<a class="anchor" aria-label="anchor" href="#changing-the-pipeline-structure-at-runtime"></a>
+</h3>
+<p>After this little excursion let’s next see how to safely modify our
+pipeline structure at runtime.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"init"</span>, \<span class="op">(</span><span class="va">xInit</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="va">xInit</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f1"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">init</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f2"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">2</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f3"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">3</span><span class="op">)</span></span>
+<span></span>
+<span><span class="op">(</span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.182 UTC]: Starting run of pipeflow 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.182 UTC]: Step 1/4 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.183 UTC]: Step 2/4 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.185 UTC]: Step 3/4 f2</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.186 UTC]: Step 4/4 f3</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.187 UTC]: Finished run of pipeflow 'my-pipeline'</span></span>
+<span><span class="co"># &lt;pipeflow&gt; my-pipeline (4 steps)</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co">#    step params depends state out</span></span>
+<span><span class="co"># 1: init  xInit          done   0</span></span>
+<span><span class="co"># 2:   f1      x    init  done   1</span></span>
+<span><span class="co"># 3:   f2      x      f1  done   3</span></span>
+<span><span class="co"># 4:   f3      x      f2  done   6</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 17:20:07</span></span></code></pre></div>
+<p>This pipeline just adds 1, 2, and 3 to the initial value,
+respectively. Let’s modify step <code>f2</code> that in turn will modify
 <code>f3</code> at runtime based on the interim result passed into
 <code>f2</code>.</p>
 <div class="section level4">
 <h4 id="modify-steps">Modify steps<a class="anchor" aria-label="anchor" href="#modify-steps"></a>
 </h4>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_replace.html">pip_replace</a></span><span class="op">(</span></span>
 <span>    <span class="st">"f2"</span>,</span>
-<span>    <span class="kw">function</span><span class="op">(</span></span>
-<span>        <span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span>,</span>
-<span>        <span class="va">.self</span> <span class="op">=</span> <span class="cn">NULL</span></span>
-<span>    <span class="op">)</span> <span class="op">{</span></span>
+<span>    \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="op">{</span></span>
 <span>        <span class="kw">if</span> <span class="op">(</span><span class="va">x</span> <span class="op">&gt;</span> <span class="fl">10</span><span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="va">.self</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_replace.html">pip_replace</a></span><span class="op">(</span><span class="st">"f3"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="fl">3</span><span class="op">)</span></span>
+<span>            <span class="va">.self</span><span class="op">$</span><span class="fu">replace</span><span class="op">(</span><span class="st">"f3"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="fl">3</span><span class="op">)</span></span>
 <span>            <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="va">x</span> <span class="op">/</span> <span class="fl">2</span><span class="op">)</span></span>
 <span>        <span class="op">}</span></span>
 <span>        <span class="va">x</span> <span class="op">+</span> <span class="fl">2</span></span>
@@ -339,228 +259,208 @@ than 10, and if so, it replaces step <code>f3</code> with a new step now
 referencing <code>f1</code> that multiplies the input passed from
 <code>f1</code> by 3 and returns half of the input.</p>
 <p>To see this, let’s try it with an input of 15.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xInit <span class="op">=</span> <span class="fl">15</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.929 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.929 UTC]: Step 1/4 init</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.930 UTC]: Step 2/4 f1</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.933 UTC]: Step 3/4 f2</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.937 UTC]: Step 4/4 f3</span></span>
-<span><span class="co"># info [2026-06-27 18:21:03.939 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.298 UTC]: Starting run of pipeflow 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.298 UTC]: Step 1/4 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.299 UTC]: Step 2/4 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.300 UTC]: Step 3/4 f2</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.302 UTC]: Step 4/4 f3</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.303 UTC]: Finished run of pipeflow 'my-pipeline'</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow_pip&gt; my-pipeline (4 steps)</span></span>
-<span><span class="co"># ------------------------------------</span></span>
-<span><span class="co">#    step depends out state</span></span>
-<span><span class="co"># 1: init          15  done</span></span>
-<span><span class="co"># 2:   f1    init  16  done</span></span>
-<span><span class="co"># 3:   f2      f1   8  done</span></span>
-<span><span class="co"># 4:   f3      f1  48  done</span></span></code></pre></div>
+<span><span class="co"># &lt;pipeflow&gt; my-pipeline (4 steps)</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co">#    step params depends state out</span></span>
+<span><span class="co"># 1: init  xInit          done  15</span></span>
+<span><span class="co"># 2:   f1      x    init  done  16</span></span>
+<span><span class="co"># 3:   f2      x      f1  done   8</span></span>
+<span><span class="co"># 4:   f3      x      f1  done  48</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 17:20:07</span></span></code></pre></div>
 <p>We see that both the output of the pipeline and the dependencies of
 the last step have changed. Let’s confirm by inspecting the function of
 the last step.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"f3"</span>, <span class="st">"fun"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co"># function (x = ~f1) </span></span>
 <span><span class="co"># x * 3</span></span>
-<span><span class="co"># &lt;environment: 0x00000206dbfb22e8&gt;</span></span></code></pre></div>
+<span><span class="co"># &lt;environment: 0x556545b4f5f8&gt;</span></span></code></pre></div>
 </div>
 <div class="section level4">
 <h4 id="insert-and-remove-steps">Insert and remove steps<a class="anchor" aria-label="anchor" href="#insert-and-remove-steps"></a>
 </h4>
-<p>For our last example, we get even more hacky and instead of just
-replacing, we will go a bit further to insert and remove steps. The
-pipeline definition is as follows:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"init"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">xInit</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="va">xInit</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f1"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">init</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<p>Next, we get even more hacky and instead of just replacing, we will
+go a bit further to insert and remove steps. The pipeline definition is
+as follows:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"hicky-hacky"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"init"</span>, \<span class="op">(</span><span class="va">xInit</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="va">xInit</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f1"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">init</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"f2"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span></span>
-<span>            <span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span>,</span>
-<span>            <span class="va">.self</span> <span class="op">=</span> <span class="cn">NULL</span></span>
-<span>        <span class="op">)</span> <span class="op">{</span></span>
+<span>        \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="kw">if</span> <span class="op">(</span><span class="va">x</span> <span class="op">&gt;</span> <span class="fl">10</span><span class="op">)</span> <span class="op">{</span></span>
 <span>                <span class="va">.self</span> <span class="op">|&gt;</span></span>
-<span>                    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>                        <span class="st">"f2a"</span>,</span>
-<span>                        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">21</span>,</span>
-<span>                        after <span class="op">=</span> <span class="st">"f1"</span>,</span>
-<span>                    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>                    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>                        <span class="st">"f2b"</span>,</span>
-<span>                        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2a</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">22</span>,</span>
-<span>                        after <span class="op">=</span> <span class="st">"f2a"</span></span>
-<span>                    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>                    <span class="fu"><a href="../reference/pip_replace.html">pip_replace</a></span><span class="op">(</span></span>
-<span>                        <span class="st">"f3"</span>,</span>
-<span>                        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2b</span><span class="op">)</span> <span class="op">{</span></span>
-<span>                            <span class="va">x</span> <span class="op">+</span> <span class="fl">30</span></span>
-<span>                        <span class="op">}</span></span>
-<span>                    <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>                    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f2a"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">21</span>, after <span class="op">=</span> <span class="st">"f1"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>                    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f2b"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2a</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">22</span>, after <span class="op">=</span> <span class="st">"f2a"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>                    <span class="fu"><a href="../reference/pip_replace.html">pip_replace</a></span><span class="op">(</span><span class="st">"f3"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2b</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">30</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>                    <span class="fu"><a href="../reference/pip_remove.html">pip_remove</a></span><span class="op">(</span><span class="st">"f2"</span><span class="op">)</span></span>
 <span>            <span class="op">}</span></span>
 <span>            <span class="va">x</span> <span class="op">+</span> <span class="fl">2</span></span>
 <span>        <span class="op">}</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f3"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
-<p>Basically, if the input is greater than 10, we insert two new steps
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f3"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
+<p>If the input is greater than 10, we insert two new steps
 <code>f2a</code> and <code>f2b</code> after <code>f1</code>, remove
 <code>f2</code>, and replace <code>f3</code> with a new step that adds
 30 to the input. Let’s first run with the initial value of 0 to see the
 original output.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.117 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.118 UTC]: Step 1/4 init</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.118 UTC]: Step 2/4 f1</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.120 UTC]: Step 3/4 f2</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.124 UTC]: Step 4/4 f3</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.125 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.468 UTC]: Starting run of pipeflow 'hicky-hacky'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.469 UTC]: Step 1/4 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.469 UTC]: Step 2/4 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.470 UTC]: Step 3/4 f2</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.471 UTC]: Step 4/4 f3</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.472 UTC]: Finished run of pipeflow 'hicky-hacky'</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow_pip&gt; my-pipeline (4 steps)</span></span>
-<span><span class="co"># ------------------------------------</span></span>
-<span><span class="co">#    step depends out state</span></span>
-<span><span class="co"># 1: init           0  done</span></span>
-<span><span class="co"># 2:   f1    init   1  done</span></span>
-<span><span class="co"># 3:   f2      f1   3  done</span></span>
-<span><span class="co"># 4:   f3      f2   6  done</span></span></code></pre></div>
+<span><span class="co"># &lt;pipeflow&gt; hicky-hacky (4 steps)</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co">#    step params depends state out</span></span>
+<span><span class="co"># 1: init  xInit          done   0</span></span>
+<span><span class="co"># 2:   f1      x    init  done   1</span></span>
+<span><span class="co"># 3:   f2      x      f1  done   3</span></span>
+<span><span class="co"># 4:   f3      x      f2  done   6</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 17:20:07</span></span></code></pre></div>
 <p>Next, we set the initial value to 11 to trigger the changes.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xInit <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.198 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.199 UTC]: Step 1/4 init</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.199 UTC]: Step 2/4 f1</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.202 UTC]: Step 3/4 f2</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.244 UTC]: Step 4/4 f3</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.245 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.530 UTC]: Starting run of pipeflow 'hicky-hacky'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.530 UTC]: Step 1/4 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.530 UTC]: Step 2/4 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.538 UTC]: Step 3/4 f2</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.542 UTC]: Step 4/4 f3</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.543 UTC]: Finished run of pipeflow 'hicky-hacky'</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow_pip&gt; my-pipeline (5 steps)</span></span>
-<span><span class="co"># ------------------------------------</span></span>
-<span><span class="co">#    step depends    out state</span></span>
-<span><span class="co"># 1: init             11  done</span></span>
-<span><span class="co"># 2:   f1    init     12  done</span></span>
-<span><span class="co"># 3:  f2a      f1 [NULL]   new</span></span>
-<span><span class="co"># 4:  f2b     f2a         done</span></span>
-<span><span class="co"># 5:   f3     f2b [NULL]   new</span></span></code></pre></div>
+<span><span class="co"># &lt;pipeflow&gt; hicky-hacky (5 steps)</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co">#    step params depends state    out</span></span>
+<span><span class="co"># 1: init  xInit          done     11</span></span>
+<span><span class="co"># 2:   f1      x    init  done     12</span></span>
+<span><span class="co"># 3:  f2a      x      f1   new [NULL]</span></span>
+<span><span class="co"># 4:  f2b      x     f2a  done       </span></span>
+<span><span class="co"># 5:   f3      x     f2b   new [NULL]</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 17:20:07</span></span></code></pre></div>
 <p>While the structure has changed as expected, some steps were not yet
 run. In fact, since originally step <code>f3</code>came after
 <code>f2</code>, and in contrast to what the log is showing, instead of
-step <code>f3</code>, actually the new step <code>f2b</code> was run<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt; Compare the state of &lt;code&gt;f2b&lt;/code&gt;, which is set to
-&lt;code&gt;done&lt;/code&gt;.&lt;/p&gt;"><sup>1</sup></a> , albeit
+step <code>f3</code>, actually the new step <code>f2b</code> was run<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt; See the state of &lt;code&gt;f2b&lt;/code&gt; in row 4: it is set
+to &lt;code&gt;done&lt;/code&gt;.&lt;/p&gt;"><sup>2</sup></a> , albeit
 with x = NULL as input.</p>
 <p>So to have the true results, we need to re-init the parameter and
 need to re-run the pipeline.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xInit <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.322 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.323 UTC]: Step 1/5 init</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.323 UTC]: Step 2/5 f1</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.326 UTC]: Step 3/5 f2a</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.330 UTC]: Step 4/5 f2b</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.332 UTC]: Step 5/5 f3</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.334 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.599 UTC]: Starting run of pipeflow 'hicky-hacky'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.599 UTC]: Step 1/5 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.599 UTC]: Step 2/5 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.600 UTC]: Step 3/5 f2a</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.601 UTC]: Step 4/5 f2b</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.602 UTC]: Step 5/5 f3</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.602 UTC]: Finished run of pipeflow 'hicky-hacky'</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow_pip&gt; my-pipeline (5 steps)</span></span>
-<span><span class="co"># ------------------------------------</span></span>
-<span><span class="co">#    step depends out state</span></span>
-<span><span class="co"># 1: init          11  done</span></span>
-<span><span class="co"># 2:   f1    init  12  done</span></span>
-<span><span class="co"># 3:  f2a      f1  33  done</span></span>
-<span><span class="co"># 4:  f2b     f2a  55  done</span></span>
-<span><span class="co"># 5:   f3     f2b  85  done</span></span></code></pre></div>
+<span><span class="co"># &lt;pipeflow&gt; hicky-hacky (5 steps)</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co">#    step params depends state out</span></span>
+<span><span class="co"># 1: init  xInit          done  11</span></span>
+<span><span class="co"># 2:   f1      x    init  done  12</span></span>
+<span><span class="co"># 3:  f2a      x      f1  done  33</span></span>
+<span><span class="co"># 4:  f2b      x     f2a  done  55</span></span>
+<span><span class="co"># 5:   f3      x     f2b  done  85</span></span>
+<span><span class="co"># --------------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 17:20:07</span></span></code></pre></div>
 <p>Now the output of all steps is as expected. If we want to use
 {pipeflow} in production, obviously, having to re-run the pipeline and
-temporarily showing a wrong log is not ideal. Ideally, the pipeline run
-would be aborted right after all changes were done in <code>f2</code>
-and the pipeline re-run automatically from the beginning. Also, this
-process potentially should be repeated recursively until the structure
-does not change anymore.</p>
+temporarily showing a wrong log is not ideal. That is, ideally, the
+pipeline run would be aborted once away after all changes were made in
+<code>f2</code> and then re-run right away from the beginning. Also,
+this process potentially should be repeated recursively until the
+structure does not change anymore.</p>
+</div>
+</div>
+<div class="section level3">
+<h3 id="invoke-restart-during-run">Invoke restart during run<a class="anchor" aria-label="anchor" href="#invoke-restart-during-run"></a>
+</h3>
 <p>Luckily, with some minimal changes, this behaviour can be achieved
 with {pipeflow}. First, for any step where you want to restart the
-pipeline run, you need to return the pipeline object, so we adapt the
-<code>f2</code> function as follows:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"init"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">xInit</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="va">xInit</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f1"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">init</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+pipeline run, you need to call <code>.self$restart()</code>, so we adapt
+the <code>f2</code> function as follows:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"hacky-with-restart"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"init"</span>, \<span class="op">(</span><span class="va">xInit</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="va">xInit</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f1"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">init</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"f2"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span></span>
-<span>            <span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span>,</span>
-<span>            <span class="va">.self</span> <span class="op">=</span> <span class="cn">NULL</span></span>
-<span>        <span class="op">)</span> <span class="op">{</span></span>
+<span>        \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="kw">if</span> <span class="op">(</span><span class="va">x</span> <span class="op">&gt;</span> <span class="fl">10</span><span class="op">)</span> <span class="op">{</span></span>
 <span>                <span class="va">.self</span> <span class="op">|&gt;</span></span>
-<span>                    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>                        <span class="st">"f2a"</span>,</span>
-<span>                        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">21</span>,</span>
-<span>                        after <span class="op">=</span> <span class="st">"f1"</span>,</span>
-<span>                    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>                    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>                        <span class="st">"f2b"</span>,</span>
-<span>                        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2a</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">22</span>,</span>
-<span>                        after <span class="op">=</span> <span class="st">"f2a"</span></span>
-<span>                    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>                    <span class="fu"><a href="../reference/pip_replace.html">pip_replace</a></span><span class="op">(</span></span>
-<span>                        <span class="st">"f3"</span>,</span>
-<span>                        <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2b</span><span class="op">)</span> <span class="op">{</span></span>
-<span>                            <span class="va">x</span> <span class="op">+</span> <span class="fl">30</span></span>
-<span>                        <span class="op">}</span></span>
-<span>                    <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>                    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f2a"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">21</span>, after <span class="op">=</span> <span class="st">"f1"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>                    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f2b"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2a</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">22</span>, after <span class="op">=</span> <span class="st">"f2a"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>                    <span class="fu"><a href="../reference/pip_replace.html">pip_replace</a></span><span class="op">(</span><span class="st">"f3"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2b</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">30</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>                    <span class="fu"><a href="../reference/pip_remove.html">pip_remove</a></span><span class="op">(</span><span class="st">"f2"</span><span class="op">)</span></span>
-<span>                <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="va">.self</span><span class="op">)</span>           <span class="co"># &lt;-- return modified pipeline</span></span>
+<span>                <span class="va">.self</span><span class="op">$</span><span class="fu">restart</span><span class="op">(</span><span class="op">)</span> <span class="co"># &lt;-- restart the run</span></span>
 <span>            <span class="op">}</span></span>
 <span>            <span class="va">x</span> <span class="op">+</span> <span class="fl">2</span></span>
 <span>        <span class="op">}</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f3"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
-<p>Second, you need to run the pipeline with
-<code>recursive = TRUE</code>.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"f3"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">f2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
+<p>Second, you just run the pipeline as usual.</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xInit <span class="op">=</span> <span class="fl">11</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span>recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.475 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.475 UTC]: Step 1/4 init</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.476 UTC]: Step 2/4 f1</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.478 UTC]: Step 3/4 f2</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.500 UTC]: Abort pipeline execution and restart on returned pipeline.</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.500 UTC]: Start run of pipeflow_pip 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.500 UTC]: Step 1/5 init</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.500 UTC]: Step 2/5 f1</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.502 UTC]: Step 3/5 f2a</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.504 UTC]: Step 4/5 f2b</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.506 UTC]: Step 5/5 f3</span></span>
-<span><span class="co"># info [2026-06-27 18:21:04.508 UTC]: Finished run of pipeflow_pip 'my-pipeline'</span></span></code></pre></div>
-<p>As you can see, the run is now automatically aborted right after the
-pipeline was modified and, since we have set
-<code>recursive = TRUE</code>, the pipeline is also restarted
-automatically based on the new structure. As a result, the log now is
-fully aligned with the performed pipeline run.</p>
+<span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.711 UTC]: Starting run of pipeflow 'hacky-with-restart'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.711 UTC]: Step 1/4 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.711 UTC]: Step 2/4 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.712 UTC]: Step 3/4 f2</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.716 UTC]: Restarting pipeline execution.</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.716 UTC]: Restarting run of pipeflow 'hacky-with-restart'</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.716 UTC]: Step 1/5 init</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.716 UTC]: Step 2/5 f1</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.717 UTC]: Step 3/5 f2a</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.718 UTC]: Step 4/5 f2b</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.719 UTC]: Step 5/5 f3</span></span>
+<span><span class="co"># info [2026-09-27 15:20:07.719 UTC]: Finished run of pipeflow 'hacky-with-restart'</span></span></code></pre></div>
+<p>As you can see, the run was aborted right after step <code>f2</code>
+and re-run from the start based on the new structure. As a result, the
+log now is fully aligned with the performed pipeline run.</p>
 <p>Looking at the final pipeline overview, we see that the output
 matches the expected output of the modified pipeline.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow_pip&gt; my-pipeline (5 steps)</span></span>
-<span><span class="co"># ------------------------------------</span></span>
-<span><span class="co">#    step depends out state</span></span>
-<span><span class="co"># 1: init          11  done</span></span>
-<span><span class="co"># 2:   f1    init  12  done</span></span>
-<span><span class="co"># 3:  f2a      f1  33  done</span></span>
-<span><span class="co"># 4:  f2b     f2a  55  done</span></span>
-<span><span class="co"># 5:   f3     f2b  85  done</span></span></code></pre></div>
-<p>Of course, this was just a silly example to show some possibilities,
+<span><span class="co"># &lt;pipeflow&gt; hacky-with-restart (5 steps)</span></span>
+<span><span class="co"># ---------------------------------------</span></span>
+<span><span class="co">#    step params depends state out</span></span>
+<span><span class="co"># 1: init  xInit          done  11</span></span>
+<span><span class="co"># 2:   f1      x    init  done  12</span></span>
+<span><span class="co"># 3:  f2a      x      f1  done  33</span></span>
+<span><span class="co"># 4:  f2b      x     f2a  done  55</span></span>
+<span><span class="co"># 5:   f3      x     f2b  done  85</span></span>
+<span><span class="co"># ---------------------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 17:20:07</span></span></code></pre></div>
+<p>Of course, this was just a toy example to show some possibilities,
 but I have made use of this feature already in various projects and may
 present one of them in a more sophisticated example in the future.</p>
 <p>Lastly note that since you have full access to the pipeline object,
@@ -569,13 +469,12 @@ additional operations are done under the hood when steps are added or
 removed. It is therefore not recommended to “manually” manipulate the
 internal data.table object in terms of removing or adding rows, or
 changing important columns such as <code>depends</code> or
-<code>.nodeId</code> as this immediately would invalidate the internal
+<code>nodeId</code> as this immediately would invalidate the internal
 consistency of the dependency graph.</p>
 <p>On the other hand, changing entries in columns such as
 <code>tags</code>, <code>time</code>, <code>state</code> or
 <code>output</code> is generally not critical. If in doubt, just try and
 see what works.</p>
-</div>
 </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

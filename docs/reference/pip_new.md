@@ -15,7 +15,7 @@ pip_new(name = "pipe")
 
 - name:
 
-  Single name used for printing and for derived view names.
+  The name of the pipeline used for display and logging.
 
 ## Value
 
@@ -24,30 +24,33 @@ A pipeflow pipeline object.
 ## Examples
 
 ``` r
-# Create a named pipeline
-p <- pip_new("my_analysis")
-p[["name"]] # "my_analysis"
-#> [1] "my_analysis"
-
-# Build a simple pipeline and run it
-pip_add(p, "load", \(n = 5) seq_len(n))
-pip_add(p, "double", \(x = ~load) x * 2) # x depends on load's output
+p <- pip_new("demo") |>
+    pip_add("numbers", \(n = 5) seq_len(n)) |>
+    pip_add("squared", \(x = ~numbers) x^2) |>
+    pip_add("total",   \(x = ~squared) sum(x))
 p
-#> <pipeflow_pip> my_analysis (2 steps)
-#> ------------------------------------
-#>      step depends    out state
-#> 1:   load         [NULL]   new
-#> 2: double    load [NULL]   new
-pip_run(p)
-#> info [2026-06-20 19:19:07.157 UTC]: Start run of pipeflow_pip 'my_analysis'
-#> info [2026-06-20 19:19:07.158 UTC]: Step 1/2 load
-#> info [2026-06-20 19:19:07.158 UTC]: Step 2/2 double
-#> info [2026-06-20 19:19:07.160 UTC]: Finished run of pipeflow_pip 'my_analysis'
-p[["out"]] # list of outputs, one per step
-#> [[1]]
-#> [1] 1 2 3 4 5
-#> 
-#> [[2]]
-#> [1]  2  4  6  8 10
-#> 
+#> <pipeflow> demo (3 steps)
+#> -------------------------
+#>       step params depends state
+#> 1: numbers      n           new
+#> 2: squared      x numbers   new
+#> 3:   total      x squared   new
+#> -------------------------
+#> <ready> last run: never
+str(p)
+#> List of 3
+#>  $ name  : chr "demo"
+#>  $ view  : NULL
+#>  $ pipenv:<environment: 0x559204ac61a0> 
+p[["name"]]  # "demo"
+#> [1] "demo"
+p[["view"]]  # initially NULL
+#> NULL
+
+# Inner pipeline environment (for advanced usage)
+ls(p[["pipenv"]])                # shows "data"
+#> [1] "data"
+ls(p[["pipenv"]], all = TRUE)    # also shows hidden variables
+#> [1] ".dag"            ".last_run"       ".restart_count"  ".restart_force" 
+#> [5] ".run_state"      ".steps_to_nodes" "data"           
 ```

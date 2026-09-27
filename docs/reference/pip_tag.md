@@ -1,24 +1,26 @@
-# Add tags to selected steps
+# Add or remove tags
 
-Adds tags to existing tags for all steps in the pipeline unless `p` is a
-view, in which case tags are only added for steps covered by the view.
-Locked steps are skipped and not updated.
+Adds tags to, or removes tags from, all steps of a pipeline or a subset
+of steps defined by a view. Tagged steps can later be selected via
+[`pip_view()`](https://github.com/rpahl/pipeflow/reference/pip_view.md).
 
 ## Usage
 
 ``` r
-pip_tag(p, tags = character())
+pip_tag(x, tags = character())
+
+pip_untag(x, tags = character())
 ```
 
 ## Arguments
 
-- p:
+- x:
 
   A pipeflow pip or view.
 
 - tags:
 
-  Character vector of tags to add for each selected step.
+  Character vector of tags to add to or remove from each selected step.
 
 ## Value
 
@@ -32,23 +34,42 @@ p <- pip_new() |>
   pip_add("fit", \(x = ~load) x + 1)
 
 # Tag every step in the pipeline at once
-pip_tag(p, tags = c("daily", "core"))
-p[["pipeline"]][["tags"]] # both steps have c("daily", "core")
-#> [[1]]
-#> [1] "daily" "core" 
-#> 
-#> [[2]]
-#> [1] "daily" "core" 
-#> 
+pip_tag(p, c("daily", "core"))
+p
+#> <pipeflow> pipe (2 steps)
+#> -------------------------
+#>    step params depends state       tags
+#> 1: load      x           new daily,core
+#> 2:  fit      x    load   new daily,core
+#> -------------------------
+#> <ready> last run: never
+p[, "tags"] # both steps have c("daily", "core")
+#>          tags
+#>        <list>
+#> 1: daily,core
+#> 2: daily,core
 
 # Add an extra tag to only one step via a view
-v <- pip_view(p, i = "fit")
-pip_tag(v, tags = "model")
-p[["pipeline"]][["tags"]] # "fit" also has "model"
-#> [[1]]
-#> [1] "daily" "core" 
-#> 
-#> [[2]]
-#> [1] "daily" "core"  "model"
-#> 
+p[step == "fit"] |> pip_tag("model")
+p
+#> <pipeflow> pipe (2 steps)
+#> -------------------------
+#>    step params depends state             tags
+#> 1: load      x           new       daily,core
+#> 2:  fit      x    load   new daily,core,model
+#> -------------------------
+#> <ready> last run: never
+p[, "tags"] # "fit" also has "model"
+#>                tags
+#>              <list>
+#> 1:       daily,core
+#> 2: daily,core,model
+
+# Remove "daily" from all steps
+pip_untag(p, "daily")
+p[, "tags"]
+#>          tags
+#>        <list>
+#> 1:       core
+#> 2: core,model
 ```

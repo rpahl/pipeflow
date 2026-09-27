@@ -1,13 +1,13 @@
 ---
-title: "Modifying existing pipelines"
+title: "Modify existing pipelines"
 output:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 4
 description: >
-  Shows how to insert, replace, and remove steps in a pipeline.
+  How to insert, replace, and remove steps in a pipeline.
 vignette: >
-  %\VignetteIndexEntry{Modifying existing pipelines}
+  %\VignetteIndexEntry{Modify existing pipelines}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -34,29 +34,26 @@ pip <- pip_new("my-pip") |>
         function(data = airquality[1:10, ]) data
     ) |>
     pip_add(
-        "data_prep",
-        function(x = ~data) {
-            replace(x, "Temp.Celsius", (x[, "Temp"] - 32) * 5 / 9)
+        "prep",
+        function(df = ~data) {
+            df[, "Temp.Celsius"] <- (df[, "Temp"] - 32) * 5 / 9
+            df
         }
     ) |>
     pip_add(
-        "model_fit",
-        function(
-            data = ~data_prep,
-            xVar = "Temp.Celsius"
-        ) {
+        "fit",
+        function(data = ~prep,
+                 xVar = "Temp.Celsius") {
             lm(paste("Ozone ~", xVar), data = data)
         }
     ) |>
     pip_add(
-        "model_plot",
-        function(
-            model = ~model_fit,
-            data = ~data_prep,
-            xVar = "Temp.Celsius",
-            xLab = "Temperature in degrees Celsius",
-            title = "Linear model fit"
-        ) {
+        "plot",
+        function(model = ~fit,
+                 data = ~prep,
+                 xVar = "Temp.Celsius",
+                 xLab = "Temperature in degrees Celsius",
+                 title = "Linear model fit") {
             require(ggplot2, quietly = TRUE)
             coeffs <- coefficients(model)
             ggplot(data) +
@@ -79,7 +76,7 @@ pip_run(pip, lgr = NULL)
 
 Let's start where we left off in the
 [Get started with pipeflow](v01-get-started.html) vignette, that is, we have
-the following pipeline
+the following pipeline.
 
 ```{r show-pipeline}
 pip
@@ -94,7 +91,7 @@ pip_get_params(pip)[["data"]] |> head(3)
 
 ### Insert new step
 
-Let's say we want to insert a new step after the `data_prep` step
+Let's say we want to insert a new step after the `prep` step
 that standardizes the y-variable. To do this, we use `pip_add()`
 with the `after` argument.
 
@@ -102,14 +99,12 @@ with the `after` argument.
 ```{r insert-step}
 pip |> pip_add(
     "standardize",
-    function(
-        data = ~data_prep,
-        yVar = "Ozone"
-    ) {
+    function(data = ~prep,
+             yVar = "Ozone") {
         data[, yVar] <- scale(data[, yVar])
         data
     },
-    after = "data_prep"
+    after = "prep"
 )
 ```
 
@@ -120,13 +115,13 @@ pip
 
 ```{r, eval = FALSE, echo = nzchar(Sys.getenv("IN_PKGDOWN"))}
 library(visNetwork)
-do.call(visNetwork, args = pip_get_graph(pip)) |>
+do.call(visNetwork, args = pip_graph(pip)) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
 ```{r, echo = FALSE, eval = nzchar(Sys.getenv("IN_PKGDOWN"))}
 library(visNetwork)
-do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 300))) |>
+do.call(visNetwork, args = c(pip_graph(pip), list(height = 300))) |>
     visHierarchicalLayout(direction = "LR", sortMethod = "directed")
 ```
 
@@ -135,10 +130,10 @@ so far it is not used by any other step.
 
 ### Replace existing steps
 
-Let's revisit the function definition of the `model_fit` step
+Let's revisit the function definition of the `fit` step
 
 ```{r}
-pip[["model_fit", "fun"]]
+pip[["fit", "fun"]]
 ```
 
 To use the standardized data, we need to change the data dependency
@@ -147,11 +142,10 @@ a fixed y-variable in the model, let's pass it as a parameter.
 
 ```{r replace-model-fit-step}
 pip |> pip_replace(
-    "model_fit",
-    function(
-        data = ~standardize,            # <- changed data reference
+    "fit",
+    function(data = ~standardize, # <- changed data reference
         xVar = "Temp.Celsius",
-        yVar = "Ozone"                  # <- new y-variable
+        yVar = "Ozone" # <- new y-variable
     ) {
         lm(paste(yVar, "~", xVar), data = data)
     }
@@ -159,18 +153,16 @@ pip |> pip_replace(
 ```
 
 
-The `model_plot` step needs to be updated in a similar way.
+The `plot` step needs to be updated in a similar way.
 
 ```{r replace-model-plot-step}
 pip |> pip_replace(
-    "model_plot",
-    function(
-        model = ~model_fit,
-        data = ~standardize,            # <- changed data reference
-        xVar = "Temp.Celsius",
-        yVar = "Ozone",                 # <- new y-variable
-        title = "Linear model fit"
-    ) {
+    "plot",
+    function(model = ~fit,
+             data = ~standardize, # <- changed data reference
+             xVar = "Temp.Celsius",
+             yVar = "Ozone", # <- new y-variable
+             title = "Linear model fit") {
         coeffs <- coefficients(model)
         ggplot(data) +
             geom_point(aes(.data[[xVar]], .data[[yVar]])) +
@@ -187,11 +179,11 @@ pip
 ```
 
 ```{r, echo = FALSE, eval = nzchar(Sys.getenv("IN_PKGDOWN"))}
-do.call(visNetwork, args = c(pip_get_graph(pip), list(height = 100))) |>
+do.call(visNetwork, args = c(pip_graph(pip), list(height = 100))) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
-We see that the `model_fit` and `model_plot` steps now use (i.e., depend on) the
+We see that the `fit` and `plot` steps now use (i.e., depend on) the
 standardized data. Let's re-run the pipeline and inspect the output.
 
 ```{r}
@@ -200,11 +192,11 @@ pip_run(pip)
 ```
 
 ```{r}
-pip[["model_fit", "out"]] |> coefficients()
+pip[["fit", "out"]] |> coefficients()
 ```
 
 ```{r, fig.alt = "model-plot", warning = FALSE, message = FALSE}
-pip[["model_plot", "out"]]
+pip[["plot", "out"]]
 ```
 
 
@@ -216,18 +208,18 @@ pip
 ```
 
 When you are trying to remove a step, {pipeflow} by default checks if
-the step is used by any other step, and raises an error if removing the
-step would violate the integrity of the pipeline.
+the step is used by any other step, and raises an error if removing
+the step would violate the integrity of the pipeline
 
 ```{r try-remove-step}
 try(pip_remove(pip, "standardize"))
 ```
 
 To enforce removing a step together with all its downstream
-dependencies, you can use the `recursive` argument.
+dependencies, you can use the `force` argument.
 
 ```{r remove-steps-recursively}
-pip_remove(pip, "standardize", recursive = TRUE)
+pip_remove(pip, "standardize", force = TRUE)
 ```
 
 ```{r}
@@ -249,7 +241,7 @@ pip
 Replacing steps in a pipeline as shown in this vignette will allow to re-use existing
 pipelines and adapt them programmatically to new requirements.
 Another way of re-using pipelines is to combine them, which is shown in the
-[Combining pipelines](v03-combine-pipelines.html) vignette.
+[Combine pipelines](v03a-combine-pipelines.html) vignette.
 
 ```{r, include = FALSE}
 options(old)

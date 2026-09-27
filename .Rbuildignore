@@ -50,6 +50,7 @@
 
 ^scratch.md$
 ^kilo.json$
+^\.kilo$
 
 # Rd2pdf temp directories
 ^\.Rd2pdf

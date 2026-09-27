@@ -11,7 +11,7 @@ automatically adapted to avoid name clashes."><meta property="og:image" content=
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9004</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,13 +35,13 @@ automatically adapted to avoid name clashes."><meta property="og:image" content=
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Get started</h6></li>
     <li><a class="dropdown-item" href="../articles/v01-get-started.html">Get started with pipeflow</a></li>
-    <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modifying existing pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combining pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collecting and filtering output</a></li>
+    <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modify existing pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combine pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collect and group output</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
-    <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
+    <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
     <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
@@ -103,7 +103,7 @@ automatically adapted to avoid name clashes.</p>
 <span class="r-in"><span><span class="va">ab</span><span class="op">[[</span><span class="st">"step"</span><span class="op">]</span><span class="op">]</span> <span class="co"># "prep", "fit", "prep2" (step name conflict auto-resolved)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "prep"  "fit"   "prep2"</span>
 <span class="r-in"><span><span class="va">ab</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_pip&gt; a-b (3 steps)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; a-b (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     step depends    out state</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  prep         [NULL]   new</span>

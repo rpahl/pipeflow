@@ -8,7 +8,15 @@ validated when the step is added.
 ## Usage
 
 ``` r
-pip_add(x, step, fun, tags = character(0), after = length(x), exec = "auto")
+pip_add(
+  x,
+  step,
+  fun,
+  tags = character(0),
+  after = length(x),
+  params = list(),
+  exec = "auto"
+)
 ```
 
 ## Arguments
@@ -40,6 +48,19 @@ pip_add(x, step, fun, tags = character(0), after = length(x), exec = "auto")
   (defaults to last position). Can be a step name or an integer index.
   If set to 0, the new step will be inserted at the beginning of the
   pipeline.
+
+- params:
+
+  Optional named list of parameter values, which will be merged with the
+  defaults of `fun` (if overlapping names, the default values in `fun`
+  take precedence). There are two use cases for `params`:
+
+  1.  Provide param values programmatically when adding steps at runtime
+
+  2.  Provide extra param values to "mark" dependencies that are defined
+      in pipelines nested in a step, which ensures that the step (and
+      with that the pipeline in the step) is re-executed when one of the
+      respective param values change.
 
 - exec:
 
@@ -83,38 +104,46 @@ p <- pip_new("analysis") |>
   pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
 
 pip_run(p)
-#> info [2026-06-20 19:19:03.804 UTC]: Start run of pipeflow_pip 'analysis'
-#> info [2026-06-20 19:19:03.804 UTC]: Step 1/4 load
-#> info [2026-06-20 19:19:03.806 UTC]: Step 2/4 clean
-#> info [2026-06-20 19:19:03.808 UTC]: Step 3/4 fit
-#> info [2026-06-20 19:19:03.810 UTC]: Step 4/4 report
-#> info [2026-06-20 19:19:03.812 UTC]: Finished run of pipeflow_pip 'analysis'
+#> info [2026-09-27 15:19:37.115 UTC]: Starting run of pipeflow 'analysis'
+#> info [2026-09-27 15:19:37.115 UTC]: Step 1/4 load
+#> info [2026-09-27 15:19:37.115 UTC]: Step 2/4 clean
+#> info [2026-09-27 15:19:37.116 UTC]: Step 3/4 fit
+#> info [2026-09-27 15:19:37.117 UTC]: Step 4/4 report
+#> info [2026-09-27 15:19:37.118 UTC]: Finished run of pipeflow 'analysis'
 p
-#> <pipeflow_pip> analysis (4 steps)
-#> ---------------------------------
-#>      step depends            out state             tags
-#> 1:   load              1,2,3,4,5  done           io,raw
-#> 2:  clean    load  2, 4, 6, 8,10  done       io,process
-#> 3:    fit   clean             30  done model,core,daily
-#> 4: report     fit     result: 30  done           report
+#> <pipeflow> analysis (4 steps)
+#> -----------------------------
+#>      step params depends state            out             tags
+#> 1:   load      n          done      1,2,3,4,5           io,raw
+#> 2:  clean      x    load  done  2, 4, 6, 8,10       io,process
+#> 3:    fit      x   clean  done             30 model,core,daily
+#> 4: report      x     fit  done     result: 30           report
+#> -----------------------------
+#> <ready> last run: 2026-09-27 17:19:37
 
 # Filter by tag using pip_view — keeps steps with any matching tag
 pip_view(p, tags = "daily")
 #> <pipeflow_view> analysis view (1 of 4 steps)
 #> --------------------------------------------
-#>  step depends out state             tags
-#>   fit   clean  30  done model,core,daily
+#>    step params depends state out             tags
+#> 1:  fit      x   clean  done  30 model,core,daily
+#> --------------------------------------------
+#> <ready> last run: 2026-09-27 17:19:37
 pip_view(p, tags = "core")
 #> <pipeflow_view> analysis view (1 of 4 steps)
 #> --------------------------------------------
-#>  step depends out state             tags
-#>   fit   clean  30  done model,core,daily
+#>    step params depends state out             tags
+#> 1:  fit      x   clean  done  30 model,core,daily
+#> --------------------------------------------
+#> <ready> last run: 2026-09-27 17:19:37
 pip_view(p, tags = c("raw", "report"))
 #> <pipeflow_view> analysis view (2 of 4 steps)
 #> --------------------------------------------
-#>    step depends        out state   tags
-#>    load          1,2,3,4,5  done io,raw
-#>  report     fit result: 30  done report
+#>      step params depends state        out   tags
+#> 1:   load      n          done  1,2,3,4,5 io,raw
+#> 2: report      x     fit  done result: 30 report
+#> --------------------------------------------
+#> <ready> last run: 2026-09-27 17:19:37
 
 # --- Split / reduce execution modes ---
 q <- pip_new("split-demo") |>
@@ -128,12 +157,12 @@ q <- pip_new("split-demo") |>
   )
 
 pip_run(q)
-#> info [2026-06-20 19:19:03.830 UTC]: Start run of pipeflow_pip 'split-demo'
-#> info [2026-06-20 19:19:03.830 UTC]: Step 1/4 data
-#> info [2026-06-20 19:19:03.831 UTC]: Step 2/4 split
-#> info [2026-06-20 19:19:03.832 UTC]: Step 3/4 stats
-#> info [2026-06-20 19:19:03.839 UTC]: Step 4/4 combine
-#> info [2026-06-20 19:19:03.840 UTC]: Finished run of pipeflow_pip 'split-demo'
+#> info [2026-09-27 15:19:37.133 UTC]: Starting run of pipeflow 'split-demo'
+#> info [2026-09-27 15:19:37.133 UTC]: Step 1/4 data
+#> info [2026-09-27 15:19:37.133 UTC]: Step 2/4 split
+#> info [2026-09-27 15:19:37.135 UTC]: Step 3/4 stats
+#> info [2026-09-27 15:19:37.139 UTC]: Step 4/4 combine
+#> info [2026-09-27 15:19:37.140 UTC]: Finished run of pipeflow 'split-demo'
 q[["stats", "out"]]   # partitioned list — one summary per species
 #> $setosa
 #>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   
@@ -217,4 +246,58 @@ q[["combine", "out"]] # combined table
 #>  NA               
 #>  NA               
 #>  NA               
+
+# --- Insert a step at a specific position with 'after' ---
+p2 <- pip_new("insert-demo") |>
+  pip_add("load", \(x = 1) x) |>
+  pip_add("fit", \(x = ~load) x + 1)
+p2
+#> <pipeflow> insert-demo (2 steps)
+#> --------------------------------
+#>    step params depends state
+#> 1: load      x           new
+#> 2:  fit      x    load   new
+#> --------------------------------
+#> <ready> last run: never
+pip_add(p2, "clean", \(x = ~load) x * 2, after = "load")
+p2  # "load", "clean", "fit" — inserted after "load"
+#> <pipeflow> insert-demo (3 steps)
+#> --------------------------------
+#>     step params depends state
+#> 1:  load      x           new
+#> 2: clean      x    load   new
+#> 3:   fit      x    load   new
+#> --------------------------------
+#> <ready> last run: never
+
+# after = 0 inserts the new step at the very beginning
+pip_add(p2, "preload", \(x = 1) x, after = 0)
+p2
+#> <pipeflow> insert-demo (4 steps)
+#> --------------------------------
+#>       step params depends state
+#> 1: preload      x           new
+#> 2:    load      x           new
+#> 3:   clean      x    load   new
+#> 4:     fit      x    load   new
+#> --------------------------------
+#> <ready> last run: never
+
+# --- Provide parameter values programmatically with 'params' ---
+p3 <- pip_new("params-demo") |>
+  pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
+pip_run(p3)
+#> info [2026-09-27 15:19:37.151 UTC]: Starting run of pipeflow 'params-demo'
+#> info [2026-09-27 15:19:37.151 UTC]: Step 1/1 load
+#> info [2026-09-27 15:19:37.152 UTC]: Finished run of pipeflow 'params-demo'
+p3
+#> <pipeflow> params-demo (1 step)
+#> -------------------------------
+#>    step params depends state   out
+#> 1: load size,x          done  1,42
+#> -------------------------------
+#> <ready> last run: 2026-09-27 17:19:37
+p3[["load", "out"]] # c(1, size = 42) — extra params passed via `...`
+#>      size 
+#>    1   42 
 ```

@@ -1,15 +1,17 @@
-pandoc: 3.8.3
+pandoc: 3.1.3
 pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
   v01-get-started: v01-get-started.html
   v02-modify-pipeline: v02-modify-pipeline.html
-  v03-combine-pipelines: v03-combine-pipelines.html
+  v03a-combine-pipelines: v03a-combine-pipelines.html
+  v03b-pipeline-views: v03b-pipeline-views.html
   v04-collect-output: v04-collect-output.html
-  v05-split-map-reduce: v05-split-map-reduce.html
+  v05a-split-map-reduce: v05a-split-map-reduce.html
+  v05b-nested-pipeline: v05b-nested-pipeline.html
   v06-self-modify-pipeline: v06-self-modify-pipeline.html
   articles/v07-vs-targets: v07-vs-targets.html
-last_built: 2026-06-20T19:18Z
+last_built: 2026-09-27T15:19Z
 urls:
   reference: https://github.com/rpahl/pipeflow/reference
   article: https://github.com/rpahl/pipeflow/articles

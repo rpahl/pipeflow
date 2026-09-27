@@ -1,5 +1,29 @@
 # Changelog
 
+## pipeflow 0.3.0.9004
+
+- bump actions/checkout from 6.0.3 to 7.0.0
+- bump EnricoMi/publish-unit-test-result-action from 2.23.0 to 2.24.0
+
+## pipeflow 0.3.0.9003
+
+- bump r-lib/actions/check-r-package from 2.12.0 to 2.12.1
+- bump r-lib/actions/setup-r from 2.12.0 to 2.12.1
+
+## pipeflow 0.3.0.9002
+
+- Updated descriptions in v04-collect-output.Rmd for better readability.
+- Enhanced explanations in v06-self-modify-pipeline.Rmd, focusing on the
+  use of the .self parameter and runtime modifications.
+- Improved wording and fixed typos throughout the document.
+- Clarified the process of modifying pipeline structure and the
+  importance of returning the modified pipeline object.
+
+## pipeflow 0.3.0.9001
+
+- fix some typos and missing viz
+- fix link to pipeflow vs targets vignette
+
 ## pipeflow 0.3.0.9000
 
 - Same as previous version.
@@ -21,9 +45,9 @@ CRAN release: 2026-06-15
   [`pip_run()`](https://github.com/rpahl/pipeflow/reference/pip_run.md),
   [`pip_replace()`](https://github.com/rpahl/pipeflow/reference/pip_replace.md),
   [`pip_clone()`](https://github.com/rpahl/pipeflow/reference/pip_clone.md),
-  [`pip_bind()`](https://github.com/rpahl/pipeflow/reference/pip_bind.md),
+  `pip_bind()`,
   [`pip_view()`](https://github.com/rpahl/pipeflow/reference/pip_view.md),
-  [`pip_tag()`](https://github.com/rpahl/pipeflow/reference/pip_tag.md)/[`pip_untag()`](https://github.com/rpahl/pipeflow/reference/pip_untag.md),
+  [`pip_tag()`](https://github.com/rpahl/pipeflow/reference/pip_tag.md)/[`pip_untag()`](https://github.com/rpahl/pipeflow/reference/pip_tag.md),
   etc.
 - **Execution modes** (`auto`/`split`/`reduce`/`plain`): Native support
   for map-reduce style workflows where steps split output into named
@@ -42,7 +66,7 @@ CRAN release: 2026-06-15
 
 - Legacy `pipe_*` functions and `Pipeline` R6 class are deprecated
   (preserved as aliases in `R/aliases.R`, `R/pipelineR6.R`).
-- [`pip_collect_out()`](https://github.com/rpahl/pipeflow/reference/pip_collect_out.md)
+- [`pip_collect_out()`](https://github.com/rpahl/pipeflow/reference/pip_collect.md)
   no longer accepts `grouped` or `by` parameters. It returns a flat
   named list of step outputs. Use
   [`pip_view()`](https://github.com/rpahl/pipeflow/reference/pip_view.md)

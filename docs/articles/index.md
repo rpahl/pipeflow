@@ -7,29 +7,42 @@
 
   Start here if this is your first time using pipeflow.
 
-- [Modifying existing
+- [Modify existing
   pipelines](https://github.com/rpahl/pipeflow/articles/v02-modify-pipeline.md):
 
-  Shows how to insert, replace, and remove steps in a pipeline.
+  How to insert, replace, and remove steps in a pipeline.
 
-- [Combining
-  pipelines](https://github.com/rpahl/pipeflow/articles/v03-combine-pipelines.md):
+- [Combine
+  pipelines](https://github.com/rpahl/pipeflow/articles/v03a-combine-pipelines.md):
 
-  Shows how to combine different pipelines to a single pipeline.
+  How to combine different pipelines to a single pipeline.
 
-- [Collecting and filtering
+- [Pipeline
+  views](https://github.com/rpahl/pipeflow/articles/v03b-pipeline-views.md):
+
+  How to filter pipelines with
+  [`pip_view()`](https://github.com/rpahl/pipeflow/reference/pip_view.md)
+  and the `[` operator, compose views, and run only a subset of steps.
+
+- [Collect and group
   output](https://github.com/rpahl/pipeflow/articles/v04-collect-output.md):
 
-  Shows how to tag, filter, and collect pipeline output.
+  How to collect and group pipeline output.
 
 - [Split, map, and
-  reduce](https://github.com/rpahl/pipeflow/articles/v05-split-map-reduce.md):
+  reduce](https://github.com/rpahl/pipeflow/articles/v05a-split-map-reduce.md):
 
   Shows how to split data, apply the pipeline to each subset, and then
   reduce the results back into a combined output.
 
-- [Recursive
-  self-modification](https://github.com/rpahl/pipeflow/articles/v06-self-modify-pipeline.md):
+- [Nested
+  pipelines](https://github.com/rpahl/pipeflow/articles/v05b-nested-pipeline.md):
+
+  Shows how to embed pipelines within pipeline steps and how to mark
+  their parameters so that changing them re-executes the outer step.
+
+- [Self-modifying
+  pipelines](https://github.com/rpahl/pipeflow/articles/v06-self-modify-pipeline.md):
 
   Shows how you can setup pipelines to modify themselves at runtime,
   which, for example, allows for changing pipeline parameters based on

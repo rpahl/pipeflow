@@ -5,7 +5,7 @@ Length of a pipeflow pipeline or view
 ## Usage
 
 ``` r
-# S3 method for class 'pipeflow_pip'
+# S3 method for class 'pipeflow'
 length(x)
 
 # S3 method for class 'pipeflow_view'
@@ -33,7 +33,7 @@ length(p) # 3 — total steps in the pipeline
 #> [1] 3
 
 # A view reports only the number of selected (visible) steps
-v <- pip_view(p, i = c("s2", "s3"))
+v <- pip_view(p, step = c("s2", "s3"))
 length(v) # 2
 #> [1] 2
 ```

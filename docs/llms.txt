@@ -18,16 +18,16 @@ overview of your project.
 - All parameters managed in one place
 - Pipeline verified at definition time
 - Filter pipeline steps via views
-  ![](https://img.shields.io/badge/-new-orange)
 - Branch and merge pipeline steps
-  ![](https://img.shields.io/badge/-new-orange)
 - Fast dependency resolution (C++-powered DAG)
+- Subset pipelines with data.table-style `[` filters
+  ![](https://img.shields.io/badge/-new-orange)
+- Embed reusable workflows in steps (nested pipelines)
   ![](https://img.shields.io/badge/-new-orange)
 
 ### Installation
 
 ``` r
-
 # Install release version from CRAN
 install.packages("pipeflow")
 
@@ -38,36 +38,37 @@ devtools::install_github("rpahl/pipeflow")
 ### Usage
 
 ``` r
-
 library(pipeflow)
 
 p <- pip_new("demo") |>
     pip_add("numbers", \(n = 5) seq_len(n)) |>
     pip_add("squared", \(x = ~numbers) x^2) |>
-    pip_add("total",   \(x = ~squared) sum(x))
+    pip_add("total", \(x = ~squared) sum(x))
 
 p
-# <pipeflow_pip> demo (3 steps)
-# -----------------------------
-#       step depends    out state
-# 1: numbers         [NULL]   new
-# 2: squared numbers [NULL]   new
-# 3:   total squared [NULL]   new
+# <pipeflow> demo (3 steps)
+# -------------------------
+#       step params depends state
+# 1: numbers      n           new
+# 2: squared      x numbers   new
+# 3:   total      x squared   new
+# -------------------------
+# <ready> last run: never
 
 pip_run(p)
-# info [2026-06-20 19:16:29.615 UTC]: Start run of pipeflow_pip 'demo'
-# info [2026-06-20 19:16:29.616 UTC]: Step 1/3 numbers
-# info [2026-06-20 19:16:29.618 UTC]: Step 2/3 squared
-# info [2026-06-20 19:16:29.620 UTC]: Step 3/3 total
-# info [2026-06-20 19:16:29.622 UTC]: Finished run of pipeflow_pip 'demo'
+# info [2026-09-27 14:59:46.748 UTC]: Starting run of pipeflow 'demo'
+# info [2026-09-27 14:59:46.748 UTC]: Step 1/3 numbers
+# info [2026-09-27 14:59:46.750 UTC]: Step 2/3 squared
+# info [2026-09-27 14:59:46.752 UTC]: Step 3/3 total
+# info [2026-09-27 14:59:46.753 UTC]: Finished run of pipeflow 'demo'
 
-pip_collect_out(p)
+pip_collect(p)
 # $numbers
 # [1] 1 2 3 4 5
-# 
+#
 # $squared
 # [1]  1  4  9 16 25
-# 
+#
 # $total
 # [1] 55
 ```
@@ -79,19 +80,23 @@ below:
 
 - [Get started with
   pipeflow](https://rpahl.github.io/pipeflow/articles/v01-get-started.html)
-- [Modifying existing
+- [Modify existing
   pipelines](https://rpahl.github.io/pipeflow/articles/v02-modify-pipeline.html)
-- [Combining
-  pipelines](https://rpahl.github.io/pipeflow/articles/v03-combine-pipelines.html)
-- [Collecting and filtering
+- [Combine
+  pipelines](https://rpahl.github.io/pipeflow/articles/v03a-combine-pipelines.html)
+- [Pipeline
+  views](https://rpahl.github.io/pipeflow/articles/v03b-pipeline-views.html)
+- [Collect and group
   output](https://rpahl.github.io/pipeflow/articles/v04-collect-output.html)
 
-### Advanced topics
+### Advanced workflows
 
 - [Split, map, and
-  reduce](https://rpahl.github.io/pipeflow/articles/v05-split-map-reduce.html)
-- [Recursive
-  self-modification](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
+  reduce](https://rpahl.github.io/pipeflow/articles/v05a-split-map-reduce.html)
+- [Nested
+  pipelines](https://rpahl.github.io/pipeflow/articles/v05b-nested-pipeline.html)
+- [Self-modifying
+  pipelines](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
 
 ### Benchmarks
 
@@ -102,23 +107,22 @@ below:
 
 ## Getting started
 
-Create a pipeline, add steps, run it, and collect results.
+Create a pipeline, add steps, and collect results.
 
+- [`pipeflow`](https://github.com/rpahl/pipeflow/reference/pipeflow-package.md)
+  [`pipeflow-package`](https://github.com/rpahl/pipeflow/reference/pipeflow-package.md)
+  : pipeflow: Fast Interactive Data Analysis Pipelines
 - [`pip_new()`](https://github.com/rpahl/pipeflow/reference/pip_new.md)
   : Create a pipeline
 - [`pip_add()`](https://github.com/rpahl/pipeflow/reference/pip_add.md)
   : Add a step
-- [`pip_run()`](https://github.com/rpahl/pipeflow/reference/pip_run.md)
-  : Run a pipeline
-- [`pip_collect_out()`](https://github.com/rpahl/pipeflow/reference/pip_collect_out.md)
+- [`pip_collect()`](https://github.com/rpahl/pipeflow/reference/pip_collect.md)
+  [`pip_collect_out()`](https://github.com/rpahl/pipeflow/reference/pip_collect.md)
   : Collect step outputs
-- [`pipeflow`](https://github.com/rpahl/pipeflow/reference/pipeflow-package.md)
-  [`pipeflow-package`](https://github.com/rpahl/pipeflow/reference/pipeflow-package.md)
-  : pipeflow: Lightweight, General-Purpose Data Analysis Pipelines
 
 ## Modify steps
 
-Replace, rename, or remove steps; adjust tunable parameters.
+Replace, rename, remove, reset, or re-configure steps.
 
 - [`pip_replace()`](https://github.com/rpahl/pipeflow/reference/pip_replace.md)
   : Replace a step
@@ -126,61 +130,90 @@ Replace, rename, or remove steps; adjust tunable parameters.
   : Rename a step
 - [`pip_remove()`](https://github.com/rpahl/pipeflow/reference/pip_remove.md)
   : Remove a step
-- [`pip_set_params()`](https://github.com/rpahl/pipeflow/reference/pip_set_params.md)
-  : Set independent parameters
+- [`pip_reset()`](https://github.com/rpahl/pipeflow/reference/pip_reset.md)
+  : Reset a pipeline to its initial state
+- [`pip_get_params()`](https://github.com/rpahl/pipeflow/reference/pip_set_params.md)
+  [`pip_set_params()`](https://github.com/rpahl/pipeflow/reference/pip_set_params.md)
+  : Get or set unbound parameters
 
 ## Pipeline composition
 
-Combine, clone, or copy steps between pipelines.
+Combine or clone pipelines.
 
-- [`pip_add_from()`](https://github.com/rpahl/pipeflow/reference/pip_add_from.md)
-  : Copy a step from another pipeline
-- [`pip_bind()`](https://github.com/rpahl/pipeflow/reference/pip_bind.md)
+- [`rbind(`*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/rbind.pipeflow.md)
   : Bind pipelines
 - [`pip_clone()`](https://github.com/rpahl/pipeflow/reference/pip_clone.md)
   : Clone a pipeline
 
-## Inspection and views
+## Running pipelines
 
-Inspect the pipeline structure and create filtered views.
+Execute pipeline steps or views.
 
-- [`pip_get_graph()`](https://github.com/rpahl/pipeflow/reference/pip_get_graph.md)
-  : Build pipeline graph data
-- [`pip_get_params()`](https://github.com/rpahl/pipeflow/reference/pip_get_params.md)
-  : Get independent parameters
-- [`pip_has_step()`](https://github.com/rpahl/pipeflow/reference/pip_has_step.md)
-  : Check whether a step exists
-- [`pip_view()`](https://github.com/rpahl/pipeflow/reference/pip_view.md)
-  : Create a pipeline view
+- [`pip_run()`](https://github.com/rpahl/pipeflow/reference/pip_run.md)
+  : Run a pipeline
 
 ## Locking and tagging
 
 Lock steps against changes or tag them for filtering.
 
 - [`pip_lock()`](https://github.com/rpahl/pipeflow/reference/pip_lock.md)
-  : Lock selected steps against updates
-- [`pip_unlock()`](https://github.com/rpahl/pipeflow/reference/pip_unlock.md)
-  : Unlock selected steps
+  [`pip_unlock()`](https://github.com/rpahl/pipeflow/reference/pip_lock.md)
+  : Lock or unlock steps
 - [`pip_tag()`](https://github.com/rpahl/pipeflow/reference/pip_tag.md)
-  : Add tags to selected steps
-- [`pip_untag()`](https://github.com/rpahl/pipeflow/reference/pip_untag.md)
-  : Remove tags from selected steps
+  [`pip_untag()`](https://github.com/rpahl/pipeflow/reference/pip_tag.md)
+  : Add or remove tags
+
+## Inspection and views
+
+Inspect the pipeline structure, access the step table, and create
+filtered views.
+
+- [`pip_view()`](https://github.com/rpahl/pipeflow/reference/pip_view.md)
+  : Create a pipeline view
+- [`pip_data()`](https://github.com/rpahl/pipeflow/reference/pip_data.md)
+  : Access the underlying step table
+- [`pip_graph()`](https://github.com/rpahl/pipeflow/reference/pip_graph.md)
+  [`pip_get_graph()`](https://github.com/rpahl/pipeflow/reference/pip_graph.md)
+  : Build pipeline graph data
+
+## Extract and replace operators
+
+Subset, read from and write to a pipeline using base R operators.
+
+- [`` `[`( ``*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow.md)
+  [`` `[[`( ``*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow.md)
+  [`` `[[<-`( ``*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow.md)
+  [`` `[<-`( ``*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow.md)
+  [`` `$`( ``*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow.md)
+  [`` `$<-`( ``*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow.md)
+  : Extract or replace parts of a pipeline
 
 ## S3 methods
 
 Generic methods for pipeflow objects.
 
-- [`length(`*`<pipeflow_pip>`*`)`](https://github.com/rpahl/pipeflow/reference/length.pipeflow.md)
-  [`length(`*`<pipeflow_view>`*`)`](https://github.com/rpahl/pipeflow/reference/length.pipeflow.md)
-  : Length of a pipeflow pipeline or view
-- [`print(`*`<pipeflow_pip>`*`)`](https://github.com/rpahl/pipeflow/reference/print.md)
-  [`print(`*`<pipeflow_view>`*`)`](https://github.com/rpahl/pipeflow/reference/print.md)
+- [`length(`*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/dim.pipeflow.md)
+  [`dim(`*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/dim.pipeflow.md)
+  : Dimensions of a pipeflow pipeline or view
+- [`str(`*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/print.md)
+  [`print(`*`<pipeflow>`*`)`](https://github.com/rpahl/pipeflow/reference/print.md)
   : Print pipeflow objects
-- [`` `[`( ``*`<pipeflow_pip>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow_pip.md)
-  [`` `[[`( ``*`<pipeflow_pip>`*`)`](https://github.com/rpahl/pipeflow/reference/Extract.pipeflow_pip.md)
-  : Extract or subset a pipeline
-- [`set_log_layout()`](https://github.com/rpahl/pipeflow/reference/set_log_layout.md)
-  : Set pipeflow log layout
+
+## Filtering helpers
+
+Filter operators from data.table re-exported for use in view and subset
+expressions.
+
+- [`pipeflow-operators`](https://github.com/rpahl/pipeflow/reference/pipeflow-operators.md)
+  [`%like%`](https://github.com/rpahl/pipeflow/reference/pipeflow-operators.md)
+  [`%ilike%`](https://github.com/rpahl/pipeflow/reference/pipeflow-operators.md)
+  [`%flike%`](https://github.com/rpahl/pipeflow/reference/pipeflow-operators.md)
+  [`%plike%`](https://github.com/rpahl/pipeflow/reference/pipeflow-operators.md)
+  [`%chin%`](https://github.com/rpahl/pipeflow/reference/pipeflow-operators.md)
+  [`%between%`](https://github.com/rpahl/pipeflow/reference/pipeflow-operators.md)
+  [`%inrange%`](https://github.com/rpahl/pipeflow/reference/pipeflow-operators.md)
+  [`%notin%`](https://github.com/rpahl/pipeflow/reference/pipeflow-operators.md)
+  : Row-filter operators re-exported from data.table
 
 # Articles
 
@@ -191,29 +224,42 @@ Generic methods for pipeflow objects.
 
   Start here if this is your first time using pipeflow.
 
-- [Modifying existing
+- [Modify existing
   pipelines](https://github.com/rpahl/pipeflow/articles/v02-modify-pipeline.md):
 
-  Shows how to insert, replace, and remove steps in a pipeline.
+  How to insert, replace, and remove steps in a pipeline.
 
-- [Combining
-  pipelines](https://github.com/rpahl/pipeflow/articles/v03-combine-pipelines.md):
+- [Combine
+  pipelines](https://github.com/rpahl/pipeflow/articles/v03a-combine-pipelines.md):
 
-  Shows how to combine different pipelines to a single pipeline.
+  How to combine different pipelines to a single pipeline.
 
-- [Collecting and filtering
+- [Pipeline
+  views](https://github.com/rpahl/pipeflow/articles/v03b-pipeline-views.md):
+
+  How to filter pipelines with
+  [`pip_view()`](https://github.com/rpahl/pipeflow/reference/pip_view.md)
+  and the `[` operator, compose views, and run only a subset of steps.
+
+- [Collect and group
   output](https://github.com/rpahl/pipeflow/articles/v04-collect-output.md):
 
-  Shows how to tag, filter, and collect pipeline output.
+  How to collect and group pipeline output.
 
 - [Split, map, and
-  reduce](https://github.com/rpahl/pipeflow/articles/v05-split-map-reduce.md):
+  reduce](https://github.com/rpahl/pipeflow/articles/v05a-split-map-reduce.md):
 
   Shows how to split data, apply the pipeline to each subset, and then
   reduce the results back into a combined output.
 
-- [Recursive
-  self-modification](https://github.com/rpahl/pipeflow/articles/v06-self-modify-pipeline.md):
+- [Nested
+  pipelines](https://github.com/rpahl/pipeflow/articles/v05b-nested-pipeline.md):
+
+  Shows how to embed pipelines within pipeline steps and how to mark
+  their parameters so that changing them re-executes the outer step.
+
+- [Self-modifying
+  pipelines](https://github.com/rpahl/pipeflow/articles/v06-self-modify-pipeline.md):
 
   Shows how you can setup pipelines to modify themselves at runtime,
   which, for example, allows for changing pipeline parameters based on

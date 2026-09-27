@@ -54,65 +54,66 @@ library(pipeflow)
 
 pip <- pip_new("my-pip")
 
-pip <- pip_add(pip,
+pip <- pip_add(
+    pip,
     step = "data",
     fun = function(data = airquality) data
 )
 ```
 
-For each step to add, at minimum we specify the name of the step and a function
-that defines what is computed in that step. Let's take a first look at the
-pipeline.
+For each step, at minimum we specify the name of the step (here `step = "data`)
+and a function (`fun`) that defines what is computed in that step.
+Let's take a first look at the pipeline.
 
 ```{r show-initial-pipeline}
 pip
 ```
 
-Here, each step is represented by one row in the table as denoted in the first
-column. The `depends` column lists the dependencies of a step, which is empty
-for the `data` step since it does not depend on any other step (more on
-dependencies later). The `out` column will eventually contain the output of the
-step, which is currently `NULL` since we haven't run the pipeline yet, and
-the `state` column shows the current state, which initially is `new` for
-all steps.
+Each step is represented by one row in the table, which currently shows four columns:
 
-Next, we add a step called `data_prep`, which consists of a function that
-takes the output of the `data` step as its first argument, adds a new column
-and returns the modified data as its output. To refer to the output of an
-earlier pipeline step, we just write the name of the step preceded with the
-tilde (~) operator, that is, the output of the `data` step can be
-referred to via `~data`.
+* `step` the name of the step
+* `params` the names of the function parameters
+* `depends` the dependencies of a step (more on that below)
+* `state` the state of each step, which initially is always set to `new`
+
+Next, we want to add a step called `prep`, which prepares our original
+data by adding the new column `"Temp.Celsius"`.
+This means, our `prep` step will have to use the output of the `data` step.
+To refer to the output of an earlier pipeline step, we just write its name
+preceded with the tilde (~) operator, which in this case means `~data`.
 
 Since `pip_add` works "by reference", we can add the step as follows:
 
 ```{r define-data-prep-step}
 pip |> pip_add(
-    "data_prep",
-    function(x = ~data) {
-        replace(x, "Temp.Celsius", (x[, "Temp"] - 32) * 5 / 9)
+    "prep",
+    function(df = ~data) {
+        df[, "Temp.Celsius"] <- (df[, "Temp"] - 32) * 5 / 9
+        df
     }
 )
 ```
 
-So, a second step called `data_prep` was added and it depends on the `data`
-step as now visible in column `depends`.
+To reiterate: `function(df = ~data)` basically means that once this function
+gets called `df` will contain whatever was produced last by the `data` step.
+
+So, a second step called `prep` was added and it depends on the `data`
+step, which is also marked in the 2nd row in column `depends`.
 
 ```{r}
 pip
 ```
 
-Next, we want to add a step called `model_fit` that fits a linear model to the
-data. The function takes the output of the `data_prep` and defines a
-parameter `xVar`, which is used to specify the variable that is used as
+Next, we want to add a step called `fit` that fits a linear model to the
+data. The function is using the `prep`ared data and defines a
+parameter `xVar`, which determines the variable that is used as
 predictor in the linear model.
 
 ```{r}
 pip |> pip_add(
-    "model_fit",
-    function(
-        data = ~data_prep,
-        xVar = "Temp.Celsius"
-    ) {
+    "fit",
+    function(data = ~prep,
+             xVar = "Temp.Celsius") {
         lm(paste("Ozone ~", xVar), data = data)
     }
 )
@@ -120,21 +121,19 @@ pip |> pip_add(
 pip
 ```
 
-Lastly, we add a step called `model_plot`, which plots the data and the
-linear model fit. The function uses the output from both the
-`model_fit` and `data_prep` step. As in the previous step, it defines the
+Lastly, we add a step called `plot`, which plots the data and the
+linear model fit. This function references both the
+`fit` and `prep` step. As in the previous step, it defines the
 `xVar` parameter plus two more plot-specific parameters `xLab` and `title`.
 
 ```{r}
 pip |> pip_add(
-    "model_plot",
-    function(
-        model = ~model_fit,
-        data = ~data_prep,
-        xVar = "Temp.Celsius",
-        xLab = "Temperature in degrees Celsius",
-        title = "Linear model fit"
-    ) {
+    "plot",
+    function(model = ~fit,
+             data = ~prep,
+             xVar = "Temp.Celsius",
+             xLab = "Temperature in degrees Celsius",
+             title = "Linear model fit") {
         require(ggplot2, quietly = TRUE)
         coeffs <- coefficients(model)
         ggplot(data) +
@@ -145,8 +144,8 @@ pip |> pip_add(
 )
 ```
 
-In the last line, we see that the `model_plot` step depends on both
-the `model_fit` and `data_prep` step.
+In the `depends` column of row `4:`, we see that the `plot` step depends
+on both the `fit` and the `prep` step.
 
 ```{r}
 pip
@@ -154,12 +153,12 @@ pip
 
 In addition to the tabular output, {pipeflow} also provides a graphical
 representation that is compatible with the `visNetwork` package.
-In particular, the `pip_get_graph()` function returns a list of arguments
+The `pip_graph()` function returns a list of arguments
 that can be feed directly to `visNetwork::visNetwork()`.
 
 ```{r, eval = FALSE}
 library(visNetwork)
-do.call(visNetwork, args = pip_get_graph(pip)) |>
+do.call(visNetwork, args = pip_graph(pip)) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
@@ -167,7 +166,7 @@ do.call(visNetwork, args = pip_get_graph(pip)) |>
 library(visNetwork)
 do.call(
     visNetwork,
-    args = c(pip_get_graph(pip), list(height = 100, width = 600))
+    args = c(pip_graph(pip), list(height = 100, width = 600))
 ) |>
     visHierarchicalLayout(direction = "LR")
 ```
@@ -178,14 +177,14 @@ the nodes represent the steps and the edges represent the dependencies.
 ### Pipeline integrity
 
 A key feature of {pipeflow} is that the integrity of a pipeline is verified at
-definition time. To see this, let's try to add another step that is referring
-to a non-existent step `i_dont_exist` as its input.
+definition time. To see this, let's try to add another step that referencing
+step that does not exist in the pipeline.
 
 ```{r try-add-bad-step, error = TRUE}
 pip |> pip_add(
     "another_step",
-    function(data = ~i_dont_exist) {
-        data
+    function(x = ~upsi) {
+        x
     }
 )
 ```
@@ -215,7 +214,7 @@ pip
 ```{r, echo = FALSE}
 do.call(
     visNetwork,
-    args = c(pip_get_graph(pip), list(height = 100, width = 600))
+    args = c(pip_graph(pip), list(height = 100, width = 600))
 ) |>
     visHierarchicalLayout(direction = "LR")
 ```
@@ -223,17 +222,19 @@ do.call(
 We can see that the `state` of all steps have been changed from `new` to `done`,
 which graphically is represented by the color change from blue to green.
 
-In addition, the output was added in the `out` column. To access a specific
-entry of the pipeline, we just select the row (aka step) and column of
-pipeline table via the `[[` operator. For example, to inspect the `out`put
-of the `model_fit` and `model_plot` steps, we do:
+In addition, the output was added in a new `out` column^[
+    Technically, the `out` column was there all the time but {pipeflow}
+    just did not display it while it was still empty.
+]. To access a single value of the pipeline, we just select the row (aka step)
+and a column of the pipeline table via the `[[` operator.
+For example, to inspect the `out`put of the `fit` and `plot` steps, we do:
 
 ```{r inspect-lm, message = FALSE}
-pip[["model_fit", "out"]]
+pip[["fit", "out"]]
 ```
 
 ```{r inspect-plot, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
-pip[["model_plot", "out"]]
+pip[["plot", "out"]]
 ```
 
 
@@ -251,16 +252,16 @@ parameters of the above defined pipeline using the `pip_get_params()` function.
 pip_get_params(pip) |> str()
 ```
 
-It returns a list of all *independent* parameters (here
+It returns a list of all *unbound* parameters (here
 ``r toString(names(pip_get_params(pip)))``).
-By *independent* we mean that these parameters don't depend
-on other steps (i.e. steps defined with the `~` operator). This is important as you
-never want to mess with parameters defined in terms of other steps.
+By *unbound* we mean that the values of these parameters don't depend
+on other steps (i.e. parameters defined with the `~` operator) and
+therefore can be adjusted freely.
 
-Furthermore, each parameter is only listed once, even if it's used in multiple
-steps^[For example, the `xVar` parameter is used in both the `model_fit`
-and `model_plot` step].
-To change any independent parameter, we simply call `pip_set_params()`:
+Also note that each parameter is only listed once, even if it's used in
+multiple steps^[For example, the `xVar` parameter is used in both the `fit`
+and `plot` step].
+To change parameters, we simply call `pip_set_params()`:
 
 ```{r set-xVar}
 pip |>
@@ -269,9 +270,10 @@ pip |>
 pip_get_params(pip) |> str()
 ```
 
-{pipeflow} automatically propagates the parameter change to all steps that use the
-respective parameter. In addition, it will recognize which steps are affected by
-the parameter change and mark them as `outdated`.
+{pipeflow} automatically propagates new parameter values to all steps that
+use it. In addition, it will recognize which steps are
+affected by the parameter change and mark them as `outdated` (see column
+`state`).
 
 ```{r show-pipeline-with-outdated-step}
 pip
@@ -281,39 +283,40 @@ pip
 library(visNetwork)
 do.call(
     visNetwork,
-    args = c(pip_get_graph(pip), list(height = 100, width = 600))
+    args = c(pip_graph(pip), list(height = 100, width = 600))
 ) |>
     visHierarchicalLayout(direction = "LR")
 ```
 
-We can see that the `model_fit` and `model_plot` steps are now in state
-`outdated` (graphically indicated by the orange color).
+We can see that the `fit` and `plot` steps are now in state
+`outdated`, because the `xVar` and `xLab` parameters were updated.
 To update the results, we just run the pipeline again.
 
 ```{r run-pipeline-again}
 pip_run(pip)
 ```
 
-The outdated steps were re-run as expected and the output was
-updated accordingly now showing the new x-variable `Solar.R`.
-
-```{r inspect-plot-again, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
-pip[["model_plot", "out"]]
-```
-
 A closer look at the run log shows that the pipeline skipped the first
 two steps and ran only the steps that were outdated, which basically
-can be thought of caching or
-mimicking the behavior of `make` in software development.
-That is, {pipeflow} always keeps track of which steps are outdated and
-only re-runs those steps and their downstream dependencies,
-which can be a huge time saver for larger pipelines^[
+can be thought of caching or mimicking the behavior of `make` in software
+development.
+That is, {pipeflow} always keeps track of the step states and only re-runs
+those where its necessary.
+This can be a huge time saver in larger pipelines^[
     Another use case is backend computation in interactive shiny applications,
     where users change parameters dynamically and want quick updates.
 ].
 
+After the re-run, we can see that the output was updated accordingly now
+showing the new x-variable `Solar.R`.
+
+```{r inspect-plot-again, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
+pip[["plot", "out"]]
+```
+
+
 Let's visit some more examples of parameter changes and their effects on
-the pipeline. To just change the title of the plot, only the `model_plot` step
+the pipeline. To just change the title of the plot, only the `plot` step
 needs to be rerun.
 
 ```{r set-title}
@@ -323,7 +326,7 @@ pip
 
 ```{r inspect-plot-after-title-change, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
 pip_run(pip)
-pip[["model_plot", "out"]]
+pip[["plot", "out"]]
 ```
 
 Once we change the input data parameter from the `data` step,
@@ -337,7 +340,7 @@ pip
 
 ```{r inspect-plot-after-data-change, message = FALSE, warning = FALSE, fig.alt = "model-plot"}
 pip_run(pip)
-pip[["model_plot", "out"]]
+pip[["plot", "out"]]
 ```
 
 Last but not least let's try to set parameters that don't exist

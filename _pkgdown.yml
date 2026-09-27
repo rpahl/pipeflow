@@ -24,52 +24,61 @@ home:
 
 reference:
 - title: "Getting started"
-  desc: Create a pipeline, add steps, run it, and collect results.
+  desc: Create a pipeline, add steps, and collect results.
   contents:
+  - pipeflow-package
   - pip_new
   - pip_add
-  - pip_run
-  - pip_collect_out
-  - pipeflow-package
+  - pip_collect
 
 - title: "Modify steps"
-  desc: Replace, rename, or remove steps; adjust tunable parameters.
+  desc: Replace, rename, remove, reset, or re-configure steps.
   contents:
   - pip_replace
   - pip_rename
   - pip_remove
+  - pip_reset
   - pip_set_params
 
 - title: "Pipeline composition"
-  desc: Combine, clone, or copy steps between pipelines.
+  desc: Combine or clone pipelines.
   contents:
-  - pip_add_from
-  - pip_bind
+  - rbind.pipeflow
   - pip_clone
 
-- title: "Inspection and views"
-  desc: Inspect the pipeline structure and create filtered views.
+- title: "Running pipelines"
+  desc: Execute pipeline steps or views.
   contents:
-  - pip_get_graph
-  - pip_get_params
-  - pip_has_step
-  - pip_view
+  - pip_run
 
 - title: "Locking and tagging"
   desc: Lock steps against changes or tag them for filtering.
   contents:
   - pip_lock
-  - pip_unlock
   - pip_tag
-  - pip_untag
+
+- title: "Inspection and views"
+  desc: Inspect the pipeline structure, access the step table, and create filtered views.
+  contents:
+  - pip_view
+  - pip_data
+  - pip_graph
+
+- title: "Extract and replace operators"
+  desc: Subset, read from and write to a pipeline using base R operators.
+  contents:
+  - Extract.pipeflow
 
 - title: "S3 methods"
   desc: Generic methods for pipeflow objects.
   contents:
-  - length.pipeflow_pip
-  - print.pipeflow_pip
-  - '[.pipeflow_pip'
-  - set_log_layout
+  - dim.pipeflow
+  - print.pipeflow
+
+- title: "Filtering helpers"
+  desc: Filter operators from data.table re-exported for use in view and subset expressions.
+  contents:
+  - pipeflow-operators
 
 
 
@@ -100,17 +109,21 @@ navbar:
       - text: "Get started"
       - text: "Get started with pipeflow"
         href: articles/v01-get-started.html
-      - text: "Modifying existing pipelines"
+      - text: "Modify existing pipelines"
         href: articles/v02-modify-pipeline.html
-      - text: "Combining pipelines"
-        href: articles/v03-combine-pipelines.html
-      - text: "Collecting and filtering output"
+      - text: "Combine pipelines"
+        href: articles/v03a-combine-pipelines.html
+      - text: "Pipeline views"
+        href: articles/v03b-pipeline-views.html
+      - text: "Collect and group output"
         href: articles/v04-collect-output.html
       - text: ----
-      - text: "Advanced"
+      - text: "Advanced workflows"
       - text: "Split, map, and reduce"
-        href: articles/v05-split-map-reduce.html
-      - text: "Recursive self-modification"
+        href: articles/v05a-split-map-reduce.html
+      - text: "Nested pipelines"
+        href: articles/v05b-nested-pipeline.html
+      - text: "Self-modifying pipelines"
         href: articles/v06-self-modify-pipeline.html
       - text: ----
       - text: "Benchmarks"

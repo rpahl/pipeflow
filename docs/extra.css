@@ -1,0 +1,25 @@
+/* Widen the page on large screens (Bootstrap defaults: 1140px / 1320px). */
+@media (min-width: 1200px) {
+  .container {
+    max-width: 1500px;
+  }
+}
+
+@media (min-width: 1400px) {
+  .container {
+    max-width: 1700px;
+  }
+}
+
+/* Give the main column a bit more room by trimming the sidebar. */
+@media (min-width: 768px) {
+  aside.col-md-3 {
+    flex: 0 0 auto;
+    width: 20%;
+  }
+
+  main#main.col-md-9 {
+    flex: 0 0 auto;
+    width: 80%;
+  }
+}

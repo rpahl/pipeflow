@@ -7,5 +7,6 @@
     ".github/instructions/testing/unit-tests.instructions.md",
     ".github/instructions/workflow/commits.instructions.md",
     ".github/instructions/workflow/issues.instructions.md"
-  ]
+  ],
+  "auto_collapse_reasoning": true
 }

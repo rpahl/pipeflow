@@ -11,10 +11,10 @@ indices (`row`, `column`), a single cell is extracted.
 ## Usage
 
 ``` r
-# S3 method for class 'pipeflow_pip'
+# S3 method for class 'pipeflow'
 x[i, ...]
 
-# S3 method for class 'pipeflow_pip'
+# S3 method for class 'pipeflow'
 x[[i, j, ...]]
 ```
 
@@ -74,10 +74,10 @@ p[["pipeline"]] # the full step table
 #>    <char>        <list>    <list>      <char>  <list> <list> <char> <list>
 #> 1:   load <function[1]> <list[1]>     (x = 1)         [NULL]    new       
 #> 2:    fit <function[1]> <list[1]> (x = ~load)    load [NULL]    new       
-#>                   time locked   exec .nodeId .indeps
+#>                   time locked   exec .nodeId unbound
 #>                 <POSc> <lgcl> <char>   <int>  <list>
-#> 1: 2026-06-20 21:18:41  FALSE   auto       0       x
-#> 2: 2026-06-20 21:18:41  FALSE   auto       1        
+#> 1: 2026-08-22 19:08:00  FALSE   auto       0       x
+#> 2: 2026-08-22 19:08:00  FALSE   auto       1        
 p[["name"]] # "pipe"
 #> [1] "pipe"
 
