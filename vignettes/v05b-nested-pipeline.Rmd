@@ -33,7 +33,7 @@ reuse a standard analysis pipeline inside a larger workflow.
 ### Inner pipeline
 
 We start with the same pipeline as in the previous
-["Split, map, and reduce"](v05-split-map-reduce.html) vignette,
+["Split, map, and reduce"](v05a-split-map-reduce.html) vignette,
 fitting a linear model and returning its coefficients. This will
 serve as our inner pipeline.
 
@@ -258,7 +258,7 @@ about parameter synchronization.
 
 ### Built-in exec modes vs. nested pipelines
 
-Both this and the [previous vignette](v05-split-map-reduce.html) solve the
+Both this and the [previous vignette](v05a-split-map-reduce.html) solve the
 same "split, apply, and combine" problem. The built-in execution modes
 (`exec = "split"`/`"reduce"`) are the recommended default whenever they fit
 while nested pipelines can be considered the more general tool.

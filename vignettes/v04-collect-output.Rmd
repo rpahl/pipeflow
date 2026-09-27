@@ -54,7 +54,7 @@ pip <- pip_new("my-pip") |>
     )
 ```
 
-As introduced in the [previous vignette](v03a-pipeline-views.html), we use tags to
+As introduced in the [previous vignette](v03b-pipeline-views.html), we use tags to
 label steps, specifically, `"data"`/`"model"` to distinguish the topic,
 and `"summary"`/`"fit"` for the output type.
 Let's briefly run the pipeline and see what's in the `out` column.

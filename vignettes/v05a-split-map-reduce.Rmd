@@ -269,7 +269,7 @@ way to express such a workflow. If you instead need to map over inputs that
 are not a single split point (for example cross-validation folds or nested
 splits) or want to
 reuse a standalone pipeline as a self-contained building block, see the
-[next vignette on nested pipelines](v05a-nested-pipeline.html).
+[next vignette on nested pipelines](v05b-nested-pipeline.html).
 
 ```{r, include = FALSE}
 options(old)

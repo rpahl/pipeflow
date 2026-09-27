@@ -112,17 +112,17 @@ navbar:
       - text: "Modify existing pipelines"
         href: articles/v02-modify-pipeline.html
       - text: "Combine pipelines"
-        href: articles/v03-combine-pipelines.html
+        href: articles/v03a-combine-pipelines.html
       - text: "Pipeline views"
-        href: articles/v03a-pipeline-views.html
+        href: articles/v03b-pipeline-views.html
       - text: "Collect and group output"
         href: articles/v04-collect-output.html
       - text: ----
       - text: "Advanced workflows"
       - text: "Split, map, and reduce"
-        href: articles/v05-split-map-reduce.html
+        href: articles/v05a-split-map-reduce.html
       - text: "Nested pipelines"
-        href: articles/v05a-nested-pipeline.html
+        href: articles/v05b-nested-pipeline.html
       - text: "Self-modifying pipelines"
         href: articles/v06-self-modify-pipeline.html
       - text: ----

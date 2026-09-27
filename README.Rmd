@@ -92,14 +92,14 @@ It is recommended to read the vignettes in the order they are listed below:
 
 * [Get started with pipeflow](https://rpahl.github.io/pipeflow/articles/v01-get-started.html)
 * [Modify existing pipelines](https://rpahl.github.io/pipeflow/articles/v02-modify-pipeline.html)
-* [Combine pipelines](https://rpahl.github.io/pipeflow/articles/v03-combine-pipelines.html)
+* [Combine pipelines](https://rpahl.github.io/pipeflow/articles/v03a-combine-pipelines.html)
 * [Collect and group output](https://rpahl.github.io/pipeflow/articles/v04-collect-output.html)
 
 
 ### Advanced workflows
 
-* [Split, map, and reduce](https://rpahl.github.io/pipeflow/articles/v05-split-map-reduce.html)
-* [Nested pipelines](https://rpahl.github.io/pipeflow/articles/v05a-nested-pipeline.html)
+* [Split, map, and reduce](https://rpahl.github.io/pipeflow/articles/v05a-split-map-reduce.html)
+* [Nested pipelines](https://rpahl.github.io/pipeflow/articles/v05b-nested-pipeline.html)
 * [Self-modifying pipelines](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
 
 ### Benchmarks

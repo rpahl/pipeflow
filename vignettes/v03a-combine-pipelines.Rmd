@@ -175,7 +175,7 @@ pip[["predict", "out"]]
 Whether you combine them or not, in practice pipelines can get long quickly.
 The next vignette shows how you can easily focus on certain parts of your
 entire analysis workflow by
-[Pipeline views](v03a-pipeline-views.html).
+[Pipeline views](v03b-pipeline-views.html).
 
 ```{r, include = FALSE}
 options(old)
