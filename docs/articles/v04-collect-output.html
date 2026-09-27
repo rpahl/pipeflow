@@ -60,13 +60,13 @@
     <li><h6 class="dropdown-header" data-toc-skip>Get started</h6></li>
     <li><a class="dropdown-item" href="../articles/v01-get-started.html">Get started with pipeflow</a></li>
     <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modify existing pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combine pipelines</a></li>
-    <li><a class="dropdown-item" href="../articles/v03a-pipeline-views.html">Pipeline views</a></li>
+    <li><a class="dropdown-item" href="../articles/v03a-combine-pipelines.html">Combine pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v03b-pipeline-views.html">Pipeline views</a></li>
     <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collect and group output</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
-    <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
-    <li><a class="dropdown-item" href="../articles/v05a-nested-pipeline.html">Nested pipelines</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Advanced workflows</h6></li>
+    <li><a class="dropdown-item" href="../articles/v05a-split-map-reduce.html">Split, map, and reduce</a></li>
+    <li><a class="dropdown-item" href="../articles/v05b-nested-pipeline.html">Nested pipelines</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
@@ -92,14 +92,14 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Collect and group output</h1>
-
-
+            
+      
       <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/v04-collect-output.Rmd"><code>vignettes/v04-collect-output.Rmd</code></a></small>
       <div class="d-none name"><code>v04-collect-output.Rmd</code></div>
     </div>
 
-
-
+    
+    
 <p>{pipeflow} manages all functions and parameter dependencies for you,
 thereby enabling you to create a lot of pipeline steps without losing
 track<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt; The linear/sequential structure of a pipeline design
@@ -128,7 +128,7 @@ functions are kept very basic.</p>
 <span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"model_summary"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">model_fit</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>,</span>
 <span>        tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"model"</span>, <span class="st">"summary"</span><span class="op">)</span></span>
 <span>    <span class="op">)</span></span></code></pre></div>
-<p>As introduced in the <a href="v03a-pipeline-views.html">previous
+<p>As introduced in the <a href="v03b-pipeline-views.html">previous
 vignette</a>, we use tags to label steps, specifically,
 <code>"data"</code>/<code>"model"</code> to distinguish the topic, and
 <code>"summary"</code>/<code>"fit"</code> for the output type. Let’s
@@ -145,7 +145,7 @@ column.</p>
 <span><span class="co"># 4:     model_fit    x,k      prep  done  4, 8,12,16,20     model,fit</span></span>
 <span><span class="co"># 5: model_summary      x model_fit  done             60 model,summary</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-26 11:32:37</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 16:48:31</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="flat-output-collection">Flat output collection<a class="anchor" aria-label="anchor" href="#flat-output-collection"></a>
@@ -215,7 +215,7 @@ report.</p>
 <span><span class="co"># 4:     model_fit    x,k      prep  done  4, 8,12,16,20       model,fit,Model</span></span>
 <span><span class="co"># 5: model_summary      x model_fit  done             60 model,summary,Summary</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-26 11:32:37</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 16:48:31</span></span></code></pre></div>
 <p>Naturally, we then would group the output as follows:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">report</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>

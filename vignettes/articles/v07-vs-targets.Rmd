@@ -45,21 +45,23 @@ you decide which one fits your project.
 |---|---|---|
 | Paradigm | Declarative — define the full DAG upfront in a `_targets.R` script, then execute | Interactive — incrementally build the pipeline with `pip_add()` as you code |
 | Execution | `tar_make()` runs in a **fresh R process** | `pip_run()` runs in the **current R session** |
-| Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ❌ In-memory only, lost when R session ends |
+| Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ❌ In-memory only |
 | Skip up-to-date steps | ✅ Hash-based invalidation of code and data | ✅ State-based (`done` / `outdated`) |
-| Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | ❌ No per-step provenance metadata |
+| Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | ❌ No per-step provenance metadata (only the time of last execution) |
 | Dependency validation | ✅ `tar_validate()` for pre-flight checks (opt-in) | ✅ On `pip_add()`, `pip_replace()`, `pip_remove()` — fails fast on broken references |
-| Modify pipeline at runtime | ❌ Must edit `_targets.R` and re-run | ✅ `pip_remove()`, `pip_rename()`, `pip_replace()`, insert with `after =` |
+| Modify pipeline at runtime | ❌ Must edit `_targets.R` and re-run | ✅ `pip_add()` insert with `after =`, `pip_replace()`, `pip_remove()`  |
 | Parameter management | ❌ No unified parameter view across targets | ✅ `pip_get_params()` / `pip_set_params()` — one call updates all steps |
 | Split / map / reduce | ✅ `pattern = map()` / `cross()` built-in, `tarchetypes` for advanced patterns | ✅ Built-in `exec = "split"` / `"auto"` / `"reduce"` |
 | Dynamic branching | ✅ Comprehensive via `tarchetypes` | ✅ Auto-mapping over partition keys (`exec = "auto"`) |
-| Views / tag filtering | `tar_described_as()` selects by description tags | ✅ `pip_view()` — filter steps by tags or index |
+| Views / tag filtering | ✅ `tar_described_as()` selects by description tags | ✅ `pip_view()` and the `[` operator — filter by tags, step names, state, or boolean expressions |
 | Pipeline composition | ❌ | ✅ `rbind()` any number of pipelines |
-| Self-modifying pipelines | ❌ | ✅ `pip_run(recursive = TRUE)` — steps can return modified pipelines |
+| Nested pipelines | ❌ | ✅ Steps can embed and run nested pipelines — reuse standalone pipelines as building blocks |
+| Self-modifying pipelines | ❌ | ✅ Steps can modify the pipeline at runtime via `.self` (add/remove/replace steps, set params) and restart the run with `.self$restart()` |
 | Distributed computing | ✅ `crew` for HPC and cloud workers | ❌ |
 | Cloud storage | ✅ AWS, GCS | ❌ |
 | File tracking | ✅ File targets with `format = "file"` | ❌ |
 | Step locking | ❌ | ✅ `pip_lock()` / `pip_unlock()` — protect steps from accidental modification |
+| Visualization / monitoring | ✅ `tar_visnetwork()`, `tar_glimpse()`, `tar_watch()` (live Shiny app) | ✅ `pip_graph()` → visNetwork |
 
 In short, **{targets}** is the tool of choice for large-scale reproducible
 projects: it persists results to disk, captures provenance with
@@ -132,7 +134,7 @@ plot_model <- function(model, data) {
 tar_dir({
     create_data_csv(file = "data.csv")
     p <- pip_new("walkthrough") |>
-        pip_add("data",  \(file = "data.csv") get_data(file)) |>
+        pip_add("data", \(file = "data.csv") get_data(file)) |>
         pip_add("model", \(data = ~data) fit_model(data)) |>
         pip_add(
             "plot",
@@ -158,14 +160,17 @@ tar_make_here <- function(reporter = "silent") {
 
 tar_dir({
     create_data_csv(file = "data.csv")
-    tar_script({
-        list(
-            tar_target(file, "data.csv", format = "file"),
-            tar_target(data, get_data(file)),
-            tar_target(model, fit_model(data)),
-            tar_target(plot, plot_model(model, data))
-        )
-    }, ask = FALSE)
+    tar_script(
+        {
+            list(
+                tar_target(file, "data.csv", format = "file"),
+                tar_target(data, get_data(file)),
+                tar_target(model, fit_model(data)),
+                tar_target(plot, plot_model(model, data))
+            )
+        },
+        ask = FALSE
+    )
 
     message("\nProof of principle full run (no skips)")
     tar_make_here(reporter = "timestamp")
@@ -288,7 +293,7 @@ tar_df <- do.call(rbind, lapply(seq_along(tar_times), function(i) {
     )
 }))
 
-d_pf  <- cbind(pf_df,  package = "pipeflow")
+d_pf <- cbind(pf_df, package = "pipeflow")
 d_tar <- cbind(tar_df, package = "targets")
 
 d_all <- rbind(d_pf, d_tar)
@@ -314,7 +319,7 @@ independently once the source completes.
 ```{r dag-helpers}
 dag_source <- function() 1
 dag_branch <- function(x) x + 1
-dag_sink   <- function(...) sum(...)
+dag_sink <- function(...) sum(...)
 ```
 
 #### pipeflow pipeline
@@ -322,8 +327,9 @@ dag_sink   <- function(...) sum(...)
 ```{r dag-pipeflow}
 make_branch_pip <- function(n) {
     pip <- pip_new("dag") |> pip_add("source", dag_source)
-    for (i in seq_len(n))
+    for (i in seq_len(n)) {
         pip_add(pip, paste0("b", i), \(x = ~source) dag_branch(x))
+    }
 
     sink_args <- paste(
         sprintf("x%s = ~b%s", seq_len(n), seq_len(n)),
@@ -403,7 +409,7 @@ tar_df <- do.call(rbind, lapply(seq_along(tar_times), function(i) {
     data.frame(expr = paste0("tar br=", br_sizes[i]), time = tar_times[[i]])
 }))
 
-d_pf  <- cbind(pf_df,  package = "pipeflow")
+d_pf <- cbind(pf_df, package = "pipeflow")
 d_tar <- cbind(tar_df, package = "targets")
 ```
 
