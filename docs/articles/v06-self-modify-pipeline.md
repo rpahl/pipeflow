@@ -1,4 +1,4 @@
-# Recursive self-modification
+# Self-modifying pipelines
 
 The {pipeflow} package aims to offer a lean and intuitive interface that
 enables new users to get started quickly without having to learn a lot

@@ -123,7 +123,7 @@ navbar:
         href: articles/v05-split-map-reduce.html
       - text: "Nested pipelines"
         href: articles/v05a-nested-pipeline.html
-      - text: "Recursive self-modification"
+      - text: "Self-modifying pipelines"
         href: articles/v06-self-modify-pipeline.html
       - text: ----
       - text: "Benchmarks"
