@@ -15,7 +15,8 @@
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Split, map, and reduce">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<meta property="og:title" content="Split, map, and reduce">
 <meta name="description" content="Shows how to split data, apply the pipeline to each subset, and then reduce the results back into a combined output.
 ">
 <meta property="og:description" content="Shows how to split data, apply the pipeline to each subset, and then reduce the results back into a combined output.
@@ -60,10 +61,12 @@
     <li><a class="dropdown-item" href="../articles/v01-get-started.html">Get started with pipeflow</a></li>
     <li><a class="dropdown-item" href="../articles/v02-modify-pipeline.html">Modify existing pipelines</a></li>
     <li><a class="dropdown-item" href="../articles/v03-combine-pipelines.html">Combine pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v03a-pipeline-views.html">Pipeline views</a></li>
     <li><a class="dropdown-item" href="../articles/v04-collect-output.html">Collect and group output</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Advanced</h6></li>
     <li><a class="dropdown-item" href="../articles/v05-split-map-reduce.html">Split, map, and reduce</a></li>
+    <li><a class="dropdown-item" href="../articles/v05a-nested-pipeline.html">Nested pipelines</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Recursive self-modification</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
@@ -89,14 +92,14 @@
 <script src="v05-split-map-reduce_files/vis-9.1.0/vis-network.min.js"></script><script src="v05-split-map-reduce_files/visNetwork-binding-2.1.4/visNetwork.js"></script><div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Split, map, and reduce</h1>
-
-
+            
+      
       <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/HEAD/vignettes/v05-split-map-reduce.Rmd"><code>vignettes/v05-split-map-reduce.Rmd</code></a></small>
       <div class="d-none name"><code>v05-split-map-reduce.Rmd</code></div>
     </div>
 
-
-
+    
+    
 <div class="section level3">
 <h3 id="motivation">Motivation<a class="anchor" aria-label="anchor" href="#motivation"></a>
 </h3>
@@ -115,37 +118,25 @@ fits a linear model and outputs the model coefficients.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpahl.github.io/pipeflow/" class="external-link">pipeflow</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"my-pipeline"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"data"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="va">data</span></span>
-<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"linear-model-coeffs"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"data"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="va">data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"fit"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span></span>
-<span>            <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>,</span>
-<span>            <span class="va">xVar</span> <span class="op">=</span> <span class="st">"x"</span>,</span>
-<span>            <span class="va">yVar</span> <span class="op">=</span> <span class="st">"y"</span></span>
-<span>        <span class="op">)</span> <span class="op">{</span></span>
+<span>        \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">xVar</span> <span class="op">=</span> <span class="st">"x"</span>, <span class="va">yVar</span> <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">yVar</span>, <span class="st">"~"</span>, <span class="va">xVar</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
 <span>        <span class="op">}</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"coefs"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">fit</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span><span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
-<span>        <span class="op">}</span></span>
-<span>    <span class="op">)</span></span></code></pre></div>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"coefs"</span>, \<span class="op">(</span><span class="va">fit</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>So our pipeline looks like this:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
-<span><span class="co"># &lt;pipeflow&gt; my-pipeline (3 steps)</span></span>
-<span><span class="co"># --------------------------------</span></span>
-<span><span class="co">#     step                         params depends state</span></span>
-<span><span class="co"># 1:  data                      data=NULL           new</span></span>
-<span><span class="co"># 2:   fit data=~data, xVar="x", yVar="y"    data   new</span></span>
-<span><span class="co"># 3: coefs                       fit=~fit     fit   new</span></span>
-<span><span class="co"># --------------------------------</span></span>
+<span><span class="co"># &lt;pipeflow&gt; linear-model-coeffs (3 steps)</span></span>
+<span><span class="co"># ----------------------------------------</span></span>
+<span><span class="co">#     step         params depends state</span></span>
+<span><span class="co"># 1:  data           data           new</span></span>
+<span><span class="co"># 2:   fit data,xVar,yVar    data   new</span></span>
+<span><span class="co"># 3: coefs            fit     fit   new</span></span>
+<span><span class="co"># ----------------------------------------</span></span>
 <span><span class="co"># &lt;ready&gt; last run: never</span></span></code></pre></div>
 <p>Or graphically:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
@@ -171,11 +162,11 @@ fits a linear model and outputs the model coefficients.</p>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-20 18:24:44.969 UTC]: Starting run of pipeflow 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-09-20 18:24:44.969 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-09-20 18:24:44.970 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-09-20 18:24:44.972 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-09-20 18:24:44.973 UTC]: Finished run of pipeflow 'my-pipeline'</span></span></code></pre></div>
+<span><span class="co"># info [2026-09-26 13:14:55.684 UTC]: Starting run of pipeflow 'linear-model-coeffs'</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.684 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.685 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.688 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.689 UTC]: Finished run of pipeflow 'linear-model-coeffs'</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"coefs"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co">#  (Intercept) Sepal.Length </span></span>
@@ -196,21 +187,21 @@ for each subset. For example:</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">iris</span>, <span class="va">iris</span><span class="op">$</span><span class="va">Species</span><span class="op">)</span>, FUN <span class="op">=</span> <span class="va">run_pipeline_helper</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.079 UTC]: Starting run of pipeflow 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.079 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.080 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.081 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.082 UTC]: Finished run of pipeflow 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.085 UTC]: Starting run of pipeflow 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.085 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.085 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.087 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.087 UTC]: Finished run of pipeflow 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.089 UTC]: Starting run of pipeflow 'my-pipeline'</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.089 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.089 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.090 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.091 UTC]: Finished run of pipeflow 'my-pipeline'</span></span></code></pre></div>
+<span><span class="co"># info [2026-09-26 13:14:55.795 UTC]: Starting run of pipeflow 'linear-model-coeffs'</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.795 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.796 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.797 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.798 UTC]: Finished run of pipeflow 'linear-model-coeffs'</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.801 UTC]: Starting run of pipeflow 'linear-model-coeffs'</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.801 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.801 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.803 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.803 UTC]: Finished run of pipeflow 'linear-model-coeffs'</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.805 UTC]: Starting run of pipeflow 'linear-model-coeffs'</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.805 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.805 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.806 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-09-26 13:14:55.807 UTC]: Finished run of pipeflow 'linear-model-coeffs'</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span></span>
 <span><span class="co"># $setosa</span></span>
@@ -238,45 +229,30 @@ step to our pipeline that splits the data set and set its execution mode
 to <code>split</code>.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"my-split-pip"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"data"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="va">data</span></span>
-<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"data"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="va">data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"split_data"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span></span>
-<span>            <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>,</span>
-<span>            <span class="va">byVar</span> <span class="op">=</span> <span class="st">"by"</span></span>
-<span>        <span class="op">)</span> <span class="op">{</span></span>
+<span>        \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">byVar</span> <span class="op">=</span> <span class="st">"by"</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">data</span>, f <span class="op">=</span> <span class="va">data</span><span class="op">[[</span><span class="va">byVar</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span>        <span class="op">}</span>,</span>
 <span>        exec <span class="op">=</span> <span class="st">"split"</span> <span class="co"># &lt;-- set execution mode to "split"</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"fit"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span></span>
-<span>            <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">split_data</span>,</span>
-<span>            <span class="va">xVar</span> <span class="op">=</span> <span class="st">"x"</span>,</span>
-<span>            <span class="va">yVar</span> <span class="op">=</span> <span class="st">"y"</span></span>
-<span>        <span class="op">)</span> <span class="op">{</span></span>
+<span>        \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">split_data</span>, <span class="va">xVar</span> <span class="op">=</span> <span class="st">"x"</span>, <span class="va">yVar</span> <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">yVar</span>, <span class="st">"~"</span>, <span class="va">xVar</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
 <span>        <span class="op">}</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"coefs"</span>,</span>
-<span>        <span class="kw">function</span><span class="op">(</span><span class="va">fit</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span><span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
-<span>        <span class="op">}</span></span>
-<span>    <span class="op">)</span></span></code></pre></div>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"coefs"</span>, \<span class="op">(</span><span class="va">fit</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow&gt; my-split-pip (4 steps)</span></span>
 <span><span class="co"># ---------------------------------</span></span>
-<span><span class="co">#          step                             params    depends state  exec</span></span>
-<span><span class="co"># 1:       data                          data=NULL              new  auto</span></span>
-<span><span class="co"># 2: split_data             data=~data, byVar="by"       data   new split</span></span>
-<span><span class="co"># 3:        fit data=&lt;formula&gt;, xVar="x", yVar="y" split_data   new  auto</span></span>
-<span><span class="co"># 4:      coefs                           fit=~fit        fit   new  auto</span></span>
+<span><span class="co">#          step         params    depends state  exec</span></span>
+<span><span class="co"># 1:       data           data              new  auto</span></span>
+<span><span class="co"># 2: split_data     data,byVar       data   new split</span></span>
+<span><span class="co"># 3:        fit data,xVar,yVar split_data   new  auto</span></span>
+<span><span class="co"># 4:      coefs            fit        fit   new  auto</span></span>
 <span><span class="co"># ---------------------------------</span></span>
 <span><span class="co"># &lt;ready&gt; last run: never</span></span></code></pre></div>
 <p>First of all, we see that the pipeline now is printed with an
@@ -306,12 +282,12 @@ step.</p>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.416 UTC]: Starting run of pipeflow 'my-split-pip'</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.416 UTC]: Step 1/4 data</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.417 UTC]: Step 2/4 split_data</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.418 UTC]: Step 3/4 fit</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.420 UTC]: Step 4/4 coefs</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.421 UTC]: Finished run of pipeflow 'my-split-pip'</span></span></code></pre></div>
+<span><span class="co"># info [2026-09-26 13:14:56.130 UTC]: Starting run of pipeflow 'my-split-pip'</span></span>
+<span><span class="co"># info [2026-09-26 13:14:56.130 UTC]: Step 1/4 data</span></span>
+<span><span class="co"># info [2026-09-26 13:14:56.131 UTC]: Step 2/4 split_data</span></span>
+<span><span class="co"># info [2026-09-26 13:14:56.132 UTC]: Step 3/4 fit</span></span>
+<span><span class="co"># info [2026-09-26 13:14:56.135 UTC]: Step 4/4 coefs</span></span>
+<span><span class="co"># info [2026-09-26 13:14:56.136 UTC]: Finished run of pipeflow 'my-split-pip'</span></span></code></pre></div>
 <p>Looking at the pipeline overview, we see that the
 <code>out</code>puts following the <code>split_data</code> steps are now
 all lists of results.</p>
@@ -319,13 +295,13 @@ all lists of results.</p>
 <code class="sourceCode R"><span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow&gt; my-split-pip (4 steps)</span></span>
 <span><span class="co"># ---------------------------------</span></span>
-<span><span class="co">#          step                                   params    depends state                 out  exec</span></span>
-<span><span class="co"># 1:       data                        data=&lt;data.frame&gt;             done &lt;data.frame[150x5]&gt;  auto</span></span>
-<span><span class="co"># 2: split_data                 data=~data, byVar=&lt;char&gt;       data  done           &lt;list[3]&gt; split</span></span>
-<span><span class="co"># 3:        fit data=&lt;formula&gt;, xVar=&lt;char&gt;, yVar=&lt;char&gt; split_data  done           &lt;list[3]&gt;  auto</span></span>
-<span><span class="co"># 4:      coefs                                 fit=~fit        fit  done           &lt;list[3]&gt;  auto</span></span>
+<span><span class="co">#          step         params    depends state                 out  exec</span></span>
+<span><span class="co"># 1:       data           data             done &lt;data.frame[150x5]&gt;  auto</span></span>
+<span><span class="co"># 2: split_data     data,byVar       data  done           &lt;list[3]&gt; split</span></span>
+<span><span class="co"># 3:        fit data,xVar,yVar split_data  done           &lt;list[3]&gt;  auto</span></span>
+<span><span class="co"># 4:      coefs            fit        fit  done           &lt;list[3]&gt;  auto</span></span>
 <span><span class="co"># ---------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-20 20:24:45</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-26 15:14:56</span></span></code></pre></div>
 <p>Inspecting in particular the output of the <code>coefs</code> step,
 we see that it is now a list of coefficient tables, one for each
 species.</p>
@@ -363,29 +339,21 @@ Let’s for this matter extend our pipeline by one step at the end.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
 <span>    <span class="st">"combine_coefs"</span>,</span>
-<span>    <span class="kw">function</span><span class="op">(</span><span class="va">coefs</span> <span class="op">=</span> <span class="op">~</span><span class="va">coefs</span><span class="op">)</span> <span class="op">{</span></span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">coefs</span><span class="op">)</span></span>
-<span>    <span class="op">}</span>,</span>
+<span>    \<span class="op">(</span><span class="va">coefs</span> <span class="op">=</span> <span class="op">~</span><span class="va">coefs</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">coefs</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>    exec <span class="op">=</span> <span class="st">"reduce"</span> <span class="co"># &lt;-- set execution mode to "reduce"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow&gt; my-split-pip (5 steps)</span></span>
 <span><span class="co"># ---------------------------------</span></span>
-<span><span class="co">#             step                                   params    depends state                 out</span></span>
-<span><span class="co"># 1:          data                        data=&lt;data.frame&gt;             done &lt;data.frame[150x5]&gt;</span></span>
-<span><span class="co"># 2:    split_data                 data=~data, byVar=&lt;char&gt;       data  done           &lt;list[3]&gt;</span></span>
-<span><span class="co"># 3:           fit data=&lt;formula&gt;, xVar=&lt;char&gt;, yVar=&lt;char&gt; split_data  done           &lt;list[3]&gt;</span></span>
-<span><span class="co"># 4:         coefs                                 fit=~fit        fit  done           &lt;list[3]&gt;</span></span>
-<span><span class="co"># 5: combine_coefs                             coefs=~coefs      coefs   new              [NULL]</span></span>
-<span><span class="co">#      exec</span></span>
-<span><span class="co"># 1:   auto</span></span>
-<span><span class="co"># 2:  split</span></span>
-<span><span class="co"># 3:   auto</span></span>
-<span><span class="co"># 4:   auto</span></span>
-<span><span class="co"># 5: reduce</span></span>
+<span><span class="co">#             step         params    depends state                 out   exec</span></span>
+<span><span class="co"># 1:          data           data             done &lt;data.frame[150x5]&gt;   auto</span></span>
+<span><span class="co"># 2:    split_data     data,byVar       data  done           &lt;list[3]&gt;  split</span></span>
+<span><span class="co"># 3:           fit data,xVar,yVar split_data  done           &lt;list[3]&gt;   auto</span></span>
+<span><span class="co"># 4:         coefs            fit        fit  done           &lt;list[3]&gt;   auto</span></span>
+<span><span class="co"># 5: combine_coefs          coefs      coefs   new              [NULL] reduce</span></span>
 <span><span class="co"># ---------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-20 20:24:45</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-09-26 15:14:56</span></span></code></pre></div>
 <p>Again, we see that the new step is marked with the execution mode
 (<code>reduce</code>) in the overview. Graphically, this mode is
 represented by a circle.</p>
@@ -396,13 +364,13 @@ represented by a circle.</p>
 <code>combine_coefs</code> step is a combined table of coefficients.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.801 UTC]: Starting run of pipeflow 'my-split-pip'</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.802 UTC]: Step 1/5 data - skipping done step</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.802 UTC]: Step 2/5 split_data - skipping done step</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.802 UTC]: Step 3/5 fit - skipping done step</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.802 UTC]: Step 4/5 coefs - skipping done step</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.802 UTC]: Step 5/5 combine_coefs</span></span>
-<span><span class="co"># info [2026-09-20 18:24:45.803 UTC]: Finished run of pipeflow 'my-split-pip'</span></span>
+<span><span class="co"># info [2026-09-26 13:14:56.532 UTC]: Starting run of pipeflow 'my-split-pip'</span></span>
+<span><span class="co"># info [2026-09-26 13:14:56.532 UTC]: Step 1/5 data - skipping done step</span></span>
+<span><span class="co"># info [2026-09-26 13:14:56.532 UTC]: Step 2/5 split_data - skipping done step</span></span>
+<span><span class="co"># info [2026-09-26 13:14:56.533 UTC]: Step 3/5 fit - skipping done step</span></span>
+<span><span class="co"># info [2026-09-26 13:14:56.533 UTC]: Step 4/5 coefs - skipping done step</span></span>
+<span><span class="co"># info [2026-09-26 13:14:56.533 UTC]: Step 5/5 combine_coefs</span></span>
+<span><span class="co"># info [2026-09-26 13:14:56.534 UTC]: Finished run of pipeflow 'my-split-pip'</span></span>
 <span></span>
 <span><span class="va">pip</span><span class="op">[[</span><span class="st">"combine_coefs"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co">#            (Intercept) Sepal.Length</span></span>

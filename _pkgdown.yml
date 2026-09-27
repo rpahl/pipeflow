@@ -121,6 +121,8 @@ navbar:
       - text: "Advanced"
       - text: "Split, map, and reduce"
         href: articles/v05-split-map-reduce.html
+      - text: "Nested pipelines"
+        href: articles/v05a-nested-pipeline.html
       - text: "Recursive self-modification"
         href: articles/v06-self-modify-pipeline.html
       - text: ----
