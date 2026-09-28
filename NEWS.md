@@ -1,34 +1,49 @@
-<!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
+# pipeflow 0.4.0
 
-# pipeflow 0.3.0.9004
+## New features
 
-- bump actions/checkout from 6.0.3 to 7.0.0
-- bump EnricoMi/publish-unit-test-result-action from 2.23.0 to 2.24.0
+- Pipeline functions can be called as methods on the pipeline object,
+  e.g. `p$add(...)`, `p$run(...)`, `p$set_params(...)`, ...
+- The extract and replace operators gained new capabilities:
+  - two-index extraction (`p[[step, "out"]]`),
+  - negative row indices in `p[...]` and `p[i, j] <- value`,
+  - boolean filters in `p[...]` (data.table-style expressions),
+  - cross-pipeline assignment to copy steps between pipelines,
+  - step removal via `p[[step]] <- NULL`,
+  - time stamps via `p[[step, "time"]] <- value`,
+  - setting or replacing views via `p[["view"]] <- ...`.
+- `pip_collect()` (formerly `pip_collect_out()`) supports grouping via a
+  `by` argument, `as.table = TRUE` to return a compact table, and a
+  `simplify` argument to control flattening of single-step groups.
+- `pip_data()` provides direct access to the underlying step table.
+- `pip_graph()` (formerly `pip_get_graph()`) returns visNetwork-compatible
+  graph data. The old function names remain available as deprecated aliases.
+- `pip_derived_cols()` returns the names of the read-only (derived) columns.
+- `pip_view()` gains a `join = "union"` argument to combine filters as a
+  logical OR.
+- `.self` is now automatically available inside every step function (and is
+  a protected parameter name), enabling pipelines to modify themselves at
+  runtime, including `.self$restart()` and `.self$halt()`.
 
+## Changes
 
-# pipeflow 0.3.0.9003
+- The columns of the internal step table were reordered and `nodeId` is now
+  shown in the full print view (`cols = "all"`).
+- The dependencies on `lgr` and `jsonlite` were removed.
 
-- bump r-lib/actions/check-r-package from 2.12.0 to 2.12.1
-- bump r-lib/actions/setup-r from 2.12.0 to 2.12.1
+## Bug fixes
 
+- `pip_rename()` no longer corrupts the parameters of single-step pipelines.
+- Running a view now resolves upstream dependencies correctly.
 
-# pipeflow 0.3.0.9002
+## Documentation
 
-- Updated descriptions in v04-collect-output.Rmd for better readability.
-- Enhanced explanations in v06-self-modify-pipeline.Rmd, focusing on the use of the .self parameter and runtime modifications.
-- Improved wording and fixed typos throughout the document.
-- Clarified the process of modifying pipeline structure and the importance of returning the modified pipeline object.
-
-
-# pipeflow 0.3.0.9001
-
-- fix some typos and missing viz
-- fix link to pipeflow vs targets vignette
-
-
-# pipeflow 0.3.0.9000
-
-- Same as previous version.
+- New vignettes: "Working with pipeline views" and "Nested pipelines".
+- Help pages of related functions were consolidated (extract/replace
+  operators, `dim`/`length`, `lock`/`unlock`, `tag`/`untag`,
+  `set_params`/`get_params`).
+- `pip_run()` documents the runtime control flow (`restart()`, `halt()`), and
+  `pip_add()` gained an example for the `after` argument.
 
 
 

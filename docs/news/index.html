@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0.9004</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,31 +60,51 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.3.0.9004" id="pipeflow-0309004">pipeflow 0.3.0.9004<a class="anchor" aria-label="anchor" href="#pipeflow-0309004"></a></h2>
-<ul><li>bump actions/checkout from 6.0.3 to 7.0.0</li>
-<li>bump EnricoMi/publish-unit-test-result-action from 2.23.0 to 2.24.0</li>
+<h2 class="pkg-version" data-toc-text="0.4.0" id="pipeflow-040">pipeflow 0.4.0<a class="anchor" aria-label="anchor" href="#pipeflow-040"></a></h2>
+<div class="section level3">
+<h3 id="new-features-0-4-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-4-0"></a></h3>
+<ul><li>Pipeline functions can be called as methods on the pipeline object, e.g. <code>p$add(...)</code>, <code>p$run(...)</code>, <code>p$set_params(...)</code>, …</li>
+<li>The extract and replace operators gained new capabilities:
+<ul><li>two-index extraction (<code>p[[step, "out"]]</code>),</li>
+<li>negative row indices in <code>p[...]</code> and <code>p[i, j] &lt;- value</code>,</li>
+<li>boolean filters in <code>p[...]</code> (data.table-style expressions),</li>
+<li>cross-pipeline assignment to copy steps between pipelines,</li>
+<li>step removal via <code>p[[step]] &lt;- NULL</code>,</li>
+<li>time stamps via <code>p[[step, "time"]] &lt;- value</code>,</li>
+<li>setting or replacing views via <code>p[["view"]] &lt;- ...</code>.</li>
+</ul></li>
+<li>
+<code><a href="../reference/pip_collect.html">pip_collect()</a></code> (formerly <code><a href="../reference/pip_collect.html">pip_collect_out()</a></code>) supports grouping via a <code>by</code> argument, <code>as.table = TRUE</code> to return a compact table, and a <code>simplify</code> argument to control flattening of single-step groups.</li>
+<li>
+<code><a href="../reference/pip_data.html">pip_data()</a></code> provides direct access to the underlying step table.</li>
+<li>
+<code><a href="../reference/pip_graph.html">pip_graph()</a></code> (formerly <code><a href="../reference/pip_graph.html">pip_get_graph()</a></code>) returns visNetwork-compatible graph data. The old function names remain available as deprecated aliases.</li>
+<li>
+<code>pip_derived_cols()</code> returns the names of the read-only (derived) columns.</li>
+<li>
+<code><a href="../reference/pip_view.html">pip_view()</a></code> gains a <code>join = "union"</code> argument to combine filters as a logical OR.</li>
+<li>
+<code>.self</code> is now automatically available inside every step function (and is a protected parameter name), enabling pipelines to modify themselves at runtime, including <code>.self$restart()</code> and <code>.self$halt()</code>.</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.3.0.9003" id="pipeflow-0309003">pipeflow 0.3.0.9003<a class="anchor" aria-label="anchor" href="#pipeflow-0309003"></a></h2>
-<ul><li>bump r-lib/actions/check-r-package from 2.12.0 to 2.12.1</li>
-<li>bump r-lib/actions/setup-r from 2.12.0 to 2.12.1</li>
+<div class="section level3">
+<h3 id="changes-0-4-0">Changes<a class="anchor" aria-label="anchor" href="#changes-0-4-0"></a></h3>
+<ul><li>The columns of the internal step table were reordered and <code>nodeId</code> is now shown in the full print view (<code>cols = "all"</code>).</li>
+<li>The dependencies on <code>lgr</code> and <code>jsonlite</code> were removed.</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.3.0.9002" id="pipeflow-0309002">pipeflow 0.3.0.9002<a class="anchor" aria-label="anchor" href="#pipeflow-0309002"></a></h2>
-<ul><li>Updated descriptions in v04-collect-output.Rmd for better readability.</li>
-<li>Enhanced explanations in v06-self-modify-pipeline.Rmd, focusing on the use of the .self parameter and runtime modifications.</li>
-<li>Improved wording and fixed typos throughout the document.</li>
-<li>Clarified the process of modifying pipeline structure and the importance of returning the modified pipeline object.</li>
+<div class="section level3">
+<h3 id="bug-fixes-0-4-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-4-0"></a></h3>
+<ul><li>
+<code><a href="../reference/pip_rename.html">pip_rename()</a></code> no longer corrupts the parameters of single-step pipelines.</li>
+<li>Running a view now resolves upstream dependencies correctly.</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.3.0.9001" id="pipeflow-0309001">pipeflow 0.3.0.9001<a class="anchor" aria-label="anchor" href="#pipeflow-0309001"></a></h2>
-<ul><li>fix some typos and missing viz</li>
-<li>fix link to pipeflow vs targets vignette</li>
+<div class="section level3">
+<h3 id="documentation-0-4-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-4-0"></a></h3>
+<ul><li>New vignettes: “Working with pipeline views” and “Nested pipelines”.</li>
+<li>Help pages of related functions were consolidated (extract/replace operators, <code>dim</code>/<code>length</code>, <code>lock</code>/<code>unlock</code>, <code>tag</code>/<code>untag</code>, <code>set_params</code>/<code>get_params</code>).</li>
+<li>
+<code><a href="../reference/pip_run.html">pip_run()</a></code> documents the runtime control flow (<code>restart()</code>, <code>halt()</code>), and <code><a href="../reference/pip_add.html">pip_add()</a></code> gained an example for the <code>after</code> argument.</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.3.0.9000" id="pipeflow-0309000">pipeflow 0.3.0.9000<a class="anchor" aria-label="anchor" href="#pipeflow-0309000"></a></h2>
-<ul><li>Same as previous version.</li>
-</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.3.0" id="pipeflow-030">pipeflow 0.3.0<a class="anchor" aria-label="anchor" href="#pipeflow-030"></a></h2><p class="text-muted">CRAN release: 2026-06-15</p>
 <div class="section level3">

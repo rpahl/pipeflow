@@ -65,10 +65,10 @@ pip_run(p)
 pip_collect(p)
 # $numbers
 # [1] 1 2 3 4 5
-#
+# 
 # $squared
 # [1]  1  4  9 16 25
-#
+# 
 # $total
 # [1] 55
 ```

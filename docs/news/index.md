@@ -1,32 +1,62 @@
 # Changelog
 
-## pipeflow 0.3.0.9004
+## pipeflow 0.4.0
 
-- bump actions/checkout from 6.0.3 to 7.0.0
-- bump EnricoMi/publish-unit-test-result-action from 2.23.0 to 2.24.0
+### New features
 
-## pipeflow 0.3.0.9003
+- Pipeline functions can be called as methods on the pipeline object,
+  e.g. `p$add(...)`, `p$run(...)`, `p$set_params(...)`, …
+- The extract and replace operators gained new capabilities:
+  - two-index extraction (`p[[step, "out"]]`),
+  - negative row indices in `p[...]` and `p[i, j] <- value`,
+  - boolean filters in `p[...]` (data.table-style expressions),
+  - cross-pipeline assignment to copy steps between pipelines,
+  - step removal via `p[[step]] <- NULL`,
+  - time stamps via `p[[step, "time"]] <- value`,
+  - setting or replacing views via `p[["view"]] <- ...`.
+- [`pip_collect()`](https://github.com/rpahl/pipeflow/reference/pip_collect.md)
+  (formerly
+  [`pip_collect_out()`](https://github.com/rpahl/pipeflow/reference/pip_collect.md))
+  supports grouping via a `by` argument, `as.table = TRUE` to return a
+  compact table, and a `simplify` argument to control flattening of
+  single-step groups.
+- [`pip_data()`](https://github.com/rpahl/pipeflow/reference/pip_data.md)
+  provides direct access to the underlying step table.
+- [`pip_graph()`](https://github.com/rpahl/pipeflow/reference/pip_graph.md)
+  (formerly
+  [`pip_get_graph()`](https://github.com/rpahl/pipeflow/reference/pip_graph.md))
+  returns visNetwork-compatible graph data. The old function names
+  remain available as deprecated aliases.
+- `pip_derived_cols()` returns the names of the read-only (derived)
+  columns.
+- [`pip_view()`](https://github.com/rpahl/pipeflow/reference/pip_view.md)
+  gains a `join = "union"` argument to combine filters as a logical OR.
+- `.self` is now automatically available inside every step function (and
+  is a protected parameter name), enabling pipelines to modify
+  themselves at runtime, including `.self$restart()` and `.self$halt()`.
 
-- bump r-lib/actions/check-r-package from 2.12.0 to 2.12.1
-- bump r-lib/actions/setup-r from 2.12.0 to 2.12.1
+### Changes
 
-## pipeflow 0.3.0.9002
+- The columns of the internal step table were reordered and `nodeId` is
+  now shown in the full print view (`cols = "all"`).
+- The dependencies on `lgr` and `jsonlite` were removed.
 
-- Updated descriptions in v04-collect-output.Rmd for better readability.
-- Enhanced explanations in v06-self-modify-pipeline.Rmd, focusing on the
-  use of the .self parameter and runtime modifications.
-- Improved wording and fixed typos throughout the document.
-- Clarified the process of modifying pipeline structure and the
-  importance of returning the modified pipeline object.
+### Bug fixes
 
-## pipeflow 0.3.0.9001
+- [`pip_rename()`](https://github.com/rpahl/pipeflow/reference/pip_rename.md)
+  no longer corrupts the parameters of single-step pipelines.
+- Running a view now resolves upstream dependencies correctly.
 
-- fix some typos and missing viz
-- fix link to pipeflow vs targets vignette
+### Documentation
 
-## pipeflow 0.3.0.9000
-
-- Same as previous version.
+- New vignettes: “Working with pipeline views” and “Nested pipelines”.
+- Help pages of related functions were consolidated (extract/replace
+  operators, `dim`/`length`, `lock`/`unlock`, `tag`/`untag`,
+  `set_params`/`get_params`).
+- [`pip_run()`](https://github.com/rpahl/pipeflow/reference/pip_run.md)
+  documents the runtime control flow (`restart()`, `halt()`), and
+  [`pip_add()`](https://github.com/rpahl/pipeflow/reference/pip_add.md)
+  gained an example for the `after` argument.
 
 ## pipeflow 0.3.0
 
