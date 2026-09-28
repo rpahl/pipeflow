@@ -4,6 +4,7 @@ on:
   pull_request:
     types: [closed]
     branches: [main, master]
+  workflow_dispatch:
 
 concurrency:
   group: bump-dev-${{ github.ref }}
@@ -14,11 +15,12 @@ permissions:
 
 jobs:
   bump_dev_version:
-    if: ${{ github.event.pull_request.merged }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
+          ref: ${{ github.event.pull_request.base.ref || github.ref }}
           fetch-depth: 0
           token: ${{ secrets.GITHUBPAT }}
 
@@ -31,6 +33,13 @@ jobs:
       - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.9
         with:
           use-public-rspm: true
+
+      # fledge's dependency gert links against the system libgit2; the RSPM
+      # binary needs it to be present on the runner.
+      - name: Install system dependencies (libgit2)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgit2-dev libssh2-1-dev
 
       # ---- Option A (recommended): use fledge ----
       - name: Bump dev version with fledge
