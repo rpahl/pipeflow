@@ -100,11 +100,11 @@ against modification from <code><a href="pip_set_params.html">pip_set_params()</
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"y"</span>, \<span class="op">(</span><span class="va">y</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="va">y</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"sum"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span>, <span class="va">y</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.208 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.208 UTC]: Step 1/3 x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.209 UTC]: Step 2/3 y</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.209 UTC]: Step 3/3 sum</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.209 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.683 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.683 UTC]: Step 1/3 x</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.683 UTC]: Step 2/3 y</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.684 UTC]: Step 3/3 sum</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.684 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    step params depends state out</span>
@@ -112,7 +112,7 @@ against modification from <code><a href="pip_set_params.html">pip_set_params()</
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:    y      y          done   2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  sum    x,y          done   3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-02 20:37:06</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"sum"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="co"># 3</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 3</span>
 <span class="r-in"><span></span></span>
@@ -127,11 +127,11 @@ against modification from <code><a href="pip_set_params.html">pip_set_params()</
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">pip_lock</span><span class="op">(</span><span class="va">p</span><span class="op">[</span><span class="st">"sum"</span>, <span class="op">]</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.214 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.215 UTC]: Step 1/3 x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.215 UTC]: Step 2/3 y</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.215 UTC]: Step 3/3 sum - skipping locked step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.215 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.689 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.689 UTC]: Step 1/3 x</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.690 UTC]: Step 2/3 y</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.690 UTC]: Step 3/3 sum - skipping locked step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.690 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    step params depends    state out locked</span>
@@ -139,7 +139,7 @@ against modification from <code><a href="pip_set_params.html">pip_set_params()</
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:    y      y             done  20  FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  sum    x,y         outdated   3   TRUE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-02 20:37:06</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"sum"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="co"># still 3</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 3</span>
 <span class="r-in"><span></span></span>
@@ -165,11 +165,11 @@ against modification from <code><a href="pip_set_params.html">pip_set_params()</
 <span class="r-in"><span><span class="fu">pip_unlock</span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">100</span>, y <span class="op">=</span> <span class="fl">200</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.223 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.223 UTC]: Step 1/3 x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.224 UTC]: Step 2/3 y</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.224 UTC]: Step 3/3 sum</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:07.224 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.705 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.705 UTC]: Step 1/3 x</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.705 UTC]: Step 2/3 y</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.705 UTC]: Step 3/3 sum</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:06.705 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    step params depends state out</span>
@@ -177,7 +177,7 @@ against modification from <code><a href="pip_set_params.html">pip_set_params()</
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:    y      y          done 200</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  sum    x,y          done 300</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-02 20:37:06</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -511,7 +511,7 @@ change at the head of the chain:</p>
 <span><span class="co"># 3:   s2      x      s1 outdated   2</span></span>
 <span><span class="co"># 4:   s3      x      s2 outdated   3</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-02 20:25:08</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-02 20:37:45</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># pipeflow: everything up to date -&gt; skip-all</span></span>
@@ -537,7 +537,7 @@ performs<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-co
 &lt;em&gt;every&lt;/em&gt; &lt;code&gt;tar_make()&lt;/code&gt; call, not just at definition
 time.&lt;/p&gt;"><sup>1</sup></a>.</p>
 <p><img src="v07-vs-targets_files/figure-html/define-plot-1.png" class="r-plt" alt="" width="672"></p>
-<p>Declaring the pipeline is roughly 20 to 122 times faster in pipeflow
+<p>Declaring the pipeline is roughly 20 to 121 times faster in pipeflow
 across the four sizes, and the gap widens with <code>n</code>. Again,
 the targets bar covers writing <code>_targets.R</code> and the parse and
 graph build that <code>tar_manifest()</code> performs once here and then
@@ -549,7 +549,7 @@ on every run.</p>
 <p>The closest thing to an apples-to-apples comparison: everything is
 already up to date, and we time a no-op run.</p>
 <p><img src="v07-vs-targets_files/figure-html/skip-plot-1.png" class="r-plt" alt="" width="672"></p>
-<p>pipeflow’s skip check stays at or below 1.83 ms even at 128 steps.
+<p>pipeflow’s skip check stays at or below 1.93 ms even at 128 steps.
 targets pays its per-run script re-source and graph rebuild even when no
 target runs. That fixed cost is what a targets user pays on
 <em>every</em> <code>tar_make()</code> in an interactive session — it

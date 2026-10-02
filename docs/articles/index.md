@@ -52,4 +52,5 @@
 - [pipeflow vs
   targets](https://github.com/rpahl/pipeflow/articles/v07-vs-targets.md):
 
-  A detailed comparison and benchmark between pipeflow and targets.
+  Comparing general properties and performance of {pipeflow} vs
+  {targets} in a scoped latency comparison.

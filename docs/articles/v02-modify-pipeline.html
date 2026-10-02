@@ -115,7 +115,7 @@ is, we have the following pipeline.</p>
 <span><span class="co"># 3:  fit                  data,xVar     prep  done           &lt;lm[13]&gt;</span></span>
 <span><span class="co"># 4: plot model,data,xVar,xLab,title fit,prep  done  &lt;ggplot2::ggplot&gt;</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 19:53:18</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-02 20:37:19</span></span></code></pre></div>
 <p>with the following set data</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_get_params</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span><span class="op">[[</span><span class="st">"data"</span><span class="op">]</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span>
@@ -151,7 +151,7 @@ step that standardizes the y-variable. To do this, we use
 <span><span class="co"># 4:         fit                  data,xVar     prep  done           &lt;lm[13]&gt;</span></span>
 <span><span class="co"># 5:        plot model,data,xVar,xLab,title fit,prep  done  &lt;ggplot2::ggplot&gt;</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 19:53:18</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-02 20:37:19</span></span></code></pre></div>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://datastorm-open.github.io/visNetwork/" class="external-link">visNetwork</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">visNetwork</span>, args <span class="op">=</span> <span class="fu"><a href="../reference/pip_graph.html">pip_graph</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
@@ -171,7 +171,7 @@ step</p>
 <span><span class="co"># {</span></span>
 <span><span class="co">#     lm(paste("Ozone ~", xVar), data = data)</span></span>
 <span><span class="co"># }</span></span>
-<span><span class="co"># &lt;environment: 0x55a73add1100&gt;</span></span></code></pre></div>
+<span><span class="co"># &lt;environment: 0x5644e3705e30&gt;</span></span></code></pre></div>
 <p>To use the standardized data, we need to change the data dependency
 such that it refers to the <code>standardize</code> step. Also instead
 of a fixed y-variable in the model, let’s pass it as a parameter.</p>
@@ -213,7 +213,7 @@ of a fixed y-variable in the model, let’s pass it as a parameter.</p>
 <span><span class="co"># 4:         fit             data,xVar,yVar     standardize   new             [NULL]</span></span>
 <span><span class="co"># 5:        plot model,data,xVar,yVar,title fit,standardize   new             [NULL]</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 19:53:18</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-02 20:37:19</span></span></code></pre></div>
 <div id="htmlwidget-e5c8c404fe174e4c81bd" style="width:700px;height:100px;" class="visNetwork html-widget"></div>
 <script type="application/json" data-for="htmlwidget-e5c8c404fe174e4c81bd">{"x":{"nodes":{"id":[0,1,4,2,3],"label":["data","prep","standardize","fit","plot"],"shape":["hexagon","hexagon","hexagon","hexagon","hexagon"],"color":["#87ff6fff","#87ff6fff","#47b8ffff","#47b8ffff","#47b8ffff"]},"edges":{"from":[0,1,4,2,4],"to":[1,4,2,3,3],"arrows":["to","to","to","to","to"]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR"}}},"groups":null,"width":null,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>We see that the <code>fit</code> and <code>plot</code> steps now use
 (i.e., depend on) the standardized data. Let’s re-run the pipeline and
@@ -221,13 +221,13 @@ inspect the output.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">pip</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Solar.R"</span>, yVar <span class="op">=</span> <span class="st">"Wind"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-27 17:53:19.513 UTC]: Starting run of pipeflow 'my-pip'</span></span>
-<span><span class="co"># info [2026-09-27 17:53:19.513 UTC]: Step 1/5 data - skipping done step</span></span>
-<span><span class="co"># info [2026-09-27 17:53:19.514 UTC]: Step 2/5 prep - skipping done step</span></span>
-<span><span class="co"># info [2026-09-27 17:53:19.514 UTC]: Step 3/5 standardize</span></span>
-<span><span class="co"># info [2026-09-27 17:53:19.515 UTC]: Step 4/5 fit</span></span>
-<span><span class="co"># info [2026-09-27 17:53:19.517 UTC]: Step 5/5 plot</span></span>
-<span><span class="co"># info [2026-09-27 17:53:19.525 UTC]: Finished run of pipeflow 'my-pip'</span></span></code></pre></div>
+<span><span class="co"># info [2026-10-02 18:37:20.599 UTC]: Starting run of pipeflow 'my-pip'</span></span>
+<span><span class="co"># info [2026-10-02 18:37:20.599 UTC]: Step 1/5 data - skipping done step</span></span>
+<span><span class="co"># info [2026-10-02 18:37:20.599 UTC]: Step 2/5 prep - skipping done step</span></span>
+<span><span class="co"># info [2026-10-02 18:37:20.599 UTC]: Step 3/5 standardize</span></span>
+<span><span class="co"># info [2026-10-02 18:37:20.601 UTC]: Step 4/5 fit</span></span>
+<span><span class="co"># info [2026-10-02 18:37:20.602 UTC]: Step 5/5 plot</span></span>
+<span><span class="co"># info [2026-10-02 18:37:20.610 UTC]: Finished run of pipeflow 'my-pip'</span></span></code></pre></div>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"fit"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#  (Intercept)      Solar.R </span></span>
@@ -251,7 +251,7 @@ inspect the output.</p>
 <span><span class="co"># 4:         fit             data,xVar,yVar     standardize  done           &lt;lm[13]&gt;</span></span>
 <span><span class="co"># 5:        plot model,data,xVar,yVar,title fit,standardize  done  &lt;ggplot2::ggplot&gt;</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 19:53:19</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-02 20:37:20</span></span></code></pre></div>
 <p>When you are trying to remove a step, {pipeflow} by default checks if
 the step is used by any other step, and raises an error if removing the
 step would violate the integrity of the pipeline</p>
@@ -272,7 +272,7 @@ dependencies, you can use the <code>force</code> argument.</p>
 <span><span class="co"># 1: data   data          done &lt;data.frame[10x6]&gt;</span></span>
 <span><span class="co"># 2: prep     df    data  done &lt;data.frame[10x7]&gt;</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 19:53:19</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-02 20:37:20</span></span></code></pre></div>
 <p>Naturally, the last step never has any downstream dependencies, so it
 can be removed without any issues.</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
@@ -285,7 +285,7 @@ can be removed without any issues.</p>
 <span><span class="co">#    step params depends state                out</span></span>
 <span><span class="co"># 1: data   data          done &lt;data.frame[10x6]&gt;</span></span>
 <span><span class="co"># --------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-09-27 19:53:19</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-02 20:37:20</span></span></code></pre></div>
 <p>Replacing steps in a pipeline as shown in this vignette will allow to
 re-use existing pipelines and adapt them programmatically to new
 requirements. Another way of re-using pipelines is to combine them,

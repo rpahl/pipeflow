@@ -44,11 +44,15 @@ library(pipeflow)
 
 pip <- pip_new("my-pip") |>
     pip_add("data", \(x = 1:5) x) |>
-    pip_add("prep", \(x = ~data) x * 2, tags = "data") |>
+    pip_add("prep", \(x = ~data) x * 2,
+        tags = "data"
+    ) |>
     pip_add("data_summary", \(x = ~prep) range(x),
         tags = c("data", "summary")
     ) |>
-    pip_add("model_fit", \(x = ~prep, k = 2) x * k, tags = c("model", "fit")) |>
+    pip_add("model_fit", \(x = ~prep, k = 2) x * k,
+        tags = c("model", "fit")
+    ) |>
     pip_add("model_summary", \(x = ~model_fit) sum(x),
         tags = c("model", "summary")
     )

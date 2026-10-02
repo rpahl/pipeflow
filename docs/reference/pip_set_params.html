@@ -127,17 +127,17 @@ remains unchanged.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.720 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.720 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.720 UTC]: Step 2/2 scale</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.721 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:08.276 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:08.276 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:08.277 UTC]: Step 2/2 scale</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:08.278 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     step   params depends state                             out</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n          done             1,2,3,4,5,6,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load  done 0.5,1.0,1.5,2.0,2.5,3.0,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-02 20:37:08</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Updating params marks affected steps (and their dependents) outdated</span></span></span>
 <span class="r-in"><span><span class="fu">pip_set_params</span><span class="op">(</span><span class="va">p</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span>, factor <span class="op">=</span> <span class="fl">2.0</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -148,19 +148,19 @@ remains unchanged.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n         outdated             1,2,3,4,5,6,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load outdated 0.5,1.0,1.5,2.0,2.5,3.0,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-02 20:37:08</span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.726 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.726 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.726 UTC]: Step 2/2 scale</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.727 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:08.283 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:08.283 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:08.284 UTC]: Step 2/2 scale</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:08.285 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     step   params depends state            out</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n          done      1,2,3,4,5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load  done  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-02 20:37:08</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Setting a parameter that is not defined in the pipeline yields a warning</span></span></span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>

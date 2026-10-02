@@ -138,10 +138,10 @@ a single call. In summary:</p><ul><li><p>auto: map if partitioned input appears,
 <span class="r-in"><span>    <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"load"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>    <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"double"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">load</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.013 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.013 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.014 UTC]: Step 2/2 double</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.015 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:07.511 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:07.511 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:07.512 UTC]: Step 2/2 double</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:07.513 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
@@ -149,7 +149,7 @@ a single call. In summary:</p><ul><li><p>auto: map if partitioned input appears,
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:   load      n          done      1,2,3,4,5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: double      x    load  done  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-02 20:37:07</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Replace "load" — downstream steps are automatically marked "outdated"</span></span></span>
 <span class="r-in"><span><span class="fu">pip_replace</span><span class="op">(</span><span class="va">p</span>, <span class="st">"load"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -160,14 +160,14 @@ a single call. In summary:</p><ul><li><p>auto: map if partitioned input appears,
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:   load      n              new         [NULL]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: double      x    load outdated  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-02 20:37:07</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Re-run to bring everything up to date</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.019 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.020 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.020 UTC]: Step 2/2 double</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-09-27 17:53:08.021 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:07.518 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:07.518 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:07.518 UTC]: Step 2/2 double</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-02 18:37:07.519 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
@@ -175,7 +175,7 @@ a single call. In summary:</p><ul><li><p>auto: map if partitioned input appears,
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:   load      n          done 1,2,3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: double      x    load  done 2,4,6</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-09-27 19:53:08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-02 20:37:07</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># If a view is passed, the step must be part of the view</span></span></span>
 <span class="r-in"><span><span class="va">v</span> <span class="op">&lt;-</span> <span class="fu"><a href="pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">p</span>, step <span class="op">=</span> <span class="st">"double"</span><span class="op">)</span></span></span>

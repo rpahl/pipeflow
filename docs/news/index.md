@@ -2,6 +2,8 @@
 
 ## pipeflow 0.4.0
 
+CRAN release: 2026-09-27
+
 ### New features
 
 - Pipeline functions can be called as methods on the pipeline object,

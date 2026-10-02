@@ -23,3 +23,33 @@
     width: 80%;
   }
 }
+
+/* Match the base font size of the official CRAN/rmarkdown vignettes
+   (14px instead of pkgdown's 16px), scaled down proportionally. */
+.template-article main#main {
+  font-size: 0.875rem;
+}
+
+.template-article main#main h1 {
+  font-size: 2.5em;
+}
+
+.template-article main#main h2 {
+  font-size: 2em;
+}
+
+.template-article main#main h3 {
+  font-size: 1.75em;
+}
+
+.template-article main#main h4 {
+  font-size: 1.5em;
+}
+
+.template-article main#main h5 {
+  font-size: 1.25em;
+}
+
+.template-article main#main h6 {
+  font-size: 1em;
+}

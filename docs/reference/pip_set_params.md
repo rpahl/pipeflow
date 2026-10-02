@@ -52,17 +52,17 @@ pip_get_params(p) # list(n = 10, factor = 0.5)
 #> [1] 0.5
 #> 
 (pip_run(p))
-#> info [2026-09-27 17:53:08.720 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-09-27 17:53:08.720 UTC]: Step 1/2 load
-#> info [2026-09-27 17:53:08.720 UTC]: Step 2/2 scale
-#> info [2026-09-27 17:53:08.721 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-02 18:37:08.276 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-02 18:37:08.276 UTC]: Step 1/2 load
+#> info [2026-10-02 18:37:08.277 UTC]: Step 2/2 scale
+#> info [2026-10-02 18:37:08.278 UTC]: Finished run of pipeflow 'pipe'
 #> <pipeflow> pipe (2 steps)
 #> -------------------------
 #>     step   params depends state                             out
 #> 1:  load        n          done             1,2,3,4,5,6,...[10]
 #> 2: scale x,factor    load  done 0.5,1.0,1.5,2.0,2.5,3.0,...[10]
 #> -------------------------
-#> <ready> last run: 2026-09-27 19:53:08
+#> <ready> last run: 2026-10-02 20:37:08
 
 # Updating params marks affected steps (and their dependents) outdated
 pip_set_params(p, params = list(n = 5, factor = 2.0))
@@ -73,19 +73,19 @@ p
 #> 1:  load        n         outdated             1,2,3,4,5,6,...[10]
 #> 2: scale x,factor    load outdated 0.5,1.0,1.5,2.0,2.5,3.0,...[10]
 #> -------------------------
-#> <ready> last run: 2026-09-27 19:53:08
+#> <ready> last run: 2026-10-02 20:37:08
 (pip_run(p))
-#> info [2026-09-27 17:53:08.726 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-09-27 17:53:08.726 UTC]: Step 1/2 load
-#> info [2026-09-27 17:53:08.726 UTC]: Step 2/2 scale
-#> info [2026-09-27 17:53:08.727 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-02 18:37:08.283 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-02 18:37:08.283 UTC]: Step 1/2 load
+#> info [2026-10-02 18:37:08.284 UTC]: Step 2/2 scale
+#> info [2026-10-02 18:37:08.285 UTC]: Finished run of pipeflow 'pipe'
 #> <pipeflow> pipe (2 steps)
 #> -------------------------
 #>     step   params depends state            out
 #> 1:  load        n          done      1,2,3,4,5
 #> 2: scale x,factor    load  done  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-09-27 19:53:08
+#> <ready> last run: 2026-10-02 20:37:08
 
 # Setting a parameter that is not defined in the pipeline yields a warning
 # \donttest{
