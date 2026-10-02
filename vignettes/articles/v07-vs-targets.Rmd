@@ -11,7 +11,7 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 params:
-  min_iters: 20
+  min_iters: 2
 ---
 
 ```{r knitr-setup, include = FALSE}
@@ -67,10 +67,9 @@ you decide which one fits your project.
 In short, **{targets}** is the tool of choice for large-scale reproducible
 projects: it persists results to disk, captures provenance with
 `tar_meta()`, and scales to distributed infrastructure via `crew`.
-**{pipeflow}** prioritises simplicity and interactivity: sub-millisecond
-skipped-step checks, in-session pipeline modification, and low response
-times make it well suited as a Shiny backend or for rapid parameter
-exploration during analysis.
+**{pipeflow}** prioritises simplicity, interactivity, and flexibility:
+in-session pipeline modification, and low response times make it well
+suited for Shiny backends or rapid parameter exploration during analysis.
 
 ## The benchmark: what we measure
 
@@ -120,14 +119,11 @@ the in-memory object built once by `pip_add()`.
 * targets is run in the current session (`callr_function = NULL`) for all
   phases except the cold reference.
 * The targets store lives in a fresh temporary directory (`tar_dir()`) on the
-  same fast local disk for every run.
-* Package versions and the full session are recorded at the end: pipeflow
-  `r packageVersion("pipeflow")`, targets `r packageVersion("targets")`.
+  same disk for every run.
 
 ## The operations, in miniature
 
-Before the timing, here are the pieces being benchmarked on a three-step
-linear pipeline, to make the phases concrete.
+Here are the pieces being benchmarked on a three-step linear pipeline.
 
 ```{r helpers}
 # ---- pipeflow: linear pipeline --------------------------------------------
@@ -243,12 +239,6 @@ run_phase <- function(exprs, env, n, phase, min_iterations, min_time = 0.2,
     d$phase <- phase
     d
 }
-
-median_kable <- function(d, digits = 1) {
-    agg <- aggregate(time * 1000 ~ package + n + phase, d, median)
-    names(agg) <- c("package", "n", "phase", "median (ms)")
-    knitr::kable(agg, digits = digits)
-}
 ```
 
 ```{r verify-linear}
@@ -276,7 +266,7 @@ tar_dir({
 ```
 
 The mini-pipelines build and run correctly in both packages, with trivial
-and costly step bodies alike. Now watch what happens after a change at the
+and costly step bodies alike. Let's see what happens after a change at the
 head of the chain:
 
 ```{r ops-demo}
@@ -288,7 +278,7 @@ pip_run(p, lgr = NULL)
 # pipeflow: everything up to date -> skip-all
 pip_run(p, lgr = NULL)
 
-# targets: edit the parameter value in _targets.R, refresh affected steps
+# targets: edit parameter in _targets.R, refresh affected steps
 tar_dir({
     writeLines(linear_script(3, init = 1), "_targets.R")
     tar_make_silent()
@@ -301,10 +291,12 @@ date. These are the two operations we time in phases 2 and 3.
 
 ## Phase 1 — Define and build
 
-How long does it take to declare a pipeline in R? For pipeflow, that is the
+How long does it take to declare a pipeline? For pipeflow, that is the
 `pip_add()` loop itself. For targets, it is writing the target script plus
-the graph build that `tar_manifest()` performs — and note that targets pays
-this graph build on *every* `tar_make()` call, not just at definition time.
+the graph build that `tar_manifest()` performs^[
+    Note that targets pays this graph build on *every* `tar_make()` call,
+    not just at definition time.
+].
 
 ```{r define-benchmark, echo = FALSE}
 sizes <- c(16, 32, 64, 128)
@@ -344,9 +336,7 @@ ggplot(
     theme_bw()
 ```
 
-```{r define-medians, echo = FALSE}
-median_kable(define_df)
-
+```{r define-medians, echo = FALSE, include = FALSE}
 define_med <- aggregate(time ~ package + n, define_df, median)
 define_wide <- reshape(
     define_med,
@@ -355,17 +345,15 @@ define_wide <- reshape(
 define_ratio <- round(range(define_wide$time.targets / define_wide$time.pipeflow))
 ```
 
-Declaring the pipeline is roughly `r define_ratio[1]`–`r define_ratio[2]`
+Declaring the pipeline is roughly `r define_ratio[1]` to `r define_ratio[2]`
 times faster in pipeflow across the four sizes, and the gap widens with `n`.
-The targets bar covers writing `_targets.R` and the parse and graph build
-that `tar_manifest()` performs — the entry price of its declarative model,
-paid once here and again on every run.
+Again, the targets bar covers writing `_targets.R` and the parse and graph
+build that `tar_manifest()` performs once here and then on every run.
 
 ## Phase 2 — Skip-all
 
 The closest thing to an apples-to-apples comparison: everything is already
-up to date, and we time a no-op run. This is the "sub-millisecond skip
-check" claim, measured directly.
+up to date, and we time a no-op run.
 
 ```{r skip-benchmark, echo = FALSE}
 skip_df <- do.call(rbind, lapply(sizes, function(n) {
@@ -405,9 +393,7 @@ ggplot(
     theme_bw()
 ```
 
-```{r skip-medians, echo = FALSE}
-median_kable(skip_df)
-
+```{r skip-medians, echo = FALSE, include = FALSE}
 skip_med <- aggregate(time ~ package + n, skip_df, median)
 skip_pf_max_ms <- max(skip_med$time[skip_med$package == "pipeflow"]) * 1000
 ```
@@ -420,10 +406,10 @@ provenance-tracking store.
 
 ## Phase 3 — Warm incremental update
 
-The fair head-to-head for interactive work: a pipeline that is up to date, a
-single parameter change, and the time until all affected steps are
-refreshed. Each iteration changes the source value (pipeflow:
-`pip_set_params()`; targets: editing the value in `_targets.R`), so both
+Scenario: the pipeline is up to date, a single parameter changed, and
+we measure the time until all affected steps are refreshed.
+Each iteration changes the source value (pipeflow via `pip_set_params()`
+and targets by editing the value in `_targets.R`), so both
 packages re-run the same affected steps.
 
 ### Trivial step bodies
@@ -474,23 +460,20 @@ ggplot(
     theme_bw()
 ```
 
-```{r incr-medians, echo = FALSE}
-median_kable(incr_df)
-```
-
-With trivial step bodies this is pure framework overhead: the graph
-traversal and state bookkeeping in pipeflow, plus the per-run graph rebuild
-and per-step bookkeeping in targets. pipeflow's cost grows with the number
-of re-run steps, while targets pays a fixed graph rebuild on top of a
-heavier per-step cost.
+Since we use trivial step bodies, this shows the pure framework overhead:
+the graph traversal and state bookkeeping in pipeflow vs the per-run
+graph rebuild and per-step bookkeeping in targets.
+pipeflow's cost grows with the number of re-run steps, while targets
+pays a fixed graph rebuild on top of a heavier per-step cost.
 
 ### Work-cost control
 
 Trivial bodies are overhead, but overhead is only meaningful relative to
-real work. So we repeat the incremental scenario with a fixed cost per
-step — `Sys.sleep(0.005)` — so each full cascade performs `n * 5 ms` of
-known work. This isolates the framework's contribution to a run that
-actually computes something.
+real work. To put things in perspective, we repeat the incremental
+scenario with a fixed cost per step (here `Sys.sleep(0.005)`) so that
+each full cascade performs `n * 5 ms` of known work.
+This isolates the framework's contribution to a run that actually
+computes something.
 
 ```{r work-benchmark, echo = FALSE}
 work_per_step <- 0.005
@@ -566,13 +549,9 @@ work_wide <- reshape(
 work_ratio <- max(work_wide$median_ms.targets / work_wide$median_ms.pipeflow)
 ```
 
-Once steps do real work, the picture changes: the update time is
+Once steps do real work, as expected, the update time is
 increasingly dominated by the work itself, and the two packages land within
-about `r round(work_ratio, 1)`× of each other. The overhead share column makes the
-same point quantitatively — it is a minority of the total for both. The
-framework contribution is exactly what the trivial-bodies benchmark
-isolates, which confirms that the benchmark measures interactive *latency*,
-not pipeline throughput.
+about `r round(work_ratio, 1)`x of each other.
 
 ## Phase 4 — Cold full run (reference, not a race)
 
@@ -634,10 +613,6 @@ ggplot(
         title = "Phase 4: cold full run at 128 steps (reference only)"
     ) +
     theme_bw()
-```
-
-```{r cold-medians, echo = FALSE}
-median_kable(cold_df)
 ```
 
 ## Does the story change with wide graphs?
@@ -763,18 +738,15 @@ ggplot(
     labs(
         y = "Time (ms, log scale)",
         x = "Number of branches",
-        title = "Fan-out DAG: skip-all and warm incremental update"
+        title = "Fan-out DAG: warm incremental update and skip-all"
     ) +
     theme_bw()
 ```
 
-```{r dag-medians, echo = FALSE}
-median_kable(dag_df)
-```
-
-Wide graphs do not change the picture: skip checks stay sub-millisecond in
-pipeflow, and the incremental update scales with the number of re-run
-steps while targets carries its fixed per-run rebuild.
+Overall, wide graphs do not change the picture. The skip checks
+stay sub-millisecond in pipeflow, and the incremental update
+scales with the number of re-run steps while targets carries its
+fixed per-run rebuild.
 
 ## What the numbers include
 
@@ -797,18 +769,18 @@ caveat attached.
 
 ## Summary
 
-* **Skip-all** (Phase 2) is the closest apples-to-apples comparison and the
-  strongest headline: pipeflow's skip check is sub-millisecond, targets'
+* **Skip-all** (Phase 2) is the closest apples-to-apples comparison:
+  while pipeflow's skip check is sub-millisecond, targets'
   is dominated by its per-run graph rebuild.
-* **Warm incremental** (Phase 3) is the fairest measure of interactive
+* **Warm incremental** (Phase 3) is the fairest measure of *interactive*
   latency: pipeflow scales with the re-run steps, targets carries a fixed
   per-run cost, and with real per-step work the two converge.
-* **Cold full run** (Phase 4) is reported as reference only: targets'
+* **Cold full run** (Phase 4) reported as reference only: targets'
   fresh-process, disk-persisting rebuild is its home turf, not a race
   pipeflow can run.
 * Treat these as *latency* numbers, not a general speed ranking. A targets
-  run that saves hours of recomputation, or that runs across `crew`
-  workers, will win the only race that matters for heavy workloads — and
+  run that saves hours of recomputation or runs across `crew`
+  workers will win the only race that matters for heavy workloads — and
   pipeflow will never claim that ground.
 
 ## Session info
