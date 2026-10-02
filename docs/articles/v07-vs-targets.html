@@ -17,9 +17,9 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <meta property="og:title" content="pipeflow vs targets">
-<meta name="description" content="A scoped latency comparison between pipeflow and targets.
+<meta name="description" content="Comparing general properties and performance of {pipeflow} vs {targets} in a scoped latency comparison.
 ">
-<meta property="og:description" content="A scoped latency comparison between pipeflow and targets.
+<meta property="og:description" content="Comparing general properties and performance of {pipeflow} vs {targets} in a scoped latency comparison.
 ">
 <meta property="og:image" content="https://github.com/rpahl/pipeflow/logo.png">
 </head>
@@ -100,8 +100,14 @@
 
     
     
+<p>This vignette has two parts. It opens with a <a href="#overview">general, qualitative comparison</a> of {pipeflow} and
+{targets} — what each package is designed for and where they differ. It
+then tries to investigate certain performance characteristics of the two
+packages in a deliberately <a href="#benchmark">scoped benchmark</a>,
+which will mostly focus on comparing the in-session interactive
+latency.</p>
 <div class="section level2">
-<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+<h2 id="overview">General Properties<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
 <p><a href="https://docs.ropensci.org/targets/" class="external-link">{targets}</a> is the
 most widely used pipeline toolkit in the R ecosystem and the de-facto
@@ -253,22 +259,21 @@ pipeline modification, and low response times make it well suited for
 Shiny backends or rapid parameter exploration during analysis.</p>
 </div>
 <div class="section level2">
-<h2 id="the-benchmark-what-we-measure">The benchmark: what we measure<a class="anchor" aria-label="anchor" href="#the-benchmark-what-we-measure"></a>
+<h2 id="benchmark">The benchmark: what we measure<a class="anchor" aria-label="anchor" href="#benchmark"></a>
 </h2>
-<p>The comparison below is deliberately scoped. It does <em>not</em>
-claim that pipeflow is generally “faster at pipelines” but rather tackle
-one specific question: <em>what is the in-session interactive latency of
-each package?</em>. For this, we investigate how long does a running R
-session take to:</p>
+<p>The comparison in this vignette is deliberately scoped. It does
+<em>not</em> claim that pipeflow is generally “faster at pipelines” but
+rather is focussing specifically on the in-session interactive latency
+of each package. We ask how long does a running R session take to:</p>
 <ul>
 <li>declare a pipeline</li>
 <li>check whether anything needs to run, and</li>
 <li>refresh the affected steps after a change</li>
 </ul>
 <p>This covers the typical Shiny / parameter-exploration use case
-pipeflow is built for. For reference we also report the cold full
-end-to-end run, which is not to be interpreted head-to-head but rather
-as a demonstration of the different cost models of the two packages.</p>
+pipeflow is built for. For reference we also report the <a href="#cold-ref">cold full end-to-end run</a>), which is not to be
+interpreted head-to-head but rather as a demonstration of the different
+cost models of the two packages.</p>
 <p>Each operation is timed as its own, clearly scoped phase:</p>
 <table class="table">
 <colgroup>
@@ -336,7 +341,7 @@ explicit warmup.</li>
 <li>since <code><a href="https://bench.r-lib.org/reference/mark.html" class="external-link">bench::mark()</a></code> does <em>not</em> randomize
 expressions, every comparison is run twice, with the argument order
 swapped, and the per-iteration times pooled.</li>
-<li>Each expression runs for at least <code>mi</code> (= 2) iterations
+<li>Each expression runs for at least <code>mi</code> (= 20) iterations
 and <code>min_time</code> seconds, capped at
 <code>max_iterations</code>.</li>
 <li>targets is run in the current session
@@ -352,7 +357,9 @@ reference.</li>
 </h2>
 <p>Here are the pieces being benchmarked on a three-step linear
 pipeline.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<details class="code-fold"><summary>
+Show code
+</summary><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># ---- pipeflow: linear pipeline --------------------------------------------</span></span>
 <span><span class="va">create_linear_pip</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span>, <span class="va">flavor</span> <span class="op">=</span> <span class="st">"trivial"</span>, <span class="va">work</span> <span class="op">=</span> <span class="fl">0.005</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"linear"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"s0"</span>, \<span class="op">(</span><span class="va">init</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="va">init</span><span class="op">)</span></span>
@@ -465,9 +472,10 @@ pipeline.</p>
 <span>    <span class="va">d</span><span class="op">$</span><span class="va">n</span> <span class="op">&lt;-</span> <span class="va">n</span></span>
 <span>    <span class="va">d</span><span class="op">$</span><span class="va">phase</span> <span class="op">&lt;-</span> <span class="va">phase</span></span>
 <span>    <span class="va">d</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># pipeflow, trivial bodies</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="co"># ---- verify pipelines ----------------------------------------------------</span></span>
+<span><span class="co"># pipeflow, trivial bodies</span></span>
 <span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu">create_linear_pip</span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">p</span><span class="op">[[</span><span class="st">"s3"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">3</span><span class="op">)</span></span>
@@ -488,10 +496,10 @@ pipeline.</p>
 <span>    <span class="fu">tar_make_silent</span><span class="op">(</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu">tar_read</span><span class="op">(</span><span class="va">s3</span><span class="op">)</span> <span class="op">==</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<p>The mini-pipelines build and run correctly in both packages, with
+</details><p>The mini-pipelines build and run correctly in both packages, with
 trivial and costly step bodies alike. Let’s see what happens after a
 change at the head of the chain:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># pipeflow: change one parameter, refresh affected steps</span></span>
 <span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>init <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
@@ -503,7 +511,7 @@ change at the head of the chain:</p>
 <span><span class="co"># 3:   s2      x      s1 outdated   2</span></span>
 <span><span class="co"># 4:   s3      x      s2 outdated   3</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-02 14:17:49</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-02 20:25:08</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># pipeflow: everything up to date -&gt; skip-all</span></span>
@@ -529,7 +537,7 @@ performs<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-co
 &lt;em&gt;every&lt;/em&gt; &lt;code&gt;tar_make()&lt;/code&gt; call, not just at definition
 time.&lt;/p&gt;"><sup>1</sup></a>.</p>
 <p><img src="v07-vs-targets_files/figure-html/define-plot-1.png" class="r-plt" alt="" width="672"></p>
-<p>Declaring the pipeline is roughly 20 to 117 times faster in pipeflow
+<p>Declaring the pipeline is roughly 20 to 122 times faster in pipeflow
 across the four sizes, and the gap widens with <code>n</code>. Again,
 the targets bar covers writing <code>_targets.R</code> and the parse and
 graph build that <code>tar_manifest()</code> performs once here and then
@@ -559,106 +567,26 @@ steps.</p>
 <div class="section level3">
 <h3 id="trivial-step-bodies">Trivial step bodies<a class="anchor" aria-label="anchor" href="#trivial-step-bodies"></a>
 </h3>
+<p>Since with trivial step bodies almost nothing is computed in the
+steps, we are basically measuring the pure framework overhead, which is
+the graph traversal and state bookkeeping in pipeflow vs the per-run
+graph rebuild and per-step bookkeeping in targets.</p>
 <p><img src="v07-vs-targets_files/figure-html/incr-plot-1.png" class="r-plt" alt="" width="672"></p>
-<p>Since we use trivial step bodies, this shows the pure framework
-overhead: the graph traversal and state bookkeeping in pipeflow vs the
-per-run graph rebuild and per-step bookkeeping in targets. pipeflow’s
-cost grows with the number of re-run steps, while targets pays a fixed
-graph rebuild on top of a heavier per-step cost.</p>
 </div>
 <div class="section level3">
-<h3 id="work-cost-control">Work-cost control<a class="anchor" aria-label="anchor" href="#work-cost-control"></a>
+<h3 id="non-trivial-step-bodies">Non-trivial step bodies<a class="anchor" aria-label="anchor" href="#non-trivial-step-bodies"></a>
 </h3>
-<p>Trivial bodies are overhead, but overhead is only meaningful relative
-to real work. To put things in perspective, we repeat the incremental
-scenario with a fixed cost per step (here <code>Sys.sleep(0.005)</code>)
-so that each full cascade performs <code>n * 5 ms</code> of known work.
-This isolates the framework’s contribution to a run that actually
-computes something.</p>
+<p>To simulate some real work in the step bodies, we add an additional
+fixed cost of <code>5 ms</code> per step so that each full cascade
+performs <code>n * 5 ms</code> of known work.</p>
 <p><img src="v07-vs-targets_files/figure-html/work-plot-1.png" class="r-plt" alt="" width="672"></p>
-<table class="table">
-<thead><tr class="header">
-<th align="left">package</th>
-<th align="right">n</th>
-<th align="right">median (ms)</th>
-<th align="right">work (ms)</th>
-<th align="right">overhead (ms)</th>
-<th align="right">overhead share</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td align="left">pipeflow</td>
-<td align="right">16</td>
-<td align="right">113.2</td>
-<td align="right">80</td>
-<td align="right">33.2</td>
-<td align="right">0.293</td>
-</tr>
-<tr class="even">
-<td align="left">targets</td>
-<td align="right">16</td>
-<td align="right">183.0</td>
-<td align="right">80</td>
-<td align="right">103.0</td>
-<td align="right">0.563</td>
-</tr>
-<tr class="odd">
-<td align="left">pipeflow</td>
-<td align="right">32</td>
-<td align="right">244.7</td>
-<td align="right">160</td>
-<td align="right">84.7</td>
-<td align="right">0.346</td>
-</tr>
-<tr class="even">
-<td align="left">targets</td>
-<td align="right">32</td>
-<td align="right">330.5</td>
-<td align="right">160</td>
-<td align="right">170.5</td>
-<td align="right">0.516</td>
-</tr>
-<tr class="odd">
-<td align="left">pipeflow</td>
-<td align="right">64</td>
-<td align="right">469.9</td>
-<td align="right">320</td>
-<td align="right">149.9</td>
-<td align="right">0.319</td>
-</tr>
-<tr class="even">
-<td align="left">targets</td>
-<td align="right">64</td>
-<td align="right">642.1</td>
-<td align="right">320</td>
-<td align="right">322.1</td>
-<td align="right">0.502</td>
-</tr>
-<tr class="odd">
-<td align="left">pipeflow</td>
-<td align="right">128</td>
-<td align="right">961.5</td>
-<td align="right">640</td>
-<td align="right">321.5</td>
-<td align="right">0.334</td>
-</tr>
-<tr class="even">
-<td align="left">targets</td>
-<td align="right">128</td>
-<td align="right">1215.1</td>
-<td align="right">640</td>
-<td align="right">575.1</td>
-<td align="right">0.473</td>
-</tr>
-</tbody>
-</table>
 <p>Once steps do real work, as expected, the update time is increasingly
-dominated by the work itself, and the two packages land within about
-1.6x of each other.</p>
+dominated by the work itself, and the two packages are starting to
+converge.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="phase-4-cold-full-run-reference-not-a-race">Phase 4 — Cold full run (reference, not a race)<a class="anchor" aria-label="anchor" href="#phase-4-cold-full-run-reference-not-a-race"></a>
+<h2 id="cold-ref">Phase 4 — Cold full run (reference, not a race)<a class="anchor" aria-label="anchor" href="#cold-ref"></a>
 </h2>
 <p>For completeness, here is the cold end-to-end rebuild. It is
 <em>not</em> a head-to-head: pipeflow re-runs in a warm in-memory
@@ -674,10 +602,12 @@ defect.</p>
 <div class="section level2">
 <h2 id="does-the-story-change-with-wide-graphs">Does the story change with wide graphs?<a class="anchor" aria-label="anchor" href="#does-the-story-change-with-wide-graphs"></a>
 </h2>
-<p>A source feeds <code>n</code> parallel branches that converge on one
-sink. We time the same two phases — skip-all and warm incremental — with
+<p>We create <code>n</code> parallel branches that converge on one sink
+and time the same two phases — skip-all and warm incremental — with
 trivial bodies.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<details class="code-fold"><summary>
+Show code
+</summary><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dag_source</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fl">1</span></span>
 <span><span class="va">dag_branch</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span></span>
 <span><span class="va">dag_sink</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span>
@@ -725,9 +655,10 @@ trivial bodies.</p>
 <span>        <span class="va">sink_line</span>,</span>
 <span>        <span class="st">")"</span></span>
 <span>    <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">p4</span> <span class="op">&lt;-</span> <span class="fu">make_branch_pip</span><span class="op">(</span><span class="fl">4</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="co"># Verify the wide-graph pipelines build and run correctly in both packages.</span></span>
+<span><span class="va">p4</span> <span class="op">&lt;-</span> <span class="fu">make_branch_pip</span><span class="op">(</span><span class="fl">4</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p4</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">p4</span><span class="op">[[</span><span class="st">"sink"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">8</span><span class="op">)</span></span>
 <span></span>
@@ -736,7 +667,7 @@ trivial bodies.</p>
 <span>    <span class="fu">tar_make_silent</span><span class="op">(</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu">tar_read</span><span class="op">(</span><span class="va">sink</span><span class="op">)</span> <span class="op">==</span> <span class="fl">8</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
-<p><img src="v07-vs-targets_files/figure-html/dag-plot-1.png" class="r-plt" alt="" width="672"></p>
+</details><p><img src="v07-vs-targets_files/figure-html/dag-plot-1.png" class="r-plt" alt="" width="672"></p>
 <p>Overall, wide graphs do not change the picture. The skip checks stay
 sub-millisecond in pipeflow, and the incremental update scales with the
 number of re-run steps while targets carries its fixed per-run
@@ -845,6 +776,16 @@ ranking. A targets run that saves hours of recomputation or runs across
 <code>crew</code> workers will win the only race that matters for heavy
 workloads — and pipeflow will never claim that ground.</li>
 </ul>
+<p>Finally, it is worth noting that while this benchmark was mostly
+focused on sparse step bodies to investigate framework overhead,
+pipeflow is well equipped to handle more realistic workloads too. Here,
+two implementation choices matter: while the dependency graph is
+implemented in C++ and therefore capable of handling large graphs
+efficiently, the step and parameter bookkeeping is backed by
+{data.table}, which provides outstanding memory management and reference
+semantics. Those advantages grow with the size and edit frequency of
+real pipelines, where in-place updates avoid copying and keep re-runs
+cheap.</p>
 </div>
 <div class="section level2">
 <h2 id="session-info">Session info<a class="anchor" aria-label="anchor" href="#session-info"></a>

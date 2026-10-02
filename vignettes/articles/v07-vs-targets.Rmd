@@ -5,13 +5,14 @@ output:
     toc: true
     toc_depth: 4
 description: >
-  A scoped latency comparison between pipeflow and targets.
+  Comparing general properties and performance
+  of {pipeflow} vs {targets} in a scoped latency comparison.
 vignette: >
   %\VignetteIndexEntry{pipeflow vs targets}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 params:
-  min_iters: 2
+  min_iters: 20
 ---
 
 ```{r knitr-setup, include = FALSE}
@@ -20,8 +21,44 @@ knitr::opts_chunk$set(
     prompt = FALSE,
     tidy = FALSE,
     cache = FALSE,
-    collapse = TRUE
+    collapse = TRUE,
+    fold = TRUE,
+    fold_output = FALSE
 )
+
+# Hide code behind a click-to-unfold <details> element by default. A chunk can
+# opt out with `fold = FALSE`. html_document's `code_folding` option is not used
+# because pkgdown overrides the output format and would ignore it.
+default_source <- knitr::knit_hooks$get("source")
+knitr::knit_hooks$set(source = function(x, options) {
+    if (!isTRUE(options$fold)) {
+        return(default_source(x, options))
+    }
+    paste0(
+        "<details class=\"code-fold\">\n",
+        "<summary>Show code</summary>\n\n",
+        "```", options$engine, "\n",
+        paste(x, collapse = "\n"),
+        "\n```\n\n",
+        "</details>\n"
+    )
+})
+
+# Printed text output can be folded the same way by setting
+# `fold_output = TRUE` (globally or on individual chunks). Off by default, and
+# note that it does not wrap plots, which go through a separate hook.
+default_output <- knitr::knit_hooks$get("output")
+knitr::knit_hooks$set(output = function(x, options) {
+    out <- default_output(x, options)
+    if (!isTRUE(options$fold_output)) {
+        return(out)
+    }
+    paste0(
+        "<details class=\"output-fold\">\n",
+        "<summary>Show output</summary>\n\n",
+        out, "\n\n</details>\n"
+    )
+})
 
 old <- options(width = 100L)
 ```
@@ -35,7 +72,14 @@ library(ggplot2)
 mi <- params$min_iters
 ```
 
-## Overview
+This vignette has two parts. It opens with a
+[general, qualitative comparison](#overview) of {pipeflow} and {targets} —
+what each package is designed for and where they differ.
+It then tries to investigate certain performance characteristics
+of the two packages in a deliberately [scoped benchmark](#benchmark),
+which will mostly focus on comparing the in-session interactive latency.
+
+## General Properties {#overview}
 
 [{targets}](https://docs.ropensci.org/targets/) is the most widely used
 pipeline toolkit in the R ecosystem and the de-facto standard for heavy-duty
@@ -71,13 +115,12 @@ projects: it persists results to disk, captures provenance with
 in-session pipeline modification, and low response times make it well
 suited for Shiny backends or rapid parameter exploration during analysis.
 
-## The benchmark: what we measure
+## The benchmark: what we measure {#benchmark}
 
-The comparison below is deliberately scoped. It does *not* claim that
-pipeflow is generally "faster at pipelines" but rather tackle one
-specific question:
-*what is the in-session interactive latency of each package?*.
-For this, we investigate how long does a running R session take to:
+The comparison in this vignette is deliberately scoped. It does *not*
+claim that pipeflow is generally "faster at pipelines" but rather
+is focussing specifically on the in-session interactive latency of
+each package. We ask how long does a running R session take to:
 
  - declare a pipeline
  - check whether anything needs to run, and
@@ -85,9 +128,9 @@ For this, we investigate how long does a running R session take to:
 
 This covers the typical Shiny / parameter-exploration use case pipeflow
 is built for.
-For reference we also report the cold full end-to-end run, which is
-not to be interpreted head-to-head but rather as a demonstration of the
-different cost models of the two packages.
+For reference we also report the [cold full end-to-end run](#cold-ref)),
+which is not to be interpreted head-to-head but rather as a demonstration
+of the different cost models of the two packages.
 
 Each operation is timed as its own, clearly scoped phase:
 
@@ -239,9 +282,8 @@ run_phase <- function(exprs, env, n, phase, min_iterations, min_time = 0.2,
     d$phase <- phase
     d
 }
-```
 
-```{r verify-linear}
+# ---- verify pipelines ----------------------------------------------------
 # pipeflow, trivial bodies
 p <- create_linear_pip(3)
 pip_run(p, lgr = NULL)
@@ -269,7 +311,7 @@ The mini-pipelines build and run correctly in both packages, with trivial
 and costly step bodies alike. Let's see what happens after a change at the
 head of the chain:
 
-```{r ops-demo}
+```{r ops-demo, fold = FALSE}
 # pipeflow: change one parameter, refresh affected steps
 pip_set_params(p, list(init = 1))
 print(p)
@@ -414,6 +456,11 @@ packages re-run the same affected steps.
 
 ### Trivial step bodies
 
+Since with trivial step bodies almost nothing is computed in the steps,
+we are basically measuring the pure framework overhead, which is
+the graph traversal and state bookkeeping in pipeflow vs the per-run
+graph rebuild and per-step bookkeeping in targets.
+
 ```{r incr-benchmark, echo = FALSE}
 incr_df <- do.call(rbind, lapply(sizes, function(n) {
     tar_dir({
@@ -460,20 +507,11 @@ ggplot(
     theme_bw()
 ```
 
-Since we use trivial step bodies, this shows the pure framework overhead:
-the graph traversal and state bookkeeping in pipeflow vs the per-run
-graph rebuild and per-step bookkeeping in targets.
-pipeflow's cost grows with the number of re-run steps, while targets
-pays a fixed graph rebuild on top of a heavier per-step cost.
+### Non-trivial step bodies
 
-### Work-cost control
-
-Trivial bodies are overhead, but overhead is only meaningful relative to
-real work. To put things in perspective, we repeat the incremental
-scenario with a fixed cost per step (here `Sys.sleep(0.005)`) so that
-each full cascade performs `n * 5 ms` of known work.
-This isolates the framework's contribution to a run that actually
-computes something.
+To simulate some real work in the step bodies, we add an additional
+fixed cost of `5 ms` per step so that each full cascade performs
+`n * 5 ms` of known work.
 
 ```{r work-benchmark, echo = FALSE}
 work_per_step <- 0.005
@@ -529,7 +567,7 @@ ggplot(
     theme_bw()
 ```
 
-```{r work-medians, echo = FALSE}
+```{r work-medians, echo = FALSE, include = FALSE}
 work_med <- aggregate(time ~ package + n + phase, work_df, median)
 work_med$median_ms <- work_med$time * 1000
 work_med$work_ms <- work_med$n * work_per_step * 1000
@@ -550,10 +588,10 @@ work_ratio <- max(work_wide$median_ms.targets / work_wide$median_ms.pipeflow)
 ```
 
 Once steps do real work, as expected, the update time is
-increasingly dominated by the work itself, and the two packages land within
-about `r round(work_ratio, 1)`x of each other.
+increasingly dominated by the work itself, and the two
+packages are starting to converge.
 
-## Phase 4 — Cold full run (reference, not a race)
+## Phase 4 — Cold full run (reference, not a race) {#cold-ref}
 
 For completeness, here is the cold end-to-end rebuild. It is *not* a
 head-to-head: pipeflow re-runs in a warm in-memory session, while targets
@@ -617,7 +655,7 @@ ggplot(
 
 ## Does the story change with wide graphs?
 
-A source feeds `n` parallel branches that converge on one sink. We time the
+We create `n` parallel branches that converge on one sink and time the
 same two phases — skip-all and warm incremental — with trivial bodies.
 
 ```{r dag-helpers}
@@ -669,9 +707,8 @@ branch_script <- function(n, init = 0) {
         ")"
     )
 }
-```
 
-```{r verify-dag}
+# Verify the wide-graph pipelines build and run correctly in both packages.
 p4 <- make_branch_pip(4)
 pip_run(p4, lgr = NULL)
 stopifnot(p4[["sink", "out"]] == 8)
@@ -782,6 +819,17 @@ caveat attached.
   run that saves hours of recomputation or runs across `crew`
   workers will win the only race that matters for heavy workloads — and
   pipeflow will never claim that ground.
+
+
+Finally, it is worth noting that while this benchmark was mostly focused on
+sparse step bodies to investigate framework overhead, pipeflow is
+well equipped to handle more realistic workloads too.
+Here, two implementation choices matter: while the dependency graph is
+implemented in C++ and therefore capable of handling large graphs efficiently,
+the step and parameter bookkeeping is backed by {data.table}, which provides
+outstanding memory management and reference semantics. Those advantages grow
+with the size and edit frequency of real pipelines, where in-place updates
+avoid copying and keep re-runs cheap.
 
 ## Session info
 
