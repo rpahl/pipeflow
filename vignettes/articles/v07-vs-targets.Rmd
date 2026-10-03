@@ -245,7 +245,10 @@ warmup <- function(exprs, env) {
 mark_times <- function(mark_res) {
     times <- mark_res$time
     data.frame(
-        package = rep(as.character(mark_res$expression), times = lengths(times)),
+        package = rep(
+            as.character(mark_res$expression),
+            times = lengths(times)
+        ),
         time = as.numeric(unlist(times)),
         stringsAsFactors = FALSE
     )
@@ -384,7 +387,9 @@ define_wide <- reshape(
     define_med,
     idvar = "n", timevar = "package", direction = "wide"
 )
-define_ratio <- round(range(define_wide$time.targets / define_wide$time.pipeflow))
+define_ratio <- round(range(
+    define_wide$time.targets / define_wide$time.pipeflow
+))
 ```
 
 Declaring the pipeline is roughly `r define_ratio[1]` to `r define_ratio[2]`
@@ -464,7 +469,10 @@ graph rebuild and per-step bookkeeping in targets.
 ```{r incr-benchmark, echo = FALSE}
 incr_df <- do.call(rbind, lapply(sizes, function(n) {
     tar_dir({
-        scripts <- list(linear_script(n, init = 0L), linear_script(n, init = 1L))
+        scripts <- list(
+            linear_script(n, init = 0L),
+            linear_script(n, init = 1L)
+        )
         writeLines(scripts[[1L]], "_targets.R")
         tar_make_silent()
         p <- create_linear_pip(n)
@@ -519,8 +527,12 @@ work_per_step <- 0.005
 work_df <- do.call(rbind, lapply(sizes, function(n) {
     tar_dir({
         scripts <- list(
-            linear_script(n, flavor = "costly", work = work_per_step, init = 0L),
-            linear_script(n, flavor = "costly", work = work_per_step, init = 1L)
+            linear_script(
+                n, flavor = "costly", work = work_per_step, init = 0L
+            ),
+            linear_script(
+                n, flavor = "costly", work = work_per_step, init = 1L
+            )
         )
         writeLines(scripts[[1L]], "_targets.R")
         tar_make_silent()
@@ -736,7 +748,10 @@ dag_df <- do.call(rbind, lapply(sizes, function(n) {
             environment(), n, "skip", mi
         )
 
-        scripts <- list(branch_script(n, init = 0L), branch_script(n, init = 1L))
+        scripts <- list(
+            branch_script(n, init = 0L),
+            branch_script(n, init = 1L)
+        )
         pf_flip <- counter()
         tar_flip <- counter()
         incr <- run_phase(
