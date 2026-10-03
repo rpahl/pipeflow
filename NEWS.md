@@ -1,5 +1,11 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.4.0.9001
+
+- Revise benchmark vignette
+- decrease font size in vignettes
+
+
 # pipeflow 0.4.0.9000
 
 - Same as previous version.
