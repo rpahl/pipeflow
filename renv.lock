@@ -436,6 +436,53 @@
       "Maintainer": "Michel Lang <michellang@gmail.com>",
       "Repository": "CRAN"
     },
+    "bench": {
+      "Package": "bench",
+      "Version": "1.1.4",
+      "Source": "Repository",
+      "Title": "High Precision Timing of R Expressions",
+      "Authors@R": "c( person(\"Jim\", \"Hester\", role = \"aut\"), person(\"Davis\", \"Vaughan\", , \"davis@posit.co\", role = c(\"aut\", \"cre\")), person(\"Drew\", \"Schmidt\", role = \"ctb\", comment = \"read_proc_file implementation\"), person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")) )",
+      "Description": "Tools to accurately benchmark and analyze execution times for R expressions.",
+      "License": "MIT + file LICENSE",
+      "URL": "https://bench.r-lib.org/, https://github.com/r-lib/bench",
+      "BugReports": "https://github.com/r-lib/bench/issues",
+      "Depends": [
+        "R (>= 4.0.0)"
+      ],
+      "Imports": [
+        "glue (>= 1.8.0)",
+        "methods",
+        "pillar (>= 1.10.1)",
+        "profmem (>= 0.6.0)",
+        "rlang (>= 1.1.4)",
+        "stats",
+        "tibble (>= 3.2.1)",
+        "utils"
+      ],
+      "Suggests": [
+        "covr",
+        "dplyr",
+        "forcats",
+        "ggbeeswarm",
+        "ggplot2 (>= 3.5.1)",
+        "ggridges",
+        "parallel",
+        "scales",
+        "testthat (>= 3.2.3)",
+        "tidyr (>= 1.3.1)",
+        "vctrs (>= 0.6.5)",
+        "withr"
+      ],
+      "Config/Needs/website": "tidyverse/tidytemplate",
+      "Config/testthat/edition": "3",
+      "Config/usethis/last-upkeep": "2025-01-16",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.2",
+      "NeedsCompilation": "yes",
+      "Author": "Jim Hester [aut], Davis Vaughan [aut, cre], Drew Schmidt [ctb] (read_proc_file implementation), Posit Software, PBC [cph, fnd]",
+      "Maintainer": "Davis Vaughan <davis@posit.co>",
+      "Repository": "CRAN"
+    },
     "brew": {
       "Package": "brew",
       "Version": "1.0-10",
@@ -3151,6 +3198,33 @@
       "NeedsCompilation": "yes",
       "Author": "Gábor Csárdi [aut, cre, cph] (ORCID: <https://orcid.org/0000-0001-7098-9676>), Winston Chang [aut], Posit Software, PBC [cph, fnd] (ROR: <https://ror.org/03wc8by49>), Ascent Digital Services [cph, fnd]",
       "Maintainer": "Gábor Csárdi <csardi.gabor@gmail.com>",
+      "Repository": "CRAN"
+    },
+    "profmem": {
+      "Package": "profmem",
+      "Version": "0.7.0",
+      "Source": "Repository",
+      "Title": "Simple Memory Profiling for R",
+      "Imports": [
+        "utils"
+      ],
+      "Suggests": [
+        "R.rsp",
+        "markdown",
+        "microbenchmark"
+      ],
+      "VignetteBuilder": "R.rsp",
+      "Authors@R": "c(person(\"Henrik\", \"Bengtsson\", role=c(\"aut\", \"cre\", \"cph\"), email = \"henrikb@braju.com\"))",
+      "Description": "A simple and light-weight API for memory profiling of R expressions.  The profiling is built on top of R's built-in memory profiler ('utils::Rprofmem()'), which records every memory allocation done by R (also native code).",
+      "License": "LGPL (>= 2.1)",
+      "LazyLoad": "TRUE",
+      "URL": "https://henrikbengtsson.github.io/profmem/, https://github.com/HenrikBengtsson/profmem",
+      "BugReports": "https://github.com/HenrikBengtsson/profmem/issues",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.2",
+      "NeedsCompilation": "no",
+      "Author": "Henrik Bengtsson [aut, cre, cph]",
+      "Maintainer": "Henrik Bengtsson <henrikb@braju.com>",
       "Repository": "CRAN"
     },
     "profvis": {

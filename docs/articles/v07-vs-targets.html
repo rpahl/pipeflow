@@ -17,9 +17,9 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <meta property="og:title" content="pipeflow vs targets">
-<meta name="description" content="A detailed comparison and benchmark between pipeflow and targets.
+<meta name="description" content="Comparing general properties and performance of {pipeflow} vs {targets} in a scoped latency comparison.
 ">
-<meta property="og:description" content="A detailed comparison and benchmark between pipeflow and targets.
+<meta property="og:description" content="Comparing general properties and performance of {pipeflow} vs {targets} in a scoped latency comparison.
 ">
 <meta property="og:image" content="https://github.com/rpahl/pipeflow/logo.png">
 </head>
@@ -100,8 +100,14 @@
 
     
     
+<p>This vignette has two parts. It opens with a <a href="#overview">general, qualitative comparison</a> of {pipeflow} and
+{targets} — what each package is designed for and where they differ. It
+then tries to investigate certain performance characteristics of the two
+packages in a deliberately <a href="#benchmark">scoped benchmark</a>,
+which will mostly focus on comparing the in-session interactive
+latency.</p>
 <div class="section level2">
-<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+<h2 id="overview">General Properties<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
 <p><a href="https://docs.ropensci.org/targets/" class="external-link">{targets}</a> is the
 most widely used pipeline toolkit in the R ecosystem and the de-facto
@@ -130,9 +136,8 @@ project.</p>
 <tr class="even">
 <td>Execution</td>
 <td>
-<code>tar_make()</code> runs in a <strong>fresh R
-process</strong>
-</td>
+<code>tar_make()</code> runs in a <strong>fresh R process</strong>
+by default</td>
 <td>
 <code><a href="../reference/pip_run.html">pip_run()</a></code> runs in the <strong>current R
 session</strong>
@@ -249,327 +254,582 @@ steps from accidental modification</td>
 large-scale reproducible projects: it persists results to disk, captures
 provenance with <code>tar_meta()</code>, and scales to distributed
 infrastructure via <code>crew</code>. <strong>{pipeflow}</strong>
-prioritises speed and interactivity — sub-millisecond skipped-step
-checks, in-session pipeline modification, and low response times make it
-well suited as a Shiny backend or for rapid parameter exploration during
-analysis.</p>
+prioritises simplicity, interactivity, and flexibility: in-session
+pipeline modification, and low response times make it well suited for
+Shiny backends or rapid parameter exploration during analysis.</p>
 </div>
 <div class="section level2">
-<h2 id="benchmarks">Benchmarks<a class="anchor" aria-label="anchor" href="#benchmarks"></a>
+<h2 id="benchmark">The benchmark: what we measure<a class="anchor" aria-label="anchor" href="#benchmark"></a>
 </h2>
-<p>The benchmarks below provide a quantitative comparison on three
-pipeline topologies. All timings are measured with
-<code><a href="https://rdrr.io/r/base/system.time.html" class="external-link">system.time()</a></code> across 30 iterations per scenario.</p>
-<p>Package versions: pipeflow 0.4.0, targets 1.12.0.</p>
-<p>The three scenarios were chosen to isolate different aspects of
-pipeline overhead:</p>
+<p>The comparison in this vignette is deliberately scoped. It does
+<em>not</em> claim that pipeflow is generally “faster at pipelines” but
+rather is focussing specifically on the in-session interactive latency
+of each package. We ask how long does a running R session take to:</p>
+<ul>
+<li>declare a pipeline</li>
+<li>check whether anything needs to run, and</li>
+<li>refresh the affected steps after a change</li>
+</ul>
+<p>This covers the typical Shiny / parameter-exploration use case
+pipeflow is built for. For reference we also report the <a href="#cold-ref">cold full end-to-end run</a>), which is not to be
+interpreted head-to-head but rather as a demonstration of the different
+cost models of the two packages.</p>
+<p>Each operation is timed as its own, clearly scoped phase:</p>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th>Phase</th>
+<th>pipeflow</th>
+<th>targets</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><strong>Define + build</strong></td>
+<td>
+<code><a href="../reference/pip_new.html">pip_new()</a></code> + <code><a href="../reference/pip_add.html">pip_add()</a></code> loop</td>
+<td>write <code>_targets.R</code>, then graph build
+(<code>tar_manifest()</code>)</td>
+</tr>
+<tr class="even">
+<td><strong>Skip-all</strong></td>
+<td>
+<code><a href="../reference/pip_run.html">pip_run()</a></code> — all steps <code>done</code>
+</td>
+<td>
+<code>tar_make()</code> — all targets up to date</td>
+</tr>
+<tr class="odd">
+<td><strong>Warm incremental</strong></td>
+<td>
+<code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> + <code><a href="../reference/pip_run.html">pip_run()</a></code>
+</td>
+<td>edit parameter in <code>_targets.R</code> +
+<code>tar_make(callr_function = NULL)</code>
+</td>
+</tr>
+<tr class="even">
+<td>
+<strong>Cold full run</strong> (reference)</td>
+<td><code>pip_run(force = TRUE)</code></td>
+<td>
+<code>tar_destroy()</code> + default <code>tar_make()</code> (fresh
+process)</td>
+</tr>
+</tbody>
+</table>
+<p>All phases run in the current R session, except the cold reference,
+where targets uses its default fresh-process execution. targets
+re-sources <code>_targets.R</code> and rebuilds its graph on
+<em>every</em> <code>tar_make()</code> and <code>tar_manifest()</code>
+call — that fixed per-run cost is part of its in-session latency and is
+measured here. pipeflow has no equivalent: its graph is the in-memory
+object built once by <code><a href="../reference/pip_add.html">pip_add()</a></code>.</p>
+<div class="section level3">
+<h3 id="measurement-method">Measurement method<a class="anchor" aria-label="anchor" href="#measurement-method"></a>
+</h3>
 <ul>
 <li>
-<strong>Walkthrough</strong> — a minimal 4-step pipeline mimicking a
-typical exploratory workflow. This measures startup cost and skip-check
-overhead in the simplest realistic case.</li>
-<li>
-<strong>Long linear pipeline</strong> — a chain of N steps
-(<code>s0 -&gt; s1 -&gt; ... -&gt; sN</code>). This isolates per-step
-bookkeeping cost as the pipeline grows to 128 steps.</li>
-<li>
-<strong>Fan-out DAG</strong> — a single source feeds N parallel
-branches that converge on one sink. This tests how each package handles
-wide dependency structures.</li>
+<code><a href="https://bench.r-lib.org/reference/mark.html" class="external-link">bench::mark()</a></code> is used with <code>check = FALSE</code>
+(the two expressions return different objects by design),
+<code>memory = FALSE</code>, and <code>filter_gc = FALSE</code>.</li>
+<li>Each expression is evaluated once and discarded before timing, as an
+explicit warmup.</li>
+<li>since <code><a href="https://bench.r-lib.org/reference/mark.html" class="external-link">bench::mark()</a></code> does <em>not</em> randomize
+expressions, every comparison is run twice, with the argument order
+swapped, and the per-iteration times pooled.</li>
+<li>Each expression runs for at least <code>mi</code> (= 20) iterations
+and <code>min_time</code> seconds, capped at
+<code>max_iterations</code>.</li>
+<li>targets is run in the current session
+(<code>callr_function = NULL</code>) for all phases except the cold
+reference.</li>
+<li>The targets store lives in a fresh temporary directory
+(<code>tar_dir()</code>) on the same disk for every run.</li>
 </ul>
-<p>For targets, each iteration uses a fresh <code>tar_dir()</code> and
-<code>tar_script()</code> to ensure fair timing of end-to-end pipeline
-execution. For pipeflow, pipelines are built once and timed with
-<code>force = TRUE</code> to measure the cost of a full re-run.</p>
-<div class="section level3">
-<h3 id="walkthrough-example">Walkthrough example<a class="anchor" aria-label="anchor" href="#walkthrough-example"></a>
-</h3>
-<p>A minimal four-step pipeline based on the <a href="https://books.ropensci.org/targets/walkthrough.html" class="external-link">{targets}
-walkthrough</a> — read CSV data, fit a linear model, and produce a plot.
-We measure both the first full run (all steps executed) and the
-subsequent skipped run (all steps already up to date). Full runs with
-targets include a <code>tar_destroy()</code> between iterations so each
-is a true cold start.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">create_data_csv</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="va">airquality</span>, <span class="va">file</span> <span class="op">=</span> <span class="st">"data.csv"</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu">utils</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv</a></span><span class="op">(</span><span class="va">data</span>, <span class="va">file</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="va">get_data</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">file</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu">utils</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></span><span class="op">(</span><span class="va">file</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/na.fail.html" class="external-link">na.omit</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="va">fit_model</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="va">Ozone</span> <span class="op">~</span> <span class="va">Temp</span>, <span class="va">data</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="va">plot_model</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">model</span>, <span class="va">data</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span> <span class="op">+</span></span>
-<span>        <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Temp</span>, y <span class="op">=</span> <span class="va">Ozone</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>        <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_abline.html" class="external-link">geom_abline</a></span><span class="op">(</span>intercept <span class="op">=</span> <span class="va">model</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, slope <span class="op">=</span> <span class="va">model</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
-<div class="section level4">
-<h4 id="pipeflow-pipeline">pipeflow pipeline<a class="anchor" aria-label="anchor" href="#pipeflow-pipeline"></a>
-</h4>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">tar_dir</span><span class="op">(</span><span class="op">{</span></span>
-<span>    <span class="fu">create_data_csv</span><span class="op">(</span>file <span class="op">=</span> <span class="st">"data.csv"</span><span class="op">)</span></span>
-<span>    <span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"walkthrough"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"data"</span>, \<span class="op">(</span><span class="va">file</span> <span class="op">=</span> <span class="st">"data.csv"</span><span class="op">)</span> <span class="fu">get_data</span><span class="op">(</span><span class="va">file</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"model"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="fu">fit_model</span><span class="op">(</span><span class="va">data</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>        <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>            <span class="st">"plot"</span>,</span>
-<span>            \<span class="op">(</span><span class="va">model</span> <span class="op">=</span> <span class="op">~</span><span class="va">model</span>, <span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="fu">plot_model</span><span class="op">(</span><span class="va">model</span>, <span class="va">data</span><span class="op">)</span></span>
-<span>        <span class="op">)</span></span>
-<span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"\nProof of principle full run (no skips)"</span><span class="op">)</span></span>
-<span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
-<span>    <span class="va">p_r</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">replicate</a></span><span class="op">(</span><span class="va">nrep</span>, <span class="fu">elapsed_time</span><span class="op">(</span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="cn">NULL</span>, force <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"\nProof of principle skipped run"</span><span class="op">)</span></span>
-<span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
-<span>    <span class="va">p_s</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">replicate</a></span><span class="op">(</span><span class="va">nrep</span>, <span class="fu">elapsed_time</span><span class="op">(</span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
-<span><span class="co"># </span></span>
-<span><span class="co"># Proof of principle full run (no skips)</span></span>
-<span><span class="co"># info [2026-09-27 17:53:42.561 UTC]: Starting run of pipeflow 'walkthrough'</span></span>
-<span><span class="co"># info [2026-09-27 17:53:42.561 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-09-27 17:53:42.565 UTC]: Step 2/3 model</span></span>
-<span><span class="co"># info [2026-09-27 17:53:42.573 UTC]: Step 3/3 plot</span></span>
-<span><span class="co"># info [2026-09-27 17:53:42.628 UTC]: Finished run of pipeflow 'walkthrough'</span></span>
-<span><span class="co"># </span></span>
-<span><span class="co"># Proof of principle skipped run</span></span>
-<span><span class="co"># info [2026-09-27 17:53:43.213 UTC]: Starting run of pipeflow 'walkthrough'</span></span>
-<span><span class="co"># info [2026-09-27 17:53:43.213 UTC]: Step 1/3 data - skipping done step</span></span>
-<span><span class="co"># info [2026-09-27 17:53:43.213 UTC]: Step 2/3 model - skipping done step</span></span>
-<span><span class="co"># info [2026-09-27 17:53:43.213 UTC]: Step 3/3 plot - skipping done step</span></span>
-<span><span class="co"># info [2026-09-27 17:53:43.213 UTC]: Finished run of pipeflow 'walkthrough'</span></span></code></pre></div>
-</div>
-<div class="section level4">
-<h4 id="targets-pipeline">targets pipeline<a class="anchor" aria-label="anchor" href="#targets-pipeline"></a>
-</h4>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tar_make_here</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">reporter</span> <span class="op">=</span> <span class="st">"silent"</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="fu">tar_make</span><span class="op">(</span>callr_function <span class="op">=</span> <span class="cn">NULL</span>, reporter <span class="op">=</span> <span class="va">reporter</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="fu">tar_dir</span><span class="op">(</span><span class="op">{</span></span>
-<span>    <span class="fu">create_data_csv</span><span class="op">(</span>file <span class="op">=</span> <span class="st">"data.csv"</span><span class="op">)</span></span>
-<span>    <span class="fu">tar_script</span><span class="op">(</span></span>
-<span>        <span class="op">{</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>                <span class="fu">tar_target</span><span class="op">(</span><span class="va">file</span>, <span class="st">"data.csv"</span>, format <span class="op">=</span> <span class="st">"file"</span><span class="op">)</span>,</span>
-<span>                <span class="fu">tar_target</span><span class="op">(</span><span class="va">data</span>, <span class="fu">get_data</span><span class="op">(</span><span class="va">file</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>                <span class="fu">tar_target</span><span class="op">(</span><span class="va">model</span>, <span class="fu">fit_model</span><span class="op">(</span><span class="va">data</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>                <span class="fu">tar_target</span><span class="op">(</span><span class="va">plot</span>, <span class="fu">plot_model</span><span class="op">(</span><span class="va">model</span>, <span class="va">data</span><span class="op">)</span><span class="op">)</span></span>
-<span>            <span class="op">)</span></span>
-<span>        <span class="op">}</span>,</span>
-<span>        ask <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>    <span class="op">)</span></span>
-<span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"\nProof of principle full run (no skips)"</span><span class="op">)</span></span>
-<span>    <span class="fu">tar_make_here</span><span class="op">(</span>reporter <span class="op">=</span> <span class="st">"timestamp"</span><span class="op">)</span></span>
-<span>    <span class="va">tar_r</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">replicate</a></span><span class="op">(</span><span class="va">nrep</span>, <span class="op">{</span></span>
-<span>        <span class="fu">tar_destroy</span><span class="op">(</span>ask <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span>        <span class="fu">elapsed_time</span><span class="op">(</span><span class="fu">tar_make_here</span><span class="op">(</span>reporter <span class="op">=</span> <span class="st">"silent"</span><span class="op">)</span><span class="op">)</span></span>
-<span>    <span class="op">}</span><span class="op">)</span></span>
-<span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"\nProof of principle skipped run"</span><span class="op">)</span></span>
-<span>    <span class="fu">tar_make_here</span><span class="op">(</span>reporter <span class="op">=</span> <span class="st">"timestamp"</span><span class="op">)</span></span>
-<span>    <span class="va">tar_s</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">replicate</a></span><span class="op">(</span><span class="va">nrep</span>, <span class="op">{</span></span>
-<span>        <span class="fu">elapsed_time</span><span class="op">(</span><span class="fu">tar_make_here</span><span class="op">(</span>reporter <span class="op">=</span> <span class="st">"silent"</span><span class="op">)</span><span class="op">)</span></span>
-<span>    <span class="op">}</span><span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
-<span><span class="co"># </span></span>
-<span><span class="co"># Proof of principle full run (no skips)</span></span>
-<span><span class="co"># 2026-09-27 19:53:43.46 dispatched target file</span></span>
-<span><span class="co"># 2026-09-27 19:53:43.48 completed target file [1ms, 3.71 kB]</span></span>
-<span><span class="co"># 2026-09-27 19:53:43.48 dispatched target data</span></span>
-<span><span class="co"># 2026-09-27 19:53:43.50 completed target data [1ms, 1.38 kB]</span></span>
-<span><span class="co"># 2026-09-27 19:53:43.52 dispatched target model</span></span>
-<span><span class="co"># 2026-09-27 19:53:43.53 completed target model [1ms, 111 B]</span></span>
-<span><span class="co"># 2026-09-27 19:53:43.53 dispatched target plot</span></span>
-<span><span class="co"># 2026-09-27 19:53:43.58 completed target plot [7ms, 114.10 kB]</span></span>
-<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-09-27 19:53:43.59 ended pipeline [234ms, 4 completed, 0 skipped]</span></span>
-<span><span class="co"># </span></span>
-<span><span class="co"># Proof of principle skipped run</span></span>
-<span><span class="co"># 2026-09-27 19:54:07.78 skipped 1 targets</span></span>
-<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-09-27 19:54:07.78 skipped pipeline [24ms, 4 skipped]</span></span></code></pre></div>
-</div>
-<div class="section level4">
-<h4 id="runtimes">Runtimes<a class="anchor" aria-label="anchor" href="#runtimes"></a>
-</h4>
-<p><img src="v07-vs-targets_files/figure-html/walkthrough-runtime-plot-1.png" class="r-plt" alt="" width="672"></p>
 </div>
 </div>
-<div class="section level3">
-<h3 id="long-linear-pipeline">Long linear pipeline<a class="anchor" aria-label="anchor" href="#long-linear-pipeline"></a>
-</h3>
-<p>Each step depends on the output of the previous step:
-<code>s0 -&gt; s1 -&gt; s2 -&gt; ... -&gt; sN</code>. This measures the
-overhead of managing the pipeline structure and skipping logic as the
-number of steps increases. We benchmark at 16, 32, 64, and 128 steps to
-show how the per-step cost scales.</p>
-<div class="section level4">
-<h4 id="pipeflow-pipeline-1">pipeflow pipeline<a class="anchor" aria-label="anchor" href="#pipeflow-pipeline-1"></a>
-</h4>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">create_linear_pip</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
+<div class="section level2">
+<h2 id="the-operations-in-miniature">The operations, in miniature<a class="anchor" aria-label="anchor" href="#the-operations-in-miniature"></a>
+</h2>
+<p>Here are the pieces being benchmarked on a three-step linear
+pipeline.</p>
+<details class="code-fold"><summary>
+Show code
+</summary><div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># ---- pipeflow: linear pipeline --------------------------------------------</span></span>
+<span><span class="va">create_linear_pip</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span>, <span class="va">flavor</span> <span class="op">=</span> <span class="st">"trivial"</span>, <span class="va">work</span> <span class="op">=</span> <span class="fl">0.005</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"linear"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"s0"</span>, \<span class="op">(</span><span class="va">init</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="va">init</span><span class="op">)</span></span>
-<span></span>
 <span>    <span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>        <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="va">pip</span>, step <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"s"</span>, <span class="va">i</span><span class="op">)</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span> <span class="op">-</span><span class="fl">1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span></span>
+<span>        <span class="kw">if</span> <span class="op">(</span><span class="va">flavor</span> <span class="op">==</span> <span class="st">"costly"</span><span class="op">)</span> <span class="op">{</span></span>
+<span>            <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
+<span>                <span class="va">pip</span>,</span>
+<span>                step <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"s%d"</span>, <span class="va">i</span><span class="op">)</span>,</span>
+<span>                \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span> <span class="op">-</span><span class="fl">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span>                    <span class="fu"><a href="https://rdrr.io/r/base/Sys.sleep.html" class="external-link">Sys.sleep</a></span><span class="op">(</span><span class="va">work</span><span class="op">)</span></span>
+<span>                    <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span></span>
+<span>                <span class="op">}</span></span>
+<span>            <span class="op">)</span></span>
+<span>        <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>            <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="va">pip</span>, step <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"s%d"</span>, <span class="va">i</span><span class="op">)</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span> <span class="op">-</span><span class="fl">1</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span></span>
+<span>        <span class="op">}</span></span>
 <span>    <span class="op">}</span></span>
 <span>    <span class="va">pip</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="co"># Verify</span></span>
-<span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu">create_linear_pip</span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-27 17:54:09.196 UTC]: Starting run of pipeflow 'linear'</span></span>
-<span><span class="co"># info [2026-09-27 17:54:09.196 UTC]: Step 1/4 s0</span></span>
-<span><span class="co"># info [2026-09-27 17:54:09.197 UTC]: Step 2/4 s1</span></span>
-<span><span class="co"># info [2026-09-27 17:54:09.198 UTC]: Step 3/4 s2</span></span>
-<span><span class="co"># info [2026-09-27 17:54:09.198 UTC]: Step 4/4 s3</span></span>
-<span><span class="co"># info [2026-09-27 17:54:09.199 UTC]: Finished run of pipeflow 'linear'</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">p</span><span class="op">[[</span><span class="st">"s3"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level4">
-<h4 id="targets-pipeline-1">targets pipeline<a class="anchor" aria-label="anchor" href="#targets-pipeline-1"></a>
-</h4>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">create_linear_tar</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">init</span> <span class="op">&lt;-</span> <span class="fu">tar_target</span><span class="op">(</span><span class="va">s0</span>, <span class="fl">0</span><span class="op">)</span></span>
-<span>    <span class="va">rest</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span></span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span>,</span>
-<span>        FUN <span class="op">=</span> \<span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="fu">tar_target_raw</span><span class="op">(</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"s%d"</span>, <span class="va">i</span><span class="op">)</span>,</span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/call.html" class="external-link">call</a></span><span class="op">(</span><span class="st">"+"</span>, <span class="fu"><a href="https://rdrr.io/r/base/name.html" class="external-link">as.symbol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"s%d"</span>, <span class="va">i</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span>
-<span>        <span class="op">)</span></span>
+<span><span class="co"># ---- targets: linear pipeline script --------------------------------------</span></span>
+<span><span class="va">linear_script</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span>, <span class="va">flavor</span> <span class="op">=</span> <span class="st">"trivial"</span>, <span class="va">work</span> <span class="op">=</span> <span class="fl">0.005</span>, <span class="va">init</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">lines</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>        <span class="st">"library(targets)"</span>,</span>
+<span>        <span class="st">"list("</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"    tar_target(s0, %s),"</span>, <span class="va">init</span><span class="op">)</span></span>
 <span>    <span class="op">)</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">init</span><span class="op">)</span>, <span class="va">rest</span><span class="op">)</span></span>
+<span>    <span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="va">prev</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"s%d"</span>, <span class="va">i</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span></span>
+<span>        <span class="kw">if</span> <span class="op">(</span><span class="va">flavor</span> <span class="op">==</span> <span class="st">"costly"</span><span class="op">)</span> <span class="op">{</span></span>
+<span>            <span class="va">body</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
+<span>                <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span></span>
+<span>                    <span class="st">"    tar_target_raw(\"s%d\", quote({ Sys.sleep(%s);"</span>,</span>
+<span>                    <span class="st">" %s + 1 }))"</span></span>
+<span>                <span class="op">)</span>,</span>
+<span>                <span class="va">i</span>, <span class="fu"><a href="https://rdrr.io/r/base/format.html" class="external-link">format</a></span><span class="op">(</span><span class="va">work</span>, scientific <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span>, <span class="va">prev</span></span>
+<span>            <span class="op">)</span></span>
+<span>        <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>            <span class="va">body</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
+<span>                <span class="st">"    tar_target_raw(\"s%d\", quote(%s + 1))"</span>, <span class="va">i</span>, <span class="va">prev</span></span>
+<span>            <span class="op">)</span></span>
+<span>        <span class="op">}</span></span>
+<span>        <span class="va">comma</span> <span class="op">&lt;-</span> <span class="kw">if</span> <span class="op">(</span><span class="va">i</span> <span class="op">==</span> <span class="va">n</span><span class="op">)</span> <span class="st">""</span> <span class="kw">else</span> <span class="st">","</span></span>
+<span>        <span class="va">lines</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">lines</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">body</span>, <span class="va">comma</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">lines</span>, <span class="st">")"</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="co"># Verify</span></span>
+<span><span class="co"># ---- shared ---------------------------------------------------------------</span></span>
+<span><span class="va">tar_make_silent</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu">tar_make</span><span class="op">(</span>callr_function <span class="op">=</span> <span class="cn">NULL</span>, reporter <span class="op">=</span> <span class="st">"silent"</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="co"># Each call flips between 0 and 1, so consecutive evaluations of the same</span></span>
+<span><span class="co"># package always see a genuinely new parameter value. One toggle per package,</span></span>
+<span><span class="co"># because the benchmark interleaves evaluations of the two packages.</span></span>
+<span><span class="va">counter</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">k</span> <span class="op">&lt;-</span> <span class="fl">0L</span></span>
+<span>    <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="va">k</span> <span class="op">&lt;&lt;-</span> <span class="fl">1L</span> <span class="op">-</span> <span class="va">k</span></span>
+<span>        <span class="va">k</span></span>
+<span>    <span class="op">}</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="co"># One discarded evaluation of each expression before timing.</span></span>
+<span><span class="va">warmup</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">exprs</span>, <span class="va">env</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="kw">for</span> <span class="op">(</span><span class="va">e</span> <span class="kw">in</span> <span class="va">exprs</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">eval</a></span><span class="op">(</span><span class="va">e</span>, <span class="va">env</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/invisible.html" class="external-link">invisible</a></span><span class="op">(</span><span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="co"># Turn a bench::mark() result into long (package, time[s]) data.</span></span>
+<span><span class="va">mark_times</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">mark_res</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">times</span> <span class="op">&lt;-</span> <span class="va">mark_res</span><span class="op">$</span><span class="va">time</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>        package <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">mark_res</span><span class="op">$</span><span class="va">expression</span><span class="op">)</span>, times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lengths.html" class="external-link">lengths</a></span><span class="op">(</span><span class="va">times</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>        time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unlist.html" class="external-link">unlist</a></span><span class="op">(</span><span class="va">times</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>        stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>    <span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="co"># Benchmark two named quoted expressions in both orders and pool the</span></span>
+<span><span class="co"># per-iteration times.</span></span>
+<span><span class="va">bench_pair</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">exprs</span>, <span class="va">env</span>, <span class="va">min_iterations</span>, <span class="va">min_time</span> <span class="op">=</span> <span class="fl">0.2</span>,</span>
+<span>                       <span class="va">max_iterations</span> <span class="op">=</span> <span class="fl">1000L</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">exprs</span><span class="op">)</span> <span class="op">==</span> <span class="fl">2L</span>, <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">exprs</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="va">run</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="fu">mark_times</span><span class="op">(</span><span class="fu">bench</span><span class="fu">::</span><span class="fu"><a href="https://bench.r-lib.org/reference/mark.html" class="external-link">mark</a></span><span class="op">(</span></span>
+<span>            exprs <span class="op">=</span> <span class="va">e</span>,</span>
+<span>            env <span class="op">=</span> <span class="va">env</span>,</span>
+<span>            check <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>            memory <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>            filter_gc <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>            min_iterations <span class="op">=</span> <span class="va">min_iterations</span>,</span>
+<span>            min_time <span class="op">=</span> <span class="va">min_time</span>,</span>
+<span>            max_iterations <span class="op">=</span> <span class="va">max_iterations</span></span>
+<span>        <span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span><span class="fu">run</span><span class="op">(</span><span class="va">exprs</span><span class="op">)</span>, <span class="fu">run</span><span class="op">(</span><span class="va">exprs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/rev.html" class="external-link">rev</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">exprs</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">run_phase</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">exprs</span>, <span class="va">env</span>, <span class="va">n</span>, <span class="va">phase</span>, <span class="va">min_iterations</span>, <span class="va">min_time</span> <span class="op">=</span> <span class="fl">0.2</span>,</span>
+<span>                      <span class="va">max_iterations</span> <span class="op">=</span> <span class="fl">1000L</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu">warmup</span><span class="op">(</span><span class="va">exprs</span>, <span class="va">env</span><span class="op">)</span></span>
+<span>    <span class="va">d</span> <span class="op">&lt;-</span> <span class="fu">bench_pair</span><span class="op">(</span></span>
+<span>        <span class="va">exprs</span>, <span class="va">env</span>,</span>
+<span>        <span class="va">min_iterations</span>, min_time <span class="op">=</span> <span class="va">min_time</span>, max_iterations <span class="op">=</span> <span class="va">max_iterations</span></span>
+<span>    <span class="op">)</span></span>
+<span>    <span class="va">d</span><span class="op">$</span><span class="va">n</span> <span class="op">&lt;-</span> <span class="va">n</span></span>
+<span>    <span class="va">d</span><span class="op">$</span><span class="va">phase</span> <span class="op">&lt;-</span> <span class="va">phase</span></span>
+<span>    <span class="va">d</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="co"># ---- verify pipelines ----------------------------------------------------</span></span>
+<span><span class="co"># pipeflow, trivial bodies</span></span>
+<span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu">create_linear_pip</span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">p</span><span class="op">[[</span><span class="st">"s3"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">3</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># pipeflow, costly bodies</span></span>
+<span><span class="va">p_costly</span> <span class="op">&lt;-</span> <span class="fu">create_linear_pip</span><span class="op">(</span><span class="fl">3</span>, flavor <span class="op">=</span> <span class="st">"costly"</span>, work <span class="op">=</span> <span class="fl">0.001</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p_costly</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">p_costly</span><span class="op">[[</span><span class="st">"s3"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">3</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># targets, trivial and costly bodies</span></span>
 <span><span class="fu">tar_dir</span><span class="op">(</span><span class="op">{</span></span>
-<span>    <span class="fu">tar_script</span><span class="op">(</span><span class="fu">create_linear_tar</span><span class="op">(</span><span class="fl">3</span><span class="op">)</span>, ask <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span>    <span class="fu">tar_make_here</span><span class="op">(</span>reporter <span class="op">=</span> <span class="st">"timestamp"</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="fu">linear_script</span><span class="op">(</span><span class="fl">3</span><span class="op">)</span>, <span class="st">"_targets.R"</span><span class="op">)</span></span>
+<span>    <span class="fu">tar_make_silent</span><span class="op">(</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu">tar_read</span><span class="op">(</span><span class="va">s3</span><span class="op">)</span> <span class="op">==</span> <span class="fl">3</span><span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
-<span><span class="co"># 2026-09-27 19:54:09.27 dispatched target s0</span></span>
-<span><span class="co"># 2026-09-27 19:54:09.28 completed target s0 [1ms, 49 B]</span></span>
-<span><span class="co"># 2026-09-27 19:54:09.28 dispatched target s1</span></span>
-<span><span class="co"># 2026-09-27 19:54:09.28 completed target s1 [0ms, 51 B]</span></span>
-<span><span class="co"># 2026-09-27 19:54:09.28 dispatched target s2</span></span>
-<span><span class="co"># 2026-09-27 19:54:09.28 completed target s2 [1ms, 50 B]</span></span>
-<span><span class="co"># 2026-09-27 19:54:09.28 dispatched target s3</span></span>
-<span><span class="co"># 2026-09-27 19:54:09.29 completed target s3 [0ms, 51 B]</span></span>
-<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-09-27 19:54:09.29 ended pipeline [29ms, 4 completed, 0 skipped]</span></span>
-<span><span class="co"># </span></span></code></pre></div>
+<span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="fu">linear_script</span><span class="op">(</span><span class="fl">3</span>, flavor <span class="op">=</span> <span class="st">"costly"</span>, work <span class="op">=</span> <span class="fl">0.001</span><span class="op">)</span>,</span>
+<span>               <span class="st">"_targets.R"</span><span class="op">)</span></span>
+<span>    <span class="fu">tar_make_silent</span><span class="op">(</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu">tar_read</span><span class="op">(</span><span class="va">s3</span><span class="op">)</span> <span class="op">==</span> <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+</details><p>The mini-pipelines build and run correctly in both packages, with
+trivial and costly step bodies alike. Let’s see what happens after a
+change at the head of the chain:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># pipeflow: change one parameter, refresh affected steps</span></span>
+<span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>init <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
+<span><span class="co"># &lt;pipeflow&gt; linear (4 steps)</span></span>
+<span><span class="co"># ---------------------------</span></span>
+<span><span class="co">#    step params depends    state out</span></span>
+<span><span class="co"># 1:   s0   init         outdated   0</span></span>
+<span><span class="co"># 2:   s1      x      s0 outdated   1</span></span>
+<span><span class="co"># 3:   s2      x      s1 outdated   2</span></span>
+<span><span class="co"># 4:   s3      x      s2 outdated   3</span></span>
+<span><span class="co"># ---------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-02 20:37:45</span></span>
+<span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># pipeflow: everything up to date -&gt; skip-all</span></span>
+<span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># targets: edit parameter in _targets.R, refresh affected steps</span></span>
+<span><span class="fu">tar_dir</span><span class="op">(</span><span class="op">{</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="fu">linear_script</span><span class="op">(</span><span class="fl">3</span>, init <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>, <span class="st">"_targets.R"</span><span class="op">)</span></span>
+<span>    <span class="fu">tar_make_silent</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<p>Both packages re-run only the steps affected by the change (the whole
+chain, in a linear pipeline), and both skip everything when the pipeline
+is up to date. These are the two operations we time in phases 2 and
+3.</p>
 </div>
-<div class="section level4">
-<h4 id="runtimes-1">Runtimes<a class="anchor" aria-label="anchor" href="#runtimes-1"></a>
-</h4>
-<p><img src="v07-vs-targets_files/figure-html/linear-plot-1.png" class="r-plt" alt="" width="672"></p>
+<div class="section level2">
+<h2 id="phase-1-define-and-build">Phase 1 — Define and build<a class="anchor" aria-label="anchor" href="#phase-1-define-and-build"></a>
+</h2>
+<p>How long does it take to declare a pipeline? For pipeflow, that is
+the <code><a href="../reference/pip_add.html">pip_add()</a></code> loop itself. For targets, it is writing the
+target script plus the graph build that <code>tar_manifest()</code>
+performs<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt; Note that targets pays this graph build on
+&lt;em&gt;every&lt;/em&gt; &lt;code&gt;tar_make()&lt;/code&gt; call, not just at definition
+time.&lt;/p&gt;"><sup>1</sup></a>.</p>
+<p><img src="v07-vs-targets_files/figure-html/define-plot-1.png" class="r-plt" alt="" width="672"></p>
+<p>Declaring the pipeline is roughly 20 to 121 times faster in pipeflow
+across the four sizes, and the gap widens with <code>n</code>. Again,
+the targets bar covers writing <code>_targets.R</code> and the parse and
+graph build that <code>tar_manifest()</code> performs once here and then
+on every run.</p>
 </div>
+<div class="section level2">
+<h2 id="phase-2-skip-all">Phase 2 — Skip-all<a class="anchor" aria-label="anchor" href="#phase-2-skip-all"></a>
+</h2>
+<p>The closest thing to an apples-to-apples comparison: everything is
+already up to date, and we time a no-op run.</p>
+<p><img src="v07-vs-targets_files/figure-html/skip-plot-1.png" class="r-plt" alt="" width="672"></p>
+<p>pipeflow’s skip check stays at or below 1.93 ms even at 128 steps.
+targets pays its per-run script re-source and graph rebuild even when no
+target runs. That fixed cost is what a targets user pays on
+<em>every</em> <code>tar_make()</code> in an interactive session — it
+buys the persistent, provenance-tracking store.</p>
+</div>
+<div class="section level2">
+<h2 id="phase-3-warm-incremental-update">Phase 3 — Warm incremental update<a class="anchor" aria-label="anchor" href="#phase-3-warm-incremental-update"></a>
+</h2>
+<p>Scenario: the pipeline is up to date, a single parameter changed, and
+we measure the time until all affected steps are refreshed. Each
+iteration changes the source value (pipeflow via
+<code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> and targets by editing the value in
+<code>_targets.R</code>), so both packages re-run the same affected
+steps.</p>
+<div class="section level3">
+<h3 id="trivial-step-bodies">Trivial step bodies<a class="anchor" aria-label="anchor" href="#trivial-step-bodies"></a>
+</h3>
+<p>Since with trivial step bodies almost nothing is computed in the
+steps, we are basically measuring the pure framework overhead, which is
+the graph traversal and state bookkeeping in pipeflow vs the per-run
+graph rebuild and per-step bookkeeping in targets.</p>
+<p><img src="v07-vs-targets_files/figure-html/incr-plot-1.png" class="r-plt" alt="" width="672"></p>
 </div>
 <div class="section level3">
-<h3 id="dag-with-branching">DAG with branching<a class="anchor" aria-label="anchor" href="#dag-with-branching"></a>
+<h3 id="non-trivial-step-bodies">Non-trivial step bodies<a class="anchor" aria-label="anchor" href="#non-trivial-step-bodies"></a>
 </h3>
-<p>A source feeds N parallel branches, all converging on a single sink
-step. This tests scalability with fan-out structures and how each
-package handles wide dependency graphs — from 16 up to 128 parallel
-branches. Unlike the linear pipeline, all branches can potentially run
-independently once the source completes.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<p>To simulate some real work in the step bodies, we add an additional
+fixed cost of <code>5 ms</code> per step so that each full cascade
+performs <code>n * 5 ms</code> of known work.</p>
+<p><img src="v07-vs-targets_files/figure-html/work-plot-1.png" class="r-plt" alt="" width="672"></p>
+<p>Once steps do real work, as expected, the update time is increasingly
+dominated by the work itself, and the two packages are starting to
+converge.</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="cold-ref">Phase 4 — Cold full run (reference, not a race)<a class="anchor" aria-label="anchor" href="#cold-ref"></a>
+</h2>
+<p>For completeness, here is the cold end-to-end rebuild. It is
+<em>not</em> a head-to-head: pipeflow re-runs in a warm in-memory
+session, while targets destroys its store and runs in a fresh R process,
+persisting every object to disk with provenance. That is targets’ design
+and its home turf — the bar shows the magnitude of its cost model, not a
+defect.</p>
+<p>This time the teardown is kept out of the timed region:
+<code>tar_destroy()</code> runs before each timed
+<code>tar_make()</code>.</p>
+<p><img src="v07-vs-targets_files/figure-html/cold-plot-1.png" class="r-plt" alt="" width="672"></p>
+</div>
+<div class="section level2">
+<h2 id="does-the-story-change-with-wide-graphs">Does the story change with wide graphs?<a class="anchor" aria-label="anchor" href="#does-the-story-change-with-wide-graphs"></a>
+</h2>
+<p>We create <code>n</code> parallel branches that converge on one sink
+and time the same two phases — skip-all and warm incremental — with
+trivial bodies.</p>
+<details class="code-fold"><summary>
+Show code
+</summary><div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dag_source</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fl">1</span></span>
 <span><span class="va">dag_branch</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span></span>
-<span><span class="va">dag_sink</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span></code></pre></div>
-<div class="section level4">
-<h4 id="pipeflow-pipeline-2">pipeflow pipeline<a class="anchor" aria-label="anchor" href="#pipeflow-pipeline-2"></a>
-</h4>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">make_branch_pip</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"dag"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"source"</span>, <span class="va">dag_source</span><span class="op">)</span></span>
+<span><span class="va">dag_sink</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">make_branch_pip</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">pip</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"dag"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>        <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"source"</span>, \<span class="op">(</span><span class="va">init</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="fu">dag_source</span><span class="op">(</span><span class="op">)</span> <span class="op">+</span> <span class="va">init</span><span class="op">)</span></span>
 <span>    <span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>        <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="va">pip</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"b"</span>, <span class="va">i</span><span class="op">)</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">source</span><span class="op">)</span> <span class="fu">dag_branch</span><span class="op">(</span><span class="va">x</span><span class="op">)</span><span class="op">)</span></span>
+<span>        <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="va">pip</span>, <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"b%d"</span>, <span class="va">i</span><span class="op">)</span>,</span>
+<span>                \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">source</span><span class="op">)</span> <span class="fu">dag_branch</span><span class="op">(</span><span class="va">x</span><span class="op">)</span><span class="op">)</span></span>
 <span>    <span class="op">}</span></span>
-<span></span>
-<span>    <span class="va">sink_args</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span></span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"x%s = ~b%s"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>        collapse <span class="op">=</span> <span class="st">", "</span></span>
-<span>    <span class="op">)</span></span>
-<span>    <span class="va">sink_call</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">eval</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/parse.html" class="external-link">parse</a></span><span class="op">(</span>text <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
-<span>        <span class="st">"pip_add(pip, 'sink', function(%s) { dag_sink(%s) })"</span>,</span>
-<span>        <span class="va">sink_args</span>, <span class="va">sink_call</span></span>
-<span>    <span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/invisible.html" class="external-link">invisible</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
+<span>    <span class="va">args</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">as.pairlist</a></span><span class="op">(</span><span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"b"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span>, \<span class="op">(</span><span class="va">s</span><span class="op">)</span> <span class="op">{</span></span>
+<span>            <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/formula.html" class="external-link">as.formula</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"~"</span>, <span class="va">s</span><span class="op">)</span><span class="op">)</span></span>
+<span>        <span class="op">}</span><span class="op">)</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="va">body</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/call.html" class="external-link">as.call</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/name.html" class="external-link">as.symbol</a></span><span class="op">(</span><span class="st">"dag_sink"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span>, <span class="va">as.symbol</span><span class="op">)</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="va">sink_fun</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/eval.html" class="external-link">eval</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/call.html" class="external-link">call</a></span><span class="op">(</span><span class="st">"function"</span>, <span class="va">args</span>, <span class="va">body</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="va">pip</span>, <span class="st">"sink"</span>, <span class="va">sink_fun</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">p4</span> <span class="op">&lt;-</span> <span class="fu">make_branch_pip</span><span class="op">(</span><span class="fl">4</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p4</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-09-27 17:54:43.087 UTC]: Starting run of pipeflow 'dag'</span></span>
-<span><span class="co"># info [2026-09-27 17:54:43.087 UTC]: Step 1/6 source</span></span>
-<span><span class="co"># info [2026-09-27 17:54:43.088 UTC]: Step 2/6 b1</span></span>
-<span><span class="co"># info [2026-09-27 17:54:43.089 UTC]: Step 3/6 b2</span></span>
-<span><span class="co"># info [2026-09-27 17:54:43.090 UTC]: Step 4/6 b3</span></span>
-<span><span class="co"># info [2026-09-27 17:54:43.091 UTC]: Step 5/6 b4</span></span>
-<span><span class="co"># info [2026-09-27 17:54:43.092 UTC]: Step 6/6 sink</span></span>
-<span><span class="co"># info [2026-09-27 17:54:43.093 UTC]: Finished run of pipeflow 'dag'</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">p4</span><span class="op">[[</span><span class="st">"sink"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level4">
-<h4 id="targets-pipeline-2">targets pipeline<a class="anchor" aria-label="anchor" href="#targets-pipeline-2"></a>
-</h4>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">make_branch_tar</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">source</span> <span class="op">&lt;-</span> <span class="fu">tar_target</span><span class="op">(</span><span class="va">source</span>, <span class="fu">dag_source</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span>    <span class="va">branches</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span></span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span>,</span>
-<span>        FUN <span class="op">=</span> \<span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="fu">tar_target_raw</span><span class="op">(</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"b%d"</span>, <span class="va">i</span><span class="op">)</span>,</span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/call.html" class="external-link">call</a></span><span class="op">(</span><span class="st">"dag_branch"</span>, <span class="fu"><a href="https://rdrr.io/r/base/name.html" class="external-link">as.symbol</a></span><span class="op">(</span><span class="st">"source"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">branch_script</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span>, <span class="va">init</span> <span class="op">=</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">branches</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
+<span>            <span class="st">"    tar_target_raw(\"b%d\", quote(dag_branch(source))),"</span>,</span>
+<span>            <span class="va">i</span></span>
 <span>        <span class="op">)</span></span>
+<span>    <span class="op">}</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="va">sink_line</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
+<span>        <span class="st">"    tar_target_raw(\"sink\", quote(dag_sink(%s)))"</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"b"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span>, collapse <span class="op">=</span> <span class="st">", "</span><span class="op">)</span></span>
 <span>    <span class="op">)</span></span>
-<span>    <span class="va">sink</span> <span class="op">&lt;-</span> <span class="fu">tar_target_raw</span><span class="op">(</span></span>
-<span>        <span class="st">"sink"</span>,</span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/call.html" class="external-link">as.call</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/name.html" class="external-link">as.symbol</a></span><span class="op">(</span><span class="st">"dag_sink"</span><span class="op">)</span>,</span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"b"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span>, <span class="va">as.symbol</span><span class="op">)</span></span>
-<span>        <span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>        <span class="st">"library(targets)"</span>,</span>
+<span>        <span class="st">"dag_source &lt;- function() 1"</span>,</span>
+<span>        <span class="st">"dag_branch &lt;- function(x) x + 1"</span>,</span>
+<span>        <span class="st">"dag_sink &lt;- function(...) sum(...)"</span>,</span>
+<span>        <span class="st">"list("</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"    tar_target(source, dag_source() + %s),"</span>, <span class="va">init</span><span class="op">)</span>,</span>
+<span>        <span class="va">branches</span>,</span>
+<span>        <span class="va">sink_line</span>,</span>
+<span>        <span class="st">")"</span></span>
 <span>    <span class="op">)</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">source</span><span class="op">)</span>, <span class="va">branches</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">sink</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="co"># Verify</span></span>
+<span><span class="co"># Verify the wide-graph pipelines build and run correctly in both packages.</span></span>
+<span><span class="va">p4</span> <span class="op">&lt;-</span> <span class="fu">make_branch_pip</span><span class="op">(</span><span class="fl">4</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p4</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="va">p4</span><span class="op">[[</span><span class="st">"sink"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">8</span><span class="op">)</span></span>
+<span></span>
 <span><span class="fu">tar_dir</span><span class="op">(</span><span class="op">{</span></span>
-<span>    <span class="fu">tar_script</span><span class="op">(</span><span class="fu">make_branch_tar</span><span class="op">(</span><span class="fl">4</span><span class="op">)</span>, ask <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span>    <span class="fu">tar_make_here</span><span class="op">(</span>reporter <span class="op">=</span> <span class="st">"timestamp"</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="fu">branch_script</span><span class="op">(</span><span class="fl">4</span><span class="op">)</span>, <span class="st">"_targets.R"</span><span class="op">)</span></span>
+<span>    <span class="fu">tar_make_silent</span><span class="op">(</span><span class="op">)</span></span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/stopifnot.html" class="external-link">stopifnot</a></span><span class="op">(</span><span class="fu">tar_read</span><span class="op">(</span><span class="va">sink</span><span class="op">)</span> <span class="op">==</span> <span class="fl">8</span><span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
-<span><span class="co"># 2026-09-27 19:54:43.17 dispatched target source</span></span>
-<span><span class="co"># 2026-09-27 19:54:43.18 completed target source [0ms, 51 B]</span></span>
-<span><span class="co"># 2026-09-27 19:54:43.18 dispatched target b1</span></span>
-<span><span class="co"># 2026-09-27 19:54:43.18 completed target b1 [1ms, 50 B]</span></span>
-<span><span class="co"># 2026-09-27 19:54:43.18 dispatched target b2</span></span>
-<span><span class="co"># 2026-09-27 19:54:43.19 completed target b2 [1ms, 50 B]</span></span>
-<span><span class="co"># 2026-09-27 19:54:43.19 dispatched target b3</span></span>
-<span><span class="co"># 2026-09-27 19:54:43.19 completed target b3 [1ms, 50 B]</span></span>
-<span><span class="co"># 2026-09-27 19:54:43.19 dispatched target b4</span></span>
-<span><span class="co"># 2026-09-27 19:54:43.19 completed target b4 [1ms, 50 B]</span></span>
-<span><span class="co"># 2026-09-27 19:54:43.20 dispatched target sink</span></span>
-<span><span class="co"># 2026-09-27 19:54:43.20 completed target sink [2ms, 51 B]</span></span>
-<span><span class="co"># <span style="color: #00BB00;">✔</span> 2026-09-27 19:54:43.20 ended pipeline [48ms, 6 completed, 0 skipped]</span></span>
-<span><span class="co"># </span></span></code></pre></div>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+</details><p><img src="v07-vs-targets_files/figure-html/dag-plot-1.png" class="r-plt" alt="" width="672"></p>
+<p>Overall, wide graphs do not change the picture. The skip checks stay
+sub-millisecond in pipeflow, and the incremental update scales with the
+number of re-run steps while targets carries its fixed per-run
+rebuild.</p>
 </div>
-<div class="section level4">
-<h4 id="runtimes-2">Runtimes<a class="anchor" aria-label="anchor" href="#runtimes-2"></a>
-</h4>
-<p><img src="v07-vs-targets_files/figure-html/dag-plot-1.png" class="r-plt" alt="" width="672"></p>
+<div class="section level2">
+<h2 id="what-the-numbers-include">What the numbers include<a class="anchor" aria-label="anchor" href="#what-the-numbers-include"></a>
+</h2>
+<p>The bars above are <em>not</em> all measuring the same thing. This
+table states explicitly what each phase does and does not include.</p>
+<table style="width:100%;" class="table">
+<colgroup>
+<col width="16%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
+<col width="16%">
+</colgroup>
+<thead><tr class="header">
+<th>Bar</th>
+<th>Step bodies run</th>
+<th>Process</th>
+<th>Disk persistence</th>
+<th>Provenance</th>
+<th>Store</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>pipeflow skip-all</td>
+<td>none</td>
+<td>current session</td>
+<td>no</td>
+<td>no</td>
+<td>in-memory</td>
+</tr>
+<tr class="even">
+<td>targets skip-all</td>
+<td>none</td>
+<td>current session</td>
+<td>yes</td>
+<td>yes</td>
+<td>on-disk <code>_targets/</code>
+</td>
+</tr>
+<tr class="odd">
+<td>pipeflow incremental</td>
+<td>affected steps</td>
+<td>current session</td>
+<td>no</td>
+<td>no</td>
+<td>in-memory</td>
+</tr>
+<tr class="even">
+<td>targets incremental</td>
+<td>affected steps</td>
+<td>current session</td>
+<td>yes</td>
+<td>yes</td>
+<td>on-disk <code>_targets/</code>
+</td>
+</tr>
+<tr class="odd">
+<td>pipeflow cold (ref)</td>
+<td>all steps</td>
+<td>current session</td>
+<td>no</td>
+<td>no</td>
+<td>in-memory</td>
+</tr>
+<tr class="even">
+<td>targets cold (ref)</td>
+<td>all steps</td>
+<td><strong>fresh R process</strong></td>
+<td>yes</td>
+<td>yes</td>
+<td>on-disk <code>_targets/</code>
+</td>
+</tr>
+</tbody>
+</table>
+<p>In short: targets’ overhead buys disk persistence, provenance, and
+distributed execution; pipeflow’s buys in-session latency. The benchmark
+above is a latency comparison, and the numbers only make sense with that
+caveat attached.</p>
 </div>
+<div class="section level2">
+<h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
+</h2>
+<ul>
+<li>
+<strong>Skip-all</strong> (Phase 2) is the closest apples-to-apples
+comparison: while pipeflow’s skip check is sub-millisecond, targets’ is
+dominated by its per-run graph rebuild.</li>
+<li>
+<strong>Warm incremental</strong> (Phase 3) is the fairest measure
+of <em>interactive</em> latency: pipeflow scales with the re-run steps,
+targets carries a fixed per-run cost, and with real per-step work the
+two converge.</li>
+<li>
+<strong>Cold full run</strong> (Phase 4) reported as reference only:
+targets’ fresh-process, disk-persisting rebuild is its home turf, not a
+race pipeflow can run.</li>
+<li>Treat these as <em>latency</em> numbers, not a general speed
+ranking. A targets run that saves hours of recomputation or runs across
+<code>crew</code> workers will win the only race that matters for heavy
+workloads — and pipeflow will never claim that ground.</li>
+</ul>
+<p>Finally, it is worth noting that while this benchmark was mostly
+focused on sparse step bodies to investigate framework overhead,
+pipeflow is well equipped to handle more realistic workloads too. Here,
+two implementation choices matter: while the dependency graph is
+implemented in C++ and therefore capable of handling large graphs
+efficiently, the step and parameter bookkeeping is backed by
+{data.table}, which provides outstanding memory management and reference
+semantics. Those advantages grow with the size and edit frequency of
+real pipelines, where in-place updates avoid copying and keep re-runs
+cheap.</p>
 </div>
+<div class="section level2">
+<h2 id="session-info">Session info<a class="anchor" aria-label="anchor" href="#session-info"></a>
+</h2>
+<pre><code><span><span class="co"># R version 4.5.3 (2026-03-11)</span></span>
+<span><span class="co"># Platform: x86_64-pc-linux-gnu</span></span>
+<span><span class="co"># Running under: Ubuntu 24.04.4 LTS</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># Matrix products: default</span></span>
+<span><span class="co"># BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 </span></span>
+<span><span class="co"># LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># locale:</span></span>
+<span><span class="co">#  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8        LC_COLLATE=C.UTF-8    </span></span>
+<span><span class="co">#  [5] LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8    LC_PAPER=C.UTF-8       LC_NAME=C             </span></span>
+<span><span class="co">#  [9] LC_ADDRESS=C           LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   </span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># time zone: Etc/UTC</span></span>
+<span><span class="co"># tzcode source: system (glibc)</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># attached base packages:</span></span>
+<span><span class="co"># [1] stats     graphics  grDevices datasets  utils     methods   base     </span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># other attached packages:</span></span>
+<span><span class="co"># [1] ggplot2_4.0.3  bench_1.1.4    targets_1.12.0 pipeflow_0.4.0</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># loaded via a namespace (and not attached):</span></span>
+<span><span class="co">#  [1] sass_0.4.10         generics_0.1.4      renv_1.2.3          digest_0.6.39      </span></span>
+<span><span class="co">#  [5] magrittr_2.0.5      evaluate_1.0.5      grid_4.5.3          RColorBrewer_1.1-3 </span></span>
+<span><span class="co">#  [9] fastmap_1.2.0       jsonlite_2.0.0      processx_3.9.0      backports_1.5.1    </span></span>
+<span><span class="co"># [13] secretbase_1.2.2    ps_1.9.3            BiocManager_1.30.27 scales_1.4.0       </span></span>
+<span><span class="co"># [17] codetools_0.2-20    textshaping_1.0.5   jquerylib_0.1.4     cli_3.6.6          </span></span>
+<span><span class="co"># [21] rlang_1.2.0         withr_3.0.2         cachem_1.1.0        yaml_2.3.12        </span></span>
+<span><span class="co"># [25] otel_0.2.0          tools_4.5.3         dplyr_1.2.1         base64url_1.4      </span></span>
+<span><span class="co"># [29] vctrs_0.7.3         R6_2.6.1            lifecycle_1.0.5     fs_2.1.0           </span></span>
+<span><span class="co"># [33] htmlwidgets_1.6.4   ragg_1.5.2          pkgconfig_2.0.3     desc_1.4.3         </span></span>
+<span><span class="co"># [37] callr_3.7.6         pkgdown_2.2.0       pillar_1.11.1       bslib_0.11.0       </span></span>
+<span><span class="co"># [41] gtable_0.3.6        data.table_1.18.6.1 glue_1.8.1          Rcpp_1.1.1-1.1     </span></span>
+<span><span class="co"># [45] systemfonts_1.3.2   xfun_0.57           tibble_3.3.1        tidyselect_1.2.1   </span></span>
+<span><span class="co"># [49] rstudioapi_0.18.0   knitr_1.51          farver_2.1.2        htmltools_0.5.9    </span></span>
+<span><span class="co"># [53] igraph_2.3.2        labeling_0.4.3      rmarkdown_2.31      compiler_4.5.3     </span></span>
+<span><span class="co"># [57] prettyunits_1.2.0   S7_0.2.2</span></span></code></pre>
 </div>
+
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
 </div>

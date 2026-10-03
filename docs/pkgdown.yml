@@ -11,7 +11,7 @@ articles:
   v05b-nested-pipeline: v05b-nested-pipeline.html
   v06-self-modify-pipeline: v06-self-modify-pipeline.html
   articles/v07-vs-targets: v07-vs-targets.html
-last_built: 2026-09-27T17:53Z
+last_built: 2026-10-02T18:37Z
 urls:
   reference: https://github.com/rpahl/pipeflow/reference
   article: https://github.com/rpahl/pipeflow/articles

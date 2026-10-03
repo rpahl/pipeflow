@@ -288,11 +288,11 @@ p[tags %like% "report", view = FALSE][["step"]] # "load", "square", "total"
 # No arguments returns a copy of the pipeline
 p2 <- p[]
 pip_run(p2)
-#> info [2026-09-27 17:53:04.693 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-09-27 17:53:04.693 UTC]: Step 1/3 load
-#> info [2026-09-27 17:53:04.694 UTC]: Step 2/3 square
-#> info [2026-09-27 17:53:04.699 UTC]: Step 3/3 total
-#> info [2026-09-27 17:53:04.700 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-02 18:37:04.198 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-02 18:37:04.198 UTC]: Step 1/3 load
+#> info [2026-10-02 18:37:04.206 UTC]: Step 2/3 square
+#> info [2026-10-02 18:37:04.210 UTC]: Step 3/3 total
+#> info [2026-10-02 18:37:04.211 UTC]: Finished run of pipeflow 'pipe'
 p
 #> <pipeflow> pipe (3 steps)
 #> -------------------------
@@ -310,7 +310,7 @@ p2
 #> 2: square      x    load  done  1, 4, 9,16,25        model
 #> 3:  total      x  square  done             55 model,report
 #> -------------------------
-#> <ready> last run: 2026-09-27 19:53:04
+#> <ready> last run: 2026-10-02 20:37:04
 
 # Two-index extraction selects step-table columns by name
 p[, "step"]                     # one-column data.table
@@ -340,10 +340,10 @@ p <- pip_new() |>
   pip_add("load", \(x = 1) x) |>
   pip_add("fit", \(x = ~load) x + 1)
 pip_run(p)
-#> info [2026-09-27 17:53:04.716 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-09-27 17:53:04.716 UTC]: Step 1/2 load
-#> info [2026-09-27 17:53:04.716 UTC]: Step 2/2 fit
-#> info [2026-09-27 17:53:04.717 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-02 18:37:04.221 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-02 18:37:04.221 UTC]: Step 1/2 load
+#> info [2026-10-02 18:37:04.222 UTC]: Step 2/2 fit
+#> info [2026-10-02 18:37:04.222 UTC]: Finished run of pipeflow 'pipe'
 
 # Meta fields
 p[["name"]]              # "pipe"
@@ -351,7 +351,7 @@ p[["name"]]              # "pipe"
 p[["view"]]              # NULL - not a view
 #> NULL
 p[["pipenv"]]            # the inner pipeline environment
-#> <environment: 0x559e078da340>
+#> <environment: 0x5581e23cc0b8>
 p[["pipenv"]][["data"]]  # the underlying step table
 #> Indices: <step>, <nodeId>
 #>      step           fun    params    out  state   tags locked   exec
@@ -360,27 +360,27 @@ p[["pipenv"]][["data"]]  # the underlying step table
 #> 2:    fit <function[1]> <list[1]>      2   done         FALSE   auto
 #>                   time depends unbound nodeId
 #>                 <POSc>  <list>  <list>  <int>
-#> 1: 2026-09-27 19:53:04               x      0
-#> 2: 2026-09-27 19:53:04    load              1
+#> 1: 2026-10-02 20:37:04               x      0
+#> 2: 2026-10-02 20:37:04    load              1
 
 # Virtual methods
 p$add("s3", \(x = ~fit) x * 10)
 p$run()
-#> info [2026-09-27 17:53:04.723 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-09-27 17:53:04.723 UTC]: Step 1/3 load - skipping done step
-#> info [2026-09-27 17:53:04.723 UTC]: Step 2/3 fit - skipping done step
-#> info [2026-09-27 17:53:04.723 UTC]: Step 3/3 s3
-#> info [2026-09-27 17:53:04.724 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-02 18:37:04.228 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-02 18:37:04.228 UTC]: Step 1/3 load - skipping done step
+#> info [2026-10-02 18:37:04.228 UTC]: Step 2/3 fit - skipping done step
+#> info [2026-10-02 18:37:04.228 UTC]: Step 3/3 s3
+#> info [2026-10-02 18:37:04.229 UTC]: Finished run of pipeflow 'pipe'
 p$restart   # a function; call p$restart() to request a restart
 #> function (...) 
 #> fn(x, ...)
-#> <bytecode: 0x559e09bff290>
-#> <environment: 0x559e06238500>
+#> <bytecode: 0x5581e697c408>
+#> <environment: 0x5581e4ba0ce8>
 p$halt      # a function; call p$halt() to halt the current run
 #> function (...) 
 #> fn(x, ...)
-#> <bytecode: 0x559e09bff290>
-#> <environment: 0x559e06024b68>
+#> <bytecode: 0x5581e697c408>
+#> <environment: 0x5581e4bde908>
 
 # Column access, named by steps
 p[["step"]]   # c(load = "load", fit = "fit")
@@ -502,6 +502,6 @@ p$name <- "renamed"   # same as p[["name"]] <- "renamed"
 p$run                 # a virtual method; call p$run() to run the pipeline
 #> function (...) 
 #> fn(x, ...)
-#> <bytecode: 0x559e09bff290>
-#> <environment: 0x559e09d8afa0>
+#> <bytecode: 0x5581e697c408>
+#> <environment: 0x5581e6aec380>
 ```
