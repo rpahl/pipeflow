@@ -4,7 +4,13 @@
 \alias{pip_run}
 \title{Run a pipeline}
 \usage{
-pip_run(x, lgr = pipeflow_lgr, force = FALSE, progress = NULL)
+pip_run(
+  x,
+  lgr = pipeflow_lgr,
+  force = FALSE,
+  progress = NULL,
+  on_error = c("stop", "continue")
+)
 }
 \arguments{
 \item{x}{A pipeflow pip or view}
@@ -17,6 +23,10 @@ regardless of whether they are outdated or not.}
 
 \item{progress}{Optional callback of the form
 \verb{function(value, detail)} called before each step.}
+
+\item{on_error}{What to do when a step fails: \code{"stop"} (the default)
+aborts the run, \code{"continue"} goes on with all steps that do not depend on
+a failed step (see section 'Continuing after errors' below).}
 }
 \value{
 The updated pipeline or view, invisibly.
@@ -38,13 +48,16 @@ A step can take the following states:
 \itemize{
 \item one of the step's parameters were changed (e.g. via \code{\link[=pip_set_params]{pip_set_params()}})
 \item a step it depends on was re-executed or replaced
-\item the last run did not reach it either on purpose (see section 'Running
-views below) or because a run was aborted early due to failed step
+\item a step it depends on was executed, but the run did not reach the step
+itself, either on purpose (see section 'Running views' below) or
+because the run was aborted early due to a failed step
 }
 \item done: the step was executed successfully with its current inputs
 \item failed: the step raised an error during its last execution
 }
 
+Only steps that have run before can become outdated: a step in state
+\code{"new"} stays \code{"new"} until it is executed.
 A "done" step is skipped unless \code{force = TRUE} was set. For all other
 states, the step will be re-executed in the next \code{\link[=pip_run]{pip_run()}}.
 }
@@ -54,16 +67,52 @@ states, the step will be re-executed in the next \code{\link[=pip_run]{pip_run()
 When \code{x} is a view, the requested rows are run together with their
 upstream dependencies, so the steps covered by the view are brought up to
 date even if their inputs come from steps outside the view. The rest of
-the pipeline is not executed; downstream steps that were not processed
-are marked \code{"outdated"}.
+the pipeline is not executed; downstream steps of executed steps are
+marked \code{"outdated"}. Steps whose inputs were not re-executed (for example,
+because they were already \code{"done"}) keep their state.
 }
 
 \subsection{Runtime errors}{
 
 If a step fails with an error, the failing step's state is set to
 \code{"failed"}, the run is aborted (no further steps are executed), and the
-pipeline run state is set to \code{"failed"}. Steps that have not been
-executed are marked \code{"outdated"}, so a subsequent run retries them.
+pipeline run state is set to \code{"failed"}. Steps downstream of executed
+steps that were not reached are marked \code{"outdated"}, so a subsequent run
+retries them.
+}
+
+\subsection{Continuing after errors}{
+
+With \code{on_error = "continue"}, a failing step gets state \code{"failed"}, its
+error condition is stored as its output, and the run goes on. An input of
+a step is \emph{failed} if its step failed or was not run because a step
+upstream of it failed in this run.
+\itemize{
+\item A step with a failed input is not run, and counts as failed for its own
+dependents, unless the argument receiving that input is listed in the
+step's \code{allow_failed} (see \code{\link[=pip_add]{pip_add()}}).
+\item A step whose failed inputs are all listed in \code{allow_failed} is run, and
+each of these arguments receives a condition of class
+\code{c("pipeflow_failure", "error", "condition")} with the fields
+\code{message}, \code{step} (the step of the input), \code{failed_step} (the step that
+actually failed) and \code{parent} (the original error condition).
+\item Locked steps are the exception: they are never run, so a failed input
+does not affect them. They keep their state and output, and their
+dependents receive that output as usual.
+}
+
+Steps that ran (including those that received failure objects) are
+\code{"done"}. Steps that were not run are treated like steps not reached by an
+aborted run: a \code{"done"} step becomes \code{"outdated"}, a \code{"new"} one stays
+\code{"new"}, so the next run retries them together with the failed steps.
+Once a failed step succeeds, the steps downstream of it, including those
+that received failure objects, are run again.
+
+If any step failed, the pipeline run state is set to \code{"continued"} and,
+once all states and outputs are stored, a warning of class
+\code{c("pipeflow_run_failed", "warning", "condition")} is signalled. Its
+field \code{failed} is a named list with the original conditions of the failed
+steps and its field \code{skipped} names the steps that were not run.
 }
 
 \subsection{Runtime control flow via restart and halt}{
@@ -85,13 +134,12 @@ their upstream dependencies.
 \item \code{p$halt()}: aborts the current run after the current step has finished.
 This is a \emph{controlled halt} and deliberately distinct from \code{\link[base:stop]{base::stop()}}:
 no error is raised and the pipeline is not marked as \code{"failed"}. The run
-simply ends, the steps that have not been executed are marked
-\code{"outdated"}, and a subsequent \code{\link[=pip_run]{pip_run()}} will continue where the run
+simply ends and a subsequent \code{\link[=pip_run]{pip_run()}} will continue where the run
 left off.
 }
 
-In both cases steps that have not been executed until the restart or halt
-happens are marked as \code{"outdated"}.
+In both cases steps downstream of executed steps that have not been
+executed until the restart or halt happens are marked as \code{"outdated"}.
 }
 }
 \examples{
@@ -141,6 +189,26 @@ p
 
 pip_set_params(p, list(n = 15)) # now halt() in 'check' step is triggered
 pip_run(p)
+
+# Continue after errors and pass failures to the steps that allow them
+p <- pip_new("continue") |>
+  pip_add("data", \(n = 5) seq_len(n)) |>
+  pip_add("check", \(x = ~data) stop("check failed")) |>
+  pip_add("count", \(x = ~check) length(x)) |>
+  pip_add("total", \(x = ~data) sum(x)) |>
+  pip_add("report", \(total = ~total, n = ~count) {
+    if (inherits(n, "pipeflow_failure")) conditionMessage(n) else n
+  }, allow_failed = "n")
+
+withCallingHandlers(
+  pip_run(p, lgr = NULL, on_error = "continue"),
+  pipeflow_run_failed = \(w) {
+    message("failed: ", toString(names(w$failed)))
+    invokeRestart("muffleWarning")
+  }
+)
+p
+p[["report", "out"]]
 }
 \seealso{
 \code{vignette("v06-self-modify-pipeline", package = "pipeflow")}

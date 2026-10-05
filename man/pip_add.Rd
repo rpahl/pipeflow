@@ -11,7 +11,8 @@ pip_add(
   tags = character(0),
   after = length(x),
   params = list(),
-  exec = "auto"
+  exec = "auto",
+  allow_failed = character(0)
 )
 }
 \arguments{
@@ -58,6 +59,14 @@ a single call. In summary:
 \item reduce: single call, but only valid with partitioned input
 \item plain: single call, only valid with non-partitioned input
 }}
+
+\item{allow_failed}{Optional character vector of argument names of \code{fun}
+whose defaults refer to other steps (\code{~step}) and that may receive a
+failed input when the pipeline is run with \code{on_error = "continue"} (see
+section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). Instead of the output
+of the referenced step, such an argument then receives a condition of
+class \code{pipeflow_failure}. Argument names (not step names) are used, so
+they stay valid when steps are renamed.}
 }
 \value{
 The updated pipeline, invisibly.

@@ -27,7 +27,7 @@ parameters of a pipeline or view, that is, parameters wired to another
 step's output via \code{~step_name} are excluded.
 \code{\link[=pip_set_params]{pip_set_params()}} updates these parameters for the whole pipeline or
 or view and marks the affected steps and their downstream dependents
-as outdated.
+as outdated (steps that have never run stay \code{"new"}).
 }
 \note{
 Parameters of locked steps are never changed and their state
