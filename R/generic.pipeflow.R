@@ -740,7 +740,10 @@ dim.pipeflow <- function(x) {
         .assert_exec_mode(value)
         data.table::set(data, i = i, j = "exec", value = value)
     } else if (j == "allow_failed") {
-        value <- as.character(value)
+        # NULL clears the arguments; anything else must be a character vector
+        if (is.null(value)) {
+            value <- character(0)
+        }
         .assert_allow_failed(value, data[["depends"]][[i]], step)
         data.table::set(
             data,

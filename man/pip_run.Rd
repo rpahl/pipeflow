@@ -96,6 +96,9 @@ each of these arguments receives a condition of class
 \code{c("pipeflow_failure", "error", "condition")} with the fields
 \code{message}, \code{step} (the step of the input), \code{failed_step} (the step that
 actually failed) and \code{parent} (the original error condition).
+\item Locked steps are the exception: they are never run, so a failed input
+does not affect them. They keep their state and output, and their
+dependents receive that output as usual.
 }
 
 Steps that ran (including those that received failure objects) are

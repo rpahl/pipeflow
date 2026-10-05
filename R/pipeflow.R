@@ -67,8 +67,19 @@
 # -------
 # Asserts
 # -------
-# Each name in `allowFailed` must be an argument of the step that refers to
-# another step, i.e. one of the names of `depends`.
+#' Assert valid `allow_failed` argument names
+#'
+#' Each name in `allowFailed` must be an argument of the step that refers to
+#' another step, i.e. one of the names of `depends`.
+#'
+#' @param allowFailed Character vector of argument names.
+#' @param depends Named character vector of the step's dependencies, mapping
+#' argument names to the referenced step names.
+#' @param step The step name (used in the error message).
+#' @return `allowFailed`, invisibly. Signals an error if it is not a
+#' character vector without `NA`s or names arguments that do not refer to
+#' other steps.
+#' @noRd
 .assert_allow_failed <- function(allowFailed, depends, step) {
     if (!is.character(allowFailed) || anyNA(allowFailed)) {
         stop_no_call("allow_failed must be a character vector")
@@ -256,8 +267,17 @@
     x
 }
 
-# Error signalled by .pip_run_row() when a step function fails. It keeps the
-# original condition as `parent`.
+#' Create a step error condition
+#'
+#' Error signalled by `.pip_run_row()` when a step function fails. It keeps
+#' the original condition as `parent`.
+#'
+#' @param step The name of the failed step.
+#' @param parent The original condition raised by the step function.
+#' @return A condition of class
+#' `c("pipeflow_step_error", "error", "condition")` with the message of
+#' `parent` and the fields `step` and `parent`.
+#' @noRd
 .pip_step_error <- function(step, parent) {
     structure(
         class = c("pipeflow_step_error", "error", "condition"),
@@ -270,9 +290,19 @@
     )
 }
 
-# Failure object for the output of `step` in a run that continues after
-# errors. `failedStep` is the step that actually failed with condition
-# `parent`; if it differs from `step`, `step` was not run because of it.
+#' Create a failure object
+#'
+#' Failure object for the output of `step` in a run that continues after
+#' errors. It is passed to the step arguments listed in `allow_failed`.
+#'
+#' @param step The step whose output the failure object replaces.
+#' @param parent The original condition of the step that actually failed.
+#' @param failedStep The step that actually failed. If it differs from
+#' `step`, `step` was not run because of it.
+#' @return A condition of class
+#' `c("pipeflow_failure", "error", "condition")` with the fields `step`,
+#' `failed_step` and `parent`.
+#' @noRd
 .pip_failure <- function(step, parent, failedStep = step) {
     msg <- sprintf(
         "step '%s' failed: %s",
@@ -294,8 +324,16 @@
     )
 }
 
-# Warning signalled at the end of a run that continued after errors.
-# `failures` is the named list of failure objects of the run.
+#' Create the warning of a run that continued after errors
+#'
+#' @param pipname The name of the pipeline (used in the message).
+#' @param failures Named list of the failure objects of the run (see
+#' `.pip_failure()`), by step name.
+#' @return A condition of class
+#' `c("pipeflow_run_failed", "warning", "condition")` with the fields
+#' `failed` (named list of the original conditions of the failed steps) and
+#' `skipped` (names of the steps not run because an input failed).
+#' @noRd
 .pip_run_failed_warning <- function(pipname, failures) {
     failedSteps <- vapply(failures, \(f) f[["failed_step"]], FUN.VALUE = "")
     isFailed <- names(failures) == failedSteps
@@ -498,8 +536,17 @@
     invisible()
 }
 
-# Mark `steps` and all steps downstream of them as "outdated", except for the
-# steps in `keep`. Steps in state "new" have never run, so they stay "new".
+#' Mark steps and their downstream steps as outdated
+#'
+#' Marks `steps` and all steps downstream of them as `"outdated"`, except for
+#' the steps in `keep`. Steps in state `"new"` have never run, so they stay
+#' `"new"`.
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param steps Character vector of step names. Unknown steps are ignored.
+#' @param keep Character vector of step names whose state is not changed.
+#' @return `x`, invisibly. The step states are updated in place.
+#' @noRd
 .pip_outdate_downstream <- function(x, steps, keep = character()) {
     nodes <- unique(as.integer(unlist(.pip_get_reachable_nodes(x, steps))))
     if (length(nodes) == 0L) {
@@ -2180,6 +2227,9 @@ pip_replace <- function(
 #'   `c("pipeflow_failure", "error", "condition")` with the fields
 #'   `message`, `step` (the step of the input), `failed_step` (the step that
 #'   actually failed) and `parent` (the original error condition).
+#' * Locked steps are the exception: they are never run, so a failed input
+#'   does not affect them. They keep their state and output, and their
+#'   dependents receive that output as usual.
 #'
 #' Steps that ran (including those that received failure objects) are
 #' `"done"`. Steps that were not run are treated like steps not reached by an

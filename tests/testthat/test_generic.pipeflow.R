@@ -1016,6 +1016,10 @@ describe("assignment operator [[<-", {
             p[["s2", "allow_failed"]] <- NA,
             "allow_failed must be a character vector"
         )
+        expect_error(
+            p[["s2", "allow_failed"]] <- factor("x"),
+            "allow_failed must be a character vector"
+        )
         expect_equal(p[["s2", "allow_failed"]], "x")
 
         p[["s2", "allow_failed"]] <- NULL
