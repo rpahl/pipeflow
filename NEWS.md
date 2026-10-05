@@ -4,6 +4,14 @@
 
 - Revise benchmark vignette
 - decrease font size in vignettes
+- Steps that have never run now stay `"new"` instead of becoming
+  `"outdated"` when `pip_set_params()` or `pip_replace()` changes them or a
+  step upstream of them, or when a run (of a view, or an aborted run) does
+  not reach them.
+- At the end of a run, `pip_run()` now marks only the steps downstream of
+  steps it actually *executed* as `"outdated"`. Before, steps it skipped
+  because they were `"done"` counted too, so running a view outdated done
+  steps outside the view although none of their inputs had changed.
 
 
 # pipeflow 0.4.0.9000

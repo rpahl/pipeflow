@@ -52,8 +52,8 @@ The updated pipeline, invisibly.
 }
 \description{
 Replaces a step's function while keeping it in the same position in the
-pipeline. Downstream steps are automatically marked as outdated and will
-re-run on the next \code{\link[=pip_run]{pip_run()}}.
+pipeline. Downstream steps that have run before are automatically marked as
+outdated and will re-run on the next \code{\link[=pip_run]{pip_run()}}.
 }
 \examples{
 p <- pip_new() |>

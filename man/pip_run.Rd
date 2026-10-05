@@ -38,13 +38,16 @@ A step can take the following states:
 \itemize{
 \item one of the step's parameters were changed (e.g. via \code{\link[=pip_set_params]{pip_set_params()}})
 \item a step it depends on was re-executed or replaced
-\item the last run did not reach it either on purpose (see section 'Running
-views below) or because a run was aborted early due to failed step
+\item a step it depends on was executed, but the run did not reach the step
+itself, either on purpose (see section 'Running views' below) or
+because the run was aborted early due to a failed step
 }
 \item done: the step was executed successfully with its current inputs
 \item failed: the step raised an error during its last execution
 }
 
+Only steps that have run before can become outdated: a step in state
+\code{"new"} stays \code{"new"} until it is executed.
 A "done" step is skipped unless \code{force = TRUE} was set. For all other
 states, the step will be re-executed in the next \code{\link[=pip_run]{pip_run()}}.
 }
@@ -54,16 +57,18 @@ states, the step will be re-executed in the next \code{\link[=pip_run]{pip_run()
 When \code{x} is a view, the requested rows are run together with their
 upstream dependencies, so the steps covered by the view are brought up to
 date even if their inputs come from steps outside the view. The rest of
-the pipeline is not executed; downstream steps that were not processed
-are marked \code{"outdated"}.
+the pipeline is not executed; downstream steps of executed steps are
+marked \code{"outdated"}. Steps whose inputs were not re-executed (for example,
+because they were already \code{"done"}) keep their state.
 }
 
 \subsection{Runtime errors}{
 
 If a step fails with an error, the failing step's state is set to
 \code{"failed"}, the run is aborted (no further steps are executed), and the
-pipeline run state is set to \code{"failed"}. Steps that have not been
-executed are marked \code{"outdated"}, so a subsequent run retries them.
+pipeline run state is set to \code{"failed"}. Steps downstream of executed
+steps that were not reached are marked \code{"outdated"}, so a subsequent run
+retries them.
 }
 
 \subsection{Runtime control flow via restart and halt}{
@@ -85,13 +90,12 @@ their upstream dependencies.
 \item \code{p$halt()}: aborts the current run after the current step has finished.
 This is a \emph{controlled halt} and deliberately distinct from \code{\link[base:stop]{base::stop()}}:
 no error is raised and the pipeline is not marked as \code{"failed"}. The run
-simply ends, the steps that have not been executed are marked
-\code{"outdated"}, and a subsequent \code{\link[=pip_run]{pip_run()}} will continue where the run
+simply ends and a subsequent \code{\link[=pip_run]{pip_run()}} will continue where the run
 left off.
 }
 
-In both cases steps that have not been executed until the restart or halt
-happens are marked as \code{"outdated"}.
+In both cases steps downstream of executed steps that have not been
+executed until the restart or halt happens are marked as \code{"outdated"}.
 }
 }
 \examples{

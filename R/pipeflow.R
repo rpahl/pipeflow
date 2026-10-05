@@ -401,9 +401,26 @@
     invisible()
 }
 
-.pip_update_downstream <- function(x, steps, what, value) {
-    nodes <- .pip_get_reachable_nodes(x, steps)
-    .pip_pipenv(x)[["data"]][list(nodes), (what) := value, on = "nodeId"]
+# Mark `steps` and all steps downstream of them as "outdated", except for the
+# steps in `keep`. Steps in state "new" have never run, so they stay "new".
+.pip_outdate_downstream <- function(x, steps, keep = character()) {
+    nodes <- unique(as.integer(unlist(.pip_get_reachable_nodes(x, steps))))
+    if (length(nodes) == 0L) {
+        return(invisible(x))
+    }
+
+    dat <- .pip_pipenv(x)[["data"]]
+    rows <- dat[list(nodes), which = TRUE, on = "nodeId", nomatch = NULL]
+    isNew <- dat[["state"]][rows] == .step_states[["new"]][["name"]]
+    rows <- rows[!isNew & !(dat[["step"]][rows] %in% keep)]
+    if (length(rows) > 0L) {
+        data.table::set(
+            dat,
+            i = rows,
+            j = "state",
+            value = .step_states[["outdated"]][["name"]]
+        )
+    }
 
     invisible(x)
 }
@@ -1784,8 +1801,8 @@ pip_rename <- function(x, from, to) {
 #' Replace a step
 #'
 #' Replaces a step's function while keeping it in the same position in the
-#' pipeline. Downstream steps are automatically marked as outdated and will
-#' re-run on the next [pip_run()].
+#' pipeline. Downstream steps that have run before are automatically marked as
+#' outdated and will re-run on the next [pip_run()].
 #'
 #' @inheritParams pip_add
 #' @param x A pipeflow pipeline or view object.
@@ -1937,28 +1954,9 @@ pip_replace <- function(
     )
     data.table::set(data, i = iStep, j = names(values), value = values)
 
-    # Mark downstream dependent steps as outdated, but keep the replaced
-    # step itself as "new".
-    downNodes <- .pip_get_reachable_nodes(x, step)
-    downNodes <- unique(setdiff(
-        as.integer(unlist(downNodes)),
-        as.integer(nodeId)
-    ))
-    if (length(downNodes) > 0L) {
-        rowsDown <- data[
-            list(downNodes),
-            which = TRUE,
-            on = "nodeId"
-        ]
-        if (length(rowsDown) > 0L) {
-            data.table::set(
-                data,
-                i = rowsDown,
-                j = "state",
-                value = .step_states[["outdated"]][["name"]]
-            )
-        }
-    }
+    # Mark downstream dependent steps as outdated (the replaced step itself
+    # is "new" and therefore stays "new").
+    .pip_outdate_downstream(x, steps = step)
 
     invisible(x)
 }
@@ -1991,11 +1989,14 @@ pip_replace <- function(
 #' * outdated: a step can get outdated in the following scenarios:
 #'   - one of the step's parameters were changed (e.g. via [pip_set_params()])
 #'   - a step it depends on was re-executed or replaced
-#'   - the last run did not reach it either on purpose (see section 'Running
-#'     views below) or because a run was aborted early due to failed step
+#'   - a step it depends on was executed, but the run did not reach the step
+#'     itself, either on purpose (see section 'Running views' below) or
+#'     because the run was aborted early due to a failed step
 #' * done: the step was executed successfully with its current inputs
 #' * failed: the step raised an error during its last execution
 #'
+#' Only steps that have run before can become outdated: a step in state
+#' `"new"` stays `"new"` until it is executed.
 #' A "done" step is skipped unless `force = TRUE` was set. For all other
 #' states, the step will be re-executed in the next [pip_run()].
 #'
@@ -2003,14 +2004,16 @@ pip_replace <- function(
 #' When `x` is a view, the requested rows are run together with their
 #' upstream dependencies, so the steps covered by the view are brought up to
 #' date even if their inputs come from steps outside the view. The rest of
-#' the pipeline is not executed; downstream steps that were not processed
-#' are marked `"outdated"`.
+#' the pipeline is not executed; downstream steps of executed steps are
+#' marked `"outdated"`. Steps whose inputs were not re-executed (for example,
+#' because they were already `"done"`) keep their state.
 #'
 #' ## Runtime errors
 #' If a step fails with an error, the failing step's state is set to
 #' `"failed"`, the run is aborted (no further steps are executed), and the
-#' pipeline run state is set to `"failed"`. Steps that have not been
-#' executed are marked `"outdated"`, so a subsequent run retries them.
+#' pipeline run state is set to `"failed"`. Steps downstream of executed
+#' steps that were not reached are marked `"outdated"`, so a subsequent run
+#' retries them.
 #'
 #' ## Runtime control flow via restart and halt
 #'
@@ -2031,12 +2034,11 @@ pip_replace <- function(
 #' - `p$halt()`: aborts the current run after the current step has finished.
 #'   This is a *controlled halt* and deliberately distinct from [base::stop()]:
 #'   no error is raised and the pipeline is not marked as `"failed"`. The run
-#'   simply ends, the steps that have not been executed are marked
-#'   `"outdated"`, and a subsequent [pip_run()] will continue where the run
+#'   simply ends and a subsequent [pip_run()] will continue where the run
 #'   left off.
 #'
-#' In both cases steps that have not been executed until the restart or halt
-#' happens are marked as `"outdated"`.
+#' In both cases steps downstream of executed steps that have not been
+#' executed until the restart or halt happens are marked as `"outdated"`.
 #'
 #' @seealso `vignette("v06-self-modify-pipeline", package = "pipeflow")`
 #'   for an advanced example of dynamic pipelines.
@@ -2128,34 +2130,24 @@ pip_run <- function(
         names(rowsToRun)[match(requested, rowsToRun)] <- "view"
         names(rowsToRun)[match(upstreamRows, rowsToRun)] <- "upstream"
     }
-    processedSteps <- character()
-    restartDelegated <- FALSE
-    on.exit({
-        # At the end, mark all downstream dependent steps as outdated that
-        # were *not* processed, which can happen in two different ways:
-        # a) when running a view that does not cover the entire pipeline or
-        # b) the run was aborted in the middle (due to an error or manual halt).
-        # When the run was restarted, a nested pip_run() has already handled
-        # the whole pipeline (including marking), so nothing to do here.
-        if (!restartDelegated) {
-            processedNodes <- as.integer(.pip_steps_to_nodes(x, processedSteps))
-            outdatedNodes <- .pip_get_reachable_nodes(x, processedSteps) |>
-                unlist() |>
-                unique() |>
-                setdiff(processedNodes)
-            if (length(outdatedNodes) > 0L) {
-                iOut <- dat[list(outdatedNodes), which = TRUE, on = "nodeId"]
-                if (length(iOut) > 0L) {
-                    data.table::set(
-                        dat,
-                        i = iOut,
-                        j = "state",
-                        value = "outdated"
-                    )
-                }
-            }
-        }
-    })
+    # Mark the steps downstream of the executed steps as outdated if they were
+    # not executed themselves, which can happen in two different ways:
+    # a) when running a view that does not cover the entire pipeline or
+    # b) the run was aborted in the middle (due to an error or manual halt).
+    # Steps downstream of steps that were only skipped keep their state, as
+    # do locked steps.
+    executedSteps <- character()
+    outdate_downstream_of_executed <- function() {
+        dat <- pipenv[["data"]]
+        locked <- dat[["step"]][dat[["locked"]]]
+        .pip_outdate_downstream(
+            x,
+            steps = executedSteps,
+            keep = c(executedSteps, locked)
+        )
+        executedSteps <<- character()
+    }
+    on.exit(outdate_downstream_of_executed())
 
     state <- pipenv[[".run_state"]]
     action <- if (state == "restart") "Restarting" else "Starting"
@@ -2166,7 +2158,6 @@ pip_run <- function(
             for (i in seq_along(rowsToRun)) {
                 row <- rowsToRun[[i]]
                 step <- dat[["step"]][[row]]
-                processedSteps <- c(processedSteps, step)
                 if (!is.null(progress)) {
                     progress(value = i, detail = step)
                 }
@@ -2197,6 +2188,13 @@ pip_run <- function(
                 self <- .wrap_pipenv(pipenv, pipname, view = NULL)
 
                 log_info(msg)
+
+                # Take the name from the current data, since a step that
+                # modified the pipeline may have shifted the rows.
+                executedSteps <- c(
+                    executedSteps,
+                    pipenv[["data"]][["step"]][[row]]
+                )
                 .pip_run_row(x = self, i = row, lgr = lgr)
                 stateAfterStep <- pipenv[[".run_state"]]
 
@@ -2204,7 +2202,11 @@ pip_run <- function(
                 if (stateAfterStep == "restart") {
                     log_info("Restarting pipeline execution.")
                     doForce <- pipenv[[".restart_force"]]
-                    restartDelegated <- TRUE
+
+                    # Mark what has run so far before handing the remaining
+                    # work to a nested run, which then re-runs the outdated
+                    # steps and does its own marking at the end.
+                    outdate_downstream_of_executed()
                     pip_run(
                         x,
                         lgr = lgr,
@@ -2314,7 +2316,7 @@ pip_reset <- function(x) {
 #' step's output via `~step_name` are excluded.
 #' [pip_set_params()] updates these parameters for the whole pipeline or
 #' or view and marks the affected steps and their downstream dependents
-#' as outdated.
+#' as outdated (steps that have never run stay `"new"`).
 #'
 #' @note Parameters of locked steps are never changed and their state
 #' remains unchanged.
@@ -2400,13 +2402,7 @@ pip_set_params <- function(x, params = list()) {
         }
 
         # Update states of affected steps and their downstream steps
-        steps <- dat[["step"]][rowsAffected]
-        .pip_update_downstream(
-            x,
-            steps = steps,
-            what = "state",
-            value = "outdated"
-        )
+        .pip_outdate_downstream(x, steps = dat[["step"]][rowsAffected])
     }
 
     invisible(x)

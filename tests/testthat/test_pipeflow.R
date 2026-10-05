@@ -405,6 +405,26 @@ describe(".pip_restart", {
         expect_equal(c[["n"]], 2L)
         expect_equal(get_run_state(p), "ready")
     })
+
+    it("re-runs done steps downstream of steps executed before restart", {
+        c <- counter_env(n = 0L)
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) {
+                c[["n"]] <- c[["n"]] + 1L
+                if (c[["n"]] == 1L) {
+                    .self$restart(force = FALSE)
+                }
+                x
+            }) |>
+            pip_add("s2", function(x = ~s1) x + 1)
+        p[["s2", "state"]] <- "done"
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(c[["n"]], 1L)
+        expect_equal(unname(p[["out"]]), list(1, 2))
+        expect_equal(unname(p[["state"]]), c("done", "done"))
+    })
 })
 
 describe(".pip_halt", {
@@ -426,6 +446,7 @@ describe(".pip_halt", {
                 x + 1
             }) |>
             pip_add("s3", function(x = ~s2) x + 1)
+        p[["s3", "state"]] <- "done"
 
         pip_run(p, lgr = NULL)
 
@@ -435,6 +456,20 @@ describe(".pip_halt", {
             c("done", "done", "outdated")
         )
         expect_equal(get_run_state(p), "ready")
+    })
+
+    it("leaves new steps not reached due to the halt as new", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) x) |>
+            pip_add("s2", function(x = ~s1) {
+                .self$halt()
+                x + 1
+            }) |>
+            pip_add("s3", function(x = ~s2) x + 1)
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(unname(p[["state"]]), c("done", "done", "new"))
     })
 
     it("logs the manual halt message during the run", {
@@ -488,6 +523,7 @@ describe(".pip_halt", {
             }) |>
             pip_add("s2", function(x = ~s1) x + 1) |>
             pip_add("s3", function(x = ~s2) x + 1)
+        p[c("s2", "s3"), "state"] <- "done"
 
         pip_run(p, lgr = NULL)
 
@@ -512,7 +548,7 @@ describe(".pip_halt", {
         expect_equal(unname(p[["out"]]), list(1, 2, NULL))
         expect_equal(
             unname(p[["state"]]),
-            c("done", "done", "outdated")
+            c("done", "done", "new")
         )
     })
 
@@ -536,6 +572,7 @@ describe(".pip_halt", {
             }) |>
             pip_add("s3", function(x = ~s2) x + 1) |>
             pip_add("s4", function(x = ~s3) x + 1)
+        p[c("s3", "s4"), "state"] <- "done"
         v <- pip_view(p, step = "s4")
 
         pip_run(v, lgr = NULL)
@@ -549,50 +586,70 @@ describe(".pip_halt", {
     })
 })
 
-describe(".pip_update_downstream", {
+describe(".pip_outdate_downstream", {
     test_pip <- function() {
         pip_new() |>
             pip_add("a1", \(x = 1) x) |>
             pip_add("a2", \(x = ~a1) x) |>
             pip_add("b1", \(x = 1) x) |>
             pip_add("a3", \(x = ~a1) x) |>
-            pip_add("b2", \(x = ~b1) x)
+            pip_add("b2", \(x = ~b1) x) |>
+            pip_run(lgr = NULL)
     }
 
-    it("updates states downstream of single node as expected", {
+    it("outdates states downstream of single node as expected", {
         p <- test_pip()
 
-        expect_true(all(p[["state"]] == "new"))
-        .pip_update_downstream(p, "a1", what = "state", value = "outdated")
+        expect_true(all(p[["state"]] == "done"))
+        .pip_outdate_downstream(p, "a1")
 
         expect_equal(
             unname(p[["state"]]),
-            c("outdated", "outdated", "new", "outdated", "new")
+            c("outdated", "outdated", "done", "outdated", "done")
         )
     })
 
-    it("can update states downstream of multiple nodes", {
+    it("can outdate states downstream of multiple nodes", {
         p <- test_pip()
-        .pip_update_downstream(
-            p,
-            steps = c("a1", "b1"),
-            what = "state",
-            value = "outdated"
-        )
+        .pip_outdate_downstream(p, steps = c("a1", "b1"))
         expect_true(all(p[["state"]] == "outdated"))
 
         p <- test_pip()
-        .pip_update_downstream(
-            p,
-            steps = c("a1", "b2"),
-            what = "state",
-            value = "outdated"
-        )
+        .pip_outdate_downstream(p, steps = c("a1", "b2"))
 
         expect_equal(
             unname(p[["state"]]),
-            c("outdated", "outdated", "new", "outdated", "outdated")
+            c("outdated", "outdated", "done", "outdated", "outdated")
         )
+    })
+
+    it("does not outdate the steps listed in 'keep'", {
+        p <- test_pip()
+        .pip_outdate_downstream(p, steps = "a1", keep = c("a1", "a3"))
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "outdated", "done", "done", "done")
+        )
+    })
+
+    it("leaves new steps as new", {
+        p <- test_pip()
+        pip_reset(p[c("a1", "a3")])
+        .pip_outdate_downstream(p, steps = "a1")
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("new", "outdated", "done", "new", "done")
+        )
+    })
+
+    it("ignores unknown steps and handles empty input", {
+        p <- test_pip()
+        .pip_outdate_downstream(p, steps = c("nope", character()))
+        .pip_outdate_downstream(p, steps = character())
+
+        expect_true(all(p[["state"]] == "done"))
     })
 })
 
@@ -1443,6 +1500,17 @@ describe("pip_replace", {
         )
     })
 
+    it("leaves downstream steps that have never run as new", {
+        p <- pip_new("pipe") |>
+            pip_add("a1", \(x = 1) x) |>
+            pip_add("a2", \(x = ~a1) x + 1) |>
+            pip_add("a3", \(x = ~a2) x + 1)
+
+        pip_replace(p, "a2", \(x = ~a1) x + 2)
+
+        expect_equal(unname(p[["state"]]), c("new", "new", "new"))
+    })
+
     it("updates tags on replaced step", {
         p <- pip_new("pipe") |>
             pip_add("a1", \(x = 1) x) |>
@@ -2017,6 +2085,26 @@ describe("pip_run", {
         })
 
         it("marks downstream steps not reached due to abort as outdated", {
+            fail <- FALSE
+            p <- pip_new() |>
+                pip_add(
+                    "load_raw",
+                    \(x = 1) if (fail) stop("io error") else x,
+                    tags = "io"
+                ) |>
+                pip_add("fit_model", \(x = ~ -1) x + 1, tags = "model") |>
+                pip_add("eval_model", \(x = ~fit_model) x, tags = "model")
+            pip_run(p, lgr = NULL)
+
+            fail <- TRUE
+            expect_error(pip_run(p, lgr = NULL, force = TRUE), "io error")
+            expect_equal(
+                unname(p[["state"]]),
+                c("failed", "outdated", "outdated")
+            )
+        })
+
+        it("leaves new steps not reached due to abort as new", {
             p <- pip_new() |>
                 pip_add("load_raw", \(x = 1) stop("io error"), tags = "io") |>
                 pip_add("fit_model", \(x = ~ -1) x + 1, tags = "model") |>
@@ -2025,7 +2113,22 @@ describe("pip_run", {
             expect_error(pip_run(p, lgr = NULL), "io error")
             expect_equal(
                 unname(p[["state"]]),
-                c("failed", "outdated", "outdated")
+                c("failed", "new", "new")
+            )
+        })
+
+        it("keeps the state of unreached steps whose inputs did not run", {
+            p <- pip_new() |>
+                pip_add("data", \(n = 3) n) |>
+                pip_add("a", \(d = ~data) d + 1) |>
+                pip_add("fails", \(x = 1) stop("boom")) |>
+                pip_add("b", \(d = ~data) d + 2)
+            p[c("data", "a", "b"), "state"] <- "done"
+
+            expect_error(pip_run(p, lgr = NULL), "boom")
+            expect_equal(
+                unname(p[["state"]]),
+                c("done", "done", "failed", "done")
             )
         })
 
@@ -2096,12 +2199,65 @@ describe("pip_run", {
 
         it("marks downstream steps outside the view as outdated", {
             p <- test_pip()
+            pip_run(p, lgr = NULL)
+            v <- pip_view(p, tags = "io")
+            pip_run(v, lgr = NULL, force = TRUE)
+            expect_equal(
+                unname(p[["state"]]),
+                c("done", "outdated", "outdated", "done")
+            )
+        })
+
+        it("leaves new steps outside the view as new", {
+            p <- test_pip()
             v <- pip_view(p, tags = "io")
             pip_run(v, lgr = NULL)
             expect_equal(
                 unname(p[["state"]]),
-                c("done", "outdated", "outdated", "new")
+                c("done", "new", "new", "new")
             )
+        })
+
+        it("does not outdate steps when the view run executes nothing", {
+            p <- pip_new("p") |>
+                pip_add("data", \(n = 3) n) |>
+                pip_add("a", \(d = ~data) d + 1) |>
+                pip_add("b", \(d = ~data) d + 2)
+            pip_run(p, lgr = NULL)
+
+            pip_run(pip_view(p, step = "a"), lgr = NULL)
+
+            expect_equal(unname(p[["state"]]), c("done", "done", "done"))
+        })
+
+        it("outdates only steps downstream of executed view steps", {
+            p <- pip_new("p") |>
+                pip_add("data", \(n = 3) n) |>
+                pip_add("a", \(d = ~data) d + 1) |>
+                pip_add("a2", \(x = ~a) x) |>
+                pip_add("b", \(d = ~data) d + 2)
+            pip_run(p, lgr = NULL)
+            p[["a", "state"]] <- "outdated"
+
+            pip_run(pip_view(p, step = "a"), lgr = NULL)
+
+            expect_equal(
+                unname(p[["state"]]),
+                c("done", "done", "outdated", "done")
+            )
+        })
+
+        it("does not outdate locked steps", {
+            p <- pip_new("p") |>
+                pip_add("data", \(n = 3) n) |>
+                pip_add("a", \(d = ~data) d + 1) |>
+                pip_add("b", \(d = ~data) d + 2)
+            pip_run(p, lgr = NULL)
+            pip_lock(p["b"])
+
+            pip_run(pip_view(p, step = "a"), lgr = NULL, force = TRUE)
+
+            expect_equal(unname(p[["state"]]), c("done", "done", "done"))
         })
 
         it("adds [view]/[upstream] markers to view-run logs", {
@@ -2858,25 +3014,39 @@ describe("pip_set_params", {
     })
 
     it("marks changed and dependent downstream steps as 'outdated'", {
-        p <- test_pip()
+        p <- test_pip() |> pip_run(lgr = NULL)
         pip_set_params(p, params = list(x = 5))
         expect_equal(
             unname(p[["state"]]),
             c("outdated", "outdated", "outdated", "outdated")
         )
 
-        p <- test_pip()
+        p <- test_pip() |> pip_run(lgr = NULL)
         pip_set_params(p, params = list(y = 5))
         expect_equal(
             unname(p[["state"]]),
-            c("new", "outdated", "new", "new")
+            c("done", "outdated", "done", "done")
         )
 
-        p <- test_pip()
+        p <- test_pip() |> pip_run(lgr = NULL)
         pip_set_params(p, params = list(z = 5))
         expect_equal(
             unname(p[["state"]]),
-            c("new", "new", "outdated", "outdated")
+            c("done", "done", "outdated", "outdated")
+        )
+    })
+
+    it("leaves steps that have never run as 'new'", {
+        p <- test_pip()
+        pip_set_params(p, params = list(x = 5))
+        expect_equal(unname(p[["state"]]), rep("new", 4))
+
+        p <- test_pip() |> pip_run(lgr = NULL)
+        pip_reset(p[3:4])
+        pip_set_params(p, params = list(x = 5))
+        expect_equal(
+            unname(p[["state"]]),
+            c("outdated", "outdated", "new", "new")
         )
     })
 
