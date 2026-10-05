@@ -153,7 +153,9 @@ integer row index and \code{property} selects what to update:
 downstream dependencies; same as \code{pip_remove(p, step, force = TRUE)}
 }
 \item \code{p[[step, "fun"]] <- fun} -- replace the step's function;
-same as \code{\link[=pip_replace]{pip_replace()}}) but tags and execution mode are kept
+same as \code{\link[=pip_replace]{pip_replace()}}) but tags, execution mode and \code{allow_failed}
+are kept (an error is raised if \code{allow_failed} names arguments that
+do not refer to other steps in \code{fun})
 \item \code{p[[step, "params"]] <- list(...)} -- update the step's parameters;
 same as \code{pip_set_params(p, list(...))}
 \item \code{p[[step, "tags"]] <- tags} -- set the step's tags explicitly to \code{tags}
@@ -164,6 +166,8 @@ same as \code{pip_set_params(p, list(...))}
 \item \code{p[[step, "locked"]] <- TRUE|FALSE} -- lock or unlock the step;
 same as \code{\link[=pip_lock]{pip_lock()}} / \code{\link[=pip_unlock]{pip_unlock()}}
 \item \code{p[[step, "exec"]] <- mode} -- set the step's execution mode.
+\item \code{p[[step, "allow_failed"]] <- args} -- set the arguments that may
+receive failed inputs (see \code{\link[=pip_add]{pip_add()}}).
 \item \code{p[[step, "state"]] <- state} -- set the step's state.
 \item \code{p[[step, "time"]] <- time} -- set the step's time stamp (a single
 \code{POSIXct} value).
@@ -208,7 +212,8 @@ the steps of \code{q} selected by \code{i} into the steps of \code{p} selected b
 (the rows of both sides are aligned by position and must have the same
 length). In this form, \code{i} is required and \code{j} must be omitted. The
 properties are copied in the order \code{step}, \code{fun}, \code{params}, \code{out},
-\code{state}, \code{time}, \code{tags}, \code{locked}, \code{exec}: the step is renamed to the
+\code{state}, \code{time}, \code{tags}, \code{locked}, \code{exec}, \code{allow_failed}: the step is
+renamed to the
 source name (a no-op when it is unchanged), the function is replaced with
 the source function (same as \code{\link[=pip_replace]{pip_replace()}}; its dependencies are recomputed
 against the steps of \code{p}), the unbound parameters of the source are

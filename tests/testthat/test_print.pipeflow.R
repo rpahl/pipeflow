@@ -40,6 +40,31 @@ describe("print.pipeflow", {
         )
     })
 
+    it("shows the allow_failed column when any step defines it", {
+        op <- options(width = 1000L)
+        on.exit(options(op))
+
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1)
+        expect_false("allow_failed" %in% get_print_header(p))
+
+        p[["s2", "allow_failed"]] <- "x"
+        expect_equal(
+            get_print_header(p),
+            c("step", "params", "depends", "state", "allow_failed")
+        )
+    })
+
+    it("shows the 'continued' run state in the footer", {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) stop("boom"))
+        suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+
+        out <- capture.output(print(p))
+        expect_match(out[[length(out)]], "^<continued> last run: ")
+    })
+
     it("shows the 'out' column only when a step has a result", {
         op <- options(width = 1000L)
         on.exit(options(op))

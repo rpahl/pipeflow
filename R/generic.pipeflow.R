@@ -41,7 +41,8 @@
         "time",
         "tags",
         "locked",
-        "exec"
+        "exec",
+        "allow_failed"
     )
 
     # Since the source can be `x` itself, we will work on a snapshot to
@@ -60,6 +61,9 @@
 
         # 2) Function. pip_replace() resets the params to the function
         #    defaults and recomputes `depends` against the steps of `x`.
+        #    The old `allow_failed` of `x` may not fit the new function, so
+        #    it is cleared first and taken over from q below.
+        x[[iSelP[[k]], "allow_failed"]] <- character(0)
         x[[iSelP[[k]], "fun"]] <- qVals[["fun"]]
 
         # 3) Take over all unbound param values from q. Bound (formula)
@@ -75,7 +79,7 @@
         }
 
         # 4) Runtime state and annotation columns.
-        for (prop in c("out", "state", "time", "tags", "locked", "exec")) {
+        for (prop in setdiff(props, c("step", "fun", "params"))) {
             x[[iSelP[[k]], prop]] <- qVals[[prop]]
         }
     }
@@ -568,7 +572,9 @@ dim.pipeflow <- function(x) {
 #'   * `p[[step, "step"]] <- NULL` -- remove the step, together with its
 #'      downstream dependencies; same as `pip_remove(p, step, force = TRUE)`
 #' * `p[[step, "fun"]] <- fun` -- replace the step's function;
-#'    same as [pip_replace()]) but tags and execution mode are kept
+#'    same as [pip_replace()]) but tags, execution mode and `allow_failed`
+#'    are kept (an error is raised if `allow_failed` names arguments that
+#'    do not refer to other steps in `fun`)
 #' * `p[[step, "params"]] <- list(...)` -- update the step's parameters;
 #'   same as `pip_set_params(p, list(...))`
 #' * `p[[step, "tags"]] <- tags` -- set the step's tags explicitly to `tags`
@@ -577,6 +583,8 @@ dim.pipeflow <- function(x) {
 #' * `p[[step, "locked"]] <- TRUE|FALSE` -- lock or unlock the step;
 #'   same as [pip_lock()] / [pip_unlock()]
 #' * `p[[step, "exec"]] <- mode` -- set the step's execution mode.
+#' * `p[[step, "allow_failed"]] <- args` -- set the arguments that may
+#'   receive failed inputs (see [pip_add()]).
 #' * `p[[step, "state"]] <- state` -- set the step's state.
 #' * `p[[step, "time"]] <- time` -- set the step's time stamp (a single
 #'   `POSIXct` value).
@@ -700,9 +708,14 @@ dim.pipeflow <- function(x) {
             pip_rename(x, from = step, to = value)
         }
     } else if (j == "fun") {
-        tags <- data[["tags"]][[i]]
-        exec <- data[["exec"]][[i]]
-        pip_replace(x, step = step, fun = value, tags = tags, exec = exec)
+        pip_replace(
+            x,
+            step = step,
+            fun = value,
+            tags = data[["tags"]][[i]],
+            exec = data[["exec"]][[i]],
+            allow_failed = data[["allow_failed"]][[i]]
+        )
     } else if (j == "params") {
         pip_set_params(pip_view(x, step = step), params = value)
     } else if (j == "out") {
@@ -726,6 +739,15 @@ dim.pipeflow <- function(x) {
     } else if (j == "exec") {
         .assert_exec_mode(value)
         data.table::set(data, i = i, j = "exec", value = value)
+    } else if (j == "allow_failed") {
+        value <- as.character(value)
+        .assert_allow_failed(value, data[["depends"]][[i]], step)
+        data.table::set(
+            data,
+            i = i,
+            j = "allow_failed",
+            value = list(list(value))
+        )
     } else if (j == "time") {
         if (!.is_single(value, "POSIXct") || is.na(value)) {
             stop("time must be a single POSIXct value")
@@ -769,7 +791,8 @@ dim.pipeflow <- function(x) {
 #' (the rows of both sides are aligned by position and must have the same
 #' length). In this form, `i` is required and `j` must be omitted. The
 #' properties are copied in the order `step`, `fun`, `params`, `out`,
-#' `state`, `time`, `tags`, `locked`, `exec`: the step is renamed to the
+#' `state`, `time`, `tags`, `locked`, `exec`, `allow_failed`: the step is
+#' renamed to the
 #' source name (a no-op when it is unchanged), the function is replaced with
 #' the source function (same as [pip_replace()]; its dependencies are recomputed
 #' against the steps of `p`), the unbound parameters of the source are

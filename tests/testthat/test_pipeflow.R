@@ -17,6 +17,7 @@ describe(".empty_pipeline", {
                 "tags",
                 "locked",
                 "exec",
+                "allow_failed",
                 "time",
                 "depends",
                 "unbound",
@@ -1129,6 +1130,56 @@ describe("pip_add exec modes", {
 })
 
 
+describe("pip_add allow_failed", {
+    it("is empty by default and stores the given argument names", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("a2", \(x = 2) x) |>
+            pip_add("b", \(x = ~a, y = ~a2, z = 1) x, allow_failed = "y")
+
+        expect_equal(p[["a", "allow_failed"]], character(0))
+        expect_equal(p[["b", "allow_failed"]], "y")
+    })
+
+    it("stores the argument names when inserting a step", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("c", \(x = ~a) x) |>
+            pip_add("b", \(x = ~a) x, after = "a", allow_failed = "x")
+
+        expect_equal(unname(p[["step"]]), c("a", "b", "c"))
+        expect_equal(p[["b", "allow_failed"]], "x")
+    })
+
+    it("signals names that are not step-reference arguments", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x)
+
+        expect_error(
+            pip_add(p, "b", \(x = ~a, z = 1) x, allow_failed = "z"),
+            "allow_failed of step 'b' must name arguments .*: 'z'"
+        )
+        expect_error_fixed(
+            pip_add(p, "b", \(x = ~a) x, allow_failed = c("x", "a", "nope")),
+            "refer to other steps: 'a', 'nope'"
+        )
+        expect_error_fixed(
+            pip_add(p, "b", \(x = 1) x, after = 0, allow_failed = "x"),
+            "refer to other steps: 'x'"
+        )
+        expect_error_fixed(
+            pip_add(p, "b", \(x = ~a) x, allow_failed = 1),
+            "allow_failed must be a character vector"
+        )
+        expect_error_fixed(
+            pip_add(p, "b", \(x = ~a) x, allow_failed = NA_character_),
+            "allow_failed must be a character vector"
+        )
+        expect_equal(unname(p[["step"]]), "a")
+    })
+})
+
+
 describe("pip_rename", {
     test_pip <- function() {
         pip_new("pipe") |>
@@ -1546,6 +1597,31 @@ describe("pip_replace", {
         expect_equal(p[["pipenv"]][["data"]][step == "f2", out][[1]], 8)
         expect_equal(p[["pipenv"]][["data"]][step == "f3", out][[1]], 9)
     })
+
+    it("sets allow_failed of the replaced step", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x, allow_failed = "x")
+
+        pip_replace(p, "b", \(y = ~a) y)
+        expect_equal(p[["b", "allow_failed"]], character(0))
+
+        pip_replace(p, "b", \(y = ~a) y, allow_failed = "y")
+        expect_equal(p[["b", "allow_failed"]], "y")
+    })
+
+    it("signals invalid allow_failed and leaves the step unchanged", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x, allow_failed = "x")
+
+        expect_error(
+            pip_replace(p, "b", \(x = 1) x, allow_failed = "x"),
+            "allow_failed of step 'b' must name arguments .*: 'x'"
+        )
+        expect_equal(p[["b", "allow_failed"]], "x")
+        expect_equal(unname(p[["depends"]][[2]]), "a")
+    })
 })
 
 
@@ -1624,6 +1700,16 @@ describe("pip_clone", {
         expect_equal(length(p2), 0L)
         expect_equal(p2[["name"]], p[["name"]])
         expect_false(identical(p2, p))
+    })
+
+    it("keeps allow_failed", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x, allow_failed = "x")
+
+        p2 <- pip_clone(p)
+
+        expect_equal(p2[["b", "allow_failed"]], "x")
     })
 })
 
@@ -2856,6 +2942,333 @@ describe("pip_run", {
 
         expect_true(any(grepl("warn careful now", logs)))
         expect_true(any(grepl("info hey there", logs)))
+    })
+
+    describe("continuing after errors", {
+        # 'b' and 'd' depend on the failing step 'a', 'c' does not
+        test_pip <- function() {
+            pip_new("p") |>
+                pip_add("data", \(n = 3) n) |>
+                pip_add("a", \(x = ~data) stop("boom")) |>
+                pip_add("b", \(x = ~a) x + 1) |>
+                pip_add("c", \(x = ~data) x * 2) |>
+                pip_add("d", \(x = ~b) x + 1)
+        }
+        run_continue <- function(x, ...) {
+            suppressWarnings(
+                pip_run(x, lgr = NULL, on_error = "continue", ...),
+                classes = "pipeflow_run_failed"
+            )
+        }
+
+        it("signals invalid on_error values", {
+            expect_error(
+                pip_run(test_pip(), lgr = NULL, on_error = "nope"),
+                "should be one of"
+            )
+        })
+
+        it("runs all steps that do not depend on a failed step", {
+            p <- test_pip()
+            run_continue(p)
+
+            expect_equal(
+                unname(p[["state"]]),
+                c("done", "failed", "new", "done", "new")
+            )
+            expect_equal(p[["c", "out"]], 6)
+            expect_null(p[["b", "out"]])
+        })
+
+        it("still aborts at the first failed step by default", {
+            p <- test_pip()
+            expect_error(pip_run(p, lgr = NULL), "boom")
+
+            expect_equal(
+                unname(p[["state"]]),
+                c("done", "failed", "new", "new", "new")
+            )
+            expect_null(p[["a", "out"]])
+            expect_equal(get_run_state(p), "failed")
+        })
+
+        it("keeps the original condition as output of the failed step", {
+            p <- pip_new() |>
+                pip_add("a", \(x = 1) {
+                    stop(structure(
+                        class = c("my_error", "error", "condition"),
+                        list(message = "custom", call = NULL)
+                    ))
+                })
+            run_continue(p)
+
+            out <- p[["a", "out"]]
+            expect_s3_class(out, "my_error")
+            expect_equal(conditionMessage(out), "custom")
+        })
+
+        it("sets the run state to 'continued' and signals a warning", {
+            p <- test_pip()
+            w <- tryCatch(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                pipeflow_run_failed = \(w) w
+            )
+
+            expect_s3_class(
+                w,
+                c("pipeflow_run_failed", "warning", "condition"),
+                exact = TRUE
+            )
+            expect_equal(names(w[["failed"]]), "a")
+            expect_equal(conditionMessage(w[["failed"]][["a"]]), "boom")
+            expect_equal(w[["skipped"]], c("b", "d"))
+            expect_match(
+                conditionMessage(w),
+                "Run of pipeline 'p' continued after 1 failed step:",
+                fixed = TRUE
+            )
+            expect_match(conditionMessage(w), "'a': boom", fixed = TRUE)
+            expect_match(
+                conditionMessage(w),
+                "Steps not run because an input failed: 'b', 'd'",
+                fixed = TRUE
+            )
+            expect_null(w[["call"]])
+            expect_equal(get_run_state(p), "continued")
+        })
+
+        it("signals the warning after all states and outputs are stored", {
+            p <- test_pip()
+            seen <- NULL
+            withCallingHandlers(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                pipeflow_run_failed = function(w) {
+                    seen <<- list(state = p[["state"]], c = p[["c", "out"]])
+                    invokeRestart("muffleWarning")
+                }
+            )
+
+            expect_equal(seen[["state"]], p[["state"]])
+            expect_equal(seen[["c"]], 6)
+        })
+
+        it("neither warns nor changes the run state if nothing fails", {
+            p <- pip_new() |>
+                pip_add("a", \(x = 1) x)
+
+            expect_no_warning(pip_run(p, lgr = NULL, on_error = "continue"))
+            expect_equal(get_run_state(p), "ready")
+        })
+
+        it("passes failure objects to arguments listed in allow_failed", {
+            p <- test_pip() |>
+                pip_add(
+                    "doc",
+                    \(c = ~c, a = ~a, d = ~d) list(c = c, a = a, d = d),
+                    allow_failed = c("a", "d")
+                )
+            run_continue(p)
+
+            expect_equal(p[["doc", "state"]], "done")
+            out <- p[["doc", "out"]]
+            expect_equal(out[["c"]], 6)
+
+            a <- out[["a"]]
+            expect_s3_class(
+                a,
+                c("pipeflow_failure", "error", "condition"),
+                exact = TRUE
+            )
+            expect_equal(conditionMessage(a), "step 'a' failed: boom")
+            expect_equal(a[["step"]], "a")
+            expect_equal(a[["failed_step"]], "a")
+            expect_equal(conditionMessage(a[["parent"]]), "boom")
+            expect_null(a[["call"]])
+
+            d <- out[["d"]]
+            expect_s3_class(d, "pipeflow_failure")
+            expect_equal(
+                conditionMessage(d),
+                "step 'd' was not run: step 'a' failed: boom"
+            )
+            expect_equal(d[["step"]], "d")
+            expect_equal(d[["failed_step"]], "a")
+            expect_identical(d[["parent"]], a[["parent"]])
+        })
+
+        it("does not run a step if any of its failed inputs is not allowed", {
+            p <- test_pip() |>
+                pip_add(
+                    "doc",
+                    \(a = ~a, d = ~d) list(a = a, d = d),
+                    allow_failed = "a"
+                ) |>
+                pip_add("final", \(x = ~doc) x)
+            w <- tryCatch(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                pipeflow_run_failed = \(w) w
+            )
+
+            expect_equal(
+                unname(p[["state"]]),
+                c("done", "failed", "new", "done", "new", "new", "new")
+            )
+            expect_equal(w[["skipped"]], c("b", "d", "doc", "final"))
+        })
+
+        it("marks skipped done steps outdated and keeps new ones new", {
+            fail <- FALSE
+            p <- pip_new() |>
+                pip_add("a", \(x = 1) if (fail) stop("boom") else x) |>
+                pip_add("b", \(x = ~a) x + 1) |>
+                pip_add("c", \(x = 1) x) |>
+                pip_add("d", \(x = ~b, y = ~c) x + y)
+            pip_run(p, lgr = NULL)
+            pip_add(p, "e", \(x = ~b) x)
+
+            fail <- TRUE
+            p[["a", "state"]] <- "outdated"
+            run_continue(p)
+
+            expect_equal(
+                unname(p[["state"]]),
+                c("failed", "outdated", "done", "outdated", "new")
+            )
+            expect_equal(p[["b", "out"]], 2)
+        })
+
+        it("retries failed steps and re-runs the steps given failures", {
+            fail <- TRUE
+            p <- pip_new() |>
+                pip_add("a", \(x = 1) if (fail) stop("boom") else x) |>
+                pip_add("b", \(x = ~a) x + 1) |>
+                pip_add(
+                    "doc",
+                    \(x = ~b) if (inherits(x, "pipeflow_failure")) NA else x,
+                    allow_failed = "x"
+                ) |>
+                pip_add("final", \(x = ~doc) x * 10)
+            run_continue(p)
+            expect_equal(
+                unname(p[["state"]]),
+                c("failed", "new", "done", "done")
+            )
+            expect_equal(p[["final", "out"]], NA_real_)
+
+            fail <- FALSE
+            run_continue(p)
+
+            expect_equal(unname(p[["state"]]), rep("done", 4))
+            expect_equal(p[["final", "out"]], 20)
+            expect_equal(get_run_state(p), "ready")
+        })
+
+        it("re-runs steps given failures if the step fails again", {
+            msg <- "first"
+            p <- pip_new() |>
+                pip_add("a", \(x = 1) stop(msg)) |>
+                pip_add(
+                    "doc",
+                    \(x = ~a) conditionMessage(x),
+                    allow_failed = "x"
+                )
+            run_continue(p)
+            expect_equal(p[["doc", "out"]], "step 'a' failed: first")
+
+            msg <- "second"
+            run_continue(p)
+            expect_equal(p[["doc", "out"]], "step 'a' failed: second")
+        })
+
+        it("keeps the key prefix of failed partitions", {
+            calc <- function(x = ~parts) if (x > 1) stop("too big") else x
+            p <- pip_new() |>
+                pip_add("parts", \(x = 1) list(a = 1, b = 2), exec = "split") |>
+                pip_add("calc", calc) |>
+                pip_add("doc", \(x = ~calc) x, allow_failed = "x")
+            run_continue(p)
+
+            f <- p[["doc", "out"]]
+            expect_s3_class(f, "pipeflow_failure")
+            expect_equal(
+                conditionMessage(f),
+                "step 'calc' failed: key 'b': too big"
+            )
+            expect_equal(conditionMessage(f[["parent"]]), "key 'b': too big")
+        })
+
+        it("does not treat locked steps with failed inputs as failed", {
+            fail <- FALSE
+            p <- pip_new() |>
+                pip_add("a", \(x = 1) if (fail) stop("boom") else x) |>
+                pip_add("locked", \(x = ~a) x + 1) |>
+                pip_add("after", \(x = ~locked) x * 10)
+            pip_run(p, lgr = NULL)
+            pip_lock(p["locked"])
+
+            fail <- TRUE
+            run_continue(p, force = TRUE)
+
+            expect_equal(
+                unname(p[["state"]]),
+                c("failed", "done", "done")
+            )
+            expect_equal(p[["after", "out"]], 20)
+        })
+
+        it("continues in view runs", {
+            p <- test_pip() |>
+                pip_add("doc", \(c = ~c, b = ~b) b, allow_failed = "b")
+            run_continue(pip_view(p, step = "doc"))
+
+            expect_equal(
+                unname(p[["state"]]),
+                c("done", "failed", "new", "done", "new", "done")
+            )
+            expect_s3_class(p[["doc", "out"]], "pipeflow_failure")
+        })
+
+        it("keeps continuing after a restart", {
+            cnt <- new.env()
+            cnt[["n"]] <- 0L
+            p <- pip_new() |>
+                pip_add("s1", function(x = 1) {
+                    cnt[["n"]] <- cnt[["n"]] + 1L
+                    if (cnt[["n"]] == 1L) {
+                        .self$restart()
+                    }
+                    x
+                }) |>
+                pip_add("s2", \(x = ~s1) stop("boom")) |>
+                pip_add("s3", \(x = 1) x)
+
+            expect_warning(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                class = "pipeflow_run_failed"
+            )
+            expect_equal(cnt[["n"]], 2L)
+            expect_equal(unname(p[["state"]]), c("done", "failed", "done"))
+            expect_equal(get_run_state(p), "continued")
+        })
+
+        it("logs skipped steps and the summary of the failures", {
+            p <- test_pip()
+            logs <- character(0)
+            lgr <- function(level, msg) logs <<- c(logs, paste(level, msg))
+            suppressWarnings(pip_run(p, lgr = lgr, on_error = "continue"))
+
+            expect_true(any(grepl("error boom", logs)))
+            expect_true(any(grepl(
+                "Step 3/5 b - skipping step, input 'x' failed",
+                logs,
+                fixed = TRUE
+            )))
+            expect_true(any(grepl(
+                "warn Run of pipeline 'p' continued after 1 failed step",
+                logs,
+                fixed = TRUE
+            )))
+        })
     })
 })
 

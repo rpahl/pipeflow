@@ -253,6 +253,15 @@ describe("extract operator [", {
         expect_equal(unname(sub[["step"]]), c("b1", "b2"))
     })
 
+    it("keeps allow_failed with view = FALSE", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x, allow_failed = "x")
+        suppressMessages(sub <- p["b", view = FALSE])
+
+        expect_equal(sub[["b", "allow_failed"]], "x")
+    })
+
     it("returns a pipeline by step names with view = FALSE", {
         p <- test_pip()
         suppressMessages(sub <- p[c("a2", "b2"), view = FALSE])
@@ -976,6 +985,43 @@ describe("assignment operator [[<-", {
         )
     })
 
+    it("keeps allow_failed when replacing a function if it still fits", {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1, allow_failed = "x")
+
+        p[["s2", "fun"]] <- \(x = ~s1) x * 2
+        expect_equal(p[["s2", "allow_failed"]], "x")
+
+        expect_error(
+            p[["s2", "fun"]] <- \(y = ~s1) y,
+            "allow_failed of step 's2' must name arguments .*: 'x'"
+        )
+        expect_equal(p[["s2", "allow_failed"]], "x")
+    })
+
+    it("sets allow_failed after validating it", {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1, y = 1) x + y)
+
+        p[["s2", "allow_failed"]] <- "x"
+        expect_equal(p[["s2", "allow_failed"]], "x")
+
+        expect_error(
+            p[["s2", "allow_failed"]] <- "y",
+            "must name arguments that refer to other steps: 'y'"
+        )
+        expect_error(
+            p[["s2", "allow_failed"]] <- NA,
+            "allow_failed must be a character vector"
+        )
+        expect_equal(p[["s2", "allow_failed"]], "x")
+
+        p[["s2", "allow_failed"]] <- NULL
+        expect_equal(p[["s2", "allow_failed"]], character(0))
+    })
+
     it("updates the parameters of a single step", {
         p <- pip_new() |>
             pip_add("s1", \(x = 1) x) |>
@@ -1520,6 +1566,19 @@ describe("cross-pipeline assignment", {
         vp[1, ] <- vq[1, ]
         expect_equal(p[["tags"]][[1]], "x")
     })
+
+    it("copies allow_failed, also if it does not fit the old function", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x, allow_failed = "x")
+        q <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(y = ~s1) y, allow_failed = "y")
+
+        p[2, ] <- q[2, ]
+
+        expect_equal(p[["s2", "allow_failed"]], "y")
+    })
 })
 
 
@@ -1710,5 +1769,19 @@ describe("rbind", {
             unname(out[["locked"]]),
             c(TRUE, FALSE, FALSE, TRUE)
         )
+    })
+
+    it("keeps allow_failed when steps are renamed", {
+        p1 <- pip_new("left") |>
+            pip_add("data", \(x = 1) x)
+        p2 <- pip_new("right") |>
+            pip_add("data", \(x = 2) x) |>
+            pip_add("doc", \(d = ~data) d, allow_failed = "d")
+
+        out <- rbind(p1, p2)
+
+        expect_equal(unname(out[["step"]]), c("data", "data2", "doc"))
+        expect_equal(out[["doc", "allow_failed"]], "d")
+        expect_equal(unname(out[["doc", "depends"]]), "data2")
     })
 })
