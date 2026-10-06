@@ -17,7 +17,6 @@ describe(".empty_pipeline", {
                 "tags",
                 "locked",
                 "exec",
-                "allow_failed",
                 "time",
                 "depends",
                 "unbound",
@@ -1130,50 +1129,39 @@ describe("pip_add exec modes", {
 })
 
 
-describe("pip_add allow_failed", {
-    it("is empty by default and stores the given argument names", {
+describe("pip_add try() references", {
+    it("resolves the referenced step and keeps the formula in the params", {
         p <- pip_new() |>
             pip_add("a", \(x = 1) x) |>
             pip_add("a2", \(x = 2) x) |>
-            pip_add("b", \(x = ~a, y = ~a2, z = 1) x, allow_failed = "y")
+            pip_add("a3", \(x = 3) x) |>
+            pip_add("b", \(x = ~a, y = ~try(a2), z = ~try(-1)) x)
 
-        expect_equal(p[["a", "allow_failed"]], character(0))
-        expect_equal(p[["b", "allow_failed"]], "y")
+        expect_equal(p[["b", "depends"]], c(x = "a", y = "a2", z = "a3"))
+        expect_equal(p[["b", "params"]][["y"]], ~try(a2), ignore_attr = TRUE)
     })
 
-    it("stores the argument names when inserting a step", {
+    it("resolves the referenced step when inserting a step", {
         p <- pip_new() |>
             pip_add("a", \(x = 1) x) |>
             pip_add("c", \(x = ~a) x) |>
-            pip_add("b", \(x = ~a) x, after = "a", allow_failed = "x")
+            pip_add("b", \(x = ~try(a)) x, after = "a")
 
         expect_equal(unname(p[["step"]]), c("a", "b", "c"))
-        expect_equal(p[["b", "allow_failed"]], "x")
+        expect_equal(p[["b", "depends"]], c(x = "a"))
     })
 
-    it("signals names that are not step-reference arguments", {
+    it("signals references to unknown steps", {
         p <- pip_new() |>
             pip_add("a", \(x = 1) x)
 
-        expect_error(
-            pip_add(p, "b", \(x = ~a, z = 1) x, allow_failed = "z"),
-            "allow_failed of step 'b' must name arguments .*: 'z'"
+        expect_error_fixed(
+            pip_add(p, "b", \(x = ~try(nope)) x),
+            "cannot reference unknown steps: 'nope'"
         )
         expect_error_fixed(
-            pip_add(p, "b", \(x = ~a) x, allow_failed = c("x", "a", "nope")),
-            "refer to other steps: 'a', 'nope'"
-        )
-        expect_error_fixed(
-            pip_add(p, "b", \(x = 1) x, after = 0, allow_failed = "x"),
-            "refer to other steps: 'x'"
-        )
-        expect_error_fixed(
-            pip_add(p, "b", \(x = ~a) x, allow_failed = 1),
-            "allow_failed must be a character vector"
-        )
-        expect_error_fixed(
-            pip_add(p, "b", \(x = ~a) x, allow_failed = NA_character_),
-            "allow_failed must be a character vector"
+            pip_add(p, "b", \(x = ~try(a, silent = TRUE)) x),
+            "cannot reference unknown steps: 'try(a, silent = TRUE)'"
         )
         expect_equal(unname(p[["step"]]), "a")
     })
@@ -1598,29 +1586,19 @@ describe("pip_replace", {
         expect_equal(p[["pipenv"]][["data"]][step == "f3", out][[1]], 9)
     })
 
-    it("sets allow_failed of the replaced step", {
+    it("takes try() references from the new function", {
         p <- pip_new() |>
-            pip_add("a", \(x = 1) x) |>
-            pip_add("b", \(x = ~a) x, allow_failed = "x")
+            pip_add("a", \(x = 1) stop("boom")) |>
+            pip_add("b", \(x = ~try(a)) conditionMessage(x))
 
         pip_replace(p, "b", \(y = ~a) y)
-        expect_equal(p[["b", "allow_failed"]], character(0))
+        expect_equal(p[["b", "depends"]], c(y = "a"))
+        suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+        expect_equal(p[["b", "state"]], "new")
 
-        pip_replace(p, "b", \(y = ~a) y, allow_failed = "y")
-        expect_equal(p[["b", "allow_failed"]], "y")
-    })
-
-    it("signals invalid allow_failed and leaves the step unchanged", {
-        p <- pip_new() |>
-            pip_add("a", \(x = 1) x) |>
-            pip_add("b", \(x = ~a) x, allow_failed = "x")
-
-        expect_error(
-            pip_replace(p, "b", \(x = 1) x, allow_failed = "x"),
-            "allow_failed of step 'b' must name arguments .*: 'x'"
-        )
-        expect_equal(p[["b", "allow_failed"]], "x")
-        expect_equal(unname(p[["depends"]][[2]]), "a")
+        pip_replace(p, "b", \(y = ~try(a)) conditionMessage(y))
+        suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+        expect_equal(p[["b", "out"]], "step 'a' failed: boom")
     })
 })
 
@@ -1700,16 +1678,6 @@ describe("pip_clone", {
         expect_equal(length(p2), 0L)
         expect_equal(p2[["name"]], p[["name"]])
         expect_false(identical(p2, p))
-    })
-
-    it("keeps allow_failed", {
-        p <- pip_new() |>
-            pip_add("a", \(x = 1) x) |>
-            pip_add("b", \(x = ~a) x, allow_failed = "x")
-
-        p2 <- pip_clone(p)
-
-        expect_equal(p2[["b", "allow_failed"]], "x")
     })
 })
 
@@ -3060,12 +3028,11 @@ describe("pip_run", {
             expect_equal(get_run_state(p), "ready")
         })
 
-        it("passes failure objects to arguments listed in allow_failed", {
+        it("passes failure objects to arguments with try() references", {
             p <- test_pip() |>
                 pip_add(
                     "doc",
-                    \(c = ~c, a = ~a, d = ~d) list(c = c, a = a, d = d),
-                    allow_failed = c("a", "d")
+                    \(c = ~c, a = ~try(a), d = ~try(d)) list(c = c, a = a, d = d)
                 )
             run_continue(p)
 
@@ -3098,11 +3065,7 @@ describe("pip_run", {
 
         it("does not run a step if any of its failed inputs is not allowed", {
             p <- test_pip() |>
-                pip_add(
-                    "doc",
-                    \(a = ~a, d = ~d) list(a = a, d = d),
-                    allow_failed = "a"
-                ) |>
+                pip_add("doc", \(a = ~try(a), d = ~d) list(a = a, d = d)) |>
                 pip_add("final", \(x = ~doc) x)
             w <- tryCatch(
                 pip_run(p, lgr = NULL, on_error = "continue"),
@@ -3144,8 +3107,7 @@ describe("pip_run", {
                 pip_add("b", \(x = ~a) x + 1) |>
                 pip_add(
                     "doc",
-                    \(x = ~b) if (inherits(x, "pipeflow_failure")) NA else x,
-                    allow_failed = "x"
+                    \(x = ~try(b)) if (inherits(x, "pipeflow_failure")) NA else x
                 ) |>
                 pip_add("final", \(x = ~doc) x * 10)
             run_continue(p)
@@ -3167,11 +3129,7 @@ describe("pip_run", {
             msg <- "first"
             p <- pip_new() |>
                 pip_add("a", \(x = 1) stop(msg)) |>
-                pip_add(
-                    "doc",
-                    \(x = ~a) conditionMessage(x),
-                    allow_failed = "x"
-                )
+                pip_add("doc", \(x = ~try(a)) conditionMessage(x))
             run_continue(p)
             expect_equal(p[["doc", "out"]], "step 'a' failed: first")
 
@@ -3185,7 +3143,7 @@ describe("pip_run", {
             p <- pip_new() |>
                 pip_add("parts", \(x = 1) list(a = 1, b = 2), exec = "split") |>
                 pip_add("calc", calc) |>
-                pip_add("doc", \(x = ~calc) x, allow_failed = "x")
+                pip_add("doc", \(x = ~try(calc)) x)
             run_continue(p)
 
             f <- p[["doc", "out"]]
@@ -3218,7 +3176,7 @@ describe("pip_run", {
 
         it("continues in view runs", {
             p <- test_pip() |>
-                pip_add("doc", \(c = ~c, b = ~b) b, allow_failed = "b")
+                pip_add("doc", \(c = ~c, b = ~try(b)) b)
             run_continue(pip_view(p, step = "doc"))
 
             expect_equal(

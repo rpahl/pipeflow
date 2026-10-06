@@ -11,7 +11,6 @@
         tags = list(),
         locked = logical(0),
         exec = character(0), # execution mode
-        allow_failed = list(), # step-reference args that may receive failures
         time = as.POSIXct(character(0)),
         depends = list(), # names of parameters referencing other steps
         unbound = list(), # names of unbound parameters
@@ -26,8 +25,7 @@
     depends,
     nodeId,
     tags = character(0),
-    exec = "auto",
-    allow_failed = character(0)
+    exec = "auto"
 ) {
     list(
         step = step,
@@ -38,7 +36,6 @@
         tags = list(tags),
         locked = FALSE,
         exec = exec,
-        allow_failed = list(allow_failed),
         time = Sys.time(),
         depends = list(depends),
         unbound = list(setdiff(names(params), names(depends))),
@@ -67,35 +64,6 @@
 # -------
 # Asserts
 # -------
-#' Assert valid `allow_failed` argument names
-#'
-#' Each name in `allowFailed` must be an argument of the step that refers to
-#' another step, i.e. one of the names of `depends`.
-#'
-#' @param allowFailed Character vector of argument names.
-#' @param depends Named character vector of the step's dependencies, mapping
-#' argument names to the referenced step names.
-#' @param step The step name (used in the error message).
-#' @return `allowFailed`, invisibly. Signals an error if it is not a
-#' character vector without `NA`s or names arguments that do not refer to
-#' other steps.
-#' @noRd
-.assert_allow_failed <- function(allowFailed, depends, step) {
-    if (!is.character(allowFailed) || anyNA(allowFailed)) {
-        stop_no_call("allow_failed must be a character vector")
-    }
-    bad <- setdiff(allowFailed, names(depends))
-    if (length(bad) > 0L) {
-        stop_no_call(
-            "allow_failed of step '",
-            step,
-            "' must name arguments that refer to other steps: ",
-            paste0("'", bad, "'", collapse = ", ")
-        )
-    }
-    invisible(allowFailed)
-}
-
 .assert_exec_mode <- function(exec) {
     if (!.is_single(exec, "character") || is.na(exec)) {
         stop("exec must be a single string")
@@ -293,7 +261,8 @@
 #' Create a failure object
 #'
 #' Failure object for the output of `step` in a run that continues after
-#' errors. It is passed to the step arguments listed in `allow_failed`.
+#' errors. It is passed to the step arguments whose reference is wrapped in
+#' `try()`, e.g. `x = ~try(step)`.
 #'
 #' @param step The step whose output the failure object replaces.
 #' @param parent The original condition of the step that actually failed.
@@ -780,15 +749,7 @@
 # Pipeline addition
 # -----------------
 
-.pip_append <- function(
-    x,
-    step,
-    fun,
-    tags,
-    exec = "auto",
-    params = list(),
-    allow_failed = character(0)
-) {
+.pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
     funParams <- .extract_fun_params(fun)
     params[names(funParams)] <- funParams
 
@@ -814,7 +775,6 @@
             paste0("'", names(notFound), "'", collapse = ", ")
         )
     }
-    .assert_allow_failed(allow_failed, depends, step)
 
     # Update DAG
     d <- env[[".dag"]]
@@ -831,7 +791,6 @@
         depends = depends,
         tags = tags,
         exec = exec,
-        allow_failed = allow_failed,
         nodeId = nodeId
     )
 
@@ -848,16 +807,7 @@
 # the data table (one O(n) rbindlist) and the node is added to the DAG at
 # the corresponding position of its topological order, leaving all existing
 # steps (and their runtime state) untouched.
-.pip_insert <- function(
-    x,
-    step,
-    fun,
-    tags,
-    exec,
-    params,
-    pos,
-    allow_failed = character(0)
-) {
+.pip_insert <- function(x, step, fun, tags, exec, params, pos) {
     funParams <- .extract_fun_params(fun)
     params[names(funParams)] <- funParams
 
@@ -900,7 +850,6 @@
             paste0("'", names(notFound), "'", collapse = ", ")
         )
     }
-    .assert_allow_failed(allow_failed, depends, step)
 
     # Update DAG: add the node at the insertion position of its order
     d <- env[[".dag"]]
@@ -917,7 +866,6 @@
         depends = depends,
         tags = tags,
         exec = exec,
-        allow_failed = allow_failed,
         nodeId = nodeId
     )
     n <- nrow(data)
@@ -972,14 +920,19 @@
         fun <- yyDat[["fun"]][[k]]
         tags <- yyDat[["tags"]][[k]]
         exec <- yyDat[["exec"]][[k]]
-        allowFailed <- yyDat[["allow_failed"]][[k]]
         params <- yyDat[["params"]][[k]]
         depends <- yyDat[["depends"]][[k]]
 
         # Re-create the formula dependencies in the target pipeline's context
-        # so that they point to the (renamed) steps of y.
+        # so that they point to the (renamed) steps of y. References wrapped
+        # in try() stay wrapped.
+        tryArgs <- formula_try_args(params)
         for (arg in intersect(names(depends), names(params))) {
-            params[[arg]] <- stats::as.formula(paste("~", depends[[arg]]))
+            ref <- depends[[arg]]
+            if (arg %in% tryArgs) {
+                ref <- sprintf("try(%s)", ref)
+            }
+            params[[arg]] <- stats::as.formula(paste("~", ref))
         }
         # Fold current parameter values into the defaults of the existing
         # function arguments.
@@ -1004,16 +957,7 @@
             dag_add_edges_to(d, from = refNodes, to = nodeId)
         }
 
-        row <- .new_step(
-            step,
-            fun,
-            params,
-            depends,
-            nodeId,
-            tags,
-            exec,
-            allowFailed
-        )
+        row <- .new_step(step, fun, params, depends, nodeId, tags, exec)
         rows[[k]] <- row
     }
 
@@ -1116,7 +1060,11 @@ pip_new <- function(name = "pipe") {
 #' have a default value. Default values that are simple constants are resolved
 #' immediately. Default values that are formulas like `~other_step` are
 #' treated as dependencies to those steps and resolved to the respective output
-#' values at runtime once the step is executed.
+#' values at runtime once the step is executed. A reference wrapped in `try()`,
+#' like `~try(other_step)`, accepts a failed input when the pipeline is run
+#' with `on_error = "continue"`: instead of the output of the referenced step,
+#' the argument then receives a condition of class `pipeflow_failure` (see
+#' section 'Continuing after errors' in [pip_run()]).
 #' @param tags Optional character vector of tags belonging to the step.
 #' Can also be adjusted later using `[pip_tag()]`.
 #' @param after Optional position after which the new step should be inserted
@@ -1143,13 +1091,6 @@ pip_new <- function(name = "pipe") {
 #' * split: single call, then mark output as partitioned
 #' * reduce: single call, but only valid with partitioned input
 #' * plain: single call, only valid with non-partitioned input
-#' @param allow_failed Optional character vector of argument names of `fun`
-#' whose defaults refer to other steps (`~step`) and that may receive a
-#' failed input when the pipeline is run with `on_error = "continue"` (see
-#' section 'Continuing after errors' in [pip_run()]). Instead of the output
-#' of the referenced step, such an argument then receives a condition of
-#' class `pipeflow_failure`. Argument names (not step names) are used, so
-#' they stay valid when steps are renamed.
 #'
 #' @details
 #' If `after` was specified, the new step will be inserted after the given
@@ -1216,8 +1157,7 @@ pip_add <- function(
     tags = character(0),
     after = length(x),
     params = list(),
-    exec = "auto",
-    allow_failed = character(0)
+    exec = "auto"
 ) {
     .assert_pip(x)
     if (!.is_single(step, "character")) {
@@ -1288,8 +1228,7 @@ pip_add <- function(
             fun = fun,
             tags = tags,
             exec = exec,
-            params = params,
-            allow_failed = allow_failed
+            params = params
         )
     } else {
         .pip_insert(
@@ -1299,8 +1238,7 @@ pip_add <- function(
             tags = tags,
             exec = exec,
             params = params,
-            pos = pos,
-            allow_failed = allow_failed
+            pos = pos
         )
     }
     invisible(x)
@@ -1969,8 +1907,13 @@ pip_rename <- function(x, from, to) {
             fml <- newParams[[i]][[arg]]
             if (inherits(fml, "formula")) {
                 # Only swap the referenced name to keep the formula's
-                # environment (as.formula() would attach this frame).
-                fml[[2L]] <- as.name(dep[[arg]])
+                # environment (as.formula() would attach this frame) and
+                # a try() wrapper.
+                if (is_try_ref(fml)) {
+                    fml[[2L]][[2L]] <- as.name(dep[[arg]])
+                } else {
+                    fml[[2L]] <- as.name(dep[[arg]])
+                }
                 newParams[[i]][[arg]] <- fml
             }
         }
@@ -2027,8 +1970,7 @@ pip_replace <- function(
     fun,
     tags = character(0),
     params = list(),
-    exec = "auto",
-    allow_failed = character(0)
+    exec = "auto"
 ) {
     .assert_pip_or_view(x)
     if (!.is_single(step, "character")) {
@@ -2106,7 +2048,6 @@ pip_replace <- function(
             paste0("'", notFound, "'", collapse = ", ")
         )
     }
-    .assert_allow_failed(allow_failed, depends, step)
 
     # Update the incoming DAG edges of the replaced step (its node and all
     # outgoing edges stay the same).
@@ -2132,8 +2073,8 @@ pip_replace <- function(
         dag_add_edges_to(d, from = toAdd, to = nodeId)
     }
 
-    # Reset the step row: new function, params, tags, exec and allow_failed,
-    # fresh runtime state (like a freshly added step).
+    # Reset the step row: new function, params, tags and exec, fresh runtime
+    # state (like a freshly added step).
     values <- list(
         "fun" = list(fun),
         "params" = list(params),
@@ -2142,7 +2083,6 @@ pip_replace <- function(
         "tags" = list(tags),
         "locked" = FALSE,
         "exec" = exec,
-        "allow_failed" = list(allow_failed),
         "time" = Sys.time(),
         "depends" = list(depends),
         "unbound" = list(setdiff(names(params), names(depends)))
@@ -2220,9 +2160,9 @@ pip_replace <- function(
 #' upstream of it failed in this run.
 #'
 #' * A step with a failed input is not run, and counts as failed for its own
-#'   dependents, unless the argument receiving that input is listed in the
-#'   step's `allow_failed` (see [pip_add()]).
-#' * A step whose failed inputs are all listed in `allow_failed` is run, and
+#'   dependents, unless the argument receiving that input refers to its step
+#'   via `try()`, e.g. `x = ~try(other_step)` (see [pip_add()]).
+#' * A step whose failed inputs all use `try()` references is run, and
 #'   each of these arguments receives a condition of class
 #'   `c("pipeflow_failure", "error", "condition")` with the fields
 #'   `message`, `step` (the step of the input), `failed_step` (the step that
@@ -2325,9 +2265,9 @@ pip_replace <- function(
 #'   pip_add("check", \(x = ~data) stop("check failed")) |>
 #'   pip_add("count", \(x = ~check) length(x)) |>
 #'   pip_add("total", \(x = ~data) sum(x)) |>
-#'   pip_add("report", \(total = ~total, n = ~count) {
+#'   pip_add("report", \(total = ~total, n = ~try(count)) {
 #'     if (inherits(n, "pipeflow_failure")) conditionMessage(n) else n
-#'   }, allow_failed = "n")
+#'   })
 #'
 #' withCallingHandlers(
 #'   pip_run(p, lgr = NULL, on_error = "continue"),
@@ -2431,7 +2371,7 @@ pip_run <- function(
 
                 # Arguments whose input step failed or was not run in this
                 # run (only possible with on_error = "continue"). Unless all
-                # of them are listed in `allow_failed`, the step is not run
+                # of them refer to their step via try(), the step is not run
                 # and counts as failed for its own dependents.
                 depends <- dat[["depends"]][[row]]
                 failedArgs <- names(depends)[depends %in% names(failures)]
@@ -2440,7 +2380,7 @@ pip_run <- function(
                 if (hasFailedInput) {
                     notAllowed <- setdiff(
                         failedArgs,
-                        dat[["allow_failed"]][[row]]
+                        formula_try_args(dat[["params"]][[row]])
                     )
                     if (length(notAllowed) > 0L) {
                         cause <- failures[[depends[[notAllowed[[1L]]]]]]

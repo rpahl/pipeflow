@@ -23,12 +23,10 @@
   failed step. If any step failed, the run state is set to `"continued"` and
   a warning of class `pipeflow_run_failed` lists the failed and the skipped
   steps.
-- `pip_add()` and `pip_replace()` gain `allow_failed`: names of
-  step-reference arguments that may receive a failed input in a continuing
-  run. Such arguments get a condition of class `pipeflow_failure` instead of
-  the step output. `allow_failed` is a new column of the step table; it is
-  kept by `p[[step, "fun"]] <- f`, `pip_clone()` and `rbind()`, and can be
-  set via `p[[step, "allow_failed"]] <- args`.
+- A step reference wrapped in `try()`, e.g. `x = ~try(other_step)`, marks
+  an argument that may receive a failed input in a continuing run. Such an
+  argument gets a condition of class `pipeflow_failure` instead of the step
+  output.
 - `pip_run()` now also re-runs a `"done"` step if one of its inputs was
   executed in the same run.
 
