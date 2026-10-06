@@ -2358,13 +2358,8 @@ pip_run <- function(
                 }
                 msg <- if (isView) {
                     marker <- names(rowsToRun)[[i]]
-                    sprintf(
-                        "Step %i/%i [%s] %s",
-                        i,
-                        length(rowsToRun),
-                        marker,
-                        step
-                    )
+                    # fmt: skip
+                    sprintf("Step %i/%i [%s] %s", i, length(rowsToRun), marker, step) # nolint
                 } else {
                     sprintf("Step %i/%i %s", i, length(rowsToRun), step)
                 }
@@ -2378,10 +2373,8 @@ pip_run <- function(
                 hasFailedInput <- length(failedArgs) > 0L &&
                     !dat[["locked"]][[row]]
                 if (hasFailedInput) {
-                    notAllowed <- setdiff(
-                        failedArgs,
-                        formula_try_args(dat[["params"]][[row]])
-                    )
+                    tryArgs <- formula_try_args(dat[["params"]][[row]])
+                    notAllowed <- setdiff(failedArgs, tryArgs)
                     if (length(notAllowed) > 0L) {
                         cause <- failures[[depends[[notAllowed[[1L]]]]]]
                         failures[[step]] <- .pip_failure(
@@ -2415,25 +2408,22 @@ pip_run <- function(
                 # Always pass the full pipeline object (not a view) to the
                 # step function, so that it can modify itself if needed.
                 self <- .wrap_pipenv(pipenv, pipname, view = NULL)
-
                 log_info(msg)
 
                 # Take the name from the current data, since a step that
                 # modified the pipeline may have shifted the rows.
                 execStep <- pipenv[["data"]][["step"]][[row]]
                 executedSteps <- c(executedSteps, execStep)
-                failedInputs <- stats::setNames(
+
+                # Prepare the list of failed inputs for the current step.
+                failed <- stats::setNames(
                     failures[unname(depends[failedArgs])],
                     failedArgs
                 )
                 cond <- tryCatch(
                     {
-                        .pip_run_row(
-                            x = self,
-                            i = row,
-                            lgr = lgr,
-                            failed = failedInputs
-                        )
+                        # fmt: skip
+                        .pip_run_row(x = self, i = row, lgr = lgr, failed = failed) # nolint
                         NULL
                     },
                     pipeflow_step_error = function(e) {

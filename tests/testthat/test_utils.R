@@ -123,14 +123,14 @@ describe("formula_deps", {
 
     it("unwraps references wrapped in try()", {
         expect_equal(
-            formula_deps(list(x = ~try(s1), y = ~try(-1), z = ~s2)),
+            formula_deps(list(x = ~ try(s1), y = ~ try(-1), z = ~s2)),
             c(x = "s1", y = "-1", z = "s2")
         )
     })
 
     it("does not unwrap try() calls with more than one argument", {
         expect_equal(
-            formula_deps(list(x = ~try(s1, silent = TRUE))),
+            formula_deps(list(x = ~ try(s1, silent = TRUE))),
             c(x = "try(s1, silent = TRUE)")
         )
     })
@@ -181,7 +181,7 @@ describe("formula_deps", {
 
 describe("formula_try_args", {
     it("returns the names of the args with references wrapped in try()", {
-        params <- list(a = ~try(s1), b = ~s2, c = 1, d = ~try(-1), e = "try")
+        params <- list(a = ~ try(s1), b = ~s2, c = 1, d = ~ try(-1), e = "try")
         expect_equal(formula_try_args(params), c("a", "d"))
     })
 
@@ -189,7 +189,7 @@ describe("formula_try_args", {
         expect_equal(formula_try_args(list()), character(0))
         expect_equal(formula_try_args(list(a = ~s1, b = ~try)), character(0))
         expect_equal(
-            formula_try_args(list(a = ~try(s1, silent = TRUE))),
+            formula_try_args(list(a = ~ try(s1, silent = TRUE))),
             character(0)
         )
     })

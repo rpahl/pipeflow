@@ -1135,17 +1135,17 @@ describe("pip_add try() references", {
             pip_add("a", \(x = 1) x) |>
             pip_add("a2", \(x = 2) x) |>
             pip_add("a3", \(x = 3) x) |>
-            pip_add("b", \(x = ~a, y = ~try(a2), z = ~try(-1)) x)
+            pip_add("b", \(x = ~a, y = ~ try(a2), z = ~ try(-1)) x)
 
         expect_equal(p[["b", "depends"]], c(x = "a", y = "a2", z = "a3"))
-        expect_equal(p[["b", "params"]][["y"]], ~try(a2), ignore_attr = TRUE)
+        expect_equal(p[["b", "params"]][["y"]], ~ try(a2), ignore_attr = TRUE)
     })
 
     it("resolves the referenced step when inserting a step", {
         p <- pip_new() |>
             pip_add("a", \(x = 1) x) |>
             pip_add("c", \(x = ~a) x) |>
-            pip_add("b", \(x = ~try(a)) x, after = "a")
+            pip_add("b", \(x = ~ try(a)) x, after = "a")
 
         expect_equal(unname(p[["step"]]), c("a", "b", "c"))
         expect_equal(p[["b", "depends"]], c(x = "a"))
@@ -1156,11 +1156,11 @@ describe("pip_add try() references", {
             pip_add("a", \(x = 1) x)
 
         expect_error_fixed(
-            pip_add(p, "b", \(x = ~try(nope)) x),
+            pip_add(p, "b", \(x = ~ try(nope)) x),
             "cannot reference unknown steps: 'nope'"
         )
         expect_error_fixed(
-            pip_add(p, "b", \(x = ~try(a, silent = TRUE)) x),
+            pip_add(p, "b", \(x = ~ try(a, silent = TRUE)) x),
             "cannot reference unknown steps: 'try(a, silent = TRUE)'"
         )
         expect_equal(unname(p[["step"]]), "a")
@@ -1589,14 +1589,14 @@ describe("pip_replace", {
     it("takes try() references from the new function", {
         p <- pip_new() |>
             pip_add("a", \(x = 1) stop("boom")) |>
-            pip_add("b", \(x = ~try(a)) conditionMessage(x))
+            pip_add("b", \(x = ~ try(a)) conditionMessage(x))
 
         pip_replace(p, "b", \(y = ~a) y)
         expect_equal(p[["b", "depends"]], c(y = "a"))
         suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
         expect_equal(p[["b", "state"]], "new")
 
-        pip_replace(p, "b", \(y = ~try(a)) conditionMessage(y))
+        pip_replace(p, "b", \(y = ~ try(a)) conditionMessage(y))
         suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
         expect_equal(p[["b", "out"]], "step 'a' failed: boom")
     })
@@ -3032,7 +3032,9 @@ describe("pip_run", {
             p <- test_pip() |>
                 pip_add(
                     "doc",
-                    \(c = ~c, a = ~try(a), d = ~try(d)) list(c = c, a = a, d = d)
+                    \(c = ~c, a = ~ try(a), d = ~ try(d)) {
+                        list(c = c, a = a, d = d)
+                    }
                 )
             run_continue(p)
 
@@ -3065,7 +3067,7 @@ describe("pip_run", {
 
         it("does not run a step if any of its failed inputs is not allowed", {
             p <- test_pip() |>
-                pip_add("doc", \(a = ~try(a), d = ~d) list(a = a, d = d)) |>
+                pip_add("doc", \(a = ~ try(a), d = ~d) list(a = a, d = d)) |>
                 pip_add("final", \(x = ~doc) x)
             w <- tryCatch(
                 pip_run(p, lgr = NULL, on_error = "continue"),
@@ -3107,7 +3109,9 @@ describe("pip_run", {
                 pip_add("b", \(x = ~a) x + 1) |>
                 pip_add(
                     "doc",
-                    \(x = ~try(b)) if (inherits(x, "pipeflow_failure")) NA else x
+                    \(x = ~ try(b)) {
+                        if (inherits(x, "pipeflow_failure")) NA else x
+                    }
                 ) |>
                 pip_add("final", \(x = ~doc) x * 10)
             run_continue(p)
@@ -3129,7 +3133,7 @@ describe("pip_run", {
             msg <- "first"
             p <- pip_new() |>
                 pip_add("a", \(x = 1) stop(msg)) |>
-                pip_add("doc", \(x = ~try(a)) conditionMessage(x))
+                pip_add("doc", \(x = ~ try(a)) conditionMessage(x))
             run_continue(p)
             expect_equal(p[["doc", "out"]], "step 'a' failed: first")
 
@@ -3143,7 +3147,7 @@ describe("pip_run", {
             p <- pip_new() |>
                 pip_add("parts", \(x = 1) list(a = 1, b = 2), exec = "split") |>
                 pip_add("calc", calc) |>
-                pip_add("doc", \(x = ~try(calc)) x)
+                pip_add("doc", \(x = ~ try(calc)) x)
             run_continue(p)
 
             f <- p[["doc", "out"]]
@@ -3176,7 +3180,7 @@ describe("pip_run", {
 
         it("continues in view runs", {
             p <- test_pip() |>
-                pip_add("doc", \(c = ~c, b = ~try(b)) b)
+                pip_add("doc", \(c = ~c, b = ~ try(b)) b)
             run_continue(pip_view(p, step = "doc"))
 
             expect_equal(

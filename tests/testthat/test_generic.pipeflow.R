@@ -256,7 +256,7 @@ describe("extract operator [", {
     it("keeps try() references with view = FALSE", {
         p <- pip_new() |>
             pip_add("a", \(x = 1) x) |>
-            pip_add("b", \(x = ~try(a)) x)
+            pip_add("b", \(x = ~ try(a)) x)
         suppressMessages(sub <- p["b", view = FALSE])
 
         expect_equal(formula_try_args(sub[["b", "params"]]), "x")
@@ -988,12 +988,12 @@ describe("assignment operator [[<-", {
     it("takes try() references from the new function", {
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(x = ~try(s1)) x + 1)
+            pip_add("s2", \(x = ~ try(s1)) x + 1)
 
         p[["s2", "fun"]] <- \(x = ~s1) x * 2
         expect_equal(formula_try_args(p[["s2", "params"]]), character(0))
 
-        p[["s2", "fun"]] <- \(y = ~try(s1)) y
+        p[["s2", "fun"]] <- \(y = ~ try(s1)) y
         expect_equal(formula_try_args(p[["s2", "params"]]), "y")
     })
 
@@ -1546,11 +1546,11 @@ describe("cross-pipeline assignment", {
         p <- pip_new() |>
             pip_add("s0", \(x = 0) x) |>
             pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(x = ~try(s1)) x)
+            pip_add("s2", \(x = ~ try(s1)) x)
         q <- pip_new() |>
             pip_add("s0", \(x = 0) x) |>
             pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(y = ~try(s1), z = ~s0) y)
+            pip_add("s2", \(y = ~ try(s1), z = ~s0) y)
 
         p[3, ] <- q[3, ]
 
@@ -1754,7 +1754,9 @@ describe("rbind", {
         p2 <- pip_new("right") |>
             pip_add("data", \(x = 2) stop("boom")) |>
             pip_add("other", \(x = 3) x) |>
-            pip_add("doc", \(d = ~try(data), e = ~try(-1)) conditionMessage(d))
+            pip_add("doc", \(d = ~ try(data), e = ~ try(-1)) {
+                conditionMessage(d)
+            })
 
         out <- rbind(p1, p2)
 
@@ -1768,12 +1770,12 @@ describe("rbind", {
         )
         expect_equal(
             out[["doc", "params"]][c("d", "e")],
-            list(d = ~try(data2), e = ~try(other)),
+            list(d = ~ try(data2), e = ~ try(other)),
             ignore_attr = TRUE
         )
         expect_equal(
             formals(out[["doc", "fun"]])[["d"]],
-            ~try(data2),
+            ~ try(data2),
             ignore_attr = TRUE
         )
 
