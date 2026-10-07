@@ -669,6 +669,20 @@ describe("extract operator [[", {
         expect_equal(v[[2, "step"]], "s2")
     })
 
+    it("extracts the cell of the named step from a view of later rows", {
+        p <- pip_new("p") |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(y = 2) y) |>
+            pip_add("c", \(z = 3) z)
+        v <- pip_view(p, step = c("b", "c"))
+
+        expect_equal(v[["b", "params"]], list(y = 2))
+        expect_equal(v[["c", "params"]], list(z = 3))
+        expect_equal(v[[1, "step"]], "b")
+        expect_error(v[["a", "params"]], "selected step not part of view: a")
+        expect_error(v[["unknown", "params"]], "Unknown step names: unknown")
+    })
+
     it("signals steps not covered by the view", {
         p <- test_pip() |> pip_run(lgr = NULL)
         v <- pip_view(p, step = "s1")

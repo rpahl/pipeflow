@@ -2,7 +2,8 @@
 
 # pipeflow 0.4.0.9004
 
-- Same as previous version.
+- `x[[step, j]]` on a view now returns the value of `step`. Before, it read
+  the wrong row (or failed) when the view did not start at the first step.
 
 
 # pipeflow 0.4.0.9003
