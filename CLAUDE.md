@@ -16,6 +16,9 @@ referenced by `kilo.json`). The important parts are summarized below.
   not have them. The R on PATH may be a different version. Check
   `R --version` before running tests or checks, and don't run them on a
   mismatched R.
+  Several versions are installed under `/opt/R/<version>/` (managed by
+  `rig`): if the default isn't 4.5.3, run with
+  `/opt/R/4.5.3/bin/Rscript` and put `/opt/R/4.5.3/bin` first on `PATH`.
 - Run R from the repo root. If `.Rprofile` exists, call `source(".Rprofile")`
   first so the renv library is active. If packages are missing, run
   `renv::restore(prompt = FALSE)`. Don't install into global or system
