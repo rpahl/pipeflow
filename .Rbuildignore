@@ -19,6 +19,8 @@
 ^\.git$
 ^\.github$
 ^\.vscode$
+^\.claude$
+^CLAUDE\.md$
 ^\.lintr$
 
 # Documentation/site generation (optional)

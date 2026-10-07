@@ -26,9 +26,6 @@ print.pipeflow <- function(
         if (any(data[["exec"]] != "auto")) {
             cols <- append(cols, "exec")
         }
-        if (any(lengths(data[["allow_failed"]]) > 0L)) {
-            cols <- append(cols, "allow_failed")
-        }
         if (any(data[["locked"]])) {
             cols <- append(cols, "locked")
         }

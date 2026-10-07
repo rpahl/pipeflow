@@ -89,9 +89,9 @@ a step is \emph{failed} if its step failed or was not run because a step
 upstream of it failed in this run.
 \itemize{
 \item A step with a failed input is not run, and counts as failed for its own
-dependents, unless the argument receiving that input is listed in the
-step's \code{allow_failed} (see \code{\link[=pip_add]{pip_add()}}).
-\item A step whose failed inputs are all listed in \code{allow_failed} is run, and
+dependents, unless the argument receiving that input refers to its step
+via \code{try()}, e.g. \code{x = ~try(other_step)} (see \code{\link[=pip_add]{pip_add()}}).
+\item A step whose failed inputs all use \code{try()} references is run, and
 each of these arguments receives a condition of class
 \code{c("pipeflow_failure", "error", "condition")} with the fields
 \code{message}, \code{step} (the step of the input), \code{failed_step} (the step that
@@ -196,9 +196,9 @@ p <- pip_new("continue") |>
   pip_add("check", \(x = ~data) stop("check failed")) |>
   pip_add("count", \(x = ~check) length(x)) |>
   pip_add("total", \(x = ~data) sum(x)) |>
-  pip_add("report", \(total = ~total, n = ~count) {
+  pip_add("report", \(total = ~total, n = ~try(count)) {
     if (inherits(n, "pipeflow_failure")) conditionMessage(n) else n
-  }, allow_failed = "n")
+  })
 
 withCallingHandlers(
   pip_run(p, lgr = NULL, on_error = "continue"),

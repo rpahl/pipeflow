@@ -11,8 +11,7 @@ pip_add(
   tags = character(0),
   after = length(x),
   params = list(),
-  exec = "auto",
-  allow_failed = character(0)
+  exec = "auto"
 )
 }
 \arguments{
@@ -24,7 +23,11 @@ pip_add(
 have a default value. Default values that are simple constants are resolved
 immediately. Default values that are formulas like \code{~other_step} are
 treated as dependencies to those steps and resolved to the respective output
-values at runtime once the step is executed.}
+values at runtime once the step is executed. A reference wrapped in \code{try()},
+like \code{~try(other_step)}, accepts a failed input when the pipeline is run
+with \code{on_error = "continue"}: instead of the output of the referenced step,
+the argument then receives a condition of class \code{pipeflow_failure} (see
+section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}).}
 
 \item{tags}{Optional character vector of tags belonging to the step.
 Can also be adjusted later using \verb{[pip_tag()]}.}
@@ -59,14 +62,6 @@ a single call. In summary:
 \item reduce: single call, but only valid with partitioned input
 \item plain: single call, only valid with non-partitioned input
 }}
-
-\item{allow_failed}{Optional character vector of argument names of \code{fun}
-whose defaults refer to other steps (\code{~step}) and that may receive a
-failed input when the pipeline is run with \code{on_error = "continue"} (see
-section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). Instead of the output
-of the referenced step, such an argument then receives a condition of
-class \code{pipeflow_failure}. Argument names (not step names) are used, so
-they stay valid when steps are renamed.}
 }
 \value{
 The updated pipeline, invisibly.

@@ -121,6 +121,20 @@ describe("formula_deps", {
         expect_equal(formula_deps(list(x = ~ -2)), c(x = "-2"))
     })
 
+    it("unwraps references wrapped in try()", {
+        expect_equal(
+            formula_deps(list(x = ~ try(s1), y = ~ try(-1), z = ~s2)),
+            c(x = "s1", y = "-1", z = "s2")
+        )
+    })
+
+    it("does not unwrap try() calls with more than one argument", {
+        expect_equal(
+            formula_deps(list(x = ~ try(s1, silent = TRUE))),
+            c(x = "try(s1, silent = TRUE)")
+        )
+    })
+
     it("treats strings starting with ~ as plain values, not formulas", {
         expect_equal(formula_deps(list(x = "~s1")), character(0))
     })
@@ -160,6 +174,23 @@ describe("formula_deps", {
         expect_equal(
             formula_deps(list(x = ~`my step`)),
             c(x = "`my step`")
+        )
+    })
+})
+
+
+describe("formula_try_args", {
+    it("returns the names of the args with references wrapped in try()", {
+        params <- list(a = ~ try(s1), b = ~s2, c = 1, d = ~ try(-1), e = "try")
+        expect_equal(formula_try_args(params), c("a", "d"))
+    })
+
+    it("returns an empty vector if there are no try() references", {
+        expect_equal(formula_try_args(list()), character(0))
+        expect_equal(formula_try_args(list(a = ~s1, b = ~try)), character(0))
+        expect_equal(
+            formula_try_args(list(a = ~ try(s1, silent = TRUE))),
+            character(0)
         )
     })
 })

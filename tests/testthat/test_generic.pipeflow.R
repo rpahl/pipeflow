@@ -253,13 +253,13 @@ describe("extract operator [", {
         expect_equal(unname(sub[["step"]]), c("b1", "b2"))
     })
 
-    it("keeps allow_failed with view = FALSE", {
+    it("keeps try() references with view = FALSE", {
         p <- pip_new() |>
             pip_add("a", \(x = 1) x) |>
-            pip_add("b", \(x = ~a) x, allow_failed = "x")
+            pip_add("b", \(x = ~ try(a)) x)
         suppressMessages(sub <- p["b", view = FALSE])
 
-        expect_equal(sub[["b", "allow_failed"]], "x")
+        expect_equal(formula_try_args(sub[["b", "params"]]), "x")
     })
 
     it("returns a pipeline by step names with view = FALSE", {
@@ -985,45 +985,16 @@ describe("assignment operator [[<-", {
         )
     })
 
-    it("keeps allow_failed when replacing a function if it still fits", {
+    it("takes try() references from the new function", {
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(x = ~s1) x + 1, allow_failed = "x")
+            pip_add("s2", \(x = ~ try(s1)) x + 1)
 
         p[["s2", "fun"]] <- \(x = ~s1) x * 2
-        expect_equal(p[["s2", "allow_failed"]], "x")
+        expect_equal(formula_try_args(p[["s2", "params"]]), character(0))
 
-        expect_error(
-            p[["s2", "fun"]] <- \(y = ~s1) y,
-            "allow_failed of step 's2' must name arguments .*: 'x'"
-        )
-        expect_equal(p[["s2", "allow_failed"]], "x")
-    })
-
-    it("sets allow_failed after validating it", {
-        p <- pip_new("pipe") |>
-            pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(x = ~s1, y = 1) x + y)
-
-        p[["s2", "allow_failed"]] <- "x"
-        expect_equal(p[["s2", "allow_failed"]], "x")
-
-        expect_error(
-            p[["s2", "allow_failed"]] <- "y",
-            "must name arguments that refer to other steps: 'y'"
-        )
-        expect_error(
-            p[["s2", "allow_failed"]] <- NA,
-            "allow_failed must be a character vector"
-        )
-        expect_error(
-            p[["s2", "allow_failed"]] <- factor("x"),
-            "allow_failed must be a character vector"
-        )
-        expect_equal(p[["s2", "allow_failed"]], "x")
-
-        p[["s2", "allow_failed"]] <- NULL
-        expect_equal(p[["s2", "allow_failed"]], character(0))
+        p[["s2", "fun"]] <- \(y = ~ try(s1)) y
+        expect_equal(formula_try_args(p[["s2", "params"]]), "y")
     })
 
     it("updates the parameters of a single step", {
@@ -1571,17 +1542,19 @@ describe("cross-pipeline assignment", {
         expect_equal(p[["tags"]][[1]], "x")
     })
 
-    it("copies allow_failed, also if it does not fit the old function", {
+    it("copies try() references with the function", {
         p <- pip_new() |>
+            pip_add("s0", \(x = 0) x) |>
             pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(x = ~s1) x, allow_failed = "x")
+            pip_add("s2", \(x = ~ try(s1)) x)
         q <- pip_new() |>
+            pip_add("s0", \(x = 0) x) |>
             pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(y = ~s1) y, allow_failed = "y")
+            pip_add("s2", \(y = ~ try(s1), z = ~s0) y)
 
-        p[2, ] <- q[2, ]
+        p[3, ] <- q[3, ]
 
-        expect_equal(p[["s2", "allow_failed"]], "y")
+        expect_equal(formula_try_args(p[["s2", "params"]]), "y")
     })
 })
 
@@ -1775,17 +1748,38 @@ describe("rbind", {
         )
     })
 
-    it("keeps allow_failed when steps are renamed", {
+    it("keeps try() references when steps are renamed", {
         p1 <- pip_new("left") |>
             pip_add("data", \(x = 1) x)
         p2 <- pip_new("right") |>
-            pip_add("data", \(x = 2) x) |>
-            pip_add("doc", \(d = ~data) d, allow_failed = "d")
+            pip_add("data", \(x = 2) stop("boom")) |>
+            pip_add("other", \(x = 3) x) |>
+            pip_add("doc", \(d = ~ try(data), e = ~ try(-1)) {
+                conditionMessage(d)
+            })
 
         out <- rbind(p1, p2)
 
-        expect_equal(unname(out[["step"]]), c("data", "data2", "doc"))
-        expect_equal(out[["doc", "allow_failed"]], "d")
-        expect_equal(unname(out[["doc", "depends"]]), "data2")
+        expect_equal(
+            unname(out[["step"]]),
+            c("data", "data2", "other", "doc")
+        )
+        expect_equal(
+            out[["doc", "depends"]],
+            c(d = "data2", e = "other")
+        )
+        expect_equal(
+            out[["doc", "params"]][c("d", "e")],
+            list(d = ~ try(data2), e = ~ try(other)),
+            ignore_attr = TRUE
+        )
+        expect_equal(
+            formals(out[["doc", "fun"]])[["d"]],
+            ~ try(data2),
+            ignore_attr = TRUE
+        )
+
+        suppressWarnings(pip_run(out, lgr = NULL, on_error = "continue"))
+        expect_equal(out[["doc", "out"]], "step 'data2' failed: boom")
     })
 })
