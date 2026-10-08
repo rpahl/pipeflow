@@ -8,6 +8,9 @@
   get their own `.self`. Before, they shared it with the steps of the
   original, so once the copy ran, a running step of the original saw the
   copy as `.self`.
+- `pip_set_params()` no longer warns about parameters that are defined only
+  in locked steps. It now also warns about undefined parameters when all
+  selected steps are locked. Locked steps still keep their parameters.
 
 
 # pipeflow 0.4.0.9003

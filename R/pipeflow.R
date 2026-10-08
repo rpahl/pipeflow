@@ -2636,12 +2636,23 @@ pip_set_params <- function(x, params = list()) {
         stop("All parameters must be named")
     }
 
-    # Narrow down the considered rows
     env <- .pip_pipenv(x)
     dat <- env[["data"]]
     rows <- .pip_view_rows(x)
-    rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
 
+    # Signal parameters that are not defined in any of the selected steps,
+    # including the locked ones
+    defined <- unique(unlist(dat[["unbound"]][rows]))
+    undefined <- setdiff(parNames, defined)
+    if (length(undefined) > 0L) {
+        warning(
+            "Trying to set parameters not defined in the target: ",
+            toString(undefined)
+        )
+    }
+
+    # Narrow down the considered rows
+    rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
     if (length(rowsConsidered) == 0L) {
         message("No steps to update: all selected steps are locked")
         return(invisible(x))
@@ -2653,16 +2664,6 @@ pip_set_params <- function(x, params = list()) {
     hasOverlap <- lengths(intersects) > 0
     namesAffected <- intersects[hasOverlap]
     rowsAffected <- rowsConsidered[hasOverlap]
-
-    # Signal parameters that are not defined in any of the affected steps
-    used <- unique(unlist(intersects))
-    undefined <- setdiff(parNames, used)
-    if (length(undefined) > 0L) {
-        warning(
-            "Trying to set parameters not defined in the target: ",
-            toString(undefined)
-        )
-    }
 
     if (any(hasOverlap)) {
         # Update parameters in all affected rows

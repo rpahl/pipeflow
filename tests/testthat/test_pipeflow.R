@@ -3387,6 +3387,18 @@ describe("pip_set_params", {
         expect_equal(after[[1]][["x"]], 1)
     })
 
+    it("does not warn for parameters defined only in locked steps", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(y = 2) y)
+        pip_lock(p["s1"])
+
+        expect_no_warning(pip_set_params(p, params = list(x = 99, y = 22)))
+        after <- p[["params"]]
+        expect_equal(after[[1]][["x"]], 1)
+        expect_equal(after[[2]][["y"]], 22)
+    })
+
     it("warns for unused parameters", {
         p <- pip_new()
         pip_add(p, "s1", \(x = 1, ...) x)
@@ -3465,6 +3477,19 @@ describe("pip_set_params", {
             "all selected steps are locked"
         )
         expect_equal(pip_get_params(p), params) # verify that nothing changed
+    })
+
+    it("warns for unused parameters if all considered steps are locked", {
+        p <- test_pip() |> pip_lock()
+
+        expect_message(
+            expect_warning(
+                pip_set_params(p, params = list(x = 5, foo = 1)),
+                "Trying to set parameters not defined in the target: foo"
+            ),
+            "all selected steps are locked"
+        )
+        expect_equal(p[["params"]][[1]][["x"]], 1)
     })
 
     it("signals unnamed params", {
