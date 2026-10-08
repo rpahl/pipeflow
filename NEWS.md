@@ -2,7 +2,13 @@
 
 # pipeflow 0.4.0.9005
 
-- Same as previous version.
+- Behaviour change: if a step fails, the error from `pip_run()` now names
+  the step (`step 'fit': object 'x' not found`). It is of class
+  `pipeflow_step_error`, with the fields `step` and `parent` (the original
+  condition, which keeps its class). If a partition key fails, the original
+  condition is wrapped in a `pipeflow_key_error` with the fields `key` and
+  `parent`; with `on_error = "continue"`, it is the output of the failed
+  step. Before, only the message of the original error was signalled.
 
 
 # pipeflow 0.4.0.9004

@@ -79,14 +79,28 @@ If a step fails with an error, the failing step's state is set to
 pipeline run state is set to \code{"failed"}. Steps downstream of executed
 steps that were not reached are marked \code{"outdated"}, so a subsequent run
 retries them.
+
+The error is signalled as a condition of class
+\code{c("pipeflow_step_error", "error", "condition")}. Its message is the
+message of the original error, prefixed with \code{"step '<step>': "}. Its
+field \code{step} names the failed step and its field \code{parent} holds the
+original error condition with its class, which can be caught via
+\code{tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)}.
+If the step was mapped over partitioned inputs (see \code{exec} in
+\code{\link[=pip_add]{pip_add()}}), \code{parent} is a condition of class
+\code{c("pipeflow_key_error", "error", "condition")} instead. Its message is
+prefixed with \code{"key '<key>': "}, its field \code{key} names the failed
+partition key and its field \code{parent} holds the original error condition.
 }
 
 \subsection{Continuing after errors}{
 
 With \code{on_error = "continue"}, a failing step gets state \code{"failed"}, its
-error condition is stored as its output, and the run goes on. An input of
-a step is \emph{failed} if its step failed or was not run because a step
-upstream of it failed in this run.
+error condition is stored as its output, and the run goes on. For a step
+mapped over partitioned inputs, the stored condition is the
+\code{pipeflow_key_error} described above. An input of a step is \emph{failed} if
+its step failed or was not run because a step upstream of it failed in
+this run.
 \itemize{
 \item A step with a failed input is not run, and counts as failed for its own
 dependents, unless the argument receiving that input refers to its step
