@@ -26,7 +26,8 @@ filter, multiple values are always treated as alternatives (OR).
 otherwise they are treated as regular expressions.}
 }
 \value{
-A \code{pipeflow_view} object.
+A view: a \code{pipeflow} object that shares the pipeline's state and
+covers the selected steps.
 }
 \description{
 Creates a filtered view showing only a selected subset of steps.

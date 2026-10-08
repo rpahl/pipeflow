@@ -11,6 +11,11 @@
 - `pip_set_params()` no longer warns about parameters that are defined only
   in locked steps. It now also warns about undefined parameters when all
   selected steps are locked. Locked steps still keep their parameters.
+- `pip_add()` and `pip_replace()` now reject primitive functions such as
+  `sum` with a clear error. Before, they failed with "use of NULL
+  environment is defunct".
+- `pip_add()` now says that `.self` is a reserved *parameter* name (not a
+  step name) if `fun` declares it, as `pip_replace()` does.
 
 
 # pipeflow 0.4.0.9003
@@ -65,7 +70,7 @@
   - negative row indices in `p[...]` and `p[i, j] <- value`,
   - boolean filters in `p[...]` (data.table-style expressions),
   - cross-pipeline assignment to copy steps between pipelines,
-  - step removal via `p[[step]] <- NULL`,
+  - step removal via `p[[step, "step"]] <- NULL`,
   - time stamps via `p[[step, "time"]] <- value`,
   - setting or replacing views via `p[["view"]] <- ...`.
 - `pip_collect()` (formerly `pip_collect_out()`) supports grouping via a
@@ -74,7 +79,8 @@
 - `pip_data()` provides direct access to the underlying step table.
 - `pip_graph()` (formerly `pip_get_graph()`) returns visNetwork-compatible
   graph data. The old function names remain available as deprecated aliases.
-- `pip_derived_cols()` returns the names of the read-only (derived) columns.
+- The derived columns `depends`, `unbound` and `nodeId` are read-only and
+  can't be assigned directly.
 - `pip_view()` gains a `join = "union"` argument to combine filters as a
   logical OR.
 - `.self` is now automatically available inside every step function (and is

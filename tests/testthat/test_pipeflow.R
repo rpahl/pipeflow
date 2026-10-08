@@ -761,6 +761,15 @@ describe("pip_add", {
         )
     })
 
+    it("signals if fun is a primitive function", {
+        p <- pip_new()
+        expect_error(
+            pip_add(p, "s1", fun = sum),
+            "fun must not be a primitive function; wrap it"
+        )
+        expect_equal(length(p), 0L)
+    })
+
     it("signals duplicate step names", {
         p <- pip_new()
         pip_add(p, "s1", \(a = 0) a)
@@ -1077,7 +1086,11 @@ describe("pip_add", {
         p <- pip_new()
         expect_error(
             pip_add(p, "s1", function(x = 1, .self = NULL) x),
-            "'.self' is a reserved parameter"
+            paste(
+                "'.self' is a reserved parameter name and must not be",
+                "declared in step 's1' - it is provided automatically"
+            ),
+            fixed = TRUE
         )
     })
 
@@ -1495,6 +1508,19 @@ describe("pip_replace", {
             "step 'unknown' does not exist"
         )
         expect_error(pip_replace(p, "f1", 1), "fun must be a function")
+    })
+
+    it("signals if fun is a primitive function", {
+        p <- test_pip()
+        expect_error(
+            pip_replace(p, "f1", sum),
+            "fun must not be a primitive function; wrap it"
+        )
+        expect_error(
+            p[["f1", "fun"]] <- sum,
+            "fun must not be a primitive function; wrap it"
+        )
+        expect_false(is.primitive(p[["f1", "fun"]]))
     })
 
     it("replaces a step in-place while keeping the original order", {

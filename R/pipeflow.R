@@ -1186,9 +1186,18 @@ pip_add <- function(
     if (!is.function(fun)) {
         stop("fun must be a function")
     }
+    if (is.primitive(fun)) {
+        stop(
+            "fun must not be a primitive function; wrap it, ",
+            "e.g. \\(x = 1) sum(x)"
+        )
+    }
     if (".self" %in% names(formals(fun))) {
         stop_no_call(
-            "'.self' is a reserved parameter and cannot be used as a step name"
+            "'.self' is a reserved parameter name and must not be declared ",
+            "in step '",
+            step,
+            "' - it is provided automatically"
         )
     }
     if (".self" %in% names(params)) {
@@ -2003,6 +2012,12 @@ pip_replace <- function(
     if (!is.function(fun)) {
         stop("fun must be a function")
     }
+    if (is.primitive(fun)) {
+        stop(
+            "fun must not be a primitive function; wrap it, ",
+            "e.g. \\(x = 1) sum(x)"
+        )
+    }
     if (".self" %in% names(formals(fun))) {
         stop_no_call(
             "'.self' is a reserved parameter name and must not be declared ",
@@ -2048,18 +2063,8 @@ pip_replace <- function(
     refNodes <- mget(
         depends,
         envir = env[[".steps_to_nodes"]],
-        ifnotfound = NA_integer_,
         inherits = FALSE
     )
-    if (anyNA(refNodes)) {
-        notFound <- Filter(is.na, refNodes)
-        stop_no_call(
-            "while adding step '",
-            step,
-            "' - cannot reference unknown steps: ",
-            paste0("'", notFound, "'", collapse = ", ")
-        )
-    }
 
     # Update the incoming DAG edges of the replaced step (its node and all
     # outgoing edges stay the same).
@@ -2859,7 +2864,8 @@ pip_unlock <- function(x) {
 #' @param fixed If TRUE, values in `...` are treated as fixed strings,
 #' otherwise they are treated as regular expressions.
 #'
-#' @return A `pipeflow_view` object.
+#' @return A view: a `pipeflow` object that shares the pipeline's state and
+#' covers the selected steps.
 #' @export
 #' @examples
 #' p <- pip_new() |>
