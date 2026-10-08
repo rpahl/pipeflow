@@ -137,9 +137,16 @@
     eval(call("function", formals(fun), body(fun)), envir = env)
 }
 
-# Wrap the step functions of a copied step table again, so that they get a
-# `.self` environment of their own instead of sharing the one of the steps
-# they were copied from. Modifies `dat` in place.
+#' Give the steps of a copied step table their own `.self`
+#'
+#' Wraps the step functions of a copied step table again, so that they get a
+#' `.self` environment of their own instead of sharing the one of the steps
+#' they were copied from.
+#'
+#' @param dat The copied step table (a `data.table`).
+#' @param self The pipeflow pipeline that `.self` refers to in the copy.
+#' @return `dat`, invisibly. Its `fun` column is updated in place.
+#' @noRd
 .pip_rewrap_self <- function(dat, self) {
     if (nrow(dat) > 0L) {
         funs <- lapply(dat[["fun"]], .wrap_self, self = self)
