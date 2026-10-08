@@ -114,6 +114,7 @@
     }
 
     subDat <- data.table::copy(data[rows])
+    .pip_rewrap_self(subDat, self = out)
     useRebuild <- length(rows) / nrow(data) >= rebuildThresh
 
     if (useRebuild) {
@@ -250,9 +251,10 @@
 
     data <- .pip_view_data(x)
     if (is.character(i)) {
-        # case x[[stepName, col]]
-        row <- .pip_steps_to_rows(x, steps = i)
-        if (row > nrow(data)) {
+        # case x[[stepName, col]]; the row is relative to the view's data
+        row <- data.table::chmatch(i, data[["step"]])
+        if (is.na(row)) {
+            .pip_steps_to_rows(x, steps = i) # signals unknown steps
             stop("selected step not part of view: ", i)
         }
     } else {

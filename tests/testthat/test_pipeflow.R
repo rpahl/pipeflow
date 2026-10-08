@@ -455,7 +455,42 @@ describe(".pip_halt", {
             unname(p[["state"]]),
             c("done", "done", "outdated")
         )
+        expect_equal(get_run_state(p), "halted")
+    })
+
+    it("continues after the halt in the next run", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) x) |>
+            pip_add("s2", function(x = ~s1) {
+                .self$halt()
+                x + 1
+            }) |>
+            pip_add("s3", function(x = ~s2) x + 1)
+
+        pip_run(p, lgr = NULL)
+        expect_equal(get_run_state(p), "halted")
+
+        pip_run(p, lgr = NULL)
+        expect_equal(unname(p[["out"]]), list(1, 2, 3))
+        expect_equal(unname(p[["state"]]), rep("done", 3))
         expect_equal(get_run_state(p), "ready")
+    })
+
+    it("keeps the halted run state if steps failed before the halt", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) stop("boom")) |>
+            pip_add("s2", function(x = 1) {
+                .self$halt()
+                x
+            }) |>
+            pip_add("s3", function(x = 1) x)
+
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        expect_equal(get_run_state(p), "halted")
+        expect_equal(unname(p[["state"]]), c("failed", "done", "new"))
     })
 
     it("leaves new steps not reached due to the halt as new", {
@@ -582,7 +617,7 @@ describe(".pip_halt", {
             unname(p[["state"]]),
             c("done", "done", "outdated", "outdated")
         )
-        expect_equal(get_run_state(p), "ready")
+        expect_equal(get_run_state(p), "halted")
     })
 })
 
@@ -759,6 +794,15 @@ describe("pip_add", {
             pip_add(p, "s1", fun = "not a function"),
             "fun must be a function"
         )
+    })
+
+    it("signals if fun is a primitive function", {
+        p <- pip_new()
+        expect_error(
+            pip_add(p, "s1", fun = sum),
+            "fun must not be a primitive function; wrap it"
+        )
+        expect_equal(length(p), 0L)
     })
 
     it("signals duplicate step names", {
@@ -1077,7 +1121,11 @@ describe("pip_add", {
         p <- pip_new()
         expect_error(
             pip_add(p, "s1", function(x = 1, .self = NULL) x),
-            "'.self' is a reserved parameter"
+            paste(
+                "'.self' is a reserved parameter name and must not be",
+                "declared in step 's1' - it is provided automatically"
+            ),
+            fixed = TRUE
         )
     })
 
@@ -1497,6 +1545,19 @@ describe("pip_replace", {
         expect_error(pip_replace(p, "f1", 1), "fun must be a function")
     })
 
+    it("signals if fun is a primitive function", {
+        p <- test_pip()
+        expect_error(
+            pip_replace(p, "f1", sum),
+            "fun must not be a primitive function; wrap it"
+        )
+        expect_error(
+            p[["f1", "fun"]] <- sum,
+            "fun must not be a primitive function; wrap it"
+        )
+        expect_false(is.primitive(p[["f1", "fun"]]))
+    })
+
     it("replaces a step in-place while keeping the original order", {
         p <- test_pip()
         pip_run(p, lgr = NULL)
@@ -1669,6 +1730,31 @@ describe("pip_clone", {
         # The original pipeline still points at itself.
         pip_run(p, lgr = NULL, force = TRUE)
         expect_equal(p[["out"]][[1]], "p1")
+    })
+
+    it("does not change .self of the original when the clone runs", {
+        p <- test_pip()
+        p2 <- pip_clone(p, name = "p2")
+        pip_run(p2, lgr = NULL)
+
+        expect_equal(p2[["out"]][[1]], "p2")
+        self <- environment(p[["s1", "fun"]])[[".self"]]
+        expect_identical(self[["pipenv"]], p[["pipenv"]])
+    })
+
+    it("keeps .self of a running step when a clone of it runs", {
+        p <- pip_new("self") |>
+            pip_add("s", \(x = 1) {
+                before <- .self[["name"]]
+                if (x == 1) {
+                    cl <- pip_clone(.self, name = "inner-clone")
+                    pip_set_params(cl, list(x = 2)) |> pip_run(lgr = NULL)
+                }
+                c(before = before, after = .self[["name"]])
+            })
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["s", "out"]], c(before = "self", after = "self"))
     })
 
     it("clones an empty pipeline", {
@@ -3362,6 +3448,18 @@ describe("pip_set_params", {
         expect_equal(after[[1]][["x"]], 1)
     })
 
+    it("does not warn for parameters defined only in locked steps", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(y = 2) y)
+        pip_lock(p["s1"])
+
+        expect_no_warning(pip_set_params(p, params = list(x = 99, y = 22)))
+        after <- p[["params"]]
+        expect_equal(after[[1]][["x"]], 1)
+        expect_equal(after[[2]][["y"]], 22)
+    })
+
     it("warns for unused parameters", {
         p <- pip_new()
         pip_add(p, "s1", \(x = 1, ...) x)
@@ -3440,6 +3538,19 @@ describe("pip_set_params", {
             "all selected steps are locked"
         )
         expect_equal(pip_get_params(p), params) # verify that nothing changed
+    })
+
+    it("warns for unused parameters if all considered steps are locked", {
+        p <- test_pip() |> pip_lock()
+
+        expect_message(
+            expect_warning(
+                pip_set_params(p, params = list(x = 5, foo = 1)),
+                "Trying to set parameters not defined in the target: foo"
+            ),
+            "all selected steps are locked"
+        )
+        expect_equal(p[["params"]][[1]][["x"]], 1)
     })
 
     it("signals unnamed params", {

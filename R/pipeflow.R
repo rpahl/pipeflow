@@ -137,6 +137,17 @@
     eval(call("function", formals(fun), body(fun)), envir = env)
 }
 
+# Wrap the step functions of a copied step table again, so that they get a
+# `.self` environment of their own instead of sharing the one of the steps
+# they were copied from. Modifies `dat` in place.
+.pip_rewrap_self <- function(dat, self) {
+    if (nrow(dat) > 0L) {
+        funs <- lapply(dat[["fun"]], .wrap_self, self = self)
+        data.table::set(dat, j = "fun", value = list(funs))
+    }
+    invisible(dat)
+}
+
 # ------------------------------
 # Parameter & dependency parsing
 # ------------------------------
@@ -1175,9 +1186,18 @@ pip_add <- function(
     if (!is.function(fun)) {
         stop("fun must be a function")
     }
+    if (is.primitive(fun)) {
+        stop(
+            "fun must not be a primitive function; wrap it, ",
+            "e.g. \\(x = 1) sum(x)"
+        )
+    }
     if (".self" %in% names(formals(fun))) {
         stop_no_call(
-            "'.self' is a reserved parameter and cannot be used as a step name"
+            "'.self' is a reserved parameter name and must not be declared ",
+            "in step '",
+            step,
+            "' - it is provided automatically"
         )
     }
     if (".self" %in% names(params)) {
@@ -1282,6 +1302,7 @@ pip_clone <- function(x, name = NULL) {
 
     env[[".dag"]] <- dag_clone(.pip_pipenv(x)[[".dag"]])
     dat <- data.table::copy(.pip_pipenv(x)[["data"]])
+    .pip_rewrap_self(dat, self = out)
 
     # Clone steps to nodes mapping
     stepsToNodes <- env[[".steps_to_nodes"]]
@@ -1991,6 +2012,12 @@ pip_replace <- function(
     if (!is.function(fun)) {
         stop("fun must be a function")
     }
+    if (is.primitive(fun)) {
+        stop(
+            "fun must not be a primitive function; wrap it, ",
+            "e.g. \\(x = 1) sum(x)"
+        )
+    }
     if (".self" %in% names(formals(fun))) {
         stop_no_call(
             "'.self' is a reserved parameter name and must not be declared ",
@@ -2036,18 +2063,8 @@ pip_replace <- function(
     refNodes <- mget(
         depends,
         envir = env[[".steps_to_nodes"]],
-        ifnotfound = NA_integer_,
         inherits = FALSE
     )
-    if (anyNA(refNodes)) {
-        notFound <- Filter(is.na, refNodes)
-        stop_no_call(
-            "while adding step '",
-            step,
-            "' - cannot reference unknown steps: ",
-            paste0("'", notFound, "'", collapse = ", ")
-        )
-    }
 
     # Update the incoming DAG edges of the replaced step (its node and all
     # outgoing edges stay the same).
@@ -2203,8 +2220,8 @@ pip_replace <- function(
 #' - `p$halt()`: aborts the current run after the current step has finished.
 #'   This is a *controlled halt* and deliberately distinct from [base::stop()]:
 #'   no error is raised and the pipeline is not marked as `"failed"`. The run
-#'   simply ends and a subsequent [pip_run()] will continue where the run
-#'   left off.
+#'   simply ends with run state `"halted"` and a subsequent [pip_run()] will
+#'   continue where the run left off.
 #'
 #' In both cases steps downstream of executed steps that have not been
 #' executed until the restart or halt happens are marked as `"outdated"`.
@@ -2348,6 +2365,7 @@ pip_run <- function(
     action <- if (state == "restart") "Restarting" else "Starting"
     log_info(sprintf("%s run of %s '%s'", action, data.class(x), pipname))
     pipenv[[".run_state"]][] <- "running"
+    halted <- FALSE
     tryCatch(
         {
             for (i in seq_along(rowsToRun)) {
@@ -2469,6 +2487,7 @@ pip_run <- function(
 
                 if (stateAfterStep == "halted") {
                     log_info("Aborting pipeline execution on manual halt.")
+                    halted <- TRUE
                     break
                 }
             }
@@ -2476,7 +2495,13 @@ pip_run <- function(
             log_info(
                 sprintf("Finished run of %s '%s'", data.class(x), pipname)
             )
-            runState <- if (length(failures) > 0L) "continued" else "ready"
+            runState <- if (halted) {
+                "halted"
+            } else if (length(failures) > 0L) {
+                "continued"
+            } else {
+                "ready"
+            }
             pipenv[[".run_state"]][] <- runState
             pipenv[[".last_run"]] <- Sys.time()
         },
@@ -2624,12 +2649,23 @@ pip_set_params <- function(x, params = list()) {
         stop("All parameters must be named")
     }
 
-    # Narrow down the considered rows
     env <- .pip_pipenv(x)
     dat <- env[["data"]]
     rows <- .pip_view_rows(x)
-    rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
 
+    # Signal parameters that are not defined in any of the selected steps,
+    # including the locked ones
+    defined <- unique(unlist(dat[["unbound"]][rows]))
+    undefined <- setdiff(parNames, defined)
+    if (length(undefined) > 0L) {
+        warning(
+            "Trying to set parameters not defined in the target: ",
+            toString(undefined)
+        )
+    }
+
+    # Narrow down the considered rows
+    rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
     if (length(rowsConsidered) == 0L) {
         message("No steps to update: all selected steps are locked")
         return(invisible(x))
@@ -2641,16 +2677,6 @@ pip_set_params <- function(x, params = list()) {
     hasOverlap <- lengths(intersects) > 0
     namesAffected <- intersects[hasOverlap]
     rowsAffected <- rowsConsidered[hasOverlap]
-
-    # Signal parameters that are not defined in any of the affected steps
-    used <- unique(unlist(intersects))
-    undefined <- setdiff(parNames, used)
-    if (length(undefined) > 0L) {
-        warning(
-            "Trying to set parameters not defined in the target: ",
-            toString(undefined)
-        )
-    }
 
     if (any(hasOverlap)) {
         # Update parameters in all affected rows
@@ -2846,7 +2872,8 @@ pip_unlock <- function(x) {
 #' @param fixed If TRUE, values in `...` are treated as fixed strings,
 #' otherwise they are treated as regular expressions.
 #'
-#' @return A `pipeflow_view` object.
+#' @return A view: a `pipeflow` object that shares the pipeline's state and
+#' covers the selected steps.
 #' @export
 #' @examples
 #' p <- pip_new() |>
