@@ -2298,6 +2298,125 @@ describe("pip_run", {
         })
     })
 
+    describe("signals step errors", {
+        catch_step_error <- function(x, ...) {
+            tryCatch(
+                pip_run(x, lgr = NULL, ...),
+                pipeflow_step_error = \(e) e
+            )
+        }
+
+        it("names the failed step and keeps the original condition", {
+            p <- pip_new() |>
+                pip_add("data", \(x = 1) x) |>
+                pip_add("a", \(x = ~data) stop("boom"))
+
+            expect_error(
+                pip_run(p, lgr = NULL),
+                "step 'a': boom",
+                fixed = TRUE,
+                class = "pipeflow_step_error"
+            )
+
+            e <- catch_step_error(p)
+            expect_s3_class(
+                e,
+                c("pipeflow_step_error", "error", "condition"),
+                exact = TRUE
+            )
+            expect_equal(conditionMessage(e), "step 'a': boom")
+            expect_equal(e[["step"]], "a")
+            expect_s3_class(e[["parent"]], "simpleError")
+            expect_equal(conditionMessage(e[["parent"]]), "boom")
+            expect_null(e[["call"]])
+            expect_equal(get_run_state(p), "failed")
+        })
+
+        it("keeps the class of the original condition", {
+            skip_if_not_installed("rlang")
+            p <- pip_new() |>
+                pip_add("a", \(x = 1) {
+                    rlang::abort(
+                        "boom",
+                        class = "my_error",
+                        body = c(i = "hint")
+                    )
+                })
+
+            e <- catch_step_error(p)
+
+            expect_s3_class(e[["parent"]], "my_error")
+            expect_s3_class(e[["parent"]], "rlang_error")
+            expect_equal(
+                conditionMessage(e),
+                paste0("step 'a': ", conditionMessage(e[["parent"]]))
+            )
+            expect_match(conditionMessage(e), "hint", fixed = TRUE)
+        })
+
+        it("names the failed upstream step of a view run", {
+            p <- pip_new() |>
+                pip_add("a", \(x = 1) stop("upstream boom")) |>
+                pip_add("b", \(x = ~a) x)
+
+            e <- catch_step_error(pip_view(p, step = "b"))
+
+            expect_equal(e[["step"]], "a")
+            expect_equal(conditionMessage(e), "step 'a': upstream boom")
+        })
+
+        it("keeps the step error of a run after a restart", {
+            cnt <- new.env()
+            cnt[["n"]] <- 0L
+            p <- pip_new() |>
+                pip_add("s1", function(x = 1) {
+                    cnt[["n"]] <- cnt[["n"]] + 1L
+                    if (cnt[["n"]] == 1L) {
+                        .self$restart()
+                    }
+                    x
+                }) |>
+                pip_add("s2", \(x = ~s1) stop("boom"))
+
+            e <- catch_step_error(p)
+
+            expect_equal(cnt[["n"]], 2L)
+            expect_equal(e[["step"]], "s2")
+            expect_equal(conditionMessage(e), "step 's2': boom")
+            expect_equal(get_run_state(p), "failed")
+        })
+
+        it("nests the step errors of inner pipelines", {
+            inner <- pip_new("inner") |>
+                pip_add("i", \(x = 1) stop("boom"))
+            p <- pip_new("outer") |>
+                pip_add("o", \(x = 1) pip_run(inner, lgr = NULL))
+
+            e <- catch_step_error(p)
+
+            expect_equal(conditionMessage(e), "step 'o': step 'i': boom")
+            expect_equal(e[["step"]], "o")
+            expect_s3_class(e[["parent"]], "pipeflow_step_error")
+            expect_equal(e[["parent"]][["step"]], "i")
+        })
+
+        it("keeps other errors of the run as they are", {
+            p <- pip_new() |>
+                pip_add("a", \(x = 1) x)
+            progress <- function(value, detail) stop("progress boom")
+
+            e <- tryCatch(
+                pip_run(p, lgr = NULL, progress = progress),
+                error = \(e) e
+            )
+
+            expect_false(inherits(e, "pipeflow_step_error"))
+            expect_equal(conditionMessage(e), "progress boom")
+            expect_null(e[["call"]])
+            expect_equal(get_run_state(p), "failed")
+        })
+    })
+
     describe("running views", {
         it("can run parts of the pipeline via views", {
             p <- test_pip()
@@ -2594,6 +2713,19 @@ describe("pip_run", {
                 pip_run(p, lgr = NULL),
                 "key 'b': boom"
             )
+
+            e <- tryCatch(pip_run(p, lgr = NULL), pipeflow_step_error = \(e) e)
+            expect_equal(conditionMessage(e), "step 'fragile': key 'b': boom")
+            keyError <- e[["parent"]]
+            expect_s3_class(
+                keyError,
+                c("pipeflow_key_error", "error", "condition"),
+                exact = TRUE
+            )
+            expect_equal(keyError[["key"]], "b")
+            expect_equal(conditionMessage(keyError), "key 'b': boom")
+            expect_equal(conditionMessage(keyError[["parent"]]), "boom")
+            expect_null(keyError[["call"]])
         })
     })
 
@@ -3058,7 +3190,31 @@ describe("pip_run", {
 
             out <- p[["a", "out"]]
             expect_s3_class(out, "my_error")
+            expect_false(inherits(out, "pipeflow_step_error"))
             expect_equal(conditionMessage(out), "custom")
+        })
+
+        it("does not repeat the step name in failures and the warning", {
+            skip_if_not_installed("rlang")
+            p <- pip_new("p") |>
+                pip_add("a", \(x = 1) {
+                    rlang::abort("boom", class = "my_error")
+                }) |>
+                pip_add("doc", \(x = ~ try(a)) x)
+            w <- tryCatch(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                pipeflow_run_failed = \(w) w
+            )
+
+            expect_s3_class(p[["a", "out"]], "my_error")
+            expect_false(inherits(p[["a", "out"]], "pipeflow_step_error"))
+            expect_equal(
+                conditionMessage(p[["doc", "out"]]),
+                "step 'a' failed: boom"
+            )
+            expect_s3_class(w[["failed"]][["a"]], "my_error")
+            expect_match(conditionMessage(w), "'a': boom", fixed = TRUE)
+            expect_no_match(conditionMessage(w), "step 'a': ", fixed = TRUE)
         })
 
         it("sets the run state to 'continued' and signals a warning", {
@@ -3243,6 +3399,12 @@ describe("pip_run", {
                 "step 'calc' failed: key 'b': too big"
             )
             expect_equal(conditionMessage(f[["parent"]]), "key 'b': too big")
+
+            out <- p[["calc", "out"]]
+            expect_s3_class(out, "pipeflow_key_error")
+            expect_equal(out[["key"]], "b")
+            expect_equal(conditionMessage(out[["parent"]]), "too big")
+            expect_identical(f[["parent"]], out)
         })
 
         it("does not treat locked steps with failed inputs as failed", {

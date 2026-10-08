@@ -25,6 +25,7 @@ Suggests:
     gridExtra,
     knitr,
     mockery,
+    rlang,
     rmarkdown,
     targets,
     testthat,
