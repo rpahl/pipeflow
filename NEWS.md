@@ -4,6 +4,10 @@
 
 - `x[[step, j]]` on a view now returns the value of `step`. Before, it read
   the wrong row (or failed) when the view did not start at the first step.
+- The steps of a copy made by `pip_clone()`, `p[]` or `p[i, view = FALSE]`
+  get their own `.self`. Before, they shared it with the steps of the
+  original, so once the copy ran, a running step of the original saw the
+  copy as `.self`.
 
 
 # pipeflow 0.4.0.9003

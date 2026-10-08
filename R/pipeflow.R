@@ -137,6 +137,17 @@
     eval(call("function", formals(fun), body(fun)), envir = env)
 }
 
+# Wrap the step functions of a copied step table again, so that they get a
+# `.self` environment of their own instead of sharing the one of the steps
+# they were copied from. Modifies `dat` in place.
+.pip_rewrap_self <- function(dat, self) {
+    if (nrow(dat) > 0L) {
+        funs <- lapply(dat[["fun"]], .wrap_self, self = self)
+        data.table::set(dat, j = "fun", value = list(funs))
+    }
+    invisible(dat)
+}
+
 # ------------------------------
 # Parameter & dependency parsing
 # ------------------------------
@@ -1282,6 +1293,7 @@ pip_clone <- function(x, name = NULL) {
 
     env[[".dag"]] <- dag_clone(.pip_pipenv(x)[[".dag"]])
     dat <- data.table::copy(.pip_pipenv(x)[["data"]])
+    .pip_rewrap_self(dat, self = out)
 
     # Clone steps to nodes mapping
     stepsToNodes <- env[[".steps_to_nodes"]]

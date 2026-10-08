@@ -114,6 +114,7 @@
     }
 
     subDat <- data.table::copy(data[rows])
+    .pip_rewrap_self(subDat, self = out)
     useRebuild <- length(rows) / nrow(data) >= rebuildThresh
 
     if (useRebuild) {

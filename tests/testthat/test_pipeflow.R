@@ -1671,6 +1671,31 @@ describe("pip_clone", {
         expect_equal(p[["out"]][[1]], "p1")
     })
 
+    it("does not change .self of the original when the clone runs", {
+        p <- test_pip()
+        p2 <- pip_clone(p, name = "p2")
+        pip_run(p2, lgr = NULL)
+
+        expect_equal(p2[["out"]][[1]], "p2")
+        self <- environment(p[["s1", "fun"]])[[".self"]]
+        expect_identical(self[["pipenv"]], p[["pipenv"]])
+    })
+
+    it("keeps .self of a running step when a clone of it runs", {
+        p <- pip_new("self") |>
+            pip_add("s", \(x = 1) {
+                before <- .self[["name"]]
+                if (x == 1) {
+                    cl <- pip_clone(.self, name = "inner-clone")
+                    pip_set_params(cl, list(x = 2)) |> pip_run(lgr = NULL)
+                }
+                c(before = before, after = .self[["name"]])
+            })
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["s", "out"]], c(before = "self", after = "self"))
+    })
+
     it("clones an empty pipeline", {
         p <- pip_new()
         p2 <- pip_clone(p)

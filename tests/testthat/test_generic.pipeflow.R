@@ -334,6 +334,17 @@ describe("extract operator [", {
         expect_equal(unname(p[["state"]][1]), "new")
     })
 
+    it("does not change .self of the source steps with view = FALSE", {
+        p <- pip_new("p") |>
+            pip_add("a", \(x = 1) .self[["name"]]) |>
+            pip_add("b", \(x = ~a) x)
+        sub <- p["a", view = FALSE]
+        pip_run(sub, lgr = NULL)
+
+        self <- environment(p[["a", "fun"]])[[".self"]]
+        expect_identical(self[["pipenv"]], p[["pipenv"]])
+    })
+
     it("copies DAG edges for the extracted subset", {
         p <- test_pip()
         suppressMessages(sub <- p[c("a2", "b2"), view = FALSE])
