@@ -1,5 +1,10 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.4.0.9006
+
+- Same as previous version.
+
+
 # pipeflow 0.4.0.9005
 
 - Behaviour change: if a step fails, the error from `pip_run()` now names
