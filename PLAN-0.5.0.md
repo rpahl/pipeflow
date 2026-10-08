@@ -1,6 +1,6 @@
 # pipeflow 0.5.0 — plan
 
-Starting point: `main` at 0.4.0.9003 (3319065). Since 0.4.0 (CRAN):
+Starting point: `main` at 0.4.0.9004 (3457d4c). Since 0.4.0 (CRAN):
 - steps that never ran stay "new", and runs outdate only what is
   downstream of executed steps (#84);
 - `pip_run(on_error = "continue")` runs on after failed steps (#84);
@@ -11,8 +11,9 @@ This plan covers the rest of 0.5.0: bug fixes, clearer errors, parameter
 handling, one extension point (`pip_arg_value()`), `.self` only where it
 is used, and the CRAN release.
 
-Line references are at 3319065: `pf` = `R/pipeflow.R`, `gen` =
-`R/generic.pipeflow.R`, `print` = `R/print.pipeflow.R`.
+Line references are at 3319065 (the code is the same at 3457d4c): `pf` =
+`R/pipeflow.R`, `gen` = `R/generic.pipeflow.R`, `print` =
+`R/print.pipeflow.R`.
 
 ## Conventions
 
