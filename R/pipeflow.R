@@ -2220,8 +2220,8 @@ pip_replace <- function(
 #' - `p$halt()`: aborts the current run after the current step has finished.
 #'   This is a *controlled halt* and deliberately distinct from [base::stop()]:
 #'   no error is raised and the pipeline is not marked as `"failed"`. The run
-#'   simply ends and a subsequent [pip_run()] will continue where the run
-#'   left off.
+#'   simply ends with run state `"halted"` and a subsequent [pip_run()] will
+#'   continue where the run left off.
 #'
 #' In both cases steps downstream of executed steps that have not been
 #' executed until the restart or halt happens are marked as `"outdated"`.
@@ -2365,6 +2365,7 @@ pip_run <- function(
     action <- if (state == "restart") "Restarting" else "Starting"
     log_info(sprintf("%s run of %s '%s'", action, data.class(x), pipname))
     pipenv[[".run_state"]][] <- "running"
+    halted <- FALSE
     tryCatch(
         {
             for (i in seq_along(rowsToRun)) {
@@ -2486,6 +2487,7 @@ pip_run <- function(
 
                 if (stateAfterStep == "halted") {
                     log_info("Aborting pipeline execution on manual halt.")
+                    halted <- TRUE
                     break
                 }
             }
@@ -2493,7 +2495,13 @@ pip_run <- function(
             log_info(
                 sprintf("Finished run of %s '%s'", data.class(x), pipname)
             )
-            runState <- if (length(failures) > 0L) "continued" else "ready"
+            runState <- if (halted) {
+                "halted"
+            } else if (length(failures) > 0L) {
+                "continued"
+            } else {
+                "ready"
+            }
             pipenv[[".run_state"]][] <- runState
             pipenv[[".last_run"]] <- Sys.time()
         },

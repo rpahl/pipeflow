@@ -16,6 +16,10 @@
   environment is defunct".
 - `pip_add()` now says that `.self` is a reserved *parameter* name (not a
   step name) if `fun` declares it, as `pip_replace()` does.
+- Behaviour change: a run stopped by `halt()` now ends with run state
+  `"halted"`, as shown when printing the pipeline. Before, it was always
+  overwritten with `"ready"` (or `"continued"`). The next `pip_run()`
+  continues as before.
 
 
 # pipeflow 0.4.0.9003

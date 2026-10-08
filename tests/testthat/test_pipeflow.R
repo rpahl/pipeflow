@@ -455,7 +455,42 @@ describe(".pip_halt", {
             unname(p[["state"]]),
             c("done", "done", "outdated")
         )
+        expect_equal(get_run_state(p), "halted")
+    })
+
+    it("continues after the halt in the next run", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) x) |>
+            pip_add("s2", function(x = ~s1) {
+                .self$halt()
+                x + 1
+            }) |>
+            pip_add("s3", function(x = ~s2) x + 1)
+
+        pip_run(p, lgr = NULL)
+        expect_equal(get_run_state(p), "halted")
+
+        pip_run(p, lgr = NULL)
+        expect_equal(unname(p[["out"]]), list(1, 2, 3))
+        expect_equal(unname(p[["state"]]), rep("done", 3))
         expect_equal(get_run_state(p), "ready")
+    })
+
+    it("keeps the halted run state if steps failed before the halt", {
+        p <- pip_new() |>
+            pip_add("s1", function(x = 1) stop("boom")) |>
+            pip_add("s2", function(x = 1) {
+                .self$halt()
+                x
+            }) |>
+            pip_add("s3", function(x = 1) x)
+
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        expect_equal(get_run_state(p), "halted")
+        expect_equal(unname(p[["state"]]), c("failed", "done", "new"))
     })
 
     it("leaves new steps not reached due to the halt as new", {
@@ -582,7 +617,7 @@ describe(".pip_halt", {
             unname(p[["state"]]),
             c("done", "done", "outdated", "outdated")
         )
-        expect_equal(get_run_state(p), "ready")
+        expect_equal(get_run_state(p), "halted")
     })
 })
 
