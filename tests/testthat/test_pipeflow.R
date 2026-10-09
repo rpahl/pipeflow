@@ -781,6 +781,56 @@ describe("pip_new", {
 })
 
 
+describe("pip_add params overlapping the formals of fun", {
+    it("warns if params overlap the defaults of fun", {
+        p <- pip_new()
+        expect_warning(
+            pip_add(p, "s", \(x = 1, y = 2) x + y, params = list(x = 5, y = 6)),
+            "step 's': the defaults of fun take precedence over params: x, y",
+            fixed = TRUE
+        )
+        expect_equal(p[["params"]][["s"]][["x"]], 1)
+        expect_equal(p[["params"]][["s"]][["y"]], 2)
+    })
+
+    it("names only the overlapping params", {
+        p <- pip_new()
+        expect_warning(
+            pip_add(p, "s", \(x = 1) x, params = list(x = 5, z = 6)),
+            "over params: x$"
+        )
+    })
+
+    it("warns if the step is inserted via after", {
+        p <- pip_new() |> pip_add("a", \(x = 1) x)
+        expect_warning(
+            pip_add(p, "b", \(x = 1) x, params = list(x = 5), after = 0),
+            "step 'b': the defaults of fun take precedence over params: x",
+            fixed = TRUE
+        )
+    })
+
+    it("does not warn for params that are not formals of fun", {
+        p <- pip_new()
+        expect_no_warning(
+            pip_add(p, "s", \(x = 1) x, params = list(z = 5))
+        )
+    })
+
+    it("does not warn for params that only match '...'", {
+        p <- pip_new()
+        expect_no_warning(
+            pip_add(p, "s", \(x = 1, ...) x, params = list(... = 5))
+        )
+    })
+
+    it("does not warn without params", {
+        p <- pip_new()
+        expect_no_warning(pip_add(p, "s", \(x = 1) x))
+    })
+})
+
+
 describe("pip_add", {
     it("signals if step is not a single non-empty string", {
         p <- pip_new()
@@ -984,11 +1034,14 @@ describe("pip_add", {
 
     it("merges params with function defaults, letting defaults win", {
         p <- pip_new()
-        pip_add(
-            p,
-            "s1",
-            function(x = 1, y = 2) x + y,
-            params = list(x = 10, y = 20, z = 99)
+        expect_warning(
+            pip_add(
+                p,
+                "s1",
+                function(x = 1, y = 2) x + y,
+                params = list(x = 10, y = 20, z = 99)
+            ),
+            "defaults of fun take precedence over params: x, y"
         )
 
         pars <- p[["params"]][[1]]
@@ -1085,7 +1138,7 @@ describe("pip_add", {
             p,
             "s1",
             function(x = 1, y = 2, ...) x + y,
-            params = list(x = 10, y = 20, z = 99)
+            params = list(z = 99)
         )
         pip_run(p, lgr = NULL)
 
@@ -1518,6 +1571,23 @@ describe("pip_replace", {
             pip_add("f2", \(x = 2) x) |>
             pip_add("f3", \(x = ~f2) x + 1)
     }
+
+    it("warns if params overlap the defaults of fun", {
+        p <- test_pip()
+        expect_warning(
+            pip_replace(p, "f2", \(x = 20) x, params = list(x = 5)),
+            "step 'f2': the defaults of fun take precedence over params: x",
+            fixed = TRUE
+        )
+        expect_equal(p[["params"]][["f2"]][["x"]], 20)
+    })
+
+    it("does not warn if params do not overlap the defaults of fun", {
+        p <- test_pip()
+        expect_no_warning(
+            pip_replace(p, "f2", \(x = 20) x, params = list(z = 5))
+        )
+    })
 
     it("signals invalid inputs", {
         p <- test_pip()

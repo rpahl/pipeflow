@@ -75,6 +75,22 @@
     invisible(exec)
 }
 
+# Warn if `params` contain names that are also formals of `fun`, because
+# the defaults of `fun` take precedence over `params` when merged.
+.warn_params_overlap <- function(step, fun, params) {
+    overlap <- intersect(names(params), setdiff(names(formals(fun)), "..."))
+    if (length(overlap) > 0L) {
+        warning(
+            "step '",
+            step,
+            "': the defaults of fun take precedence over params: ",
+            toString(overlap),
+            call. = FALSE
+        )
+    }
+    invisible(overlap)
+}
+
 .assert_logger <- function(lgr) {
     if (!is.function(lgr)) {
         stop("lgr must be a function")
@@ -1237,6 +1253,7 @@ pip_add <- function(
         )
     }
     .assert_exec_mode(exec)
+    .warn_params_overlap(step, fun, params)
 
     n <- length(x)
 
@@ -2064,6 +2081,7 @@ pip_replace <- function(
         )
     }
     .assert_exec_mode(exec)
+    .warn_params_overlap(step, fun, params)
 
     env <- .pip_pipenv(x)
     data <- env[["data"]]

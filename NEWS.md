@@ -2,6 +2,9 @@
 
 # pipeflow 0.4.0.9006
 
+- `pip_add()` and `pip_replace()` now warn if `params` contain names that
+  are also arguments of `fun`. As documented, the defaults of `fun` take
+  precedence over `params`, so such values were silently dropped before.
 - `pip_set_params()` gains `unknown = c("warn", "ignore", "error")` to
   control what happens with parameters that are not defined in the target.
   The default `"warn"` keeps the current behaviour; `"error"` fails before
