@@ -3632,6 +3632,80 @@ describe("pip_set_params", {
         )
     })
 
+    it("ignores unused parameters silently if unknown = 'ignore'", {
+        p <- test_pip()
+        expect_no_warning(
+            pip_set_params(p, params = list(x = 5, foo = 1), unknown = "ignore")
+        )
+        expect_equal(p[["params"]][[1]][["x"]], 5)
+    })
+
+    it("fails for unused parameters if unknown = 'error'", {
+        p <- test_pip()
+        expect_error(
+            pip_set_params(p, params = list(foo = 1), unknown = "error"),
+            "Trying to set parameters not defined in the target: foo"
+        )
+    })
+
+    it("changes nothing if unknown = 'error' fails", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        params <- p[["params"]]
+        expect_error(
+            pip_set_params(p, params = list(x = 5, foo = 1), unknown = "error"),
+            "foo"
+        )
+        expect_equal(p[["params"]], params)
+        expect_equal(unname(p[["state"]]), rep("done", 4))
+    })
+
+    it("checks unknown parameters against the selected view", {
+        p <- test_pip()
+        v <- pip_view(p, step = "s3")
+        expect_error(
+            pip_set_params(v, params = list(y = 22), unknown = "error"),
+            "Trying to set parameters not defined in the target: y"
+        )
+    })
+
+    it("fails for unused parameters if all steps are locked", {
+        p <- test_pip() |> pip_lock()
+        expect_no_message(
+            expect_error(
+                pip_set_params(p, params = list(foo = 1), unknown = "error"),
+                "not defined in the target: foo"
+            )
+        )
+    })
+
+    it("does not fail if unknown = 'error' and all params are known", {
+        p <- test_pip()
+        expect_no_error(
+            pip_set_params(p, params = list(x = 5, y = 3), unknown = "error")
+        )
+        expect_equal(p[["params"]][[2]][["y"]], 3)
+    })
+
+    it("fails for invalid values of unknown", {
+        p <- test_pip()
+        expect_error(
+            pip_set_params(p, params = list(x = 5), unknown = "foo"),
+            "'arg' should be one of"
+        )
+    })
+
+    it("warns by default for unused parameters via the $ method", {
+        p <- test_pip()
+        expect_warning(
+            p$set_params(params = list(foo = 1)),
+            "not defined in the target: foo"
+        )
+        expect_error(
+            p$set_params(params = list(foo = 1), unknown = "error"),
+            "not defined in the target: foo"
+        )
+    })
+
     it("sets parameters only within the selected view", {
         p <- test_pip()
 

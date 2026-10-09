@@ -2,6 +2,10 @@
 
 # pipeflow 0.4.0.9006
 
+- `pip_set_params()` gains `unknown = c("warn", "ignore", "error")` to
+  control what happens with parameters that are not defined in the target.
+  The default `"warn"` keeps the current behaviour; `"error"` fails before
+  anything is changed.
 - Behaviour change: `pip_set_params()` (and `p[[step, "params"]] <- value`)
   no longer outdates a step if the values set on it are `identical()` to
   the stored ones. Only steps whose values change, and the steps downstream

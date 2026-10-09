@@ -2666,13 +2666,15 @@ pip_reset <- function(x) {
 #' doesn't outdate the step unless `force = TRUE`.
 #'
 #' @param x A pipeflow pip or view.
-#' @param params Named list of parameters to set (only used by
-#' [pip_set_params()]).
+#' @param params Named list of parameters to set
+#' @param unknown How to handle `params` that are not defined in any of the
+#' selected steps, including locked ones: `"warn"` (default) signals a
+#' warning and sets the remaining parameters, `"ignore"` does so silently, and
+#' `"error"` fails before anything is changed.
 #' @param force Logical. If `TRUE`, every step that has one of the `params`
 #' is outdated (together with its downstream steps), even if the values are
 #' [identical()] to the stored ones. This refreshes steps whose inputs are
-#' environments or reference objects that were modified in place. Only used
-#' by [pip_set_params()]. Default is `FALSE`.
+#' environments or reference objects that were modified in place.
 #' @return For [pip_get_params()], a named list of unbound parameter values;
 #' if the same parameter name appears in multiple steps, the first
 #' occurrence in pipeline order is returned. For [pip_set_params()], the
@@ -2703,10 +2705,20 @@ pip_reset <- function(x) {
 #' \donttest{
 #' pip_set_params(p, params = list(nope = 1))
 #' }
+#'
+#' # ... which can be silenced or turned into an error
+#' pip_set_params(p, params = list(nope = 1), unknown = "ignore")
+#' try(pip_set_params(p, params = list(nope = 1), unknown = "error"))
 #' @export
-pip_set_params <- function(x, params = list(), force = FALSE) {
+pip_set_params <- function(
+    x,
+    params = list(),
+    unknown = c("warn", "ignore", "error"),
+    force = FALSE
+) {
     # Input checking
     .assert_pip_or_view(x)
+    unknown <- match.arg(unknown)
     if (!is.list(params)) {
         stop("params must be a list")
     }
@@ -2730,11 +2742,15 @@ pip_set_params <- function(x, params = list(), force = FALSE) {
     # including the locked ones
     defined <- unique(unlist(dat[["unbound"]][rows]))
     undefined <- setdiff(parNames, defined)
-    if (length(undefined) > 0L) {
-        warning(
+    if (length(undefined) > 0L && unknown != "ignore") {
+        msg <- paste0(
             "Trying to set parameters not defined in the target: ",
             toString(undefined)
         )
+        if (unknown == "error") {
+            stop_no_call(msg)
+        }
+        warning(msg)
     }
 
     # Narrow down the considered rows

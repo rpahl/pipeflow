@@ -7,19 +7,27 @@
 \usage{
 pip_get_params(x)
 
-pip_set_params(x, params = list(), force = FALSE)
+pip_set_params(
+  x,
+  params = list(),
+  unknown = c("warn", "ignore", "error"),
+  force = FALSE
+)
 }
 \arguments{
 \item{x}{A pipeflow pip or view.}
 
-\item{params}{Named list of parameters to set (only used by
-\code{\link[=pip_set_params]{pip_set_params()}}).}
+\item{params}{Named list of parameters to set}
+
+\item{unknown}{How to handle \code{params} that are not defined in any of the
+selected steps, including locked ones: \code{"warn"} (default) signals a
+warning and sets the remaining parameters, \code{"ignore"} does so silently, and
+\code{"error"} fails before anything is changed.}
 
 \item{force}{Logical. If \code{TRUE}, every step that has one of the \code{params}
 is outdated (together with its downstream steps), even if the values are
 \code{\link[=identical]{identical()}} to the stored ones. This refreshes steps whose inputs are
-environments or reference objects that were modified in place. Only used
-by \code{\link[=pip_set_params]{pip_set_params()}}. Default is \code{FALSE}.}
+environments or reference objects that were modified in place.}
 }
 \value{
 For \code{\link[=pip_get_params]{pip_get_params()}}, a named list of unbound parameter values;
@@ -71,4 +79,8 @@ p
 \donttest{
 pip_set_params(p, params = list(nope = 1))
 }
+
+# ... which can be silenced or turned into an error
+pip_set_params(p, params = list(nope = 1), unknown = "ignore")
+try(pip_set_params(p, params = list(nope = 1), unknown = "error"))
 }
