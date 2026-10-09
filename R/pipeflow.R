@@ -2653,15 +2653,26 @@ pip_reset <- function(x) {
 #' parameters of a pipeline or view, that is, parameters wired to another
 #' step's output via `~step_name` are excluded.
 #' [pip_set_params()] updates these parameters for the whole pipeline or
-#' or view and marks the affected steps and their downstream dependents
-#' as outdated (steps that have never run stay `"new"`).
+#' view. Steps whose values change are marked as outdated, together with
+#' their downstream dependents (steps that have never run stay `"new"`).
+#' Values that are [identical()] to the stored ones are skipped and don't
+#' outdate any step, unless `force = TRUE`.
 #'
 #' @note Parameters of locked steps are never changed and their state
 #' remains unchanged.
 #'
+#' An environment (or a reference object such as an R6 object) that was
+#' modified in place is identical to the stored one, so setting it again
+#' doesn't outdate the step unless `force = TRUE`.
+#'
 #' @param x A pipeflow pip or view.
 #' @param params Named list of parameters to set (only used by
 #' [pip_set_params()]).
+#' @param force Logical. If `TRUE`, every step that has one of the `params`
+#' is outdated (together with its downstream steps), even if the values are
+#' [identical()] to the stored ones. This refreshes steps whose inputs are
+#' environments or reference objects that were modified in place. Only used
+#' by [pip_set_params()]. Default is `FALSE`.
 #' @return For [pip_get_params()], a named list of unbound parameter values;
 #' if the same parameter name appears in multiple steps, the first
 #' occurrence in pipeline order is returned. For [pip_set_params()], the
@@ -2680,16 +2691,27 @@ pip_reset <- function(x) {
 #' p
 #' (pip_run(p))
 #'
+#' # Setting the same values again doesn't outdate any step
+#' pip_set_params(p, params = list(n = 5, factor = 2.0))
+#' p
+#'
+#' # Use force = TRUE to outdate the steps anyway
+#' pip_set_params(p, params = list(n = 5, factor = 2.0), force = TRUE)
+#' p
+#'
 #' # Setting a parameter that is not defined in the pipeline yields a warning
 #' \donttest{
 #' pip_set_params(p, params = list(nope = 1))
 #' }
 #' @export
-pip_set_params <- function(x, params = list()) {
+pip_set_params <- function(x, params = list(), force = FALSE) {
     # Input checking
     .assert_pip_or_view(x)
     if (!is.list(params)) {
         stop("params must be a list")
+    }
+    if (!is.logical(force) || length(force) != 1L || is.na(force)) {
+        stop("force must be TRUE or FALSE")
     }
     parNames <- names(params)
     if (length(params) == 0) {
@@ -2730,18 +2752,33 @@ pip_set_params <- function(x, params = list()) {
     rowsAffected <- rowsConsidered[hasOverlap]
 
     if (any(hasOverlap)) {
-        # Update parameters in all affected rows
+        # Update parameters in all affected rows, skipping values that are
+        # identical to the stored ones (unless forced)
+        isChanged <- logical(length(rowsAffected))
         for (j in seq_along(rowsAffected)) {
             i <- rowsAffected[[j]]
-            names <- namesAffected[[j]]
             rowPars <- dat[["params"]][[i]]
+            names <- namesAffected[[j]]
+            if (!force) {
+                names <- Filter(
+                    \(name) !identical(rowPars[[name]], params[[name]]),
+                    names
+                )
+            }
+            if (length(names) == 0L) {
+                next
+            }
             rowPars[names] <- params[names]
             value <- list(list(rowPars)) # need to wrap in list() for call below
             data.table::set(dat, i = i, j = "params", value = value)
+            isChanged[[j]] <- TRUE
         }
 
-        # Update states of affected steps and their downstream steps
-        .pip_outdate_downstream(x, steps = dat[["step"]][rowsAffected])
+        # Update states of changed steps and their downstream steps
+        rowsChanged <- rowsAffected[isChanged]
+        if (length(rowsChanged) > 0L) {
+            .pip_outdate_downstream(x, steps = dat[["step"]][rowsChanged])
+        }
     }
 
     invisible(x)

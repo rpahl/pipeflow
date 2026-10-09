@@ -3685,6 +3685,95 @@ describe("pip_set_params", {
         )
     })
 
+    it("does not outdate steps if the values are identical", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        pip_set_params(p, params = list(x = 1, data = data.frame(a = 1:2)))
+        expect_equal(unname(p[["state"]]), rep("done", 4))
+    })
+
+    it("outdates steps with identical values if force = TRUE", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        pip_set_params(p, params = list(y = 2), force = TRUE)
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "outdated", "done", "done")
+        )
+        pip_set_params(p, params = list(x = 1), force = TRUE)
+        expect_equal(unname(p[["state"]]), rep("outdated", 4))
+    })
+
+    it("refreshes steps with environments modified in place if forced", {
+        e <- new.env()
+        p <- pip_new() |> pip_add("s", \(e = NULL) e)
+        pip_set_params(p, params = list(e = e))
+        pip_run(p, lgr = NULL)
+        e$a <- 1
+        pip_set_params(p, params = list(e = e))
+        expect_equal(p[["state"]][[1]], "done")
+        pip_set_params(p, params = list(e = e), force = TRUE)
+        expect_equal(p[["state"]][[1]], "outdated")
+    })
+
+    it("keeps steps that have never run 'new' if force = TRUE", {
+        p <- test_pip()
+        pip_set_params(p, params = list(x = 1), force = TRUE)
+        expect_equal(unname(p[["state"]]), rep("new", 4))
+    })
+
+    it("fails if force is not TRUE or FALSE", {
+        p <- test_pip()
+        expect_error(
+            pip_set_params(p, params = list(x = 1), force = NA),
+            "force must be TRUE or FALSE"
+        )
+        expect_error(
+            pip_set_params(p, params = list(x = 1), force = "yes"),
+            "force must be TRUE or FALSE"
+        )
+    })
+
+    it("outdates only the steps whose values change", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        pip_set_params(p, params = list(x = 1, y = 2, z = 5))
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "done", "outdated", "outdated")
+        )
+        expect_equal(p[["params"]][[3]][["z"]], 5)
+    })
+
+    it("outdates a step if one of its values changes", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        pip_set_params(p, params = list(x = 1, data = data.frame(a = 3:4)))
+        expect_equal(
+            unname(p[["state"]]),
+            c("outdated", "outdated", "done", "outdated")
+        )
+        expect_equal(p[["params"]][[1]][["data"]], data.frame(a = 3:4))
+    })
+
+    it("compares the values of each step separately", {
+        p <- test_pip()
+        pip_set_params(pip_view(p, step = "s3"), params = list(x = 5))
+        pip_run(p, lgr = NULL)
+
+        pip_set_params(p, params = list(x = 1))
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "done", "outdated", "outdated")
+        )
+        expect_equal(p[["params"]][[3]][["x"]], 1)
+    })
+
+    it("compares values with identical()", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        pip_set_params(p, params = list(y = 2L))
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "outdated", "done", "done")
+        )
+    })
+
     it("no-ops on empty params list", {
         p <- test_pip()
         pip_set_params(p, params = list())
