@@ -1163,10 +1163,13 @@ pip_new <- function(name = "pipe") {
 #' partition-wise during step execution. The `reduce` mode expects
 #' partitioned input and passes it through without mapping, while `plain`
 #' mode only accepts non-partitioned input and always intends to execute
-#' a single call. In summary:
+#' a single call. If a split pipeline fails in a run with
+#' `on_error = "continue"`, a `reduce` step also accepts the resulting failure
+#' object when it takes it via `~try()`. In summary:
 #' * auto: map if partitioned input appears, otherwise single call
 #' * split: single call, then mark output as partitioned
-#' * reduce: single call, but only valid with partitioned input
+#' * reduce: single call, but only valid with partitioned input or, via
+#'   `~try()`, a failure object
 #' * plain: single call, only valid with non-partitioned input
 #'
 #' @details
