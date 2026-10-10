@@ -426,9 +426,19 @@
     }
 
     # Reduce mode: combines partitioned inputs in a single call,
-    # so it needs at least one partitioned input to be meaningful.
+    # so it needs at least one partitioned input to be meaningful. A failure
+    # object counts as one, because a failed split step yields a single
+    # failure instead of a partitioned output.
     if (exec == "reduce" && length(partIdx) == 0L) {
-        stop("reduce mode requires at least one partitioned input")
+        hasFailure <- any(vapply(
+            args,
+            FUN = inherits,
+            what = "pipeflow_failure",
+            FUN.VALUE = logical(1)
+        ))
+        if (!hasFailure) {
+            stop("reduce mode requires at least one partitioned input")
+        }
     }
 
     # Single-call, which happens in three scenarios:
