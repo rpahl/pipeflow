@@ -2,7 +2,22 @@
 
 # pipeflow 0.4.0.9006
 
-- Same as previous version.
+- `pip_add()` and `pip_replace()` now warn if `params` contain names that
+  are also arguments of `fun`. As documented, the defaults of `fun` take
+  precedence over `params`, so such values were silently dropped before.
+- `pip_set_params()` gains `unknown = c("warn", "ignore", "error")` to
+  control what happens with parameters that are not defined in the target.
+  The default `"warn"` keeps the current behaviour; `"error"` fails before
+  anything is changed.
+- Behaviour change: `pip_set_params()` (and `p[[step, "params"]] <- value`)
+  no longer outdates a step if the values set on it are `identical()` to
+  the stored ones. Only steps whose values change, and the steps downstream
+  of them, are outdated. Before, every step a value was set on was
+  outdated, so apps that set all inputs on every change re-ran unchanged
+  steps. `pip_run(force = TRUE)` still re-runs all steps. The new argument
+  `force = TRUE` of `pip_set_params()` outdates the steps even if the values
+  are identical, e.g. to refresh steps whose inputs are environments or R6
+  objects that were modified in place.
 
 
 # pipeflow 0.4.0.9005

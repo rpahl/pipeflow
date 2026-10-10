@@ -7,13 +7,27 @@
 \usage{
 pip_get_params(x)
 
-pip_set_params(x, params = list())
+pip_set_params(
+  x,
+  params = list(),
+  unknown = c("warn", "ignore", "error"),
+  force = FALSE
+)
 }
 \arguments{
 \item{x}{A pipeflow pip or view.}
 
-\item{params}{Named list of parameters to set (only used by
-\code{\link[=pip_set_params]{pip_set_params()}}).}
+\item{params}{Named list of parameters to set}
+
+\item{unknown}{How to handle \code{params} that are not defined in any of the
+selected steps, including locked ones: \code{"warn"} (default) signals a
+warning and sets the remaining parameters, \code{"ignore"} does so silently, and
+\code{"error"} fails before anything is changed.}
+
+\item{force}{Logical. If \code{TRUE}, every step that has one of the \code{params}
+is outdated (together with its downstream steps), even if the values are
+\code{\link[=identical]{identical()}} to the stored ones. This refreshes steps whose inputs are
+environments or reference objects that were modified in place.}
 }
 \value{
 For \code{\link[=pip_get_params]{pip_get_params()}}, a named list of unbound parameter values;
@@ -26,12 +40,18 @@ updated pipeline or view, invisibly.
 parameters of a pipeline or view, that is, parameters wired to another
 step's output via \code{~step_name} are excluded.
 \code{\link[=pip_set_params]{pip_set_params()}} updates these parameters for the whole pipeline or
-or view and marks the affected steps and their downstream dependents
-as outdated (steps that have never run stay \code{"new"}).
+view. Steps whose values change are marked as outdated, together with
+their downstream dependents (steps that have never run stay \code{"new"}).
+Values that are \code{\link[=identical]{identical()}} to the stored ones are skipped and don't
+outdate any step, unless \code{force = TRUE}.
 }
 \note{
 Parameters of locked steps are never changed and their state
 remains unchanged.
+
+An environment (or a reference object such as an R6 object) that was
+modified in place is identical to the stored one, so setting it again
+doesn't outdate the step unless \code{force = TRUE}.
 }
 \examples{
 p <- pip_new() |>
@@ -47,8 +67,20 @@ pip_set_params(p, params = list(n = 5, factor = 2.0))
 p
 (pip_run(p))
 
+# Setting the same values again doesn't outdate any step
+pip_set_params(p, params = list(n = 5, factor = 2.0))
+p
+
+# Use force = TRUE to outdate the steps anyway
+pip_set_params(p, params = list(n = 5, factor = 2.0), force = TRUE)
+p
+
 # Setting a parameter that is not defined in the pipeline yields a warning
 \donttest{
 pip_set_params(p, params = list(nope = 1))
 }
+
+# ... which can be silenced or turned into an error
+pip_set_params(p, params = list(nope = 1), unknown = "ignore")
+try(pip_set_params(p, params = list(nope = 1), unknown = "error"))
 }

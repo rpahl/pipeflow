@@ -781,6 +781,56 @@ describe("pip_new", {
 })
 
 
+describe("pip_add params overlapping the formals of fun", {
+    it("warns if params overlap the defaults of fun", {
+        p <- pip_new()
+        expect_warning(
+            pip_add(p, "s", \(x = 1, y = 2) x + y, params = list(x = 5, y = 6)),
+            "step 's': the defaults of fun take precedence over params: x, y",
+            fixed = TRUE
+        )
+        expect_equal(p[["params"]][["s"]][["x"]], 1)
+        expect_equal(p[["params"]][["s"]][["y"]], 2)
+    })
+
+    it("names only the overlapping params", {
+        p <- pip_new()
+        expect_warning(
+            pip_add(p, "s", \(x = 1) x, params = list(x = 5, z = 6)),
+            "over params: x$"
+        )
+    })
+
+    it("warns if the step is inserted via after", {
+        p <- pip_new() |> pip_add("a", \(x = 1) x)
+        expect_warning(
+            pip_add(p, "b", \(x = 1) x, params = list(x = 5), after = 0),
+            "step 'b': the defaults of fun take precedence over params: x",
+            fixed = TRUE
+        )
+    })
+
+    it("does not warn for params that are not formals of fun", {
+        p <- pip_new()
+        expect_no_warning(
+            pip_add(p, "s", \(x = 1) x, params = list(z = 5))
+        )
+    })
+
+    it("does not warn for params that only match '...'", {
+        p <- pip_new()
+        expect_no_warning(
+            pip_add(p, "s", \(x = 1, ...) x, params = list(... = 5))
+        )
+    })
+
+    it("does not warn without params", {
+        p <- pip_new()
+        expect_no_warning(pip_add(p, "s", \(x = 1) x))
+    })
+})
+
+
 describe("pip_add", {
     it("signals if step is not a single non-empty string", {
         p <- pip_new()
@@ -984,11 +1034,14 @@ describe("pip_add", {
 
     it("merges params with function defaults, letting defaults win", {
         p <- pip_new()
-        pip_add(
-            p,
-            "s1",
-            function(x = 1, y = 2) x + y,
-            params = list(x = 10, y = 20, z = 99)
+        expect_warning(
+            pip_add(
+                p,
+                "s1",
+                function(x = 1, y = 2) x + y,
+                params = list(x = 10, y = 20, z = 99)
+            ),
+            "defaults of fun take precedence over params: x, y"
         )
 
         pars <- p[["params"]][[1]]
@@ -1085,7 +1138,7 @@ describe("pip_add", {
             p,
             "s1",
             function(x = 1, y = 2, ...) x + y,
-            params = list(x = 10, y = 20, z = 99)
+            params = list(z = 99)
         )
         pip_run(p, lgr = NULL)
 
@@ -1518,6 +1571,23 @@ describe("pip_replace", {
             pip_add("f2", \(x = 2) x) |>
             pip_add("f3", \(x = ~f2) x + 1)
     }
+
+    it("warns if params overlap the defaults of fun", {
+        p <- test_pip()
+        expect_warning(
+            pip_replace(p, "f2", \(x = 20) x, params = list(x = 5)),
+            "step 'f2': the defaults of fun take precedence over params: x",
+            fixed = TRUE
+        )
+        expect_equal(p[["params"]][["f2"]][["x"]], 20)
+    })
+
+    it("does not warn if params do not overlap the defaults of fun", {
+        p <- test_pip()
+        expect_no_warning(
+            pip_replace(p, "f2", \(x = 20) x, params = list(z = 5))
+        )
+    })
 
     it("signals invalid inputs", {
         p <- test_pip()
@@ -3632,6 +3702,80 @@ describe("pip_set_params", {
         )
     })
 
+    it("ignores unused parameters silently if unknown = 'ignore'", {
+        p <- test_pip()
+        expect_no_warning(
+            pip_set_params(p, params = list(x = 5, foo = 1), unknown = "ignore")
+        )
+        expect_equal(p[["params"]][[1]][["x"]], 5)
+    })
+
+    it("fails for unused parameters if unknown = 'error'", {
+        p <- test_pip()
+        expect_error(
+            pip_set_params(p, params = list(foo = 1), unknown = "error"),
+            "Trying to set parameters not defined in the target: foo"
+        )
+    })
+
+    it("changes nothing if unknown = 'error' fails", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        params <- p[["params"]]
+        expect_error(
+            pip_set_params(p, params = list(x = 5, foo = 1), unknown = "error"),
+            "foo"
+        )
+        expect_equal(p[["params"]], params)
+        expect_equal(unname(p[["state"]]), rep("done", 4))
+    })
+
+    it("checks unknown parameters against the selected view", {
+        p <- test_pip()
+        v <- pip_view(p, step = "s3")
+        expect_error(
+            pip_set_params(v, params = list(y = 22), unknown = "error"),
+            "Trying to set parameters not defined in the target: y"
+        )
+    })
+
+    it("fails for unused parameters if all steps are locked", {
+        p <- test_pip() |> pip_lock()
+        expect_no_message(
+            expect_error(
+                pip_set_params(p, params = list(foo = 1), unknown = "error"),
+                "not defined in the target: foo"
+            )
+        )
+    })
+
+    it("does not fail if unknown = 'error' and all params are known", {
+        p <- test_pip()
+        expect_no_error(
+            pip_set_params(p, params = list(x = 5, y = 3), unknown = "error")
+        )
+        expect_equal(p[["params"]][[2]][["y"]], 3)
+    })
+
+    it("fails for invalid values of unknown", {
+        p <- test_pip()
+        expect_error(
+            pip_set_params(p, params = list(x = 5), unknown = "foo"),
+            "'arg' should be one of"
+        )
+    })
+
+    it("warns by default for unused parameters via the $ method", {
+        p <- test_pip()
+        expect_warning(
+            p$set_params(params = list(foo = 1)),
+            "not defined in the target: foo"
+        )
+        expect_error(
+            p$set_params(params = list(foo = 1), unknown = "error"),
+            "not defined in the target: foo"
+        )
+    })
+
     it("sets parameters only within the selected view", {
         p <- test_pip()
 
@@ -3682,6 +3826,95 @@ describe("pip_set_params", {
         expect_equal(
             unname(p[["state"]]),
             c("outdated", "outdated", "new", "new")
+        )
+    })
+
+    it("does not outdate steps if the values are identical", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        pip_set_params(p, params = list(x = 1, data = data.frame(a = 1:2)))
+        expect_equal(unname(p[["state"]]), rep("done", 4))
+    })
+
+    it("outdates steps with identical values if force = TRUE", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        pip_set_params(p, params = list(y = 2), force = TRUE)
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "outdated", "done", "done")
+        )
+        pip_set_params(p, params = list(x = 1), force = TRUE)
+        expect_equal(unname(p[["state"]]), rep("outdated", 4))
+    })
+
+    it("refreshes steps with environments modified in place if forced", {
+        e <- new.env()
+        p <- pip_new() |> pip_add("s", \(e = NULL) e)
+        pip_set_params(p, params = list(e = e))
+        pip_run(p, lgr = NULL)
+        e$a <- 1
+        pip_set_params(p, params = list(e = e))
+        expect_equal(p[["state"]][[1]], "done")
+        pip_set_params(p, params = list(e = e), force = TRUE)
+        expect_equal(p[["state"]][[1]], "outdated")
+    })
+
+    it("keeps steps that have never run 'new' if force = TRUE", {
+        p <- test_pip()
+        pip_set_params(p, params = list(x = 1), force = TRUE)
+        expect_equal(unname(p[["state"]]), rep("new", 4))
+    })
+
+    it("fails if force is not TRUE or FALSE", {
+        p <- test_pip()
+        expect_error(
+            pip_set_params(p, params = list(x = 1), force = NA),
+            "force must be TRUE or FALSE"
+        )
+        expect_error(
+            pip_set_params(p, params = list(x = 1), force = "yes"),
+            "force must be TRUE or FALSE"
+        )
+    })
+
+    it("outdates only the steps whose values change", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        pip_set_params(p, params = list(x = 1, y = 2, z = 5))
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "done", "outdated", "outdated")
+        )
+        expect_equal(p[["params"]][[3]][["z"]], 5)
+    })
+
+    it("outdates a step if one of its values changes", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        pip_set_params(p, params = list(x = 1, data = data.frame(a = 3:4)))
+        expect_equal(
+            unname(p[["state"]]),
+            c("outdated", "outdated", "done", "outdated")
+        )
+        expect_equal(p[["params"]][[1]][["data"]], data.frame(a = 3:4))
+    })
+
+    it("compares the values of each step separately", {
+        p <- test_pip()
+        pip_set_params(pip_view(p, step = "s3"), params = list(x = 5))
+        pip_run(p, lgr = NULL)
+
+        pip_set_params(p, params = list(x = 1))
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "done", "outdated", "outdated")
+        )
+        expect_equal(p[["params"]][[3]][["x"]], 1)
+    })
+
+    it("compares values with identical()", {
+        p <- test_pip() |> pip_run(lgr = NULL)
+        pip_set_params(p, params = list(y = 2L))
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "outdated", "done", "done")
         )
     })
 
