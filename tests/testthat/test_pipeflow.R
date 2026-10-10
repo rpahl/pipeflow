@@ -4465,6 +4465,14 @@ describe("pip_arg_value", {
 
         # load: (1 + 10) + (2 + 10); map adds 10 per key; total adds 10
         expect_equal(p[["pipenv"]][["data"]]$out[[3]], 11 + 10 + 12 + 10 + 10)
+
+        p <- pip_new() |>
+            pip_add("one", \(x = 1) x) |>
+            pip_add("plain", \(x = ~one, k = 0) x + k, exec = "plain")
+        pip_set_params(p, list(k = k))
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["pipenv"]][["data"]]$out[[2]], 11)
     })
 
     it("turns an error in a method into a step error", {
