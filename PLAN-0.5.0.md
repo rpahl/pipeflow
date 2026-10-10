@@ -169,9 +169,9 @@ An S3 hook makes that one method.
   objects.
 - It runs inside the `withCallingHandlers` (pf:438), so an error in a
   method is a step error and `on_error = "continue"` applies to it.
-- Docs: `?pip_arg_value` with an example (a value with a unit class), and
-  a short section in the parameters vignette. Methods are meant for the
-  package's or user's own classes, not base classes.
+- Docs: `?pip_arg_value` with an example (an annotated value of a custom
+  class). The vignette follows later (see the end of this plan). Methods
+  are meant for the package's or user's own classes, not base classes.
 - Tests: called once per unbound argument in every exec mode (auto,
   split, reduce); never for `~step` inputs; an error in a method fails
   the step; the default method changes nothing (existing tests).
@@ -262,3 +262,11 @@ WP1 -> WP2 -> WP3 -> WP4 -> WP5 -> WP6 -> WP7 -> WP8.
 - `pip_replace()` keeps tags and exec by default (`tags = NULL`, `exec =
   NULL`); changes a default.
 - Export the default logger.
+
+## Vignette for `pip_arg_value()`
+
+`pip_arg_value()` is not a topic for the "Get started" vignette. Create a
+separate vignette for it, likely in the "Advanced workflows" section of
+`_pkgdown.yml` (articles list), covering annotated parameter values, how to
+write and register a method, what it is (not) applied to, and how errors in
+a method behave. Do this after WP5 has merged.
