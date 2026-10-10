@@ -2,7 +2,11 @@
 
 # pipeflow 0.4.0.9008
 
-- Same as previous version.
+- New generic `pip_arg_value()` as an extension point for annotated parameter
+  values (e.g. values with units). It is applied to each unbound argument of
+  a step right before the step function is called, so packages can unwrap
+  their own classes with a single S3 method instead of wrapping every step
+  function. The default method returns the value unchanged.
 
 
 # pipeflow 0.4.0.9007

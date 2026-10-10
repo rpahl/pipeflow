@@ -512,8 +512,13 @@
     # reference the correct pipeline after cloning, subsetting or replacing.
     environment(fun)[[".self"]] <- x
 
+    unbound <- dat[["unbound"]][[i]]
+
     out <- withCallingHandlers(
-        .pip_execute_step_call(fun = fun, args = args, exec = exec),
+        {
+            args <- .pip_unwrap_args(args, unbound)
+            .pip_execute_step_call(fun = fun, args = args, exec = exec)
+        },
         error = function(e) {
             data.table::set(
                 dat,
@@ -2684,6 +2689,71 @@ pip_reset <- function(x) {
     env[[".last_run"]] <- NULL
 
     invisible(x)
+}
+
+
+#' Unwrap a parameter value before a step function is called
+#'
+#' `pip_arg_value()` is an extension point for packages that store annotated
+#' values (e.g. values with units or labels, or parameter objects that carry
+#' UI metadata) as step parameters. When a step runs, the generic is applied
+#' once to each unbound argument of the step, that is, to the values that
+#' come from `params` or from the defaults of the step function, and its
+#' result is what the step function receives. The stored parameters are not
+#' changed.
+#'
+#' The default method returns `x` unchanged. Methods are meant for your own
+#' classes, not for base classes such as `numeric` or `character`.
+#'
+#' The generic is *not* applied to the outputs of other steps (arguments
+#' defined as `~step`), to partitions or to failure objects. An error in a
+#' method is an error of the step and is handled like any other step error,
+#' including `pip_run(on_error = "continue")`.
+#'
+#' @param x The parameter value as stored in the step.
+#' @param ... Currently unused, reserved for future extensions. Methods
+#' should accept it.
+#' @return The value the step function receives for the argument.
+#' @examples
+#' # A value that carries annotations
+#' my_number <- structure(
+#'     list(value = 1.23, label = "Number", descr = "I am an example"),
+#'     class = "foo"
+#' )
+#'
+#' # Step functions then simply see the plain value
+#' pip_arg_value.foo <- function(x, ...) x$value
+#' registerS3method("pip_arg_value", "foo", pip_arg_value.foo)
+#'
+#' p <- pip_new() |>
+#'     pip_add("double", \(x = 1) x * 2)
+#' pip_set_params(p, list(x = my_number))
+#' pip_run(p, lgr = NULL)
+#' pip_collect(p)
+#' @seealso [pip_set_params()], [pip_run()]
+#' @export
+pip_arg_value <- function(x, ...) {
+    UseMethod("pip_arg_value")
+}
+
+#' @export
+pip_arg_value.default <- function(x, ...) {
+    x
+}
+
+#' Apply pip_arg_value() to the unbound arguments of a step call
+#'
+#' @param args Named list of all arguments of the step call.
+#' @param unbound Names of the unbound arguments.
+#' @return `args`, with the unbound arguments passed through
+#'   [pip_arg_value()].
+#' @noRd
+.pip_unwrap_args <- function(args, unbound) {
+    unbound <- intersect(unbound, names(args))
+    if (length(unbound) > 0L) {
+        args[unbound] <- lapply(args[unbound], FUN = pip_arg_value)
+    }
+    args
 }
 
 
