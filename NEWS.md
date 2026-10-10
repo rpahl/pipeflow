@@ -1,5 +1,10 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.4.0.9008
+
+- Same as previous version.
+
+
 # pipeflow 0.4.0.9007
 
 - With `pip_run(on_error = "continue")`, a `reduce` step that takes the output
