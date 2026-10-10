@@ -1,5 +1,10 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.4.0.9009
+
+- Same as previous version.
+
+
 # pipeflow 0.4.0.9008
 
 - New generic `pip_arg_value()` as an extension point for annotated parameter
