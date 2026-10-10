@@ -75,8 +75,17 @@
     invisible(exec)
 }
 
-# Warn if `params` contain names that are also formals of `fun`, because
-# the defaults of `fun` take precedence over `params` when merged.
+#' Warn about params that are shadowed by the defaults of a step function
+#'
+#' The defaults of `fun` take precedence over `params` when both are merged,
+#' so values given in `params` for names that are also formals of `fun` are
+#' dropped. `...` is not counted as a formal.
+#'
+#' @param step The name of the step (used in the message).
+#' @param fun The step function.
+#' @param params Named list of parameter values passed to the step.
+#' @return The overlapping names, invisibly. Signals a warning if there are any.
+#' @noRd
 .warn_params_overlap <- function(step, fun, params) {
     overlap <- intersect(names(params), setdiff(names(formals(fun)), "..."))
     if (length(overlap) > 0L) {
