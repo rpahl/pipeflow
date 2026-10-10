@@ -2,7 +2,10 @@
 
 # pipeflow 0.4.0.9007
 
-- Same as previous version.
+- With `pip_run(on_error = "continue")`, a `reduce` step that takes the output
+  of a failed split pipeline via `~try()` now runs and receives the failure
+  object. Before, it failed with "reduce mode requires at least one
+  partitioned input", which hid the actual cause.
 
 
 # pipeflow 0.4.0.9006

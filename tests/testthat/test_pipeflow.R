@@ -2670,6 +2670,61 @@ describe("pip_run", {
             )
         })
 
+        it("lets a reduce step receive a failure through ~try()", {
+            p <- pip_new() |>
+                pip_add(
+                    "load",
+                    \(x = list(a = 1, b = 2)) x,
+                    exec = "split"
+                ) |>
+                pip_add(
+                    "per_key",
+                    \(x = ~load) if (x == 2) stop("boom") else x
+                ) |>
+                pip_add(
+                    "total",
+                    \(x = ~ try(per_key)) {
+                        if (inherits(x, "pipeflow_failure")) {
+                            "failed"
+                        } else {
+                            sum(unlist(x))
+                        }
+                    },
+                    exec = "reduce"
+                )
+
+            expect_warning(
+                pip_run(p, on_error = "continue", lgr = NULL),
+                class = "pipeflow_run_failed"
+            )
+            expect_equal(p[["pipenv"]][["data"]]$out[[3]], "failed")
+            expect_equal(p[["pipenv"]][["data"]]$state[[3]], "done")
+        })
+
+        it("skips a reduce step without try() if its input failed", {
+            p <- pip_new() |>
+                pip_add(
+                    "load",
+                    \(x = list(a = 1, b = 2)) x,
+                    exec = "split"
+                ) |>
+                pip_add(
+                    "per_key",
+                    \(x = ~load) if (x == 2) stop("boom") else x
+                ) |>
+                pip_add(
+                    "total",
+                    \(x = ~per_key) sum(unlist(x)),
+                    exec = "reduce"
+                )
+
+            expect_warning(
+                pip_run(p, on_error = "continue", lgr = NULL),
+                "total"
+            )
+            expect_equal(p[["pipenv"]][["data"]]$state[[3]], "new")
+        })
+
         it("errors when plain mode receives partitioned input", {
             p <- pip_new() |>
                 pip_add(

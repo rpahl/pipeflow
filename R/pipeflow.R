@@ -426,9 +426,19 @@
     }
 
     # Reduce mode: combines partitioned inputs in a single call,
-    # so it needs at least one partitioned input to be meaningful.
+    # so it needs at least one partitioned input to be meaningful. A failure
+    # object counts as one, because a failed split step yields a single
+    # failure instead of a partitioned output.
     if (exec == "reduce" && length(partIdx) == 0L) {
-        stop("reduce mode requires at least one partitioned input")
+        hasFailure <- any(vapply(
+            args,
+            FUN = inherits,
+            what = "pipeflow_failure",
+            FUN.VALUE = logical(1)
+        ))
+        if (!hasFailure) {
+            stop("reduce mode requires at least one partitioned input")
+        }
     }
 
     # Single-call, which happens in three scenarios:
@@ -1153,10 +1163,13 @@ pip_new <- function(name = "pipe") {
 #' partition-wise during step execution. The `reduce` mode expects
 #' partitioned input and passes it through without mapping, while `plain`
 #' mode only accepts non-partitioned input and always intends to execute
-#' a single call. In summary:
+#' a single call. If a split pipeline fails in a run with
+#' `on_error = "continue"`, a `reduce` step also accepts the resulting failure
+#' object when it takes it via `~try()`. In summary:
 #' * auto: map if partitioned input appears, otherwise single call
 #' * split: single call, then mark output as partitioned
-#' * reduce: single call, but only valid with partitioned input
+#' * reduce: single call, but only valid with partitioned input or, via
+#'   `~try()`, a failure object
 #' * plain: single call, only valid with non-partitioned input
 #'
 #' @details
