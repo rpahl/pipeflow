@@ -51,9 +51,9 @@
     inherits(x, "pipeflow")
 }
 
-# A view is a pipeflow whose `rows` field is not NULL.
+# A view is a pipeflow whose `view` field is not NULL.
 .is_pipeflow_view <- function(x) {
-    inherits(x, "pipeflow") && !is.null(x[["view"]])
+    inherits(x, "pipeflow") && !is.null(.subset2(x, "view"))
 }
 
 .is_pipeflow_partitioned <- function(x) {
@@ -145,7 +145,8 @@
 
 # Outer pipeline env wrapper that allows to create views as copied objects with
 # different names and view specifications, while sharing (i.e. pointing to) the
-# same underlying pipeline environment.
+# same underlying pipeline environment. The `view` of a view holds the node ids
+# of the covered steps (see `.pip_rows_to_view()`).
 .wrap_pipenv <- function(pipenv, name, view = NULL) {
     structure(
         list(name = name, view = view, pipenv = pipenv),
@@ -626,15 +627,31 @@
     .subset2(x, "pipenv")
 }
 
-# The rows covered by `x`: all pipeline rows for a full pipeline, or the
-# view's `rows` selector for a view.
+#' Build the view selector for rows of the step table
+#'
+#' Returns the node ids of the steps in the given rows. Unlike row numbers,
+#' node ids don't change when steps are added, removed, renamed or replaced,
+#' and they are never reused, so a view keeps covering its steps.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @param rows Absolute row indices of the step table.
+#' @return An integer vector of node ids, to be used as the `view` of
+#' `.wrap_pipenv()`.
+#' @noRd
+.pip_rows_to_view <- function(pipenv, rows) {
+    as.integer(pipenv[["data"]][["nodeId"]][rows])
+}
+
+# The rows covered by `x`: all pipeline rows for a full pipeline, or the rows
+# of the steps in the view's selector (in pipeline order) for a view. Steps
+# that were removed from the pipeline are no longer covered.
 .pip_view_rows <- function(x) {
     view <- .subset2(x, "view")
+    nodeIds <- .pip_pipenv(x)[["data"]][["nodeId"]]
     if (is.null(view)) {
-        seq_len(nrow(.pip_pipenv(x)[["data"]]))
-    } else {
-        as.integer(view)
+        return(seq_along(nodeIds))
     }
+    which(nodeIds %in% view)
 }
 
 .pip_view_data <- function(x) {
@@ -1760,21 +1777,15 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
 #' together with all its downstream dependent steps.
 #'
 #' @note
-#' If called on a view, the step to be removed must be part of the view,
-#' since removing steps drops rows from the pipeline, the row positions
-#' of the view will be shifted after the removal operation.
-#' For views, you therefore need to assign the result back to the view:
-#' `v <- pip_remove(v, ...)`.
-#' Views that are not reassigned (or other views on the same pipeline),
-#' keep their old row positions and therefore can become invalid after a
-#' step removal.
+#' If called on a view, the step to be removed must be part of the view.
+#' The view, as well as any other view on the same pipeline, stays valid:
+#' the removed steps just drop out of it.
 #'
 #' @param x A pipeflow pip or view
 #' @param step `string` the name of the step to be removed.
 #' @param force `logical` if `TRUE` the step is removed together
 #' with all its downstream dependencies.
-#' @return The updated pipeline, invisibly. For a view, the view with its
-#' remapped selector.
+#' @return The updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(x = 1) x) |>
@@ -1791,8 +1802,11 @@ pip_get_graph <- function(x, include_upstream = FALSE) {
 #' # If a view is passed, the step must be part of the view.
 #' v <- pip_view(p, step = "transform")
 #' try(pip_remove(v, "load"))  # Error: "load" is not part of the view
-#' v <- pip_remove(v, "transform")
-#' v[["step"]]              # view is remapped and stays valid
+#'
+#' # Views stay valid, the removed steps just drop out of them
+#' v <- pip_view(p, step = c("load", "transform"))
+#' pip_remove(v, "transform")
+#' v[["step"]]              # "load"
 #' p                        # "load"
 #'
 #' # force = TRUE removes the step and all its downstream dependents
@@ -1820,12 +1834,6 @@ pip_remove <- function(x, step, force = FALSE) {
     pipenv <- .pip_pipenv(x)
     dat <- pipenv[["data"]]
     `%chin%` <- data.table::`%chin%`
-
-    # For views, remember the covered steps so that the view can be remapped.
-    isView <- .is_pipeflow_view(x)
-    if (isView) {
-        viewSteps <- dat[["step"]][.pip_view_rows(x)]
-    }
 
     directDeps <- dat[["step"]][
         vapply(
@@ -1891,13 +1899,6 @@ pip_remove <- function(x, step, force = FALSE) {
     )
 
     data.table::setindexv(pipenv[["data"]], list("step", "nodeId"))
-
-    # Remap the view to the shifted (and potentially dropped) row positions.
-    if (isView) {
-        remaining <- pipenv[["data"]][["step"]]
-        newRows <- as.integer(which(remaining %chin% viewSteps))
-        x <- .wrap_pipenv(pipenv, name = x[["name"]], view = newRows)
-    }
     invisible(x)
 }
 
@@ -3110,6 +3111,11 @@ pip_unlock <- function(x) {
 #' work directly on the underlying pipeline, but are restricted to the
 #' steps defined by the view.
 #'
+#' A view keeps covering its steps when steps are added, removed, renamed or
+#' replaced, also through the pipeline or another view. Removed steps drop
+#' out of the view, and new steps are not added to it, even if they match
+#' the filters.
+#'
 #' @param x A pipeflow pipeline or view.
 #' @param ... Named filters, which can be one or more of `step`, `params`,
 #' `state`, `tags`, `exec`, and `depends`. Each filter value is a character
@@ -3216,5 +3222,5 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
     }
 
     rows <- parent_rows[which(keep)]
-    .wrap_pipenv(env, name = x[["name"]], view = rows)
+    .wrap_pipenv(env, name = x[["name"]], view = .pip_rows_to_view(env, rows))
 }

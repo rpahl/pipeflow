@@ -225,7 +225,7 @@ Agreed (2026-10-10):
   - `pip_get_params()` includes locked rows but `pip_set_params()` skips
     them.
   - Views store row numbers, so they go stale when steps are added or
-    removed through another handle.
+    removed through another handle. Fixed in WP7e instead of documented.
   - `tags %like% "x"` in `[` also matches untagged steps; use
     `pip_view(tags = )`.
 
@@ -240,7 +240,9 @@ outputs no longer drag the pipeline along, so this is the other half.
   accessor, and use it in all entry points: `pip_add`, `pip_run`,
   `pip_set_params`, `pip_remove`, `pip_replace`, `pip_clone`, `rbind`,
   `[`. `.steps_to_nodes` is a plain environment and survives, but check
-  that it matches the rebuilt node ids (`nodeId` column).
+  that it matches the rebuilt node ids (`nodeId` column). Views store node
+  ids (WP7e), so the rebuilt DAG must keep the ids of the `nodeId` column
+  rather than renumber them.
 - Tests: a `saveRDS()`/`readRDS()` round trip per entry point, including a
   pipeline with views and one that was changed after a restart.
 - Docs: a short note in `?pip_new` (or the get-started vignette) on saving
@@ -283,6 +285,29 @@ separate vignette for it, likely in the "Advanced workflows" section of
 write and register a method, what it is (not) applied to, and how errors in
 a method behave. Do this after WP5 has merged.
 
+## WP7e — views keep track of their steps (`feat-view-steps`)
+
+A view stores the row numbers of its steps, so it covers the wrong steps
+once rows shift: after a step is inserted before them or removed through
+the pipeline or another view. `pip_remove()` re-maps only the view it is
+given, and only if the result is assigned back.
+
+- Store the DAG node ids of the covered steps instead (`nodeId` column).
+  They don't change on insert, remove, rename or replace, and are never
+  reused; only `.pip_compact()` renumbers them, on a new copy. Step names
+  were rejected: a rename (also through the view itself, as in the
+  `?pip_rename` example) would drop the step from the view.
+- `.pip_view_rows()` resolves the ids to rows on each access (pipeline
+  order; removed steps drop out); `.pip_rows_to_view()` builds the
+  selector in `[` and `pip_view()`. Drop the re-mapping in `pip_remove()`.
+- `v[["view"]]` returns the names of the covered steps (behaviour change;
+  before: row indices). New steps are not added to a view, even if they
+  match its filters.
+- Tests: views after insert, remove, rename (through any handle) and
+  replace; running a view after rows shifted. Docs: `?pip_view`,
+  `?pip_remove`, the `view` meta field, vignette v03b. Branched from
+  `feat-run-state` (WP7), since both touch the view code.
+
 ## WP8 — release 0.5.0
 
 - Merge the dependabot PRs (#72, #81, #82).
@@ -293,6 +318,7 @@ a method behave. Do this after WP5 has merged.
   - identical values no longer outdate;
   - step names in error messages;
   - view names;
+  - views keep track of their steps, `v[["view"]]` returns step names;
   - `.self` only in step functions that refer to it;
   - `pip_replace()` keeps tags and exec mode.
 - Checks: lint, tests, `rcmdcheck` on R 4.5.3 and on the oldest supported
@@ -302,8 +328,8 @@ a method behave. Do this after WP5 has merged.
 
 ## Order
 
-WP1 -> WP2 -> WP3 -> WP4 -> WP5 -> WP6 -> WP7 -> WP7a -> WP7b -> WP7c ->
-WP7d -> WP8.
+WP1 -> WP2 -> WP3 -> WP4 -> WP5 -> WP6 -> WP7 -> WP7e -> WP7a -> WP7b ->
+WP7c -> WP7d -> WP8.
 
 ## Later (0.6+)
 

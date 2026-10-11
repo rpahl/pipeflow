@@ -36,6 +36,12 @@ operations like \code{\link[=pip_run]{pip_run()}} and \code{\link[=pip_set_param
 work directly on the underlying pipeline, but are restricted to the
 steps defined by the view.
 }
+\details{
+A view keeps covering its steps when steps are added, removed, renamed or
+replaced, also through the pipeline or another view. Removed steps drop
+out of the view, and new steps are not added to it, even if they match
+the filters.
+}
 \examples{
 p <- pip_new() |>
   pip_add("load", \(a = 1) a, tags = c("io", "core", "daily")) |>

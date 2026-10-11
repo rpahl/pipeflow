@@ -233,7 +233,7 @@ describe("extract operator [", {
         v <- p[5L]
 
         expect_true(.is_pipeflow_view(v))
-        expect_equal(v[["view"]], 5L)
+        expect_equal(v[["view"]], "b2")
         expect_identical(v[["pipenv"]][["data"]], p[["pipenv"]][["data"]])
     })
 
@@ -242,7 +242,7 @@ describe("extract operator [", {
         v <- p[c("a2", "b2")]
 
         expect_true(.is_pipeflow_view(v))
-        expect_equal(v[["view"]], c(2L, 5L))
+        expect_equal(v[["view"]], c("a2", "b2"))
     })
 
     it("keeps the pipeline name for views and views of views", {
@@ -434,7 +434,7 @@ describe("extract operator [", {
             p <- filter_pip()
             v <- p[step %in% c("load", "eval")]
 
-            expect_equal(v[["view"]], c(1L, 3L))
+            expect_equal(v[["view"]], c("load", "eval"))
         })
 
         it("mirrors the data.table filter on the step table", {
@@ -457,7 +457,7 @@ describe("extract operator [", {
             keep <- p[["step"]] %in% c("load", "eval")
             v <- p[keep]
 
-            expect_equal(v[["view"]], c(1L, 3L))
+            expect_equal(v[["view"]], c("load", "eval"))
         })
 
         it("extracts upstream dependencies with view = FALSE", {
@@ -475,8 +475,8 @@ describe("extract operator [", {
             v <- pip_view(p, step = c("fit", "eval"))
 
             expect_true(.is_pipeflow_view(v[1L]))
-            expect_equal(v[1L][["view"]], 2L)
-            expect_equal(v[][["view"]], c(2L, 3L))
+            expect_equal(v[1L][["view"]], "fit")
+            expect_equal(v[][["view"]], c("fit", "eval"))
             expect_equal(unname(v[state == "done"][["step"]]), "fit")
 
             expect_error(v["load"], "not part of the view")
@@ -678,7 +678,7 @@ describe("extract operator [[", {
         v <- pip_view(p, step = c("s1", "s2"))
 
         expect_identical(v[["pipenv"]][["data"]], p[["pipenv"]][["data"]])
-        expect_equal(v[["view"]], c(1L, 2L))
+        expect_equal(v[["view"]], c("s1", "s2"))
         expect_equal(v[["step"]], c(s1 = "s1", s2 = "s2"))
         expect_equal(v[["out"]], list(s1 = 1, s2 = 2))
     })
@@ -846,13 +846,13 @@ describe("assignment operator [[<-", {
 
         expect_true(inherits(p, "pipeflow"))
         expect_true(.is_pipeflow_view(p))
-        expect_equal(p[["view"]], c(1L, 3L))
+        expect_equal(p[["view"]], c("s1", "s3"))
         expect_equal(unname(p[["step"]]), c("s1", "s3"))
         expect_equal(nrow(p), 2L)
 
         # Re-assigning replaces the current view
         p[["view"]] <- "s2"
-        expect_equal(p[["view"]], 2L)
+        expect_equal(p[["view"]], "s2")
         expect_equal(unname(p[["step"]]), "s2")
 
         # Re-assigning a view keeps the pipeline name
@@ -907,9 +907,10 @@ describe("assignment operator [[<-", {
         expect_equal(unname(p[["step"]]), "s1")
     })
 
-    it("remaps views when removing a step via NULL", {
+    it("keeps views valid when removing a step via NULL", {
         p <- test_pip()
         v <- pip_view(p, step = c("s1", "s2"))
+        other <- pip_view(p, step = c("s1", "s2"))
 
         expect_message(
             v[["s2", "step"]] <- NULL,
@@ -918,7 +919,8 @@ describe("assignment operator [[<-", {
 
         expect_equal(unname(p[["step"]]), "s1")
         expect_equal(unname(v[["step"]]), "s1")
-        expect_equal(v[["view"]], 1L)
+        expect_equal(v[["view"]], "s1")
+        expect_equal(other[["view"]], "s1")
     })
 
     it("can assign and clear tags", {

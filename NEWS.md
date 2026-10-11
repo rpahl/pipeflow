@@ -2,7 +2,13 @@
 
 # pipeflow 0.4.0.9011
 
-- Same as previous version.
+- Behaviour change: a view keeps track of its steps instead of their row
+  numbers, so it stays valid when steps are added, removed, renamed or
+  replaced later, also through the pipeline or another view. Removed steps
+  drop out of the view. Before, a view could cover the wrong steps once rows
+  had shifted, and the result of `pip_remove()` had to be assigned back to
+  the view. `v[["view"]]` now returns the names of the covered steps instead
+  of row indices.
 
 
 # pipeflow 0.4.0.9010

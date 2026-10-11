@@ -778,6 +778,47 @@ describe(".pip_steps_to_rows", {
 })
 
 
+describe(".pip_view_rows", {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x) |>
+            pip_add("s3", \(x = ~s2) x)
+    }
+
+    it("returns all rows for a pipeline", {
+        expect_equal(.pip_view_rows(test_pip()), 1:3)
+        expect_equal(.pip_view_rows(pip_new()), integer(0))
+    })
+
+    it("returns the rows of the steps covered by a view", {
+        p <- test_pip()
+        pipenv <- p[["pipenv"]]
+        view <- .pip_rows_to_view(pipenv, c(3L, 1L))
+        v <- .wrap_pipenv(pipenv, "pipe", view = view)
+
+        # The selector holds node ids, the rows come in pipeline order
+        expect_equal(view, unname(p[["nodeId"]][c(3L, 1L)]))
+        expect_equal(.pip_view_rows(v), c(1L, 3L))
+    })
+
+    it("follows the steps when rows shift and drops removed steps", {
+        p <- test_pip()
+        v <- pip_view(p, step = c("s2", "s3"))
+
+        pip_add(p, "s0", \(x = 0) x, after = 0)
+        expect_equal(.pip_view_rows(v), c(3L, 4L))
+
+        pip_remove(p, "s3")
+        expect_equal(.pip_view_rows(v), 3L)
+
+        pip_remove(p, "s2")
+        expect_equal(.pip_view_rows(v), integer(0))
+        expect_true(.is_pipeflow_view(v))
+    })
+})
+
+
 # -----------------
 # Pipeline addition
 # -----------------
@@ -1576,24 +1617,24 @@ describe("pip_remove", {
         )
     })
 
-    it("removes a step through a view and remaps the selector", {
+    it("removes a step through a view, which stays valid", {
         p <- test_pip()
         v <- pip_view(p, step = c("f4", "g1"))
-        expect_equal(v[["view"]], c(4L, 5L))
+        expect_equal(v[["view"]], c("f4", "g1"))
 
         expect_error(
             pip_remove(v, "f1"),
             "step 'f1' is not part of the view"
         )
 
-        v <- pip_remove(v, "f4")
+        pip_remove(v, "f4")
 
         expect_equal(
             unname(p[["step"]]),
             c("f1", "f2", "f3", "g1")
         )
         expect_equal(v[["step"]], c(g1 = "g1"))
-        expect_equal(v[["view"]], 4L)
+        expect_equal(v[["view"]], "g1")
     })
 
     it("force-removes downstream steps through a view", {
@@ -4392,7 +4433,7 @@ describe("pip_view", {
 
         v <- pip_view(p, tags = "model", state = "done")
 
-        expect_equal(v[["view"]], 2L)
+        expect_equal(v[["view"]], "fit")
     })
 
     it("can filter by depends column with multiple entries", {
@@ -4403,7 +4444,7 @@ describe("pip_view", {
 
         v <- pip_view(p, depends = "fit", tags = "model")
         v
-        expect_equal(v[["view"]], 3L)
+        expect_equal(v[["view"]], "eval")
     })
 
     it("can filter by tags", {
@@ -4413,7 +4454,7 @@ describe("pip_view", {
         pip_add(p, "s3", \(x = ~ -1) x, tags = c("daily", "report"))
 
         v <- pip_view(p, tags = "daily")
-        expect_equal(v[["view"]], c(1L, 3L))
+        expect_equal(v[["view"]], c("s1", "s3"))
     })
 
     it("can filter by step names", {
@@ -4423,10 +4464,10 @@ describe("pip_view", {
         pip_add(p, "a3", \(x = ~ -1) x, tags = "g2")
 
         v <- pip_view(p, step = c("a1", "a3"))
-        expect_equal(v[["view"]], c(1L, 3L))
+        expect_equal(v[["view"]], c("a1", "a3"))
 
         v <- pip_view(p, step = c("a1", "a2"), tags = "g2")
-        expect_equal(v[["view"]], 2L)
+        expect_equal(v[["view"]], "a2")
     })
 
     it("can filter by parameter names", {
@@ -4435,10 +4476,10 @@ describe("pip_view", {
         pip_add(p, "s2", \(y = ~ -1, z = 2) y, tags = "g2")
 
         v <- pip_view(p, params = "n")
-        expect_equal(v[["view"]], 1L)
+        expect_equal(v[["view"]], "s1")
 
         v <- pip_view(p, params = c("x", "z"))
-        expect_equal(v[["view"]], c(1L, 2L))
+        expect_equal(v[["view"]], c("s1", "s2"))
     })
 
     it("matches dependency parameters via the params filter", {
@@ -4447,7 +4488,7 @@ describe("pip_view", {
         pip_add(p, "s2", \(y = ~s1) y)
 
         v <- pip_view(p, params = "y")
-        expect_equal(v[["view"]], 2L)
+        expect_equal(v[["view"]], "s2")
     })
 
     it("can filter by exec mode", {
@@ -4456,7 +4497,7 @@ describe("pip_view", {
         pip_add(p, "s2", \(x = 2) x, exec = "split")
 
         v <- pip_view(p, exec = "split")
-        expect_equal(v[["view"]], 2L)
+        expect_equal(v[["view"]], "s2")
     })
 
     it("can filter by regex when fixed is FALSE", {
@@ -4466,7 +4507,7 @@ describe("pip_view", {
         pip_add(p, "eval_model", \(x = ~data, y = ~fit_model) x)
 
         v <- pip_view(p, step = "_model$", fixed = FALSE)
-        expect_equal(v[["view"]], c(2L, 3L))
+        expect_equal(v[["view"]], c("fit_model", "eval_model"))
     })
 
     it("intersects multiple filters", {
@@ -4476,7 +4517,7 @@ describe("pip_view", {
         pip_add(p, "a3", \(x = ~ -1) x, tags = "g2")
 
         v <- pip_view(p, step = c("a1", "a2"), tags = "g2")
-        expect_equal(v[["view"]], 2L)
+        expect_equal(v[["view"]], "a2")
     })
 
     it("unions multiple filters with join = union", {
@@ -4486,7 +4527,7 @@ describe("pip_view", {
         pip_add(p, "a3", \(x = ~ -1) x, tags = "g2")
 
         v <- pip_view(p, step = "a1", tags = "g2", join = "union")
-        expect_equal(v[["view"]], c(1L, 2L, 3L))
+        expect_equal(v[["view"]], c("a1", "a2", "a3"))
     })
 
     it("defaults to intersect and allows partial join names", {
@@ -4496,11 +4537,11 @@ describe("pip_view", {
 
         expect_equal(
             pip_view(p, step = "a1", tags = "g2")[["view"]],
-            integer(0)
+            character(0)
         )
         expect_equal(
             pip_view(p, step = "a1", tags = "g2", join = "uni")[["view"]],
-            c(1L, 2L)
+            c("a1", "a2")
         )
     })
 
@@ -4521,11 +4562,11 @@ describe("pip_view", {
         pip_add(p, "s3", \(x = ~ -1) x, tags = c("daily", "report"))
 
         v <- pip_view(p, tags = "daily")
-        expect_equal(v[["view"]], c(1L, 3L))
+        expect_equal(v[["view"]], c("s1", "s3"))
         expect_equal(v[["name"]], "test_pipeline")
 
         v2 <- pip_view(v, tags = "report")
-        expect_equal(v2[["view"]], 3L)
+        expect_equal(v2[["view"]], "s3")
         expect_equal(v2[["name"]], "test_pipeline")
     })
 
@@ -4555,6 +4596,78 @@ describe("pip_view", {
             pip_view(p, params = TRUE),
             "filter 'params' must be a character vector, not logical"
         )
+    })
+
+    describe("when the pipeline changes", {
+        view_pip <- function() {
+            pip_new() |>
+                pip_add("a", \(x = 1) x, tags = "t") |>
+                pip_add("b", \(x = ~a) x + 1) |>
+                pip_add("c", \(x = ~b) x + 1, tags = "t")
+        }
+
+        it("keeps covering its steps when steps are inserted", {
+            p <- view_pip()
+            v <- pip_view(p, step = c("b", "c"))
+
+            pip_add(p, "first", \(x = 0) x, after = 0)
+            pip_add(p, "mid", \(x = ~b) x, after = "b")
+
+            expect_equal(v[["view"]], c("b", "c"))
+            expect_equal(nrow(v), 2L)
+        })
+
+        it("does not cover new steps that match its filters", {
+            p <- view_pip()
+            v <- pip_view(p, tags = "t")
+
+            pip_add(p, "d", \(x = ~c) x, tags = "t")
+
+            expect_equal(v[["view"]], c("a", "c"))
+        })
+
+        it("drops steps that were removed through another handle", {
+            p <- view_pip()
+            v <- pip_view(p, step = c("a", "c"))
+            other <- p[c("b", "c")]
+
+            pip_remove(other, "c")
+
+            expect_equal(v[["view"]], "a")
+            expect_equal(other[["view"]], "b")
+        })
+
+        it("keeps covering steps that were renamed through any handle", {
+            p <- view_pip()
+            v <- pip_view(p, step = c("b", "c"))
+
+            pip_rename(p, "c", "c2")
+            pip_rename(v, "b", "b2") # v is not reassigned
+
+            expect_equal(v[["view"]], c("b2", "c2"))
+        })
+
+        it("keeps covering replaced steps", {
+            p <- view_pip()
+            v <- pip_view(p, step = "b")
+
+            pip_replace(p, "b", \(x = ~a) x * 10)
+            pip_run(v, lgr = NULL)
+
+            expect_equal(v[["view"]], "b")
+            expect_equal(v[["b", "out"]], 10)
+        })
+
+        it("runs its steps after steps were inserted before them", {
+            p <- view_pip()
+            v <- pip_view(p, step = "c")
+
+            pip_add(p, "first", \(x = 0) x, after = 0)
+            pip_run(v, lgr = NULL)
+
+            expect_equal(v[["c", "out"]], 3)
+            expect_equal(p[["first", "state"]], "new")
+        })
     })
 })
 
