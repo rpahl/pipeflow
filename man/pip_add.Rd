@@ -92,10 +92,8 @@ steps at runtime, or to call \code{.self$restart()} or \code{.self$halt()} (see
 run. pipeflow provides it each time the step runs, but only if the body of
 the step function contains the name \code{.self} (also within functions defined
 in the body). Indirect access, such as \code{get(".self")}, is not detected.
-Other step functions are called as they are, so their outputs (for example
-plots or closures, which keep the environment of the step) don't reach the
-pipeline through \code{.self}. \code{.self} is a reserved name: it can't be an
-argument of \code{fun} or a name in \code{params}.
+\code{.self} is a reserved name: it can't be an argument of \code{fun} or a name in
+\code{params}.
 }
 }
 \examples{
