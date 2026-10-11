@@ -1,5 +1,10 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.4.0.9011
+
+- Same as previous version.
+
+
 # pipeflow 0.4.0.9010
 
 - New `pip_run_state()` returns the run state of a pipeline or view
