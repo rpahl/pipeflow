@@ -288,7 +288,7 @@ p[[2, "state"]]          # state of the second step
 
 # Views behave analogously:
 v <- pip_view(p, step = c("load", "fit"))
-v[["name"]]              # "pipe view"
+v[["name"]]              # "pipe"
 v[["view"]]              # row indices of the covered steps
 
 v[["step"]]              # c(load = "load", fit = "fit")

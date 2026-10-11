@@ -454,7 +454,7 @@ dim.pipeflow <- function(x) {
 
     if (view) {
         # Return a view on the selected rows
-        return(.wrap_pipenv(pipenv, name = paste(name, "view"), view = rows))
+        return(.wrap_pipenv(pipenv, name = name, view = rows))
     }
 
     # Resolve all nodes reachable from the selected rows via upstream edges,
@@ -537,7 +537,7 @@ dim.pipeflow <- function(x) {
 #'
 #' # Views behave analogously:
 #' v <- pip_view(p, step = c("load", "fit"))
-#' v[["name"]]              # "pipe view"
+#' v[["name"]]              # "pipe"
 #' v[["view"]]              # row indices of the covered steps
 #'
 #' v[["step"]]              # c(load = "load", fit = "fit")

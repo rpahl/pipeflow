@@ -4379,7 +4379,7 @@ describe("pip_view", {
         expect_true(.is_pipeflow_view(v))
         expect_true("view" %in% names(v))
         expect_identical(v[["pipenv"]][["data"]], p[["pipenv"]][["data"]])
-        expect_identical(v[["name"]], "test_pipeline view")
+        expect_identical(v[["name"]], "test_pipeline")
     })
 
     it("can filter by multiple properties with fixed matching", {
@@ -4522,11 +4522,11 @@ describe("pip_view", {
 
         v <- pip_view(p, tags = "daily")
         expect_equal(v[["view"]], c(1L, 3L))
-        expect_equal(v[["name"]], "test_pipeline view")
+        expect_equal(v[["name"]], "test_pipeline")
 
         v2 <- pip_view(v, tags = "report")
         expect_equal(v2[["view"]], 3L)
-        expect_equal(v2[["name"]], "test_pipeline view view")
+        expect_equal(v2[["name"]], "test_pipeline")
     })
 
     it("signals invalid filter names", {

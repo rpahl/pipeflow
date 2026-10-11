@@ -213,7 +213,11 @@ describe("print.pipeflow_view", {
         v <- pip_view(p, tags = "model")
         out <- capture.output(print(v))
 
-        expect_true(any(grepl("<pipeflow_view>", out)))
+        expect_true(any(grepl(
+            "<pipeflow_view> pipe (1 of 2 steps)",
+            out,
+            fixed = TRUE
+        )))
         expect_equal(
             get_view_header(v),
             c("step", "params", "depends", "state", "tags")

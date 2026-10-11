@@ -3213,5 +3213,5 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
     }
 
     rows <- parent_rows[which(keep)]
-    .wrap_pipenv(env, name = sprintf("%s view", x[["name"]]), view = rows)
+    .wrap_pipenv(env, name = x[["name"]], view = rows)
 }

@@ -5,6 +5,10 @@
 - New `pip_run_state()` returns the run state of a pipeline or view
   (`"ready"`, `"running"`, `"restart"`, `"halted"`, `"failed"` or
   `"continued"`).
+- Behaviour change: a view keeps the name of its pipeline. Before, views were
+  named `"<name> view"` (and a view of a view `"<name> view view"`), so code
+  holding a view couldn't get the pipeline name. `print()` still marks views
+  with `<pipeflow_view>`.
 
 
 # pipeflow 0.4.0.9009
