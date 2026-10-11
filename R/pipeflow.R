@@ -627,10 +627,17 @@
     .subset2(x, "pipenv")
 }
 
-# The view selector for the given absolute rows of the step table: the node
-# ids of the steps. Unlike row numbers, node ids don't change when steps are
-# added, removed, renamed or replaced, and they are never reused, so a view
-# keeps covering its steps.
+#' Build the view selector for rows of the step table
+#'
+#' Returns the node ids of the steps in the given rows. Unlike row numbers,
+#' node ids don't change when steps are added, removed, renamed or replaced,
+#' and they are never reused, so a view keeps covering its steps.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @param rows Absolute row indices of the step table.
+#' @return An integer vector of node ids, to be used as the `view` of
+#' `.wrap_pipenv()`.
+#' @noRd
 .pip_rows_to_view <- function(pipenv, rows) {
     as.integer(pipenv[["data"]][["nodeId"]][rows])
 }
