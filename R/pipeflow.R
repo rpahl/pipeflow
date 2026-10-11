@@ -2794,8 +2794,8 @@ pip_arg_value.default <- function(x, ...) {
 #' Get or set unbound parameters
 #'
 #' [pip_get_params()] returns the current default values of all unbound
-#' parameters of a pipeline or view, that is, parameters wired to another
-#' step's output via `~step_name` are excluded.
+#' parameters of a pipeline or view (parameters wired to another step's
+#' output via `~step_name` are excluded), including those of locked steps.
 #' [pip_set_params()] updates these parameters for the whole pipeline or
 #' view. Steps whose values change are marked as outdated, together with
 #' their downstream dependents (steps that have never run stay `"new"`).
@@ -2803,7 +2803,10 @@ pip_arg_value.default <- function(x, ...) {
 #' outdate any step, unless `force = TRUE`.
 #'
 #' @note Parameters of locked steps are never changed and their state
-#' remains unchanged.
+#' remains unchanged. [pip_get_params()] still returns them, so if a locked
+#' step comes first among the steps that share a parameter name,
+#' [pip_get_params()] keeps returning the locked step's value after the
+#' parameter was set.
 #'
 #' An environment (or a reference object such as an R6 object) that was
 #' modified in place is identical to the stored one, so setting it again
@@ -3105,7 +3108,7 @@ pip_unlock <- function(x) {
 #' A view references the underlying pipeline without copying it, so
 #' operations like [pip_run()] and [pip_set_params()] applied to a view
 #' work directly on the underlying pipeline, but are restricted to the
-#' the steps defined by the view.
+#' steps defined by the view.
 #'
 #' @param x A pipeflow pipeline or view.
 #' @param ... Named filters, which can be one or more of `step`, `params`,

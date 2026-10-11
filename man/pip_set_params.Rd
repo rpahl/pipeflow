@@ -37,8 +37,8 @@ updated pipeline or view, invisibly.
 }
 \description{
 \code{\link[=pip_get_params]{pip_get_params()}} returns the current default values of all unbound
-parameters of a pipeline or view, that is, parameters wired to another
-step's output via \code{~step_name} are excluded.
+parameters of a pipeline or view (parameters wired to another step's
+output via \code{~step_name} are excluded), including those of locked steps.
 \code{\link[=pip_set_params]{pip_set_params()}} updates these parameters for the whole pipeline or
 view. Steps whose values change are marked as outdated, together with
 their downstream dependents (steps that have never run stay \code{"new"}).
@@ -47,7 +47,10 @@ outdate any step, unless \code{force = TRUE}.
 }
 \note{
 Parameters of locked steps are never changed and their state
-remains unchanged.
+remains unchanged. \code{\link[=pip_get_params]{pip_get_params()}} still returns them, so if a locked
+step comes first among the steps that share a parameter name,
+\code{\link[=pip_get_params]{pip_get_params()}} keeps returning the locked step's value after the
+parameter was set.
 
 An environment (or a reference object such as an R6 object) that was
 modified in place is identical to the stored one, so setting it again

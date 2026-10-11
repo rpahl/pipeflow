@@ -34,7 +34,7 @@ Creates a filtered view showing only a selected subset of steps.
 A view references the underlying pipeline without copying it, so
 operations like \code{\link[=pip_run]{pip_run()}} and \code{\link[=pip_set_params]{pip_set_params()}} applied to a view
 work directly on the underlying pipeline, but are restricted to the
-the steps defined by the view.
+steps defined by the view.
 }
 \examples{
 p <- pip_new() |>

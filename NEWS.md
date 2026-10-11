@@ -17,6 +17,11 @@
   flattened values; and a function or environment (e.g. an R6 object) as
   `<class>`. Strings longer than 40 characters are cut off and marked with
   `"..."`.
+- Documentation: `?pip_set_params` notes that `pip_get_params()` also returns
+  the parameters of locked steps, which `pip_set_params()` skips.
+  `` ?`[.pipeflow` `` explains that `tags %like% "x"` matches against the
+  tags converted to a string (so it can also match untagged steps) and
+  points to `pip_view(tags = )` for exact tag matching.
 
 
 # pipeflow 0.4.0.9009

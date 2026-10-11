@@ -80,6 +80,14 @@ Boolean filters may reference the columns of the step table (\code{step}, \code{
 (e.g. \verb{\%like\%}, \verb{\%chin\%}, \verb{\%between\%}) are available. \code{p[]} returns a copy
 of the pipeline.
 
+Note that \code{tags} is a list column, so \verb{\%like\%} matches the pattern against
+the tags of each step converted to a single string, e.g. \code{"character(0)"}
+for a step without tags and \code{'c("io", "daily")'} for a step with two tags.
+A pattern can therefore also match untagged steps (e.g.
+\code{tags \%like\% "a"}), and anchored patterns such as \code{"^io$"} miss steps with
+several tags. To match tags exactly, use the \code{tags} argument of
+\code{\link[=pip_view]{pip_view()}}, e.g. \code{pip_view(p, tags = "io")}.
+
 When \code{j} is provided, the selected steps are returned as a step-table
 extraction rather than a pipeline. \code{j} must be a character vector of column
 names: \code{p[, j]} keeps those columns for all steps and \code{p[i, j]} first

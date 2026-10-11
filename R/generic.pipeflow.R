@@ -348,6 +348,14 @@ dim.pipeflow <- function(x) {
 #' (e.g. `%like%`, `%chin%`, `%between%`) are available. `p[]` returns a copy
 #' of the pipeline.
 #'
+#' Note that `tags` is a list column, so `%like%` matches the pattern against
+#' the tags of each step converted to a single string, e.g. `"character(0)"`
+#' for a step without tags and `'c("io", "daily")'` for a step with two tags.
+#' A pattern can therefore also match untagged steps (e.g.
+#' `tags %like% "a"`), and anchored patterns such as `"^io$"` miss steps with
+#' several tags. To match tags exactly, use the `tags` argument of
+#' [pip_view()], e.g. `pip_view(p, tags = "io")`.
+#'
 #' When `j` is provided, the selected steps are returned as a step-table
 #' extraction rather than a pipeline. `j` must be a character vector of column
 #' names: `p[, j]` keeps those columns for all steps and `p[i, j]` first
