@@ -14,6 +14,13 @@
   named `"<name> view"` (and a view of a view `"<name> view view"`), so code
   holding a view couldn't get the pipeline name. `print()` still marks views
   with `<pipeflow_view>`.
+- Behaviour change: a view keeps track of its steps instead of their row
+  numbers, so it stays valid when steps are added, removed, renamed or
+  replaced later, also through the pipeline or another view. Removed steps
+  drop out of the view. Before, a view could cover the wrong steps once rows
+  had shifted, and the result of `pip_remove()` had to be assigned back to
+  the view. `v[["view"]]` now returns the names of the covered steps instead
+  of row indices.
 - `print()` shows outputs that were hard to read in the `out` column in short
   form: a condition (the output of a step that failed in a run with
   `on_error = "continue"`) as `<kind/class>`, e.g. `<error/simpleError>`,

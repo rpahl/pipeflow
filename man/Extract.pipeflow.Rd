@@ -110,8 +110,8 @@ In addition, a few meta fields are accessible by name.
 The following meta fields are available via \code{p[["..."]]} (or \code{p$...}):
 \itemize{
 \item \code{name} -- the name of the pipeline.
-\item \code{view} -- the absolute row indices of the steps covered by a view, or
-\code{NULL} for a full pipeline.
+\item \code{view} -- the names of the steps covered by a view, or \code{NULL} for a full
+pipeline.
 \item \code{pipenv} -- the shared inner environment holding the pipeline's state.
 All views and extracted subsets reference the same environment, so
 mutations are shared. The step table is available as
@@ -297,7 +297,7 @@ p[[2, "state"]]          # state of the second step
 # Views behave analogously:
 v <- pip_view(p, step = c("load", "fit"))
 v[["name"]]              # "pipe"
-v[["view"]]              # row indices of the covered steps
+v[["view"]]              # "load", "fit" - the covered steps
 
 v[["step"]]              # c(load = "load", fit = "fit")
 v[["out"]]               # c(load = 1, fit = 2)

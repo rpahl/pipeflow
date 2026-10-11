@@ -164,15 +164,15 @@ v2
 
 ## The `view` meta field
 
-Under the hood, a view is defined by a vector of row indices covered by the
-view (`NULL` for a "no view"). This vector is stored in the `view` meta
-field of the pipeline object, so in principle you can also manipulate
-the view directly by assigning to the meta field^[
+Under the hood, a view stores the steps it covers in the `view` meta field
+of the pipeline object (`NULL` for a "no view"). Reading the field returns
+the names of the covered steps, so in principle you can also manipulate
+the view directly by assigning step names to the meta field^[
     Direct manipulation of the view usually is not needed and probably
     mostly useful for debugging.
 ].
 
-```{r}
+```{r view-meta-field}
 pip[["view"]] # NULL — not a view
 
 w <- pip
@@ -181,6 +181,21 @@ w
 
 w[["view"]] <- NULL # back to the full pipeline
 w
+```
+
+A view keeps covering its steps when the pipeline changes later, also if
+the change is made through the pipeline itself or another view: steps that
+are added or renamed don't affect it, and removed steps just drop out of
+it. New steps are not added to an existing view, even if they match its
+filters.
+
+```{r view-after-changes}
+pip2 <- pip_clone(pip)
+v <- pip_view(pip2, tags = "core") # clean, fit
+
+pip_add(pip2, "check", \(x = ~load) x, tags = "core", after = "load")
+pip_rename(pip2, from = "fit", to = "model")
+v[["view"]]
 ```
 
 ## Running views

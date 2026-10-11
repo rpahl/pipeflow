@@ -15,8 +15,7 @@ pip_remove(x, step, force = FALSE)
 with all its downstream dependencies.}
 }
 \value{
-The updated pipeline, invisibly. For a view, the view with its
-remapped selector.
+The updated pipeline or view, invisibly.
 }
 \description{
 Removes a pipeline step by its name. If other steps depend on it,
@@ -25,14 +24,9 @@ an error is given and the removal of the step is blocked, unless
 together with all its downstream dependent steps.
 }
 \note{
-If called on a view, the step to be removed must be part of the view,
-since removing steps drops rows from the pipeline, the row positions
-of the view will be shifted after the removal operation.
-For views, you therefore need to assign the result back to the view:
-\code{v <- pip_remove(v, ...)}.
-Views that are not reassigned (or other views on the same pipeline),
-keep their old row positions and therefore can become invalid after a
-step removal.
+If called on a view, the step to be removed must be part of the view.
+The view, as well as any other view on the same pipeline, stays valid:
+the removed steps just drop out of it.
 }
 \examples{
 p <- pip_new() |>
@@ -50,8 +44,11 @@ p                        # "load", "transform"
 # If a view is passed, the step must be part of the view.
 v <- pip_view(p, step = "transform")
 try(pip_remove(v, "load"))  # Error: "load" is not part of the view
-v <- pip_remove(v, "transform")
-v[["step"]]              # view is remapped and stays valid
+
+# Views stay valid, the removed steps just drop out of them
+v <- pip_view(p, step = c("load", "transform"))
+pip_remove(v, "transform")
+v[["step"]]              # "load"
 p                        # "load"
 
 # force = TRUE removes the step and all its downstream dependents

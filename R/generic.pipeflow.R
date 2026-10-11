@@ -218,6 +218,14 @@
         stop("i must be a single step name or row index")
     }
     if (is.null(j)) {
+        # The `view` field holds node ids, so the covered steps are returned.
+        if (identical(i, "view")) {
+            if (!.is_pipeflow_view(x)) {
+                return(NULL)
+            }
+            return(.pip_pipenv(x)[["data"]][["step"]][.pip_view_rows(x)])
+        }
+
         # List fields of the wrapper have priority over column names.
         if (is.character(i) && length(i) == 1L && !is.na(i)) {
             if (i %in% names(x)) {
@@ -462,7 +470,8 @@ dim.pipeflow <- function(x) {
 
     if (view) {
         # Return a view on the selected rows
-        return(.wrap_pipenv(pipenv, name = name, view = rows))
+        selector <- .pip_rows_to_view(pipenv, rows)
+        return(.wrap_pipenv(pipenv, name = name, view = selector))
     }
 
     # Resolve all nodes reachable from the selected rows via upstream edges,
@@ -497,8 +506,8 @@ dim.pipeflow <- function(x) {
 #' The following meta fields are available via `p[["..."]]` (or `p$...`):
 #'
 #' * `name` -- the name of the pipeline.
-#' * `view` -- the absolute row indices of the steps covered by a view, or
-#'   `NULL` for a full pipeline.
+#' * `view` -- the names of the steps covered by a view, or `NULL` for a full
+#'   pipeline.
 #' * `pipenv` -- the shared inner environment holding the pipeline's state.
 #'   All views and extracted subsets reference the same environment, so
 #'   mutations are shared. The step table is available as
@@ -546,7 +555,7 @@ dim.pipeflow <- function(x) {
 #' # Views behave analogously:
 #' v <- pip_view(p, step = c("load", "fit"))
 #' v[["name"]]              # "pipe"
-#' v[["view"]]              # row indices of the covered steps
+#' v[["view"]]              # "load", "fit" - the covered steps
 #'
 #' v[["step"]]              # c(load = "load", fit = "fit")
 #' v[["out"]]               # c(load = 1, fit = 2)
