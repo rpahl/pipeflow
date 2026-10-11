@@ -27,7 +27,9 @@ values at runtime once the step is executed. A reference wrapped in \code{try()}
 like \code{~try(other_step)}, accepts a failed input when the pipeline is run
 with \code{on_error = "continue"}: instead of the output of the referenced step,
 the argument then receives a condition of class \code{pipeflow_failure} (see
-section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}).}
+section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). The function can refer
+to the running pipeline as \code{.self} (see section 'The pipeline as \code{.self}'
+in \code{\link[=pip_add]{pip_add()}}).}
 
 \item{tags}{Optional character vector of tags belonging to the step.
 Can also be adjusted later using \verb{[pip_tag()]}.}
@@ -81,6 +83,18 @@ step or position. Be aware that in contrast to adding a step at the end,
 inserting a step in the middle is a rather expensive operation as it
 requires re-wiring parts of the internal pipeline structure, especially
 if the new step is inserted at an early position.
+\subsection{The pipeline as \code{.self}}{
+
+A step function can refer to the pipeline that is being run as \code{.self}
+without declaring it as an argument, for example to set parameters or add
+steps at runtime, or to call \code{.self$restart()} or \code{.self$halt()} (see
+\code{\link[=pip_run]{pip_run()}}). \code{.self} is always the full pipeline, also when a view is
+run. pipeflow provides it each time the step runs, but only if the body of
+the step function contains the name \code{.self} (also within functions defined
+in the body). Indirect access, such as \code{get(".self")}, is not detected.
+\code{.self} is a reserved name: it can't be an argument of \code{fun} or a name in
+\code{params}.
+}
 }
 \examples{
 # --- Tags, and view filtering ---

@@ -188,10 +188,11 @@ forwards the combined parameter set at run time. Three aspects are worth
 spelling out:
 
 * **`.self`** refers to the pipeline that is currently being run and is
-  available inside *every* step function without having to declare it. It
-  exposes the usual pipeline interface, so `.self$get_params()` returns the
-  current unbound parameters of the outer pipeline, and things like
-  `.self$name` or `.self$run()` work as expected. For more examples on this
+  available inside every step function that refers to it, without having
+  to declare it. It exposes the usual pipeline interface, so
+  `.self$get_params()` returns the current unbound parameters of the outer
+  pipeline, and things like `.self$name` or `.self$run()` work as
+  expected. For more examples on this
   mechanism see the
   [self-modifying pipelines](v06-self-modify-pipeline.html) vignette.
 * **`params = pip_get_params(inner)`** registers the inner pipeline's unbound

@@ -153,31 +153,27 @@
     )
 }
 
-# Wrap a step function so that `.self` is available in its body. The wrapper
-# gets its own environment holding the pipeline reference, so the original
-# function object is never mutated.
+#' Provide `.self` to a step function that refers to it
+#'
+#' If the body of `fun` contains the name `.self` (also within functions
+#' defined in the body), a copy of `fun` is returned whose environment is a
+#' new child of the environment of `fun`, holding `self` as `.self`. `fun`
+#' and its environment are not changed. Other functions are returned as they
+#' are, so their outputs don't keep a reference to the pipeline. Indirect
+#' access, such as `get(".self")`, is not detected.
+#'
+#' @param fun The step function.
+#' @param self The pipeflow pipeline that `.self` refers to.
+#' @return `fun`, or a copy of it that sees `self` as `.self`.
+#' @noRd
 .wrap_self <- function(fun, self) {
+    if (!(".self" %in% all.names(body(fun)))) {
+        return(fun)
+    }
     env <- new.env(parent = environment(fun))
     env[[".self"]] <- self
-    eval(call("function", formals(fun), body(fun)), envir = env)
-}
-
-#' Give the steps of a copied step table their own `.self`
-#'
-#' Wraps the step functions of a copied step table again, so that they get a
-#' `.self` environment of their own instead of sharing the one of the steps
-#' they were copied from.
-#'
-#' @param dat The copied step table (a `data.table`).
-#' @param self The pipeflow pipeline that `.self` refers to in the copy.
-#' @return `dat`, invisibly. Its `fun` column is updated in place.
-#' @noRd
-.pip_rewrap_self <- function(dat, self) {
-    if (nrow(dat) > 0L) {
-        funs <- lapply(dat[["fun"]], .wrap_self, self = self)
-        data.table::set(dat, j = "fun", value = list(funs))
-    }
-    invisible(dat)
+    environment(fun) <- env
+    fun
 }
 
 # ------------------------------
@@ -508,9 +504,9 @@
 
     step <- dat[["step"]][[i]]
 
-    # Keep `.self` pointing at the pipeline object being run, so steps still
-    # reference the correct pipeline after cloning, subsetting or replacing.
-    environment(fun)[[".self"]] <- x
+    # Provide `.self` (the full pipeline being run) to a step function that
+    # refers to it, in an environment of its own for this call.
+    fun <- .wrap_self(fun, self = x)
 
     unbound <- dat[["unbound"]][[i]]
 
@@ -835,9 +831,6 @@
     funParams <- .extract_fun_params(fun)
     params[names(funParams)] <- funParams
 
-    # Provide `.self` to the step via a dedicated wrapper environment.
-    fun <- .wrap_self(fun, x)
-
     # Determine and verify potential links to existing steps
     env <- .pip_pipenv(x)
     steps <- c(env[["data"]][["step"]], step)
@@ -892,9 +885,6 @@
 .pip_insert <- function(x, step, fun, tags, exec, params, pos) {
     funParams <- .extract_fun_params(fun)
     params[names(funParams)] <- funParams
-
-    # Provide `.self` to the step via a dedicated wrapper environment.
-    fun <- .wrap_self(fun, x)
 
     env <- .pip_pipenv(x)
     data <- env[["data"]]
@@ -990,9 +980,9 @@
     }
 
     # Append all (potentially renamed) steps of y in one pass: transform each
-    # row (re-create the formula dependencies after renaming and re-bind
-    # `.self` to the target), allocate a fresh node id, wire the DAG edges,
-    # and collect the rows for a single rbindlist.
+    # row (re-create the formula dependencies after renaming), allocate a
+    # fresh node id, wire the DAG edges, and collect the rows for a single
+    # rbindlist.
     outEnv <- .pip_pipenv(out)
     d <- outEnv[[".dag"]]
     stepsToNodes <- outEnv[[".steps_to_nodes"]]
@@ -1023,8 +1013,6 @@
             fml[[nm]] <- params[[nm]]
         }
         formals(fun) <- fml
-
-        fun <- .wrap_self(fun, out)
 
         # Update DAG: allocate the node, register the step, add edges to its
         # upstream steps (which are either in `out` or already appended).
@@ -1146,7 +1134,9 @@ pip_new <- function(name = "pipe") {
 #' like `~try(other_step)`, accepts a failed input when the pipeline is run
 #' with `on_error = "continue"`: instead of the output of the referenced step,
 #' the argument then receives a condition of class `pipeflow_failure` (see
-#' section 'Continuing after errors' in [pip_run()]).
+#' section 'Continuing after errors' in [pip_run()]). The function can refer
+#' to the running pipeline as `.self` (see section 'The pipeline as `.self`'
+#' in [pip_add()]).
 #' @param tags Optional character vector of tags belonging to the step.
 #' Can also be adjusted later using `[pip_tag()]`.
 #' @param after Optional position after which the new step should be inserted
@@ -1183,6 +1173,17 @@ pip_new <- function(name = "pipe") {
 #' inserting a step in the middle is a rather expensive operation as it
 #' requires re-wiring parts of the internal pipeline structure, especially
 #' if the new step is inserted at an early position.
+#'
+#' ## The pipeline as `.self`
+#' A step function can refer to the pipeline that is being run as `.self`
+#' without declaring it as an argument, for example to set parameters or add
+#' steps at runtime, or to call `.self$restart()` or `.self$halt()` (see
+#' [pip_run()]). `.self` is always the full pipeline, also when a view is
+#' run. pipeflow provides it each time the step runs, but only if the body of
+#' the step function contains the name `.self` (also within functions defined
+#' in the body). Indirect access, such as `get(".self")`, is not detected.
+#' `.self` is a reserved name: it can't be an argument of `fun` or a name in
+#' `params`.
 #'
 #' @return The updated pipeline, invisibly.
 #' @examples
@@ -1377,7 +1378,6 @@ pip_clone <- function(x, name = NULL) {
 
     env[[".dag"]] <- dag_clone(.pip_pipenv(x)[[".dag"]])
     dat <- data.table::copy(.pip_pipenv(x)[["data"]])
-    .pip_rewrap_self(dat, self = out)
 
     # Clone steps to nodes mapping
     stepsToNodes <- env[[".steps_to_nodes"]]
@@ -2117,9 +2117,6 @@ pip_replace <- function(
     funParams <- .extract_fun_params(fun)
     params[names(funParams)] <- funParams
 
-    # Provide `.self` to the step via a dedicated wrapper environment.
-    fun <- .wrap_self(fun, x)
-
     # Dependencies of the replacement may only point to earlier steps
     prefixSteps <- data[["step"]][seq_len(iStep - 1L)]
     steps <- c(prefixSteps, step)
@@ -2295,8 +2292,8 @@ pip_replace <- function(
 #'
 #' A running pipeline can be interrupted via the `restart()` and `halt()`
 #' virtual methods. They are intended for advanced, self-modifying pipelines
-#' and are most often called from within a step function via the `.self`
-#' argument.
+#' and are most often called from within a step function via `.self` (see
+#' section 'The pipeline as `.self`' in [pip_add()]).
 #'
 #' - `.self$restart(force = TRUE, times = 1L)`: aborts the current run after the
 #'   current step has finished and restarts it from the first step.
