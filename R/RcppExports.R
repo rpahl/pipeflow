@@ -9,6 +9,14 @@ dag_clone <- function(dp) {
     .Call(`_pipeflow_dag_clone`, dp)
 }
 
+dag_restore <- function(dp, order, from, to) {
+    .Call(`_pipeflow_dag_restore`, dp, order, from, to)
+}
+
+dag_is_null <- function(dp) {
+    .Call(`_pipeflow_dag_is_null`, dp)
+}
+
 dag_size <- function(dp) {
     .Call(`_pipeflow_dag_size`, dp)
 }

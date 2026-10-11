@@ -63,3 +63,28 @@ create_bin_tree_dag <- function() {
     dag_tidy_up(d)
     d
 }
+
+# The structure of a DAG: its node order and the sorted incoming and outgoing
+# nodes of each node, by node id.
+dag_structure <- function(d) {
+    ids <- dag_get_nodes_order(d)
+    edges <- function(get) {
+        stats::setNames(lapply(ids, \(id) sort(get(d, id))), ids)
+    }
+    list(
+        order = ids,
+        incoming = edges(dag_get_incoming),
+        outgoing = edges(dag_get_outgoing)
+    )
+}
+
+# The id that the next node gets after the DAG was saved and restored.
+next_id_after_restore <- function(d) {
+    restored <- dag_restore(
+        unserialize(serialize(d, NULL)),
+        order = integer(),
+        from = integer(),
+        to = integer()
+    )
+    dag_add_node(restored)
+}

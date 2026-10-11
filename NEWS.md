@@ -2,7 +2,12 @@
 
 # pipeflow 0.4.0.9012
 
-- Same as previous version.
+- Pipelines can be saved with `saveRDS()` and read back with `readRDS()`,
+  or sent to other R processes. Before, `pip_run()`, `pip_add()` and most
+  other functions failed on a read pipeline with "null Dag pointer". The
+  dependency graph of the steps is now rebuilt when it is first needed, with
+  the same node ids, so views that were saved together with their pipeline
+  keep their steps (see section 'Saving pipelines' in `?pip_new`).
 
 
 # pipeflow 0.4.0.9011

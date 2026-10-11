@@ -819,6 +819,80 @@ describe(".pip_view_rows", {
 })
 
 
+describe(".pip_dag", {
+    # Node ids a = 0, a2 = 4, b = 1, c = 2, d = 3; id 5 was removed with e
+    test_pip <- function() {
+        p <- pip_new("p") |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1) |>
+            pip_add("c", \(x = ~b, k = 2) x * k) |>
+            pip_add("d", \(x = ~a, y = ~c) x + y)
+        pip_add(p, "a2", \(x = ~a) x * 10, after = "a")
+        pip_add(p, "e", \(x = ~d) x)
+        pip_remove(p, "e")
+    }
+
+    it("returns the DAG of a pipeline as it is", {
+        pipenv <- test_pip()[["pipenv"]]
+        expect_identical(.pip_dag(pipenv), pipenv[[".dag"]])
+    })
+
+    it("rebuilds the DAG of a read pipeline with the same node ids", {
+        p <- test_pip()
+        pipenv <- save_and_read(p)[["pipenv"]]
+        expect_true(dag_is_null(pipenv[[".dag"]]))
+
+        d <- .pip_dag(pipenv)
+        expect_false(dag_is_null(d))
+        expect_identical(pipenv[[".dag"]], d)
+        expect_equal(pipenv[["data"]][["nodeId"]], c(0L, 4L, 1L, 2L, 3L))
+        expect_equal(dag_structure(d), dag_structure(p[["pipenv"]][[".dag"]]))
+    })
+
+    it("keeps the node ids of removed steps unused", {
+        p <- test_pip()
+        q <- save_and_read(p)
+        pip_add(p, "f", \(x = ~d) x)
+        pip_add(q, "f", \(x = ~d) x)
+        expect_equal(q[["nodeId"]][["f"]], 6L)
+        expect_equal(q[["nodeId"]], p[["nodeId"]])
+    })
+
+    it("rebuilds the DAG of an empty pipeline", {
+        pipenv <- save_and_read(pip_new())[["pipenv"]]
+        expect_equal(dag_size(.pip_dag(pipenv)), 0L)
+    })
+
+    it("signals a step to node map that does not match the step table", {
+        msg <- "the step to node map does not match the step table"
+
+        pipenv <- save_and_read(test_pip())[["pipenv"]]
+        rm("b", envir = pipenv[[".steps_to_nodes"]])
+        expect_error(.pip_dag(pipenv), msg)
+
+        pipenv <- save_and_read(test_pip())[["pipenv"]]
+        pipenv[[".steps_to_nodes"]][["b"]] <- 7L
+        expect_error(.pip_dag(pipenv), msg)
+
+        pipenv <- save_and_read(test_pip())[["pipenv"]]
+        pipenv[[".steps_to_nodes"]][["zz"]] <- 7L
+        expect_error(.pip_dag(pipenv), msg)
+        expect_true(dag_is_null(pipenv[[".dag"]]))
+    })
+
+    it("signals steps that depend on unknown steps", {
+        pipenv <- save_and_read(test_pip())[["pipenv"]]
+        data.table::set(
+            pipenv[["data"]],
+            i = 3L,
+            j = "depends",
+            value = list(list(c(x = "zz")))
+        )
+        expect_error(.pip_dag(pipenv), "steps depend on unknown steps")
+    })
+})
+
+
 # -----------------
 # Pipeline addition
 # -----------------
@@ -855,6 +929,238 @@ describe("pip_new", {
         expect_error(pip_new(c("a", "b")), "name must be a single string")
         expect_error(pip_new(1), "name must be a single string")
         expect_error(pip_new(NA_character_), "name must not be NA")
+    })
+})
+
+
+describe("pipelines read with readRDS()", {
+    is_formula <- \(x) inherits(x, "formula")
+
+    # Node ids a = 0, a2 = 4, b = 1, c = 2, d = 3; id 5 was removed with e
+    test_pip <- function() {
+        p <- pip_new("p") |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1) |>
+            pip_add("c", \(x = ~b, k = 2) x * k) |>
+            pip_add("d", \(x = ~a, y = ~c) x + y)
+        pip_add(p, "a2", \(x = ~a) x * 10, after = "a")
+        pip_add(p, "e", \(x = ~d) x)
+        pip_remove(p, "e")
+    }
+
+    # Read pipeline `q` has the same steps and DAG as pipeline `p`. Params
+    # that refer to steps are compared via `depends`.
+    expect_same_pip <- function(q, p) {
+        cols <- c("step", "out", "state", "tags", "locked", "exec", "depends")
+        expect_equal(q[, cols], p[, cols])
+        unbound <- \(x) lapply(x[["params"]], Filter, f = Negate(is_formula))
+        expect_equal(unbound(q), unbound(p))
+        expect_equal(q[["nodeId"]], p[["nodeId"]])
+        expect_equal(
+            dag_structure(.pip_dag(q[["pipenv"]])),
+            dag_structure(.pip_dag(p[["pipenv"]]))
+        )
+    }
+
+    it("can get new steps with pip_add()", {
+        p <- test_pip()
+        q <- save_and_read(p)
+        for (x in list(p, q)) {
+            pip_add(x, "f", \(x = ~d) x - 1)
+            pip_add(x, "b2", \(x = ~b) x / 2, after = "b")
+        }
+        expect_equal(
+            q[["nodeId"]],
+            c(a = 0L, a2 = 4L, b = 1L, b2 = 7L, c = 2L, d = 3L, f = 6L)
+        )
+        expect_same_pip(q, p)
+    })
+
+    it("can be run with pip_run()", {
+        p <- test_pip()
+        q <- save_and_read(p)
+        pip_run(p, lgr = NULL)
+        expect_no_warning(pip_run(q, lgr = NULL))
+        expect_equal(q[["out"]], list(a = 1, a2 = 10, b = 2, c = 4, d = 5))
+        expect_same_pip(q, p)
+    })
+
+    it("can be run through a view", {
+        q <- save_and_read(test_pip())
+        pip_run(q["c"], lgr = NULL)
+        expect_equal(
+            q[["state"]],
+            c(a = "done", a2 = "new", b = "done", c = "done", d = "new")
+        )
+    })
+
+    it("outdates the downstream steps of changed params", {
+        p <- pip_run(test_pip(), lgr = NULL)
+        q <- save_and_read(p)
+        for (x in list(p, q)) {
+            pip_set_params(x, list(k = 3))
+        }
+        expect_equal(
+            q[["state"]],
+            c(
+                a = "done",
+                a2 = "done",
+                b = "done",
+                c = "outdated",
+                d = "outdated"
+            )
+        )
+        expect_same_pip(q, p)
+    })
+
+    it("can remove steps with pip_remove()", {
+        p <- test_pip()
+        q <- save_and_read(p)
+        for (x in list(p, q)) {
+            pip_remove(x, "a2")
+        }
+        expect_same_pip(q, p)
+
+        q <- save_and_read(p)
+        for (x in list(p, q)) {
+            expect_message(
+                pip_remove(x, "b", force = TRUE),
+                "downstream dependencies: 'c', 'd'"
+            )
+        }
+        expect_equal(unname(q[["step"]]), "a")
+        expect_same_pip(q, p)
+    })
+
+    it("can replace steps with pip_replace()", {
+        p <- pip_run(test_pip(), lgr = NULL)
+        q <- save_and_read(p)
+        for (x in list(p, q)) {
+            pip_replace(x, "c", \(x = ~a2) x * 3)
+        }
+        expect_equal(q[["depends"]][["c"]], c(x = "a2"))
+        expect_equal(
+            q[["state"]],
+            c(a = "done", a2 = "done", b = "done", c = "new", d = "outdated")
+        )
+        expect_same_pip(q, p)
+    })
+
+    it("can be cloned with pip_clone()", {
+        p <- test_pip()
+        q <- save_and_read(p)
+        cl <- pip_clone(q)
+        expect_same_pip(cl, p)
+
+        pip_add(cl, "f", \(x = ~d) x)
+        expect_equal(cl[["nodeId"]][["f"]], 6L)
+        expect_false("f" %in% q[["step"]])
+    })
+
+    it("can be shown with pip_graph()", {
+        p <- test_pip()
+        q <- save_and_read(p)
+        expect_equal(
+            pip_graph(q["c"], include_upstream = TRUE),
+            pip_graph(p["c"], include_upstream = TRUE)
+        )
+    })
+
+    it("can be changed before the DAG is rebuilt", {
+        q <- save_and_read(pip_run(test_pip(), lgr = NULL))
+        expect_no_warning({
+            pip_rename(q, from = "a2", to = "ten")
+            pip_tag(q["b"], "tag")
+            pip_lock(q["b"])
+            pip_reset(q)
+        })
+        expect_true(dag_is_null(q[["pipenv"]][[".dag"]]))
+
+        pip_run(q, lgr = NULL)
+        expect_equal(q[["out"]], list(a = 1, ten = 10, b = 2, c = 4, d = 5))
+        expect_equal(q[["nodeId"]], c(a = 0L, ten = 4L, b = 1L, c = 2L, d = 3L))
+    })
+
+    it("keeps views that were saved with the pipeline", {
+        p <- test_pip()
+        saved <- save_and_read(list(p = p, v = pip_view(p, step = c("b", "c"))))
+        q <- saved[["p"]]
+        v <- saved[["v"]]
+        expect_identical(v[["pipenv"]], q[["pipenv"]])
+        expect_equal(v[["view"]], c("b", "c"))
+
+        # Running the view rebuilds the DAG of the pipeline as well
+        pip_run(v, lgr = NULL)
+        expect_false(dag_is_null(q[["pipenv"]][[".dag"]]))
+        expect_equal(
+            q[["state"]],
+            c(a = "done", a2 = "new", b = "done", c = "done", d = "new")
+        )
+
+        pip_add(q, "b2", \(x = ~b) x, after = "b")
+        expect_message(pip_remove(v, "c", force = TRUE), "'d'")
+        expect_equal(v[["view"]], "b")
+        expect_equal(unname(q[["step"]]), c("a", "a2", "b", "b2"))
+    })
+
+    it("doesn't give new steps the node ids that views hold", {
+        p <- pip_new("p") |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1)
+        v <- pip_view(p, step = c("a", "b"))
+        pip_remove(p, "b")
+        expect_equal(v[["view"]], "a")
+
+        saved <- save_and_read(list(p = p, v = v))
+        pip_add(saved[["p"]], "c", \(x = ~a) x)
+        expect_equal(saved[["p"]][["nodeId"]], c(a = 0L, c = 2L))
+        expect_equal(saved[["v"]][["view"]], "a")
+    })
+
+    it("restores a view saved on its own with a copy of its pipeline", {
+        p <- test_pip()
+        w <- save_and_read(pip_view(p, step = "c"))
+        expect_equal(w[["view"]], "c")
+
+        pip_run(w, lgr = NULL)
+        expect_equal(w[["c", "out"]], 4)
+        expect_equal(unname(p[["state"]]), rep("new", 5))
+    })
+
+    it("works for a pipeline that changed itself in a restarted run", {
+        p <- pip_new("restart") |>
+            pip_add("init", \(xInit = 0) xInit) |>
+            pip_add("f1", \(x = ~init) x + 1) |>
+            pip_add("f2", \(x = ~f1) {
+                if (x > 10) {
+                    .self |>
+                        pip_add("f2a", \(x = ~f1) x + 21, after = "f1") |>
+                        pip_add("f2b", \(x = ~f2a) x + 22, after = "f2a") |>
+                        pip_replace("f3", \(x = ~f2b) x + 30) |>
+                        pip_remove("f2")
+                    .self$restart()
+                }
+                x + 2
+            }) |>
+            pip_add("f3", \(x = ~f2) x + 3)
+        pip_set_params(p, list(xInit = 11))
+        pip_run(p, lgr = NULL)
+        expect_equal(
+            unname(p[["step"]]),
+            c("init", "f1", "f2a", "f2b", "f3")
+        )
+        expect_equal(p[["f3", "out"]], 11 + 1 + 21 + 22 + 30)
+
+        q <- save_and_read(p)
+        expect_same_pip(q, p)
+        for (x in list(p, q)) {
+            pip_set_params(x, list(xInit = 1))
+            pip_add(x, "f4", \(x = ~f3) x * 2)
+            pip_run(x, lgr = NULL)
+        }
+        expect_equal(q[["f4", "out"]], (1 + 1 + 21 + 22 + 30) * 2)
+        expect_equal(q[["nodeId"]][["f4"]], 6L)
+        expect_same_pip(q, p)
     })
 })
 

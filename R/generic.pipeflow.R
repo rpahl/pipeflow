@@ -120,7 +120,7 @@
         # Clone the existing DAG, drop all nodes that are not kept, and let
         # the C++ side compact the node ids. Nodes that are still alive
         # correspond to the current rows of `data`.
-        d <- dag_clone(pipenv[[".dag"]])
+        d <- dag_clone(.pip_dag(pipenv))
         dead <- setdiff(data[["nodeId"]], keepNodes)
         for (id in dead) {
             dag_remove_node(d, id, force = TRUE)
@@ -477,7 +477,7 @@ dim.pipeflow <- function(x) {
     # Resolve all nodes reachable from the selected rows via upstream edges,
     # then build a self-contained, compact pipeline from them.
     keepNodes <- dag_get_reachable_nodes_up(
-        pipenv[[".dag"]],
+        .pip_dag(pipenv),
         as.integer(unique(dat[["nodeId"]][rows]))
     )
     out <- .pip_compact(x, keepNodes)

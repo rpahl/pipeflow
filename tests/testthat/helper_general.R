@@ -17,3 +17,13 @@ expect_no_warning <- function(...) {
 get_run_state <- function(x) {
     as.character(.pip_pipenv(x)[[".run_state"]])
 }
+
+# Write `x` with saveRDS() and read it back with readRDS(). Objects that are
+# saved together share their environments after reading, like a pipeline and
+# its views.
+save_and_read <- function(x) {
+    f <- tempfile(fileext = ".rds")
+    on.exit(unlink(f))
+    saveRDS(x, f)
+    readRDS(f)
+}

@@ -90,7 +90,7 @@ you decide which one fits your project.
 |---|---|---|
 | Paradigm | Declarative — define the full DAG upfront in a `_targets.R` script, then execute | Interactive — incrementally build the pipeline with `pip_add()` as you code |
 | Execution | `tar_make()` runs in a **fresh R process** by default | `pip_run()` runs in the **current R session** |
-| Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ❌ In-memory only |
+| Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ✅ On demand — `saveRDS()` / `readRDS()` save and restore the whole pipeline (steps, params, outputs, states); no automatic storage, data must fit in RAM |
 | Skip up-to-date steps | ✅ Hash-based invalidation of code and data | ✅ State-based (`done` / `outdated`) |
 | Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | ❌ No per-step provenance metadata (only the time of last execution) |
 | Dependency validation | ✅ `tar_validate()` for pre-flight checks (opt-in) | ✅ On `pip_add()`, `pip_replace()`, `pip_remove()` — fails fast on broken references |
