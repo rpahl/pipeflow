@@ -627,6 +627,75 @@
     .subset2(x, "pipenv")
 }
 
+#' Get the DAG of a pipeline
+#'
+#' All access to the DAG goes through this function. The DAG lives in C++
+#' behind an external pointer, which `saveRDS()` stores as a null pointer.
+#' In that case the DAG is rebuilt from the step table (see
+#' `.pip_dag_restore()`) and stored in `pipenv`, so the pipeline and all
+#' views on it use the rebuilt DAG from then on.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @return The external pointer to the DAG.
+#' @noRd
+.pip_dag <- function(pipenv) {
+    d <- pipenv[[".dag"]]
+    if (dag_is_null(d)) {
+        d <- .pip_dag_restore(pipenv)
+        pipenv[[".dag"]] <- d
+    }
+    d
+}
+
+#' Rebuild the DAG of a pipeline from its step table
+#'
+#' The nodes are the ids of the `nodeId` column, kept as they are since views
+#' refer to them, in the order of the rows, which is the topological order.
+#' The edges come from the `depends` column. The ids of removed steps are not
+#' reused, as `dag_restore()` takes the number of ids from the (null) pointer.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @return An external pointer to the rebuilt DAG.
+#' @noRd
+.pip_dag_restore <- function(pipenv) {
+    dat <- pipenv[["data"]]
+    steps <- dat[["step"]]
+    ids <- as.integer(dat[["nodeId"]])
+
+    # Other functions find the nodes of steps via the step->node map, so it
+    # must match the step table.
+    stepsToNodes <- pipenv[[".steps_to_nodes"]]
+    mapped <- mget(
+        steps,
+        envir = stepsToNodes,
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    )
+    if (
+        length(stepsToNodes) != length(steps) ||
+            !identical(as.integer(unlist(mapped, use.names = FALSE)), ids)
+    ) {
+        stop_no_call(
+            "cannot rebuild the pipeline DAG: the step to node map does not ",
+            "match the step table"
+        )
+    }
+
+    from <- lapply(
+        dat[["depends"]],
+        FUN = \(dep) unique(ids[data.table::chmatch(unname(dep), steps)])
+    )
+    to <- rep.int(ids, lengths(from))
+    from <- as.integer(unlist(from))
+    if (anyNA(from)) {
+        stop_no_call(
+            "cannot rebuild the pipeline DAG: steps depend on unknown steps"
+        )
+    }
+
+    dag_restore(pipenv[[".dag"]], order = ids, from = from, to = to)
+}
+
 #' Build the view selector for rows of the step table
 #'
 #' Returns the node ids of the steps in the given rows. Unlike row numbers,
@@ -833,9 +902,9 @@
     }
 
     if (downstream) {
-        dag_get_reachable_nodes_down(env[[".dag"]], start_ids)
+        dag_get_reachable_nodes_down(.pip_dag(env), start_ids)
     } else {
-        dag_get_reachable_nodes_up(env[[".dag"]], start_ids)
+        dag_get_reachable_nodes_up(.pip_dag(env), start_ids)
     }
 }
 
@@ -869,7 +938,7 @@
     }
 
     # Update DAG
-    d <- env[[".dag"]]
+    d <- .pip_dag(env)
     nodeId <- as.integer(dag_add_node(d))
     if (length(refNodes) > 0) {
         dag_add_edges_to(d, from = as.integer(refNodes), to = nodeId)
@@ -941,7 +1010,7 @@
     }
 
     # Update DAG: add the node at the insertion position of its order
-    d <- env[[".dag"]]
+    d <- .pip_dag(env)
     nodeId <- as.integer(dag_add_node_at(d, pos))
     if (length(refNodes) > 0) {
         dag_add_edges_to(d, from = as.integer(refNodes), to = nodeId)
@@ -1001,7 +1070,7 @@
     # fresh node id, wire the DAG edges, and collect the rows for a single
     # rbindlist.
     outEnv <- .pip_pipenv(out)
-    d <- outEnv[[".dag"]]
+    d <- .pip_dag(outEnv)
     stepsToNodes <- outEnv[[".steps_to_nodes"]]
     rows <- vector("list", nrow(yyDat))
     for (k in seq_len(nrow(yyDat))) {
@@ -1079,6 +1148,16 @@
 #' @param name The name of the pipeline used for display and logging.
 #' @return A pipeflow pipeline object.
 #'
+#' @section Saving pipelines:
+#' A pipeline can be saved with [saveRDS()] and read back with [readRDS()]
+#' (or serialized in other ways, e.g. to send it to another R process), with
+#' its steps, parameters, outputs and states. The dependency graph of the
+#' steps is kept outside of R and is not saved, but it is rebuilt from the
+#' steps the first time it is needed. Views that are saved in the same object
+#' as their pipeline, as in `saveRDS(list(p, v), file)`, are read as views of
+#' the read pipeline. A view that is saved on its own is read with its own
+#' copy of the pipeline.
+#'
 #' @examples
 #' p <- pip_new("demo") |>
 #'     pip_add("numbers", \(n = 5) seq_len(n)) |>
@@ -1092,6 +1171,14 @@
 #' # Inner pipeline environment (for advanced usage)
 #' ls(p[["pipenv"]])                # shows "data"
 #' ls(p[["pipenv"]], all = TRUE)    # also shows hidden variables
+#'
+#' # Save the pipeline and read it back
+#' file <- tempfile(fileext = ".rds")
+#' saveRDS(p, file)
+#' p2 <- readRDS(file)
+#' pip_run(p2)
+#' p2
+#' unlink(file)
 #' @export
 pip_new <- function(name = "pipe") {
     if (!.is_single(name, "character")) {
@@ -1386,7 +1473,7 @@ pip_clone <- function(x, name = NULL) {
     out <- pip_new(name = newName)
     env <- .pip_pipenv(out)
 
-    env[[".dag"]] <- dag_clone(.pip_pipenv(x)[[".dag"]])
+    env[[".dag"]] <- dag_clone(.pip_dag(.pip_pipenv(x)))
     dat <- data.table::copy(.pip_pipenv(x)[["data"]])
 
     # Clone steps to nodes mapping
@@ -1681,7 +1768,6 @@ pip_graph <- function(x, include_upstream = FALSE) {
     isView <- .is_pipeflow_view(x)
     env <- .pip_pipenv(x)
     dat <- env[["data"]]
-    dag <- env[[".dag"]]
 
     rows <- .pip_view_rows(x)
     rows <- sort(unique(rows))
@@ -1689,7 +1775,7 @@ pip_graph <- function(x, include_upstream = FALSE) {
     if (isView && include_upstream && length(rows) > 0L) {
         startNodes <- dat[["nodeId"]][rows]
         keepNodes <- dag_get_reachable_nodes_up(
-            dag,
+            .pip_dag(env),
             as.integer(unique(startNodes))
         )
         rows <- which(dat[["nodeId"]] %in% keepNodes)
@@ -1880,14 +1966,15 @@ pip_remove <- function(x, step, force = FALSE) {
     )))
 
     # Remove DAG nodes first to keep node references stable during filtering.
+    d <- .pip_dag(pipenv)
     for (nid in rev(nodesToRemove)) {
-        ok <- dag_remove_node(pipenv[[".dag"]], nid, force = force)
+        ok <- dag_remove_node(d, nid, force = force)
         if (!ok) {
             stop("failed to remove node ", nid, " from DAG")
         }
     }
 
-    dag_tidy_up(pipenv[[".dag"]])
+    dag_tidy_up(d)
     keep <- !(dat[["step"]] %chin% stepsToRemove)
     pipenv[["data"]] <- dat[keep]
     suppressWarnings(
@@ -2135,7 +2222,7 @@ pip_replace <- function(
 
     # Update the incoming DAG edges of the replaced step (its node and all
     # outgoing edges stay the same).
-    d <- env[[".dag"]]
+    d <- .pip_dag(env)
     nodeId <- env[[".steps_to_nodes"]][[step]]
     oldDeps <- data[["depends"]][[iStep]]
     oldRefs <- if (length(oldDeps) > 0L) {

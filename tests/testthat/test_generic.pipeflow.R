@@ -343,6 +343,26 @@ describe("extract operator [", {
         expect_equal(unname(p[["state"]][1]), "new")
     })
 
+    it("works with view = FALSE for a pipeline read with readRDS()", {
+        p <- test_pip()
+        pip_remove(p, "a3")
+        q <- save_and_read(p)
+
+        # Few steps are copied to a new DAG, more are rebuilt from a clone
+        for (i in list("a1", c("a2", "b2"))) {
+            suppressMessages({
+                expected <- p[i, view = FALSE]
+                sub <- q[i, view = FALSE]
+            })
+            expect_equal(sub[, "step"], expected[, "step"])
+            expect_equal(sub[["nodeId"]], expected[["nodeId"]])
+            expect_equal(
+                dag_structure(.pip_dag(sub[["pipenv"]])),
+                dag_structure(.pip_dag(expected[["pipenv"]]))
+            )
+        }
+    })
+
     it("does not change .self of the source steps with view = FALSE", {
         p <- pip_new("p") |>
             pip_add("a", \(x = 1) .self[["name"]]) |>
@@ -1822,5 +1842,28 @@ describe("rbind", {
 
         suppressWarnings(pip_run(out, lgr = NULL, on_error = "continue"))
         expect_equal(out[["doc", "out"]], "step 'data2' failed: boom")
+    })
+
+    it("binds pipelines read with readRDS()", {
+        p1 <- test_pip("left")
+        p2 <- test_pip("right") |>
+            pip_add("s3", \(x = ~s1) x * 2)
+        pip_remove(p2, "s2")
+
+        expected <- rbind(p1, p2)
+        out <- rbind(save_and_read(p1), save_and_read(p2))
+        cols <- c("step", "depends")
+        expect_equal(out[, cols], expected[, cols])
+        expect_equal(out[["nodeId"]], expected[["nodeId"]])
+        expect_equal(
+            dag_structure(.pip_dag(out[["pipenv"]])),
+            dag_structure(.pip_dag(expected[["pipenv"]]))
+        )
+
+        pip_run(out, lgr = NULL)
+        expect_equal(
+            out[["out"]],
+            list(s1 = 1, s2 = 2, s12 = 1, s3 = 2)
+        )
     })
 })

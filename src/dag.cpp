@@ -1,6 +1,7 @@
 // -*- mode: C++; c-indent-level: 4; c-basic-offset: 4; indent-tabs-mode: nil; -*-
 
 #include <Rcpp.h>
+#include <memory>
 // using namespace Rcpp;
 
 using nodeId = uint32_t;
@@ -79,6 +80,12 @@ bool remove_edge(Dag* dag, nodeId from, nodeId to, bool force = false);
 void tidy_up(Dag* dag);
 nodeId_vec rebuild(Dag* dag);
 void shift(Dag* dag, nodeId offset);
+Dag* restore(
+    nodeId n,
+    const nodeId_vec& order,
+    const nodeId_vec& from,
+    const nodeId_vec& to
+);
 
 // Internal state
 // --------------
@@ -552,6 +559,43 @@ void shift(Dag* dag, nodeId offset)
     }
 }
 
+// Build a DAG with `n` node ids, of which the ids in `order` are alive (in
+// this topological order) and all others are dead, so that the ids are kept
+// as they are and new nodes continue at id `n`.
+Dag* restore(
+    nodeId n,
+    const nodeId_vec& order,
+    const nodeId_vec& from,
+    const nodeId_vec& to
+)
+{
+    std::unique_ptr<Dag> dag(new Dag());
+    dag->nodes.resize(n);
+    for (auto& node : dag->nodes) {
+        node.alive = false;
+    }
+
+    for (nodeId id : order) {
+        if (id >= n) {
+            Rcpp::stop("node id %u exceeds the number of node ids", id);
+        }
+        if (dag->nodes[id].alive) {
+            Rcpp::stop("duplicated node id %u", id);
+        }
+        dag->nodes[id].alive = true;
+    }
+    dag->nodes_order = order;
+
+    for (std::size_t i = 0; i < from.size(); ++i) {
+        if (!has_node(dag.get(), from[i]) || !has_node(dag.get(), to[i])) {
+            Rcpp::stop("edge %u -> %u refers to unknown node", from[i], to[i]);
+        }
+        add_edge(dag.get(), from[i], to[i], false);
+    }
+
+    return dag.release();
+}
+
 
 // Internal state
 // --------------
@@ -605,6 +649,35 @@ static void dag_finalizer(SEXP dp)
     }
 }
 
+// The number of node ids of a DAG (the size of its node storage) is also kept
+// in the tag of its external pointer. R serializes the tag but not the
+// address, so the DAG of a pipeline read with readRDS() can be restored with
+// the same number of ids, and ids of removed nodes are not reused (see
+// dag_restore()). Exports that change the number of ids update the tag.
+static void set_id_count_tag(SEXP dp, const Dag* dag)
+{
+    int n = static_cast<int>(dag->nodes.size());
+    R_SetExternalPtrTag(dp, Rf_ScalarInteger(n));
+}
+
+static nodeId get_id_count_tag(SEXP dp)
+{
+    SEXP tag = R_ExternalPtrTag(dp);
+    if (TYPEOF(tag) != INTSXP || XLENGTH(tag) != 1 || INTEGER(tag)[0] < 0) {
+        return 0;
+    }
+    return static_cast<nodeId>(INTEGER(tag)[0]);
+}
+
+static SEXP make_dag_ptr(Dag* dag)
+{
+    SEXP dp = PROTECT(R_MakeExternalPtr(dag, R_NilValue, R_NilValue));
+    R_RegisterCFinalizerEx(dp, dag_finalizer, TRUE);
+    set_id_count_tag(dp, dag);
+    UNPROTECT(1);
+    return dp;
+}
+
 static nodeId_vec as_node_vec(const Rcpp::IntegerVector& x)
 {
     nodeId_vec out;
@@ -622,27 +695,65 @@ static nodeId_vec as_node_vec(const Rcpp::IntegerVector& x)
 // [[Rcpp::export]]
 SEXP dag_new()
 {
-    Dag* dag = new Dag();
-    SEXP dp = PROTECT(R_MakeExternalPtr(dag, R_NilValue, R_NilValue));
-    R_RegisterCFinalizerEx(dp, dag_finalizer, TRUE);
-    UNPROTECT(1);
-    return dp;
+    return make_dag_ptr(new Dag());
 }
 
 // [[Rcpp::export]]
 SEXP dag_clone(SEXP dp)
 {
-    Dag* dag = cast_sexp_to_dag_ptr(dp);
-    Dag* out = clone(dag);
-    SEXP out_dp = PROTECT(R_MakeExternalPtr(out, R_NilValue, R_NilValue));
-    R_RegisterCFinalizerEx(out_dp, dag_finalizer, TRUE);
-    UNPROTECT(1);
-    return out_dp;
+    return make_dag_ptr(clone(cast_sexp_to_dag_ptr(dp)));
+}
+
+// Restore the DAG of `dp`, typically a null pointer after readRDS(), from
+// its alive node ids in topological order and its edges `from[i] -> to[i]`.
+// The ids are kept as they are, and the DAG gets as many node ids as `dp`
+// had (as recorded in its tag), but at least `max(order) + 1`.
+// [[Rcpp::export]]
+SEXP dag_restore(
+    SEXP dp,
+    const Rcpp::IntegerVector& order,
+    const Rcpp::IntegerVector& from,
+    const Rcpp::IntegerVector& to
+)
+{
+    if (TYPEOF(dp) != EXTPTRSXP) {
+        Rcpp::stop("expected external pointer to Dag");
+    }
+    if (from.size() != to.size()) {
+        Rcpp::stop("`from` and `to` must have identical lengths");
+    }
+
+    nodeId n = get_id_count_tag(dp);
+    for (const Rcpp::IntegerVector* ids : {&order, &from, &to}) {
+        for (int id : *ids) {
+            if (id < 0) { // includes NA
+                Rcpp::stop("node ids must be non-negative integers");
+            }
+        }
+    }
+    for (int id : order) {
+        n = std::max(n, static_cast<nodeId>(id) + 1);
+    }
+
+    return make_dag_ptr(
+        restore(n, as_node_vec(order), as_node_vec(from), as_node_vec(to))
+    );
 }
 
 
 // Inspect
 // -------
+
+// TRUE if `dp` points to no DAG, e.g. after saveRDS() and readRDS(), which
+// don't keep the address of an external pointer.
+// [[Rcpp::export]]
+bool dag_is_null(SEXP dp)
+{
+    if (TYPEOF(dp) != EXTPTRSXP) {
+        Rcpp::stop("expected external pointer to Dag");
+    }
+    return R_ExternalPtrAddr(dp) == nullptr;
+}
 
 // [[Rcpp::export]]
 int dag_size(SEXP dp)
@@ -763,15 +874,19 @@ Rcpp::IntegerVector dag_get_reachable_nodes_up(
 // [[Rcpp::export]]
 int dag_add_node(SEXP dp)
 {
-    return static_cast<int>(add_node(cast_sexp_to_dag_ptr(dp)));
+    Dag* dag = cast_sexp_to_dag_ptr(dp);
+    nodeId id = add_node(dag);
+    set_id_count_tag(dp, dag);
+    return static_cast<int>(id);
 }
 
 // [[Rcpp::export]]
 int dag_add_node_at(SEXP dp, int pos)
 {
-    return static_cast<int>(
-        add_node_at(cast_sexp_to_dag_ptr(dp), static_cast<nodeId>(pos))
-    );
+    Dag* dag = cast_sexp_to_dag_ptr(dp);
+    nodeId id = add_node_at(dag, static_cast<nodeId>(pos));
+    set_id_count_tag(dp, dag);
+    return static_cast<int>(id);
 }
 
 // [[Rcpp::export]]
@@ -832,9 +947,10 @@ Rcpp::LogicalVector dag_add_edges_to(
 // [[Rcpp::export]]
 Rcpp::IntegerVector dag_add_dag(SEXP dp, SEXP other_dp)
 {
-    return as_int_vec(
-        add_dag(cast_sexp_to_dag_ptr(dp), cast_sexp_to_dag_ptr(other_dp))
-    );
+    Dag* dag = cast_sexp_to_dag_ptr(dp);
+    nodeId_vec ids = add_dag(dag, cast_sexp_to_dag_ptr(other_dp));
+    set_id_count_tag(dp, dag);
+    return as_int_vec(ids);
 }
 
 // Remove
@@ -871,11 +987,16 @@ void dag_tidy_up(SEXP dp)
 // [[Rcpp::export]]
 Rcpp::IntegerVector dag_rebuild(SEXP dp)
 {
-    return as_int_vec(rebuild(cast_sexp_to_dag_ptr(dp)));
+    Dag* dag = cast_sexp_to_dag_ptr(dp);
+    nodeId_vec old_order = rebuild(dag);
+    set_id_count_tag(dp, dag);
+    return as_int_vec(old_order);
 }
 
 // [[Rcpp::export]]
 void dag_shift(SEXP dp, int offset)
 {
-    shift(cast_sexp_to_dag_ptr(dp), static_cast<nodeId>(offset));
+    Dag* dag = cast_sexp_to_dag_ptr(dp);
+    shift(dag, static_cast<nodeId>(offset));
+    set_id_count_tag(dp, dag);
 }

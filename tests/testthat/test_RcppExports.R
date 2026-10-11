@@ -434,3 +434,127 @@ describe("dag shift", {
         expect_equal(dag_get_incoming(d, 10), in0 + 10)
     })
 })
+
+
+describe("dag is null", {
+    it("is FALSE for a DAG and TRUE once the DAG was saved and read", {
+        d <- create_diamond_dag()
+        expect_false(dag_is_null(d))
+
+        restored <- unserialize(serialize(d, NULL))
+        expect_true(dag_is_null(restored))
+        expect_error(dag_size(restored), "null Dag pointer")
+    })
+
+    it("signals objects that are not external pointers", {
+        expect_error(dag_is_null(1), "expected external pointer to Dag")
+    })
+})
+
+
+describe("dag restore", {
+    it("restores node ids, node order and edges", {
+        d <- create_snake_dag()
+        expect_true(dag_remove_node(d, 1, force = TRUE))
+        dag_tidy_up(d)
+        # 0 - 3 - 2
+        expect_equal(dag_get_nodes_order(d), c(0, 3, 2))
+
+        restored <- dag_restore(
+            unserialize(serialize(d, NULL)),
+            order = c(0L, 3L, 2L),
+            from = c(0L, 3L),
+            to = c(3L, 2L)
+        )
+        expect_false(dag_is_null(restored))
+        expect_equal(dag_structure(restored), dag_structure(d))
+        expect_false(dag_has_node(restored, 1))
+        expect_true(dag_is_tidy(restored))
+    })
+
+    it("keeps the ids of removed nodes unused", {
+        d <- create_diamond_dag()
+        expect_true(dag_remove_node(d, 3))
+        dag_tidy_up(d)
+
+        restored <- dag_restore(
+            unserialize(serialize(d, NULL)),
+            order = c(0L, 1L, 2L),
+            from = c(0L, 0L),
+            to = c(1L, 2L)
+        )
+        expect_false(dag_has_node(restored, 3))
+        expect_equal(dag_add_node(restored), dag_add_node(d))
+        expect_equal(dag_add_node(restored), 5)
+    })
+
+    it("records the number of node ids with each change", {
+        d <- dag_new()
+        expect_equal(next_id_after_restore(d), 0)
+
+        dag_add_node(d)
+        dag_add_node(d)
+        expect_equal(next_id_after_restore(d), 2)
+
+        dag_add_node_at(d, 0)
+        expect_equal(next_id_after_restore(d), 3)
+
+        dag_remove_node(d, 1, force = TRUE)
+        expect_equal(next_id_after_restore(d), 3)
+        expect_equal(next_id_after_restore(dag_clone(d)), 3)
+
+        dag_rebuild(d)
+        expect_equal(next_id_after_restore(d), 2)
+
+        dag_shift(d, 10)
+        expect_equal(next_id_after_restore(d), 12)
+
+        d2 <- dag_new()
+        dag_add_node(d2)
+        dag_add_dag(d2, create_diamond_dag())
+        expect_equal(dag_size(d2), 5)
+        expect_equal(next_id_after_restore(d2), 5)
+    })
+
+    it("takes at least max(order) + 1 node ids", {
+        restored <- dag_restore(
+            methods::new("externalptr"),
+            order = c(2L, 0L),
+            from = 2L,
+            to = 0L
+        )
+        expect_equal(dag_get_nodes_order(restored), c(2, 0))
+        expect_false(dag_has_node(restored, 1))
+        expect_true(dag_has_edge(restored, 2, 0))
+        expect_equal(dag_add_node(restored), 3)
+    })
+
+    it("signals invalid input", {
+        p <- methods::new("externalptr")
+        none <- integer()
+        expect_error(
+            dag_restore(1, order = 0L, from = none, to = none),
+            "expected external pointer to Dag"
+        )
+        expect_error(
+            dag_restore(p, order = 0:1, from = 0L, to = none),
+            "`from` and `to` must have identical lengths"
+        )
+        expect_error(
+            dag_restore(p, order = c(0L, NA), from = none, to = none),
+            "node ids must be non-negative integers"
+        )
+        expect_error(
+            dag_restore(p, order = 0:1, from = -1L, to = 1L),
+            "node ids must be non-negative integers"
+        )
+        expect_error(
+            dag_restore(p, order = c(0L, 0L), from = none, to = none),
+            "duplicated node id 0"
+        )
+        expect_error(
+            dag_restore(p, order = c(0L, 2L), from = 1L, to = 2L),
+            "edge 1 -> 2 refers to unknown node"
+        )
+    })
+})

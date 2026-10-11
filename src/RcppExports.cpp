@@ -31,6 +31,31 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// dag_restore
+SEXP dag_restore(SEXP dp, const Rcpp::IntegerVector& order, const Rcpp::IntegerVector& from, const Rcpp::IntegerVector& to);
+RcppExport SEXP _pipeflow_dag_restore(SEXP dpSEXP, SEXP orderSEXP, SEXP fromSEXP, SEXP toSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type order(orderSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type from(fromSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type to(toSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_restore(dp, order, from, to));
+    return rcpp_result_gen;
+END_RCPP
+}
+// dag_is_null
+bool dag_is_null(SEXP dp);
+RcppExport SEXP _pipeflow_dag_is_null(SEXP dpSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type dp(dpSEXP);
+    rcpp_result_gen = Rcpp::wrap(dag_is_null(dp));
+    return rcpp_result_gen;
+END_RCPP
+}
 // dag_size
 int dag_size(SEXP dp);
 RcppExport SEXP _pipeflow_dag_size(SEXP dpSEXP) {
@@ -329,6 +354,8 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_pipeflow_dag_new", (DL_FUNC) &_pipeflow_dag_new, 0},
     {"_pipeflow_dag_clone", (DL_FUNC) &_pipeflow_dag_clone, 1},
+    {"_pipeflow_dag_restore", (DL_FUNC) &_pipeflow_dag_restore, 4},
+    {"_pipeflow_dag_is_null", (DL_FUNC) &_pipeflow_dag_is_null, 1},
     {"_pipeflow_dag_size", (DL_FUNC) &_pipeflow_dag_size, 1},
     {"_pipeflow_dag_get_min_id", (DL_FUNC) &_pipeflow_dag_get_min_id, 1},
     {"_pipeflow_dag_get_max_id", (DL_FUNC) &_pipeflow_dag_get_max_id, 1},
