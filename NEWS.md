@@ -1,5 +1,10 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.4.0.9012
+
+- Same as previous version.
+
+
 # pipeflow 0.4.0.9011
 
 - Behaviour change: a view keeps track of its steps instead of their row
