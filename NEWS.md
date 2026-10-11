@@ -9,6 +9,14 @@
   named `"<name> view"` (and a view of a view `"<name> view view"`), so code
   holding a view couldn't get the pipeline name. `print()` still marks views
   with `<pipeflow_view>`.
+- `print()` shows outputs that were hard to read in the `out` column in short
+  form: a condition (the output of a step that failed in a run with
+  `on_error = "continue"`) as `<kind/class>`, e.g. `<error/simpleError>`,
+  instead of in full (for rlang errors including the backtrace); a matrix,
+  array or table as `<class[dims]>`, e.g. `<matrix[4x2]>`, instead of its
+  flattened values; and a function or environment (e.g. an R6 object) as
+  `<class>`. Strings longer than 40 characters are cut off and marked with
+  `"..."`.
 
 
 # pipeflow 0.4.0.9009

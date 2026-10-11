@@ -1,3 +1,68 @@
+#' Format a condition in short form
+#'
+#' Formats a condition as `<kind/class>`, where `kind` is `"error"`,
+#' `"warning"`, `"message"` or `"condition"`, and `class` is the first class
+#' of the condition, e.g. `<error/simpleError>`. If the first class is the
+#' kind itself, only `<kind>` is shown.
+#'
+#' @param x A condition.
+#' @return A single character string.
+#' @noRd
+.format_condition <- function(x) {
+    kinds <- c("error", "warning", "message")
+    kind <- kinds[vapply(kinds, \(k) inherits(x, k), logical(1))]
+    kind <- if (length(kind) > 0L) kind[[1L]] else "condition"
+    cls <- class(x)[[1L]]
+    if (identical(cls, kind)) {
+        return(sprintf("<%s>", kind))
+    }
+    sprintf("<%s/%s>", kind, cls)
+}
+
+
+#' Format a step output for printing
+#'
+#' Formats the outputs that data.table doesn't print well in a list column
+#' in short form:
+#' * a condition as `<kind/class>` (see `.format_condition()`),
+#' * an atomic object with dimensions (matrix, array, table) as
+#'   `<class[dims]>`, e.g. `<matrix[4x2]>`, similar to how data.table
+#'   prints data frames
+#' * a function or an environment (e.g. an R6 object) as `<class>`.
+#'
+#' Strings longer than `maxChars` characters are cut off after `maxChars`
+#' characters and marked with `"..."`, so that a long output (e.g. a path or
+#' a query) doesn't widen the whole table.
+#'
+#' Other outputs are returned unchanged and left to data.table.
+#'
+#' @param x A step output.
+#' @param maxChars The maximum number of characters shown of each string.
+#' @return A single character string, a character vector with the cut off
+#' strings, or `x` unchanged.
+#' @noRd
+.format_out <- function(x, maxChars = 40L) {
+    if (inherits(x, "condition")) {
+        return(.format_condition(x))
+    }
+    if (is.atomic(x) && !is.null(dim(x))) {
+        dims <- paste(dim(x), collapse = "x")
+        return(sprintf("<%s[%s]>", class(x)[[1L]], dims))
+    }
+    if (is.function(x) || is.environment(x)) {
+        return(sprintf("<%s>", class(x)[[1L]]))
+    }
+    if (is.character(x)) {
+        isLong <- !is.na(x) & nchar(x) > maxChars
+        if (any(isLong)) {
+            x <- as.character(x)
+            x[isLong] <- paste0(substr(x[isLong], 1L, maxChars), "...")
+        }
+    }
+    x
+}
+
+
 #' @rdname print
 #' @export
 print.pipeflow <- function(
@@ -70,6 +135,12 @@ print.pipeflow <- function(
             # that data.table renders and truncates them like `depends`.
             params_names <- lapply(dat[["params"]], \(p) as.character(names(p)))
             data.table::set(dat, j = "params", value = params_names)
+        }
+        if ("out" %in% names(dat)) {
+            # Fix outputs that data.table prints poorly (e.g. matrices, or
+            # the condition of a failed step) in short form.
+            out <- lapply(dat[["out"]], .format_out)
+            data.table::set(dat, j = "out", value = out)
         }
         print(
             dat,

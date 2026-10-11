@@ -944,7 +944,13 @@ dim.pipeflow <- function(x) {
 #' @param cols The columns to be printed. Can be either one of
 #' `core` or `all` to print the core or all columns, respectively,
 #' or an explicit character vector of columns to be printed. The `params`
-#' column lists the names of the step's parameters.
+#' column lists the names of the step's parameters. In the `out` column, some
+#' outputs are shown in short form: a condition (the output of a step that
+#' failed in a run with `on_error = "continue"`) as `<kind/class>`, e.g.
+#' `<error/simpleError>`; a matrix, array or table as `<class[dims]>`, e.g.
+#' `<matrix[4x2]>`; and a function or environment (e.g. an R6 object) as
+#' `<class>`. Strings longer than 40 characters are cut off and marked with
+#' `"..."`.
 #' @param topn The number of rows to be printed from the beginning
 #' and end of tables with more than `nrows` rows.
 #' @param nrows The number of rows printed before truncation is enforced.
