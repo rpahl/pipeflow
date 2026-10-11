@@ -9,7 +9,9 @@ Starting point: `main` at 0.4.0.9004 (3457d4c). Since 0.4.0 (CRAN):
 
 This plan covers the rest of 0.5.0: bug fixes, clearer errors, parameter
 handling, one extension point (`pip_arg_value()`), `.self` only where it
-is used, and the CRAN release.
+is used, pipelines that survive `saveRDS()`, `pip_replace()` defaults, the
+exported logger, and the CRAN release. Only per-key failures in split
+steps are left for later (see Later).
 
 Line references are at 3319065 (the code is the same at 3457d4c): `pf` =
 `R/pipeflow.R`, `gen` = `R/generic.pipeflow.R`, `print` =
@@ -227,17 +229,72 @@ Agreed (2026-10-10):
   - `tags %like% "x"` in `[` also matches untagged steps; use
     `pip_view(tags = )`.
 
+## WP7a — pipelines that survive `saveRDS()` (`feat-serialize`)
+
+After `readRDS()` the DAG pointer is null ("null Dag pointer"), so a
+saved pipeline can't be used. This blocks caching pipelines, sending them
+to other processes (future, mirai, callr) and Shiny bookmarks. With WP6,
+outputs no longer drag the pipeline along, so this is the other half.
+
+- Rebuild the DAG on demand from `depends` behind one `.pip_dag()`
+  accessor, and use it in all entry points: `pip_add`, `pip_run`,
+  `pip_set_params`, `pip_remove`, `pip_replace`, `pip_clone`, `rbind`,
+  `[`. `.steps_to_nodes` is a plain environment and survives, but check
+  that it matches the rebuilt node ids (`nodeId` column).
+- Tests: a `saveRDS()`/`readRDS()` round trip per entry point, including a
+  pipeline with views and one that was changed after a restart.
+- Docs: a short note in `?pip_new` (or the get-started vignette) on saving
+  pipelines. NEWS bullet.
+- Size M.
+
+## WP7b — `pip_replace()` keeps tags and exec (`feat-replace-keep`)
+
+`pip_replace()` resets tags and exec mode to the defaults
+(`tags = character(0)`, `exec = "auto"`), while `p[[step, "fun"]] <- f`
+already keeps them. Make `pip_replace()` keep them by default:
+`tags = NULL`, `exec = NULL` mean "keep", explicit values still set them.
+
+- This changes a default: mark it as a behaviour change in NEWS (for the
+  "Breaking changes" block of WP8).
+- Update `[[<-` (the `"fun"` branch in `gen`), which passes the old values
+  explicitly,
+  and the examples and vignettes that rely on the reset.
+- Tests: tags and exec are kept; explicit values (also `character(0)`)
+  override.
+
+## WP7c — export the default logger (`feat-export-logger`)
+
+`pipeflow_lgr(level, msg)` (`R/log.R`) is the default for `pip_run(lgr =)`,
+but users can't call or wrap it, e.g. to add a prefix or to filter levels
+and delegate the rest.
+
+- Export it with a roxygen header and an example (a logger that drops
+  `"info"` and passes the rest on), and list it in `_pkgdown.yml`.
+- Keep the signature `function(level, msg)`, which `.assert_logger()`
+  requires; keep the output format.
+- Tests: the exported function writes the documented format (extend
+  `test_log.R`). NEWS bullet.
+
+## WP7d - Vignette for `pip_arg_value()`
+
+`pip_arg_value()` is not a topic for the "Get started" vignette. Create a
+separate vignette for it, likely in the "Advanced workflows" section of
+`_pkgdown.yml` (articles list), covering annotated parameter values, how to
+write and register a method, what it is (not) applied to, and how errors in
+a method behave. Do this after WP5 has merged.
+
 ## WP8 — release 0.5.0
 
 - Merge the dependabot PRs (#72, #81, #82).
 - `devtools::build_readme()`; update the vignettes for `~try()`, F1, F3,
-  `pip_arg_value()` and `.self`.
+  `pip_arg_value()`, `.self`, saving pipelines and the exported logger.
 - NEWS: one `# pipeflow 0.5.0` section with a "Breaking changes" block:
   - `~try()` references (`allow_failed` was dev-only);
   - identical values no longer outdate;
   - step names in error messages;
   - view names;
-  - `.self` only in step functions that refer to it.
+  - `.self` only in step functions that refer to it;
+  - `pip_replace()` keeps tags and exec mode.
 - Checks: lint, tests, `rcmdcheck` on R 4.5.3 and on the oldest supported
   R (4.2); CI on Linux, Windows and macOS; win-builder (release, devel);
   `cran-comments.md`; reverse-dependency check.
@@ -245,11 +302,8 @@ Agreed (2026-10-10):
 
 ## Order
 
-WP1 -> WP2 -> WP3 -> WP4 -> WP5 -> WP6 -> WP7 -> WP8.
-- WP2 comes before WP5: both change `.pip_run_row()`.
-- WP6 comes after WP5: with `pip_arg_value()`, wrappers that only
-  unwrap values disappear, so fewer step functions mention `.self`.
-- WP1, WP3 and WP7 are independent and can swap places.
+WP1 -> WP2 -> WP3 -> WP4 -> WP5 -> WP6 -> WP7 -> WP7a -> WP7b -> WP7c ->
+WP7d -> WP8.
 
 ## Later (0.6+)
 
@@ -258,20 +312,3 @@ WP1 -> WP2 -> WP3 -> WP4 -> WP5 -> WP6 -> WP7 -> WP8.
   changes `pipeflow_run_failed$failed`. Size L, about 150-250 lines: the
   per-key loop in `.pip_execute_step_call()`, the skip logic in
   `pip_run()` (pf:2371-2392), and `.pip_failure()` with a `key` field.
-- **Pipelines that survive `saveRDS()`:** after `readRDS()` the DAG
-  pointer is null ("null Dag pointer"). Rebuild it on demand from
-  `depends` behind one `.pip_dag()` accessor used by all entry points
-  (`pip_add`, `pip_run`, `pip_set_params`, `pip_remove`, `pip_replace`,
-  `pip_clone`, `rbind`, `[`). Size M; needs a `saveRDS()`/`readRDS()`
-  test per entry point.
-- `pip_replace()` keeps tags and exec by default (`tags = NULL`, `exec =
-  NULL`); changes a default.
-- Export the default logger.
-
-## Vignette for `pip_arg_value()`
-
-`pip_arg_value()` is not a topic for the "Get started" vignette. Create a
-separate vignette for it, likely in the "Advanced workflows" section of
-`_pkgdown.yml` (articles list), covering annotated parameter values, how to
-write and register a method, what it is (not) applied to, and how errors in
-a method behave. Do this after WP5 has merged.
