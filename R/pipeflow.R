@@ -572,14 +572,14 @@
         return(invisible())
     }
 
-    pipenv[[".run_state"]][] <- "restart"
+    pipenv[[".run_state"]][] <- .run_states[["restart"]][["name"]]
     pipenv[[".restart_count"]] <- count + 1L
     pipenv[[".restart_force"]] <- force
     invisible()
 }
 
 .pip_halt <- function(pipenv) {
-    pipenv[[".run_state"]][] <- "halted"
+    pipenv[[".run_state"]][] <- .run_states[["halted"]][["name"]]
     invisible()
 }
 
@@ -1094,15 +1094,8 @@ pip_new <- function(name = "pipe") {
 
     # Pipeline states
     env[[".run_state"]] <- factor(
-        "ready",
-        levels = c(
-            "ready",
-            "restart",
-            "running",
-            "halted",
-            "failed",
-            "continued"
-        )
+        .run_states[["ready"]][["name"]],
+        levels = names(.run_states)
     )
     env[[".last_run"]] <- NULL
 
@@ -2307,8 +2300,8 @@ pip_replace <- function(
 #' - `p$halt()`: aborts the current run after the current step has finished.
 #'   This is a *controlled halt* and deliberately distinct from [base::stop()]:
 #'   no error is raised and the pipeline is not marked as `"failed"`. The run
-#'   simply ends with run state `"halted"` and a subsequent [pip_run()] will
-#'   continue where the run left off.
+#'   simply ends with run state `"halted"` (see [pip_run_state()]) and a
+#'   subsequent [pip_run()] will continue where the run left off.
 #'
 #' In both cases steps downstream of executed steps that have not been
 #' executed until the restart or halt happens are marked as `"outdated"`.
@@ -2449,9 +2442,10 @@ pip_run <- function(
     on.exit(outdate_downstream_of_executed())
 
     state <- pipenv[[".run_state"]]
-    action <- if (state == "restart") "Restarting" else "Starting"
+    isRestart <- state == .run_states[["restart"]][["name"]]
+    action <- if (isRestart) "Restarting" else "Starting"
     log_info(sprintf("%s run of %s '%s'", action, data.class(x), pipname))
-    pipenv[[".run_state"]][] <- "running"
+    pipenv[[".run_state"]][] <- .run_states[["running"]][["name"]]
     halted <- FALSE
     tryCatch(
         {
@@ -2554,7 +2548,7 @@ pip_run <- function(
                 stateAfterStep <- pipenv[[".run_state"]]
 
                 # Check for restart or stop signals
-                if (stateAfterStep == "restart") {
+                if (stateAfterStep == .run_states[["restart"]][["name"]]) {
                     log_info("Restarting pipeline execution.")
                     doForce <- pipenv[[".restart_force"]]
 
@@ -2572,7 +2566,7 @@ pip_run <- function(
                     return(invisible(x))
                 }
 
-                if (stateAfterStep == "halted") {
+                if (stateAfterStep == .run_states[["halted"]][["name"]]) {
                     log_info("Aborting pipeline execution on manual halt.")
                     halted <- TRUE
                     break
@@ -2589,11 +2583,11 @@ pip_run <- function(
             } else {
                 "ready"
             }
-            pipenv[[".run_state"]][] <- runState
+            pipenv[[".run_state"]][] <- .run_states[[runState]][["name"]]
             pipenv[[".last_run"]] <- Sys.time()
         },
         error = function(e) {
-            pipenv[[".run_state"]][] <- "failed"
+            pipenv[[".run_state"]][] <- .run_states[["failed"]][["name"]]
             pipenv[[".last_run"]] <- Sys.time()
 
             # Re-signal step errors as they are, so that callers can get the
@@ -2681,11 +2675,54 @@ pip_reset <- function(x) {
         )
     )
 
-    env[[".run_state"]][] <- "ready"
+    env[[".run_state"]][] <- .run_states[["ready"]][["name"]]
     env[[".restart_count"]] <- 0L
     env[[".last_run"]] <- NULL
 
     invisible(x)
+}
+
+
+#' Get the run state of a pipeline
+#'
+#' Returns the state of the last (or current) run of a pipeline. Views share
+#' the run state of their pipeline.
+#'
+#' @details The run state is one of
+#' * `"ready"`: the pipeline is new, was reset, or its last run finished
+#'   without failures.
+#' * `"running"`: a run is in progress (seen from within a step).
+#' * `"restart"`: a step requested a restart, which [pip_run()] carries out
+#'   right after the step.
+#' * `"halted"`: a step halted the run (see section 'Runtime control flow
+#'   via restart and halt' in [pip_run()]).
+#' * `"failed"`: the last run stopped on an error (`on_error = "stop"`).
+#' * `"continued"`: the last run had failed steps but went on
+#'   (`on_error = "continue"`).
+#'
+#' [pip_reset()] sets the run state back to `"ready"`.
+#'
+#' @param x A pipeflow pip or view.
+#' @return A single character string.
+#' @seealso [pip_run()], [pip_reset()]
+#' @examples
+#' p <- pip_new() |>
+#'   pip_add("load", \(n = 3) seq_len(n)) |>
+#'   pip_add("fail", \(x = ~load) stop("boom"))
+#'
+#' pip_run_state(p) # "ready"
+#' try(pip_run(p, lgr = NULL))
+#' pip_run_state(p) # "failed"
+#'
+#' suppressWarnings(pip_run(p, on_error = "continue", lgr = NULL))
+#' pip_run_state(p) # "continued"
+#'
+#' pip_reset(p)
+#' pip_run_state(p) # "ready"
+#' @export
+pip_run_state <- function(x) {
+    .assert_pip_or_view(x)
+    as.character(.pip_pipenv(x)[[".run_state"]])
 }
 
 

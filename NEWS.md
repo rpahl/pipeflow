@@ -2,7 +2,9 @@
 
 # pipeflow 0.4.0.9010
 
-- Same as previous version.
+- New `pip_run_state()` returns the run state of a pipeline or view
+  (`"ready"`, `"running"`, `"restart"`, `"halted"`, `"failed"` or
+  `"continued"`).
 
 
 # pipeflow 0.4.0.9009

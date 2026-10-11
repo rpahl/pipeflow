@@ -148,8 +148,8 @@ their upstream dependencies.
 \item \code{p$halt()}: aborts the current run after the current step has finished.
 This is a \emph{controlled halt} and deliberately distinct from \code{\link[base:stop]{base::stop()}}:
 no error is raised and the pipeline is not marked as \code{"failed"}. The run
-simply ends with run state \code{"halted"} and a subsequent \code{\link[=pip_run]{pip_run()}} will
-continue where the run left off.
+simply ends with run state \code{"halted"} (see \code{\link[=pip_run_state]{pip_run_state()}}) and a
+subsequent \code{\link[=pip_run]{pip_run()}} will continue where the run left off.
 }
 
 In both cases steps downstream of executed steps that have not been
