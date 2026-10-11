@@ -1,5 +1,10 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.4.0.9010
+
+- Same as previous version.
+
+
 # pipeflow 0.4.0.9009
 
 - Behaviour change: `.self` is only available in step functions that refer
