@@ -348,6 +348,14 @@ dim.pipeflow <- function(x) {
 #' (e.g. `%like%`, `%chin%`, `%between%`) are available. `p[]` returns a copy
 #' of the pipeline.
 #'
+#' Note that `tags` is a list column, so `%like%` matches the pattern against
+#' the tags of each step converted to a single string, e.g. `"character(0)"`
+#' for a step without tags and `'c("io", "daily")'` for a step with two tags.
+#' A pattern can therefore also match untagged steps (e.g.
+#' `tags %like% "a"`), and anchored patterns such as `"^io$"` miss steps with
+#' several tags. To match tags exactly, use the `tags` argument of
+#' [pip_view()], e.g. `pip_view(p, tags = "io")`.
+#'
 #' When `j` is provided, the selected steps are returned as a step-table
 #' extraction rather than a pipeline. `j` must be a character vector of column
 #' names: `p[, j]` keeps those columns for all steps and `p[i, j]` first
@@ -454,7 +462,7 @@ dim.pipeflow <- function(x) {
 
     if (view) {
         # Return a view on the selected rows
-        return(.wrap_pipenv(pipenv, name = paste(name, "view"), view = rows))
+        return(.wrap_pipenv(pipenv, name = name, view = rows))
     }
 
     # Resolve all nodes reachable from the selected rows via upstream edges,
@@ -537,7 +545,7 @@ dim.pipeflow <- function(x) {
 #'
 #' # Views behave analogously:
 #' v <- pip_view(p, step = c("load", "fit"))
-#' v[["name"]]              # "pipe view"
+#' v[["name"]]              # "pipe"
 #' v[["view"]]              # row indices of the covered steps
 #'
 #' v[["step"]]              # c(load = "load", fit = "fit")
@@ -944,7 +952,13 @@ dim.pipeflow <- function(x) {
 #' @param cols The columns to be printed. Can be either one of
 #' `core` or `all` to print the core or all columns, respectively,
 #' or an explicit character vector of columns to be printed. The `params`
-#' column lists the names of the step's parameters.
+#' column lists the names of the step's parameters. In the `out` column, some
+#' outputs are shown in short form: a condition (the output of a step that
+#' failed in a run with `on_error = "continue"`) as `<kind/class>`, e.g.
+#' `<error/simpleError>`; a matrix, array or table as `<class[dims]>`, e.g.
+#' `<matrix[4x2]>`; and a function or environment (e.g. an R6 object) as
+#' `<class>`. Strings longer than 40 characters are cut off and marked with
+#' `"..."`.
 #' @param topn The number of rows to be printed from the beginning
 #' and end of tables with more than `nrows` rows.
 #' @param nrows The number of rows printed before truncation is enforced.

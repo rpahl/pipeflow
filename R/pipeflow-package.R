@@ -13,6 +13,17 @@
 .step_states[["outdated"]] <- c(name = "outdated", color = "#ffa040ff")
 .step_states[["failed"]] <- c(name = "failed", color = "#ff4c4cff")
 
+# Run states of a pipeline (see `pip_run_state()`). A list, not an
+# environment, since the order defines the levels of `.run_state`.
+.run_states <- list(
+    ready = c(name = "ready", color = "#87ff6fff"),
+    restart = c(name = "restart", color = "#b48cffff"),
+    running = c(name = "running", color = "#47b8ffff"),
+    halted = c(name = "halted", color = "#ffa040ff"),
+    failed = c(name = "failed", color = "#ff4c4cff"),
+    continued = c(name = "continued", color = "#ffd84cff")
+)
+
 
 # These columns are recomputed whenever a function, its parameters,
 # or the step name change, and they cannot be assigned to directly

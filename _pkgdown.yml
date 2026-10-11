@@ -50,6 +50,7 @@ reference:
   desc: Execute pipeline steps or views.
   contents:
   - pip_run
+  - pip_run_state
   - pip_arg_value
 
 - title: "Locking and tagging"

@@ -3786,6 +3786,102 @@ describe("pip_reset", {
     })
 })
 
+describe("pip_run_state", {
+    it("has the run states defined in the package as levels", {
+        p <- pip_new()
+        state <- .pip_pipenv(p)[[".run_state"]]
+
+        expect_equal(levels(state), names(.run_states))
+        expect_equal(
+            unname(vapply(.run_states, `[[`, character(1), "name")),
+            names(.run_states)
+        )
+        expect_true(all(vapply(
+            .run_states,
+            \(st) grepl("^#[0-9a-f]{8}$", st[["color"]]),
+            logical(1)
+        )))
+    })
+
+    it("is 'ready' for a new pipeline and after a successful run", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x)
+        expect_equal(pip_run_state(p), "ready")
+
+        pip_run(p, lgr = NULL)
+        expect_equal(pip_run_state(p), "ready")
+    })
+
+    it("is 'running' while a step is executed", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) pip_run_state(.self))
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["a", "out"]], "running")
+    })
+
+    it("is 'halted' after a step halted the run", {
+        p <- pip_new() |>
+            pip_add("a", function(x = 1) {
+                .self$halt()
+                x
+            }) |>
+            pip_add("b", \(x = ~a) x)
+
+        pip_run(p, lgr = NULL)
+
+        expect_equal(pip_run_state(p), "halted")
+    })
+
+    it("is 'failed' after a run stopped on an error", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) stop("boom"))
+
+        expect_error(pip_run(p, lgr = NULL), "boom")
+
+        expect_equal(pip_run_state(p), "failed")
+    })
+
+    it("is 'continued' after a run went on after failed steps", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) stop("boom")) |>
+            pip_add("b", \(x = 1) x)
+
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+
+        expect_equal(pip_run_state(p), "continued")
+    })
+
+    it("is 'ready' again after a reset", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) stop("boom"))
+        expect_error(pip_run(p, lgr = NULL), "boom")
+
+        pip_reset(p)
+
+        expect_equal(pip_run_state(p), "ready")
+    })
+
+    it("returns the run state of the pipeline for a view", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = 1) stop("boom"))
+        v <- pip_view(p, step = "a")
+
+        expect_error(pip_run(p, lgr = NULL), "boom")
+
+        expect_equal(pip_run_state(v), "failed")
+    })
+
+    it("signals an error if x is not a pipeflow", {
+        expect_error(pip_run_state(list()), "must be a pipeflow")
+    })
+})
+
 describe("pip_set_params", {
     test_pip <- function() {
         pip_new() |>
@@ -4283,7 +4379,7 @@ describe("pip_view", {
         expect_true(.is_pipeflow_view(v))
         expect_true("view" %in% names(v))
         expect_identical(v[["pipenv"]][["data"]], p[["pipenv"]][["data"]])
-        expect_identical(v[["name"]], "test_pipeline view")
+        expect_identical(v[["name"]], "test_pipeline")
     })
 
     it("can filter by multiple properties with fixed matching", {
@@ -4426,11 +4522,11 @@ describe("pip_view", {
 
         v <- pip_view(p, tags = "daily")
         expect_equal(v[["view"]], c(1L, 3L))
-        expect_equal(v[["name"]], "test_pipeline view")
+        expect_equal(v[["name"]], "test_pipeline")
 
         v2 <- pip_view(v, tags = "report")
         expect_equal(v2[["view"]], 3L)
-        expect_equal(v2[["name"]], "test_pipeline view view")
+        expect_equal(v2[["name"]], "test_pipeline")
     })
 
     it("signals invalid filter names", {

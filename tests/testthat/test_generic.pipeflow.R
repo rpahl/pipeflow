@@ -245,6 +245,15 @@ describe("extract operator [", {
         expect_equal(v[["view"]], c(2L, 5L))
     })
 
+    it("keeps the pipeline name for views and views of views", {
+        p <- test_pip()
+        v <- p[c("a2", "b2")]
+        vv <- v["b2"]
+
+        expect_equal(v[["name"]], p[["name"]])
+        expect_equal(vv[["name"]], p[["name"]])
+    })
+
     it("returns a pipeline including upstream dependencies with view = FALSE", {
         p <- test_pip()
         suppressMessages(sub <- p[5L, view = FALSE])
@@ -845,6 +854,9 @@ describe("assignment operator [[<-", {
         p[["view"]] <- "s2"
         expect_equal(p[["view"]], 2L)
         expect_equal(unname(p[["step"]]), "s2")
+
+        # Re-assigning a view keeps the pipeline name
+        expect_equal(p[["name"]], "pipe")
 
         # Clearing the view turns it back into a full pipeline
         p[["view"]] <- NULL
