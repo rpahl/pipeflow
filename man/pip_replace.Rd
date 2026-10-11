@@ -19,7 +19,9 @@ values at runtime once the step is executed. A reference wrapped in \code{try()}
 like \code{~try(other_step)}, accepts a failed input when the pipeline is run
 with \code{on_error = "continue"}: instead of the output of the referenced step,
 the argument then receives a condition of class \code{pipeflow_failure} (see
-section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}).}
+section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). The function can refer
+to the running pipeline as \code{.self} (see section 'The pipeline as \code{.self}'
+in \code{\link[=pip_add]{pip_add()}}).}
 
 \item{tags}{Optional character vector of tags belonging to the step.
 Can also be adjusted later using \verb{[pip_tag()]}.}

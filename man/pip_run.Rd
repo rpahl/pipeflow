@@ -133,8 +133,8 @@ steps and its field \code{skipped} names the steps that were not run.
 
 A running pipeline can be interrupted via the \code{restart()} and \code{halt()}
 virtual methods. They are intended for advanced, self-modifying pipelines
-and are most often called from within a step function via the \code{.self}
-argument.
+and are most often called from within a step function via \code{.self} (see
+section 'The pipeline as \code{.self}' in \code{\link[=pip_add]{pip_add()}}).
 \itemize{
 \item \code{.self$restart(force = TRUE, times = 1L)}: aborts the current run after the
 current step has finished and restarts it from the first step.

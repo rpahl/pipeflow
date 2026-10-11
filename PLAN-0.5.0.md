@@ -177,7 +177,7 @@ An S3 hook makes that one method.
   the step; the default method changes nothing (existing tests).
 - Cost: one `lapply()` per step call, plus an API to keep stable.
 
-## WP6 — `.self` only where it is used (`feat-self-opt-in`, proposal)
+## WP6 — `.self` only where it is used (`feat-self-opt-in`)
 
 `.self` is injected into every step function (`.wrap_self()`, pf:134;
 reset each run at pf:436). An output that keeps the step's frame alive
@@ -186,21 +186,26 @@ pipeline. `saveRDS()` of such an output writes the pipeline with all its
 outputs (~900 KB for a toy plot), and sending the output to another
 process takes the pipeline along.
 
-Proposal:
-- `.wrap_self()` wraps only if `".self" %in% all.names(body(fun))`. No
-  new argument or column. Document that `get(".self")` is not detected.
-- The per-run assignment at pf:436 writes only into an environment that
-  pipeflow created for `.self`, never into the function's own closure
-  environment (often the global environment).
-- Call sites: `.pip_append` (pf:757), `.pip_insert` (pf:815),
-  `.pip_bind` (pf:945), `pip_replace` (pf:2018), `pip_clone` (WP1).
-- Tests: the `saveRDS()` size of a closure output from a step without
-  `.self`; `restart`/`halt` and the vignette examples (v05b, v06) still
-  work.
+Agreed (2026-10-10):
+- `.self` is provided per step call. `.pip_run_row()` calls the step
+  function through a copy whose environment is a new child of the
+  function's environment holding `.self`, and only if `".self" %in%
+  all.names(body(fun))` (also covers functions defined in the body). No
+  new argument or column. `get(".self")` is not detected (documented in
+  `?pip_add`); a wrapper opts in by mentioning `.self` in its body.
+- Step functions are stored as given: `.pip_rewrap_self()` and the
+  add-time `.wrap_self()` calls (`.pip_append`, `.pip_insert`,
+  `.pip_bind`, `pip_replace`, `pip_clone`, `.pip_compact`) go. Nothing is
+  written into the function's own environment (often the global
+  environment), and copies need no re-wrapping (B2).
+- Tests: the serialized size of a closure output from a step without
+  `.self`; `.self` is not visible to steps that don't refer to it; stored
+  functions are identical to the given ones; `restart`/`halt` and the
+  vignette examples (v05b, v06) still work.
 - NEWS: `.self` is available in step functions that refer to it.
-- Alternative if detection is too implicit: an argument `self = NULL`
-  (NULL = detect, TRUE/FALSE = force), stored as a column. Decide in
-  the PR.
+- Rejected: an argument `self = NULL` (NULL = detect, TRUE/FALSE =
+  force), stored as a column; and wrapping at add time with a marker on
+  pipeflow's environment.
 
 ## WP7 — small API and print items (`feat-run-state`)
 

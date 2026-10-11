@@ -339,10 +339,12 @@ describe("extract operator [", {
             pip_add("a", \(x = 1) .self[["name"]]) |>
             pip_add("b", \(x = ~a) x)
         sub <- p["a", view = FALSE]
+        sub[["name"]] <- "sub"
         pip_run(sub, lgr = NULL)
+        pip_run(p, lgr = NULL)
 
-        self <- environment(p[["a", "fun"]])[[".self"]]
-        expect_identical(self[["pipenv"]], p[["pipenv"]])
+        expect_equal(sub[["a", "out"]], "sub")
+        expect_equal(p[["a", "out"]], "p")
     })
 
     it("copies DAG edges for the extracted subset", {

@@ -61,6 +61,43 @@ describe(".new_step", {
     })
 })
 
+# -------
+# Wrapper
+# -------
+
+describe(".wrap_self", {
+    it("returns functions that don't refer to .self as they are", {
+        f <- \(x = 1) x + 1
+        expect_identical(.wrap_self(f, self = "p"), f)
+
+        # Indirect access is not detected
+        g <- \(x = 1) get(".self")
+        expect_identical(.wrap_self(g, self = "p"), g)
+    })
+
+    it("returns a copy that sees .self in a new environment", {
+        env <- new.env()
+        f <- local(\(x = 1) .self, envir = env)
+        attr(f, "note") <- "kept"
+
+        w <- .wrap_self(f, self = "p")
+
+        expect_equal(w(), "p")
+        expect_identical(parent.env(environment(w)), env)
+        expect_equal(attr(w, "note"), "kept")
+        expect_identical(environment(f), env)
+        expect_false(exists(".self", envir = env, inherits = FALSE))
+    })
+
+    it("detects .self in functions defined in the body", {
+        f <- \(x = 1) {
+            g <- function() .self
+            g()
+        }
+        expect_equal(.wrap_self(f, self = "p")(), "p")
+    })
+})
+
 # ------------------------------
 # Parameter & dependency parsing
 # ------------------------------
@@ -1201,6 +1238,13 @@ describe("pip_add", {
         expect_true(identical(p2[["out"]][[1]], p2))
         expect_true(identical(p[["out"]][[1]], p))
     })
+
+    it("stores the step function as given", {
+        f <- \(x = 1) .self[["name"]]
+        p <- pip_new() |> pip_add("s1", f)
+
+        expect_identical(p[["s1", "fun"]], f)
+    })
 })
 
 describe("pip_add exec modes", {
@@ -1628,6 +1672,14 @@ describe("pip_replace", {
         expect_false(is.primitive(p[["f1", "fun"]]))
     })
 
+    it("stores the new function as given", {
+        p <- test_pip()
+        f <- \(x = 3) .self[["name"]]
+        pip_replace(p, "f2", f)
+
+        expect_identical(p[["f2", "fun"]], f)
+    })
+
     it("replaces a step in-place while keeping the original order", {
         p <- test_pip()
         pip_run(p, lgr = NULL)
@@ -1806,10 +1858,10 @@ describe("pip_clone", {
         p <- test_pip()
         p2 <- pip_clone(p, name = "p2")
         pip_run(p2, lgr = NULL)
+        pip_run(p, lgr = NULL)
 
         expect_equal(p2[["out"]][[1]], "p2")
-        self <- environment(p[["s1", "fun"]])[[".self"]]
-        expect_identical(self[["pipenv"]], p[["pipenv"]])
+        expect_equal(p[["out"]][[1]], "p1")
     })
 
     it("keeps .self of a running step when a clone of it runs", {
@@ -3253,6 +3305,47 @@ describe("pip_run", {
 
         expect_true(any(grepl("warn careful now", logs)))
         expect_true(any(grepl("info hey there", logs)))
+    })
+
+    describe(".self in step functions", {
+        it("is provided only to step functions that refer to it", {
+            p <- pip_new("p") |>
+                pip_add("with", \(x = 1) .self[["name"]]) |>
+                pip_add("without", \(x = 1) exists(".self"))
+            pip_run(p, lgr = NULL)
+
+            expect_equal(p[["with", "out"]], "p")
+            expect_false(p[["without", "out"]])
+        })
+
+        it("is not written into the environment of the step function", {
+            env <- new.env()
+            f <- local(\(x = 1) .self[["name"]], envir = env)
+            p <- pip_new("p") |> pip_add("s", f)
+            pip_run(p, lgr = NULL)
+
+            expect_equal(p[["s", "out"]], "p")
+            expect_false(exists(".self", envir = env, inherits = FALSE))
+        })
+
+        it("doesn't keep the pipeline alive via outputs of other steps", {
+            # The step function is defined outside of this test (whose
+            # environment holds `p`), has no source references and forces
+            # `x`, so only `.self` could make the closure reach the pipeline.
+            adder <- utils::removeSource(\(x = 1) {
+                force(x)
+                function(y) x + y
+            })
+            environment(adder) <- globalenv()
+
+            p <- pip_new() |>
+                pip_add("big", \(n = 1e5) rnorm(n)) |>
+                pip_add("adder", adder)
+            pip_run(p, lgr = NULL)
+
+            size <- length(serialize(p[["adder", "out"]], connection = NULL))
+            expect_lt(size, 1e4)
+        })
     })
 
     describe("continuing after errors", {

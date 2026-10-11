@@ -2,7 +2,14 @@
 
 # pipeflow 0.4.0.9009
 
-- Same as previous version.
+- Behaviour change: `.self` is only available in step functions that refer
+  to it, that is, whose body contains the name `.self` (also within
+  functions defined in the body; indirect access such as `get(".self")` is
+  not detected). Before, every step function got it, so an output that keeps
+  the environment of its step, such as a ggplot or a closure, kept the whole
+  pipeline alive: `saveRDS()` of such an output also wrote the pipeline with
+  all its outputs. Step functions are now stored as given, and `pip_run()`
+  provides `.self` each time it calls one.
 
 
 # pipeflow 0.4.0.9008
