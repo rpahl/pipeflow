@@ -2304,8 +2304,11 @@ pip_replace <- function(
 #' executed. Use `force = TRUE` to re-execute every step.
 #'
 #' @param x A pipeflow pip or view
-#' @param lgr A logging function of the form `function(level, msg, ...)`.
-#' To suppress logging, you can set `lgr = NULL`.
+#' @param lgr A logging function with the arguments `level` (`"info"`,
+#' `"warn"` or `"error"`) and `msg`, which is called as
+#' `lgr(level = level, msg = msg)`. The default is [pipeflow_lgr()], which
+#' can also be used to build custom loggers. To suppress logging, you can set
+#' `lgr = NULL`.
 #' @param force Logical indicating if all steps should be forced to run,
 #' regardless of whether they are outdated or not.
 #' @param progress Optional callback of the form

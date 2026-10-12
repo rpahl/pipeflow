@@ -52,6 +52,7 @@ reference:
   - pip_run
   - pip_run_state
   - pip_arg_value
+  - pipeflow_lgr
 
 - title: "Locking and tagging"
   desc: Lock steps against changes or tag them for filtering.
