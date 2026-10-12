@@ -2120,6 +2120,128 @@ describe("pip_replace", {
         )
     })
 
+    it("keeps tags and exec by default", {
+        p <- test_pip()
+        p[["f2", "tags"]] <- c("io", "raw")
+        p[["f2", "exec"]] <- "plain"
+
+        pip_replace(p, "f2", \(x = 4) x * 2)
+
+        expect_equal(p[["f2", "tags"]], c("io", "raw"))
+        expect_equal(p[["f2", "exec"]], "plain")
+        # the other steps are untouched
+        expect_equal(p[["f1", "tags"]], character(0))
+        expect_equal(p[["f1", "exec"]], "auto")
+    })
+
+    it("keeps empty tags and the default exec mode", {
+        p <- test_pip()
+        pip_replace(p, "f2", \(x = 4) x * 2)
+
+        expect_equal(p[["f2", "tags"]], character(0))
+        expect_equal(p[["f2", "exec"]], "auto")
+    })
+
+    it("treats tags = NULL and exec = NULL as keep", {
+        p <- test_pip()
+        p[["f2", "tags"]] <- "io"
+        p[["f2", "exec"]] <- "split"
+
+        pip_replace(p, "f2", \(x = 4) x, tags = NULL, exec = NULL)
+
+        expect_equal(p[["f2", "tags"]], "io")
+        expect_equal(p[["f2", "exec"]], "split")
+    })
+
+    it("overrides kept tags and exec with explicit values", {
+        p <- test_pip()
+        p[["f2", "tags"]] <- "io"
+        p[["f2", "exec"]] <- "plain"
+
+        pip_replace(
+            p,
+            "f2",
+            \(x = 4) x,
+            tags = c("new", "tags"),
+            exec = "split"
+        )
+
+        expect_equal(p[["f2", "tags"]], c("new", "tags"))
+        expect_equal(p[["f2", "exec"]], "split")
+    })
+
+    it("clears all tags with tags = character(0)", {
+        p <- test_pip()
+        p[["f2", "tags"]] <- c("io", "raw")
+
+        pip_replace(p, "f2", \(x = 4) x, tags = character(0))
+
+        expect_equal(p[["f2", "tags"]], character(0))
+    })
+
+    it("resets exec to the default with exec = \"auto\"", {
+        p <- test_pip()
+        p[["f2", "exec"]] <- "reduce"
+
+        pip_replace(p, "f2", \(x = 4) x, exec = "auto")
+
+        expect_equal(p[["f2", "exec"]], "auto")
+    })
+
+    it("changes tags and exec independently of each other", {
+        p <- test_pip()
+        p[["f2", "tags"]] <- "io"
+        p[["f2", "exec"]] <- "plain"
+
+        pip_replace(p, "f2", \(x = 4) x, exec = "auto")
+        expect_equal(p[["f2", "tags"]], "io")
+        expect_equal(p[["f2", "exec"]], "auto")
+
+        pip_replace(p, "f2", \(x = 4) x, tags = "other")
+        expect_equal(p[["f2", "tags"]], "other")
+        expect_equal(p[["f2", "exec"]], "auto")
+    })
+
+    it("validates an explicit exec mode but not a missing one", {
+        p <- test_pip()
+        expect_error(
+            pip_replace(p, "f2", \(x = 4) x, exec = "foo"),
+            "exec must be one of"
+        )
+        expect_error(
+            pip_replace(p, "f2", \(x = 4) x, exec = c("auto", "plain")),
+            "exec must be a single string"
+        )
+        expect_no_error(pip_replace(p, "f2", \(x = 4) x, exec = NULL))
+    })
+
+    it("keeps tags and exec of a step replaced through a view", {
+        p <- test_pip()
+        p[["f2", "tags"]] <- "io"
+        p[["f2", "exec"]] <- "plain"
+        v <- pip_view(p, step = c("f2", "f3"))
+
+        pip_replace(v, "f2", \(x = 4) x * 2)
+
+        expect_equal(p[["f2", "tags"]], "io")
+        expect_equal(p[["f2", "exec"]], "plain")
+    })
+
+    it("still resets params, output and state when keeping tags", {
+        p <- test_pip()
+        p[["f2", "tags"]] <- "io"
+        pip_run(p, lgr = NULL)
+        pip_lock(pip_view(p, step = "f2"))
+
+        pip_replace(p, "f2", \(x = 4) x * 2)
+
+        expect_equal(p[["f2", "tags"]], "io")
+        expect_equal(p[["f2", "state"]], "new")
+        expect_false(p[["f2", "locked"]])
+        expect_null(p[["f2", "out"]])
+        expect_equal(p[["f2", "params"]], list(x = 4))
+    })
+
     it("replaces a step through a view", {
         p <- test_pip()
         v <- pip_view(p, step = c("f2", "f3"))

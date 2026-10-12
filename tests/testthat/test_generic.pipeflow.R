@@ -1031,6 +1031,57 @@ describe("assignment operator [[<-", {
         expect_equal(p[["out"]][[2]], 3)
     })
 
+    it("keeps multiple tags and a non-default exec mode via [[<-", {
+        p <- test_pip()
+        p[["s2", "tags"]] <- c("model", "core")
+        p[["s2", "exec"]] <- "reduce"
+
+        p[["s2", "fun"]] <- \(x = ~s1) x * 3
+
+        expect_equal(p[["s2", "tags"]], c("model", "core"))
+        expect_equal(p[["s2", "exec"]], "reduce")
+    })
+
+    it("keeps empty tags and the default exec mode via [[<-", {
+        p <- test_pip()
+
+        p[["s2", "fun"]] <- \(x = ~s1) x * 3
+
+        expect_equal(p[["s2", "tags"]], character(0))
+        expect_equal(p[["s2", "exec"]], "auto")
+    })
+
+    it("keeps tags and exec mode when replacing through a view", {
+        p <- test_pip()
+        p[["s2", "tags"]] <- "model"
+        p[["s2", "exec"]] <- "plain"
+        v <- pip_view(p, step = c("s2", "s3"))
+
+        # the integer index is relative to the view
+        v[[1, "fun"]] <- \(x = ~s1) x * 3
+
+        expect_equal(p[["s2", "tags"]], "model")
+        expect_equal(p[["s2", "exec"]], "plain")
+        expect_equal(p[["s2", "state"]], "new")
+    })
+
+    it("gives the same result as pip_replace() with default tags and exec", {
+        p1 <- test_pip()
+        p2 <- test_pip()
+        for (p in list(p1, p2)) {
+            p[["s2", "tags"]] <- c("a", "b")
+            p[["s2", "exec"]] <- "plain"
+        }
+        f <- \(x = ~s1) x * 3
+
+        p1[["s2", "fun"]] <- f
+        pip_replace(p2, "s2", f)
+
+        expect_equal(p1[["tags"]], p2[["tags"]])
+        expect_equal(p1[["exec"]], p2[["exec"]])
+        expect_equal(p1[["depends"]], p2[["depends"]])
+    })
+
     it("marks downstream steps outdated when replacing a function", {
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x) |>
