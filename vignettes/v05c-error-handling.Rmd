@@ -1,0 +1,292 @@
+---
+title: "Handling failures"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+description: >
+  Shows what happens when a step fails, how to keep a pipeline running with
+  on_error = "continue", how to react to failed inputs with ~try() references,
+  and how to recover once the cause is fixed.
+vignette: >
+  %\VignetteIndexEntry{Handling failures}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r knitr-setup, include = FALSE}
+knitr::opts_chunk$set(
+    comment = "#",
+    prompt = FALSE,
+    tidy = FALSE,
+    cache = FALSE,
+    collapse = TRUE
+)
+
+old <- options(width = 100L)
+```
+
+
+In practice, steps fail: data is missing, a model does not converge, or an
+input violates an assumption. This vignette shows how {pipeflow} reports such
+failures, how a run can be continued for unaffected steps, and how
+to pick up the pieces once the cause is fixed.
+
+### A pipeline that fails
+
+We use a small pipeline whose `check` step fails if the data exceeds a
+limit.
+
+```{r define-pipeline}
+library(pipeflow)
+
+pip <- pip_new("analysis") |>
+    pip_add("data", \(n = 5) seq_len(n)) |>
+    pip_add("check", \(x = ~data, limit = 3) {
+        if (max(x) > limit) stop("data exceeds limit")
+        x
+    }) |>
+    pip_add("model", \(x = ~check) mean(x)) |>
+    pip_add("total", \(x = ~data) sum(x))
+```
+
+With `n = 5` and `limit = 3`, the `check` step will fail, and the `model` step
+downstream of it cannot run. The `total` step, however, only needs the `data`
+step.
+
+
+### Stop at the first error
+
+By default, `pip_run()` stops at the first step that fails.
+
+```{r run-and-stop, error = TRUE}
+pip_run(pip)
+
+pip
+
+pip_run_state(pip)
+```
+
+The pipeline stays in a defined state. The failed step is marked as `failed`,
+the steps that were not reached are still `new`, and the run state tells that
+the last run ended with an error:
+
+Let's inspect the error object returned by `tryCatch()`.
+
+```{r step-error-fields}
+err <- tryCatch(pip_run(pip, lgr = NULL), error = \(e) e)
+
+class(err)
+err$step
+
+class(err$parent)
+err$parent$message
+```
+
+The error is of class `pipeflow_step_error`. Its field `step` names the failed
+step and the field `parent` holds the original condition, which keeps its
+own class, so that errors can be handled by class:
+
+
+### Continue after errors
+
+In the previous run, the `total` step was not run, although it does not depend
+on the failed step, because the run stopped early.
+With `on_error = "continue"` in `pip_run()`, a failing step is still marked
+as failed but the run can continue for all other steps that do not depend on it:
+
+```{r run-and-continue, warning = TRUE}
+pip$reset()
+
+suppressWarnings(pip_run(pip, on_error = "continue"))
+
+pip
+
+pip_run_state(pip)
+```
+
+Now `total` was calculated, while `model` was skipped, because its input
+depends on the failed step.
+The `out` column of a failed step holds the condition, which
+is printed in short form as `<kind/class>`.
+
+To work with it programmatically, we can extract it as usual:
+
+```{r failed-output}
+out <- pip[["check", "out"]]
+
+class(out)
+out$message
+```
+
+Let's inspect the warning object returned by `tryCatch()`.
+
+```{r run-failed-warning}
+w <- tryCatch(
+    pip_run(pip, lgr = NULL, on_error = "continue"),
+    warning = \(w) w
+)
+
+names(w$failed)
+w$skipped
+```
+
+The warning is signalled after all states and outputs are stored, so
+catching it with `tryCatch()` does not lose any results.
+
+
+### Mitigate failed inputs with `try()`
+
+Sometimes a step should run even if one of its inputs failed, for example a
+report that mentions what is missing or if a fallback is available.
+Such an argument is marked by wrapping the step reference in `try()`:
+
+```{r add-report-step}
+pip_add(
+    pip,
+    "report",
+    \(total = ~total, m = ~try(model)) {
+        if (inherits(m, "pipeflow_failure")) {
+            paste("total:", total, "- no model:", m$message)
+        } else {
+            paste("total:", total, "- mean:", m)
+        }
+    }
+)
+
+suppressWarnings(pip_run(pip, on_error = "continue"))
+
+pip[["report", "out"]]
+```
+
+Instead of the output of `model`, the `m` argument received a *failure
+object*, a condition of class `pipeflow_failure`, which stands in for the
+missing output. The message tells why the input is not available. It has the
+fields
+
+* `step`: the step that provided the input (`model`),
+* `failed_step`: the step that actually failed (`check`), and
+* `parent`: the original error condition.
+
+A step is only run despite a failed input if *all* its failed inputs are
+marked with `try()`. Everything else is skipped, as `model` above.
+Note that `try()` has an effect only in a continuing run. With
+`on_error = "stop"`, the run ends at the failed step anyway.
+
+
+### Recover from failures
+
+Both skipped and failed steps are retried in the next run, and
+so are steps that got a failure object. Steps that were completed are not
+run again. Let's fix the cause by raising the limit and re-run:
+
+```{r recover}
+pip_set_params(pip, list(limit = 10))
+pip_run(pip)
+
+pip
+```
+
+The run log shows that `data` and `total` were skipped, since they were
+completed already. The failed step `check` and the skipped step `model` were
+executed now, and so was `report`, because it had received
+a failure object instead of the real output. The report now
+contains the model result and the run state is `ready` again.
+
+```{r recovered-report}
+pip[["report", "out"]]
+
+pip_run_state(pip)
+```
+
+
+### Failures in split pipelines
+
+Failures also work with the execution modes `split` and `reduce`, which are
+described in the vignette on
+[split, map, and reduce](v05a-split-map-reduce.html). Let's split a small
+data set by group and let the `spread` step fail for groups with a single row.
+
+```{r define-split-pipeline}
+d <- data.frame(g = c("a", "a", "b", "b", "c"), y = c(1, 2, 3, 5, 8))
+
+pip <- pip_new("groups") |>
+    pip_add("data", \(data = NULL) data) |>
+    pip_add("by_group", \(data = ~data) split(data, data$g), exec = "split") |>
+    pip_add("spread", \(d = ~by_group) {
+        if (nrow(d) < 2) stop("need at least 2 rows")
+        diff(range(d$y))
+    }) |>
+    pip_add(
+        "combine",
+        \(s = ~try(spread)) {
+            if (inherits(s, "pipeflow_failure")) {
+                return(s$message)
+            }
+            unlist(s)
+        },
+        exec = "reduce"
+    )
+
+pip_set_params(pip, list(data = d))
+```
+
+If one partition (group `c`) fails, the whole `spread` step fails. The
+condition tells the failed key and keeps the original one as `parent`:
+
+```{r run-split-pipeline}
+suppressWarnings(pip_run(pip, on_error = "continue"))
+
+pip
+
+err <- pip[["spread", "out"]]
+class(err)
+err$key
+err$parent$message
+```
+
+The `combine` step reduces the outputs of all groups. Since the input
+`spread` failed and is marked with `try()`, `combine` ran once and received
+the failure object, with the key in the message:
+
+```{r reduce-with-failure}
+pip[["combine", "out"]]
+```
+
+Likewise, if the pipeline is run with `on_error = "stop"`, the error is a
+`pipeflow_step_error` as before, with the `pipeflow_key_error` as its
+`parent`. Without `try()` in the `combine` step, it would just be skipped.
+
+Failures are currently tracked per step, not per key, so the groups `a`
+and `b` that were fine are not available as results of a run that
+failed in group `c`. Once the cause is fixed, here by removing the group,
+the pipeline completes:
+
+```{r recover-split-pipeline}
+pip_set_params(pip, list(data = d[d$g != "c", ]))
+pip_run(pip)
+
+pip[["combine", "out"]]
+```
+
+
+### Summary
+
+* By default, a failing step stops the run with a `pipeflow_step_error` that
+  names the step and holds the original condition in `parent`.
+* `pip_run(on_error = "continue")` marks the step as `failed`, stores its
+  condition as output, skips the steps that depend on it, and runs
+  everything else. The run state becomes `continued`, and a
+  `pipeflow_run_failed` warning lists both failed and skipped steps.
+* A reference wrapped in `try()`, e.g. `x = ~try(step)`, makes a step run
+  despite a failed input. The argument then receives a `pipeflow_failure`
+  condition.
+* The next run retries any failed and skipped steps (and those that received
+  failure objects)
+* For steps that map over partitions, the condition of the failed
+  partition is a `pipeflow_key_error` with the field `key`. A `reduce` step
+  with a `try()` reference receives the failure.
+
+```{r, include = FALSE}
+options(old)
+```
