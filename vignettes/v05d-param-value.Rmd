@@ -160,7 +160,8 @@ The `quantity` that `make` returns reaches `inspect` untouched.
 ### Errors in a method
 
 A method runs as part of the step call. An error in a method is therefore
-an error of the step, handled like any other step error. Let's add a
+an error of the step, handled like any other step error as described in the
+vignette on [handling failures](v05c-error-handling.html). Let's add a
 class that checks its unit.
 
 ```{r checked-class}
@@ -204,7 +205,7 @@ suppressWarnings(
 pip_data(p4)[, c("step", "state")]
 ```
 
-The condition of the failed step is stored as its output:
+As usual, the condition of the failed step is stored as its output.
 
 ```{r method-error-condition}
 conditionMessage(p4[["double", "out"]])

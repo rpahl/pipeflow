@@ -133,7 +133,7 @@ navbar:
       - text: "Nested pipelines"
         href: articles/v05b-nested-pipeline.html
       - text: "Annotated parameter values"
-        href: articles/v05c-param-value.html
+        href: articles/v05d-param-value.html
       - text: "Self-modifying pipelines"
         href: articles/v06-self-modify-pipeline.html
       - text: ----
