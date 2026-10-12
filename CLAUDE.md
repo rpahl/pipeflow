@@ -143,3 +143,8 @@ have changed the pipeline.
   `.github/instructions/r/rmarkdown.instructions.md`.
 - Commit messages use conventional commits: `feat:`, `fix:`, `test:`,
   `refactor:`, `docs:`. Note user-facing changes in `NEWS.md`.
+- Versions are bumped by hand, no CI job does it. As the last commit of a PR,
+  rebase on `main` first (so the version doesn't clash with other PRs), then
+  increment the dev version in `DESCRIPTION` (`0.4.0.9014` -> `0.4.0.9015`),
+  make sure the top heading of `NEWS.md` is `# pipeflow <new version>` with
+  the PR's bullets under it, and commit as `chore: bump version to <version>`.
