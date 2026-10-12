@@ -2,5 +2,8 @@
 # of the package: this file only lets renv::snapshot() see the dependencies.
 library(covr)
 library(devtools)
+library(gridExtra)
+library(htmltools) # required for covr::report()
 library(lintr)
+library(mockery)
 library(rcmdcheck)
