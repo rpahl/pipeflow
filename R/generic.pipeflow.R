@@ -586,7 +586,7 @@ dim.pipeflow <- function(x) {
 #'   * `p[[step, "step"]] <- NULL` -- remove the step, together with its
 #'      downstream dependencies; same as `pip_remove(p, step, force = TRUE)`
 #' * `p[[step, "fun"]] <- fun` -- replace the step's function;
-#'    same as [pip_replace()]) but tags and execution mode are kept
+#'    same as [pip_replace()], that is, tags and execution mode are kept
 #' * `p[[step, "params"]] <- list(...)` -- update the step's parameters;
 #'   same as `pip_set_params(p, list(...))`
 #' * `p[[step, "tags"]] <- tags` -- set the step's tags explicitly to `tags`
@@ -718,9 +718,7 @@ dim.pipeflow <- function(x) {
             pip_rename(x, from = step, to = value)
         }
     } else if (j == "fun") {
-        tags <- data[["tags"]][[i]]
-        exec <- data[["exec"]][[i]]
-        pip_replace(x, step = step, fun = value, tags = tags, exec = exec)
+        pip_replace(x, step = step, fun = value)
     } else if (j == "params") {
         pip_set_params(pip_view(x, step = step), params = value)
     } else if (j == "out") {

@@ -2116,8 +2116,19 @@ pip_rename <- function(x, from, to) {
 #' pipeline. Downstream steps that have run before are automatically marked as
 #' outdated and will re-run on the next [pip_run()].
 #'
+#' By default, the step keeps its tags and execution mode: `tags = NULL` and
+#' `exec = NULL` mean "keep the current value". To change them, pass explicit
+#' values, where `tags = character(0)` removes all tags and `exec = "auto"`
+#' resets the execution mode to its default. Parameters, output, state and
+#' lock status are always reset, like for a freshly added step.
+#'
 #' @inheritParams pip_add
 #' @param x A pipeflow pipeline or view object.
+#' @param tags Optional character vector of tags belonging to the step. If
+#' `NULL` (the default), the current tags of the step are kept. Use
+#' `character(0)` to remove all tags.
+#' @param exec Execution mode for the step, see [pip_add()]. If `NULL` (the
+#' default), the current execution mode of the step is kept.
 #' @return The updated pipeline, invisibly.
 #' @examples
 #' p <- pip_new() |>
@@ -2140,14 +2151,21 @@ pip_rename <- function(x, from, to) {
 #' p[["state"]]                                # "double" is "new" again
 #'
 #' try(pip_replace(v, "load", \(n = 2) seq_len(n)))
+#'
+#' # Tags and execution mode are kept unless set explicitly
+#' pip_tag(p, "io")
+#' pip_replace(p, "load", \(n = 4) seq_len(n))
+#' p[, "tags"]
+#' pip_replace(p, "load", \(n = 4) seq_len(n), tags = character(0))
+#' p[, "tags"]
 #' @export
 pip_replace <- function(
     x,
     step,
     fun,
-    tags = character(0),
+    tags = NULL,
     params = list(),
-    exec = "auto"
+    exec = NULL
 ) {
     .assert_pip_or_view(x)
     if (!.is_single(step, "character")) {
@@ -2188,12 +2206,22 @@ pip_replace <- function(
             "params - it is provided automatically"
         )
     }
-    .assert_exec_mode(exec)
+    if (!is.null(exec)) {
+        .assert_exec_mode(exec)
+    }
     .warn_params_overlap(step, fun, params)
 
     env <- .pip_pipenv(x)
     data <- env[["data"]]
     iStep <- data.table::chmatch(step, data[["step"]])
+
+    # NULL means "keep the current value"
+    if (is.null(tags)) {
+        tags <- data[["tags"]][[iStep]]
+    }
+    if (is.null(exec)) {
+        exec <- data[["exec"]][[iStep]]
+    }
 
     funParams <- .extract_fun_params(fun)
     params[names(funParams)] <- funParams
@@ -2244,8 +2272,8 @@ pip_replace <- function(
         dag_add_edges_to(d, from = toAdd, to = nodeId)
     }
 
-    # Reset the step row: new function, params, tags and exec, fresh runtime
-    # state (like a freshly added step).
+    # Reset the step row: new function and params, fresh runtime state (like
+    # a freshly added step), but with the given or kept tags and exec.
     values <- list(
         "fun" = list(fun),
         "params" = list(params),

@@ -55,7 +55,9 @@ po/*~
 # rcmdcheck folder
 check*
 
-dev
+# scratch folder, except the dev tools list for renv
+dev/*
+!dev/dependencies.R
 
 # renv
 renv/
