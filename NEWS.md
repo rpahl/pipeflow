@@ -1,5 +1,3 @@
-<!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
-
 # pipeflow 0.4.0.9015
 
 - Behaviour change: `pip_replace()` now keeps the tags and the execution mode
