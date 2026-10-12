@@ -8,7 +8,7 @@ Starting point: `main` at 0.4.0.9004 (3457d4c). Since 0.4.0 (CRAN):
   0.4.0.9002's `allow_failed`).
 
 This plan covers the rest of 0.5.0: bug fixes, clearer errors, parameter
-handling, one extension point (`pip_arg_value()`), `.self` only where it
+handling, one extension point (`pip_param_value()`), `.self` only where it
 is used, pipelines that survive `saveRDS()`, `pip_replace()` defaults, the
 exported logger, and the CRAN release. Only per-key failures in split
 steps are left for later (see Later).
@@ -155,7 +155,7 @@ names the mode, not the cause.
   the failure; a reduce step without `try()` is skipped as usual.
 - Not in 0.5.0: per-key failures (see Later).
 
-## WP5 — `pip_arg_value()` (`feat-arg-value`)
+## WP5 — `pip_param_value()` (`feat-arg-value`)
 
 Some packages store annotated values as step params (values with units
 or labels, parameter objects that carry UI metadata). They must unwrap
@@ -163,7 +163,7 @@ them before the step function sees them. Today that means wrapping every
 step function: copying formals, unwrapping arguments, forwarding `.self`.
 An S3 hook makes that one method.
 
-- Exported generic `pip_arg_value(x, ...)`; the default method returns
+- Exported generic `pip_param_value(x, ...)`; the default method returns
   `x`.
 - One call site in `.pip_run_row()` (pf:410ff): applied to the
   **unbound** arguments (`dat$unbound[[i]]`, `...` names included). It is
@@ -171,7 +171,7 @@ An S3 hook makes that one method.
   objects.
 - It runs inside the `withCallingHandlers` (pf:438), so an error in a
   method is a step error and `on_error = "continue"` applies to it.
-- Docs: `?pip_arg_value` with an example (an annotated value of a custom
+- Docs: `?pip_param_value` with an example (an annotated value of a custom
   class). The vignette follows later (see the end of this plan). Methods
   are meant for the package's or user's own classes, not base classes.
 - Tests: called once per unbound argument in every exec mode (auto,
@@ -277,9 +277,9 @@ and delegate the rest.
 - Tests: the exported function writes the documented format (extend
   `test_log.R`). NEWS bullet.
 
-## WP7d - Vignette for `pip_arg_value()`
+## WP7d - Vignette for `pip_param_value()`
 
-`pip_arg_value()` is not a topic for the "Get started" vignette. Create a
+`pip_param_value()` is not a topic for the "Get started" vignette. Create a
 separate vignette for it, likely in the "Advanced workflows" section of
 `_pkgdown.yml` (articles list), covering annotated parameter values, how to
 write and register a method, what it is (not) applied to, and how errors in
@@ -312,7 +312,7 @@ given, and only if the result is assigned back.
 
 - Merge the dependabot PRs (#72, #81, #82).
 - `devtools::build_readme()`; update the vignettes for `~try()`, F1, F3,
-  `pip_arg_value()`, `.self`, saving pipelines and the exported logger.
+  `pip_param_value()`, `.self`, saving pipelines and the exported logger.
 - NEWS: one `# pipeflow 0.5.0` section with a "Breaking changes" block:
   - `~try()` references (`allow_failed` was dev-only);
   - identical values no longer outdate;

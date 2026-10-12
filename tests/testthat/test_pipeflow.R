@@ -5121,12 +5121,12 @@ describe("pip_view", {
 })
 
 
-describe("pip_arg_value", {
+describe("pip_param_value", {
     # S3 methods are looked up from the package namespace, so test methods
     # must be registered there.
-    register_arg_value <- function(cls, fn) {
+    register_param_value <- function(cls, fn) {
         registerS3method(
-            "pip_arg_value",
+            "pip_param_value",
             class = cls,
             method = fn,
             envir = asNamespace("pipeflow")
@@ -5134,14 +5134,14 @@ describe("pip_arg_value", {
     }
 
     it("returns x unchanged by default", {
-        expect_identical(pip_arg_value(1:3), 1:3)
-        expect_identical(pip_arg_value("a"), "a")
-        expect_null(pip_arg_value(NULL))
+        expect_identical(pip_param_value(1:3), 1:3)
+        expect_identical(pip_param_value("a"), "a")
+        expect_null(pip_param_value(NULL))
     })
 
     it("unwraps unbound arguments before the step function sees them", {
-        register_arg_value("av_unit", function(x, ...) unclass(x)$value)
-        val <- structure(list(value = 5, unit = "m"), class = "av_unit")
+        register_param_value("pv_unit", function(x, ...) unclass(x)$value)
+        val <- structure(list(value = 5, unit = "m"), class = "pv_unit")
 
         p <- pip_new() |>
             pip_add("s", \(x = 1, y = 2) x + y, params = list())
@@ -5154,12 +5154,12 @@ describe("pip_arg_value", {
     it("is called once per unbound argument, including defaults", {
         calls <- new.env()
         calls$n <- 0L
-        register_arg_value("av_count", function(x, ...) {
+        register_param_value("pv_count", function(x, ...) {
             calls$n <- calls$n + 1L
             unclass(x)[[1]]
         })
-        a <- structure(list(1), class = "av_count")
-        b <- structure(list(2), class = "av_count")
+        a <- structure(list(1), class = "pv_count")
+        b <- structure(list(2), class = "pv_count")
 
         p <- pip_new() |>
             pip_add("s", \(a = 0, b = 0, c = 3) a + b + c)
@@ -5171,8 +5171,8 @@ describe("pip_arg_value", {
     })
 
     it("does not change the stored params", {
-        register_arg_value("av_store", function(x, ...) unclass(x)[[1]])
-        val <- structure(list(1), class = "av_store")
+        register_param_value("pv_store", function(x, ...) unclass(x)[[1]])
+        val <- structure(list(1), class = "pv_store")
 
         p <- pip_new() |> pip_add("s", \(x = 0) x)
         pip_set_params(p, list(x = val))
@@ -5182,22 +5182,22 @@ describe("pip_arg_value", {
     })
 
     it("is never called for ~step inputs", {
-        register_arg_value("av_never", function(x, ...) {
-            stop("pip_arg_value must not be called")
+        register_param_value("pv_never", function(x, ...) {
+            stop("pip_param_value must not be called")
         })
-        mk <- function() structure(list(1), class = "av_never")
+        mk <- function() structure(list(1), class = "pv_never")
 
         p <- pip_new() |>
             pip_add("a", \(z = 1) mk()) |>
             pip_add("b", \(x = ~a) class(x))
 
         expect_no_error(pip_run(p, lgr = NULL))
-        expect_equal(p[["pipenv"]][["data"]]$out[[2]], "av_never")
+        expect_equal(p[["pipenv"]][["data"]]$out[[2]], "pv_never")
     })
 
     it("is applied in every exec mode", {
-        register_arg_value("av_modes", function(x, ...) unclass(x)[[1]])
-        k <- structure(list(10), class = "av_modes")
+        register_param_value("pv_modes", function(x, ...) unclass(x)[[1]])
+        k <- structure(list(10), class = "pv_modes")
 
         p <- pip_new() |>
             pip_add(
@@ -5227,8 +5227,8 @@ describe("pip_arg_value", {
     })
 
     it("turns an error in a method into a step error", {
-        register_arg_value("av_error", function(x, ...) stop("cannot unwrap"))
-        bad <- structure(list(1), class = "av_error")
+        register_param_value("pv_error", function(x, ...) stop("cannot unwrap"))
+        bad <- structure(list(1), class = "pv_error")
 
         p <- pip_new() |> pip_add("s", \(x = 0) x)
         pip_set_params(p, list(x = bad))
@@ -5238,8 +5238,8 @@ describe("pip_arg_value", {
     })
 
     it("lets on_error = 'continue' go on after a failing method", {
-        register_arg_value("av_cont", function(x, ...) stop("cannot unwrap"))
-        bad <- structure(list(1), class = "av_cont")
+        register_param_value("pv_cont", function(x, ...) stop("cannot unwrap"))
+        bad <- structure(list(1), class = "pv_cont")
 
         p <- pip_new() |>
             pip_add("s", \(x = 0) x) |>
