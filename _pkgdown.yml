@@ -132,6 +132,8 @@ navbar:
         href: articles/v05a-split-map-reduce.html
       - text: "Nested pipelines"
         href: articles/v05b-nested-pipeline.html
+      - text: "Handling failures"
+        href: articles/v05c-error-handling.html
       - text: "Annotated parameter values"
         href: articles/v05d-param-value.html
       - text: "Self-modifying pipelines"

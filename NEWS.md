@@ -5,6 +5,11 @@
   (the development name `pip_arg_value()` was never released). A new
   vignette, "Annotated parameter values", explains how to write and register
   a method.
+- Documentation: new vignette "Handling failures" on `on_error = "continue"`,
+  `~try()` references, step errors and recovering from failed runs. The
+  vignette "Get started" shows the `unknown` argument of `pip_set_params()`,
+  and "Combine pipelines" shows how to save and restore pipelines with
+  `saveRDS()` and `readRDS()`.
 
 
 # pipeflow 0.4.0.9017
