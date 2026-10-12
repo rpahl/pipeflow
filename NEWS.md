@@ -2,7 +2,9 @@
 
 # pipeflow 0.4.0.9013
 
-- Same as previous version.
+- Fix: adding, inserting or binding a step that references the same step
+  more than once (e.g. `\(x = ~b, y = ~b)`) no longer warns that the edge
+  already exists.
 
 
 # pipeflow 0.4.0.9012
