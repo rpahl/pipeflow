@@ -4,7 +4,7 @@
 \alias{pip_replace}
 \title{Replace a step}
 \usage{
-pip_replace(x, step, fun, tags = character(0), params = list(), exec = "auto")
+pip_replace(x, step, fun, tags = NULL, params = list(), exec = NULL)
 }
 \arguments{
 \item{x}{A pipeflow pipeline or view object.}
@@ -23,8 +23,9 @@ section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). The fun
 to the running pipeline as \code{.self} (see section 'The pipeline as \code{.self}'
 in \code{\link[=pip_add]{pip_add()}}).}
 
-\item{tags}{Optional character vector of tags belonging to the step.
-Can also be adjusted later using \verb{[pip_tag()]}.}
+\item{tags}{Optional character vector of tags belonging to the step. If
+\code{NULL} (the default), the current tags of the step are kept. Use
+\code{character(0)} to remove all tags.}
 
 \item{params}{Optional named list of parameter values, which will be merged
 with the defaults of \code{fun} (if overlapping names, the default values in \code{fun}
@@ -37,24 +38,8 @@ the pipeline in the step) is re-executed when one of the respective
 param values change.
 }}
 
-\item{exec}{Execution mode for this step. One of "auto", "split",
-"reduce" or "plain".
-Using execution mode \code{exec = split}, the output of the step is marked as
-partitioned output. In this mode, any step that depends on the split step
-(directly or indirectly) will have its output automatically mapped
-partition-wise during step execution. The \code{reduce} mode expects
-partitioned input and passes it through without mapping, while \code{plain}
-mode only accepts non-partitioned input and always intends to execute
-a single call. If a split pipeline fails in a run with
-\code{on_error = "continue"}, a \code{reduce} step also accepts the resulting failure
-object when it takes it via \code{~try()}. In summary:
-\itemize{
-\item auto: map if partitioned input appears, otherwise single call
-\item split: single call, then mark output as partitioned
-\item reduce: single call, but only valid with partitioned input or, via
-\code{~try()}, a failure object
-\item plain: single call, only valid with non-partitioned input
-}}
+\item{exec}{Execution mode for the step, see \code{\link[=pip_add]{pip_add()}}. If \code{NULL} (the
+default), the current execution mode of the step is kept.}
 }
 \value{
 The updated pipeline, invisibly.
@@ -63,6 +48,13 @@ The updated pipeline, invisibly.
 Replaces a step's function while keeping it in the same position in the
 pipeline. Downstream steps that have run before are automatically marked as
 outdated and will re-run on the next \code{\link[=pip_run]{pip_run()}}.
+}
+\details{
+By default, the step keeps its tags and execution mode: \code{tags = NULL} and
+\code{exec = NULL} mean "keep the current value". To change them, pass explicit
+values, where \code{tags = character(0)} removes all tags and \code{exec = "auto"}
+resets the execution mode to its default. Parameters, output, state and
+lock status are always reset, like for a freshly added step.
 }
 \examples{
 p <- pip_new() |>
@@ -85,4 +77,11 @@ pip_replace(v, "double", \(x = ~load) x * 3)
 p[["state"]]                                # "double" is "new" again
 
 try(pip_replace(v, "load", \(n = 2) seq_len(n)))
+
+# Tags and execution mode are kept unless set explicitly
+pip_tag(p, "io")
+pip_replace(p, "load", \(n = 4) seq_len(n))
+p[, "tags"]
+pip_replace(p, "load", \(n = 4) seq_len(n), tags = character(0))
+p[, "tags"]
 }

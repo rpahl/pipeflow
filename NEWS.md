@@ -1,5 +1,15 @@
 <!-- NEWS.md is maintained by https://cynkra.github.io/fledge, do not edit -->
 
+# pipeflow 0.4.0.9015
+
+- Behaviour change: `pip_replace()` now keeps the tags and the execution mode
+  of the replaced step. The new defaults `tags = NULL` and `exec = NULL` mean
+  "keep the current value"; before, the tags were cleared and the mode was
+  reset to `"auto"`. To get the old result, pass `tags = character(0)` and
+  `exec = "auto"` explicitly. `p[[step, "fun"]] <- fun` already behaved like
+  this.
+
+
 # pipeflow 0.4.0.9014
 
 - Same as previous version.
