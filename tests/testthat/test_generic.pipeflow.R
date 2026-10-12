@@ -1866,4 +1866,16 @@ describe("rbind", {
             list(s1 = 1, s2 = 2, s12 = 1, s3 = 2)
         )
     })
+
+    it("binds a step referencing the same step twice without warning", {
+        p <- pip_new("pipe") |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a, y = ~a) x + y)
+        q <- pip_new("q") |>
+            pip_add("a", \(x = 3) x)
+
+        expect_no_warning(out <- rbind(q, p))
+        pip_run(out, lgr = NULL)
+        expect_equal(pip_collect(out), list(a = 3, a2 = 1, b = 2))
+    })
 })

@@ -941,7 +941,7 @@
     d <- .pip_dag(env)
     nodeId <- as.integer(dag_add_node(d))
     if (length(refNodes) > 0) {
-        dag_add_edges_to(d, from = as.integer(refNodes), to = nodeId)
+        dag_add_edges_to(d, from = unique(as.integer(refNodes)), to = nodeId)
     }
 
     # Create and append step
@@ -1013,7 +1013,7 @@
     d <- .pip_dag(env)
     nodeId <- as.integer(dag_add_node_at(d, pos))
     if (length(refNodes) > 0) {
-        dag_add_edges_to(d, from = as.integer(refNodes), to = nodeId)
+        dag_add_edges_to(d, from = unique(as.integer(refNodes)), to = nodeId)
     }
 
     # Create the new step and insert its row after the first `pos` steps
@@ -1110,7 +1110,7 @@
                 envir = stepsToNodes,
                 inherits = FALSE
             )))
-            dag_add_edges_to(d, from = refNodes, to = nodeId)
+            dag_add_edges_to(d, from = unique(refNodes), to = nodeId)
         }
 
         row <- .new_step(step, fun, params, depends, nodeId, tags, exec)

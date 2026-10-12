@@ -1312,6 +1312,27 @@ describe("pip_add", {
         expect_equal(p[["depends"]][[3]], c(x = "f1"))
     })
 
+    it("appends a step referencing the same step twice without warning", {
+        p <- pip_new("pipe") |>
+            pip_add("a", \(x = 1) x)
+
+        expect_no_warning(
+            pip_add(p, "b", \(x = ~a, y = ~a) x + y)
+        )
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["out"]][[2]], 2)
+    })
+
+    it("inserts a step referencing the same step twice without warning", {
+        p <- test_pip()
+
+        expect_no_warning(
+            pip_add(p, "f3", \(x = ~f1, y = ~f1) x + y, after = "f1")
+        )
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["out"]][[2]], 2)
+    })
+
     it("can insert by numeric index and supports insertion at beginning", {
         p <- test_pip()
         pip_add(p, "f0", \(x = 0) x, after = 0)
