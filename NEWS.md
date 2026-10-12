@@ -1,3 +1,10 @@
+# pipeflow 0.4.0.9016
+
+- The default logger `pipeflow_lgr()` of `pip_run()` is now exported, so that
+  custom loggers can build on it, for example to add a prefix or to drop
+  some log levels and pass the rest on. The output format is unchanged.
+
+
 # pipeflow 0.4.0.9015
 
 - Behaviour change: `pip_replace()` now keeps the tags and the execution mode
