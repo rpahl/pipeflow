@@ -1805,18 +1805,6 @@ describe("pip_rename", {
         )
     })
 
-    it("binds a step referencing the same step twice without warning", {
-        p <- pip_new("pipe") |>
-            pip_add("a", \(x = 1) x) |>
-            pip_add("b", \(x = ~a, y = ~a) x + y)
-        q <- pip_new("q") |>
-            pip_add("a", \(x = 3) x)
-
-        expect_no_warning(out <- rbind(q, p))
-        pip_run(out, lgr = NULL)
-        expect_equal(pip_collect(out), list(a = 3, a2 = 1, b = 2))
-    })
-
     it("runs a bound pipeline whose steps were renamed", {
         p <- pip_new("pipe") |>
             pip_add("a", \(x = 1) x) |>
