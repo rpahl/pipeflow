@@ -12,11 +12,11 @@
 ## New features
 
 - `pip_run(on_error = "continue")` continues the run of unaffected steps
-  after a step to failed with an error.
-- `~try()` references (`x = ~try(step)`) allows to mitigate inputs from
-  failed steps to e.g. create a temporary fallback result for failed steps.
-- `pip_param_value()` is a generic for unwrapping parameter values, which
-  pipeline parameters to be constructed as non-trivial types or classes.
+  after a step failed with an error.
+- allow mitigation of inputs from failed steps via `~try()` references
+  (`x = ~try(step)`), e.g. by creating fallback results for failed steps.
+- `pip_param_value()` is a generic for unwrapping parameter values, enabling
+  to set pipeline parameters that consist of non-trivial types or classes.
 - `pip_set_params()` gains `unknown = c("warn", "ignore", "error")` for
   parameters that no step defines, and `force = TRUE` to outdate steps even
   if the values are identical.
