@@ -1,0 +1,67 @@
+name: pkgdown
+
+# Build the package website and publish it to the gh-pages branch.
+#
+# The site is deliberately not rebuilt on every push or pull request. It runs
+#   - for release tags such as v0.5.0 (dev tags like v0.4.0.9003 don't match),
+#   - on demand from the Actions tab.
+#
+# Where the site ends up follows the version in DESCRIPTION, see
+# `development: mode: auto` in _pkgdown.yml:
+#   - release version, e.g. 0.5.0:              root of gh-pages
+#   - development version, e.g. 0.4.0.9017:     dev/ on gh-pages
+# That is, a manual run on main refreshes only the development site and a
+# release build leaves dev/ alone.
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+
+concurrency:
+  group: pkgdown
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+  TZ: UTC
+  LANG: C.UTF-8
+
+jobs:
+  pkgdown:
+    name: Build and deploy site
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write          # push to the gh-pages branch
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      # Pandoc, system libraries, R and the renv-pinned packages (incl. pkgdown)
+      - uses: ./.github/actions/r-check-env
+
+      - name: Configure git
+        run: |
+          git config --local user.name "$GITHUB_ACTOR"
+          git config --local user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          # A tag is checked out detached. pkgdown creates a missing gh-pages
+          # branch and then switches back to the "current branch", so give it
+          # a real one.
+          git switch --create "pkgdown-$GITHUB_RUN_ID"
+
+      # pkgdown turns every top-level *.md file into a page (there is no
+      # exclude option for that). Drop the internal ones on the throw-away
+      # branch above; committing keeps them out for the whole run.
+      - name: Keep internal files out of the site
+        run: |
+          git rm --quiet --ignore-unmatch CLAUDE.md 'PLAN-*.md'
+          git commit --quiet -m "Drop internal files from the site build"
+
+      - name: Build and deploy site
+        shell: Rscript {0}
+        run: pkgdown::deploy_to_branch(install = TRUE, new_process = FALSE)

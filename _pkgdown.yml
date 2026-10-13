@@ -1,5 +1,9 @@
-url: https://github.com/rpahl/pipeflow
+url: https://rpahl.github.io/pipeflow/
 
+# Release versions go to the root of the site, development versions
+# (e.g. 0.4.0.9017) to dev/.
+development:
+  mode: auto
 
 build:
   exclude:
