@@ -216,7 +216,7 @@ conditionMessage(p4[["double", "out"]])
 
 * `pip_param_value(x)` unwraps a stored parameter value right before the
   step function is called, and it does not change the stored parameters.
-* Define one method per annotated class and register it as S3 method.
+* Define one method per annotated class and register it as an S3 method.
 * It applies to unbound arguments only (`params`, defaults, and `...`), not
   to step outputs, partitions or failure objects.
 * An error in a method is a step error, so `on_error` applies.

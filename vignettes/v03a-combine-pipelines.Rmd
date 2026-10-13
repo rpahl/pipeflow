@@ -200,7 +200,7 @@ pip_run(pip_restored)
 pip_restored[["predict", "out"]]
 ```
 
-Both, the saved and restored pipeline, are independent of each other, so the
+Both the saved and the restored pipelines are independent of each other, so the
 original `pip` still uses the multiplier `k = 3`:
 
 ```{r original-unchanged}

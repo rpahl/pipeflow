@@ -68,8 +68,8 @@ pip_run_state(pip)
 ```
 
 The pipeline stays in a defined state. The failed step is marked as `failed`,
-the steps that were not reached are still `new`, and the run state tells that
-the last run ended with an error:
+the steps that were not reached are still `new`, and the run state indicates
+that the last run ended with an error.
 
 Let's inspect the error object returned by `tryCatch()`.
 
@@ -282,7 +282,7 @@ pip[["combine", "out"]]
   despite a failed input. The argument then receives a `pipeflow_failure`
   condition.
 * The next run retries any failed and skipped steps (and those that received
-  failure objects)
+  failure objects).
 * For steps that map over partitions, the condition of the failed
   partition is a `pipeflow_key_error` with the field `key`. A `reduce` step
   with a `try()` reference receives the failure.
