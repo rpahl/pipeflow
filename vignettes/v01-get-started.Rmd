@@ -343,6 +343,26 @@ pip_run(pip)
 pip[["plot", "out"]]
 ```
 
+#### Setting Identical Values
+
+Setting a parameter to the value it already has is not a change, so
+{pipeflow} leaves the step states alone and nothing needs to be re-run.
+This is handy for apps that pass on all inputs whenever just one of them
+changed.
+
+```{r set-identical-values}
+pip |> pip_set_params(list(title = "Some new title", data = small_airquality))
+pip
+```
+
+If you do want to outdate the steps anyway, for example because a parameter
+is an environment that was modified in place, use `force = TRUE`.
+
+```{r set-identical-values-force}
+pip |> pip_set_params(list(title = "Some new title"), force = TRUE)
+pip
+```
+
 #### Handling Unknown Parameters
 
 Last but not least let's try to set a parameter that doesn't exist

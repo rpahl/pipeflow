@@ -153,6 +153,14 @@ and if so, it replaces step `f3` with a new step now referencing `f1`
 that multiplies the input passed from `f1` by 3 and returns half of
 the input.
 
+Note that `.self` does not need to be declared as an argument. {pipeflow}
+provides it each time it calls a step function whose body refers to `.self`
+(also within functions defined in the body). Access that is not visible in
+the body, such as `get(".self")`, is not detected. Step functions that don't
+mention `.self` don't get it, so their outputs, for example a plot or a
+closure that keeps its environment, don't drag the whole pipeline along when
+they are saved or sent to another process.
+
 To see this, let's try it with an input of 15.
 
 ```{r}
