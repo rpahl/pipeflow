@@ -1,219 +1,72 @@
-# pipeflow 0.4.0.9018
+# pipeflow 0.5.0
 
-- The generic for unwrapping annotated parameter values is named
-  `pip_param_value()`, to match `pip_get_params()` and `pip_set_params()`
-  (the development name `pip_arg_value()` was never released). A new
-  vignette, "Annotated parameter values", explains how to write and register
-  a method.
-- Documentation: new vignette "Handling failures" on `on_error = "continue"`,
-  `~try()` references, step errors and recovering from failed runs. The
-  vignette "Get started" shows the `unknown` argument of `pip_set_params()`,
-  and "Combine pipelines" shows how to save and restore pipelines with
-  `saveRDS()` and `readRDS()`.
+## Breaking changes
 
+- `v[["view"]]` returns the names of the covered steps instead of row
+  indices.
+- `.self` is only made available in step functions that refer to it, i.e.
+  if the name `.self` appears in the function body.
+- `pip_replace()` by default now keeps the tags and the execution mode of
+  the replaced step.
 
-# pipeflow 0.4.0.9017
+## New features
 
-- The package website is now built and published by a GitHub Actions workflow
-  for release tags and on manual runs. Release versions go to the site root,
-  development versions to `dev/`.
+- `pip_run(on_error = "continue")` continues the run of unaffected steps
+  after a step to failed with an error.
+- `~try()` references (`x = ~try(step)`) allows to mitigate inputs from
+  failed steps to e.g. create a temporary fallback result for failed steps.
+- `pip_param_value()` is a generic for unwrapping parameter values, which
+  pipeline parameters to be constructed as non-trivial types or classes.
+- `pip_set_params()` gains `unknown = c("warn", "ignore", "error")` for
+  parameters that no step defines, and `force = TRUE` to outdate steps even
+  if the values are identical.
+- `pip_run_state()` returns the run state of a pipeline or view.
+- The default logger `pipeflow_lgr()` is exported, so custom loggers can
+  build on it.
+- Pipelines survive `saveRDS()` and `readRDS()`, and can be sent to other R
+  processes (see `?pip_new`).
 
+## Changes
 
-# pipeflow 0.4.0.9016
+- `pip_set_params()` no longer outdates steps if the values are identical to
+  the stored ones.
+- Errors from `pip_run()` name the step (`step 'fit': ...`) and have class
+  `pipeflow_step_error` with the fields `step` and `parent`. A failing
+  partition key gives a `pipeflow_key_error` with `key` and `parent`.
+- Views keep the name of their pipeline (before: `"<name> view"`).
+- Views keep track of their steps instead of row numbers, so they stay valid
+  when steps are added, removed, renamed or replaced.
+- `pip_run()` also re-runs a `"done"` step if one of its inputs was executed
+  in the same run.
+- A run stopped by `halt()` ends in run state `"halted"` (before: `"ready"`).
+- `pip_add()` and `pip_replace()` warn if `params` contain names that are
+  also arguments of `fun`.
+- `print()` now shows conditions, matrices, arrays, tables, functions and
+  environments in the `out` column in short form, e.g. `<error/simpleError>`.
 
-- The default logger `pipeflow_lgr()` of `pip_run()` is now exported, so that
-  custom loggers can build on it, for example to add a prefix or to drop
-  some log levels and pass the rest on. The output format is unchanged.
+## Bug fixes
 
+- Steps that never ran stay `"new"`, and a run only outdates the steps
+  downstream of steps it executed.
+- `x[[step, j]]` on a view read the wrong row.
+- Copies made by `pip_clone()`, `p[]` or `p[i, view = FALSE]` shared `.self`
+  with the original.
+- `pip_set_params()` no longer warns about parameters defined only in
+  locked steps.
+- `pip_add()` and `pip_replace()` reject primitive functions such as `sum`
+  with a clear error, and `pip_add()` calls `.self` a reserved *parameter*
+  name.
+- A step that references the same step more than once no longer warns about
+  an existing edge.
 
-# pipeflow 0.4.0.9015
+## Documentation
 
-- Behaviour change: `pip_replace()` now keeps the tags and the execution mode
-  of the replaced step. The new defaults `tags = NULL` and `exec = NULL` mean
-  "keep the current value"; before, the tags were cleared and the mode was
-  reset to `"auto"`. To get the old result, pass `tags = character(0)` and
-  `exec = "auto"` explicitly. `p[[step, "fun"]] <- fun` already behaved like
-  this.
-
-
-# pipeflow 0.4.0.9014
-
-- Same as previous version.
-
-
-# pipeflow 0.4.0.9013
-
-- Fix: adding, inserting or binding a step that references the same step
-  more than once (e.g. `\(x = ~b, y = ~b)`) no longer warns that the edge
-  already exists.
-
-
-# pipeflow 0.4.0.9012
-
-- Pipelines can be saved with `saveRDS()` and read back with `readRDS()`,
-  or sent to other R processes. Before, `pip_run()`, `pip_add()` and most
-  other functions failed on a read pipeline with "null Dag pointer". The
-  dependency graph of the steps is now rebuilt when it is first needed, with
-  the same node ids, so views that were saved together with their pipeline
-  keep their steps (see section 'Saving pipelines' in `?pip_new`).
-
-
-# pipeflow 0.4.0.9011
-
-- Behaviour change: a view keeps track of its steps instead of their row
-  numbers, so it stays valid when steps are added, removed, renamed or
-  replaced later, also through the pipeline or another view. Removed steps
-  drop out of the view. Before, a view could cover the wrong steps once rows
-  had shifted, and the result of `pip_remove()` had to be assigned back to
-  the view. `v[["view"]]` now returns the names of the covered steps instead
-  of row indices.
-
-
-# pipeflow 0.4.0.9010
-
-- New `pip_run_state()` returns the run state of a pipeline or view
-  (`"ready"`, `"running"`, `"restart"`, `"halted"`, `"failed"` or
-  `"continued"`).
-- Behaviour change: a view keeps the name of its pipeline. Before, views were
-  named `"<name> view"` (and a view of a view `"<name> view view"`), so code
-  holding a view couldn't get the pipeline name. `print()` still marks views
-  with `<pipeflow_view>`.
-- `print()` shows outputs that were hard to read in the `out` column in short
-  form: a condition (the output of a step that failed in a run with
-  `on_error = "continue"`) as `<kind/class>`, e.g. `<error/simpleError>`,
-  instead of in full (for rlang errors including the backtrace); a matrix,
-  array or table as `<class[dims]>`, e.g. `<matrix[4x2]>`, instead of its
-  flattened values; and a function or environment (e.g. an R6 object) as
-  `<class>`. Strings longer than 40 characters are cut off and marked with
-  `"..."`.
-- Documentation: `?pip_set_params` notes that `pip_get_params()` also returns
-  the parameters of locked steps, which `pip_set_params()` skips.
-  `` ?`[.pipeflow` `` explains that `tags %like% "x"` matches against the
-  tags converted to a string (so it can also match untagged steps) and
-  points to `pip_view(tags = )` for exact tag matching.
-
-
-# pipeflow 0.4.0.9009
-
-- Behaviour change: `.self` is only available in step functions that refer
-  to it, that is, whose body contains the name `.self` (also within
-  functions defined in the body; indirect access such as `get(".self")` is
-  not detected). Before, every step function got it, so an output that keeps
-  the environment of its step, such as a ggplot or a closure, kept the whole
-  pipeline alive: `saveRDS()` of such an output also wrote the pipeline with
-  all its outputs. Step functions are now stored as given, and `pip_run()`
-  provides `.self` each time it calls one.
-
-
-# pipeflow 0.4.0.9008
-
-- New generic `pip_param_value()` as an extension point for annotated parameter
-  values (e.g. values with units). It is applied to each unbound argument of
-  a step right before the step function is called, so packages can unwrap
-  their own classes with a single S3 method instead of wrapping every step
-  function. The default method returns the value unchanged.
-
-
-# pipeflow 0.4.0.9007
-
-- With `pip_run(on_error = "continue")`, a `reduce` step that takes the output
-  of a failed split pipeline via `~try()` now runs and receives the failure
-  object. Before, it failed with "reduce mode requires at least one
-  partitioned input", which hid the actual cause.
-
-
-# pipeflow 0.4.0.9006
-
-- `pip_add()` and `pip_replace()` now warn if `params` contain names that
-  are also arguments of `fun`. As documented, the defaults of `fun` take
-  precedence over `params`, so such values were silently dropped before.
-- `pip_set_params()` gains `unknown = c("warn", "ignore", "error")` to
-  control what happens with parameters that are not defined in the target.
-  The default `"warn"` keeps the current behaviour; `"error"` fails before
-  anything is changed.
-- Behaviour change: `pip_set_params()` (and `p[[step, "params"]] <- value`)
-  no longer outdates a step if the values set on it are `identical()` to
-  the stored ones. Only steps whose values change, and the steps downstream
-  of them, are outdated. Before, every step a value was set on was
-  outdated, so apps that set all inputs on every change re-ran unchanged
-  steps. `pip_run(force = TRUE)` still re-runs all steps. The new argument
-  `force = TRUE` of `pip_set_params()` outdates the steps even if the values
-  are identical, e.g. to refresh steps whose inputs are environments or R6
-  objects that were modified in place.
-
-
-# pipeflow 0.4.0.9005
-
-- Behaviour change: if a step fails, the error from `pip_run()` now names
-  the step (`step 'fit': object 'x' not found`). It is of class
-  `pipeflow_step_error`, with the fields `step` and `parent` (the original
-  condition, which keeps its class). If a partition key fails, the original
-  condition is wrapped in a `pipeflow_key_error` with the fields `key` and
-  `parent`; with `on_error = "continue"`, it is the output of the failed
-  step. Before, only the message of the original error was signalled.
-
-
-# pipeflow 0.4.0.9004
-
-- `x[[step, j]]` on a view now returns the value of `step`. Before, it read
-  the wrong row (or failed) when the view did not start at the first step.
-- The steps of a copy made by `pip_clone()`, `p[]` or `p[i, view = FALSE]`
-  get their own `.self`. Before, they shared it with the steps of the
-  original, so once the copy ran, a running step of the original saw the
-  copy as `.self`.
-- `pip_set_params()` no longer warns about parameters that are defined only
-  in locked steps. It now also warns about undefined parameters when all
-  selected steps are locked. Locked steps still keep their parameters.
-- `pip_add()` and `pip_replace()` now reject primitive functions such as
-  `sum` with a clear error. Before, they failed with "use of NULL
-  environment is defunct".
-- `pip_add()` now says that `.self` is a reserved *parameter* name (not a
-  step name) if `fun` declares it, as `pip_replace()` does.
-- Behaviour change: a run stopped by `halt()` now ends with run state
-  `"halted"`, as shown when printing the pipeline. Before, it was always
-  overwritten with `"ready"` (or `"continued"`). The next `pip_run()`
-  continues as before.
-
-
-# pipeflow 0.4.0.9003
-
-- Same as previous version.
-
-
-# pipeflow 0.4.0.9002
-
-- Same as previous version.
-
-
-# pipeflow 0.4.0.9001
-
-- Revise benchmark vignette
-- decrease font size in vignettes
-- Steps that have never run now stay `"new"` instead of becoming
-  `"outdated"` when `pip_set_params()` or `pip_replace()` changes them or a
-  step upstream of them, or when a run (of a view, or an aborted run) does
-  not reach them.
-- At the end of a run, `pip_run()` now marks only the steps downstream of
-  steps it actually *executed* as `"outdated"`. Before, steps it skipped
-  because they were `"done"` counted too, so running a view outdated done
-  steps outside the view although none of their inputs had changed.
-- `pip_run()` gains `on_error = c("stop", "continue")`. With `"continue"`,
-  a failing step gets state `"failed"` with its error condition stored as
-  its output, and the run goes on with all steps that do not depend on a
-  failed step. If any step failed, the run state is set to `"continued"` and
-  a warning of class `pipeflow_run_failed` lists the failed and the skipped
-  steps.
-- A step reference wrapped in `try()`, e.g. `x = ~try(other_step)`, marks
-  an argument that may receive a failed input in a continuing run. Such an
-  argument gets a condition of class `pipeflow_failure` instead of the step
-  output.
-- `pip_run()` now also re-runs a `"done"` step if one of its inputs was
-  executed in the same run.
-
-
-# pipeflow 0.4.0.9000
-
-- Same as previous version.
+- New vignettes "Handling failures" and "Annotated parameter values".
+- "Get started", "Nested pipelines", "Self-modifying pipelines" and
+  "Combine pipelines" cover identical values, `unknown = "ignore"`, when
+  `.self` is available, and saving pipelines.
+- The benchmark vignette was revised.
+- The package website is built by a GitHub Actions workflow on release tags.
 
 
 # pipeflow 0.4.0
