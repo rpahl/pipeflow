@@ -15,8 +15,11 @@ pip_run(
 \arguments{
 \item{x}{A pipeflow pip or view}
 
-\item{lgr}{A logging function of the form \verb{function(level, msg, ...)}.
-To suppress logging, you can set \code{lgr = NULL}.}
+\item{lgr}{A logging function with the arguments \code{level} (\code{"info"},
+\code{"warn"} or \code{"error"}) and \code{msg}, which is called as
+\code{lgr(level = level, msg = msg)}. The default is \code{\link[=pipeflow_lgr]{pipeflow_lgr()}}, which
+can also be used to build custom loggers. To suppress logging, you can set
+\code{lgr = NULL}.}
 
 \item{force}{Logical indicating if all steps should be forced to run,
 regardless of whether they are outdated or not.}

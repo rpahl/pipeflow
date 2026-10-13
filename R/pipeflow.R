@@ -513,7 +513,7 @@
 
     out <- withCallingHandlers(
         {
-            args <- .pip_unwrap_args(args, unbound)
+            args <- .pip_unwrap_params(args, unbound)
             .pip_execute_step_call(fun = fun, args = args, exec = exec)
         },
         error = function(e) {
@@ -2304,8 +2304,11 @@ pip_replace <- function(
 #' executed. Use `force = TRUE` to re-execute every step.
 #'
 #' @param x A pipeflow pip or view
-#' @param lgr A logging function of the form `function(level, msg, ...)`.
-#' To suppress logging, you can set `lgr = NULL`.
+#' @param lgr A logging function with the arguments `level` (`"info"`,
+#' `"warn"` or `"error"`) and `msg`, which is called as
+#' `lgr(level = level, msg = msg)`. The default is [pipeflow_lgr()], which
+#' can also be used to build custom loggers. To suppress logging, you can set
+#' `lgr = NULL`.
 #' @param force Logical indicating if all steps should be forced to run,
 #' regardless of whether they are outdated or not.
 #' @param progress Optional callback of the form
@@ -2844,7 +2847,7 @@ pip_run_state <- function(x) {
 
 #' Unwrap a parameter value before a step function is called
 #'
-#' `pip_arg_value()` is an extension point for packages that store annotated
+#' `pip_param_value()` is an extension point for packages that store annotated
 #' values (e.g. values with units or labels, or parameter objects that carry
 #' UI metadata) as step parameters. When a step runs, the generic is applied
 #' once to each unbound argument of the step, that is, to the values that
@@ -2853,7 +2856,9 @@ pip_run_state <- function(x) {
 #' changed.
 #'
 #' The default method returns `x` unchanged. Methods are meant for your own
-#' classes, not for base classes such as `numeric` or `character`.
+#' classes, not for base classes such as `numeric` or `character`. Note that
+#' this is a hook that unwraps a stored value, not an accessor: use
+#' [pip_get_params()] to read parameters from a pipeline.
 #'
 #' The generic is *not* applied to the outputs of other steps (arguments
 #' defined as `~step`), to partitions or to failure objects. An error in a
@@ -2872,8 +2877,8 @@ pip_run_state <- function(x) {
 #' )
 #'
 #' # Step functions then simply see the plain value
-#' pip_arg_value.foo <- function(x, ...) x$value
-#' registerS3method("pip_arg_value", "foo", pip_arg_value.foo)
+#' pip_param_value.foo <- function(x, ...) x$value
+#' registerS3method("pip_param_value", "foo", pip_param_value.foo)
 #'
 #' p <- pip_new() |>
 #'     pip_add("double", \(x = 1) x * 2)
@@ -2882,26 +2887,26 @@ pip_run_state <- function(x) {
 #' pip_collect(p)
 #' @seealso [pip_set_params()], [pip_run()]
 #' @export
-pip_arg_value <- function(x, ...) {
-    UseMethod("pip_arg_value")
+pip_param_value <- function(x, ...) {
+    UseMethod("pip_param_value")
 }
 
 #' @export
-pip_arg_value.default <- function(x, ...) {
+pip_param_value.default <- function(x, ...) {
     x
 }
 
-#' Apply pip_arg_value() to the unbound arguments of a step call
+#' Apply pip_param_value() to the unbound arguments of a step call
 #'
 #' @param args Named list of all arguments of the step call.
 #' @param unbound Names of the unbound arguments.
 #' @return `args`, with the unbound arguments passed through
-#'   [pip_arg_value()].
+#'   [pip_param_value()].
 #' @noRd
-.pip_unwrap_args <- function(args, unbound) {
+.pip_unwrap_params <- function(args, unbound) {
     unbound <- intersect(unbound, names(args))
     if (length(unbound) > 0L) {
-        args[unbound] <- lapply(args[unbound], FUN = pip_arg_value)
+        args[unbound] <- lapply(args[unbound], FUN = pip_param_value)
     }
     args
 }

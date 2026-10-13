@@ -1,5 +1,6 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
+
 <!-- badges: start -->
 
 [![CRAN
@@ -33,9 +34,9 @@ Build fast interactive data analysis pipelines that scale.
 a pipeline that stays consistent as you go. Modify, remove, or insert
 steps at any stage, and manage all parameters in one place.
 
-Thanks to its intuitive interface, using {pipeflow} quickly pays off in
-the beginning while in the long run helps keeping a clear and structured
-overview of your project.
+Thanks to its intuitive interface, {pipeflow} pays off quickly and, in
+the long run, helps you keep a clear and structured overview of your
+project.
 
 <img src="man/figures/cartoon.png" alt="cartoon" align="right" width="330"/>
 
@@ -44,12 +45,11 @@ overview of your project.
 - Lightweight and intuitive API
 - All parameters managed in one place
 - Pipeline verified at definition time
-- Filter pipeline steps via views
+- Filter pipeline steps via views (supports data.table-style `[` filters
+  ![](https://img.shields.io/badge/-new-orange))
 - Branch and merge pipeline steps
 - Fast dependency resolution (C++-powered DAG)
-- Subset pipelines with data.table-style `[` filters
-  ![](https://img.shields.io/badge/-new-orange)
-- Embed reusable workflows in steps (nested pipelines)
+- Embed reusable workflows (nested pipelines)
   ![](https://img.shields.io/badge/-new-orange)
 
 ### Installation
@@ -83,11 +83,11 @@ p
 # <ready> last run: never
 
 pip_run(p)
-# info [2026-09-27 14:59:46.748 UTC]: Starting run of pipeflow 'demo'
-# info [2026-09-27 14:59:46.748 UTC]: Step 1/3 numbers
-# info [2026-09-27 14:59:46.750 UTC]: Step 2/3 squared
-# info [2026-09-27 14:59:46.752 UTC]: Step 3/3 total
-# info [2026-09-27 14:59:46.753 UTC]: Finished run of pipeflow 'demo'
+# info [2026-10-12 13:47:16.268 UTC]: Starting run of pipeflow 'demo'
+# info [2026-10-12 13:47:16.269 UTC]: Step 1/3 numbers
+# info [2026-10-12 13:47:16.276 UTC]: Step 2/3 squared
+# info [2026-10-12 13:47:16.285 UTC]: Step 3/3 total
+# info [2026-10-12 13:47:16.287 UTC]: Finished run of pipeflow 'demo'
 
 pip_collect(p)
 # $numbers
@@ -122,6 +122,10 @@ below:
   reduce](https://rpahl.github.io/pipeflow/articles/v05a-split-map-reduce.html)
 - [Nested
   pipelines](https://rpahl.github.io/pipeflow/articles/v05b-nested-pipeline.html)
+- [Handling
+  failures](https://rpahl.github.io/pipeflow/articles/v05c-error-handling.html)
+- [Annotated parameter
+  values](https://rpahl.github.io/pipeflow/articles/v05d-param-value.html)
 - [Self-modifying
   pipelines](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
 

@@ -36,7 +36,6 @@
 ^CODE_OF_CONDUCT\.md$
 ^CONTRIBUTING\.md$
 ^CHANGELOG\.md$
-^PLAN-0\.5\.0\.md$
 ^Meta$
 
 # Formatter config
