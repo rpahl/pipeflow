@@ -312,19 +312,33 @@ given, and only if the result is assigned back.
 
 - Merge the dependabot PRs (#72, #81, #82).
 - `devtools::build_readme()`; update the vignettes for `~try()`, F1, F3,
-  `pip_param_value()`, `.self`, saving pipelines and the exported logger.
-- NEWS: one `# pipeflow 0.5.0` section with a "Breaking changes" block:
-  - `~try()` references (`allow_failed` was dev-only);
-  - identical values no longer outdate;
-  - step names in error messages;
-  - view names;
-  - views keep track of their steps, `v[["view"]]` returns step names;
+  `pip_param_value()`, `.self` and saving pipelines (no vignette for the
+  exported logger).
+- NEWS: one `# pipeflow 0.5.0` section with short bullets. "Breaking
+  changes" only lists what requires different commands or usage:
+  - `v[["view"]]` returns step names, not row indices;
   - `.self` only in step functions that refer to it;
   - `pip_replace()` keeps tags and exec mode.
-- Checks: lint, tests, `rcmdcheck` on R 4.5.3 and on the oldest supported
-  R (4.2); CI on Linux, Windows and macOS; win-builder (release, devel);
-  `cran-comments.md`; reverse-dependency check.
-- Submit; tag `v0.5.0` after acceptance.
+
+  Everything else goes under "New features" (`on_error = "continue"`,
+  `~try()`, ...), "Changes" (identical values no longer outdate, step names
+  in error messages, view names, views keep track of their steps, ...) and
+  "Bug fixes".
+- CI: add an Ubuntu job on R 4.2, the oldest supported R.
+- Checks: lint, tests, `rcmdcheck` on R 4.5.3; CI on Linux, Windows, macOS
+  and R 4.2; win-builder (release, devel); `cran-comments.md`;
+  reverse-dependency check.
+- Set `DESCRIPTION` to `0.5.0` (three parts) before tagging: the pkgdown
+  workflow sends four-part versions to `dev/` on `gh-pages` and three-part
+  ones to the site root (`development: mode: auto`).
+- Submit; tag `v0.5.0` after acceptance. The tag starts the first release
+  build of the site.
+- Site switch after the `v0.5.0` tag build:
+  1. Set the Pages source to branch `gh-pages`, folder `/ (root)` (repo
+     settings, done by the user), and check the site.
+  2. Follow-up PR: remove `docs/`, add it to `.gitignore`, and drop the
+     stale `docs/articles/v05c-param-value.html` (the old name of the
+     `v05d` vignette).
 
 ## Order
 
