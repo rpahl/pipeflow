@@ -1,3 +1,17 @@
+# pipeflow 0.4.0.9018
+
+- The generic for unwrapping annotated parameter values is named
+  `pip_param_value()`, to match `pip_get_params()` and `pip_set_params()`
+  (the development name `pip_arg_value()` was never released). A new
+  vignette, "Annotated parameter values", explains how to write and register
+  a method.
+- Documentation: new vignette "Handling failures" on `on_error = "continue"`,
+  `~try()` references, step errors and recovering from failed runs. The
+  vignette "Get started" shows the `unknown` argument of `pip_set_params()`,
+  and "Combine pipelines" shows how to save and restore pipelines with
+  `saveRDS()` and `readRDS()`.
+
+
 # pipeflow 0.4.0.9017
 
 - The package website is now built and published by a GitHub Actions workflow
@@ -93,7 +107,7 @@
 
 # pipeflow 0.4.0.9008
 
-- New generic `pip_arg_value()` as an extension point for annotated parameter
+- New generic `pip_param_value()` as an extension point for annotated parameter
   values (e.g. values with units). It is applied to each unbound argument of
   a step right before the step function is called, so packages can unwrap
   their own classes with a single S3 method instead of wrapping every step

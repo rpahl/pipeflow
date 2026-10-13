@@ -343,15 +343,39 @@ pip_run(pip)
 pip[["plot", "out"]]
 ```
 
-Last but not least let's try to set parameters that don't exist
-in the pipeline, which mostly happens due to accidental misspells.
+#### Handling Unknown Parameters
+
+Last but not least let's try to set a parameter that doesn't exist
+in the pipeline.
 
 ```{r set-unknown-parameters, warning = TRUE}
-pip |> pip_set_params(list(titel = "misspelled variable name", foo = "my foo"))
+pip |> pip_set_params(list(title = "warn me", foo = "my foo"))
+
+pip_get_params(pip)$title
 ```
 
-As you see, a warning is given to the user hinting at the respective parameter names,
-which makes fixing any misspells straight-forward.
+By default, all existing parameters are set, and a warning is given to
+the user notifying about the unknown parameter names.
+If you set parameters programmatically and know that some of them are not
+used by the pipeline, you can silence the warning via `unknown = "ignore"`.
+
+```{r ignore-unknown-parameters}
+pip |> pip_set_params(list(foo = "ignore me"), unknown = "ignore")
+
+pip_get_params(pip)$title
+```
+
+On the other hand, if an unknown parameter should never go unnoticed, use
+`unknown = "error"`. In this case, nothing is changed at all, not even the
+valid parameters:
+
+```{r error-on-unknown-parameters, error = TRUE}
+pip |> pip_set_params(
+    list(title = "Not set", foo = "my foo"),
+    unknown = "error"
+)
+pip_get_params(pip)$title
+```
 
 Next, let's see how to [modify the pipeline](v02-modify-pipeline.html).
 

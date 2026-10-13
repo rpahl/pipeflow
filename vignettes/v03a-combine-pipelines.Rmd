@@ -172,6 +172,48 @@ pip_run(pip)
 pip[["predict", "out"]]
 ```
 
+### Saving and restoring pipelines
+
+A pipeline, like the combined one above, can be built once and reused later,
+also in another R session. To this end, it can be saved to a file with
+`saveRDS()` and read back with `readRDS()`^[
+    Other ways to serialize R objects work as well, for example to send a
+    pipeline to another R process.
+].
+
+```{r save-pipeline}
+file <- tempfile(fileext = ".rds")
+saveRDS(pip, file)
+
+pip_restored <- readRDS(file)
+pip_restored
+```
+
+The restored pipeline has all steps, parameters, outputs and states of the
+saved one. That is, it can be modified and run right away, and only the steps
+that need an update are run again:
+
+```{r run-restored-pipeline}
+pip_set_params(pip_restored, params = list(k = 4))
+pip_run(pip_restored)
+
+pip_restored[["predict", "out"]]
+```
+
+Both the saved and the restored pipelines are independent of each other, so the
+original `pip` still uses the multiplier `k = 3`:
+
+```{r original-unchanged}
+pip_get_params(pip)$k
+```
+
+```{r remove-file, include = FALSE}
+unlink(file)
+```
+
+For more details see also the section "Saving pipelines" in the help of
+`pip_new()`.
+
 Whether you combine them or not, in practice pipelines can get long quickly.
 The next vignette shows how you can easily focus on certain parts of your
 entire analysis workflow by
