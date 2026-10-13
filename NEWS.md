@@ -1,3 +1,10 @@
+# pipeflow 0.4.0.9017
+
+- The package website is now built and published by a GitHub Actions workflow
+  for release tags and on manual runs. Release versions go to the site root,
+  development versions to `dev/`.
+
+
 # pipeflow 0.4.0.9016
 
 - The default logger `pipeflow_lgr()` of `pip_run()` is now exported, so that
