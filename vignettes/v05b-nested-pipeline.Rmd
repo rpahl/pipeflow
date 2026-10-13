@@ -166,7 +166,7 @@ outer |> pip_replace(
 
         # Forward all parameters (from outer and inner)
         all_params <- .self$get_params()
-        pip_set_params(p, all_params)
+        pip_set_params(p, all_params, unknown = "ignore")
 
         Map(
             f = run_inner_pip,
@@ -225,19 +225,14 @@ outer |>
     pip_run()
 ```
 
-Note that the warning in the log above is expected and harmless. Basically,
+Note the `unknown = "ignore"` in the replacement function above.
 `.self$get_params()` returns the outer pipeline's *entire* parameter set,
 which includes `byVar` (from the `split_data` step) while the inner
-pipeline only defines `data`, `xVar`, and `yVar`. Since `pip_set_params()`
-reports any parameters that are not defined in the target and simply leaves
-them unset, the inner pipeline still receives all parameters it knows and the
-result is unaffected.
-
-If you need to omit the warning (e.g. in production code), just suppress it:
-
-```r
-suppressWarnings(pip_set_params(p, all_params))
-```
+pipeline only defines `data`, `xVar`, and `yVar`. By default,
+`pip_set_params()` warns about parameters that are not defined in the target.
+With `unknown = "ignore"`, it silently leaves them unset, so the inner
+pipeline still receives all parameters it knows and the result is unaffected.
+Unlike `suppressWarnings()`, this does not hide any other warning.
 
 Alternatively, you could first restrict the forwarded parameters to those the
 inner pipeline actually knows. That has the same effect but adds code, and
