@@ -72,3 +72,6 @@ check
 /Meta/
 
 scratch.md
+
+# pkgdown site, published to the gh-pages branch by CI
+/docs/
