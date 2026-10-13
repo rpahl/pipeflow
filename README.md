@@ -26,7 +26,7 @@ status](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https:/
 
 <!-- badges: end -->
 
-# pipeflow <img src="man/figures/logo.png" alt="logo" align="right" width="163" height="121"/>
+# pipeflow <img src="man/figures/logo.png" alt="pipeflow hex logo" align="right" width="120" height="139"/>
 
 Build fast interactive data analysis pipelines that scale.
 
