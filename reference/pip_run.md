@@ -193,12 +193,12 @@ pip_add("load", \(n = 3) seq_len(n)) |>
   pip_add("total", \(x = ~square) sum(x))
 
 pip_run(p)
-#> info [2026-10-13 15:27:08.585 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-13 15:27:08.585 UTC]: Step 1/4 load
-#> info [2026-10-13 15:27:08.586 UTC]: Step 2/4 prep
-#> info [2026-10-13 15:27:08.587 UTC]: Step 3/4 square
-#> info [2026-10-13 15:27:08.588 UTC]: Step 4/4 total
-#> info [2026-10-13 15:27:08.589 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:06.585 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:06.585 UTC]: Step 1/4 load
+#> info [2026-10-15 11:21:06.585 UTC]: Step 2/4 prep
+#> info [2026-10-15 11:21:06.586 UTC]: Step 3/4 square
+#> info [2026-10-15 11:21:06.587 UTC]: Step 4/4 total
+#> info [2026-10-15 11:21:06.588 UTC]: Finished run of pipeflow 'pipe'
 p
 #> <pipeflow> pipe (4 steps)
 #> -------------------------
@@ -208,7 +208,7 @@ p
 #> 3: square        x    prep  done 1,4,9
 #> 4:  total        x  square  done    14
 #> -------------------------
-#> <ready> last run: 2026-10-13 15:27:08
+#> <ready> last run: 2026-10-15 11:21:06
 
 pip_set_params(p, list(weight = 2))
 p
@@ -220,28 +220,28 @@ p
 #> 3: square        x    prep outdated 1,4,9
 #> 4:  total        x  square outdated    14
 #> -------------------------
-#> <ready> last run: 2026-10-13 15:27:08
+#> <ready> last run: 2026-10-15 11:21:06
 
 # Already-done steps are skipped on a second run
 pip_run(p) # first step skipped
-#> info [2026-10-13 15:27:08.596 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-13 15:27:08.596 UTC]: Step 1/4 load - skipping done step
-#> info [2026-10-13 15:27:08.596 UTC]: Step 2/4 prep
-#> info [2026-10-13 15:27:08.597 UTC]: Step 3/4 square
-#> info [2026-10-13 15:27:08.598 UTC]: Step 4/4 total
-#> info [2026-10-13 15:27:08.599 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:06.593 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:06.593 UTC]: Step 1/4 load - skipping done step
+#> info [2026-10-15 11:21:06.593 UTC]: Step 2/4 prep
+#> info [2026-10-15 11:21:06.594 UTC]: Step 3/4 square
+#> info [2026-10-15 11:21:06.595 UTC]: Step 4/4 total
+#> info [2026-10-15 11:21:06.596 UTC]: Finished run of pipeflow 'pipe'
 
 # lgr = NULL suppresses log output
 pip_run(p, lgr = NULL)
 
 # force = TRUE re-executes every step regardless of state
 pip_run(p, force = TRUE)
-#> info [2026-10-13 15:27:08.601 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-13 15:27:08.601 UTC]: Step 1/4 load
-#> info [2026-10-13 15:27:08.602 UTC]: Step 2/4 prep
-#> info [2026-10-13 15:27:08.603 UTC]: Step 3/4 square
-#> info [2026-10-13 15:27:08.604 UTC]: Step 4/4 total
-#> info [2026-10-13 15:27:08.605 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:06.598 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:06.598 UTC]: Step 1/4 load
+#> info [2026-10-15 11:21:06.598 UTC]: Step 2/4 prep
+#> info [2026-10-15 11:21:06.599 UTC]: Step 3/4 square
+#> info [2026-10-15 11:21:06.600 UTC]: Step 4/4 total
+#> info [2026-10-15 11:21:06.601 UTC]: Finished run of pipeflow 'pipe'
 p
 #> <pipeflow> pipe (4 steps)
 #> -------------------------
@@ -251,18 +251,18 @@ p
 #> 3: square        x    prep  done  4,16,36
 #> 4:  total        x  square  done       56
 #> -------------------------
-#> <ready> last run: 2026-10-13 15:27:08
+#> <ready> last run: 2026-10-15 11:21:06
 
 # Run only a subset of steps via a view;
 # upstream dependencies are automatically included
 v <- pip_view(p, step = "total")
 pip_run(v)
-#> info [2026-10-13 15:27:08.610 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-13 15:27:08.610 UTC]: Step 1/4 [upstream] load - skipping done step
-#> info [2026-10-13 15:27:08.610 UTC]: Step 2/4 [upstream] prep - skipping done step
-#> info [2026-10-13 15:27:08.610 UTC]: Step 3/4 [upstream] square - skipping done step
-#> info [2026-10-13 15:27:08.610 UTC]: Step 4/4 [view] total - skipping done step
-#> info [2026-10-13 15:27:08.610 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:06.605 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:06.605 UTC]: Step 1/4 [upstream] load - skipping done step
+#> info [2026-10-15 11:21:06.605 UTC]: Step 2/4 [upstream] prep - skipping done step
+#> info [2026-10-15 11:21:06.605 UTC]: Step 3/4 [upstream] square - skipping done step
+#> info [2026-10-15 11:21:06.605 UTC]: Step 4/4 [view] total - skipping done step
+#> info [2026-10-15 11:21:06.605 UTC]: Finished run of pipeflow 'pipe'
 
 # Halt or restart pipeline at runtime (for advanced usage)
 p <- pip_new("restart") |>
@@ -279,16 +279,16 @@ p <- pip_new("restart") |>
   })
 
 pip_run(p)
-#> info [2026-10-13 15:27:08.613 UTC]: Starting run of pipeflow 'restart'
-#> info [2026-10-13 15:27:08.613 UTC]: Step 1/3 load
-#> info [2026-10-13 15:27:08.614 UTC]: Step 2/3 check
-#> info [2026-10-13 15:27:08.615 UTC]: Step 3/3 model
-#> info [2026-10-13 15:27:08.617 UTC]: Restarting pipeline execution.
-#> info [2026-10-13 15:27:08.618 UTC]: Restarting run of pipeflow 'restart'
-#> info [2026-10-13 15:27:08.618 UTC]: Step 1/3 load
-#> info [2026-10-13 15:27:08.618 UTC]: Step 2/3 check
-#> info [2026-10-13 15:27:08.620 UTC]: Step 3/3 model
-#> info [2026-10-13 15:27:08.621 UTC]: Finished run of pipeflow 'restart'
+#> info [2026-10-15 11:21:06.607 UTC]: Starting run of pipeflow 'restart'
+#> info [2026-10-15 11:21:06.607 UTC]: Step 1/3 load
+#> info [2026-10-15 11:21:06.608 UTC]: Step 2/3 check
+#> info [2026-10-15 11:21:06.609 UTC]: Step 3/3 model
+#> info [2026-10-15 11:21:06.610 UTC]: Restarting pipeline execution.
+#> info [2026-10-15 11:21:06.611 UTC]: Restarting run of pipeflow 'restart'
+#> info [2026-10-15 11:21:06.611 UTC]: Step 1/3 load
+#> info [2026-10-15 11:21:06.611 UTC]: Step 2/3 check
+#> info [2026-10-15 11:21:06.612 UTC]: Step 3/3 model
+#> info [2026-10-15 11:21:06.617 UTC]: Finished run of pipeflow 'restart'
 p
 #> <pipeflow> restart (3 steps)
 #> ----------------------------
@@ -297,15 +297,15 @@ p
 #> 2: check      x    load  done         [NULL]
 #> 3: model      x    load  done  2, 4, 6, 8,10
 #> ----------------------------
-#> <ready> last run: 2026-10-13 15:27:08
+#> <ready> last run: 2026-10-15 11:21:06
 
 pip_set_params(p, list(n = 15)) # now halt() in 'check' step is triggered
 pip_run(p)
-#> info [2026-10-13 15:27:08.625 UTC]: Starting run of pipeflow 'restart'
-#> info [2026-10-13 15:27:08.625 UTC]: Step 1/3 load
-#> info [2026-10-13 15:27:08.626 UTC]: Step 2/3 check
-#> info [2026-10-13 15:27:08.627 UTC]: Aborting pipeline execution on manual halt.
-#> info [2026-10-13 15:27:08.627 UTC]: Finished run of pipeflow 'restart'
+#> info [2026-10-15 11:21:06.622 UTC]: Starting run of pipeflow 'restart'
+#> info [2026-10-15 11:21:06.622 UTC]: Step 1/3 load
+#> info [2026-10-15 11:21:06.622 UTC]: Step 2/3 check
+#> info [2026-10-15 11:21:06.623 UTC]: Aborting pipeline execution on manual halt.
+#> info [2026-10-15 11:21:06.623 UTC]: Finished run of pipeflow 'restart'
 
 # Continue after errors and pass failures to the steps that allow them
 p <- pip_new("continue") |>
@@ -341,7 +341,7 @@ p
 #> 4:                                          15
 #> 5: step 'count' was not run: step 'check' f...
 #> -----------------------------
-#> <continued> last run: 2026-10-13 15:27:08
+#> <continued> last run: 2026-10-15 11:21:06
 p[["report", "out"]]
 #> [1] "step 'count' was not run: step 'check' failed: check failed"
 ```

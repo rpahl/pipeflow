@@ -59,11 +59,11 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/rpahl/pipeflow/blob/v0.5.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/rpahl/pipeflow/blob/site-0.5.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.5.0" id="pipeflow-050">pipeflow 0.5.0<a class="anchor" aria-label="anchor" href="#pipeflow-050"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.5.0" id="pipeflow-050">pipeflow 0.5.0<a class="anchor" aria-label="anchor" href="#pipeflow-050"></a></h2><p class="text-muted">CRAN release: 2026-10-13</p>
 <div class="section level3">
 <h3 id="breaking-changes-0-5-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-5-0"></a></h3>
 <ul><li>
@@ -76,10 +76,10 @@
 <div class="section level3">
 <h3 id="new-features-0-5-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-5-0"></a></h3>
 <ul><li>
-<code>pip_run(on_error = "continue")</code> continues the run of unaffected steps after a step failed with an error.</li>
+<code>pip_run(on_error = "continue")</code> continues the run of unaffected steps after a step fails with an error.</li>
 <li>allow mitigation of inputs from failed steps via <code>~try()</code> references (<code>x = ~try(step)</code>), e.g. by creating fallback results for failed steps.</li>
 <li>
-<code><a href="../reference/pip_param_value.html">pip_param_value()</a></code> is a generic for unwrapping parameter values, enabling to set pipeline parameters that consist of non-trivial types or classes.</li>
+<code><a href="../reference/pip_param_value.html">pip_param_value()</a></code> is a generic for unwrapping parameter values, enabling users to set pipeline parameters that consist of non-trivial types or classes.</li>
 <li>
 <code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> gains <code>unknown = c("warn", "ignore", "error")</code> for parameters that no step defines, and <code>force = TRUE</code> to outdate steps even if the values are identical.</li>
 <li>

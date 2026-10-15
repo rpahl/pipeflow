@@ -112,27 +112,27 @@ outer |>
         )
     ) |>
     pip_run()
-# info [2026-10-13 15:28:04.678 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-13 15:28:04.679 UTC]: Step 1/4 data
-# info [2026-10-13 15:28:04.680 UTC]: Step 2/4 split_data
-# info [2026-10-13 15:28:04.682 UTC]: Step 3/4 inner_run
-# info [2026-10-13 15:28:04.764 UTC]: Starting run of pipeflow 'coefs for *setosa*'
-# info [2026-10-13 15:28:04.764 UTC]: Step 1/3 data
-# info [2026-10-13 15:28:04.765 UTC]: Step 2/3 fit
-# info [2026-10-13 15:28:04.768 UTC]: Step 3/3 coefs
-# info [2026-10-13 15:28:04.769 UTC]: Finished run of pipeflow 'coefs for *setosa*'
-# info [2026-10-13 15:28:04.785 UTC]: Starting run of pipeflow 'coefs for *versicolor*'
-# info [2026-10-13 15:28:04.785 UTC]: Step 1/3 data
-# info [2026-10-13 15:28:04.786 UTC]: Step 2/3 fit
-# info [2026-10-13 15:28:04.789 UTC]: Step 3/3 coefs
-# info [2026-10-13 15:28:04.791 UTC]: Finished run of pipeflow 'coefs for *versicolor*'
-# info [2026-10-13 15:28:04.793 UTC]: Starting run of pipeflow 'coefs for *virginica*'
-# info [2026-10-13 15:28:04.793 UTC]: Step 1/3 data
-# info [2026-10-13 15:28:04.794 UTC]: Step 2/3 fit
-# info [2026-10-13 15:28:04.795 UTC]: Step 3/3 coefs
-# info [2026-10-13 15:28:04.797 UTC]: Finished run of pipeflow 'coefs for *virginica*'
-# info [2026-10-13 15:28:04.798 UTC]: Step 4/4 combine
-# info [2026-10-13 15:28:04.799 UTC]: Finished run of pipeflow 'full analysis'
+# info [2026-10-15 11:21:45.610 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-10-15 11:21:45.610 UTC]: Step 1/4 data
+# info [2026-10-15 11:21:45.611 UTC]: Step 2/4 split_data
+# info [2026-10-15 11:21:45.612 UTC]: Step 3/4 inner_run
+# info [2026-10-15 11:21:45.704 UTC]: Starting run of pipeflow 'coefs for *setosa*'
+# info [2026-10-15 11:21:45.704 UTC]: Step 1/3 data
+# info [2026-10-15 11:21:45.704 UTC]: Step 2/3 fit
+# info [2026-10-15 11:21:45.707 UTC]: Step 3/3 coefs
+# info [2026-10-15 11:21:45.708 UTC]: Finished run of pipeflow 'coefs for *setosa*'
+# info [2026-10-15 11:21:45.721 UTC]: Starting run of pipeflow 'coefs for *versicolor*'
+# info [2026-10-15 11:21:45.721 UTC]: Step 1/3 data
+# info [2026-10-15 11:21:45.722 UTC]: Step 2/3 fit
+# info [2026-10-15 11:21:45.724 UTC]: Step 3/3 coefs
+# info [2026-10-15 11:21:45.726 UTC]: Finished run of pipeflow 'coefs for *versicolor*'
+# info [2026-10-15 11:21:45.727 UTC]: Starting run of pipeflow 'coefs for *virginica*'
+# info [2026-10-15 11:21:45.728 UTC]: Step 1/3 data
+# info [2026-10-15 11:21:45.728 UTC]: Step 2/3 fit
+# info [2026-10-15 11:21:45.729 UTC]: Step 3/3 coefs
+# info [2026-10-15 11:21:45.730 UTC]: Finished run of pipeflow 'coefs for *virginica*'
+# info [2026-10-15 11:21:45.731 UTC]: Step 4/4 combine
+# info [2026-10-15 11:21:45.732 UTC]: Finished run of pipeflow 'full analysis'
 ```
 
 The output of the `inner_run` step is a list of coefficient vectors, one
@@ -181,7 +181,7 @@ outer
 # 3:  inner_run dataList,xVar,yVar split_data outdated           <list[3]>
 # 4:    combine              coefs  inner_run outdated   <data.frame[3x2]>
 # ----------------------------------
-# <ready> last run: 2026-10-13 15:28:04
+# <ready> last run: 2026-10-15 11:21:45
 ```
 
 Since the `xVar` parameter is part of the `inner_run` step’s function
@@ -229,7 +229,7 @@ outer
 # 3:  inner_run data,xVar,yVar,dataList split_data      new              [NULL]
 # 4:    combine                   coefs  inner_run outdated   <data.frame[3x2]>
 # ----------------------------------
-# <ready> last run: 2026-10-13 15:28:04
+# <ready> last run: 2026-10-15 11:21:45
 ```
 
 In this version, the `inner_run` step no longer declares `xVar` and
@@ -275,27 +275,27 @@ outer |>
         )
     ) |>
     pip_run()
-# info [2026-10-13 15:28:05.130 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-13 15:28:05.130 UTC]: Step 1/4 data - skipping done step
-# info [2026-10-13 15:28:05.131 UTC]: Step 2/4 split_data - skipping done step
-# info [2026-10-13 15:28:05.131 UTC]: Step 3/4 inner_run
-# info [2026-10-13 15:28:05.136 UTC]: Starting run of pipeflow 'coefs for *setosa*'
-# info [2026-10-13 15:28:05.136 UTC]: Step 1/3 data
-# info [2026-10-13 15:28:05.137 UTC]: Step 2/3 fit
-# info [2026-10-13 15:28:05.139 UTC]: Step 3/3 coefs
-# info [2026-10-13 15:28:05.141 UTC]: Finished run of pipeflow 'coefs for *setosa*'
-# info [2026-10-13 15:28:05.143 UTC]: Starting run of pipeflow 'coefs for *versicolor*'
-# info [2026-10-13 15:28:05.143 UTC]: Step 1/3 data
-# info [2026-10-13 15:28:05.144 UTC]: Step 2/3 fit
-# info [2026-10-13 15:28:05.146 UTC]: Step 3/3 coefs
-# info [2026-10-13 15:28:05.147 UTC]: Finished run of pipeflow 'coefs for *versicolor*'
-# info [2026-10-13 15:28:05.150 UTC]: Starting run of pipeflow 'coefs for *virginica*'
-# info [2026-10-13 15:28:05.150 UTC]: Step 1/3 data
-# info [2026-10-13 15:28:05.150 UTC]: Step 2/3 fit
-# info [2026-10-13 15:28:05.152 UTC]: Step 3/3 coefs
-# info [2026-10-13 15:28:05.154 UTC]: Finished run of pipeflow 'coefs for *virginica*'
-# info [2026-10-13 15:28:05.155 UTC]: Step 4/4 combine
-# info [2026-10-13 15:28:05.158 UTC]: Finished run of pipeflow 'full analysis'
+# info [2026-10-15 11:21:45.971 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-10-15 11:21:45.971 UTC]: Step 1/4 data - skipping done step
+# info [2026-10-15 11:21:45.971 UTC]: Step 2/4 split_data - skipping done step
+# info [2026-10-15 11:21:45.971 UTC]: Step 3/4 inner_run
+# info [2026-10-15 11:21:45.975 UTC]: Starting run of pipeflow 'coefs for *setosa*'
+# info [2026-10-15 11:21:45.975 UTC]: Step 1/3 data
+# info [2026-10-15 11:21:45.976 UTC]: Step 2/3 fit
+# info [2026-10-15 11:21:45.978 UTC]: Step 3/3 coefs
+# info [2026-10-15 11:21:45.979 UTC]: Finished run of pipeflow 'coefs for *setosa*'
+# info [2026-10-15 11:21:45.981 UTC]: Starting run of pipeflow 'coefs for *versicolor*'
+# info [2026-10-15 11:21:45.981 UTC]: Step 1/3 data
+# info [2026-10-15 11:21:45.981 UTC]: Step 2/3 fit
+# info [2026-10-15 11:21:45.983 UTC]: Step 3/3 coefs
+# info [2026-10-15 11:21:45.984 UTC]: Finished run of pipeflow 'coefs for *versicolor*'
+# info [2026-10-15 11:21:45.985 UTC]: Starting run of pipeflow 'coefs for *virginica*'
+# info [2026-10-15 11:21:45.986 UTC]: Step 1/3 data
+# info [2026-10-15 11:21:45.986 UTC]: Step 2/3 fit
+# info [2026-10-15 11:21:45.988 UTC]: Step 3/3 coefs
+# info [2026-10-15 11:21:45.989 UTC]: Finished run of pipeflow 'coefs for *virginica*'
+# info [2026-10-15 11:21:45.990 UTC]: Step 4/4 combine
+# info [2026-10-15 11:21:45.992 UTC]: Finished run of pipeflow 'full analysis'
 ```
 
 Note the `unknown = "ignore"` in the replacement function above.
@@ -331,7 +331,7 @@ outer
 # 3:  inner_run data,xVar,yVar,dataList split_data outdated           <list[3]>
 # 4:    combine                   coefs  inner_run outdated   <data.frame[3x2]>
 # ----------------------------------
-# <ready> last run: 2026-10-13 15:28:05
+# <ready> last run: 2026-10-15 11:21:45
 ```
 
 With the above pattern, you can now change both the inner and outer

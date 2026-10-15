@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/rpahl/pipeflow/blob/v0.5.0/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/rpahl/pipeflow/blob/site-0.5.0/DESCRIPTION)
 
 Pahl R (2026). *pipeflow: Fast Interactive Data Analysis Pipelines*. R
 package version 0.5.0, <https://rpahl.github.io/pipeflow/>.

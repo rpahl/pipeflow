@@ -107,9 +107,9 @@ print(p, cols = "all") # all step-table columns
 #> 2: square <function[1]>      x [NULL]   new compute  FALSE auto
 #> 3:  total <function[1]>      x [NULL]   new compute  FALSE auto
 #>                   time depends unbound nodeId
-#> 1: 2026-10-13 15:27:10               n      0
-#> 2: 2026-10-13 15:27:10    load              1
-#> 3: 2026-10-13 15:27:10  square              2
+#> 1: 2026-10-15 11:21:08               n      0
+#> 2: 2026-10-15 11:21:08    load              1
+#> 3: 2026-10-15 11:21:08  square              2
 #> -------------------------
 #> <ready> last run: never
 print(p, rows = 2:3) # print only steps 2 and 3

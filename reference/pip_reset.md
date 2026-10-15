@@ -36,10 +36,10 @@ p <- pip_new() |>
   pip_add("square", \(x = ~load) x^2)
 
 pip_run(p)
-#> info [2026-10-13 15:27:08.362 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-13 15:27:08.362 UTC]: Step 1/2 load
-#> info [2026-10-13 15:27:08.363 UTC]: Step 2/2 square
-#> info [2026-10-13 15:27:08.364 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:06.418 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:06.418 UTC]: Step 1/2 load
+#> info [2026-10-15 11:21:06.419 UTC]: Step 2/2 square
+#> info [2026-10-15 11:21:06.420 UTC]: Finished run of pipeflow 'pipe'
 p[["state"]] # "done", "done"
 #>   load square 
 #> "done" "done" 

@@ -94,22 +94,18 @@
 <img src="logo.png" class="logo" alt=""><h1 id="pipeflow-">pipeflow <a class="anchor" aria-label="anchor" href="#pipeflow-"></a>
 </h1>
 </div>
-<p>Build fast interactive data analysis pipelines that scale.</p>
-<p>{pipeflow} simply lets you add R functions one by one, wiring them into a pipeline that stays consistent as you go. Modify, remove, or insert steps at any stage, and manage all parameters in one place.</p>
-<p>Thanks to its intuitive interface, {pipeflow} pays off quickly and, in the long run, helps you keep a clear and structured overview of your project.</p>
+<p>{pipeflow} is a lightweight framework for building interactive data analysis pipelines in R. You add R functions one by one as steps, tell {pipeflow} which steps they take their inputs from, and it keeps the pipeline consistent as you insert, replace or remove steps.</p>
 <p><img src="reference/figures/cartoon.png" alt="cartoon" align="right" width="330"></p>
 <div class="section level3">
-<h3 id="why-use-pipeflow">Why use {pipeflow}<a class="anchor" aria-label="anchor" href="#why-use-pipeflow"></a>
+<h3 id="why-pipeflow">Why pipeflow?<a class="anchor" aria-label="anchor" href="#why-pipeflow"></a>
 </h3>
 <ul>
-<li>Lightweight and intuitive API</li>
-<li>All parameters managed in one place</li>
-<li>Pipeline verified at definition time</li>
-<li>Filter pipeline steps via views (supports data.table-style <code>[</code> filters <img src="https://img.shields.io/badge/-new-orange">)</li>
-<li>Branch and merge pipeline steps</li>
-<li>Fast dependency resolution (C++-powered DAG)</li>
-<li>Embed reusable workflows (nested pipelines) <img src="https://img.shields.io/badge/-new-orange">
-</li>
+<li>concise API: steps are plain R functions</li>
+<li>all parameters in one place</li>
+<li>checked as you build</li>
+<li>reruns only what changed</li>
+<li>fast: data.table and C++ DAG under the hood</li>
+<li>feature rich: views, split/map/reduce, nested pipelines</li>
 </ul>
 </div>
 <div class="section level3">
@@ -121,6 +117,11 @@
 <span></span>
 <span><span class="co"># Install development version from GitHub</span></span>
 <span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/install-deprecated.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"rpahl/pipeflow"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="cheat-sheet">Cheat sheet<a class="anchor" aria-label="anchor" href="#cheat-sheet"></a>
+</h3>
+<p><a href="https://github.com/rpahl/pipeflow/blob/main/cheatsheet/pipeflow-cheatsheet.pdf" class="external-link"><img src="reference/figures/cheatsheet-1.png" alt="pipeflow cheat sheet, page 1" width="330"><img src="reference/figures/cheatsheet-2.png" alt="pipeflow cheat sheet, page 2" width="330"></a></p>
 </div>
 <div class="section level3">
 <h3 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
@@ -144,11 +145,11 @@
 <span><span class="co"># &lt;ready&gt; last run: never</span></span>
 <span></span>
 <span><span class="fu"><a href="reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-12 13:47:16.268 UTC]: Starting run of pipeflow 'demo'</span></span>
-<span><span class="co"># info [2026-10-12 13:47:16.269 UTC]: Step 1/3 numbers</span></span>
-<span><span class="co"># info [2026-10-12 13:47:16.276 UTC]: Step 2/3 squared</span></span>
-<span><span class="co"># info [2026-10-12 13:47:16.285 UTC]: Step 3/3 total</span></span>
-<span><span class="co"># info [2026-10-12 13:47:16.287 UTC]: Finished run of pipeflow 'demo'</span></span>
+<span><span class="co"># info [2026-10-15 10:21:00.423 UTC]: Starting run of pipeflow 'demo'</span></span>
+<span><span class="co"># info [2026-10-15 10:21:00.424 UTC]: Step 1/3 numbers</span></span>
+<span><span class="co"># info [2026-10-15 10:21:00.426 UTC]: Step 2/3 squared</span></span>
+<span><span class="co"># info [2026-10-15 10:21:00.428 UTC]: Step 3/3 total</span></span>
+<span><span class="co"># info [2026-10-15 10:21:00.429 UTC]: Finished run of pipeflow 'demo'</span></span>
 <span></span>
 <span><span class="fu"><a href="reference/pip_collect.html">pip_collect</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
 <span><span class="co"># $numbers</span></span>

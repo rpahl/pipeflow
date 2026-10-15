@@ -129,12 +129,12 @@ p <- pip_new("analysis") |>
   pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
 
 pip_run(p)
-#> info [2026-10-13 15:27:05.356 UTC]: Starting run of pipeflow 'analysis'
-#> info [2026-10-13 15:27:05.356 UTC]: Step 1/4 load
-#> info [2026-10-13 15:27:05.356 UTC]: Step 2/4 clean
-#> info [2026-10-13 15:27:05.358 UTC]: Step 3/4 fit
-#> info [2026-10-13 15:27:05.359 UTC]: Step 4/4 report
-#> info [2026-10-13 15:27:05.360 UTC]: Finished run of pipeflow 'analysis'
+#> info [2026-10-15 11:21:04.042 UTC]: Starting run of pipeflow 'analysis'
+#> info [2026-10-15 11:21:04.043 UTC]: Step 1/4 load
+#> info [2026-10-15 11:21:04.043 UTC]: Step 2/4 clean
+#> info [2026-10-15 11:21:04.044 UTC]: Step 3/4 fit
+#> info [2026-10-15 11:21:04.045 UTC]: Step 4/4 report
+#> info [2026-10-15 11:21:04.045 UTC]: Finished run of pipeflow 'analysis'
 p
 #> <pipeflow> analysis (4 steps)
 #> -----------------------------
@@ -144,7 +144,7 @@ p
 #> 3:    fit      x   clean  done             30 model,core,daily
 #> 4: report      x     fit  done     result: 30           report
 #> -----------------------------
-#> <ready> last run: 2026-10-13 15:27:05
+#> <ready> last run: 2026-10-15 11:21:04
 
 # Filter by tag using pip_view — keeps steps with any matching tag
 pip_view(p, tags = "daily")
@@ -153,14 +153,14 @@ pip_view(p, tags = "daily")
 #>    step params depends state out             tags
 #> 1:  fit      x   clean  done  30 model,core,daily
 #> ---------------------------------------
-#> <ready> last run: 2026-10-13 15:27:05
+#> <ready> last run: 2026-10-15 11:21:04
 pip_view(p, tags = "core")
 #> <pipeflow_view> analysis (1 of 4 steps)
 #> ---------------------------------------
 #>    step params depends state out             tags
 #> 1:  fit      x   clean  done  30 model,core,daily
 #> ---------------------------------------
-#> <ready> last run: 2026-10-13 15:27:05
+#> <ready> last run: 2026-10-15 11:21:04
 pip_view(p, tags = c("raw", "report"))
 #> <pipeflow_view> analysis (2 of 4 steps)
 #> ---------------------------------------
@@ -168,7 +168,7 @@ pip_view(p, tags = c("raw", "report"))
 #> 1:   load      n          done  1,2,3,4,5 io,raw
 #> 2: report      x     fit  done result: 30 report
 #> ---------------------------------------
-#> <ready> last run: 2026-10-13 15:27:05
+#> <ready> last run: 2026-10-15 11:21:04
 
 # --- Split / reduce execution modes ---
 q <- pip_new("split-demo") |>
@@ -182,12 +182,12 @@ q <- pip_new("split-demo") |>
   )
 
 pip_run(q)
-#> info [2026-10-13 15:27:05.371 UTC]: Starting run of pipeflow 'split-demo'
-#> info [2026-10-13 15:27:05.371 UTC]: Step 1/4 data
-#> info [2026-10-13 15:27:05.372 UTC]: Step 2/4 split
-#> info [2026-10-13 15:27:05.374 UTC]: Step 3/4 stats
-#> info [2026-10-13 15:27:05.379 UTC]: Step 4/4 combine
-#> info [2026-10-13 15:27:05.380 UTC]: Finished run of pipeflow 'split-demo'
+#> info [2026-10-15 11:21:04.054 UTC]: Starting run of pipeflow 'split-demo'
+#> info [2026-10-15 11:21:04.054 UTC]: Step 1/4 data
+#> info [2026-10-15 11:21:04.055 UTC]: Step 2/4 split
+#> info [2026-10-15 11:21:04.056 UTC]: Step 3/4 stats
+#> info [2026-10-15 11:21:04.059 UTC]: Step 4/4 combine
+#> info [2026-10-15 11:21:04.064 UTC]: Finished run of pipeflow 'split-demo'
 q[["stats", "out"]]   # partitioned list — one summary per species
 #> $setosa
 #>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   
@@ -312,16 +312,16 @@ p2
 p3 <- pip_new("params-demo") |>
   pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
 pip_run(p3)
-#> info [2026-10-13 15:27:05.394 UTC]: Starting run of pipeflow 'params-demo'
-#> info [2026-10-13 15:27:05.394 UTC]: Step 1/1 load
-#> info [2026-10-13 15:27:05.394 UTC]: Finished run of pipeflow 'params-demo'
+#> info [2026-10-15 11:21:04.075 UTC]: Starting run of pipeflow 'params-demo'
+#> info [2026-10-15 11:21:04.075 UTC]: Step 1/1 load
+#> info [2026-10-15 11:21:04.075 UTC]: Finished run of pipeflow 'params-demo'
 p3
 #> <pipeflow> params-demo (1 step)
 #> -------------------------------
 #>    step params depends state   out
 #> 1: load size,x          done  1,42
 #> -------------------------------
-#> <ready> last run: 2026-10-13 15:27:05
+#> <ready> last run: 2026-10-15 11:21:04
 p3[["load", "out"]] # c(1, size = 42) — extra params passed via `...`
 #>      size 
 #>    1   42 

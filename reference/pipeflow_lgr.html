@@ -65,7 +65,7 @@ info [2026-01-01 12:34:56.789 UTC]: Step 1/2 load."><meta property="og:image" co
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Default logger of pipeflow</h1>
-      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/v0.5.0/R/log.R" class="external-link"><code>R/log.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/site-0.5.0/R/log.R" class="external-link"><code>R/log.R</code></a></small>
       <div class="d-none name"><code>pipeflow_lgr.Rd</code></div>
     </div>
 
@@ -113,7 +113,7 @@ off with <code>lgr = NULL</code>.</p></div>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">pipeflow_lgr</span><span class="op">(</span><span class="st">"info"</span>, <span class="st">"Hello"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 15:27:10.326 UTC]: Hello</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 11:21:07.914 UTC]: Hello</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"demo"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>    <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"load"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
@@ -124,10 +124,10 @@ off with <code>lgr = NULL</code>.</p></div>
 <span class="r-in"><span>    <span class="fu">pipeflow_lgr</span><span class="op">(</span><span class="va">level</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"[demo]"</span>, <span class="va">msg</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="va">prefixed</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 15:27:10.330 UTC]: [demo] Starting run of pipeflow 'demo'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 15:27:10.330 UTC]: [demo] Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 15:27:10.331 UTC]: [demo] Step 2/2 double</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 15:27:10.332 UTC]: [demo] Finished run of pipeflow 'demo'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 11:21:07.916 UTC]: [demo] Starting run of pipeflow 'demo'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 11:21:07.917 UTC]: [demo] Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 11:21:07.917 UTC]: [demo] Step 2/2 double</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 11:21:07.918 UTC]: [demo] Finished run of pipeflow 'demo'</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Drop the "info" messages and pass the rest on</span></span></span>
 <span class="r-in"><span><span class="va">quiet</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">level</span>, <span class="va">msg</span><span class="op">)</span> <span class="op">{</span></span></span>

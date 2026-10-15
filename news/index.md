@@ -2,6 +2,8 @@
 
 ## pipeflow 0.5.0
 
+CRAN release: 2026-10-13
+
 ### Breaking changes
 
 - `v[["view"]]` returns the names of the covered steps instead of row
@@ -15,13 +17,13 @@
 ### New features
 
 - `pip_run(on_error = "continue")` continues the run of unaffected steps
-  after a step failed with an error.
+  after a step fails with an error.
 - allow mitigation of inputs from failed steps via `~try()` references
   (`x = ~try(step)`), e.g. by creating fallback results for failed
   steps.
 - [`pip_param_value()`](https://rpahl.github.io/pipeflow/reference/pip_param_value.md)
-  is a generic for unwrapping parameter values, enabling to set pipeline
-  parameters that consist of non-trivial types or classes.
+  is a generic for unwrapping parameter values, enabling users to set
+  pipeline parameters that consist of non-trivial types or classes.
 - [`pip_set_params()`](https://rpahl.github.io/pipeflow/reference/pip_set_params.md)
   gains `unknown = c("warn", "ignore", "error")` for parameters that no
   step defines, and `force = TRUE` to outdate steps even if the values

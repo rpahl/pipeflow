@@ -35,11 +35,11 @@ p <- pip_new() |>
   pip_add("y", \(y = 2) y) |>
   pip_add("sum", \(x = 1, y = 2) x + y)
 (pip_run(p))
-#> info [2026-10-13 15:27:06.795 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-13 15:27:06.795 UTC]: Step 1/3 x
-#> info [2026-10-13 15:27:06.796 UTC]: Step 2/3 y
-#> info [2026-10-13 15:27:06.796 UTC]: Step 3/3 sum
-#> info [2026-10-13 15:27:06.796 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:05.203 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:05.203 UTC]: Step 1/3 x
+#> info [2026-10-15 11:21:05.204 UTC]: Step 2/3 y
+#> info [2026-10-15 11:21:05.204 UTC]: Step 3/3 sum
+#> info [2026-10-15 11:21:05.204 UTC]: Finished run of pipeflow 'pipe'
 #> <pipeflow> pipe (3 steps)
 #> -------------------------
 #>    step params depends state out
@@ -47,7 +47,7 @@ p <- pip_new() |>
 #> 2:    y      y          done   2
 #> 3:  sum    x,y          done   3
 #> -------------------------
-#> <ready> last run: 2026-10-13 15:27:06
+#> <ready> last run: 2026-10-15 11:21:05
 p[["sum", "out"]] # 3
 #> [1] 3
 
@@ -62,11 +62,11 @@ p[["sum", "params"]] # x = 10, y = 20
 #> 
 pip_lock(p["sum", ])
 (pip_run(p))
-#> info [2026-10-13 15:27:06.803 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-13 15:27:06.803 UTC]: Step 1/3 x
-#> info [2026-10-13 15:27:06.803 UTC]: Step 2/3 y
-#> info [2026-10-13 15:27:06.804 UTC]: Step 3/3 sum - skipping locked step
-#> info [2026-10-13 15:27:06.804 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:05.209 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:05.209 UTC]: Step 1/3 x
+#> info [2026-10-15 11:21:05.210 UTC]: Step 2/3 y
+#> info [2026-10-15 11:21:05.210 UTC]: Step 3/3 sum - skipping locked step
+#> info [2026-10-15 11:21:05.210 UTC]: Finished run of pipeflow 'pipe'
 #> <pipeflow> pipe (3 steps)
 #> -------------------------
 #>    step params depends    state out locked
@@ -74,7 +74,7 @@ pip_lock(p["sum", ])
 #> 2:    y      y             done  20  FALSE
 #> 3:  sum    x,y         outdated   3   TRUE
 #> -------------------------
-#> <ready> last run: 2026-10-13 15:27:06
+#> <ready> last run: 2026-10-15 11:21:05
 p[["sum", "out"]] # still 3
 #> [1] 3
 
@@ -100,11 +100,11 @@ p[["sum", "params"]] # still x = 10, y = 20
 pip_unlock(p)
 pip_set_params(p, params = list(x = 100, y = 200))
 (pip_run(p))
-#> info [2026-10-13 15:27:06.813 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-13 15:27:06.813 UTC]: Step 1/3 x
-#> info [2026-10-13 15:27:06.813 UTC]: Step 2/3 y
-#> info [2026-10-13 15:27:06.814 UTC]: Step 3/3 sum
-#> info [2026-10-13 15:27:06.814 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:05.216 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:05.217 UTC]: Step 1/3 x
+#> info [2026-10-15 11:21:05.217 UTC]: Step 2/3 y
+#> info [2026-10-15 11:21:05.217 UTC]: Step 3/3 sum
+#> info [2026-10-15 11:21:05.217 UTC]: Finished run of pipeflow 'pipe'
 #> <pipeflow> pipe (3 steps)
 #> -------------------------
 #>    step params depends state out
@@ -112,5 +112,5 @@ pip_set_params(p, params = list(x = 100, y = 200))
 #> 2:    y      y          done 200
 #> 3:  sum    x,y          done 300
 #> -------------------------
-#> <ready> last run: 2026-10-13 15:27:06
+#> <ready> last run: 2026-10-15 11:21:05
 ```

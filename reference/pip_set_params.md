@@ -83,17 +83,17 @@ pip_get_params(p) # list(n = 10, factor = 0.5)
 #> [1] 0.5
 #> 
 (pip_run(p))
-#> info [2026-10-13 15:27:09.268 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-13 15:27:09.269 UTC]: Step 1/2 load
-#> info [2026-10-13 15:27:09.269 UTC]: Step 2/2 scale
-#> info [2026-10-13 15:27:09.270 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:07.108 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:07.109 UTC]: Step 1/2 load
+#> info [2026-10-15 11:21:07.109 UTC]: Step 2/2 scale
+#> info [2026-10-15 11:21:07.110 UTC]: Finished run of pipeflow 'pipe'
 #> <pipeflow> pipe (2 steps)
 #> -------------------------
 #>     step   params depends state                             out
 #> 1:  load        n          done             1,2,3,4,5,6,...[10]
 #> 2: scale x,factor    load  done 0.5,1.0,1.5,2.0,2.5,3.0,...[10]
 #> -------------------------
-#> <ready> last run: 2026-10-13 15:27:09
+#> <ready> last run: 2026-10-15 11:21:07
 
 # Updating params marks affected steps (and their dependents) outdated
 pip_set_params(p, params = list(n = 5, factor = 2.0))
@@ -104,19 +104,19 @@ p
 #> 1:  load        n         outdated             1,2,3,4,5,6,...[10]
 #> 2: scale x,factor    load outdated 0.5,1.0,1.5,2.0,2.5,3.0,...[10]
 #> -------------------------
-#> <ready> last run: 2026-10-13 15:27:09
+#> <ready> last run: 2026-10-15 11:21:07
 (pip_run(p))
-#> info [2026-10-13 15:27:09.280 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-13 15:27:09.281 UTC]: Step 1/2 load
-#> info [2026-10-13 15:27:09.281 UTC]: Step 2/2 scale
-#> info [2026-10-13 15:27:09.283 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:07.114 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-15 11:21:07.114 UTC]: Step 1/2 load
+#> info [2026-10-15 11:21:07.115 UTC]: Step 2/2 scale
+#> info [2026-10-15 11:21:07.116 UTC]: Finished run of pipeflow 'pipe'
 #> <pipeflow> pipe (2 steps)
 #> -------------------------
 #>     step   params depends state            out
 #> 1:  load        n          done      1,2,3,4,5
 #> 2: scale x,factor    load  done  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-10-13 15:27:09
+#> <ready> last run: 2026-10-15 11:21:07
 
 # Setting the same values again doesn't outdate any step
 pip_set_params(p, params = list(n = 5, factor = 2.0))
@@ -127,7 +127,7 @@ p
 #> 1:  load        n          done      1,2,3,4,5
 #> 2: scale x,factor    load  done  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-10-13 15:27:09
+#> <ready> last run: 2026-10-15 11:21:07
 
 # Use force = TRUE to outdate the steps anyway
 pip_set_params(p, params = list(n = 5, factor = 2.0), force = TRUE)
@@ -138,7 +138,7 @@ p
 #> 1:  load        n         outdated      1,2,3,4,5
 #> 2: scale x,factor    load outdated  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-10-13 15:27:09
+#> <ready> last run: 2026-10-15 11:21:07
 
 # Setting a parameter that is not defined in the pipeline yields a warning
 # \donttest{

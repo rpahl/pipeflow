@@ -130,14 +130,14 @@ step.
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 15:27:36.263 UTC]: Starting run of pipeflow 'preprocess-model'
-# info [2026-10-13 15:27:36.263 UTC]: Step 1/6 data
-# info [2026-10-13 15:27:36.265 UTC]: Step 2/6 prep
-# info [2026-10-13 15:27:36.266 UTC]: Step 3/6 standardize
-# info [2026-10-13 15:27:36.268 UTC]: Step 4/6 data2
-# info [2026-10-13 15:27:36.270 UTC]: Step 5/6 fit
-# info [2026-10-13 15:27:36.271 UTC]: Step 6/6 predict
-# info [2026-10-13 15:27:36.273 UTC]: Finished run of pipeflow 'preprocess-model'
+# info [2026-10-15 11:21:26.315 UTC]: Starting run of pipeflow 'preprocess-model'
+# info [2026-10-15 11:21:26.315 UTC]: Step 1/6 data
+# info [2026-10-15 11:21:26.316 UTC]: Step 2/6 prep
+# info [2026-10-15 11:21:26.318 UTC]: Step 3/6 standardize
+# info [2026-10-15 11:21:26.319 UTC]: Step 4/6 data2
+# info [2026-10-15 11:21:26.320 UTC]: Step 5/6 fit
+# info [2026-10-15 11:21:26.321 UTC]: Step 6/6 predict
+# info [2026-10-15 11:21:26.322 UTC]: Finished run of pipeflow 'preprocess-model'
 ```
 
 ``` r
@@ -158,14 +158,14 @@ pip_set_params(pip, params = list(k = 3))
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 15:27:36.546 UTC]: Starting run of pipeflow 'preprocess-model'
-# info [2026-10-13 15:27:36.546 UTC]: Step 1/6 data - skipping done step
-# info [2026-10-13 15:27:36.546 UTC]: Step 2/6 prep - skipping done step
-# info [2026-10-13 15:27:36.546 UTC]: Step 3/6 standardize - skipping done step
-# info [2026-10-13 15:27:36.546 UTC]: Step 4/6 data2 - skipping done step
-# info [2026-10-13 15:27:36.547 UTC]: Step 5/6 fit
-# info [2026-10-13 15:27:36.549 UTC]: Step 6/6 predict
-# info [2026-10-13 15:27:36.552 UTC]: Finished run of pipeflow 'preprocess-model'
+# info [2026-10-15 11:21:26.513 UTC]: Starting run of pipeflow 'preprocess-model'
+# info [2026-10-15 11:21:26.514 UTC]: Step 1/6 data - skipping done step
+# info [2026-10-15 11:21:26.519 UTC]: Step 2/6 prep - skipping done step
+# info [2026-10-15 11:21:26.520 UTC]: Step 3/6 standardize - skipping done step
+# info [2026-10-15 11:21:26.520 UTC]: Step 4/6 data2 - skipping done step
+# info [2026-10-15 11:21:26.520 UTC]: Step 5/6 fit
+# info [2026-10-15 11:21:26.522 UTC]: Step 6/6 predict
+# info [2026-10-15 11:21:26.524 UTC]: Finished run of pipeflow 'preprocess-model'
 ```
 
 ``` r
@@ -198,7 +198,7 @@ pip_restored
 # 5:         fit   x,k,b       data2  done                               12,18,24,30,36
 # 6:     predict       x         fit  done pred: 12,pred: 18,pred: 24,pred: 30,pred: 36
 # -------------------------------------
-# <ready> last run: 2026-10-13 15:27:36
+# <ready> last run: 2026-10-15 11:21:26
 ```
 
 The restored pipeline has all steps, parameters, outputs and states of
@@ -209,14 +209,14 @@ the steps that need an update are run again:
 
 pip_set_params(pip_restored, params = list(k = 4))
 pip_run(pip_restored)
-# info [2026-10-13 15:27:36.751 UTC]: Starting run of pipeflow 'preprocess-model'
-# info [2026-10-13 15:27:36.751 UTC]: Step 1/6 data - skipping done step
-# info [2026-10-13 15:27:36.751 UTC]: Step 2/6 prep - skipping done step
-# info [2026-10-13 15:27:36.751 UTC]: Step 3/6 standardize - skipping done step
-# info [2026-10-13 15:27:36.751 UTC]: Step 4/6 data2 - skipping done step
-# info [2026-10-13 15:27:36.752 UTC]: Step 5/6 fit
-# info [2026-10-13 15:27:36.753 UTC]: Step 6/6 predict
-# info [2026-10-13 15:27:36.754 UTC]: Finished run of pipeflow 'preprocess-model'
+# info [2026-10-15 11:21:26.667 UTC]: Starting run of pipeflow 'preprocess-model'
+# info [2026-10-15 11:21:26.667 UTC]: Step 1/6 data - skipping done step
+# info [2026-10-15 11:21:26.667 UTC]: Step 2/6 prep - skipping done step
+# info [2026-10-15 11:21:26.667 UTC]: Step 3/6 standardize - skipping done step
+# info [2026-10-15 11:21:26.668 UTC]: Step 4/6 data2 - skipping done step
+# info [2026-10-15 11:21:26.668 UTC]: Step 5/6 fit
+# info [2026-10-15 11:21:26.669 UTC]: Step 6/6 predict
+# info [2026-10-15 11:21:26.669 UTC]: Finished run of pipeflow 'preprocess-model'
 
 pip_restored[["predict", "out"]]
 # [1] "pred: 16" "pred: 24" "pred: 32" "pred: 40" "pred: 48"

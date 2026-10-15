@@ -236,12 +236,12 @@ which produces the following output:
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 15:27:17.731 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-10-13 15:27:17.731 UTC]: Step 1/4 data
-# info [2026-10-13 15:27:17.732 UTC]: Step 2/4 prep
-# info [2026-10-13 15:27:17.735 UTC]: Step 3/4 fit
-# info [2026-10-13 15:27:17.738 UTC]: Step 4/4 plot
-# info [2026-10-13 15:27:18.051 UTC]: Finished run of pipeflow 'my-pip'
+# info [2026-10-15 11:21:12.812 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-10-15 11:21:12.812 UTC]: Step 1/4 data
+# info [2026-10-15 11:21:12.813 UTC]: Step 2/4 prep
+# info [2026-10-15 11:21:12.815 UTC]: Step 3/4 fit
+# info [2026-10-15 11:21:12.818 UTC]: Step 4/4 plot
+# info [2026-10-15 11:21:13.075 UTC]: Finished run of pipeflow 'my-pip'
 ```
 
 Let’s inspect the pipeline again.
@@ -257,7 +257,7 @@ pip
 # 3:  fit                  data,xVar     prep  done            <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep  done   <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 15:27:18
+# <ready> last run: 2026-10-15 11:21:13
 ```
 
 We can see that the `state` of all steps have been changed from `new` to
@@ -359,7 +359,7 @@ pip
 # 3:  fit                  data,xVar     prep outdated            <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep outdated   <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 15:27:18
+# <ready> last run: 2026-10-15 11:21:13
 ```
 
 We can see that the `fit` and `plot` steps are now in state `outdated`,
@@ -369,12 +369,12 @@ results, we just run the pipeline again.
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 15:27:19.065 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-10-13 15:27:19.065 UTC]: Step 1/4 data - skipping done step
-# info [2026-10-13 15:27:19.065 UTC]: Step 2/4 prep - skipping done step
-# info [2026-10-13 15:27:19.066 UTC]: Step 3/4 fit
-# info [2026-10-13 15:27:19.069 UTC]: Step 4/4 plot
-# info [2026-10-13 15:27:19.088 UTC]: Finished run of pipeflow 'my-pip'
+# info [2026-10-15 11:21:13.913 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-10-15 11:21:13.913 UTC]: Step 1/4 data - skipping done step
+# info [2026-10-15 11:21:13.913 UTC]: Step 2/4 prep - skipping done step
+# info [2026-10-15 11:21:13.913 UTC]: Step 3/4 fit
+# info [2026-10-15 11:21:13.916 UTC]: Step 4/4 plot
+# info [2026-10-15 11:21:13.930 UTC]: Finished run of pipeflow 'my-pip'
 ```
 
 A closer look at the run log shows that the pipeline skipped the first
@@ -410,18 +410,18 @@ pip
 # 3:  fit                  data,xVar     prep     done            <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep outdated   <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 15:27:19
+# <ready> last run: 2026-10-15 11:21:13
 ```
 
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 15:27:19.523 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-10-13 15:27:19.523 UTC]: Step 1/4 data - skipping done step
-# info [2026-10-13 15:27:19.523 UTC]: Step 2/4 prep - skipping done step
-# info [2026-10-13 15:27:19.523 UTC]: Step 3/4 fit - skipping done step
-# info [2026-10-13 15:27:19.523 UTC]: Step 4/4 plot
-# info [2026-10-13 15:27:19.534 UTC]: Finished run of pipeflow 'my-pip'
+# info [2026-10-15 11:21:14.257 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-10-15 11:21:14.257 UTC]: Step 1/4 data - skipping done step
+# info [2026-10-15 11:21:14.257 UTC]: Step 2/4 prep - skipping done step
+# info [2026-10-15 11:21:14.257 UTC]: Step 3/4 fit - skipping done step
+# info [2026-10-15 11:21:14.257 UTC]: Step 4/4 plot
+# info [2026-10-15 11:21:14.265 UTC]: Finished run of pipeflow 'my-pip'
 pip[["plot", "out"]]
 ```
 
@@ -443,18 +443,18 @@ pip
 # 3:  fit                  data,xVar     prep outdated            <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep outdated   <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 15:27:19
+# <ready> last run: 2026-10-15 11:21:14
 ```
 
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 15:27:19.864 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-10-13 15:27:19.864 UTC]: Step 1/4 data
-# info [2026-10-13 15:27:19.866 UTC]: Step 2/4 prep
-# info [2026-10-13 15:27:19.870 UTC]: Step 3/4 fit
-# info [2026-10-13 15:27:19.872 UTC]: Step 4/4 plot
-# info [2026-10-13 15:27:19.882 UTC]: Finished run of pipeflow 'my-pip'
+# info [2026-10-15 11:21:14.512 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-10-15 11:21:14.512 UTC]: Step 1/4 data
+# info [2026-10-15 11:21:14.514 UTC]: Step 2/4 prep
+# info [2026-10-15 11:21:14.520 UTC]: Step 3/4 fit
+# info [2026-10-15 11:21:14.522 UTC]: Step 4/4 plot
+# info [2026-10-15 11:21:14.535 UTC]: Finished run of pipeflow 'my-pip'
 pip[["plot", "out"]]
 ```
 
@@ -479,7 +479,7 @@ pip
 # 3:  fit                  data,xVar     prep  done           <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep  done  <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 15:27:19
+# <ready> last run: 2026-10-15 11:21:14
 ```
 
 If you do want to outdate the steps anyway, for example because a
@@ -498,7 +498,7 @@ pip
 # 3:  fit                  data,xVar     prep     done           <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep outdated  <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 15:27:19
+# <ready> last run: 2026-10-15 11:21:14
 ```
 
 #### Handling Unknown Parameters
