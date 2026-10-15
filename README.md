@@ -28,29 +28,21 @@ status](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https:/
 
 # pipeflow <img src="man/figures/logo.png" alt="pipeflow hex logo" align="right" width="120" height="139"/>
 
-Build fast interactive data analysis pipelines that scale.
-
-{pipeflow} simply lets you add R functions one by one, wiring them into
-a pipeline that stays consistent as you go. Modify, remove, or insert
-steps at any stage, and manage all parameters in one place.
-
-Thanks to its intuitive interface, {pipeflow} pays off quickly and, in
-the long run, helps you keep a clear and structured overview of your
-project.
+{pipeflow} is a lightweight framework for building interactive data
+analysis pipelines in R. You add R functions one by one as steps, tell
+{pipeflow} which steps they take their inputs from, and it keeps the
+pipeline consistent as you insert, replace or remove steps.
 
 <img src="man/figures/cartoon.png" alt="cartoon" align="right" width="330"/>
 
-### Why use {pipeflow}
+### Why pipeflow?
 
-- Lightweight and intuitive API
-- All parameters managed in one place
-- Pipeline verified at definition time
-- Filter pipeline steps via views (supports data.table-style `[` filters
-  ![](https://img.shields.io/badge/-new-orange))
-- Branch and merge pipeline steps
-- Fast dependency resolution (C++-powered DAG)
-- Embed reusable workflows (nested pipelines)
-  ![](https://img.shields.io/badge/-new-orange)
+- concise API: steps are plain R functions
+- all parameters in one place
+- checked as you build
+- reruns only what changed
+- fast: data.table and C++ DAG under the hood
+- feature rich: views, split/map/reduce, nested pipelines
 
 ### Installation
 
@@ -64,7 +56,8 @@ devtools::install_github("rpahl/pipeflow")
 
 ### Cheat sheet
 
-<a href="https://github.com/rpahl/pipeflow/blob/main/cheatsheet/pipeflow-cheatsheet.pdf"><img src="man/figures/cheatsheet-1.png" alt="pipeflow cheat sheet, page 1" width="330"/> <img src="man/figures/cheatsheet-2.png" alt="pipeflow cheat sheet, page 2" width="330"/></a>
+<a href="https://github.com/rpahl/pipeflow/blob/main/cheatsheet/pipeflow-cheatsheet.pdf"><img src="man/figures/cheatsheet-1.png" alt="pipeflow cheat sheet, page 1" width="330"/>
+<img src="man/figures/cheatsheet-2.png" alt="pipeflow cheat sheet, page 2" width="330"/></a>
 
 ### Usage
 
@@ -87,11 +80,11 @@ p
 # <ready> last run: never
 
 pip_run(p)
-# info [2026-10-12 13:47:16.268 UTC]: Starting run of pipeflow 'demo'
-# info [2026-10-12 13:47:16.269 UTC]: Step 1/3 numbers
-# info [2026-10-12 13:47:16.276 UTC]: Step 2/3 squared
-# info [2026-10-12 13:47:16.285 UTC]: Step 3/3 total
-# info [2026-10-12 13:47:16.287 UTC]: Finished run of pipeflow 'demo'
+# info [2026-10-15 10:21:00.423 UTC]: Starting run of pipeflow 'demo'
+# info [2026-10-15 10:21:00.424 UTC]: Step 1/3 numbers
+# info [2026-10-15 10:21:00.426 UTC]: Step 2/3 squared
+# info [2026-10-15 10:21:00.428 UTC]: Step 3/3 total
+# info [2026-10-15 10:21:00.429 UTC]: Finished run of pipeflow 'demo'
 
 pip_collect(p)
 # $numbers
