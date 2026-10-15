@@ -70,6 +70,10 @@ devtools::install_github("rpahl/pipeflow")
 ```
 
 
+### Cheat sheet
+
+<a href="https://github.com/rpahl/pipeflow/blob/main/cheatsheet/pipeflow-cheatsheet.pdf"><img src="man/figures/cheatsheet-1.png" alt="pipeflow cheat sheet, page 1" width="330"/> <img src="man/figures/cheatsheet-2.png" alt="pipeflow cheat sheet, page 2" width="330"/></a>
+
 ### Usage
 
 ```{r usage}
