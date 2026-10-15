@@ -1,3 +1,15 @@
+# pipeflow 0.5.0.9001
+
+## Documentation
+
+- New hexagon logo with the package name, used in the README and as
+  pkgdown logo and favicons. The source is `logo/logo.svg`.
+- New two-page cheat sheet (`cheatsheet/pipeflow-cheatsheet.pdf`), shown
+  in the README between "Installation" and "Usage".
+- Shorter README introduction and "Why pipeflow?" list.
+- The pkgdown site is centered again, and its home page shows the logo
+  left of the package name.
+
 # pipeflow 0.5.0
 
 ## Breaking changes
