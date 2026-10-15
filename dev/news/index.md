@@ -1,245 +1,109 @@
 # Changelog
 
-## pipeflow 0.4.0.9017
+## pipeflow 0.5.0.9001
 
-- The package website is now built and published by a GitHub Actions
-  workflow for release tags and on manual runs. Release versions go to
-  the site root, development versions to `dev/`.
+### Documentation
 
-## pipeflow 0.4.0.9016
+- New hexagon logo with the package name, used in the README and as
+  pkgdown logo and favicons. The source is `logo/logo.svg`.
+- New two-page cheat sheet (`cheatsheet/pipeflow-cheatsheet.pdf`), shown
+  in the README between “Installation” and “Usage”.
+- Shorter README introduction and “Why pipeflow?” list.
+- The pkgdown site is centered again, and its home page shows the logo
+  left of the package name.
 
+## pipeflow 0.5.0
+
+CRAN release: 2026-10-13
+
+### Breaking changes
+
+- `v[["view"]]` returns the names of the covered steps instead of row
+  indices.
+- `.self` is only made available in step functions that refer to it,
+  i.e. if the name `.self` appears in the function body.
+- [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
+  by default now keeps the tags and the execution mode of the replaced
+  step.
+
+### New features
+
+- `pip_run(on_error = "continue")` continues the run of unaffected steps
+  after a step fails with an error.
+- allow mitigation of inputs from failed steps via `~try()` references
+  (`x = ~try(step)`), e.g. by creating fallback results for failed
+  steps.
+- [`pip_param_value()`](https://rpahl.github.io/pipeflow/dev/reference/pip_param_value.md)
+  is a generic for unwrapping parameter values, enabling users to set
+  pipeline parameters that consist of non-trivial types or classes.
+- [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+  gains `unknown = c("warn", "ignore", "error")` for parameters that no
+  step defines, and `force = TRUE` to outdate steps even if the values
+  are identical.
+- [`pip_run_state()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run_state.md)
+  returns the run state of a pipeline or view.
 - The default logger
   [`pipeflow_lgr()`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow_lgr.md)
-  of
-  [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
-  is now exported, so that custom loggers can build on it, for example
-  to add a prefix or to drop some log levels and pass the rest on. The
-  output format is unchanged.
-
-## pipeflow 0.4.0.9015
-
-- Behaviour change:
-  [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
-  now keeps the tags and the execution mode of the replaced step. The
-  new defaults `tags = NULL` and `exec = NULL` mean “keep the current
-  value”; before, the tags were cleared and the mode was reset to
-  `"auto"`. To get the old result, pass `tags = character(0)` and
-  `exec = "auto"` explicitly. `p[[step, "fun"]] <- fun` already behaved
-  like this.
-
-## pipeflow 0.4.0.9014
-
-- Same as previous version.
-
-## pipeflow 0.4.0.9013
-
-- Fix: adding, inserting or binding a step that references the same step
-  more than once (e.g. `\(x = ~b, y = ~b)`) no longer warns that the
-  edge already exists.
-
-## pipeflow 0.4.0.9012
-
-- Pipelines can be saved with
-  [`saveRDS()`](https://rdrr.io/r/base/readRDS.html) and read back with
-  [`readRDS()`](https://rdrr.io/r/base/readRDS.html), or sent to other R
-  processes. Before,
-  [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md),
-  [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
-  and most other functions failed on a read pipeline with “null Dag
-  pointer”. The dependency graph of the steps is now rebuilt when it is
-  first needed, with the same node ids, so views that were saved
-  together with their pipeline keep their steps (see section ‘Saving
-  pipelines’ in
+  is exported, so custom loggers can build on it.
+- Pipelines survive [`saveRDS()`](https://rdrr.io/r/base/readRDS.html)
+  and [`readRDS()`](https://rdrr.io/r/base/readRDS.html), and can be
+  sent to other R processes (see
   [`?pip_new`](https://rpahl.github.io/pipeflow/dev/reference/pip_new.md)).
 
-## pipeflow 0.4.0.9011
+### Changes
 
-- Behaviour change: a view keeps track of its steps instead of their row
-  numbers, so it stays valid when steps are added, removed, renamed or
-  replaced later, also through the pipeline or another view. Removed
-  steps drop out of the view. Before, a view could cover the wrong steps
-  once rows had shifted, and the result of
-  [`pip_remove()`](https://rpahl.github.io/pipeflow/dev/reference/pip_remove.md)
-  had to be assigned back to the view. `v[["view"]]` now returns the
-  names of the covered steps instead of row indices.
-
-## pipeflow 0.4.0.9010
-
-- New
-  [`pip_run_state()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run_state.md)
-  returns the run state of a pipeline or view (`"ready"`, `"running"`,
-  `"restart"`, `"halted"`, `"failed"` or `"continued"`).
-- Behaviour change: a view keeps the name of its pipeline. Before, views
-  were named `"<name> view"` (and a view of a view
-  `"<name> view view"`), so code holding a view couldn’t get the
-  pipeline name. [`print()`](https://rdrr.io/r/base/print.html) still
-  marks views with `<pipeflow_view>`.
-- [`print()`](https://rdrr.io/r/base/print.html) shows outputs that were
-  hard to read in the `out` column in short form: a condition (the
-  output of a step that failed in a run with `on_error = "continue"`) as
-  `<kind/class>`, e.g. `<error/simpleError>`, instead of in full (for
-  rlang errors including the backtrace); a matrix, array or table as
-  `<class[dims]>`, e.g. `<matrix[4x2]>`, instead of its flattened
-  values; and a function or environment (e.g. an R6 object) as
-  `<class>`. Strings longer than 40 characters are cut off and marked
-  with `"..."`.
-- Documentation:
-  [`?pip_set_params`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
-  notes that
-  [`pip_get_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
-  also returns the parameters of locked steps, which
-  [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
-  skips.
-  [`` ?`[.pipeflow` ``](https://rpahl.github.io/pipeflow/dev/reference/Extract.pipeflow.md)
-  explains that `tags %like% "x"` matches against the tags converted to
-  a string (so it can also match untagged steps) and points to
-  `pip_view(tags = )` for exact tag matching.
-
-## pipeflow 0.4.0.9009
-
-- Behaviour change: `.self` is only available in step functions that
-  refer to it, that is, whose body contains the name `.self` (also
-  within functions defined in the body; indirect access such as
-  `get(".self")` is not detected). Before, every step function got it,
-  so an output that keeps the environment of its step, such as a ggplot
-  or a closure, kept the whole pipeline alive:
-  [`saveRDS()`](https://rdrr.io/r/base/readRDS.html) of such an output
-  also wrote the pipeline with all its outputs. Step functions are now
-  stored as given, and
+- [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+  no longer outdates steps if the values are identical to the stored
+  ones.
+- Errors from
   [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
-  provides `.self` each time it calls one.
-
-## pipeflow 0.4.0.9008
-
-- New generic
-  [`pip_arg_value()`](https://rpahl.github.io/pipeflow/dev/reference/pip_arg_value.md)
-  as an extension point for annotated parameter values (e.g. values with
-  units). It is applied to each unbound argument of a step right before
-  the step function is called, so packages can unwrap their own classes
-  with a single S3 method instead of wrapping every step function. The
-  default method returns the value unchanged.
-
-## pipeflow 0.4.0.9007
-
-- With `pip_run(on_error = "continue")`, a `reduce` step that takes the
-  output of a failed split pipeline via `~try()` now runs and receives
-  the failure object. Before, it failed with “reduce mode requires at
-  least one partitioned input”, which hid the actual cause.
-
-## pipeflow 0.4.0.9006
-
+  name the step (`step 'fit': ...`) and have class `pipeflow_step_error`
+  with the fields `step` and `parent`. A failing partition key gives a
+  `pipeflow_key_error` with `key` and `parent`.
+- Views keep the name of their pipeline (before: `"<name> view"`).
+- Views keep track of their steps instead of row numbers, so they stay
+  valid when steps are added, removed, renamed or replaced.
+- [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
+  also re-runs a `"done"` step if one of its inputs was executed in the
+  same run.
+- A run stopped by `halt()` ends in run state `"halted"` (before:
+  `"ready"`).
 - [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
   and
   [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
-  now warn if `params` contain names that are also arguments of `fun`.
-  As documented, the defaults of `fun` take precedence over `params`, so
-  such values were silently dropped before.
-- [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
-  gains `unknown = c("warn", "ignore", "error")` to control what happens
-  with parameters that are not defined in the target. The default
-  `"warn"` keeps the current behaviour; `"error"` fails before anything
-  is changed.
-- Behaviour change:
-  [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
-  (and `p[[step, "params"]] <- value`) no longer outdates a step if the
-  values set on it are
-  [`identical()`](https://rdrr.io/r/base/identical.html) to the stored
-  ones. Only steps whose values change, and the steps downstream of
-  them, are outdated. Before, every step a value was set on was
-  outdated, so apps that set all inputs on every change re-ran unchanged
-  steps. `pip_run(force = TRUE)` still re-runs all steps. The new
-  argument `force = TRUE` of
-  [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
-  outdates the steps even if the values are identical, e.g. to refresh
-  steps whose inputs are environments or R6 objects that were modified
-  in place.
+  warn if `params` contain names that are also arguments of `fun`.
+- [`print()`](https://rdrr.io/r/base/print.html) now shows conditions,
+  matrices, arrays, tables, functions and environments in the `out`
+  column in short form, e.g. `<error/simpleError>`.
 
-## pipeflow 0.4.0.9005
+### Bug fixes
 
-- Behaviour change: if a step fails, the error from
-  [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
-  now names the step (`step 'fit': object 'x' not found`). It is of
-  class `pipeflow_step_error`, with the fields `step` and `parent` (the
-  original condition, which keeps its class). If a partition key fails,
-  the original condition is wrapped in a `pipeflow_key_error` with the
-  fields `key` and `parent`; with `on_error = "continue"`, it is the
-  output of the failed step. Before, only the message of the original
-  error was signalled.
-
-## pipeflow 0.4.0.9004
-
-- `x[[step, j]]` on a view now returns the value of `step`. Before, it
-  read the wrong row (or failed) when the view did not start at the
-  first step.
-- The steps of a copy made by
+- Steps that never ran stay `"new"`, and a run only outdates the steps
+  downstream of steps it executed.
+- `x[[step, j]]` on a view read the wrong row.
+- Copies made by
   [`pip_clone()`](https://rpahl.github.io/pipeflow/dev/reference/pip_clone.md),
-  `p[]` or `p[i, view = FALSE]` get their own `.self`. Before, they
-  shared it with the steps of the original, so once the copy ran, a
-  running step of the original saw the copy as `.self`.
+  `p[]` or `p[i, view = FALSE]` shared `.self` with the original.
 - [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
-  no longer warns about parameters that are defined only in locked
-  steps. It now also warns about undefined parameters when all selected
-  steps are locked. Locked steps still keep their parameters.
+  no longer warns about parameters defined only in locked steps.
 - [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
   and
   [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
-  now reject primitive functions such as `sum` with a clear error.
-  Before, they failed with “use of NULL environment is defunct”.
-- [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
-  now says that `.self` is a reserved *parameter* name (not a step name)
-  if `fun` declares it, as
-  [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
-  does.
-- Behaviour change: a run stopped by `halt()` now ends with run state
-  `"halted"`, as shown when printing the pipeline. Before, it was always
-  overwritten with `"ready"` (or `"continued"`). The next
-  [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
-  continues as before.
+  reject primitive functions such as `sum` with a clear error, and
+  [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
+  calls `.self` a reserved *parameter* name.
+- A step that references the same step more than once no longer warns
+  about an existing edge.
 
-## pipeflow 0.4.0.9003
+### Documentation
 
-- Same as previous version.
-
-## pipeflow 0.4.0.9002
-
-- Same as previous version.
-
-## pipeflow 0.4.0.9001
-
-- Revise benchmark vignette
-- decrease font size in vignettes
-- Steps that have never run now stay `"new"` instead of becoming
-  `"outdated"` when
-  [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
-  or
-  [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
-  changes them or a step upstream of them, or when a run (of a view, or
-  an aborted run) does not reach them.
-- At the end of a run,
-  [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
-  now marks only the steps downstream of steps it actually *executed* as
-  `"outdated"`. Before, steps it skipped because they were `"done"`
-  counted too, so running a view outdated done steps outside the view
-  although none of their inputs had changed.
-- [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
-  gains `on_error = c("stop", "continue")`. With `"continue"`, a failing
-  step gets state `"failed"` with its error condition stored as its
-  output, and the run goes on with all steps that do not depend on a
-  failed step. If any step failed, the run state is set to `"continued"`
-  and a warning of class `pipeflow_run_failed` lists the failed and the
-  skipped steps.
-- A step reference wrapped in
-  [`try()`](https://rdrr.io/r/base/try.html),
-  e.g. `x = ~try(other_step)`, marks an argument that may receive a
-  failed input in a continuing run. Such an argument gets a condition of
-  class `pipeflow_failure` instead of the step output.
-- [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
-  now also re-runs a `"done"` step if one of its inputs was executed in
-  the same run.
-
-## pipeflow 0.4.0.9000
-
-- Same as previous version.
+- New vignettes “Handling failures” and “Annotated parameter values”.
+- “Get started”, “Nested pipelines”, “Self-modifying pipelines” and
+  “Combine pipelines” cover identical values, `unknown = "ignore"`, when
+  `.self` is available, and saving pipelines.
+- The benchmark vignette was revised.
+- The package website is built by a GitHub Actions workflow on release
+  tags.
 
 ## pipeflow 0.4.0
 

@@ -21,7 +21,7 @@ outdate any step, unless force = TRUE."><meta property="og:image" content="https
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.4.0.9017</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,6 +54,8 @@ outdate any step, unless force = TRUE."><meta property="og:image" content="https
     <li><h6 class="dropdown-header" data-toc-skip>Advanced workflows</h6></li>
     <li><a class="dropdown-item" href="../articles/v05a-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v05b-nested-pipeline.html">Nested pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v05c-error-handling.html">Handling failures</a></li>
+    <li><a class="dropdown-item" href="../articles/v05d-param-value.html">Annotated parameter values</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
@@ -158,17 +160,17 @@ doesn't outdate the step unless <code>force = TRUE</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:08.292 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:08.292 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:08.293 UTC]: Step 2/2 scale</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:08.294 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:14.418 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:14.418 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:14.419 UTC]: Step 2/2 scale</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:14.420 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     step   params depends state                             out</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n          done             1,2,3,4,5,6,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load  done 0.5,1.0,1.5,2.0,2.5,3.0,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-13 08:59:08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-15 10:41:14</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Updating params marks affected steps (and their dependents) outdated</span></span></span>
 <span class="r-in"><span><span class="fu">pip_set_params</span><span class="op">(</span><span class="va">p</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span>, factor <span class="op">=</span> <span class="fl">2.0</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -179,19 +181,19 @@ doesn't outdate the step unless <code>force = TRUE</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n         outdated             1,2,3,4,5,6,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load outdated 0.5,1.0,1.5,2.0,2.5,3.0,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-13 08:59:08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-15 10:41:14</span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:08.300 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:08.300 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:08.301 UTC]: Step 2/2 scale</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:08.302 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:14.426 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:14.426 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:14.426 UTC]: Step 2/2 scale</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:14.427 UTC]: Finished run of pipeflow 'pipe'</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     step   params depends state            out</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n          done      1,2,3,4,5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load  done  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-13 08:59:08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-15 10:41:14</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Setting the same values again doesn't outdate any step</span></span></span>
 <span class="r-in"><span><span class="fu">pip_set_params</span><span class="op">(</span><span class="va">p</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span>, factor <span class="op">=</span> <span class="fl">2.0</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -202,7 +204,7 @@ doesn't outdate the step unless <code>force = TRUE</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n          done      1,2,3,4,5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load  done  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-13 08:59:08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-15 10:41:14</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use force = TRUE to outdate the steps anyway</span></span></span>
 <span class="r-in"><span><span class="fu">pip_set_params</span><span class="op">(</span><span class="va">p</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span>, factor <span class="op">=</span> <span class="fl">2.0</span><span class="op">)</span>, force <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
@@ -213,7 +215,7 @@ doesn't outdate the step unless <code>force = TRUE</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n         outdated      1,2,3,4,5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load outdated  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-13 08:59:08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-15 10:41:14</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Setting a parameter that is not defined in the pipeline yields a warning</span></span></span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>

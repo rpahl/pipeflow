@@ -48,7 +48,7 @@ Execute pipeline steps or views.
   : Run a pipeline
 - [`pip_run_state()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run_state.md)
   : Get the run state of a pipeline
-- [`pip_arg_value()`](https://rpahl.github.io/pipeflow/dev/reference/pip_arg_value.md)
+- [`pip_param_value()`](https://rpahl.github.io/pipeflow/dev/reference/pip_param_value.md)
   : Unwrap a parameter value before a step function is called
 - [`pipeflow_lgr()`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow_lgr.md)
   : Default logger of pipeflow

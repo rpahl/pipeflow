@@ -9,9 +9,11 @@ articles:
   v04-collect-output: v04-collect-output.html
   v05a-split-map-reduce: v05a-split-map-reduce.html
   v05b-nested-pipeline: v05b-nested-pipeline.html
+  v05c-error-handling: v05c-error-handling.html
+  v05d-param-value: v05d-param-value.html
   v06-self-modify-pipeline: v06-self-modify-pipeline.html
   articles/v07-vs-targets: v07-vs-targets.html
-last_built: 2026-10-13T08:59Z
+last_built: 2026-10-15T10:41Z
 urls:
   reference: https://rpahl.github.io/pipeflow/reference
   article: https://rpahl.github.io/pipeflow/articles

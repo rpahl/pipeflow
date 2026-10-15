@@ -41,6 +41,20 @@
   Shows how to embed pipelines within pipeline steps and how to mark
   their parameters so that changing them re-executes the outer step.
 
+- [Handling
+  failures](https://rpahl.github.io/pipeflow/dev/articles/v05c-error-handling.md):
+
+  Shows what happens when a step fails, how to keep a pipeline running
+  with on_error = “continue”, how to react to failed inputs with ~try()
+  references, and how to recover once the cause is fixed.
+
+- [Annotated parameter
+  values](https://rpahl.github.io/pipeflow/dev/articles/v05d-param-value.md):
+
+  Shows how to store annotated values (e.g. values with units or labels)
+  as step parameters and how to unwrap them right before a step function
+  is called, using the pip_param_value() generic.
+
 - [Self-modifying
   pipelines](https://rpahl.github.io/pipeflow/dev/articles/v06-self-modify-pipeline.md):
 

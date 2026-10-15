@@ -17,7 +17,7 @@ pip
 # 3:  fit                  data,xVar     prep  done           <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep  done  <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 08:59:23
+# <ready> last run: 2026-10-15 10:41:31
 ```
 
 with the following set data
@@ -63,7 +63,7 @@ pip
 # 4:         fit                  data,xVar     prep  done           <lm[13]>
 # 5:        plot model,data,xVar,xLab,title fit,prep  done  <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 08:59:23
+# <ready> last run: 2026-10-15 10:41:31
 ```
 
 ``` r
@@ -140,7 +140,7 @@ pip
 # 4:         fit             data,xVar,yVar     standardize   new             [NULL]
 # 5:        plot model,data,xVar,yVar,title fit,standardize   new             [NULL]
 # ---------------------------
-# <ready> last run: 2026-10-13 08:59:23
+# <ready> last run: 2026-10-15 10:41:31
 ```
 
 We see that the `fit` and `plot` steps now use (i.e., depend on) the
@@ -150,13 +150,13 @@ standardized data. Let’s re-run the pipeline and inspect the output.
 
 pip_set_params(pip, params = list(xVar = "Solar.R", yVar = "Wind"))
 pip_run(pip)
-# info [2026-10-13 08:59:24.063 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-10-13 08:59:24.063 UTC]: Step 1/5 data - skipping done step
-# info [2026-10-13 08:59:24.063 UTC]: Step 2/5 prep - skipping done step
-# info [2026-10-13 08:59:24.063 UTC]: Step 3/5 standardize
-# info [2026-10-13 08:59:24.065 UTC]: Step 4/5 fit
-# info [2026-10-13 08:59:24.067 UTC]: Step 5/5 plot
-# info [2026-10-13 08:59:24.077 UTC]: Finished run of pipeflow 'my-pip'
+# info [2026-10-15 10:41:31.916 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-10-15 10:41:31.916 UTC]: Step 1/5 data - skipping done step
+# info [2026-10-15 10:41:31.916 UTC]: Step 2/5 prep - skipping done step
+# info [2026-10-15 10:41:31.916 UTC]: Step 3/5 standardize
+# info [2026-10-15 10:41:31.918 UTC]: Step 4/5 fit
+# info [2026-10-15 10:41:31.920 UTC]: Step 5/5 plot
+# info [2026-10-15 10:41:31.930 UTC]: Finished run of pipeflow 'my-pip'
 ```
 
 ``` r
@@ -189,7 +189,7 @@ pip
 # 4:         fit             data,xVar,yVar     standardize  done           <lm[13]>
 # 5:        plot model,data,xVar,yVar,title fit,standardize  done  <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 08:59:24
+# <ready> last run: 2026-10-15 10:41:31
 ```
 
 When you are trying to remove a step, {pipeflow} by default checks if
@@ -221,7 +221,7 @@ pip
 # 1: data   data          done <data.frame[10x6]>
 # 2: prep     df    data  done <data.frame[10x7]>
 # ---------------------------
-# <ready> last run: 2026-10-13 08:59:24
+# <ready> last run: 2026-10-15 10:41:31
 ```
 
 Naturally, the last step never has any downstream dependencies, so it
@@ -241,7 +241,7 @@ pip
 #    step params depends state                out
 # 1: data   data          done <data.frame[10x6]>
 # --------------------------
-# <ready> last run: 2026-10-13 08:59:24
+# <ready> last run: 2026-10-15 10:41:31
 ```
 
 Replacing steps in a pipeline as shown in this vignette will allow to

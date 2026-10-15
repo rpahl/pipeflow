@@ -236,12 +236,12 @@ which produces the following output:
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 08:59:15.537 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-10-13 08:59:15.537 UTC]: Step 1/4 data
-# info [2026-10-13 08:59:15.538 UTC]: Step 2/4 prep
-# info [2026-10-13 08:59:15.541 UTC]: Step 3/4 fit
-# info [2026-10-13 08:59:15.544 UTC]: Step 4/4 plot
-# info [2026-10-13 08:59:15.832 UTC]: Finished run of pipeflow 'my-pip'
+# info [2026-10-15 10:41:21.757 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-10-15 10:41:21.757 UTC]: Step 1/4 data
+# info [2026-10-15 10:41:21.759 UTC]: Step 2/4 prep
+# info [2026-10-15 10:41:21.761 UTC]: Step 3/4 fit
+# info [2026-10-15 10:41:21.764 UTC]: Step 4/4 plot
+# info [2026-10-15 10:41:22.107 UTC]: Finished run of pipeflow 'my-pip'
 ```
 
 Let’s inspect the pipeline again.
@@ -257,7 +257,7 @@ pip
 # 3:  fit                  data,xVar     prep  done            <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep  done   <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 08:59:15
+# <ready> last run: 2026-10-15 10:41:22
 ```
 
 We can see that the `state` of all steps have been changed from `new` to
@@ -359,7 +359,7 @@ pip
 # 3:  fit                  data,xVar     prep outdated            <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep outdated   <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 08:59:15
+# <ready> last run: 2026-10-15 10:41:22
 ```
 
 We can see that the `fit` and `plot` steps are now in state `outdated`,
@@ -369,12 +369,12 @@ results, we just run the pipeline again.
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 08:59:16.820 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-10-13 08:59:16.820 UTC]: Step 1/4 data - skipping done step
-# info [2026-10-13 08:59:16.820 UTC]: Step 2/4 prep - skipping done step
-# info [2026-10-13 08:59:16.820 UTC]: Step 3/4 fit
-# info [2026-10-13 08:59:16.824 UTC]: Step 4/4 plot
-# info [2026-10-13 08:59:16.839 UTC]: Finished run of pipeflow 'my-pip'
+# info [2026-10-15 10:41:23.149 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-10-15 10:41:23.149 UTC]: Step 1/4 data - skipping done step
+# info [2026-10-15 10:41:23.149 UTC]: Step 2/4 prep - skipping done step
+# info [2026-10-15 10:41:23.149 UTC]: Step 3/4 fit
+# info [2026-10-15 10:41:23.153 UTC]: Step 4/4 plot
+# info [2026-10-15 10:41:23.170 UTC]: Finished run of pipeflow 'my-pip'
 ```
 
 A closer look at the run log shows that the pipeline skipped the first
@@ -410,18 +410,18 @@ pip
 # 3:  fit                  data,xVar     prep     done            <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep outdated   <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 08:59:16
+# <ready> last run: 2026-10-15 10:41:23
 ```
 
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 08:59:17.200 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-10-13 08:59:17.201 UTC]: Step 1/4 data - skipping done step
-# info [2026-10-13 08:59:17.201 UTC]: Step 2/4 prep - skipping done step
-# info [2026-10-13 08:59:17.201 UTC]: Step 3/4 fit - skipping done step
-# info [2026-10-13 08:59:17.201 UTC]: Step 4/4 plot
-# info [2026-10-13 08:59:17.210 UTC]: Finished run of pipeflow 'my-pip'
+# info [2026-10-15 10:41:23.606 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-10-15 10:41:23.606 UTC]: Step 1/4 data - skipping done step
+# info [2026-10-15 10:41:23.606 UTC]: Step 2/4 prep - skipping done step
+# info [2026-10-15 10:41:23.606 UTC]: Step 3/4 fit - skipping done step
+# info [2026-10-15 10:41:23.606 UTC]: Step 4/4 plot
+# info [2026-10-15 10:41:23.616 UTC]: Finished run of pipeflow 'my-pip'
 pip[["plot", "out"]]
 ```
 
@@ -443,35 +443,107 @@ pip
 # 3:  fit                  data,xVar     prep outdated            <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep outdated   <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-13 08:59:17
+# <ready> last run: 2026-10-15 10:41:23
 ```
 
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 08:59:17.491 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-10-13 08:59:17.491 UTC]: Step 1/4 data
-# info [2026-10-13 08:59:17.492 UTC]: Step 2/4 prep
-# info [2026-10-13 08:59:17.496 UTC]: Step 3/4 fit
-# info [2026-10-13 08:59:17.498 UTC]: Step 4/4 plot
-# info [2026-10-13 08:59:17.508 UTC]: Finished run of pipeflow 'my-pip'
+# info [2026-10-15 10:41:23.949 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-10-15 10:41:23.950 UTC]: Step 1/4 data
+# info [2026-10-15 10:41:23.951 UTC]: Step 2/4 prep
+# info [2026-10-15 10:41:23.955 UTC]: Step 3/4 fit
+# info [2026-10-15 10:41:23.957 UTC]: Step 4/4 plot
+# info [2026-10-15 10:41:23.966 UTC]: Finished run of pipeflow 'my-pip'
 pip[["plot", "out"]]
 ```
 
 ![model-plot](v01-get-started_files/figure-html/inspect-plot-after-data-change-1.png)
 
-Last but not least let’s try to set parameters that don’t exist in the
-pipeline, which mostly happens due to accidental misspells.
+#### Setting Identical Values
+
+Setting a parameter to the value it already has is not a change, so
+{pipeflow} leaves the step states alone and nothing needs to be re-run.
+This is handy for apps that pass on all inputs whenever just one of them
+changed.
 
 ``` r
 
-pip |> pip_set_params(list(titel = "misspelled variable name", foo = "my foo"))
-# Warning in pip_set_params(pip, list(titel = "misspelled variable name", : Trying to set parameters
-# not defined in the target: titel, foo
+pip |> pip_set_params(list(title = "Some new title", data = small_airquality))
+pip
+# <pipeflow> my-pip (4 steps)
+# ---------------------------
+#    step                     params  depends state                out
+# 1: data                       data           done <data.frame[10x6]>
+# 2: prep                         df     data  done <data.frame[10x7]>
+# 3:  fit                  data,xVar     prep  done           <lm[13]>
+# 4: plot model,data,xVar,xLab,title fit,prep  done  <ggplot2::ggplot>
+# ---------------------------
+# <ready> last run: 2026-10-15 10:41:23
 ```
 
-As you see, a warning is given to the user hinting at the respective
-parameter names, which makes fixing any misspells straight-forward.
+If you do want to outdate the steps anyway, for example because a
+parameter is an environment that was modified in place, use
+`force = TRUE`.
+
+``` r
+
+pip |> pip_set_params(list(title = "Some new title"), force = TRUE)
+pip
+# <pipeflow> my-pip (4 steps)
+# ---------------------------
+#    step                     params  depends    state                out
+# 1: data                       data              done <data.frame[10x6]>
+# 2: prep                         df     data     done <data.frame[10x7]>
+# 3:  fit                  data,xVar     prep     done           <lm[13]>
+# 4: plot model,data,xVar,xLab,title fit,prep outdated  <ggplot2::ggplot>
+# ---------------------------
+# <ready> last run: 2026-10-15 10:41:23
+```
+
+#### Handling Unknown Parameters
+
+Last but not least let’s try to set a parameter that doesn’t exist in
+the pipeline.
+
+``` r
+
+pip |> pip_set_params(list(title = "warn me", foo = "my foo"))
+# Warning in pip_set_params(pip, list(title = "warn me", foo = "my foo")): Trying to set parameters
+# not defined in the target: foo
+
+pip_get_params(pip)$title
+# [1] "warn me"
+```
+
+By default, all existing parameters are set, and a warning is given to
+the user notifying about the unknown parameter names. If you set
+parameters programmatically and know that some of them are not used by
+the pipeline, you can silence the warning via `unknown = "ignore"`.
+
+``` r
+
+pip |> pip_set_params(list(foo = "ignore me"), unknown = "ignore")
+
+pip_get_params(pip)$title
+# [1] "warn me"
+```
+
+On the other hand, if an unknown parameter should never go unnoticed,
+use `unknown = "error"`. In this case, nothing is changed at all, not
+even the valid parameters:
+
+``` r
+
+pip |> pip_set_params(
+    list(title = "Not set", foo = "my foo"),
+    unknown = "error"
+)
+# Error:
+# ! Trying to set parameters not defined in the target: foo
+pip_get_params(pip)$title
+# [1] "warn me"
+```
 
 Next, let’s see how to [modify the
 pipeline](https://rpahl.github.io/pipeflow/dev/articles/v02-modify-pipeline.md).

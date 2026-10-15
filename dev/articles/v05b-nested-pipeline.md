@@ -112,27 +112,27 @@ outer |>
         )
     ) |>
     pip_run()
-# info [2026-10-13 08:59:51.219 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-13 08:59:51.219 UTC]: Step 1/4 data
-# info [2026-10-13 08:59:51.221 UTC]: Step 2/4 split_data
-# info [2026-10-13 08:59:51.222 UTC]: Step 3/4 inner_run
-# info [2026-10-13 08:59:51.328 UTC]: Starting run of pipeflow 'coefs for *setosa*'
-# info [2026-10-13 08:59:51.328 UTC]: Step 1/3 data
-# info [2026-10-13 08:59:51.328 UTC]: Step 2/3 fit
-# info [2026-10-13 08:59:51.332 UTC]: Step 3/3 coefs
-# info [2026-10-13 08:59:51.333 UTC]: Finished run of pipeflow 'coefs for *setosa*'
-# info [2026-10-13 08:59:51.348 UTC]: Starting run of pipeflow 'coefs for *versicolor*'
-# info [2026-10-13 08:59:51.348 UTC]: Step 1/3 data
-# info [2026-10-13 08:59:51.349 UTC]: Step 2/3 fit
-# info [2026-10-13 08:59:51.353 UTC]: Step 3/3 coefs
-# info [2026-10-13 08:59:51.355 UTC]: Finished run of pipeflow 'coefs for *versicolor*'
-# info [2026-10-13 08:59:51.357 UTC]: Starting run of pipeflow 'coefs for *virginica*'
-# info [2026-10-13 08:59:51.357 UTC]: Step 1/3 data
-# info [2026-10-13 08:59:51.357 UTC]: Step 2/3 fit
-# info [2026-10-13 08:59:51.359 UTC]: Step 3/3 coefs
-# info [2026-10-13 08:59:51.360 UTC]: Finished run of pipeflow 'coefs for *virginica*'
-# info [2026-10-13 08:59:51.361 UTC]: Step 4/4 combine
-# info [2026-10-13 08:59:51.362 UTC]: Finished run of pipeflow 'full analysis'
+# info [2026-10-15 10:42:02.917 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-10-15 10:42:02.917 UTC]: Step 1/4 data
+# info [2026-10-15 10:42:02.919 UTC]: Step 2/4 split_data
+# info [2026-10-15 10:42:02.920 UTC]: Step 3/4 inner_run
+# info [2026-10-15 10:42:03.020 UTC]: Starting run of pipeflow 'coefs for *setosa*'
+# info [2026-10-15 10:42:03.020 UTC]: Step 1/3 data
+# info [2026-10-15 10:42:03.021 UTC]: Step 2/3 fit
+# info [2026-10-15 10:42:03.024 UTC]: Step 3/3 coefs
+# info [2026-10-15 10:42:03.026 UTC]: Finished run of pipeflow 'coefs for *setosa*'
+# info [2026-10-15 10:42:03.042 UTC]: Starting run of pipeflow 'coefs for *versicolor*'
+# info [2026-10-15 10:42:03.042 UTC]: Step 1/3 data
+# info [2026-10-15 10:42:03.043 UTC]: Step 2/3 fit
+# info [2026-10-15 10:42:03.046 UTC]: Step 3/3 coefs
+# info [2026-10-15 10:42:03.048 UTC]: Finished run of pipeflow 'coefs for *versicolor*'
+# info [2026-10-15 10:42:03.050 UTC]: Starting run of pipeflow 'coefs for *virginica*'
+# info [2026-10-15 10:42:03.050 UTC]: Step 1/3 data
+# info [2026-10-15 10:42:03.051 UTC]: Step 2/3 fit
+# info [2026-10-15 10:42:03.052 UTC]: Step 3/3 coefs
+# info [2026-10-15 10:42:03.054 UTC]: Finished run of pipeflow 'coefs for *virginica*'
+# info [2026-10-15 10:42:03.055 UTC]: Step 4/4 combine
+# info [2026-10-15 10:42:03.056 UTC]: Finished run of pipeflow 'full analysis'
 ```
 
 The output of the `inner_run` step is a list of coefficient vectors, one
@@ -181,7 +181,7 @@ outer
 # 3:  inner_run dataList,xVar,yVar split_data outdated           <list[3]>
 # 4:    combine              coefs  inner_run outdated   <data.frame[3x2]>
 # ----------------------------------
-# <ready> last run: 2026-10-13 08:59:51
+# <ready> last run: 2026-10-15 10:42:03
 ```
 
 Since the `xVar` parameter is part of the `inner_run` step’s function
@@ -208,7 +208,7 @@ outer |> pip_replace(
 
         # Forward all parameters (from outer and inner)
         all_params <- .self$get_params()
-        pip_set_params(p, all_params)
+        pip_set_params(p, all_params, unknown = "ignore")
 
         Map(
             f = run_inner_pip,
@@ -229,7 +229,7 @@ outer
 # 3:  inner_run data,xVar,yVar,dataList split_data      new              [NULL]
 # 4:    combine                   coefs  inner_run outdated   <data.frame[3x2]>
 # ----------------------------------
-# <ready> last run: 2026-10-13 08:59:51
+# <ready> last run: 2026-10-15 10:42:03
 ```
 
 In this version, the `inner_run` step no longer declares `xVar` and
@@ -275,47 +275,40 @@ outer |>
         )
     ) |>
     pip_run()
-# info [2026-10-13 08:59:51.619 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-13 08:59:51.619 UTC]: Step 1/4 data - skipping done step
-# info [2026-10-13 08:59:51.619 UTC]: Step 2/4 split_data - skipping done step
-# info [2026-10-13 08:59:51.619 UTC]: Step 3/4 inner_run
-# warn [2026-10-13 08:59:51.623 UTC]: Trying to set parameters not defined in the target: byVar
-# Warning in pip_set_params(p, all_params): Trying to set parameters not defined in the target: byVar
-# info [2026-10-13 08:59:51.625 UTC]: Starting run of pipeflow 'coefs for *setosa*'
-# info [2026-10-13 08:59:51.625 UTC]: Step 1/3 data
-# info [2026-10-13 08:59:51.626 UTC]: Step 2/3 fit
-# info [2026-10-13 08:59:51.628 UTC]: Step 3/3 coefs
-# info [2026-10-13 08:59:51.629 UTC]: Finished run of pipeflow 'coefs for *setosa*'
-# info [2026-10-13 08:59:51.631 UTC]: Starting run of pipeflow 'coefs for *versicolor*'
-# info [2026-10-13 08:59:51.631 UTC]: Step 1/3 data
-# info [2026-10-13 08:59:51.632 UTC]: Step 2/3 fit
-# info [2026-10-13 08:59:51.634 UTC]: Step 3/3 coefs
-# info [2026-10-13 08:59:51.635 UTC]: Finished run of pipeflow 'coefs for *versicolor*'
-# info [2026-10-13 08:59:51.637 UTC]: Starting run of pipeflow 'coefs for *virginica*'
-# info [2026-10-13 08:59:51.638 UTC]: Step 1/3 data
-# info [2026-10-13 08:59:51.638 UTC]: Step 2/3 fit
-# info [2026-10-13 08:59:51.640 UTC]: Step 3/3 coefs
-# info [2026-10-13 08:59:51.641 UTC]: Finished run of pipeflow 'coefs for *virginica*'
-# info [2026-10-13 08:59:51.642 UTC]: Step 4/4 combine
-# info [2026-10-13 08:59:51.645 UTC]: Finished run of pipeflow 'full analysis'
+# info [2026-10-15 10:42:03.392 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-10-15 10:42:03.392 UTC]: Step 1/4 data - skipping done step
+# info [2026-10-15 10:42:03.392 UTC]: Step 2/4 split_data - skipping done step
+# info [2026-10-15 10:42:03.392 UTC]: Step 3/4 inner_run
+# info [2026-10-15 10:42:03.397 UTC]: Starting run of pipeflow 'coefs for *setosa*'
+# info [2026-10-15 10:42:03.398 UTC]: Step 1/3 data
+# info [2026-10-15 10:42:03.398 UTC]: Step 2/3 fit
+# info [2026-10-15 10:42:03.400 UTC]: Step 3/3 coefs
+# info [2026-10-15 10:42:03.402 UTC]: Finished run of pipeflow 'coefs for *setosa*'
+# info [2026-10-15 10:42:03.404 UTC]: Starting run of pipeflow 'coefs for *versicolor*'
+# info [2026-10-15 10:42:03.404 UTC]: Step 1/3 data
+# info [2026-10-15 10:42:03.405 UTC]: Step 2/3 fit
+# info [2026-10-15 10:42:03.407 UTC]: Step 3/3 coefs
+# info [2026-10-15 10:42:03.408 UTC]: Finished run of pipeflow 'coefs for *versicolor*'
+# info [2026-10-15 10:42:03.411 UTC]: Starting run of pipeflow 'coefs for *virginica*'
+# info [2026-10-15 10:42:03.411 UTC]: Step 1/3 data
+# info [2026-10-15 10:42:03.412 UTC]: Step 2/3 fit
+# info [2026-10-15 10:42:03.414 UTC]: Step 3/3 coefs
+# info [2026-10-15 10:42:03.415 UTC]: Finished run of pipeflow 'coefs for *virginica*'
+# info [2026-10-15 10:42:03.416 UTC]: Step 4/4 combine
+# info [2026-10-15 10:42:03.419 UTC]: Finished run of pipeflow 'full analysis'
 ```
 
-Note that the warning in the log above is expected and harmless.
-Basically, `.self$get_params()` returns the outer pipeline’s *entire*
-parameter set, which includes `byVar` (from the `split_data` step) while
-the inner pipeline only defines `data`, `xVar`, and `yVar`. Since
+Note the `unknown = "ignore"` in the replacement function above.
+`.self$get_params()` returns the outer pipeline’s *entire* parameter
+set, which includes `byVar` (from the `split_data` step) while the inner
+pipeline only defines `data`, `xVar`, and `yVar`. By default,
 [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
-reports any parameters that are not defined in the target and simply
-leaves them unset, the inner pipeline still receives all parameters it
-knows and the result is unaffected.
-
-If you need to omit the warning (e.g. in production code), just suppress
-it:
-
-``` r
-
-suppressWarnings(pip_set_params(p, all_params))
-```
+warns about parameters that are not defined in the target. With
+`unknown = "ignore"`, it silently leaves them unset, so the inner
+pipeline still receives all parameters it knows and the result is
+unaffected. Unlike
+[`suppressWarnings()`](https://rdrr.io/r/base/warning.html), this does
+not hide any other warning.
 
 Alternatively, you could first restrict the forwarded parameters to
 those the inner pipeline actually knows. That has the same effect but
@@ -338,7 +331,7 @@ outer
 # 3:  inner_run data,xVar,yVar,dataList split_data outdated           <list[3]>
 # 4:    combine                   coefs  inner_run outdated   <data.frame[3x2]>
 # ----------------------------------
-# <ready> last run: 2026-10-13 08:59:51
+# <ready> last run: 2026-10-15 10:42:03
 ```
 
 With the above pattern, you can now change both the inner and outer

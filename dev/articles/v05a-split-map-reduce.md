@@ -77,11 +77,11 @@ pip |> pip_set_params(list(
 ))
 
 pip_run(pip)
-# info [2026-10-13 08:59:45.566 UTC]: Starting run of pipeflow 'linear-model-coeffs'
-# info [2026-10-13 08:59:45.566 UTC]: Step 1/3 data
-# info [2026-10-13 08:59:45.567 UTC]: Step 2/3 fit
-# info [2026-10-13 08:59:45.571 UTC]: Step 3/3 coefs
-# info [2026-10-13 08:59:45.573 UTC]: Finished run of pipeflow 'linear-model-coeffs'
+# info [2026-10-15 10:41:56.652 UTC]: Starting run of pipeflow 'linear-model-coeffs'
+# info [2026-10-15 10:41:56.652 UTC]: Step 1/3 data
+# info [2026-10-15 10:41:56.654 UTC]: Step 2/3 fit
+# info [2026-10-15 10:41:56.658 UTC]: Step 3/3 coefs
+# info [2026-10-15 10:41:56.660 UTC]: Finished run of pipeflow 'linear-model-coeffs'
 ```
 
 ``` r
@@ -106,21 +106,21 @@ run_pipeline_helper <- function(data) {
 }
 
 results <- lapply(split(iris, iris$Species), FUN = run_pipeline_helper)
-# info [2026-10-13 08:59:45.673 UTC]: Starting run of pipeflow 'linear-model-coeffs'
-# info [2026-10-13 08:59:45.674 UTC]: Step 1/3 data
-# info [2026-10-13 08:59:45.675 UTC]: Step 2/3 fit
-# info [2026-10-13 08:59:45.679 UTC]: Step 3/3 coefs
-# info [2026-10-13 08:59:45.681 UTC]: Finished run of pipeflow 'linear-model-coeffs'
-# info [2026-10-13 08:59:45.686 UTC]: Starting run of pipeflow 'linear-model-coeffs'
-# info [2026-10-13 08:59:45.686 UTC]: Step 1/3 data
-# info [2026-10-13 08:59:45.686 UTC]: Step 2/3 fit
-# info [2026-10-13 08:59:45.688 UTC]: Step 3/3 coefs
-# info [2026-10-13 08:59:45.689 UTC]: Finished run of pipeflow 'linear-model-coeffs'
-# info [2026-10-13 08:59:45.692 UTC]: Starting run of pipeflow 'linear-model-coeffs'
-# info [2026-10-13 08:59:45.692 UTC]: Step 1/3 data
-# info [2026-10-13 08:59:45.692 UTC]: Step 2/3 fit
-# info [2026-10-13 08:59:45.694 UTC]: Step 3/3 coefs
-# info [2026-10-13 08:59:45.695 UTC]: Finished run of pipeflow 'linear-model-coeffs'
+# info [2026-10-15 10:41:56.792 UTC]: Starting run of pipeflow 'linear-model-coeffs'
+# info [2026-10-15 10:41:56.792 UTC]: Step 1/3 data
+# info [2026-10-15 10:41:56.794 UTC]: Step 2/3 fit
+# info [2026-10-15 10:41:56.798 UTC]: Step 3/3 coefs
+# info [2026-10-15 10:41:56.800 UTC]: Finished run of pipeflow 'linear-model-coeffs'
+# info [2026-10-15 10:41:56.805 UTC]: Starting run of pipeflow 'linear-model-coeffs'
+# info [2026-10-15 10:41:56.805 UTC]: Step 1/3 data
+# info [2026-10-15 10:41:56.806 UTC]: Step 2/3 fit
+# info [2026-10-15 10:41:56.808 UTC]: Step 3/3 coefs
+# info [2026-10-15 10:41:56.809 UTC]: Finished run of pipeflow 'linear-model-coeffs'
+# info [2026-10-15 10:41:56.811 UTC]: Starting run of pipeflow 'linear-model-coeffs'
+# info [2026-10-15 10:41:56.812 UTC]: Step 1/3 data
+# info [2026-10-15 10:41:56.812 UTC]: Step 2/3 fit
+# info [2026-10-15 10:41:56.814 UTC]: Step 3/3 coefs
+# info [2026-10-15 10:41:56.815 UTC]: Finished run of pipeflow 'linear-model-coeffs'
 ```
 
 ``` r
@@ -216,12 +216,12 @@ pip |> pip_set_params(list(
 ))
 
 pip_run(pip)
-# info [2026-10-13 08:59:46.006 UTC]: Starting run of pipeflow 'my-split-pip'
-# info [2026-10-13 08:59:46.006 UTC]: Step 1/4 data
-# info [2026-10-13 08:59:46.007 UTC]: Step 2/4 split_data
-# info [2026-10-13 08:59:46.009 UTC]: Step 3/4 fit
-# info [2026-10-13 08:59:46.011 UTC]: Step 4/4 coefs
-# info [2026-10-13 08:59:46.013 UTC]: Finished run of pipeflow 'my-split-pip'
+# info [2026-10-15 10:41:57.217 UTC]: Starting run of pipeflow 'my-split-pip'
+# info [2026-10-15 10:41:57.217 UTC]: Step 1/4 data
+# info [2026-10-15 10:41:57.218 UTC]: Step 2/4 split_data
+# info [2026-10-15 10:41:57.219 UTC]: Step 3/4 fit
+# info [2026-10-15 10:41:57.222 UTC]: Step 4/4 coefs
+# info [2026-10-15 10:41:57.223 UTC]: Finished run of pipeflow 'my-split-pip'
 ```
 
 Looking at the pipeline overview, we see that the `out`puts following
@@ -238,7 +238,7 @@ pip
 # 3:        fit data,xVar,yVar split_data  done           <list[3]>  auto
 # 4:      coefs            fit        fit  done           <list[3]>  auto
 # ---------------------------------
-# <ready> last run: 2026-10-13 08:59:46
+# <ready> last run: 2026-10-15 10:41:57
 ```
 
 Inspecting in particular the output of the `coefs` step, we see that it
@@ -298,7 +298,7 @@ pip
 # 4:         coefs            fit        fit  done           <list[3]>   auto
 # 5: combine_coefs          coefs      coefs   new              [NULL] reduce
 # ---------------------------------
-# <ready> last run: 2026-10-13 08:59:46
+# <ready> last run: 2026-10-15 10:41:57
 ```
 
 Again, we see that the new step is marked with the execution mode
@@ -316,13 +316,13 @@ If we now run the pipeline, we see that the output of the
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 08:59:46.360 UTC]: Starting run of pipeflow 'my-split-pip'
-# info [2026-10-13 08:59:46.360 UTC]: Step 1/5 data - skipping done step
-# info [2026-10-13 08:59:46.360 UTC]: Step 2/5 split_data - skipping done step
-# info [2026-10-13 08:59:46.360 UTC]: Step 3/5 fit - skipping done step
-# info [2026-10-13 08:59:46.360 UTC]: Step 4/5 coefs - skipping done step
-# info [2026-10-13 08:59:46.360 UTC]: Step 5/5 combine_coefs
-# info [2026-10-13 08:59:46.362 UTC]: Finished run of pipeflow 'my-split-pip'
+# info [2026-10-15 10:41:57.676 UTC]: Starting run of pipeflow 'my-split-pip'
+# info [2026-10-15 10:41:57.676 UTC]: Step 1/5 data - skipping done step
+# info [2026-10-15 10:41:57.676 UTC]: Step 2/5 split_data - skipping done step
+# info [2026-10-15 10:41:57.676 UTC]: Step 3/5 fit - skipping done step
+# info [2026-10-15 10:41:57.676 UTC]: Step 4/5 coefs - skipping done step
+# info [2026-10-15 10:41:57.676 UTC]: Step 5/5 combine_coefs
+# info [2026-10-15 10:41:57.678 UTC]: Finished run of pipeflow 'my-split-pip'
 
 pip[["combine_coefs", "out"]]
 #            (Intercept) Sepal.Length

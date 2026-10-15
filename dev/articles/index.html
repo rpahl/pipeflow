@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.4.0.9017</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,8 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced workflows</h6></li>
     <li><a class="dropdown-item" href="../articles/v05a-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v05b-nested-pipeline.html">Nested pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v05c-error-handling.html">Handling failures</a></li>
+    <li><a class="dropdown-item" href="../articles/v05d-param-value.html">Annotated parameter values</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
@@ -77,6 +79,10 @@
         <dd><p>Shows how to split data, apply the pipeline to each subset, and then reduce the results back into a combined output.</p>
         </dd><dt><a href="v05b-nested-pipeline.html">Nested pipelines</a></dt>
         <dd><p>Shows how to embed pipelines within pipeline steps and how to mark their parameters so that changing them re-executes the outer step.</p>
+        </dd><dt><a href="v05c-error-handling.html">Handling failures</a></dt>
+        <dd><p>Shows what happens when a step fails, how to keep a pipeline running with on_error = “continue”, how to react to failed inputs with ~try() references, and how to recover once the cause is fixed.</p>
+        </dd><dt><a href="v05d-param-value.html">Annotated parameter values</a></dt>
+        <dd><p>Shows how to store annotated values (e.g. values with units or labels) as step parameters and how to unwrap them right before a step function is called, using the pip_param_value() generic.</p>
         </dd><dt><a href="v06-self-modify-pipeline.html">Self-modifying pipelines</a></dt>
         <dd><p>Shows how you can setup pipelines to modify themselves at runtime, which, for example, allows for changing pipeline parameters based on intermediate results or even dynamically modify the pipeline’s own structure during a pipeline run.</p>
         </dd><dt><a href="v07-vs-targets.html">pipeflow vs targets</a></dt>

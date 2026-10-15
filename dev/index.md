@@ -1,29 +1,20 @@
 # pipeflow
 
-Build fast interactive data analysis pipelines that scale.
-
-{pipeflow} simply lets you add R functions one by one, wiring them into
-a pipeline that stays consistent as you go. Modify, remove, or insert
-steps at any stage, and manage all parameters in one place.
-
-Thanks to its intuitive interface, using {pipeflow} quickly pays off in
-the beginning while in the long run helps keeping a clear and structured
-overview of your project.
+{pipeflow} is a lightweight framework for building interactive data
+analysis pipelines in R. You add R functions one by one as steps, tell
+{pipeflow} which steps they take their inputs from, and it keeps the
+pipeline consistent as you insert, replace or remove steps.
 
 ![cartoon](reference/figures/cartoon.png)
 
-### Why use {pipeflow}
+### Why pipeflow?
 
-- Lightweight and intuitive API
-- All parameters managed in one place
-- Pipeline verified at definition time
-- Filter pipeline steps via views
-- Branch and merge pipeline steps
-- Fast dependency resolution (C++-powered DAG)
-- Subset pipelines with data.table-style `[` filters
-  ![](https://img.shields.io/badge/-new-orange)
-- Embed reusable workflows in steps (nested pipelines)
-  ![](https://img.shields.io/badge/-new-orange)
+- concise API: steps are plain R functions
+- all parameters in one place
+- checked as you build
+- reruns only what changed
+- fast: data.table and C++ DAG under the hood
+- feature rich: views, split/map/reduce, nested pipelines
 
 ### Installation
 
@@ -35,6 +26,12 @@ install.packages("pipeflow")
 # Install development version from GitHub
 devtools::install_github("rpahl/pipeflow")
 ```
+
+### Cheat sheet
+
+[![pipeflow cheat sheet, page
+1](reference/figures/cheatsheet-1.png)![pipeflow cheat sheet, page
+2](reference/figures/cheatsheet-2.png)](https://github.com/rpahl/pipeflow/blob/main/cheatsheet/pipeflow-cheatsheet.pdf)
 
 ### Usage
 
@@ -58,11 +55,11 @@ p
 # <ready> last run: never
 
 pip_run(p)
-# info [2026-09-27 14:59:46.748 UTC]: Starting run of pipeflow 'demo'
-# info [2026-09-27 14:59:46.748 UTC]: Step 1/3 numbers
-# info [2026-09-27 14:59:46.750 UTC]: Step 2/3 squared
-# info [2026-09-27 14:59:46.752 UTC]: Step 3/3 total
-# info [2026-09-27 14:59:46.753 UTC]: Finished run of pipeflow 'demo'
+# info [2026-10-15 10:21:00.423 UTC]: Starting run of pipeflow 'demo'
+# info [2026-10-15 10:21:00.424 UTC]: Step 1/3 numbers
+# info [2026-10-15 10:21:00.426 UTC]: Step 2/3 squared
+# info [2026-10-15 10:21:00.428 UTC]: Step 3/3 total
+# info [2026-10-15 10:21:00.429 UTC]: Finished run of pipeflow 'demo'
 
 pip_collect(p)
 # $numbers
@@ -97,6 +94,10 @@ below:
   reduce](https://rpahl.github.io/pipeflow/articles/v05a-split-map-reduce.html)
 - [Nested
   pipelines](https://rpahl.github.io/pipeflow/articles/v05b-nested-pipeline.html)
+- [Handling
+  failures](https://rpahl.github.io/pipeflow/articles/v05c-error-handling.html)
+- [Annotated parameter
+  values](https://rpahl.github.io/pipeflow/articles/v05d-param-value.html)
 - [Self-modifying
   pipelines](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
 

@@ -130,14 +130,14 @@ step.
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 08:59:29.949 UTC]: Starting run of pipeflow 'preprocess-model'
-# info [2026-10-13 08:59:29.949 UTC]: Step 1/6 data
-# info [2026-10-13 08:59:29.951 UTC]: Step 2/6 prep
-# info [2026-10-13 08:59:29.952 UTC]: Step 3/6 standardize
-# info [2026-10-13 08:59:29.954 UTC]: Step 4/6 data2
-# info [2026-10-13 08:59:29.955 UTC]: Step 5/6 fit
-# info [2026-10-13 08:59:29.956 UTC]: Step 6/6 predict
-# info [2026-10-13 08:59:29.957 UTC]: Finished run of pipeflow 'preprocess-model'
+# info [2026-10-15 10:41:38.699 UTC]: Starting run of pipeflow 'preprocess-model'
+# info [2026-10-15 10:41:38.699 UTC]: Step 1/6 data
+# info [2026-10-15 10:41:38.700 UTC]: Step 2/6 prep
+# info [2026-10-15 10:41:38.702 UTC]: Step 3/6 standardize
+# info [2026-10-15 10:41:38.703 UTC]: Step 4/6 data2
+# info [2026-10-15 10:41:38.705 UTC]: Step 5/6 fit
+# info [2026-10-15 10:41:38.706 UTC]: Step 6/6 predict
+# info [2026-10-15 10:41:38.707 UTC]: Finished run of pipeflow 'preprocess-model'
 ```
 
 ``` r
@@ -158,14 +158,14 @@ pip_set_params(pip, params = list(k = 3))
 ``` r
 
 pip_run(pip)
-# info [2026-10-13 08:59:30.165 UTC]: Starting run of pipeflow 'preprocess-model'
-# info [2026-10-13 08:59:30.165 UTC]: Step 1/6 data - skipping done step
-# info [2026-10-13 08:59:30.165 UTC]: Step 2/6 prep - skipping done step
-# info [2026-10-13 08:59:30.165 UTC]: Step 3/6 standardize - skipping done step
-# info [2026-10-13 08:59:30.165 UTC]: Step 4/6 data2 - skipping done step
-# info [2026-10-13 08:59:30.166 UTC]: Step 5/6 fit
-# info [2026-10-13 08:59:30.168 UTC]: Step 6/6 predict
-# info [2026-10-13 08:59:30.178 UTC]: Finished run of pipeflow 'preprocess-model'
+# info [2026-10-15 10:41:38.983 UTC]: Starting run of pipeflow 'preprocess-model'
+# info [2026-10-15 10:41:38.983 UTC]: Step 1/6 data - skipping done step
+# info [2026-10-15 10:41:38.983 UTC]: Step 2/6 prep - skipping done step
+# info [2026-10-15 10:41:38.983 UTC]: Step 3/6 standardize - skipping done step
+# info [2026-10-15 10:41:38.983 UTC]: Step 4/6 data2 - skipping done step
+# info [2026-10-15 10:41:38.984 UTC]: Step 5/6 fit
+# info [2026-10-15 10:41:38.986 UTC]: Step 6/6 predict
+# info [2026-10-15 10:41:38.988 UTC]: Finished run of pipeflow 'preprocess-model'
 ```
 
 ``` r
@@ -173,6 +173,66 @@ pip_run(pip)
 pip[["predict", "out"]]
 # [1] "pred: 12" "pred: 18" "pred: 24" "pred: 30" "pred: 36"
 ```
+
+### Saving and restoring pipelines
+
+A pipeline, like the combined one above, can be built once and reused
+later, also in another R session. To this end, it can be saved to a file
+with [`saveRDS()`](https://rdrr.io/r/base/readRDS.html) and read back
+with [`readRDS()`](https://rdrr.io/r/base/readRDS.html)[^4].
+
+``` r
+
+file <- tempfile(fileext = ".rds")
+saveRDS(pip, file)
+
+pip_restored <- readRDS(file)
+pip_restored
+# <pipeflow> preprocess-model (6 steps)
+# -------------------------------------
+#           step  params     depends state                                          out
+# 1:        data       x              done                                    1,2,3,4,5
+# 2:        prep       x        data  done                                    2,3,4,5,6
+# 3: standardize x,scale        prep  done                                4, 6, 8,10,12
+# 4:       data2       x standardize  done                                4, 6, 8,10,12
+# 5:         fit   x,k,b       data2  done                               12,18,24,30,36
+# 6:     predict       x         fit  done pred: 12,pred: 18,pred: 24,pred: 30,pred: 36
+# -------------------------------------
+# <ready> last run: 2026-10-15 10:41:38
+```
+
+The restored pipeline has all steps, parameters, outputs and states of
+the saved one. That is, it can be modified and run right away, and only
+the steps that need an update are run again:
+
+``` r
+
+pip_set_params(pip_restored, params = list(k = 4))
+pip_run(pip_restored)
+# info [2026-10-15 10:41:39.187 UTC]: Starting run of pipeflow 'preprocess-model'
+# info [2026-10-15 10:41:39.188 UTC]: Step 1/6 data - skipping done step
+# info [2026-10-15 10:41:39.188 UTC]: Step 2/6 prep - skipping done step
+# info [2026-10-15 10:41:39.188 UTC]: Step 3/6 standardize - skipping done step
+# info [2026-10-15 10:41:39.188 UTC]: Step 4/6 data2 - skipping done step
+# info [2026-10-15 10:41:39.188 UTC]: Step 5/6 fit
+# info [2026-10-15 10:41:39.189 UTC]: Step 6/6 predict
+# info [2026-10-15 10:41:39.190 UTC]: Finished run of pipeflow 'preprocess-model'
+
+pip_restored[["predict", "out"]]
+# [1] "pred: 16" "pred: 24" "pred: 32" "pred: 40" "pred: 48"
+```
+
+Both the saved and the restored pipelines are independent of each other,
+so the original `pip` still uses the multiplier `k = 3`:
+
+``` r
+
+pip_get_params(pip)$k
+# [1] 3
+```
+
+For more details see also the section “Saving pipelines” in the help of
+[`pip_new()`](https://rpahl.github.io/pipeflow/dev/reference/pip_new.md).
 
 Whether you combine them or not, in practice pipelines can get long
 quickly. The next vignette shows how you can easily focus on certain
@@ -189,3 +249,6 @@ views](https://rpahl.github.io/pipeflow/dev/articles/v03b-pipeline-views.md).
 
 [^3]: A typical example would be appending several pipelines in a
     programmatic context.
+
+[^4]: Other ways to serialize R objects work as well, for example to
+    send a pipeline to another R process.

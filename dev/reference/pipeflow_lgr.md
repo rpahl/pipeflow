@@ -44,7 +44,7 @@ for how loggers are used and how to switch logging off with
 
 ``` r
 pipeflow_lgr("info", "Hello")
-#> info [2026-10-13 08:59:09.636 UTC]: Hello
+#> info [2026-10-15 10:41:15.462 UTC]: Hello
 
 p <- pip_new("demo") |>
     pip_add("load", \(n = 3) seq_len(n)) |>
@@ -55,10 +55,10 @@ prefixed <- function(level, msg) {
     pipeflow_lgr(level, paste("[demo]", msg))
 }
 pip_run(p, lgr = prefixed)
-#> info [2026-10-13 08:59:09.640 UTC]: [demo] Starting run of pipeflow 'demo'
-#> info [2026-10-13 08:59:09.640 UTC]: [demo] Step 1/2 load
-#> info [2026-10-13 08:59:09.641 UTC]: [demo] Step 2/2 double
-#> info [2026-10-13 08:59:09.642 UTC]: [demo] Finished run of pipeflow 'demo'
+#> info [2026-10-15 10:41:15.466 UTC]: [demo] Starting run of pipeflow 'demo'
+#> info [2026-10-15 10:41:15.466 UTC]: [demo] Step 1/2 load
+#> info [2026-10-15 10:41:15.467 UTC]: [demo] Step 2/2 double
+#> info [2026-10-15 10:41:15.468 UTC]: [demo] Finished run of pipeflow 'demo'
 
 # Drop the "info" messages and pass the rest on
 quiet <- function(level, msg) {

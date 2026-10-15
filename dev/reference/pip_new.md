@@ -54,7 +54,7 @@ str(p)
 #> List of 3
 #>  $ name  : chr "demo"
 #>  $ view  : NULL
-#>  $ pipenv:<environment: 0x55e896444270> 
+#>  $ pipenv:<environment: 0x5623457cf768> 
 p[["name"]]  # "demo"
 #> [1] "demo"
 p[["view"]]  # initially NULL
@@ -72,11 +72,11 @@ file <- tempfile(fileext = ".rds")
 saveRDS(p, file)
 p2 <- readRDS(file)
 pip_run(p2)
-#> info [2026-10-13 08:59:06.583 UTC]: Starting run of pipeflow 'demo'
-#> info [2026-10-13 08:59:06.583 UTC]: Step 1/3 numbers
-#> info [2026-10-13 08:59:06.584 UTC]: Step 2/3 squared
-#> info [2026-10-13 08:59:06.585 UTC]: Step 3/3 total
-#> info [2026-10-13 08:59:06.587 UTC]: Finished run of pipeflow 'demo'
+#> info [2026-10-15 10:41:12.261 UTC]: Starting run of pipeflow 'demo'
+#> info [2026-10-15 10:41:12.262 UTC]: Step 1/3 numbers
+#> info [2026-10-15 10:41:12.262 UTC]: Step 2/3 squared
+#> info [2026-10-15 10:41:12.264 UTC]: Step 3/3 total
+#> info [2026-10-15 10:41:12.265 UTC]: Finished run of pipeflow 'demo'
 p2
 #> <pipeflow> demo (3 steps)
 #> -------------------------
@@ -85,6 +85,6 @@ p2
 #> 2: squared      x numbers  done  1, 4, 9,16,25
 #> 3:   total      x squared  done             55
 #> -------------------------
-#> <ready> last run: 2026-10-13 08:59:06
+#> <ready> last run: 2026-10-15 10:41:12
 unlink(file)
 ```

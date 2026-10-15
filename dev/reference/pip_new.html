@@ -9,7 +9,7 @@ them with pip_run()."><meta property="og:image" content="https://rpahl.github.io
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.4.0.9017</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,6 +42,8 @@ them with pip_run()."><meta property="og:image" content="https://rpahl.github.io
     <li><h6 class="dropdown-header" data-toc-skip>Advanced workflows</h6></li>
     <li><a class="dropdown-item" href="../articles/v05a-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v05b-nested-pipeline.html">Nested pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v05c-error-handling.html">Handling failures</a></li>
+    <li><a class="dropdown-item" href="../articles/v05d-param-value.html">Annotated parameter values</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
@@ -118,7 +120,7 @@ copy of the pipeline.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> List of 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  $ name  : chr "demo"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  $ view  : NULL</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  $ pipenv:&lt;environment: 0x55e896444270&gt; </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  $ pipenv:&lt;environment: 0x5623457cf768&gt; </span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"name"</span><span class="op">]</span><span class="op">]</span>  <span class="co"># "demo"</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "demo"</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"view"</span><span class="op">]</span><span class="op">]</span>  <span class="co"># initially NULL</span></span></span>
@@ -136,11 +138,11 @@ copy of the pipeline.</p>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">p</span>, <span class="va">file</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="va">file</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p2</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:06.583 UTC]: Starting run of pipeflow 'demo'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:06.583 UTC]: Step 1/3 numbers</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:06.584 UTC]: Step 2/3 squared</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:06.585 UTC]: Step 3/3 total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-13 08:59:06.587 UTC]: Finished run of pipeflow 'demo'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:12.261 UTC]: Starting run of pipeflow 'demo'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:12.262 UTC]: Step 1/3 numbers</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:12.262 UTC]: Step 2/3 squared</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:12.264 UTC]: Step 3/3 total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-15 10:41:12.265 UTC]: Finished run of pipeflow 'demo'</span>
 <span class="r-in"><span><span class="va">p2</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; demo (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
@@ -149,7 +151,7 @@ copy of the pipeline.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: squared      x numbers  done  1, 4, 9,16,25</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:   total      x squared  done             55</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-13 08:59:06</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-15 10:41:12</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">file</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>

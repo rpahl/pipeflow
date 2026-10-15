@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.4.0.9017</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9001</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +40,8 @@
     <li><h6 class="dropdown-header" data-toc-skip>Advanced workflows</h6></li>
     <li><a class="dropdown-item" href="../articles/v05a-split-map-reduce.html">Split, map, and reduce</a></li>
     <li><a class="dropdown-item" href="../articles/v05b-nested-pipeline.html">Nested pipelines</a></li>
+    <li><a class="dropdown-item" href="../articles/v05c-error-handling.html">Handling failures</a></li>
+    <li><a class="dropdown-item" href="../articles/v05d-param-value.html">Annotated parameter values</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
@@ -61,102 +63,75 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9017" id="pipeflow-0409017">pipeflow 0.4.0.9017<a class="anchor" aria-label="anchor" href="#pipeflow-0409017"></a></h2>
-<ul><li>The package website is now built and published by a GitHub Actions workflow for release tags and on manual runs. Release versions go to the site root, development versions to <code>dev/</code>.</li>
+<h2 class="pkg-version" data-toc-text="0.5.0.9001" id="pipeflow-0509001">pipeflow 0.5.0.9001<a class="anchor" aria-label="anchor" href="#pipeflow-0509001"></a></h2>
+<div class="section level3">
+<h3 id="documentation-0-5-0-9001">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-5-0-9001"></a></h3>
+<ul><li>New hexagon logo with the package name, used in the README and as pkgdown logo and favicons. The source is <code>logo/logo.svg</code>.</li>
+<li>New two-page cheat sheet (<code>cheatsheet/pipeflow-cheatsheet.pdf</code>), shown in the README between “Installation” and “Usage”.</li>
+<li>Shorter README introduction and “Why pipeflow?” list.</li>
+<li>The pkgdown site is centered again, and its home page shows the logo left of the package name.</li>
 </ul></div>
+</div>
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9016" id="pipeflow-0409016">pipeflow 0.4.0.9016<a class="anchor" aria-label="anchor" href="#pipeflow-0409016"></a></h2>
-<ul><li>The default logger <code><a href="../reference/pipeflow_lgr.html">pipeflow_lgr()</a></code> of <code><a href="../reference/pip_run.html">pip_run()</a></code> is now exported, so that custom loggers can build on it, for example to add a prefix or to drop some log levels and pass the rest on. The output format is unchanged.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9015" id="pipeflow-0409015">pipeflow 0.4.0.9015<a class="anchor" aria-label="anchor" href="#pipeflow-0409015"></a></h2>
-<ul><li>Behaviour change: <code><a href="../reference/pip_replace.html">pip_replace()</a></code> now keeps the tags and the execution mode of the replaced step. The new defaults <code>tags = NULL</code> and <code>exec = NULL</code> mean “keep the current value”; before, the tags were cleared and the mode was reset to <code>"auto"</code>. To get the old result, pass <code>tags = character(0)</code> and <code>exec = "auto"</code> explicitly. <code>p[[step, "fun"]] &lt;- fun</code> already behaved like this.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9014" id="pipeflow-0409014">pipeflow 0.4.0.9014<a class="anchor" aria-label="anchor" href="#pipeflow-0409014"></a></h2>
-<ul><li>Same as previous version.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9013" id="pipeflow-0409013">pipeflow 0.4.0.9013<a class="anchor" aria-label="anchor" href="#pipeflow-0409013"></a></h2>
-<ul><li>Fix: adding, inserting or binding a step that references the same step more than once (e.g. <code>\(x = ~b, y = ~b)</code>) no longer warns that the edge already exists.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9012" id="pipeflow-0409012">pipeflow 0.4.0.9012<a class="anchor" aria-label="anchor" href="#pipeflow-0409012"></a></h2>
-<ul><li>Pipelines can be saved with <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS()</a></code> and read back with <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS()</a></code>, or sent to other R processes. Before, <code><a href="../reference/pip_run.html">pip_run()</a></code>, <code><a href="../reference/pip_add.html">pip_add()</a></code> and most other functions failed on a read pipeline with “null Dag pointer”. The dependency graph of the steps is now rebuilt when it is first needed, with the same node ids, so views that were saved together with their pipeline keep their steps (see section ‘Saving pipelines’ in <code><a href="../reference/pip_new.html">?pip_new</a></code>).</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9011" id="pipeflow-0409011">pipeflow 0.4.0.9011<a class="anchor" aria-label="anchor" href="#pipeflow-0409011"></a></h2>
-<ul><li>Behaviour change: a view keeps track of its steps instead of their row numbers, so it stays valid when steps are added, removed, renamed or replaced later, also through the pipeline or another view. Removed steps drop out of the view. Before, a view could cover the wrong steps once rows had shifted, and the result of <code><a href="../reference/pip_remove.html">pip_remove()</a></code> had to be assigned back to the view. <code>v[["view"]]</code> now returns the names of the covered steps instead of row indices.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9010" id="pipeflow-0409010">pipeflow 0.4.0.9010<a class="anchor" aria-label="anchor" href="#pipeflow-0409010"></a></h2>
-<ul><li>New <code><a href="../reference/pip_run_state.html">pip_run_state()</a></code> returns the run state of a pipeline or view (<code>"ready"</code>, <code>"running"</code>, <code>"restart"</code>, <code>"halted"</code>, <code>"failed"</code> or <code>"continued"</code>).</li>
-<li>Behaviour change: a view keeps the name of its pipeline. Before, views were named <code>"&lt;name&gt; view"</code> (and a view of a view <code>"&lt;name&gt; view view"</code>), so code holding a view couldn’t get the pipeline name. <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> still marks views with <code>&lt;pipeflow_view&gt;</code>.</li>
-<li>
-<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> shows outputs that were hard to read in the <code>out</code> column in short form: a condition (the output of a step that failed in a run with <code>on_error = "continue"</code>) as <code>&lt;kind/class&gt;</code>, e.g. <code>&lt;error/simpleError&gt;</code>, instead of in full (for rlang errors including the backtrace); a matrix, array or table as <code>&lt;class[dims]&gt;</code>, e.g. <code>&lt;matrix[4x2]&gt;</code>, instead of its flattened values; and a function or environment (e.g. an R6 object) as <code>&lt;class&gt;</code>. Strings longer than 40 characters are cut off and marked with <code>"..."</code>.</li>
-<li>Documentation: <code><a href="../reference/pip_set_params.html">?pip_set_params</a></code> notes that <code><a href="../reference/pip_set_params.html">pip_get_params()</a></code> also returns the parameters of locked steps, which <code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> skips. <code><a href="../reference/Extract.pipeflow.html">?`[.pipeflow`</a></code> explains that <code>tags %like% "x"</code> matches against the tags converted to a string (so it can also match untagged steps) and points to <code>pip_view(tags = )</code> for exact tag matching.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9009" id="pipeflow-0409009">pipeflow 0.4.0.9009<a class="anchor" aria-label="anchor" href="#pipeflow-0409009"></a></h2>
-<ul><li>Behaviour change: <code>.self</code> is only available in step functions that refer to it, that is, whose body contains the name <code>.self</code> (also within functions defined in the body; indirect access such as <code>get(".self")</code> is not detected). Before, every step function got it, so an output that keeps the environment of its step, such as a ggplot or a closure, kept the whole pipeline alive: <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS()</a></code> of such an output also wrote the pipeline with all its outputs. Step functions are now stored as given, and <code><a href="../reference/pip_run.html">pip_run()</a></code> provides <code>.self</code> each time it calls one.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9008" id="pipeflow-0409008">pipeflow 0.4.0.9008<a class="anchor" aria-label="anchor" href="#pipeflow-0409008"></a></h2>
-<ul><li>New generic <code><a href="../reference/pip_arg_value.html">pip_arg_value()</a></code> as an extension point for annotated parameter values (e.g. values with units). It is applied to each unbound argument of a step right before the step function is called, so packages can unwrap their own classes with a single S3 method instead of wrapping every step function. The default method returns the value unchanged.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9007" id="pipeflow-0409007">pipeflow 0.4.0.9007<a class="anchor" aria-label="anchor" href="#pipeflow-0409007"></a></h2>
-<ul><li>With <code>pip_run(on_error = "continue")</code>, a <code>reduce</code> step that takes the output of a failed split pipeline via <code>~try()</code> now runs and receives the failure object. Before, it failed with “reduce mode requires at least one partitioned input”, which hid the actual cause.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9006" id="pipeflow-0409006">pipeflow 0.4.0.9006<a class="anchor" aria-label="anchor" href="#pipeflow-0409006"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.5.0" id="pipeflow-050">pipeflow 0.5.0<a class="anchor" aria-label="anchor" href="#pipeflow-050"></a></h2><p class="text-muted">CRAN release: 2026-10-13</p>
+<div class="section level3">
+<h3 id="breaking-changes-0-5-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-5-0"></a></h3>
 <ul><li>
-<code><a href="../reference/pip_add.html">pip_add()</a></code> and <code><a href="../reference/pip_replace.html">pip_replace()</a></code> now warn if <code>params</code> contain names that are also arguments of <code>fun</code>. As documented, the defaults of <code>fun</code> take precedence over <code>params</code>, so such values were silently dropped before.</li>
+<code>v[["view"]]</code> returns the names of the covered steps instead of row indices.</li>
 <li>
-<code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> gains <code>unknown = c("warn", "ignore", "error")</code> to control what happens with parameters that are not defined in the target. The default <code>"warn"</code> keeps the current behaviour; <code>"error"</code> fails before anything is changed.</li>
-<li>Behaviour change: <code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> (and <code>p[[step, "params"]] &lt;- value</code>) no longer outdates a step if the values set on it are <code><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical()</a></code> to the stored ones. Only steps whose values change, and the steps downstream of them, are outdated. Before, every step a value was set on was outdated, so apps that set all inputs on every change re-ran unchanged steps. <code>pip_run(force = TRUE)</code> still re-runs all steps. The new argument <code>force = TRUE</code> of <code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> outdates the steps even if the values are identical, e.g. to refresh steps whose inputs are environments or R6 objects that were modified in place.</li>
+<code>.self</code> is only made available in step functions that refer to it, i.e. if the name <code>.self</code> appears in the function body.</li>
+<li>
+<code><a href="../reference/pip_replace.html">pip_replace()</a></code> by default now keeps the tags and the execution mode of the replaced step.</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9005" id="pipeflow-0409005">pipeflow 0.4.0.9005<a class="anchor" aria-label="anchor" href="#pipeflow-0409005"></a></h2>
-<ul><li>Behaviour change: if a step fails, the error from <code><a href="../reference/pip_run.html">pip_run()</a></code> now names the step (<code>step 'fit': object 'x' not found</code>). It is of class <code>pipeflow_step_error</code>, with the fields <code>step</code> and <code>parent</code> (the original condition, which keeps its class). If a partition key fails, the original condition is wrapped in a <code>pipeflow_key_error</code> with the fields <code>key</code> and <code>parent</code>; with <code>on_error = "continue"</code>, it is the output of the failed step. Before, only the message of the original error was signalled.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9004" id="pipeflow-0409004">pipeflow 0.4.0.9004<a class="anchor" aria-label="anchor" href="#pipeflow-0409004"></a></h2>
+<div class="section level3">
+<h3 id="new-features-0-5-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-5-0"></a></h3>
 <ul><li>
-<code>x[[step, j]]</code> on a view now returns the value of <code>step</code>. Before, it read the wrong row (or failed) when the view did not start at the first step.</li>
-<li>The steps of a copy made by <code><a href="../reference/pip_clone.html">pip_clone()</a></code>, <code>p[]</code> or <code>p[i, view = FALSE]</code> get their own <code>.self</code>. Before, they shared it with the steps of the original, so once the copy ran, a running step of the original saw the copy as <code>.self</code>.</li>
+<code>pip_run(on_error = "continue")</code> continues the run of unaffected steps after a step fails with an error.</li>
+<li>allow mitigation of inputs from failed steps via <code>~try()</code> references (<code>x = ~try(step)</code>), e.g. by creating fallback results for failed steps.</li>
 <li>
-<code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> no longer warns about parameters that are defined only in locked steps. It now also warns about undefined parameters when all selected steps are locked. Locked steps still keep their parameters.</li>
+<code><a href="../reference/pip_param_value.html">pip_param_value()</a></code> is a generic for unwrapping parameter values, enabling users to set pipeline parameters that consist of non-trivial types or classes.</li>
 <li>
-<code><a href="../reference/pip_add.html">pip_add()</a></code> and <code><a href="../reference/pip_replace.html">pip_replace()</a></code> now reject primitive functions such as <code>sum</code> with a clear error. Before, they failed with “use of NULL environment is defunct”.</li>
+<code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> gains <code>unknown = c("warn", "ignore", "error")</code> for parameters that no step defines, and <code>force = TRUE</code> to outdate steps even if the values are identical.</li>
 <li>
-<code><a href="../reference/pip_add.html">pip_add()</a></code> now says that <code>.self</code> is a reserved <em>parameter</em> name (not a step name) if <code>fun</code> declares it, as <code><a href="../reference/pip_replace.html">pip_replace()</a></code> does.</li>
-<li>Behaviour change: a run stopped by <code>halt()</code> now ends with run state <code>"halted"</code>, as shown when printing the pipeline. Before, it was always overwritten with <code>"ready"</code> (or <code>"continued"</code>). The next <code><a href="../reference/pip_run.html">pip_run()</a></code> continues as before.</li>
+<code><a href="../reference/pip_run_state.html">pip_run_state()</a></code> returns the run state of a pipeline or view.</li>
+<li>The default logger <code><a href="../reference/pipeflow_lgr.html">pipeflow_lgr()</a></code> is exported, so custom loggers can build on it.</li>
+<li>Pipelines survive <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS()</a></code> and <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS()</a></code>, and can be sent to other R processes (see <code><a href="../reference/pip_new.html">?pip_new</a></code>).</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9003" id="pipeflow-0409003">pipeflow 0.4.0.9003<a class="anchor" aria-label="anchor" href="#pipeflow-0409003"></a></h2>
-<ul><li>Same as previous version.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9002" id="pipeflow-0409002">pipeflow 0.4.0.9002<a class="anchor" aria-label="anchor" href="#pipeflow-0409002"></a></h2>
-<ul><li>Same as previous version.</li>
-</ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9001" id="pipeflow-0409001">pipeflow 0.4.0.9001<a class="anchor" aria-label="anchor" href="#pipeflow-0409001"></a></h2>
-<ul><li>Revise benchmark vignette</li>
-<li>decrease font size in vignettes</li>
-<li>Steps that have never run now stay <code>"new"</code> instead of becoming <code>"outdated"</code> when <code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> or <code><a href="../reference/pip_replace.html">pip_replace()</a></code> changes them or a step upstream of them, or when a run (of a view, or an aborted run) does not reach them.</li>
-<li>At the end of a run, <code><a href="../reference/pip_run.html">pip_run()</a></code> now marks only the steps downstream of steps it actually <em>executed</em> as <code>"outdated"</code>. Before, steps it skipped because they were <code>"done"</code> counted too, so running a view outdated done steps outside the view although none of their inputs had changed.</li>
+<div class="section level3">
+<h3 id="changes-0-5-0">Changes<a class="anchor" aria-label="anchor" href="#changes-0-5-0"></a></h3>
+<ul><li>
+<code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> no longer outdates steps if the values are identical to the stored ones.</li>
+<li>Errors from <code><a href="../reference/pip_run.html">pip_run()</a></code> name the step (<code>step 'fit': ...</code>) and have class <code>pipeflow_step_error</code> with the fields <code>step</code> and <code>parent</code>. A failing partition key gives a <code>pipeflow_key_error</code> with <code>key</code> and <code>parent</code>.</li>
+<li>Views keep the name of their pipeline (before: <code>"&lt;name&gt; view"</code>).</li>
+<li>Views keep track of their steps instead of row numbers, so they stay valid when steps are added, removed, renamed or replaced.</li>
 <li>
-<code><a href="../reference/pip_run.html">pip_run()</a></code> gains <code>on_error = c("stop", "continue")</code>. With <code>"continue"</code>, a failing step gets state <code>"failed"</code> with its error condition stored as its output, and the run goes on with all steps that do not depend on a failed step. If any step failed, the run state is set to <code>"continued"</code> and a warning of class <code>pipeflow_run_failed</code> lists the failed and the skipped steps.</li>
-<li>A step reference wrapped in <code><a href="https://rdrr.io/r/base/try.html" class="external-link">try()</a></code>, e.g. <code>x = ~try(other_step)</code>, marks an argument that may receive a failed input in a continuing run. Such an argument gets a condition of class <code>pipeflow_failure</code> instead of the step output.</li>
+<code><a href="../reference/pip_run.html">pip_run()</a></code> also re-runs a <code>"done"</code> step if one of its inputs was executed in the same run.</li>
+<li>A run stopped by <code>halt()</code> ends in run state <code>"halted"</code> (before: <code>"ready"</code>).</li>
 <li>
-<code><a href="../reference/pip_run.html">pip_run()</a></code> now also re-runs a <code>"done"</code> step if one of its inputs was executed in the same run.</li>
+<code><a href="../reference/pip_add.html">pip_add()</a></code> and <code><a href="../reference/pip_replace.html">pip_replace()</a></code> warn if <code>params</code> contain names that are also arguments of <code>fun</code>.</li>
+<li>
+<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> now shows conditions, matrices, arrays, tables, functions and environments in the <code>out</code> column in short form, e.g. <code>&lt;error/simpleError&gt;</code>.</li>
 </ul></div>
-    <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.0.9000" id="pipeflow-0409000">pipeflow 0.4.0.9000<a class="anchor" aria-label="anchor" href="#pipeflow-0409000"></a></h2>
-<ul><li>Same as previous version.</li>
+<div class="section level3">
+<h3 id="bug-fixes-0-5-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-5-0"></a></h3>
+<ul><li>Steps that never ran stay <code>"new"</code>, and a run only outdates the steps downstream of steps it executed.</li>
+<li>
+<code>x[[step, j]]</code> on a view read the wrong row.</li>
+<li>Copies made by <code><a href="../reference/pip_clone.html">pip_clone()</a></code>, <code>p[]</code> or <code>p[i, view = FALSE]</code> shared <code>.self</code> with the original.</li>
+<li>
+<code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> no longer warns about parameters defined only in locked steps.</li>
+<li>
+<code><a href="../reference/pip_add.html">pip_add()</a></code> and <code><a href="../reference/pip_replace.html">pip_replace()</a></code> reject primitive functions such as <code>sum</code> with a clear error, and <code><a href="../reference/pip_add.html">pip_add()</a></code> calls <code>.self</code> a reserved <em>parameter</em> name.</li>
+<li>A step that references the same step more than once no longer warns about an existing edge.</li>
 </ul></div>
+<div class="section level3">
+<h3 id="documentation-0-5-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-5-0"></a></h3>
+<ul><li>New vignettes “Handling failures” and “Annotated parameter values”.</li>
+<li>“Get started”, “Nested pipelines”, “Self-modifying pipelines” and “Combine pipelines” cover identical values, <code>unknown = "ignore"</code>, when <code>.self</code> is available, and saving pipelines.</li>
+<li>The benchmark vignette was revised.</li>
+<li>The package website is built by a GitHub Actions workflow on release tags.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.4.0" id="pipeflow-040">pipeflow 0.4.0<a class="anchor" aria-label="anchor" href="#pipeflow-040"></a></h2><p class="text-muted">CRAN release: 2026-09-27</p>
 <div class="section level3">
