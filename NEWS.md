@@ -1,4 +1,4 @@
-# pipeflow 0.5.0.9003
+# pipeflow 0.5.0.9004
 
 ## New features
 
@@ -16,6 +16,8 @@
 
 - `pip_get_params()` notes that a view excludes locked steps,
   `pip_get_params(p[!locked])`.
+
+# pipeflow 0.5.0.9003
 
 ## New features
 
