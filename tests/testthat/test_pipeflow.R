@@ -98,6 +98,25 @@ describe(".wrap_self", {
     })
 })
 
+describe(".release_self", {
+    it("removes .self from the environment made for one step call", {
+        env <- new.env()
+        f <- local(\(x = 1) .self, envir = env)
+
+        w <- .wrap_self(f, self = "p")
+        .release_self(environment(w))
+
+        expect_false(exists(".self", envir = environment(w), inherits = FALSE))
+        expect_identical(parent.env(environment(w)), env)
+    })
+
+    it("does nothing if .self is not there", {
+        env <- new.env()
+        expect_silent(.release_self(env))
+        expect_length(ls(env, all.names = TRUE), 0L)
+    })
+})
+
 # ------------------------------
 # Parameter & dependency parsing
 # ------------------------------
@@ -3798,6 +3817,18 @@ describe("pip_run", {
     })
 
     describe(".self in step functions", {
+        # Walks the environment chain of a step output up to the empty
+        # environment, which is where a leaked `.self` would show up.
+        has_self <- function(env) {
+            while (!identical(env, emptyenv())) {
+                if (exists(".self", envir = env, inherits = FALSE)) {
+                    return(TRUE)
+                }
+                env <- parent.env(env)
+            }
+            FALSE
+        }
+
         it("is provided only to step functions that refer to it", {
             p <- pip_new("p") |>
                 pip_add("with", \(x = 1) .self[["name"]]) |>
@@ -3834,6 +3865,88 @@ describe("pip_run", {
             pip_run(p, lgr = NULL)
 
             size <- length(serialize(p[["adder", "out"]], connection = NULL))
+            expect_lt(size, 1e4)
+        })
+
+        it("is released when the step returns", {
+            p <- pip_new("p") |>
+                pip_add("s", \(x = 1) {
+                    nm <- .self[["name"]]
+                    function() nm
+                })
+            pip_run(p, lgr = NULL)
+
+            out <- p[["s", "out"]]
+            expect_equal(out(), "p")
+            expect_false(has_self(environment(out)))
+            expect_error(get(".self", envir = environment(out)))
+        })
+
+        it("is released in split, map and reduce mode", {
+            p <- pip_new("p") |>
+                pip_add(
+                    "split",
+                    \(x = 1) {
+                        stopifnot(.self[["name"]] == "p")
+                        list(a = 1, b = 2)
+                    },
+                    exec = "split"
+                ) |>
+                pip_add("map", \(x = ~split) {
+                    stopifnot(.self[["name"]] == "p")
+                    environment()
+                }) |>
+                pip_add(
+                    "reduce",
+                    \(x = ~map) {
+                        stopifnot(.self[["name"]] == "p")
+                        environment()
+                    },
+                    exec = "reduce"
+                )
+            pip_run(p, lgr = NULL)
+
+            frames <- c(p[["map", "out"]], list(p[["reduce", "out"]]))
+            expect_length(frames, 3L)
+            for (frame in frames) {
+                expect_false(has_self(frame))
+            }
+        })
+
+        it("is released when the step fails", {
+            env <- new.env()
+            p <- pip_new("p") |>
+                pip_add("s", \(x = 1) {
+                    env[["frame"]] <- environment()
+                    stopifnot(.self[["name"]] == "p")
+                    stop("boom")
+                })
+
+            expect_warning(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                class = "pipeflow_run_failed"
+            )
+            expect_false(has_self(env[["frame"]]))
+        })
+
+        it("doesn't keep the pipeline alive via outputs that use it", {
+            # The step function is defined outside of this test (whose
+            # environment holds `p`), has no source references and forces
+            # `x`, so only `.self` could make the returned closure reach
+            # the pipeline.
+            maker <- utils::removeSource(\(x = 1) {
+                force(x)
+                nm <- .self[["name"]]
+                function() nm
+            })
+            environment(maker) <- globalenv()
+
+            p <- pip_new() |>
+                pip_add("big", \(n = 1e5) rnorm(n)) |>
+                pip_add("maker", maker)
+            pip_run(p, lgr = NULL)
+
+            size <- length(serialize(p[["maker", "out"]], connection = NULL))
             expect_lt(size, 1e4)
         })
     })
