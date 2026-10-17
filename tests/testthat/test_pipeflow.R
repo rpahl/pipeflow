@@ -5367,6 +5367,244 @@ describe("pip_param_value", {
     })
 })
 
+describe("pip_output_value", {
+    # S3 methods are looked up from the package namespace, so test methods
+    # must be registered there.
+    register_output_value <- function(cls, fn) {
+        registerS3method(
+            "pip_output_value",
+            class = cls,
+            method = fn,
+            envir = asNamespace("pipeflow")
+        )
+    }
+
+    # Records the context of every value the hook was applied to.
+    stamp <- function(x) structure(x, class = "ov_stamp")
+    register_output_value("ov_stamp", function(x, ctx = list(), ...) {
+        attr(x, "ctx") <- ctx
+        x
+    })
+    ctx_of <- function(x) attr(x, "ctx")
+
+    it("returns x unchanged by default", {
+        expect_identical(pip_output_value(1:3), 1:3)
+        expect_identical(pip_output_value("a"), "a")
+        expect_null(pip_output_value(NULL))
+    })
+
+    it("leaves the outputs of a pipeline unchanged by default", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x + 1) |>
+            pip_add("s2", \(x = ~s1) list(a = x, b = NULL))
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["s1", "out"]], 2)
+        expect_equal(p[["s2", "out"]], list(a = 2, b = NULL))
+    })
+
+    it("provides the step name and the step's time stamp", {
+        p <- pip_new() |> pip_add("s", \(x = 1) stamp(x))
+        pip_run(p, lgr = NULL)
+
+        ctx <- ctx_of(p[["s", "out"]])
+        expect_equal(ctx[["step"]], "s")
+        expect_null(ctx[["key"]])
+        expect_equivalent(ctx[["time"]], p[["s", "time"]])
+    })
+
+    it("provides the partition key of a split step", {
+        p <- pip_new() |>
+            pip_add(
+                "split",
+                \(x = 1) list(a = stamp(1), b = stamp(2)),
+                exec = "split"
+            )
+        pip_run(p, lgr = NULL)
+
+        out <- p[["split", "out"]]
+        expect_equal(ctx_of(out[["a"]])[["key"]], "a")
+        expect_equal(ctx_of(out[["b"]])[["key"]], "b")
+    })
+
+    it("provides the key and one time stamp for a mapped step", {
+        p <- pip_new() |>
+            pip_add("split", \(x = 1) list(a = 1, b = 2), exec = "split") |>
+            pip_add("map", \(x = ~split) stamp(x * 10))
+        pip_run(p, lgr = NULL)
+
+        out <- p[["map", "out"]]
+        expect_equal(ctx_of(out[["a"]])[["key"]], "a")
+        expect_equal(ctx_of(out[["b"]])[["key"]], "b")
+        expect_equal(
+            ctx_of(out[["a"]])[["time"]],
+            ctx_of(out[["b"]])[["time"]]
+        )
+        expect_equivalent(ctx_of(out[["a"]])[["time"]], p[["map", "time"]])
+    })
+
+    it("provides no key for a reduce step", {
+        p <- pip_new() |>
+            pip_add("split", \(x = 1) list(a = 1, b = 2), exec = "split") |>
+            pip_add(
+                "reduce",
+                \(x = ~split) stamp(sum(unlist(x))),
+                exec = "reduce"
+            )
+        pip_run(p, lgr = NULL)
+
+        expect_null(ctx_of(p[["reduce", "out"]])[["key"]])
+        expect_equal(unclass(p[["reduce", "out"]])[[1L]], 3)
+    })
+
+    it("does not walk into the elements of a plain list", {
+        p <- pip_new() |>
+            pip_add("s", \(x = 1) list(a = stamp(1), b = NULL))
+        pip_run(p, lgr = NULL)
+
+        out <- p[["s", "out"]]
+        expect_null(ctx_of(out[["a"]]))
+        expect_equal(names(out), c("a", "b"))
+    })
+
+    it("passes classed lists and data frames to a method as a whole", {
+        register_output_value("ov_whole", function(x, ctx = list(), ...) {
+            attr(x, "n") <- length(x)
+            x
+        })
+        p <- pip_new() |>
+            pip_add("classed", \(x = 1) {
+                structure(list(a = 1, b = 2), class = "ov_whole")
+            }) |>
+            pip_add("frame", \(x = 1) {
+                structure(
+                    data.frame(a = 1:2, b = 3:4),
+                    class = c("ov_whole", "data.frame")
+                )
+            })
+        pip_run(p, lgr = NULL)
+
+        expect_equal(attr(p[["classed", "out"]], "n"), 2L)
+        expect_equal(attr(p[["frame", "out"]], "n"), 2L)
+    })
+
+    it("lets a method walk the elements of an output itself", {
+        register_output_value("ov_bundle", function(x, ctx = list(), ...) {
+            x[] <- lapply(x, FUN = pip_output_value, ctx = ctx)
+            x
+        })
+        p <- pip_new() |>
+            pip_add("s", \(x = 1) {
+                structure(
+                    list(a = stamp(1), b = NULL),
+                    class = "ov_bundle"
+                )
+            })
+        pip_run(p, lgr = NULL)
+
+        out <- p[["s", "out"]]
+        expect_equal(ctx_of(out[["a"]])[["step"]], "s")
+        expect_equal(names(out), c("a", "b"))
+        expect_null(out[["b"]])
+    })
+
+    it("makes the annotated value the output of the step", {
+        p <- pip_new() |>
+            pip_add("make", \(x = 1) stamp(x)) |>
+            pip_add("use", \(y = ~make) ctx_of(y)[["step"]])
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["use", "out"]], "make")
+        expect_equal(ctx_of(pip_collect(p)[["make"]])[["step"]], "make")
+    })
+
+    it("turns an error in a method into a step error", {
+        register_output_value("ov_broken", function(x, ctx = list(), ...) {
+            stop("cannot annotate")
+        })
+        p <- pip_new() |>
+            pip_add("s", \(x = 1) structure(x, class = "ov_broken"))
+
+        expect_error(
+            pip_run(p, lgr = NULL),
+            "step 's': cannot annotate",
+            class = "pipeflow_step_error"
+        )
+        expect_equal(unname(p[["s", "state"]]), "failed")
+    })
+
+    it("names the partition key an error in a method belongs to", {
+        register_output_value("ov_broken", function(x, ctx = list(), ...) {
+            stop("cannot annotate")
+        })
+        p <- pip_new() |>
+            pip_add("split", \(x = 1) list(a = 1, b = 2), exec = "split") |>
+            pip_add("map", \(x = ~split) {
+                if (x == 2) structure(x, class = "ov_broken") else x
+            })
+
+        err <- tryCatch(
+            pip_run(p, lgr = NULL),
+            pipeflow_step_error = function(e) e
+        )
+        expect_equal(err[["message"]], "step 'map': key 'b': cannot annotate")
+        expect_s3_class(err[["parent"]], "pipeflow_key_error")
+        expect_equal(err[["parent"]][["key"]], "b")
+    })
+
+    it("stores the key error of a method when the run continues", {
+        register_output_value("ov_broken", function(x, ctx = list(), ...) {
+            stop("cannot annotate")
+        })
+        p <- pip_new() |>
+            pip_add(
+                "split",
+                \(x = 1) list(a = 1, b = structure(2, class = "ov_broken")),
+                exec = "split"
+            )
+
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        out <- p[["split", "out"]]
+        expect_s3_class(out, "pipeflow_key_error")
+        expect_equal(out[["key"]], "b")
+    })
+
+    it("continues the run after an error in a method", {
+        register_output_value("ov_broken", function(x, ctx = list(), ...) {
+            stop("cannot annotate")
+        })
+        p <- pip_new() |>
+            pip_add("bad", \(x = 1) structure(x, class = "ov_broken")) |>
+            pip_add("good", \(x = 1) x + 1)
+
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        expect_equal(unname(p[["state"]]), c("failed", "done"))
+        expect_equal(p[["good", "out"]], 2)
+    })
+
+    it("is not applied to the output of a failed step", {
+        register_output_value("simpleError", function(x, ctx = list(), ...) {
+            attr(x, "ctx") <- ctx
+            x
+        })
+        p <- pip_new() |> pip_add("a", \(x = 1) stop("boom"))
+
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        out <- p[["a", "out"]]
+        expect_s3_class(out, "simpleError")
+        expect_null(ctx_of(out))
+    })
+})
+
 
 describe("benchmarking", {
     skip("benchmarking tests are skipped by default")

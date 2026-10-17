@@ -319,8 +319,9 @@
 #' Create a partition key error condition
 #'
 #' Error signalled by `.pip_execute_step_call()` when a step function fails
-#' for one key of its partitioned inputs. It keeps the original condition as
-#' `parent`.
+#' for one key of its partitioned inputs, and by `.pip_annotate_output()`
+#' when `pip_output_value()` fails for one key of a partitioned output. It
+#' keeps the original condition as `parent`.
 #'
 #' @param key The partition key for which the step function failed.
 #' @param parent The original condition raised by the step function.
@@ -538,7 +539,12 @@
     out <- withCallingHandlers(
         {
             args <- .pip_unwrap_params(args, unbound)
-            .pip_execute_step_call(fun = fun, args = args, exec = exec)
+            res <- .pip_execute_step_call(fun = fun, args = args, exec = exec)
+
+            # One time stamp for the whole step, also for all keys of a
+            # partitioned output, and the one that is stored below.
+            runTime <- Sys.time()
+            .pip_annotate_output(res, step = step, time = runTime)
         },
         error = function(e) {
             data.table::set(
@@ -571,7 +577,7 @@
             j = c("out", "time", "state"),
             value = list(
                 list(out),
-                Sys.time(),
+                runTime,
                 .step_states[["done"]][["name"]]
             )
         )
@@ -2390,8 +2396,10 @@ pip_replace <- function(
 #' field `step` names the failed step and its field `parent` holds the
 #' original error condition with its class, which can be caught via
 #' `tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)`.
-#' If the step was mapped over partitioned inputs (see `exec` in
-#' [pip_add()]), `parent` is a condition of class
+#' If the error belongs to a single partition key (see `exec` in
+#' [pip_add()]) — a step mapped over partitioned inputs, or
+#' [pip_output_value()] failing for one key of a partitioned output —
+#' `parent` is a condition of class
 #' `c("pipeflow_key_error", "error", "condition")` instead. Its message is
 #' prefixed with `"key '<key>': "`, its field `key` names the failed
 #' partition key and its field `parent` holds the original error condition.
@@ -2399,8 +2407,8 @@ pip_replace <- function(
 #' ## Continuing after errors
 #' With `on_error = "continue"`, a failing step gets state `"failed"`, its
 #' error condition is stored as its output, and the run goes on. For a step
-#' mapped over partitioned inputs, the stored condition is the
-#' `pipeflow_key_error` described above. An input of a step is *failed* if
+#' whose error belongs to a single partition key, the stored condition is
+#' the `pipeflow_key_error` described above. An input of a step is *failed* if
 #' its step failed or was not run because a step upstream of it failed in
 #' this run.
 #'
@@ -2874,15 +2882,17 @@ pip_run_state <- function(x) {
 }
 
 
-#' Unwrap a parameter value before a step function is called
+#' Annotated parameter values
 #'
-#' `pip_param_value()` is an extension point for packages that store annotated
-#' values (e.g. values with units or labels, or parameter objects that carry
-#' UI metadata) as step parameters. When a step runs, the generic is applied
-#' once to each unbound argument of the step, that is, to the values that
-#' come from `params` or from the defaults of the step function, and its
-#' result is what the step function receives. The stored parameters are not
-#' changed.
+#' `pip_param_value()` is an extension point for handling non-trivial
+#' parameter values (e.g. values with units or labels, or
+#' parameter objects that carry UI metadata) as step parameters.
+#' It can be thought of as a hook that allows you to preprocess or
+#' unwrap parameter values before they are passed to the step function.
+#' When a step runs, the generic is applied to each unbound argument of the
+#' step, that is, to the values that come from `params` or from the
+#' defaults of the step function, and its result is what the step
+#' function receives. The stored parameters are not changed.
 #'
 #' The default method returns `x` unchanged. Methods are meant for your own
 #' classes, not for base classes such as `numeric` or `character`. Note that
@@ -2914,7 +2924,7 @@ pip_run_state <- function(x) {
 #' pip_set_params(p, list(x = my_number))
 #' pip_run(p, lgr = NULL)
 #' pip_collect(p)
-#' @seealso [pip_set_params()], [pip_run()]
+#' @seealso [pip_set_params()], [pip_output_value()], [pip_run()]
 #' @export
 pip_param_value <- function(x, ...) {
     UseMethod("pip_param_value")
@@ -2938,6 +2948,113 @@ pip_param_value.default <- function(x, ...) {
         args[unbound] <- lapply(args[unbound], FUN = pip_param_value)
     }
     args
+}
+
+#' Annotated step outputs
+#'
+#' `pip_output_value()` is an extension point for annotating the outputs
+#' of a pipeline, for example to stamp a result with the step it came
+#' from or the time it was computed.
+#' It can be thought of as a hook that allows you to postprocess or annotate
+#' the output of a step before it is stored.
+#' The generic is applied to the output of a step right after the step
+#' function returns, and its result is what is stored as the step's output.
+#'
+#' The default method returns `x` unchanged. Methods are meant for your own
+#' classes, not for base classes such as `numeric` or `character`.
+#'
+#' The generic is applied once to the output as a whole, so a method sees
+#' the whole object a step returned. The one exception is a partitioned
+#' output (a step with `exec = "split"`, or a step that was mapped over a
+#' partitioned input): there the generic is applied once per partition, and
+#' each partition gets its key in `ctx$key`.
+#'
+#' If you want to annotate an output element-wise instead of the whole
+#' object, just write a method that walks over each element. For example,
+#' for a plain list, a method could look something like this:
+#'
+#' ```r
+#' pip_output_value.list <- function(x, ctx = list(), ...) {
+#'     x[] <- lapply(x, FUN = pip_output_value, ctx = ctx)
+#'     x
+#' }
+#' ```
+#'
+#' The generic is *not* applied to the outputs of failed steps (see
+#' `pip_run(on_error = "continue")`), which remain the condition of the
+#' failure, nor to the inputs a step receives from other steps: it acts on
+#' what a step returns, once. An error in a method is an error of the step
+#' and is handled like any other step error; for a partitioned output it
+#' names the partition key the method failed for.
+#'
+#' @param x The output value of a step, or one of its partitions if the
+#' output is partitioned.
+#' @param ctx Named list describing the context of the value:
+#' * `step`: the name of the step, as it was before the step ran.
+#' * `key`: the partition key, or `NULL` if the output is not partitioned.
+#' * `time`: the time stamp of the step's run, which is the same for all
+#'   partition keys and is also stored as the step's `time`.
+#' @param ... Currently unused, reserved for future extensions. Methods
+#' should accept it.
+#' @return The value that is stored as the step's output.
+#' @examples
+#' # Stamp every output with the step it came from
+#' stamped <- function(x) structure(x, class = "stamped")
+#'
+#' pip_output_value.stamped <- function(x, ctx = list(), ...) {
+#'     attr(x, "step") <- ctx[["step"]]
+#'     x
+#' }
+#' registerS3method("pip_output_value", "stamped", pip_output_value.stamped)
+#'
+#' p <- pip_new() |>
+#'     pip_add("make", \(n = 3) stamped(seq_len(n)))
+#' pip_run(p, lgr = NULL)
+#' attr(p[["make", "out"]], "step")
+#' @seealso [pip_param_value()], [pip_run()]
+#' @export
+pip_output_value <- function(x, ctx = list(), ...) {
+    UseMethod("pip_output_value")
+}
+
+#' @export
+pip_output_value.default <- function(x, ctx = list(), ...) {
+    x
+}
+
+#' Apply pip_output_value() to the output of a step
+#'
+#' A partitioned output is annotated per key, so that each partition gets
+#' its key in `ctx$key`, and every other output is annotated as a whole.
+#' `[<-` is used to rebuild a partitioned output, because `[[<-` would
+#' drop a partition whose result is `NULL`. An error for one key is
+#' re-raised as a `pipeflow_key_error`, as in `.pip_execute_step_call()`.
+#'
+#' @param out The output of the step call.
+#' @param step The name of the step.
+#' @param time The time stamp of the step's run.
+#' @return `out`, passed through [pip_output_value()].
+#' @noRd
+.pip_annotate_output <- function(out, step, time) {
+    if (.is_pipeflow_partitioned(out)) {
+        keys <- names(out)
+        out[keys] <- lapply(keys, FUN = function(key) {
+            # As in `.pip_execute_step_call()`, errors are re-raised with the
+            # key name, so a failing partition can be located.
+            tryCatch(
+                expr = pip_output_value(
+                    out[[key]],
+                    ctx = list(step = step, key = key, time = time)
+                ),
+                error = function(e) {
+                    stop(.pip_key_error(key, parent = e))
+                }
+            )
+        })
+        return(out)
+    }
+
+    pip_output_value(out, ctx = list(step = step, key = NULL, time = time))
 }
 
 
