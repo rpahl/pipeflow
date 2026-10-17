@@ -1,4 +1,4 @@
-# pipeflow 0.5.0.9001
+# pipeflow 0.5.0.9002
 
 ## Breaking changes
 
@@ -6,6 +6,8 @@
   keep the pipeline alive. A step that returns a function which refers to
   `.self` now fails with `object '.self' not found` when that function is
   called after the run.
+
+# pipeflow 0.5.0.9001
 
 ## Documentation
 
