@@ -5606,6 +5606,222 @@ describe("pip_output_value", {
 })
 
 
+describe("pip_param_value<-", {
+    # S3 methods are looked up from the package namespace, so test methods
+    # must be registered there.
+    register_setter <- function(cls, fn) {
+        registerS3method(
+            "pip_param_value<-",
+            class = cls,
+            method = fn,
+            envir = asNamespace("pipeflow")
+        )
+    }
+    register_getter <- function(cls, fn) {
+        registerS3method(
+            "pip_param_value",
+            class = cls,
+            method = fn,
+            envir = asNamespace("pipeflow")
+        )
+    }
+
+    # An annotated value that keeps its unit when a plain value is set.
+    sv_quantity <- function(value, unit = "m") {
+        structure(list(value = value, unit = unit), class = "sv_quantity")
+    }
+    register_getter("sv_quantity", function(x, ...) x[["value"]])
+    register_setter("sv_quantity", function(x, ..., value) {
+        if (inherits(value, "sv_quantity")) {
+            return(value)
+        }
+        x[["value"]] <- value
+        x
+    })
+
+    it("returns value unchanged by default", {
+        expect_identical(`pip_param_value<-`(1, value = 2), 2)
+        expect_identical(`pip_param_value<-`("a", value = "b"), "b")
+        expect_null(`pip_param_value<-`(1, value = NULL))
+    })
+
+    it("round trips with pip_param_value()", {
+        x <- sv_quantity(1, "km")
+        expect_equal(pip_param_value(`pip_param_value<-`(x, value = 7)), 7)
+        expect_equal(pip_param_value(`pip_param_value<-`(1, value = 7)), 7)
+    })
+
+    it("keeps the annotations when a plain value is set", {
+        p <- pip_new() |> pip_add("s", \(x = 1) x * 2)
+        pip_set_params(p, list(x = sv_quantity(3, "km")))
+
+        pip_set_params(p, list(x = 5))
+
+        stored <- pip_get_params(p)[["x"]]
+        expect_s3_class(stored, "sv_quantity")
+        expect_equal(stored[["value"]], 5)
+        expect_equal(stored[["unit"]], "km")
+
+        # the step function still sees the plain value
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["s", "out"]], 10)
+    })
+
+    it("stores an object given as value as the method decides", {
+        p <- pip_new() |> pip_add("s", \(x = 1) x)
+        pip_set_params(p, list(x = sv_quantity(3, "km")))
+
+        pip_set_params(p, list(x = sv_quantity(9, "mi")))
+
+        stored <- pip_get_params(p)[["x"]]
+        expect_equal(stored[["value"]], 9)
+        expect_equal(stored[["unit"]], "mi")
+    })
+
+    it("merges into the stored value of each step separately", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = 1, y = 2) x + y)
+        pip_set_params(p, list(x = sv_quantity(1, "km")))
+        pip_set_params(pip_view(p, step = "s2"), list(x = sv_quantity(1, "mi")))
+
+        pip_set_params(p, list(x = 4))
+
+        after <- p[["params"]]
+        expect_equal(after[[1L]][["x"]][["unit"]], "km")
+        expect_equal(after[[2L]][["x"]][["unit"]], "mi")
+        expect_equal(after[[1L]][["x"]][["value"]], 4)
+        expect_equal(after[[2L]][["x"]][["value"]], 4)
+    })
+
+    it("compares the merged value when deciding to outdate", {
+        p <- pip_new() |> pip_add("s", \(x = 1) x)
+        pip_set_params(p, list(x = sv_quantity(3, "km")))
+        pip_run(p, lgr = NULL)
+
+        # the merged value equals the stored one, so nothing is outdated
+        pip_set_params(p, list(x = 3))
+        expect_equal(unname(p[["s", "state"]]), "done")
+
+        pip_set_params(p, list(x = 3), force = TRUE)
+        expect_equal(unname(p[["s", "state"]]), "outdated")
+    })
+
+    it("passes ... on to the method", {
+        register_setter("sv_dots", function(x, factor = 1, ..., value) {
+            x[["value"]] <- value * factor
+            x
+        })
+        p <- pip_new() |> pip_add("s", \(x = 1) x)
+        pip_set_params(
+            p,
+            list(x = structure(list(value = 1), class = "sv_dots"))
+        )
+
+        pip_set_params(p, list(x = 5), factor = 10)
+
+        expect_equal(pip_get_params(p)[["x"]][["value"]], 50)
+    })
+
+    it("reports all failing parameters at once and sets nothing", {
+        register_setter("sv_broken", function(x, ..., value) {
+            stop("cannot set ", x[["name"]])
+        })
+        broken <- function(name) {
+            structure(list(name = name), class = "sv_broken")
+        }
+        p <- pip_new() |>
+            pip_add("s1", \(a = 1) a) |>
+            pip_add("s2", \(b = 2) b)
+        pip_set_params(p, list(a = broken("a"), b = broken("b")))
+        pip_run(p, lgr = NULL)
+
+        err <- expect_error(
+            pip_set_params(p, list(a = 9, b = 9)),
+            class = "pipeflow_set_params_error"
+        )
+        expect_equal(err[["errors"]][["step"]], c("s1", "s2"))
+        expect_equal(err[["errors"]][["name"]], c("a", "b"))
+        expect_equal(
+            err[["errors"]][["message"]],
+            c("cannot set a", "cannot set b")
+        )
+        expect_length(err[["parents"]], 2L)
+
+        # nothing was set and no step was outdated
+        expect_s3_class(pip_get_params(p)[["a"]], "sv_broken")
+        expect_equal(unname(p[["state"]]), c("done", "done"))
+    })
+
+    it("leaves the stored value of a copying method untouched on failure", {
+        # The all-or-nothing guarantee holds for methods that return a new
+        # value. For a reference-backed value that means copying it first,
+        # as the method below does.
+        sv_env <- function(value) {
+            e <- new.env(parent = emptyenv())
+            e[["value"]] <- value
+            structure(e, class = "sv_env")
+        }
+        register_getter("sv_env", function(x, ...) x[["value"]])
+        register_setter("sv_env", function(x, ..., value) {
+            copy <- sv_env(value)
+            copy
+        })
+        register_setter("sv_fails", function(x, ..., value) {
+            stop("cannot set")
+        })
+
+        stored <- sv_env(1)
+        p <- pip_new() |>
+            pip_add("s1", \(a = 1) a) |>
+            pip_add("s2", \(b = 2) b)
+        pip_set_params(
+            p,
+            list(a = stored, b = structure(2, class = "sv_fails"))
+        )
+        pip_run(p, lgr = NULL)
+
+        expect_error(
+            pip_set_params(p, list(a = 9, b = 9)),
+            class = "pipeflow_set_params_error"
+        )
+        expect_identical(pip_get_params(p)[["a"]], stored)
+        expect_equal(stored[["value"]], 1)
+        expect_equal(unname(p[["state"]]), c("done", "done"))
+        expect_equal(p[["s1", "out"]], 1)
+    })
+
+    it("doesn't merge into the parameters of locked steps", {
+        register_setter("sv_locked", function(x, ..., value) {
+            stop("must not be called")
+        })
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(y = 2) y)
+        pip_set_params(p, list(x = structure(list(), class = "sv_locked")))
+        pip_lock(p["s1"])
+
+        # 'x' is held by the locked step only, so it is neither merged
+        # nor reported as unknown
+        expect_no_warning(pip_set_params(p, list(x = 5, y = 7)))
+        expect_s3_class(pip_get_params(p)[["x"]], "sv_locked")
+        expect_equal(pip_get_params(p)[["y"]], 7)
+    })
+
+    it("handles unknown parameters before anything is merged", {
+        register_setter("sv_never", function(x, ..., value) {
+            stop("must not be called")
+        })
+        p <- pip_new() |> pip_add("s", \(x = 1) x)
+        pip_set_params(p, list(x = structure(list(), class = "sv_never")))
+
+        expect_error(
+            pip_set_params(p, list(x = 1, nope = 2), unknown = "error"),
+            "Trying to set parameters not defined in the target: nope"
+        )
+    })
+})
+
 describe("benchmarking", {
     skip("benchmarking tests are skipped by default")
     v <- c("hello", "world")

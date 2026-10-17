@@ -341,6 +341,60 @@
     )
 }
 
+#' Create the error of a failed pip_set_params() call
+#'
+#' Error signalled by `pip_set_params()` when `pip_param_value<-()` failed
+#' for one or more of the parameters that were to be set. All of them are
+#' reported at once, and nothing is set.
+#'
+#' @param errors List of the collected failures, each a list with the
+#' elements `step`, `name` and `parent`.
+#' @return A condition of class
+#' `c("pipeflow_set_params_error", "error", "condition")` with the fields
+#' `errors` (a data frame with the columns `step`, `name` and `message`) and
+#' `parents` (the list of the original conditions).
+#' @noRd
+.pip_set_params_error <- function(errors) {
+    steps <- vapply(errors, FUN = `[[`, "step", FUN.VALUE = character(1))
+    names <- vapply(errors, FUN = `[[`, "name", FUN.VALUE = character(1))
+    parents <- lapply(errors, FUN = `[[`, "parent")
+    messages <- vapply(
+        parents,
+        FUN = conditionMessage,
+        FUN.VALUE = character(1)
+    )
+
+    msg <- paste0(
+        sprintf(
+            "Cannot set %s: nothing was set.\n",
+            if (length(errors) == 1L) {
+                "1 parameter"
+            } else {
+                sprintf("%d parameters", length(errors))
+            }
+        ),
+        paste0(
+            sprintf("  step '%s', parameter '%s': %s", steps, names, messages),
+            collapse = "\n"
+        )
+    )
+
+    structure(
+        class = c("pipeflow_set_params_error", "error", "condition"),
+        list(
+            message = msg,
+            call = NULL,
+            errors = data.frame(
+                step = steps,
+                name = names,
+                message = messages,
+                stringsAsFactors = FALSE
+            ),
+            parents = parents
+        )
+    )
+}
+
 #' Create a failure object
 #'
 #' Failure object for the output of `step` in a run that continues after
@@ -2892,7 +2946,10 @@ pip_run_state <- function(x) {
 #' When a step runs, the generic is applied to each unbound argument of the
 #' step, that is, to the values that come from `params` or from the
 #' defaults of the step function, and its result is what the step
-#' function receives. The stored parameters are not changed.
+#' function receives. The stored parameters are not changed, and a method
+#' should not change them either: it is called with the stored value, so a
+#' method that modifies a reference-backed `x` such as an environment or
+#' an R6 object in place changes the step's parameter on every run.
 #'
 #' The default method returns `x` unchanged. Methods are meant for your own
 #' classes, not for base classes such as `numeric` or `character`. Note that
@@ -2933,6 +2990,64 @@ pip_param_value <- function(x, ...) {
 #' @export
 pip_param_value.default <- function(x, ...) {
     x
+}
+
+#' @details
+#' `` `pip_param_value<-`() `` is the write side of the same extension point.
+#' It turns a plain value into the value that is stored in the step, so that
+#' [pip_set_params()] can keep the annotations of a stored object when it is
+#' given a plain value. Dispatch is on `x`, the value as it is currently
+#' stored, and `value` is the requested value. The default method just returns
+#' `value`.
+#' A method decides what a plain `value` and what an object of its own class
+#' means, for example whether to merge it into the stored object or to use
+#' it as is.
+#'
+#' Like `pip_param_value()`, this is a hook, not an accessor: `x` is a stored
+#' value, and the parameters of a pipeline are changed with
+#' [pip_set_params()]. The two sides belong together, so that applying
+#' `pip_param_value()` to the result of the setter gives back the plain value
+#' that was set:
+#'
+#' ```r
+#' pip_param_value(`pip_param_value<-`(x, value = v))   # v
+#' ```
+#'
+#' [pip_set_params()] computes the stored value of every affected step *before*
+#' it changes any parameters in the pipeline. If one or more methods fail,
+#' an error of class `pipeflow_set_params_error` reports all failures. This
+#' two-phase approach ensures that either all parameter changes are applied
+#' successfully or, in case of an error, the pipeline stays unchanged.
+#' For that to hold, a method should not modify `x` in place as this would
+#' change pipeline parameters directly. A reference-backed `x` such as an
+#' environment or an R6 object therefore should be copied first.
+#'
+#' @param value The plain value to set into the stored value `x`.
+#' @examples
+#'
+#' # The write side keeps the annotations when a plain value is set
+#' `pip_param_value<-.foo` <- function(x, ..., value) {
+#'     if (inherits(value, "foo")) {
+#'         return(value)
+#'     }
+#'     x$value <- value
+#'     x
+#' }
+#' registerS3method("pip_param_value<-", "foo", `pip_param_value<-.foo`)
+#'
+#' pip_set_params(p, list(x = 42))
+#' pip_get_params(p) # still a "foo" object, now holding 42
+#' pip_run(p, lgr = NULL)
+#' pip_collect(p)
+#' @rdname pip_param_value
+#' @export
+`pip_param_value<-` <- function(x, ..., value) {
+    UseMethod("pip_param_value<-")
+}
+
+#' @export
+`pip_param_value<-.default` <- function(x, ..., value) {
+    value
 }
 
 #' Apply pip_param_value() to the unbound arguments of a step call
@@ -3062,18 +3177,33 @@ pip_output_value.default <- function(x, ctx = list(), ...) {
 #'
 #' [pip_get_params()] returns the current default values of all unbound
 #' parameters of a pipeline or view (parameters wired to another step's
-#' output via `~step_name` are excluded), including those of locked steps.
+#' output via `~step_name` are excluded).
 #' [pip_set_params()] updates these parameters for the whole pipeline or
-#' view. Steps whose values change are marked as outdated, together with
+#' view except for locked steps.
+#' Steps whose values change are marked as outdated, together with
 #' their downstream dependents (steps that have never run stay `"new"`).
 #' Values that are [identical()] to the stored ones are skipped and don't
 #' outdate any step, unless `force = TRUE`.
+#'
+#' @section Storing annotated values:
+#' The value that is stored for a step is the result of
+#' `` `pip_param_value<-`() `` applied to the value the step currently
+#' holds, which by default is the given value. A method of that generic
+#' can merge the given value into an annotated object instead, so that
+#' its annotations survive (see [pip_param_value()]). The merged values
+#' of all affected steps are computed before anything is changed: if a
+#' method fails, nothing is set and an error of class
+#' `pipeflow_set_params_error` reports every failure at once. The merged
+#' value is also what is compared with the stored one, so setting a plain
+#' value that an annotated object already holds doesn't outdate the step.
 #'
 #' @note Parameters of locked steps are never changed and their state
 #' remains unchanged. [pip_get_params()] still returns them, so if a locked
 #' step comes first among the steps that share a parameter name,
 #' [pip_get_params()] keeps returning the locked step's value after the
 #' parameter was set.
+#' To read the parameters of the unlocked steps only, use a view that
+#' excludes the locked ones, `pip_get_params(p[!locked])`.
 #'
 #' An environment (or a reference object such as an R6 object) that was
 #' modified in place is identical to the stored one, so setting it again
@@ -3089,6 +3219,8 @@ pip_output_value.default <- function(x, ctx = list(), ...) {
 #' is outdated (together with its downstream steps), even if the values are
 #' [identical()] to the stored ones. This refreshes steps whose inputs are
 #' environments or reference objects that were modified in place.
+#' @param ... Passed on to the methods of `` `pip_param_value<-`() ``,
+#' which [pip_set_params()] uses to determine the value to store.
 #' @return For [pip_get_params()], a named list of unbound parameter values;
 #' if the same parameter name appears in multiple steps, the first
 #' occurrence in pipeline order is returned. For [pip_set_params()], the
@@ -3123,12 +3255,18 @@ pip_output_value.default <- function(x, ctx = list(), ...) {
 #' # ... which can be silenced or turned into an error
 #' pip_set_params(p, params = list(nope = 1), unknown = "ignore")
 #' try(pip_set_params(p, params = list(nope = 1), unknown = "error"))
+#'
+#' # pip_get_params() includes locked steps; a view can exclude them
+#' pip_lock(p["load"])
+#' pip_get_params(p) # list(n = 5, factor = 2.0)
+#' pip_get_params(p[!locked]) # list(factor = 2.0)
 #' @export
 pip_set_params <- function(
     x,
     params = list(),
     unknown = c("warn", "ignore", "error"),
-    force = FALSE
+    force = FALSE,
+    ...
 ) {
     # Input checking
     .assert_pip_or_view(x)
@@ -3182,23 +3320,57 @@ pip_set_params <- function(
     rowsAffected <- rowsConsidered[hasOverlap]
 
     if (any(hasOverlap)) {
+        # Determine the value to store for every affected row and name
+        # before anything is changed, so that a failing method leaves the
+        # pipeline untouched and all failures are reported at once.
+        merged <- vector("list", length(rowsAffected))
+        errors <- list()
+        for (j in seq_along(rowsAffected)) {
+            i <- rowsAffected[[j]]
+            rowPars <- dat[["params"]][[i]]
+            names <- namesAffected[[j]]
+            values <- stats::setNames(vector("list", length(names)), names)
+            for (name in names) {
+                values[name] <- list(tryCatch(
+                    `pip_param_value<-`(
+                        rowPars[[name]],
+                        ...,
+                        value = params[[name]]
+                    ),
+                    error = function(e) {
+                        errors[[length(errors) + 1L]] <<- list(
+                            step = dat[["step"]][[i]],
+                            name = name,
+                            parent = e
+                        )
+                        NULL
+                    }
+                ))
+            }
+            merged[[j]] <- values
+        }
+        if (length(errors) > 0L) {
+            stop(.pip_set_params_error(errors))
+        }
+
         # Update parameters in all affected rows, skipping values that are
         # identical to the stored ones (unless forced)
         isChanged <- logical(length(rowsAffected))
         for (j in seq_along(rowsAffected)) {
             i <- rowsAffected[[j]]
             rowPars <- dat[["params"]][[i]]
+            values <- merged[[j]]
             names <- namesAffected[[j]]
             if (!force) {
                 names <- Filter(
-                    \(name) !identical(rowPars[[name]], params[[name]]),
+                    \(name) !identical(rowPars[[name]], values[[name]]),
                     names
                 )
             }
             if (length(names) == 0L) {
                 next
             }
-            rowPars[names] <- params[names]
+            rowPars[names] <- values[names]
             value <- list(list(rowPars)) # need to wrap in list() for call below
             data.table::set(dat, i = i, j = "params", value = value)
             isChanged[[j]] <- TRUE

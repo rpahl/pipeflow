@@ -1,3 +1,22 @@
+# pipeflow 0.5.0.9004
+
+## New features
+
+- `` `pip_param_value<-`() `` is the write side of `pip_param_value()`: a
+  generic that turns a plain value into the value stored in a step, so
+  that `pip_set_params()` keeps the annotations of a stored object when it
+  is given a plain value.
+- `pip_set_params()` gained `...`, which is passed on to the methods of
+  `` `pip_param_value<-`() ``. It now determines the value to store for
+  every affected step before it changes anything: if a method fails,
+  nothing is set and an error of class `pipeflow_set_params_error`
+  reports all failures at once.
+
+## Documentation
+
+- `pip_get_params()` notes that a view excludes locked steps,
+  `pip_get_params(p[!locked])`.
+
 # pipeflow 0.5.0.9003
 
 ## New features
