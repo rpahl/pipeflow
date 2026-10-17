@@ -9,6 +9,14 @@
 
 # pipeflow 0.5.0.9001
 
+## New features
+
+- `pip_output_value()` is a generic for annotating the output of a step
+  when the step returns, for example to stamp a result with the step it
+  came from and the time of the run. It is applied once to the output,
+  and once per partition for a partitioned output, which gets its key in
+  `ctx$key`. See the new vignette "Annotated step outputs".
+
 ## Documentation
 
 - New hexagon logo with the package name, used in the README and as

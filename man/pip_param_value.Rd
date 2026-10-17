@@ -2,7 +2,7 @@
 % Please edit documentation in R/pipeflow.R
 \name{pip_param_value}
 \alias{pip_param_value}
-\title{Unwrap a parameter value before a step function is called}
+\title{Annotated parameter values}
 \usage{
 pip_param_value(x, ...)
 }
@@ -16,13 +16,15 @@ should accept it.}
 The value the step function receives for the argument.
 }
 \description{
-\code{pip_param_value()} is an extension point for packages that store annotated
-values (e.g. values with units or labels, or parameter objects that carry
-UI metadata) as step parameters. When a step runs, the generic is applied
-once to each unbound argument of the step, that is, to the values that
-come from \code{params} or from the defaults of the step function, and its
-result is what the step function receives. The stored parameters are not
-changed.
+\code{pip_param_value()} is an extension point for handling non-trivial
+parameter values (e.g. values with units or labels, or
+parameter objects that carry UI metadata) as step parameters.
+It can be thought of as a hook that allows you to preprocess or
+unwrap parameter values before they are passed to the step function.
+When a step runs, the generic is applied to each unbound argument of the
+step, that is, to the values that come from \code{params} or from the
+defaults of the step function, and its result is what the step
+function receives. The stored parameters are not changed.
 }
 \details{
 The default method returns \code{x} unchanged. Methods are meant for your own
@@ -53,5 +55,5 @@ pip_run(p, lgr = NULL)
 pip_collect(p)
 }
 \seealso{
-\code{\link[=pip_set_params]{pip_set_params()}}, \code{\link[=pip_run]{pip_run()}}
+\code{\link[=pip_set_params]{pip_set_params()}}, \code{\link[=pip_output_value]{pip_output_value()}}, \code{\link[=pip_run]{pip_run()}}
 }
