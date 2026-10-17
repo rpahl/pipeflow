@@ -177,6 +177,24 @@
     fun
 }
 
+#' Release the pipeline that was provided as `.self` for one step call
+#'
+#' Removes `.self` from the environment that `.wrap_self()` created for a
+#' single step call, so that whatever the step returned and that captured
+#' the call frame doesn't keep the pipeline alive. The environment of the
+#' user's function is never touched, since `.wrap_self()` only ever adds
+#' `.self` to a child environment of its own.
+#'
+#' @param env The environment that `.wrap_self()` created.
+#' @return `NULL`, invisibly.
+#' @noRd
+.release_self <- function(env) {
+    if (exists(".self", envir = env, inherits = FALSE)) {
+        rm(list = ".self", envir = env)
+    }
+    invisible()
+}
+
 # ------------------------------
 # Parameter & dependency parsing
 # ------------------------------
@@ -506,8 +524,14 @@
     step <- dat[["step"]][[i]]
 
     # Provide `.self` (the full pipeline being run) to a step function that
-    # refers to it, in an environment of its own for this call.
-    fun <- .wrap_self(fun, self = x)
+    # refers to it, in an environment of its own for this call. That
+    # environment is released once the step returned (or failed), so that
+    # outputs capturing the call frame don't keep the pipeline alive.
+    funSelf <- .wrap_self(fun, self = x)
+    if (!identical(environment(funSelf), environment(fun))) {
+        on.exit(.release_self(environment(funSelf)), add = TRUE)
+    }
+    fun <- funSelf
 
     unbound <- dat[["unbound"]][[i]]
 
@@ -1281,6 +1305,11 @@ pip_new <- function(name = "pipe") {
 #' in the body). Indirect access, such as `get(".self")`, is not detected.
 #' `.self` is a reserved name: it can't be an argument of `fun` or a name in
 #' `params`.
+#'
+#' `.self` is valid while the step runs only. It is released once the step
+#' returned, so that outputs of the step don't keep the pipeline alive. A
+#' step that returns a function which refers to `.self` therefore fails
+#' with `object '.self' not found` when that function is called later.
 #'
 #' @return The updated pipeline, invisibly.
 #' @examples
