@@ -1288,6 +1288,17 @@ describe("pip_add", {
         expect_equal(length(p), 1L)
     })
 
+    it("can refer to a step with a non-syntactic name", {
+        p <- pip_new() |>
+            pip_add("source data", \(a = 5) a) |>
+            pip_add("if", \(a = 1) a) |>
+            pip_add("s3", \(x = ~`source data`, y = ~ try(`if`)) x + y)
+
+        expect_equal(p[["s3", "depends"]], c(x = "source data", y = "if"))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["s3", "out"]], 6)
+    })
+
     it("if add is aborted, pipeline remains unchanged", {
         p <- pip_new()
         pip_add(p, "s1", \(a = 5) a)

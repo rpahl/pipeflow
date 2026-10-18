@@ -167,7 +167,6 @@ as.function.pipeflow <- function(
 ) {
     .assert_pip(x)
     .assert_fun_out(x, out)
-    .assert_fun_bind(bind)
     .assert_fun_cache(cache)
     onError <- match.arg(on_error)
     if (!is.null(lgr)) {
@@ -176,7 +175,9 @@ as.function.pipeflow <- function(
 
     template <- pip_clone(x)
     suppressMessages(pip_reset(template))
-    args <- .fun_bind(pip_get_params(template), bind)
+    params <- pip_get_params(template)
+    .assert_bind(bind, unbound = names(params))
+    args <- .fun_bind(params, bind)
 
     ctx <- list(
         template = template,
@@ -228,28 +229,6 @@ as.function.pipeflow <- function(
 }
 
 
-.assert_fun_bind <- function(bind) {
-    isOneSided <- \(f) inherits(f, "formula") && length(f) == 2L
-    bindNames <- names(bind)
-    hasNames <- !is.null(bindNames) &&
-        !anyNA(bindNames) &&
-        all(nzchar(bindNames)) &&
-        !anyDuplicated(bindNames)
-    hasValidNames <- length(bind) == 0L || hasNames
-    if (
-        !is.list(bind) ||
-            !hasValidNames ||
-            !all(vapply(bind, isOneSided, logical(1)))
-    ) {
-        stop_no_call(
-            "bind must be a named list of one-sided formulas, ",
-            "e.g. list(data = ~step)"
-        )
-    }
-    invisible(bind)
-}
-
-
 #' Put the bindings into the formals
 #'
 #' The default is a call to `~`, so that the formula is made in the
@@ -257,17 +236,10 @@ as.function.pipeflow <- function(
 #' the environment of the caller.
 #'
 #' @param args The unbound params of the pipeline.
-#' @param bind Named list of one-sided formulas.
+#' @param bind Named list of one-sided formulas, checked by `.assert_bind()`.
 #' @return `args`, with the bound ones as `~step` calls.
 #' @noRd
 .fun_bind <- function(args, bind) {
-    unknown <- setdiff(names(bind), names(args))
-    if (length(unknown) > 0L) {
-        stop_no_call(
-            "bind has names that are no unbound params of the pipeline: ",
-            toString(unknown)
-        )
-    }
     args <- .fun_quote(args)
     for (name in names(bind)) {
         args[[name]] <- call("~", bind[[name]][[2L]])
