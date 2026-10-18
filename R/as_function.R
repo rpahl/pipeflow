@@ -6,14 +6,8 @@
 #
 # The function keeps the inner pipelines it has run, so that a later call only
 # runs the steps that its changed params or inputs outdate. The kept
-# pipelines live in `.fun_registry`, keyed by the id of the function, and not
-# in the closure: the function only holds the id, so serialising it never
-# copies the cache, and a copy in another process starts cold.
-
-# Kept inner pipelines: one environment per function id (see `.fun_cache()`).
-# An entry is removed when the function is garbage collected.
-.fun_registry <- new.env(parent = emptyenv())
-
+# pipelines belong to the function (they live in the environment of its
+# runner): they are dropped with it, and serialising the function copies them.
 
 #' Turn a pipeline into a function
 #'
@@ -56,10 +50,11 @@
 #'   recently used copies are dropped before they are used again and nothing
 #'   is reused. The kept copies hold their inputs and outputs, so the memory
 #'   grows with `cache`.
-#' * The copies are kept in the session that made the function and are
-#'   dropped when the function is garbage collected. Serialising the function
-#'   (e.g. to run it in another process) does not copy them: the copy of the
-#'   function starts with an empty cache.
+#' * The copies belong to the function and are dropped with it. Serialising a
+#'   function that has been called copies them as well (e.g. when sending it
+#'   to another process): the copy starts with the same cache, but does not
+#'   share it. A function that has not been called yet, or one made with
+#'   `cache = 0`, is small.
 #' * In case of an error, the error message includes the key of the partition
 #'   and the name of the failed inner step.
 #' * If the bound steps are not partitioned, cache = 1L is always enough.
@@ -130,9 +125,7 @@ as.function.pipeflow <- function(
     suppressMessages(pip_reset(template))
     args <- .fun_bind(pip_get_params(template), bind)
 
-    id <- basename(tempfile("pip_fun_"))
     ctx <- list(
-        id = id,
         template = template,
         out = out,
         bindText = vapply(
@@ -142,11 +135,8 @@ as.function.pipeflow <- function(
         ),
         size = as.integer(cache)
     )
-    env <- new.env(parent = baseenv())
-    reg.finalizer(env, .fun_finalizer(id), onexit = FALSE)
-
     body <- .fun_body(.fun_runner(ctx), names(args), names(bind))
-    as.function(c(args, list(body)), envir = env)
+    as.function(c(args, list(body)), envir = new.env(parent = baseenv()))
 }
 
 
@@ -242,45 +232,21 @@ as.function.pipeflow <- function(
 }
 
 
+#' The function that runs the pipeline
+#'
+#' Its environment holds the kept pipelines (`entries`, a list of `pip`,
+#' `key` and `used`, and the counter `tick`). They belong to the function and
+#' not to a registry, so that they are dropped with it, also if a step
+#' closure refers to the function.
+#'
+#' @param ctx The context made by `as.function.pipeflow()`.
+#' @noRd
 .fun_runner <- function(ctx) {
     force(ctx)
-    function(args, omitted) .fun_call(args, omitted, ctx)
-}
-
-
-#' Finalizer that only knows the id
-#'
-#' It must not see the environment of the function, or the finalizer would
-#' keep it alive.
-#'
-#' @param id The id of the function.
-#' @noRd
-.fun_finalizer <- function(id) {
-    force(id)
-    function(e) {
-        if (exists(id, envir = .fun_registry, inherits = FALSE)) {
-            rm(list = id, envir = .fun_registry)
-        }
-    }
-}
-
-
-#' The cache of a function, created on first use (so it is cold after
-#' serialisation)
-#'
-#' @param id The id of the function.
-#' @return An environment with `entries` (list of `pip`, `key`, `used`) and
-#'   the counter `tick`.
-#' @noRd
-.fun_cache <- function(id) {
-    cache <- .fun_registry[[id]]
-    if (is.null(cache)) {
-        cache <- new.env(parent = emptyenv())
-        cache$entries <- list()
-        cache$tick <- 0L
-        .fun_registry[[id]] <- cache
-    }
-    cache
+    cache <- new.env(parent = emptyenv())
+    cache$entries <- list()
+    cache$tick <- 0L
+    function(args, omitted) .fun_call(args, omitted, ctx, cache)
 }
 
 
@@ -289,10 +255,10 @@ as.function.pipeflow <- function(
 #' @param args All arguments of the call, as a named list.
 #' @param omitted Named logical: was a bound argument omitted?
 #' @param ctx The context made by `as.function.pipeflow()`.
+#' @param cache The kept pipelines of the function.
 #' @noRd
-.fun_call <- function(args, omitted, ctx) {
+.fun_call <- function(args, omitted, ctx, cache) {
     .assert_fun_supplied(omitted, ctx$bindText)
-    cache <- .fun_cache(ctx$id)
     cache$tick <- cache$tick + 1L
     key <- args[names(omitted)]
 
@@ -366,15 +332,9 @@ as.function.pipeflow <- function(
 }
 
 
-#' The id of a function made by `as.function.pipeflow()`
-#' @noRd
-.fun_id <- function(fun) {
-    environment(body(fun)[[1L]])[["ctx"]][["id"]]
-}
-
-
 #' The kept pipelines of a function made by `as.function.pipeflow()`
 #' @noRd
 .fun_pips <- function(fun) {
-    lapply(.fun_cache(.fun_id(fun))$entries, `[[`, "pip")
+    cache <- environment(body(fun)[[1L]])[["cache"]]
+    lapply(cache$entries, `[[`, "pip")
 }

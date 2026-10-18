@@ -64,10 +64,11 @@ to the arguments named in \code{bind}).
 recently used copies are dropped before they are used again and nothing
 is reused. The kept copies hold their inputs and outputs, so the memory
 grows with \code{cache}.
-\item The copies are kept in the session that made the function and are
-dropped when the function is garbage collected. Serialising the function
-(e.g. to run it in another process) does not copy them: the copy of the
-function starts with an empty cache.
+\item The copies belong to the function and are dropped with it. Serialising a
+function that has been called copies them as well (e.g. when sending it
+to another process): the copy starts with the same cache, but does not
+share it. A function that has not been called yet, or one made with
+\code{cache = 0}, is small.
 \item In case of an error, the error message includes the key of the partition
 and the name of the failed inner step.
 \item If the bound steps are not partitioned, cache = 1L is always enough.

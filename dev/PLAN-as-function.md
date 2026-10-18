@@ -80,20 +80,24 @@ prototype (3 partitions, a 0.1 s inner `fit`):
   size must cover the number of partitions; kept pipelines hold their
   inputs and outputs, so memory grows with it. Document it.
 
-**Where the kept pipelines live.** Not in the closure: serialising the
-function (`saveRDS()`, futures, F4) would copy them. The function holds an
-id; the pipelines live in a registry (environment in the package) keyed by
-that id; a copy in another process starts cold. A finalizer on the
-function's environment removes the entry when the function is collected
-(it must be created by a helper that only knows the id, otherwise the
-finalizer keeps the environment alive). Pinned by tests: serialised size
-does not change with the cache, round trip works cold, entry removed after
-`gc()`. An Rcpp external pointer that owns the cache (like `.dag`) is the
-alternative; decide in the implementation.
+**Where the kept pipelines live.** In the environment of the function's
+runner, so they belong to the function and are dropped with it. The first
+design kept them in a registry in the package, keyed by an id that the
+function held, so that serialising the function never copied them. The code
+review showed that this leaks: R has no weak references, so the registry
+holds the pipelines strongly, and a step closure refers to the frame in
+which the function was assigned (registry -> pipeline -> step closure ->
+frame -> function), so the function is never collected and the finalizer
+never runs. A deserialised function did not get a finalizer either. Owning
+the cache removes both problems, and the registry, the id and the finalizer
+with them. An Rcpp external pointer that owns the cache (like `.dag`) is
+the alternative; not needed.
 
 Consequences to document:
-- A copy of the function in a worker process starts cold, so reuse helps
-  runs in one process (an interactive session), not one-shot workers.
+- Serialising a function that has been called copies the kept pipelines,
+  inputs and outputs included (8 MB input: 126 KB cold, 24 MB used). The
+  copy starts with the same cache but does not share it. A function that has
+  not been called yet, or one made with `cache = 0`, is small.
 - Clones of the outer pipeline share the function, hence the cache. That is
   safe (same argument as above) and saves work.
 
@@ -122,8 +126,8 @@ as.function(x, out = NULL, bind = list(), cache = 16L, ...)  # x: pipeline
   step: `step 'by_batch': key 'D': step 'fit': ...`.
 
 **Decided** (2026-10-17): the `as.function()` method (not a `pip_as_fun()`),
-kept pipelines in an R registry (not an external pointer), `bind` as an
-explicit argument. It was called `connect` for a while and is
+kept pipelines owned by the function (first a registry, changed after the
+review, see above), `bind` as an explicit argument. It was called `connect` for a while and is
 `bind` again: the docs contrast bound and unbound params.
 
 **Open / later.**
@@ -162,8 +166,7 @@ the file layout avoids conflicts (new `R/as_function.R`, new test file; only
 ## Status (2026-10-17)
 
 Implemented in this worktree, not committed:
-- `R/as_function.R` (`as.function.pipeflow()`, registry helpers named
-  `.fun_*`), `S3method(as.function, pipeflow)`, `man/as.function.pipeflow.Rd`,
+- `R/as_function.R` (`as.function.pipeflow()`, helpers named `.fun_*`), `S3method(as.function, pipeflow)`, `man/as.function.pipeflow.Rd`,
   `_pkgdown.yml` entry;
 - `tests/testthat/test_as_function.R` (89 expectations; fixtures inside the
   `describe()` block, because closures from a helper file have the attached

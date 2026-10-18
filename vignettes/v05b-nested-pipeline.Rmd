@@ -315,9 +315,10 @@ A few things to know:
   and running the pipeline, so reuse pays when the inner steps are expensive.
 * A call that is matched to the "wrong" pipeline is only slower, never
   wrong.
-* The pipelines are kept in the session that made the function. A copy of
-  the function in another R process (e.g. a parallel worker) starts without
-  them.
+* The pipelines belong to the function and are dropped with it. Serialising
+  a function that has been called (e.g. to send it to a parallel worker)
+  copies them, inputs and outputs included. A function that has not been
+  called yet, or one made with `cache = 0`, is small.
 * Warnings and messages of the inner steps reach the outer run. If an inner
   step fails, the outer step fails with a message that names the partition and
   the inner step.

@@ -542,22 +542,43 @@ describe("as.function.pipeflow", {
     })
 
     describe("serialisation", {
-        it("does not copy the kept pipelines with the function", {
+        big_batch <- function(n = 1e5) {
+            data.frame(batch = "A", x = seq_len(n), y = sqrt(seq_len(n)))
+        }
+
+        it("copies the kept pipelines with the function", {
             demo <- demo_nested()
             before <- length(serialize(demo$fun, NULL))
-            n <- 1e5
-            big <- data.frame(batch = "A", x = seq_len(n), y = sqrt(seq_len(n)))
 
-            demo$fun(data = big)
+            demo$fun(data = big_batch())
 
-            kept <- .fun_pips(demo$fun)
-            expect_length(kept, 1L)
-            expect_gt(length(serialize(kept[[1L]], NULL)), 1e6)
-            # the kept pipeline would add megabytes; the rest is noise
+            expect_length(.fun_pips(demo$fun), 1L)
+            # the kept pipeline holds the input and the outputs: megabytes
+            expect_gt(length(serialize(demo$fun, NULL)) - before, 1e6)
+        })
+
+        it("is small if nothing is kept", {
+            demo <- demo_nested(cache = 0)
+            before <- length(serialize(demo$fun, NULL))
+
+            demo$fun(data = big_batch())
+
             expect_lt(length(serialize(demo$fun, NULL)) - before, 1e4)
         })
 
-        it("works after a round trip with a cold cache", {
+        it("gives the copy its own copy of the kept pipelines", {
+            demo <- demo_nested()
+            demo$fun(data = demo_batches()[1:6, ])
+
+            copy <- unserialize(serialize(demo$fun, NULL))
+            expect_length(.fun_pips(copy), 1L)
+
+            demo$fun(data = demo_batches()[7:12, ])
+            expect_length(.fun_pips(demo$fun), 2L)
+            expect_length(.fun_pips(copy), 1L)
+        })
+
+        it("works after a round trip of the outer pipeline", {
             demo <- demo_nested()
             run_outer(demo)
 
@@ -577,17 +598,49 @@ describe("as.function.pipeflow", {
                 tolerance = 1e-8
             )
         })
+    })
 
-        it("drops the kept pipelines when the function is collected", {
+    describe("lifetime", {
+        # The finalizer only knows the flag, not the function.
+        set_flag <- function(flag) {
+            force(flag)
+            function(e) flag$collected <- TRUE
+        }
+        track_collection <- function(fun, flag) {
+            runnerEnv <- environment(body(fun)[[1L]])
+            reg.finalizer(runnerEnv, set_flag(flag))
+        }
+
+        it("is collected with its kept pipelines", {
+            flag <- new.env()
+            flag$collected <- FALSE
             f <- as.function(demo_inner(new.env()), out = "coefs")
             f(data = demo_batches()[1:6, ])
-            id <- .fun_id(f)
-            expect_true(exists(id, envir = .fun_registry))
+            expect_length(.fun_pips(f), 1L)
+            track_collection(f, flag)
 
             rm(f)
             gc()
 
-            expect_false(exists(id, envir = .fun_registry))
+            expect_true(flag$collected)
+        })
+
+        it("is collected if a step of the pipeline refers to it", {
+            flag <- new.env()
+            flag$collected <- FALSE
+            # the step closure refers to the frame that holds `f`
+            make <- function() {
+                p <- pip_new("local") |> pip_add("s", \(x = 1) x)
+                f <- as.function(p, out = "s")
+                f()
+                track_collection(f, flag)
+                invisible(NULL)
+            }
+
+            make()
+            gc()
+
+            expect_true(flag$collected)
         })
     })
 
