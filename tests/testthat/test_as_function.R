@@ -392,12 +392,26 @@ describe("as.function.pipeflow", {
 
         it("rejects an invalid cache", {
             inner <- demo_inner(new.env())
-            msg <- "cache must be a single non-negative number"
+            msg <- "cache must be a single whole number >= 0"
 
             expect_error(as.function(inner, cache = -1), msg)
             expect_error(as.function(inner, cache = "a"), msg)
             expect_error(as.function(inner, cache = c(1, 2)), msg)
             expect_error(as.function(inner, cache = NA_real_), msg)
+            expect_error(as.function(inner, cache = NaN), msg)
+            expect_error(as.function(inner, cache = -Inf), msg)
+            expect_error(as.function(inner, cache = 0.5), msg)
+            expect_error(as.function(inner, cache = 2.5), msg)
+        })
+
+        it("accepts whole numbers as cache, also Inf and large ones", {
+            inner <- demo_inner(new.env())
+            d <- demo_batches()[1:6, ]
+
+            for (cache in list(0, 1L, 16, Inf, .Machine$integer.max + 1)) {
+                f <- as.function(inner, out = "data", cache = cache)
+                expect_identical(f(data = d), d)
+            }
         })
 
         it("does not capture the environment of the caller in bind", {
@@ -478,6 +492,15 @@ describe("as.function.pipeflow", {
             run_outer(demo)
 
             expect_identical(demo$calls$fit, 6L)
+        })
+
+        it("keeps all pipelines with cache = Inf", {
+            demo <- demo_nested(cache = Inf)
+            d <- demo_batches()[1:6, ]
+
+            for (i in 1:20) demo$fun(data = transform(d, y = y + i))
+
+            expect_length(.fun_pips(demo$fun), 20L)
         })
 
         it("keeps one pipeline without bound arguments", {

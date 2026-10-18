@@ -71,8 +71,8 @@
 #' The formal gets the formula as its default, as
 #' if it was written in the step function (`~try(step)` is possible as
 #' well).
-#' @param cache The number of run copies of `x` to keep for reuse; `0` keeps
-#' none.
+#' @param cache The number of run copies of `x` to keep for reuse, a whole
+#' number: `0` keeps none, `Inf` keeps all.
 #' @param ... Not used.
 #' @return A function with the unbound params of `x` as arguments.
 #' @seealso [pip_add()]
@@ -117,9 +117,7 @@ as.function.pipeflow <- function(
     .assert_pip(x)
     .assert_fun_out(x, out)
     .assert_fun_bind(bind)
-    if (!.is_single(cache, "numeric") || is.na(cache) || cache < 0) {
-        stop_no_call("cache must be a single non-negative number")
-    }
+    .assert_fun_cache(cache)
 
     template <- pip_clone(x)
     suppressMessages(pip_reset(template))
@@ -133,7 +131,7 @@ as.function.pipeflow <- function(
             \(f) paste(deparse(f), collapse = " "),
             character(1)
         ),
-        size = as.integer(cache)
+        size = cache
     )
     body <- .fun_body(.fun_runner(ctx), names(args), names(bind))
     as.function(c(args, list(body)), envir = new.env(parent = baseenv()))
@@ -156,6 +154,20 @@ as.function.pipeflow <- function(
         )
     }
     invisible(out)
+}
+
+
+.assert_fun_cache <- function(cache) {
+    isCount <- .is_single(cache, "numeric") &&
+        !is.na(cache) &&
+        cache >= 0 &&
+        (is.infinite(cache) || cache == floor(cache))
+    if (!isCount) {
+        stop_no_call(
+            "cache must be a single whole number >= 0 (Inf keeps all)"
+        )
+    }
+    invisible(cache)
 }
 
 

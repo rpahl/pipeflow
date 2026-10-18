@@ -22,8 +22,8 @@ The formal gets the formula as its default, as
 if it was written in the step function (\code{~try(step)} is possible as
 well).}
 
-\item{cache}{The number of run copies of \code{x} to keep for reuse; \code{0} keeps
-none.}
+\item{cache}{The number of run copies of \code{x} to keep for reuse, a whole
+number: \code{0} keeps none, \code{Inf} keeps all.}
 
 \item{...}{Not used.}
 }
