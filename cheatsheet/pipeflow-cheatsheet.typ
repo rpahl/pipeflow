@@ -700,14 +700,12 @@
   columns: (1fr, 1fr, 1fr),
   column-gutter: 16pt,
   [
-    #section("Copy and save", vignette: "v03a-combine-pipelines")[
-      #pfn(clone-pic)[`q <- pip_clone(p)`][
-        an independent copy. After `q <- p`, both names refer to the same
-        pipeline.
+    #section("Ways to connect steps", vignette: "v01-get-started")[
+      #fn[`\(x = ~numbers)`][`x` is the output of step `numbers`.]
+      #fn[`\(x = ~-1)`][
+        the output of the previous step (`~-2`: two steps back).
       ]
-      #fn[`saveRDS(p, "p.rds")`, `p <- readRDS("p.rds")`][
-        save and restore a pipeline with its outputs and states.
-      ]
+      #fn[`\(x = ~numbers, y = ~squared)`][several inputs.]
     ]
 
     #section("Split · map · reduce", vignette: "v05a-split-map-reduce")[
@@ -751,6 +749,16 @@
 
   ],
   [
+    #section("Copy and save", vignette: "v03a-combine-pipelines")[
+      #pfn(clone-pic)[`q <- pip_clone(p)`][
+        an independent copy. After `q <- p`, both names refer to the same
+        pipeline.
+      ]
+      #fn[`saveRDS(p, "p.rds")`, `p <- readRDS("p.rds")`][
+        save and restore a pipeline with its outputs and states.
+      ]
+    ]
+
     #section("Handle failures", vignette: "v05c-error-handling")[
       #align(center, fail-pic)
       #fn[`pip_run(p, on_error = "continue")`][
@@ -787,6 +795,44 @@
       )
     ]
 
+    #v(20pt)
+    #greybox[
+      #text(size: 9pt, fill: orange)[Good to know]
+      #v(2pt)
+      - `pip_*()` functions change the pipeline in place and return it
+        invisibly, so they can be chained with `|>`.
+      - `p$add(...)` is short for `pip_add(p, ...)`; likewise `$run()`,
+        `$set_params()`, `$collect()`, ...
+      - Every argument of a step function needs a default. Primitives
+        like `sum` have none: wrap them, `\(x = ~-1) sum(x)`.
+    ]
+  ],
+  [
+    #section("Self-modifying pipelines", vignette: "v06-self-modify-pipeline")[
+      In a step function, `.self` is the running pipeline.
+      #v(4pt)
+      #align(center, restart-pic)
+      #fn[`.self$add()`, `$replace()`, `$remove()`, ...][
+        change the pipeline during a run.
+      ]
+      #fn[`.self$restart()`][
+        when the step is done, run again with the new structure.
+      ]
+      #v(4pt)
+      #align(center, halt-pic)
+      #fn[
+        ```
+        pip_add(p, "check", \(x = ~data) {
+            if (length(x) == 0) .self$halt()
+            x
+        })
+        ```
+      ][
+        `.self$halt()`: stop the run after this step; the next
+        `pip_run()` continues.
+      ]
+    ]
+
     #section("Non-trivial parameter values", vignette: "v05d-param-value")[
       pipeflow supports non-trivial parameter values.
       #fn[
@@ -821,44 +867,6 @@
       #fn[`pip_set_params(p, list(x = 99))`][
         sets the value to `99`; the label is kept.
       ]
-    ]
-  ],
-  [
-    #section("Self-modifying pipelines", vignette: "v06-self-modify-pipeline")[
-      In a step function, `.self` is the running pipeline.
-      #v(4pt)
-      #align(center, restart-pic)
-      #fn[`.self$add()`, `$replace()`, `$remove()`, ...][
-        change the pipeline during a run.
-      ]
-      #fn[`.self$restart()`][
-        when the step is done, run again with the new structure.
-      ]
-      #v(4pt)
-      #align(center, halt-pic)
-      #fn[
-        ```
-        pip_add(p, "check", \(x = ~data) {
-            if (length(x) == 0) .self$halt()
-            x
-        })
-        ```
-      ][
-        `.self$halt()`: stop the run after this step; the next
-        `pip_run()` continues.
-      ]
-    ]
-
-    #v(20pt)
-    #greybox[
-      #text(size: 9pt, fill: orange)[Good to know]
-      #v(2pt)
-      - `pip_*()` functions change the pipeline in place and return it
-        invisibly, so they can be chained with `|>`.
-      - `p$add(...)` is short for `pip_add(p, ...)`; likewise `$run()`,
-        `$set_params()`, `$collect()`, ...
-      - Every argument of a step function needs a default. Primitives
-        like `sum` have none: wrap them, `\(x = ~-1) sum(x)`.
     ]
   ],
 )
