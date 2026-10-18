@@ -40,7 +40,9 @@ to extract. For \verb{[<-}, the single step property to assign. For \code{[[} an
 \item{view}{For \code{[}, if \code{TRUE} (default), a view referencing the selected
 steps is returned. If \code{FALSE}, a new pipeline is returned that includes the
 selected steps and all their upstream dependencies. Ignored when \code{j} is
-provided.}
+provided. With no selection, \code{v[, view = FALSE]} turns a view into a
+standalone pipeline of all its covered steps, which is also the way to
+get a copy of a view, as \code{\link[=pip_clone]{pip_clone()}} requires a full pipeline.}
 
 \item{value}{The value to assign (\verb{[[<-}, \verb{[<-}).}
 }

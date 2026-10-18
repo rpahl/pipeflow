@@ -503,6 +503,27 @@ describe("extract operator [", {
             expect_error(v[3L], "Invalid row indices")
         })
 
+        it("materializes all covered steps with v[, view = FALSE]", {
+            p <- set_state(filter_pip(), "fit")
+            v <- pip_view(p, step = c("fit", "eval"))
+
+            expect_message(
+                sub <- v[, view = FALSE],
+                "pulled in 1 upstream dependency"
+            )
+
+            expect_false(.is_pipeflow_view(sub))
+            expect_equal(unname(sub[["step"]]), c("load", "fit", "eval"))
+
+            # Same result as spelling the selector out
+            suppressMessages(explicit <- v[TRUE, view = FALSE])
+            expect_equal(sub[["step"]], explicit[["step"]])
+
+            # and it is independent of the source pipeline
+            pip_remove(p, "eval")
+            expect_equal(unname(sub[["step"]]), c("load", "fit", "eval"))
+        })
+
         it("rejects named filters and stray arguments", {
             p <- filter_pip()
 
