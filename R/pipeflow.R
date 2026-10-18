@@ -123,7 +123,10 @@
         stop_no_call("x must be a pipeflow pip")
     }
     if (.is_pipeflow_view(x)) {
-        stop_no_call("x must be a full pipeline, not a view")
+        stop_no_call(
+            "x must be a full pipeline, not a view - use ",
+            "x[, view = FALSE] to turn the view into a standalone pipeline"
+        )
     }
     invisible(x)
 }
@@ -1066,13 +1069,23 @@
     steps <- c(prefixSteps, step)
     depends <- .extract_depends(params = params, steps = steps)
     if (length(depends) > 0L) {
-        forbidden <- depends[!(depends %in% prefixSteps)]
+        forbidden <- unname(depends[!(depends %in% prefixSteps)])
         if (length(forbidden) > 0L) {
+            later <- forbidden[forbidden %in% data[["step"]]]
+            if (length(later) > 0L) {
+                stop_no_call(
+                    "while adding step '",
+                    step,
+                    "' - cannot reference steps that come after the ",
+                    "insertion point: ",
+                    paste0("'", later, "'", collapse = ", ")
+                )
+            }
             stop_no_call(
                 "while adding step '",
                 step,
                 "' - cannot reference unknown steps: ",
-                paste0("'", unname(forbidden), "'", collapse = ", ")
+                paste0("'", forbidden, "'", collapse = ", ")
             )
         }
     }

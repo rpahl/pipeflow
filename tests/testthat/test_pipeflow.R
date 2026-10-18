@@ -1423,7 +1423,7 @@ describe("pip_add", {
         expect_equal(p[["state"]][[i]], "done")
     })
 
-    it("signals invalid insertion position and unknown step reference", {
+    it("signals invalid insertion position", {
         p <- test_pip()
         expect_error(
             pip_add(p, "f3", \(x = 1) x, after = "unknown"),
@@ -1441,9 +1441,23 @@ describe("pip_add", {
             pip_add(p, "f3", \(x = 1) x, after = 3),
             "after index must be between 0 and 2"
         )
+    })
+
+    it("distinguishes unknown steps from steps that come later", {
+        p <- test_pip()
+
+        # 'f2' exists, but lies behind the insertion point
         expect_error(
             pip_add(p, "f3", \(x = ~f2) x, after = "f1"),
-            "cannot reference unknown steps: 'f2'"
+            paste0(
+                "cannot reference steps that come after the ",
+                "insertion point: 'f2'"
+            )
+        )
+
+        expect_error(
+            pip_add(p, "f3", \(x = ~nope) x, after = "f1"),
+            "cannot reference unknown steps: 'nope'"
         )
     })
 
