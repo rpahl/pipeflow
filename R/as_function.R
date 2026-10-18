@@ -12,12 +12,12 @@
 #' Turn a pipeline into a function
 #'
 #' Returns a function that runs a copy of the pipeline `x` and returns the
-#' output of selected steps. The formals of the function are the unbound
-#' params of `x`, with their current values as defaults. As any other
-#' function, it can be added to another pipeline with [pip_add()]. Then the
-#' unbound params of `x` become params of that step: [pip_get_params()] lists
-#' them, [pip_set_params()] sets them and a change outdates the step.
-#' To bind params of `x` to output of steps of the outer pipeline,
+#' output of selected steps. The function arguments are the unbound
+#' parameters of `x`, with their current values as defaults. As any other
+#' function, it can be added to an "outer" pipeline with [pip_add()],
+#' in which case the unbound parameters of `x` become parameters of that
+#' pipeline.
+#' To bind parameters of `x` to output of steps of the outer pipeline,
 #' use the `bind` argument.
 #'
 #' @note
@@ -33,6 +33,18 @@
 #' makes the outer step fail.
 #' Param values of the outer pipeline reach the function unwrapped
 #' (see [pip_param_value()]).
+#'
+#' ## Continuing after errors of inner steps
+#' With `on_error = "continue"` the inner pipeline is run like
+#' `pip_run(on_error = "continue")`, that is, a failing inner step gets state
+#' `"failed"`, the inner steps that do not depend on it still run, and an
+#' inner step that refers to it via `~try(step)` runs and receives the
+#' failure.
+#'
+#' The function still fails if one of the steps named in `out` failed or was
+#' not run because an input failed. Since with `out = NULL` *all* steps are
+#' requested, you need to name the relevant steps in `out` to profit from
+#' a continuing inner run.
 #'
 #' ## Pipeline functions with partitioned inputs
 #' If the step with the pipeline function happens to receive partitioned inputs
@@ -85,6 +97,9 @@
 #' well).
 #' @param cache The number of run copies of `x` to keep for reuse, a whole
 #' number: `0` keeps none, `Inf` keeps all.
+#' @param on_error What to do when an inner step fails: `"stop"` (the
+#' default) ends the inner run at that step, `"continue"` runs the inner
+#' steps that do not depend on it, see Details and [pip_run()].
 #' @param ... Not used.
 #' @return A function with the unbound params of `x` as arguments.
 #' @seealso [pip_add()]
@@ -124,12 +139,14 @@ as.function.pipeflow <- function(
     out = NULL,
     bind = list(),
     cache = 16L,
+    on_error = c("stop", "continue"),
     ...
 ) {
     .assert_pip(x)
     .assert_fun_out(x, out)
     .assert_fun_bind(bind)
     .assert_fun_cache(cache)
+    onError <- match.arg(on_error)
 
     template <- pip_clone(x)
     suppressMessages(pip_reset(template))
@@ -138,6 +155,7 @@ as.function.pipeflow <- function(
     ctx <- list(
         template = template,
         out = out,
+        onError = onError,
         bindText = vapply(
             bind,
             \(f) paste(deparse(f), collapse = " "),
@@ -315,7 +333,8 @@ as.function.pipeflow <- function(
     # Keep before running: after a failure, the steps that did run are reused
     entry <- list(pip = pip, key = key, used = cache$tick)
     .fun_keep(cache, entry, i, ctx$size)
-    pip_run(pip, lgr = NULL)
+    pip_run(pip, lgr = NULL, on_error = ctx$onError)
+    .fun_check_run(pip, ctx$out)
     .fun_out(pip, ctx$out)
 }
 
@@ -362,6 +381,69 @@ as.function.pipeflow <- function(
         cache$entries <- cache$entries[-which.min(used)]
     }
     invisible(NULL)
+}
+
+
+#' Signal the failure of a requested step of a continued inner run
+#'
+#' With `on_error = "continue"` a failing step does not end the inner run, so
+#' the requested steps are checked afterwards: if one of them failed, or was
+#' not run because an input failed, the error of the step that failed is
+#' signalled as `pip_run(on_error = "stop")` would have signalled it.
+#'
+#' @param pip The inner pipeline, after the run.
+#' @param out The requested steps, `NULL` for all of them.
+#' @return `NULL`, invisibly, if no requested step is affected.
+#' @noRd
+.fun_check_run <- function(pip, out) {
+    dat <- .pip_pipenv(pip)[["data"]]
+    isFailed <- dat[["state"]] == .step_states[["failed"]][["name"]] &
+        !dat[["locked"]]
+    if (!any(isFailed)) {
+        return(invisible(NULL))
+    }
+    causes <- .fun_failure_causes(dat)
+    requested <- if (is.null(out)) dat[["step"]] else out
+    affected <- intersect(names(causes), requested)
+    if (length(affected) == 0L) {
+        return(invisible(NULL))
+    }
+    cause <- causes[[affected[[1L]]]]
+    stop(.pip_step_error(cause, parent = pip[[cause, "out"]]))
+}
+
+
+#' The step that failed, for each step that has no output of its own
+#'
+#' The failures are followed step by step as the run followed them (see
+#' `pip_run()`), and not along all edges of the DAG: a step that got the
+#' failure through `~try()` has run, and a locked step is neither run nor
+#' skipped, so neither of them hands the failure to its own dependents.
+#'
+#' @param dat The `data` of the inner pipeline, after the run.
+#' @return A named list: step name -> name of the step that failed for it,
+#' in the order of the steps.
+#' @noRd
+.fun_failure_causes <- function(dat) {
+    causes <- list()
+    for (i in seq_len(nrow(dat))) {
+        step <- dat[["step"]][[i]]
+        if (dat[["locked"]][[i]]) {
+            next
+        }
+        if (dat[["state"]][[i]] == .step_states[["failed"]][["name"]]) {
+            causes[[step]] <- step
+            next
+        }
+        depends <- dat[["depends"]][[i]]
+        failedArgs <- names(depends)[depends %in% names(causes)]
+        tryArgs <- formula_try_args(dat[["params"]][[i]])
+        blocked <- setdiff(failedArgs, tryArgs)
+        if (length(blocked) > 0L) {
+            causes[[step]] <- causes[[depends[[blocked[[1L]]]]]]
+        }
+    }
+    causes
 }
 
 

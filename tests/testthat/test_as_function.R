@@ -247,7 +247,9 @@ describe("as.function.pipeflow", {
                         c = \(x) x + 2,
                         missing = \(x) x + 3,
                         .pipRunner = \(x) x + 4
-                    ) list(1) + c(1) + missing(1) + .pipRunner(1)
+                    ) {
+                        list(1) + c(1) + missing(1) + .pipRunner(1)
+                    }
                 )
 
             f <- as.function(p, out = "s", bind = list(c = ~input))
@@ -417,6 +419,15 @@ describe("as.function.pipeflow", {
             expect_error(as.function(inner, cache = 2.5), msg)
         })
 
+        it("rejects an invalid on_error", {
+            inner <- demo_inner(new.env())
+
+            expect_error(
+                as.function(inner, on_error = "later"),
+                "should be one of"
+            )
+        })
+
         it("accepts whole numbers as cache, also Inf and large ones", {
             inner <- demo_inner(new.env())
             d <- demo_batches()[1:6, ]
@@ -539,7 +550,9 @@ describe("as.function.pipeflow", {
             demo <- demo_nested(cache = Inf)
             d <- demo_batches()[1:6, ]
 
-            for (i in 1:20) demo$fun(data = transform(d, y = y + i))
+            for (i in 1:20) {
+                demo$fun(data = transform(d, y = y + i))
+            }
 
             expect_length(.fun_pips(demo$fun), 20L)
         })
@@ -598,7 +611,9 @@ describe("as.function.pipeflow", {
                     x + 1
                 }) |>
                 pip_add("down", \(u = ~up) {
-                    if (state$fail) stop("boom")
+                    if (state$fail) {
+                        stop("boom")
+                    }
                     u * 2
                 })
             f <- as.function(inner, out = "down", bind = list(x = ~source))
@@ -621,7 +636,7 @@ describe("as.function.pipeflow", {
                 pip_add("a", \(v = 5) v) |>
                 pip_add(
                     "run",
-                    as.function(inner, out = "s", bind = list(x = ~-1))
+                    as.function(inner, out = "s", bind = list(x = ~ -1))
                 )
 
             pip_run(outer, lgr = NULL)
@@ -640,7 +655,7 @@ describe("as.function.pipeflow", {
                 pip_add("bad", \() stop("nope")) |>
                 pip_add(
                     "run",
-                    as.function(inner, out = "s", bind = list(x = ~try(bad)))
+                    as.function(inner, out = "s", bind = list(x = ~ try(bad)))
                 )
 
             suppressWarnings(
@@ -661,10 +676,14 @@ describe("as.function.pipeflow", {
                     calls$n <- calls$n + 1L
                     a + b
                 })
-            fun <- as.function(inner, out = "total", bind = list(
-                a = ~parts,
-                b = ~offset
-            ))
+            fun <- as.function(
+                inner,
+                out = "total",
+                bind = list(
+                    a = ~parts,
+                    b = ~offset
+                )
+            )
             outer <- pip_new("outer") |>
                 pip_add(
                     "parts",
@@ -695,6 +714,329 @@ describe("as.function.pipeflow", {
             run_outer(list(outer = outer))
             expect_identical(calls$n, 5L)
             expect_equal(unlist(outer[["run", "out"]]), c(p = 15, q = 12))
+        })
+    })
+
+    describe("continuing after errors of inner steps", {
+        # `bad` fails for the input "boom". `report` takes its output via
+        # `~try()`, `use` plainly, and `other` does not depend on it.
+        failing_inner <- function(calls = new.env()) {
+            calls$other <- 0L
+            pip_new("failing") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("bad", \(x = ~input) {
+                    if (identical(x, "boom")) {
+                        stop("boom")
+                    }
+                    x
+                }) |>
+                pip_add("report", \(b = ~ try(bad)) {
+                    if (inherits(b, "pipeflow_failure")) "no result" else b
+                }) |>
+                pip_add("use", \(b = ~bad) b) |>
+                pip_add("other", \(x = ~input) {
+                    calls$other <- calls$other + 1L
+                    "other output"
+                })
+        }
+
+        it("stops at the first failed inner step by default", {
+            f <- as.function(failing_inner(), out = "report")
+
+            # `~try(bad)` has no effect, since the run does not continue
+            expect_error(f(x = "boom"), "step 'bad': boom")
+            expect_identical(f(x = "fine"), "fine")
+        })
+
+        it("hands the failure to a ~try() step with on_error = continue", {
+            f <- as.function(
+                failing_inner(),
+                out = "report",
+                on_error = "continue"
+            )
+
+            expect_warning(
+                out <- f(x = "boom"),
+                "continued after 1 failed step"
+            )
+            expect_identical(out, "no result")
+        })
+
+        it("runs and keeps the steps that do not depend on the failure", {
+            calls <- new.env()
+            f <- as.function(
+                failing_inner(calls),
+                out = "other",
+                on_error = "continue"
+            )
+
+            expect_warning(out <- f(x = "boom"), "continued")
+            expect_identical(out, "other output")
+            expect_identical(calls$other, 1L)
+
+            pip <- .fun_pips(f)[[1L]]
+            expect_identical(pip[["other", "state"]], "done")
+            expect_identical(pip[["bad", "state"]], "failed")
+
+            # the kept pipeline only retries the failed step
+            expect_warning(f(x = "boom"), "continued")
+            expect_identical(calls$other, 1L)
+        })
+
+        it("fails if a requested step failed or was not run", {
+            failed <- as.function(
+                failing_inner(),
+                out = c("other", "bad"),
+                on_error = "continue"
+            )
+            skipped <- as.function(
+                failing_inner(),
+                out = "use",
+                on_error = "continue"
+            )
+
+            expect_error(
+                suppressWarnings(failed(x = "boom")),
+                "step 'bad': boom"
+            )
+            expect_error(
+                suppressWarnings(skipped(x = "boom")),
+                "step 'bad': boom"
+            )
+        })
+
+        it("names the step that kept a requested step from running", {
+            inner <- pip_new("two_failures") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("bad_a", \(x = ~input) stop("A failed")) |>
+                pip_add("rescue", \(a = ~ try(bad_a)) "recovered") |>
+                pip_add("bad_b", \(x = ~input) stop("B failed")) |>
+                pip_add("result", \(r = ~rescue, b = ~bad_b) list(r, b))
+            f <- as.function(inner, out = "result", on_error = "continue")
+
+            err <- tryCatch(suppressWarnings(f(x = 1)), error = \(e) e)
+
+            # `rescue` handled the failure of `bad_a`, so only `bad_b` kept
+            # `result` from running
+            expect_identical(err[["step"]], "bad_b")
+            expect_match(conditionMessage(err), "step 'bad_b': B failed")
+        })
+
+        it("does not follow a failure past a locked step", {
+            state <- new.env()
+            state$fail <- FALSE
+            inner <- pip_new("locked") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("bad_a", \(x = ~input) {
+                    if (state$fail) {
+                        stop("A failed")
+                    }
+                    x
+                }) |>
+                pip_add("kept", \(a = ~bad_a) "kept output") |>
+                pip_add("bad_b", \(x = ~input) {
+                    if (state$fail) {
+                        stop("B failed")
+                    }
+                    x
+                }) |>
+                pip_add("result", \(k = ~kept, b = ~bad_b) list(k, b))
+            pip_run(inner, lgr = NULL)
+            pip_lock(pip_view(inner, step = "kept"))
+            state$fail <- TRUE
+            f <- as.function(inner, out = "result", on_error = "continue")
+
+            err <- tryCatch(suppressWarnings(f(x = 1)), error = \(e) e)
+
+            # `kept` is not run, so the failure of `bad_a` stops there
+            expect_identical(err[["step"]], "bad_b")
+        })
+
+        it("keeps the key of a failed mapped inner step in the error", {
+            inner <- pip_new("mapped") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("parts", \(x = ~input) x, exec = "split") |>
+                pip_add("double", \(p = ~parts) {
+                    if (is.character(p)) {
+                        stop("not a number")
+                    }
+                    p * 2
+                })
+            f <- as.function(inner, out = "double", on_error = "continue")
+
+            err <- tryCatch(
+                suppressWarnings(f(x = list(a = 1, b = "x"))),
+                error = \(e) e
+            )
+
+            expect_match(
+                conditionMessage(err),
+                "step 'double': key 'b': not a number"
+            )
+            expect_s3_class(err[["parent"]], "pipeflow_key_error")
+            expect_identical(err[["parent"]][["key"]], "b")
+        })
+
+        it("does not return a kept output when an input fails later", {
+            inner <- pip_new("stale") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("bad", \(x = ~input, mode = "ok") {
+                    if (identical(mode, "boom")) {
+                        stop("boom")
+                    }
+                    x
+                }) |>
+                pip_add("use", \(b = ~bad) b * 2)
+            f <- as.function(
+                inner,
+                out = "use",
+                bind = list(x = ~source),
+                on_error = "continue"
+            )
+
+            expect_identical(f(x = 2), 4)
+            expect_error(
+                suppressWarnings(f(x = 2, mode = "boom")),
+                "step 'bad': boom"
+            )
+        })
+
+        it("reruns the ~try() step when the failed step succeeds again", {
+            state <- new.env()
+            state$fail <- TRUE
+            inner <- pip_new("recover") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("bad", \(x = ~input) {
+                    if (state$fail) {
+                        stop("boom")
+                    }
+                    x
+                }) |>
+                pip_add("report", \(b = ~ try(bad)) {
+                    if (inherits(b, "pipeflow_failure")) "no result" else b * 10
+                })
+            f <- as.function(
+                inner,
+                out = "report",
+                bind = list(x = ~source),
+                on_error = "continue"
+            )
+
+            expect_warning(out <- f(x = 3), "continued")
+            expect_identical(out, "no result")
+
+            state$fail <- FALSE
+            expect_identical(f(x = 3), 30)
+        })
+
+        it("returns the requested outputs beside an unrequested failure", {
+            for (cache in c(0, 16)) {
+                f <- as.function(
+                    failing_inner(),
+                    out = c("report", "other"),
+                    cache = cache,
+                    on_error = "continue"
+                )
+
+                expect_warning(out <- f(x = "boom"), "continued")
+                expect_identical(
+                    out,
+                    list(report = "no result", other = "other output")
+                )
+            }
+        })
+
+        it("lets the outer run succeed when the inner pipeline recovers", {
+            fun <- as.function(
+                failing_inner(),
+                out = "report",
+                bind = list(x = ~parts),
+                on_error = "continue"
+            )
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "parts",
+                    \(values = list(a = "fine", b = "boom")) values,
+                    exec = "split"
+                ) |>
+                pip_add("run", fun)
+
+            # the outer run never sees an error, although `bad` failed for 'b'
+            suppressWarnings(pip_run(outer, lgr = NULL))
+
+            expect_identical(outer[["run", "state"]], "done")
+            expect_identical(
+                unlist(outer[["run", "out"]]),
+                c(a = "fine", b = "no result")
+            )
+        })
+
+        it("requests all steps with out = NULL", {
+            f <- as.function(failing_inner(), on_error = "continue")
+
+            expect_error(suppressWarnings(f(x = "boom")), "step 'bad': boom")
+            expect_named(
+                f(x = "fine"),
+                c("input", "bad", "report", "use", "other")
+            )
+        })
+
+        it("leaves it to the outer run what happens to the outer step", {
+            fun <- as.function(
+                failing_inner(),
+                out = "use",
+                bind = list(x = ~source),
+                on_error = "continue"
+            )
+            outer <- pip_new("outer") |>
+                pip_add("source", \(x = "boom") x) |>
+                pip_add("run", fun) |>
+                pip_add("after", \(r = ~run) r) |>
+                pip_add("rescue", \(r = ~ try(run)) {
+                    if (inherits(r, "pipeflow_failure")) "rescued" else r
+                })
+
+            suppressWarnings(pip_run(outer, lgr = NULL, on_error = "continue"))
+
+            expect_identical(outer[["run", "state"]], "failed")
+            expect_match(
+                conditionMessage(outer[["run", "out"]]),
+                "step 'bad': boom"
+            )
+            expect_null(outer[["after", "out"]])
+            expect_identical(outer[["rescue", "out"]], "rescued")
+        })
+
+        it("retries only the failed step when the input comes again", {
+            state <- new.env()
+            state$up <- 0L
+            state$fail <- TRUE
+            inner <- pip_new("retry") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("up", \(x = ~input) {
+                    state$up <- state$up + 1L
+                    x + 1
+                }) |>
+                pip_add("down", \(u = ~up) {
+                    if (state$fail) {
+                        stop("boom")
+                    }
+                    u * 2
+                })
+            f <- as.function(
+                inner,
+                out = "down",
+                bind = list(x = ~source),
+                on_error = "continue"
+            )
+
+            expect_error(suppressWarnings(f(x = 1)), "step 'down': boom")
+            expect_identical(state$up, 1L)
+
+            state$fail <- FALSE
+            expect_identical(f(x = 1), 4)
+            expect_identical(state$up, 1L)
+            expect_length(.fun_pips(f), 1L)
         })
     })
 

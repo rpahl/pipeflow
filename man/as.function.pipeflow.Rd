@@ -4,7 +4,14 @@
 \alias{as.function.pipeflow}
 \title{Turn a pipeline into a function}
 \usage{
-\method{as.function}{pipeflow}(x, out = NULL, bind = list(), cache = 16L, ...)
+\method{as.function}{pipeflow}(
+  x,
+  out = NULL,
+  bind = list(),
+  cache = 16L,
+  on_error = c("stop", "continue"),
+  ...
+)
 }
 \arguments{
 \item{x}{A pipeflow pipeline (not a view; use \code{x[i, view = FALSE]} to turn
@@ -25,6 +32,10 @@ well).}
 \item{cache}{The number of run copies of \code{x} to keep for reuse, a whole
 number: \code{0} keeps none, \code{Inf} keeps all.}
 
+\item{on_error}{What to do when an inner step fails: \code{"stop"} (the
+default) ends the inner run at that step, \code{"continue"} runs the inner
+steps that do not depend on it, see Details and \code{\link[=pip_run]{pip_run()}}.}
+
 \item{...}{Not used.}
 }
 \value{
@@ -32,12 +43,12 @@ A function with the unbound params of \code{x} as arguments.
 }
 \description{
 Returns a function that runs a copy of the pipeline \code{x} and returns the
-output of selected steps. The formals of the function are the unbound
-params of \code{x}, with their current values as defaults. As any other
-function, it can be added to another pipeline with \code{\link[=pip_add]{pip_add()}}. Then the
-unbound params of \code{x} become params of that step: \code{\link[=pip_get_params]{pip_get_params()}} lists
-them, \code{\link[=pip_set_params]{pip_set_params()}} sets them and a change outdates the step.
-To bind params of \code{x} to output of steps of the outer pipeline,
+output of selected steps. The function arguments are the unbound
+parameters of \code{x}, with their current values as defaults. As any other
+function, it can be added to an "outer" pipeline with \code{\link[=pip_add]{pip_add()}},
+in which case the unbound parameters of \code{x} become parameters of that
+pipeline.
+To bind parameters of \code{x} to output of steps of the outer pipeline,
 use the \code{bind} argument.
 }
 \details{
@@ -47,6 +58,20 @@ A failing inner step results in an error of the caller, which in turn
 makes the outer step fail.
 Param values of the outer pipeline reach the function unwrapped
 (see \code{\link[=pip_param_value]{pip_param_value()}}).
+\subsection{Continuing after errors of inner steps}{
+
+With \code{on_error = "continue"} the inner pipeline is run like
+\code{pip_run(on_error = "continue")}, that is, a failing inner step gets state
+\code{"failed"}, the inner steps that do not depend on it still run, and an
+inner step that refers to it via \code{~try(step)} runs and receives the
+failure.
+
+The function still fails if one of the steps named in \code{out} failed or was
+not run because an input failed. Since with \code{out = NULL} \emph{all} steps are
+requested, you need to name the relevant steps in \code{out} to profit from
+a continuing inner run.
+}
+
 \subsection{Pipeline functions with partitioned inputs}{
 
 If the step with the pipeline function happens to receive partitioned inputs

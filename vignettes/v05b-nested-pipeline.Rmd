@@ -326,6 +326,12 @@ A few things to know:
 * Warnings and messages of the inner steps reach the outer run. If an inner
   step fails, the outer step fails with a message that names the partition and
   the inner step.
+* With `as.function(on_error = "continue")` the inner pipeline continues
+  after a failed step, just as `pip_run(on_error = "continue")` does, which
+  is also what makes `~try()` references inside the inner pipeline work (see
+  ["Error handling"](v05c-error-handling.html)). The outer step still fails
+  if one of the steps named in `out` failed or was not run because an input
+  failed, so the outer run decides what happens to it as usual.
 
 
 ### Full control: running the inner pipeline yourself
