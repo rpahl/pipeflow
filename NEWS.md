@@ -1,3 +1,17 @@
+# pipeflow 0.5.0.9007
+
+## New features
+
+- `as.function()` gained the argument `on_error`. Set to `"continue"`, the
+  inner pipeline is run as `pip_run(on_error = "continue")` runs it: inner
+  steps that do not depend on a failed step still run, and a `~try(step)`
+  reference inside the inner pipeline receives the failure. The function
+  still fails if one of the steps named in `out` failed or was not run
+  because an input failed.
+- `as.function()` gained the argument `lgr`, the logger of the inner run.
+  The inner pipeline is still run silently by default (`lgr = NULL`), but
+  its steps can now be logged, e.g. `as.function(x, lgr = pipeflow_lgr)`.
+
 # pipeflow 0.5.0.9006
 
 ## New features

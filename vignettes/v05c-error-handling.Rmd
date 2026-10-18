@@ -270,6 +270,96 @@ pip[["combine", "out"]]
 ```
 
 
+### Failures in nested pipelines
+
+A pipeline can be turned into a function with `as.function()` and added as a
+step to another pipeline, as described in the vignette on
+[nested pipelines](v05b-nested-pipeline.html). Such a step runs a pipeline of
+its own, which means it also has its own error handling.
+
+Let's put the `spread` step of the previous section into an inner pipeline
+that reports on it, and map that pipeline over the groups:
+
+```{r define-nested-pipeline}
+inner <- pip_new("inner") |>
+    pip_add("data", \(data = NULL) data) |>
+    pip_add("spread", \(d = ~data) {
+        if (nrow(d) < 2) stop("need at least 2 rows")
+        diff(range(d$y))
+    }) |>
+    pip_add("report", \(s = ~try(spread)) {
+        if (inherits(s, "pipeflow_failure")) "no spread" else s
+    })
+
+nested <- pip_new("nested") |>
+    pip_add("data", \(data = NULL) data) |>
+    pip_add("by_group", \(data = ~data) split(data, data$g), exec = "split") |>
+    pip_add(
+        "per_group",
+        as.function(inner, out = "report", bind = list(data = ~by_group))
+    )
+
+pip_set_params(nested, list(data = d))
+```
+
+By default, the inner pipeline is run with `on_error = "stop"`, so it ends at
+the first failed inner step and the outer step fails with it. The `try()`
+reference of the `report` step has no effect here, because `try()` only
+matters in a *continuing* run:
+
+```{r run-nested-stop, error = TRUE}
+pip_run(nested)
+```
+
+With `as.function(on_error = "continue")`, the inner pipeline is run as
+`pip_run(on_error = "continue")` runs it: inner steps that do not depend on
+the failed step still run, and `~try(spread)` gives the `report` step the
+failure object. Group `c` is handled inside the inner pipeline, and the outer
+run completes:
+
+```{r run-nested-continue}
+pip_replace(
+    nested,
+    "per_group",
+    as.function(
+        inner,
+        out = "report",
+        bind = list(data = ~by_group),
+        on_error = "continue"
+    )
+)
+
+pip_run(nested)
+
+nested[["per_group", "out"]]
+```
+
+The warning of the continued inner run is passed on like any other warning of
+a step, so the outer run logs it and the result of every group is available.
+
+The function still fails if one of the steps named in `out` failed or was not
+run because an input failed: the inner pipeline handles what it can, and
+everything else is left to the outer run, as before.
+
+```{r run-nested-requested, error = TRUE}
+pip_replace(
+    nested,
+    "per_group",
+    as.function(
+        inner,
+        out = "spread",
+        bind = list(data = ~by_group),
+        on_error = "continue"           # <--- this time we continue
+    )
+)
+
+pip_run(nested, lgr = NULL)
+```
+
+Since `out = NULL` requests the output of *all* inner steps, name the steps
+you need in `out` to profit from a continuing inner run.
+
+
 ### Summary
 
 * By default, a failing step stops the run with a `pipeflow_step_error` that
@@ -286,6 +376,11 @@ pip[["combine", "out"]]
 * For steps that map over partitions, the condition of the failed
   partition is a `pipeflow_key_error` with the field `key`. A `reduce` step
   with a `try()` reference receives the failure.
+* A step made with `as.function()` runs a pipeline of its own.
+  `as.function(on_error = "continue")` lets that inner pipeline continue
+  after a failed inner step, which is also what makes `try()` references
+  inside it work. The step still fails if one of the steps named in `out`
+  failed or was not run.
 
 ```{r, include = FALSE}
 options(old)

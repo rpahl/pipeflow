@@ -12,12 +12,12 @@
 #' Turn a pipeline into a function
 #'
 #' Returns a function that runs a copy of the pipeline `x` and returns the
-#' output of selected steps. The formals of the function are the unbound
-#' params of `x`, with their current values as defaults. As any other
-#' function, it can be added to another pipeline with [pip_add()]. Then the
-#' unbound params of `x` become params of that step: [pip_get_params()] lists
-#' them, [pip_set_params()] sets them and a change outdates the step.
-#' To bind params of `x` to output of steps of the outer pipeline,
+#' output of selected steps. The function arguments are the unbound
+#' parameters of `x`, with their current values as defaults. As any other
+#' function, it can be added to an "outer" pipeline with [pip_add()],
+#' in which case the unbound parameters of `x` become parameters of that
+#' pipeline.
+#' To bind parameters of `x` to output of steps of the outer pipeline,
 #' use the `bind` argument.
 #'
 #' @note
@@ -27,12 +27,24 @@
 #' before, except for locked steps, which keep their outputs.
 #'
 #' @details
-#' The inner pipeline is run silently (`lgr = NULL`).
-#' Warnings and messages of its steps are passed on to the caller.
-#' A failing inner step results in an error of the caller, which in turn
+#' By default, the inner pipeline is run silently, but warnings and messages
+#' of its steps are still passed on to the caller.
+#' A failing inner step results in an error of the caller which in turn
 #' makes the outer step fail.
 #' Param values of the outer pipeline reach the function unwrapped
 #' (see [pip_param_value()]).
+#'
+#' ## Continuing after errors of inner steps
+#' With `on_error = "continue"` the inner pipeline is run like
+#' `pip_run(on_error = "continue")`, that is, a failing inner step gets state
+#' `"failed"`, the inner steps that do not depend on it still run, and an
+#' inner step that refers to it via `~try(step)` runs and receives the
+#' failure.
+#'
+#' The function still fails if one of the steps named in `out` failed or was
+#' not run because an input failed. Since with `out = NULL` *all* steps are
+#' requested, you need to name the relevant steps in `out` to profit from
+#' a continuing inner run.
 #'
 #' ## Pipeline functions with partitioned inputs
 #' If the step with the pipeline function happens to receive partitioned inputs
@@ -68,8 +80,8 @@
 #'   environment or another reference object (e.g. R6) is not seen: as for
 #'   [pip_set_params()] of a pipeline, which needs `force = TRUE`, the
 #'   steps stay up to date. A forced run of the outer pipeline
-#'   (`pip_run(force = TRUE)`) does not force the inner pipelines either.
-#'   Use `cache = 0` for such inputs.
+#'   (`pip_run(force = TRUE)`) does not force the inner pipelines either,
+#'   but you can force them by setting `cache = 0`.
 #'
 #' @param x A pipeflow pipeline (not a view; use `x[i, view = FALSE]` to turn
 #' a part of a pipeline into a function).
@@ -85,6 +97,12 @@
 #' well).
 #' @param cache The number of run copies of `x` to keep for reuse, a whole
 #' number: `0` keeps none, `Inf` keeps all.
+#' @param on_error What to do when an inner step fails: `"stop"` (the
+#' default) ends the inner run at that step, `"continue"` runs the inner
+#' steps that do not depend on it, see Details and [pip_run()].
+#' @param lgr The logger of the inner run, see [pip_run()]. `NULL` (the
+#' default) runs the inner pipeline silently. To activate logging,
+#' set e.g. `lgr = pipeflow_lgr`.
 #' @param ... Not used.
 #' @return A function with the unbound params of `x` as arguments.
 #' @seealso [pip_add()]
@@ -116,20 +134,45 @@
 #'
 #' # Only the steps after the changed param run again, for each partition
 #' pip_set_params(outer, list(digits = 3))
+#' print(outer)
 #' pip_run(outer, lgr = NULL)
 #' outer[["table", "out"]]
+#'
+#' # With on_error = "continue", the inner pipeline handles a failed inner
+#' # step itself: `coefs` is run with the failure of `fit` and reports it.
+#' robust <- pip_new("robust") |>
+#'   pip_add("input", \(input_df = NULL) input_df) |>
+#'   pip_add("fit", \(data = ~input) {
+#'     if (nrow(data) < 3) stop("too few rows to fit")
+#'     lm(mpg ~ wt, data = data)
+#'   }) |>
+#'   pip_add("coefs", \(fit = ~try(fit), digits = 2) {
+#'     if (inherits(fit, "pipeflow_failure")) NULL else round(coef(fit), digits)
+#'   })
+#'
+#' f_robust <- as.function(robust, out = "coefs", on_error = "continue")
+#' f_robust(input_df = mtcars)
+#'
+#' # the continued inner run signals a warning instead of an error
+#' suppressWarnings(f_robust(input_df = mtcars[1:2, ]))
 #' @export
 as.function.pipeflow <- function(
     x,
     out = NULL,
     bind = list(),
     cache = 16L,
+    on_error = c("stop", "continue"),
+    lgr = NULL,
     ...
 ) {
     .assert_pip(x)
     .assert_fun_out(x, out)
     .assert_fun_bind(bind)
     .assert_fun_cache(cache)
+    onError <- match.arg(on_error)
+    if (!is.null(lgr)) {
+        .assert_logger(lgr)
+    }
 
     template <- pip_clone(x)
     suppressMessages(pip_reset(template))
@@ -138,6 +181,8 @@ as.function.pipeflow <- function(
     ctx <- list(
         template = template,
         out = out,
+        onError = onError,
+        lgr = lgr,
         bindText = vapply(
             bind,
             \(f) paste(deparse(f), collapse = " "),
@@ -315,7 +360,8 @@ as.function.pipeflow <- function(
     # Keep before running: after a failure, the steps that did run are reused
     entry <- list(pip = pip, key = key, used = cache$tick)
     .fun_keep(cache, entry, i, ctx$size)
-    pip_run(pip, lgr = NULL)
+    pip_run(pip, lgr = ctx$lgr, on_error = ctx$onError)
+    .fun_check_run(pip, ctx$out)
     .fun_out(pip, ctx$out)
 }
 
@@ -362,6 +408,69 @@ as.function.pipeflow <- function(
         cache$entries <- cache$entries[-which.min(used)]
     }
     invisible(NULL)
+}
+
+
+#' Signal the failure of a requested step of a continued inner run
+#'
+#' With `on_error = "continue"` a failing step does not end the inner run, so
+#' the requested steps are checked afterwards: if one of them failed, or was
+#' not run because an input failed, the error of the step that failed is
+#' signalled as `pip_run(on_error = "stop")` would have signalled it.
+#'
+#' @param pip The inner pipeline, after the run.
+#' @param out The requested steps, `NULL` for all of them.
+#' @return `NULL`, invisibly, if no requested step is affected.
+#' @noRd
+.fun_check_run <- function(pip, out) {
+    dat <- .pip_pipenv(pip)[["data"]]
+    isFailed <- dat[["state"]] == .step_states[["failed"]][["name"]] &
+        !dat[["locked"]]
+    if (!any(isFailed)) {
+        return(invisible(NULL))
+    }
+    causes <- .fun_failure_causes(dat)
+    requested <- if (is.null(out)) dat[["step"]] else out
+    affected <- intersect(names(causes), requested)
+    if (length(affected) == 0L) {
+        return(invisible(NULL))
+    }
+    cause <- causes[[affected[[1L]]]]
+    stop(.pip_step_error(cause, parent = pip[[cause, "out"]]))
+}
+
+
+#' The step that failed, for each step that has no output of its own
+#'
+#' The failures are followed step by step as the run followed them (see
+#' `pip_run()`), and not along all edges of the DAG: a step that got the
+#' failure through `~try()` has run, and a locked step is neither run nor
+#' skipped, so neither of them hands the failure to its own dependents.
+#'
+#' @param dat The `data` of the inner pipeline, after the run.
+#' @return A named list: step name -> name of the step that failed for it,
+#' in the order of the steps.
+#' @noRd
+.fun_failure_causes <- function(dat) {
+    causes <- list()
+    for (i in seq_len(nrow(dat))) {
+        step <- dat[["step"]][[i]]
+        if (dat[["locked"]][[i]]) {
+            next
+        }
+        if (dat[["state"]][[i]] == .step_states[["failed"]][["name"]]) {
+            causes[[step]] <- step
+            next
+        }
+        depends <- dat[["depends"]][[i]]
+        failedArgs <- names(depends)[depends %in% names(causes)]
+        tryArgs <- formula_try_args(dat[["params"]][[i]])
+        blocked <- setdiff(failedArgs, tryArgs)
+        if (length(blocked) > 0L) {
+            causes[[step]] <- causes[[depends[[blocked[[1L]]]]]]
+        }
+    }
+    causes
 }
 
 

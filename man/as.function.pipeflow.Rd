@@ -4,7 +4,15 @@
 \alias{as.function.pipeflow}
 \title{Turn a pipeline into a function}
 \usage{
-\method{as.function}{pipeflow}(x, out = NULL, bind = list(), cache = 16L, ...)
+\method{as.function}{pipeflow}(
+  x,
+  out = NULL,
+  bind = list(),
+  cache = 16L,
+  on_error = c("stop", "continue"),
+  lgr = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{A pipeflow pipeline (not a view; use \code{x[i, view = FALSE]} to turn
@@ -25,6 +33,14 @@ well).}
 \item{cache}{The number of run copies of \code{x} to keep for reuse, a whole
 number: \code{0} keeps none, \code{Inf} keeps all.}
 
+\item{on_error}{What to do when an inner step fails: \code{"stop"} (the
+default) ends the inner run at that step, \code{"continue"} runs the inner
+steps that do not depend on it, see Details and \code{\link[=pip_run]{pip_run()}}.}
+
+\item{lgr}{The logger of the inner run, see \code{\link[=pip_run]{pip_run()}}. \code{NULL} (the
+default) runs the inner pipeline silently. To activate logging,
+set e.g. \code{lgr = pipeflow_lgr}.}
+
 \item{...}{Not used.}
 }
 \value{
@@ -32,21 +48,35 @@ A function with the unbound params of \code{x} as arguments.
 }
 \description{
 Returns a function that runs a copy of the pipeline \code{x} and returns the
-output of selected steps. The formals of the function are the unbound
-params of \code{x}, with their current values as defaults. As any other
-function, it can be added to another pipeline with \code{\link[=pip_add]{pip_add()}}. Then the
-unbound params of \code{x} become params of that step: \code{\link[=pip_get_params]{pip_get_params()}} lists
-them, \code{\link[=pip_set_params]{pip_set_params()}} sets them and a change outdates the step.
-To bind params of \code{x} to output of steps of the outer pipeline,
+output of selected steps. The function arguments are the unbound
+parameters of \code{x}, with their current values as defaults. As any other
+function, it can be added to an "outer" pipeline with \code{\link[=pip_add]{pip_add()}},
+in which case the unbound parameters of \code{x} become parameters of that
+pipeline.
+To bind parameters of \code{x} to output of steps of the outer pipeline,
 use the \code{bind} argument.
 }
 \details{
-The inner pipeline is run silently (\code{lgr = NULL}).
-Warnings and messages of its steps are passed on to the caller.
-A failing inner step results in an error of the caller, which in turn
+By default, the inner pipeline is run silently, but warnings and messages
+of its steps are still passed on to the caller.
+A failing inner step results in an error of the caller which in turn
 makes the outer step fail.
 Param values of the outer pipeline reach the function unwrapped
 (see \code{\link[=pip_param_value]{pip_param_value()}}).
+\subsection{Continuing after errors of inner steps}{
+
+With \code{on_error = "continue"} the inner pipeline is run like
+\code{pip_run(on_error = "continue")}, that is, a failing inner step gets state
+\code{"failed"}, the inner steps that do not depend on it still run, and an
+inner step that refers to it via \code{~try(step)} runs and receives the
+failure.
+
+The function still fails if one of the steps named in \code{out} failed or was
+not run because an input failed. Since with \code{out = NULL} \emph{all} steps are
+requested, you need to name the relevant steps in \code{out} to profit from
+a continuing inner run.
+}
+
 \subsection{Pipeline functions with partitioned inputs}{
 
 If the step with the pipeline function happens to receive partitioned inputs
@@ -85,8 +115,8 @@ from it runs with the value of the argument.
 environment or another reference object (e.g. R6) is not seen: as for
 \code{\link[=pip_set_params]{pip_set_params()}} of a pipeline, which needs \code{force = TRUE}, the
 steps stay up to date. A forced run of the outer pipeline
-(\code{pip_run(force = TRUE)}) does not force the inner pipelines either.
-Use \code{cache = 0} for such inputs.
+(\code{pip_run(force = TRUE)}) does not force the inner pipelines either,
+but you can force them by setting \code{cache = 0}.
 }
 }
 }
@@ -124,8 +154,27 @@ outer[["table", "out"]]
 
 # Only the steps after the changed param run again, for each partition
 pip_set_params(outer, list(digits = 3))
+print(outer)
 pip_run(outer, lgr = NULL)
 outer[["table", "out"]]
+
+# With on_error = "continue", the inner pipeline handles a failed inner
+# step itself: `coefs` is run with the failure of `fit` and reports it.
+robust <- pip_new("robust") |>
+  pip_add("input", \(input_df = NULL) input_df) |>
+  pip_add("fit", \(data = ~input) {
+    if (nrow(data) < 3) stop("too few rows to fit")
+    lm(mpg ~ wt, data = data)
+  }) |>
+  pip_add("coefs", \(fit = ~try(fit), digits = 2) {
+    if (inherits(fit, "pipeflow_failure")) NULL else round(coef(fit), digits)
+  })
+
+f_robust <- as.function(robust, out = "coefs", on_error = "continue")
+f_robust(input_df = mtcars)
+
+# the continued inner run signals a warning instead of an error
+suppressWarnings(f_robust(input_df = mtcars[1:2, ]))
 }
 \seealso{
 \code{\link[=pip_add]{pip_add()}}
