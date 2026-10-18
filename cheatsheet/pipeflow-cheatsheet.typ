@@ -731,17 +731,19 @@
       A step can run a copy of another pipeline:
       #v(2pt)
       #align(center, nested-pic)
+      #fn[`f <- as.function(inner, out = "coefs")`][
+        a function that runs a copy of `inner`. Its arguments are the unbound
+        params of `inner`; `out` is the step output it returns.
+      ]
       #fn[
         ```
-        pip_add(outer, "fit", \(d = ~prep) {
-            q <- pip_clone(inner)
-            pip_set_params(q, list(data = d)) |> pip_run()
-            q[["coefs", "out"]]
-        })
+        pip_add(outer, "fit",
+                as.function(inner, out = "coefs",
+                            bind = list(data = ~prep)))
         ```
       ][
-        the input goes in as a parameter, and an output of the copy comes
-        out.
+        as a step: `bind` connects the param `data` to step `prep`. The other
+        unbound params of `inner` become params of `fit`.
       ]
     ]
 
