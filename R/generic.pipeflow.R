@@ -68,12 +68,31 @@
         for (arg in intersect(names(depends), names(params))) {
             params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
         }
+        # An unbound param can have a formula as value (set via
+        # pip_set_params()), which pip_replace() would take as a reference.
+        # It is replaced with a placeholder and its value is put back below.
+        isValue <- !(names(params) %in% names(depends)) &
+            vapply(params, is_one_sided_formula, logical(1))
+        values <- params[isValue]
+        params[isValue] <- list(NULL)
         pip_replace(
             x,
             step = qVals[["step"]],
             fun = qVals[["fun"]],
             params = params
         )
+        if (length(values) > 0L) {
+            dataX <- .pip_pipenv(x)[["data"]]
+            iRow <- data.table::chmatch(qVals[["step"]], dataX[["step"]])
+            stored <- dataX[["params"]][[iRow]]
+            stored[names(values)] <- values
+            data.table::set(
+                dataX,
+                i = iRow,
+                j = "params",
+                value = list(list(stored))
+            )
+        }
 
         # 3) Runtime state and annotation columns.
         for (prop in c("out", "state", "time", "tags", "locked", "exec")) {
@@ -800,8 +819,9 @@ dim.pipeflow <- function(x) {
 #' overwritten (locked steps included). A copied step refers to the steps
 #' that the source step depends on by name, also if it was defined with a
 #' relative reference such as `~-1`, and these steps are looked up in `p`.
-#' The structural columns `nodeId`, `depends` and `unbound` are not copied
-#' but recomputed against the steps of `p`.
+#' An unbound param stays unbound, also if its value is a formula (as set by
+#' [pip_set_params()]). The structural columns `nodeId`, `depends` and
+#' `unbound` are not copied but recomputed against the steps of `p`.
 #' Instead of `p[i, j] <- q`, use `p[i, j] <- q[i, j]` to copy the values of
 #' a single property; the one-column table returned by the extraction form
 #' is unwrapped and assigned element-wise.

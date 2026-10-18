@@ -1732,6 +1732,35 @@ describe("cross-pipeline assignment", {
         expect_true(p[["s2", "out"]])
     })
 
+    it("keeps a formula value of an unbound param as a value", {
+        q <- pip_new() |>
+            pip_add("s", \(model = NULL) model)
+        pip_set_params(q, list(model = ~x))
+
+        q["s", ] <- q["s", ]
+
+        expect_equal(q[["s", "params"]], list(model = ~x))
+        expect_equal(q[["depends"]][["s"]], character(0))
+        expect_equal(q[["unbound"]][["s"]], "model")
+    })
+
+    it("does not bind a formula value to a step of the same name", {
+        p <- pip_new() |>
+            pip_add("x", \() 1) |>
+            pip_add("s", \() 0)
+        q <- pip_new() |>
+            pip_add("x", \() 1) |>
+            pip_add("s", \(model = NULL, data = ~x) list(model, data))
+        pip_set_params(q, list(model = ~x))
+
+        p[2, ] <- q[2, ]
+
+        expect_equal(p[["depends"]][["s"]], c(data = "x"))
+        expect_equal(p[["unbound"]][["s"]], "model")
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["s", "out"]], list(~x, 1))
+    })
+
     it("is a no-op for an empty row selection", {
         p <- test_pip()
         q <- pip_clone(p)
