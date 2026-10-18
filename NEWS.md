@@ -1,3 +1,16 @@
+# pipeflow 0.5.0.9006
+
+## New features
+
+- `as.function()` turns a pipeline into a function whose arguments are the
+  unbound params of the pipeline, so that a pipeline can be a step of
+  another pipeline, e.g.
+  `pip_add(outer, "step", as.function(inner, bind = list(input_df = ~split)))`.
+  The params of the inner pipeline become params of the outer step, the exec
+  modes map it over partitions, and the function keeps the inner pipelines it
+  has run, so that a changed param only reruns the affected inner steps. See
+  `?as.function.pipeflow` and the "Nested pipelines" vignette.
+
 # pipeflow 0.5.0.9005
 
 ## Changes
@@ -52,17 +65,6 @@
   called after the run.
 
 # pipeflow 0.5.0.9001
-
-## New features
-
-- `as.function()` turns a pipeline into a function whose arguments are the
-  unbound params of the pipeline, so that a pipeline can be a step of
-  another pipeline, e.g.
-  `pip_add(outer, "step", as.function(inner, bind = list(input_df = ~split)))`.
-  The params of the inner pipeline become params of the outer step, the exec
-  modes map it over partitions, and the function keeps the inner pipelines it
-  has run, so that a changed param only reruns the affected inner steps. See
-  `?as.function.pipeflow` and the "Nested pipelines" vignette.
 
 ## Documentation
 
