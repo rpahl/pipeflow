@@ -45,10 +45,11 @@ reference:
   - pip_set_params
 
 - title: "Pipeline composition"
-  desc: Combine or clone pipelines.
+  desc: Combine or clone pipelines, or turn a pipeline into a function.
   contents:
   - rbind.pipeflow
   - pip_clone
+  - as.function.pipeflow
 
 - title: "Running pipelines"
   desc: Execute pipeline steps or views.
