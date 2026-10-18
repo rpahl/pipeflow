@@ -64,12 +64,17 @@ Because `pipenv` is a reference, functions mostly mutate it in place (often
 with `data.table::set` or `:=`) and return `x` invisibly. `pip_clone()` or
 `p[]` makes a real copy, and that copy includes the DAG via `dag_clone()`.
 
-**Views.** A view is a `pipeflow` whose `view` field holds row indices.
-Views come from `pip_view()` or `p[i]` and share the same `pipenv`.
-Structural operations call `.assert_pip()` and reject views. Read and run
-operations call `.assert_pip_or_view()`. Running a view also runs the
-upstream steps it depends on, then marks unprocessed downstream steps as
-`outdated`. `p[i, view = FALSE]` builds a standalone, compacted pipeline
+**Views.** A view is a `pipeflow` whose `view` field holds the node ids of
+the steps it covers (`v[["view"]]` shows them as step names). Views come
+from `pip_view()` or `p[i]` and share the same `pipenv`. Most functions
+call `.assert_pip_or_view()`; `pip_add()`, `pip_clone()` and `rbind()` call
+`.assert_pip()` and reject views. `pip_remove()`, `pip_rename()` and
+`pip_replace()` edit the shared pipeline through a view and gate the step
+they name with `.pip_step_in_view()`. Because the selector lives in the
+view object and not in `pipenv`, a view shrinks by reference but cannot
+grow by reference. Running a view also runs the upstream steps it depends
+on, then marks unprocessed downstream steps as `outdated`.
+`p[i, view = FALSE]` builds a standalone, compacted pipeline
 (`.pip_compact()` in `R/generic.pipeflow.R`).
 
 **Step dependencies.** Step functions must give every argument a default
