@@ -175,6 +175,38 @@ describe(".extract_fun_params", {
             list(x = 1)
         )
     })
+
+    it("lets params override the defaults and appends the other params", {
+        expect_equal(
+            .extract_fun_params(
+                function(x = 1, y = 2, ...) x,
+                params = list(z = 3, x = 10)
+            ),
+            list(x = 10, y = 2, z = 3)
+        )
+    })
+
+    it("takes the value of params for arguments without default", {
+        expect_equal(
+            .extract_fun_params(function(x, y = 1) x, params = list(x = 5)),
+            list(x = 5, y = 1)
+        )
+        expect_error(
+            .extract_fun_params(function(x, y) x, params = list(x = 5)),
+            "'y' has no default value - set one in fun or give a value in",
+            fixed = TRUE
+        )
+    })
+
+    it("does not evaluate the defaults that params override", {
+        expect_equal(
+            .extract_fun_params(
+                function(x = stop("evaluated")) x,
+                params = list(x = NULL)
+            ),
+            list(x = NULL)
+        )
+    })
 })
 
 
@@ -1184,52 +1216,148 @@ describe("pipelines read with readRDS()", {
 })
 
 
-describe("pip_add params overlapping the formals of fun", {
-    it("warns if params overlap the defaults of fun", {
+describe("pip_add params overriding the defaults of fun", {
+    it("overrides the defaults of fun without a warning", {
         p <- pip_new()
-        expect_warning(
-            pip_add(p, "s", \(x = 1, y = 2) x + y, params = list(x = 5, y = 6)),
-            "step 's': the defaults of fun take precedence over params: x, y",
-            fixed = TRUE
+        expect_no_warning(
+            pip_add(p, "s", \(x = 1, y = 2) x + y, params = list(x = 5, y = 6))
         )
-        expect_equal(p[["params"]][["s"]][["x"]], 1)
-        expect_equal(p[["params"]][["s"]][["y"]], 2)
+        expect_equal(p[["params"]][["s"]], list(x = 5, y = 6))
+
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["s", "out"]], 11)
     })
 
-    it("names only the overlapping params", {
-        p <- pip_new()
-        expect_warning(
-            pip_add(p, "s", \(x = 1) x, params = list(x = 5, z = 6)),
-            "over params: x$"
-        )
-    })
-
-    it("warns if the step is inserted via after", {
+    it("overrides the defaults also if the step is inserted via after", {
         p <- pip_new() |> pip_add("a", \(x = 1) x)
+        pip_add(p, "b", \(x = 1) x, params = list(x = 5), after = 0)
+
+        expect_equal(unname(p[["step"]]), c("b", "a"))
+        expect_equal(p[["params"]][["b"]], list(x = 5))
+    })
+
+    it("turns a value default into a reference to a step", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x + 1) |>
+            pip_add("b", \(x = 10, y = 2) x * y, params = list(x = ~a))
+
+        expect_equal(p[["depends"]][["b"]], c(x = "a"))
+        expect_equal(p[["unbound"]][["b"]], "y")
+        expect_equal(names(pip_get_params(p)), c("x", "y"))
+
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["b", "out"]], 4)
+    })
+
+    it("turns a reference into a value", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x, params = list(x = 7))
+
+        expect_equal(p[["depends"]][["b"]], character(0))
+        expect_equal(p[["unbound"]][["b"]], "x")
+    })
+
+    it("rewires a reference, also a try() reference", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = 2) x) |>
+            pip_add("c", \(x = ~a) x, params = list(x = ~ try(b)))
+
+        expect_equal(p[["depends"]][["c"]], c(x = "b"))
+        expect_equal(formula_try_args(p[["c", "params"]]), "x")
+    })
+
+    it("passes a failure to a try() reference given via params", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) stop("boom")) |>
+            pip_add(
+                "b",
+                \(x = ~a) inherits(x, "pipeflow_failure"),
+                params = list(x = ~ try(a))
+            )
+
         expect_warning(
-            pip_add(p, "b", \(x = 1) x, params = list(x = 5), after = 0),
-            "step 'b': the defaults of fun take precedence over params: x",
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        expect_equal(unname(p[["state"]]), c("failed", "done"))
+        expect_true(p[["b", "out"]])
+    })
+
+    it("gives a value to parameters of fun without default", {
+        p <- pip_new() |>
+            pip_add("data", \(x = c(1, NA, 3)) x) |>
+            pip_add("avg", mean, params = list(x = ~data, na.rm = TRUE))
+
+        expect_equal(p[["depends"]][["avg"]], c(x = "data"))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["avg", "out"]], 2)
+    })
+
+    it("still signals parameters without default that params don't give", {
+        p <- pip_new()
+        expect_error(
+            pip_add(p, "s", \(x, y, z = 1) x + y, params = list(x = 1)),
+            "'y' has no default value - set one in fun or give a value in",
             fixed = TRUE
         )
+        expect_equal(length(p), 0L)
     })
 
-    it("does not warn for params that are not formals of fun", {
+    it("does not evaluate the defaults that params override", {
         p <- pip_new()
-        expect_no_warning(
-            pip_add(p, "s", \(x = 1) x, params = list(z = 5))
+        pip_add(p, "s", \(x = stop("not evaluated")) x, params = list(x = 1))
+
+        expect_equal(p[["params"]][["s"]], list(x = 1))
+    })
+
+    it("keeps the order of the parameters of fun, followed by the others", {
+        p <- pip_new()
+        pip_add(
+            p,
+            "s",
+            \(x = 1, y = 2, ...) x + y,
+            params = list(z = 3, y = 20)
         )
+
+        expect_equal(p[["params"]][["s"]], list(x = 1, y = 20, z = 3))
     })
 
-    it("does not warn for params that only match '...'", {
+    it("can set NULL values", {
         p <- pip_new()
-        expect_no_warning(
-            pip_add(p, "s", \(x = 1, ...) x, params = list(... = 5))
+        pip_add(p, "s", \(x = 1, y = 2) list(x, y), params = list(x = NULL))
+
+        expect_equal(p[["params"]][["s"]], list(x = NULL, y = 2))
+    })
+
+    it("can give NULL to parameters without default", {
+        p <- pip_new() |>
+            pip_add("a", \(x) is.null(x), params = list(x = NULL))
+        pip_add(p, "b", \(x) is.null(x), params = list(x = NULL), after = 0)
+
+        expect_equal(p[["params"]][["a"]], list(x = NULL))
+        expect_equal(p[["params"]][["b"]], list(x = NULL))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["out"]], list(b = TRUE, a = TRUE))
+    })
+
+    it("signals params that are not a list with unique names", {
+        p <- pip_new()
+        expected <- "params must be a list with unique names"
+        f <- \(x = 1, ...) x
+        expect_error(pip_add(p, "s", f, params = c(x = 1)), expected)
+        expect_error(pip_add(p, "s", f, params = list(1)), expected)
+        expect_error(pip_add(p, "s", f, params = list(x = 1, 2)), expected)
+        expect_error(
+            pip_add(p, "s", f, params = stats::setNames(list(1), NA)),
+            expected
         )
-    })
-
-    it("does not warn without params", {
-        p <- pip_new()
-        expect_no_warning(pip_add(p, "s", \(x = 1) x))
+        expect_error(
+            pip_add(p, "s", f, params = list(x = 1, x = 2)),
+            expected
+        )
+        expect_equal(length(p), 0L)
     })
 })
 
@@ -1247,6 +1375,17 @@ describe("pip_add", {
             pip_add(p, "s1", fun = "not a function"),
             "fun must be a function"
         )
+    })
+
+    it("points to as.function() if fun is a pipeline or a view", {
+        p <- pip_new()
+        inner <- pip_new("inner") |> pip_add("a", \(x = 1) x)
+        expected <- paste(
+            "fun must be a function, not a pipeline - to use a pipeline as",
+            "a step, turn it into a function with as.function()"
+        )
+        expect_error(pip_add(p, "s1", inner), expected, fixed = TRUE)
+        expect_error(pip_add(p, "s1", inner["a"]), expected, fixed = TRUE)
     })
 
     it("signals if fun is a primitive function", {
@@ -1481,20 +1620,17 @@ describe("pip_add", {
         )
     })
 
-    it("merges params with function defaults, letting defaults win", {
+    it("merges params with function defaults, letting params win", {
         p <- pip_new()
-        expect_warning(
-            pip_add(
-                p,
-                "s1",
-                function(x = 1, y = 2) x + y,
-                params = list(x = 10, y = 20, z = 99)
-            ),
-            "defaults of fun take precedence over params: x, y"
+        pip_add(
+            p,
+            "s1",
+            function(x = 1, y = 2) x + y,
+            params = list(x = 10, z = 99)
         )
 
         pars <- p[["params"]][[1]]
-        expect_equal(pars[["x"]], 1) # fun default takes precedence
+        expect_equal(pars[["x"]], 10) # params take precedence
         expect_equal(pars[["y"]], 2)
         expect_equal(pars[["z"]], 99) # extra param carried through
     })
@@ -2028,20 +2164,83 @@ describe("pip_replace", {
             pip_add("f3", \(x = ~f2) x + 1)
     }
 
-    it("warns if params overlap the defaults of fun", {
-        p <- test_pip()
-        expect_warning(
-            pip_replace(p, "f2", \(x = 20) x, params = list(x = 5)),
-            "step 'f2': the defaults of fun take precedence over params: x",
-            fixed = TRUE
-        )
-        expect_equal(p[["params"]][["f2"]][["x"]], 20)
-    })
-
-    it("does not warn if params do not overlap the defaults of fun", {
+    it("lets params override the defaults of fun", {
         p <- test_pip()
         expect_no_warning(
-            pip_replace(p, "f2", \(x = 20) x, params = list(z = 5))
+            pip_replace(p, "f2", \(x = 20) x, params = list(x = 5))
+        )
+        expect_equal(p[["params"]][["f2"]], list(x = 5))
+    })
+
+    it("rewires the step via a reference in params", {
+        p <- test_pip()
+        pip_replace(p, "f3", \(x = ~f2) x + 1, params = list(x = ~f1))
+
+        expect_equal(p[["depends"]][["f3"]], c(x = "f1"))
+        reach <- .pip_get_reachable_nodes(p, "f2")
+        expect_equal(.pip_filter_nodes(p, reach)[["step"]], "f2")
+        reach <- .pip_get_reachable_nodes(p, "f1")
+        expect_equal(.pip_filter_nodes(p, reach)[["step"]], c("f1", "f3"))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["f3", "out"]], 2)
+    })
+
+    it("drops the edge if params turn a reference into a value", {
+        p <- test_pip()
+        pip_replace(p, "f3", \(x = ~f2) x + 1, params = list(x = 5))
+
+        expect_equal(p[["depends"]][["f3"]], character(0))
+        reach <- .pip_get_reachable_nodes(p, "f2")
+        expect_equal(.pip_filter_nodes(p, reach)[["step"]], "f2")
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["f3", "out"]], 6)
+    })
+
+    it("gives a value to parameters of fun without default", {
+        p <- test_pip()
+        pip_replace(p, "f3", \(x) x + 1, params = list(x = ~f1))
+
+        expect_equal(p[["depends"]][["f3"]], c(x = "f1"))
+        expect_error(
+            pip_replace(p, "f3", \(x) x + 1),
+            "'x' has no default value"
+        )
+    })
+
+    it("can give NULL to parameters without default", {
+        p <- test_pip()
+        pip_replace(p, "f2", \(x) is.null(x), params = list(x = NULL))
+
+        expect_equal(p[["params"]][["f2"]], list(x = NULL))
+        pip_run(p, lgr = NULL)
+        expect_true(p[["f2", "out"]])
+    })
+
+    it("signals invalid params and leaves the pipeline unchanged", {
+        p <- test_pip()
+        before <- pip_clone(p)
+        expect_error(
+            pip_replace(p, "f2", \(x = 20) x, params = list(5)),
+            "params must be a list with unique names"
+        )
+        expect_error(
+            pip_replace(p, "f2", \(x = 20) x, params = list(x = ~unknown)),
+            "cannot reference unknown steps: 'unknown'"
+        )
+        expect_error(
+            pip_replace(p, "f2", \(x = 20) x, params = list(x = ~f3)),
+            "cannot reference steps that come after the replaced step: 'f3'"
+        )
+        expect_equal(p[["params"]], before[["params"]])
+        expect_equal(p[["depends"]], before[["depends"]])
+        expect_equal(p[["fun"]][["f2"]], before[["fun"]][["f2"]])
+    })
+
+    it("points to as.function() if fun is a pipeline", {
+        p <- test_pip()
+        expect_error(
+            pip_replace(p, "f2", pip_clone(p)),
+            "fun must be a function, not a pipeline"
         )
     })
 
@@ -2110,11 +2309,21 @@ describe("pip_replace", {
 
         expect_error(
             pip_replace(p, "f2", \(x = ~f3) x),
-            "cannot reference unknown steps: 'f3'"
+            "cannot reference steps that come after the replaced step: 'f3'"
         )
         expect_error(
             pip_replace(p, "f2", \(x = ~foo) x),
             "cannot reference unknown steps: 'foo'"
+        )
+        # the step itself is unknown, as in pip_add()
+        expect_error(
+            pip_replace(p, "f2", \(x = ~f2) x),
+            "cannot reference unknown steps: 'f2'"
+        )
+        # later steps are reported before unknown ones, as in pip_add()
+        expect_error(
+            pip_replace(p, "f1", \(x = ~foo, y = ~f3) x),
+            "cannot reference steps that come after the replaced step: 'f3'$"
         )
     })
 

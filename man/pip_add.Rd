@@ -19,9 +19,10 @@ pip_add(
 
 \item{step}{Unique step name.}
 
-\item{fun}{Function to execute for the step. Each function parameter must
-have a default value. Default values that are simple constants are resolved
-immediately. Default values that are formulas like \code{~other_step} are
+\item{fun}{Function to execute for the step. Each function parameter needs
+a value: a default value in \code{fun} or an entry in \code{params}.
+Default values that are simple constants are resolved immediately.
+Default values that are formulas like \code{~other_step} are
 treated as dependencies to those steps and resolved to the respective output
 values at runtime once the step is executed. A reference wrapped in \code{try()},
 like \code{~try(other_step)}, accepts a failed input when the pipeline is run
@@ -38,15 +39,21 @@ Can also be adjusted later using \verb{[pip_tag()]}.}
 (defaults to last position). Can be a step name or an integer index. If
 set to 0, the new step will be inserted at the beginning of the pipeline.}
 
-\item{params}{Optional named list of parameter values, which will be merged
-with the defaults of \code{fun} (if overlapping names, the default values in \code{fun}
-take precedence). There are two use cases for \code{params}:
+\item{params}{Optional named list of parameter values. They override the
+defaults of \code{fun} and give a value to parameters of \code{fun} that have no
+default. As in the defaults of \code{fun}, a formula like \code{~other_step} refers
+to the output of another step. Names that are no parameters of \code{fun} add
+params to the step, which are passed on to \code{fun} as well, so \code{fun} needs a
+\code{...} argument for them. Use cases for \code{params} are:
 \enumerate{
-\item Provide param values programmatically when adding steps at runtime
+\item Set param values programmatically, e.g. when adding steps in a loop or
+at runtime.
+\item Use existing functions whose parameters have no defaults, e.g.
+\code{pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))}.
 \item Provide extra param values to "mark" dependencies that are defined in
-pipelines nested in a step, which ensures that the step (and with that
-the pipeline in the step) is re-executed when one of the respective
-param values change.
+pipelines nested in a step, which ensures that it is re-executed when
+one of the nested param values change. See the
+\href{../doc/v05b-nested-pipeline.html}{nested pipelines vignette}.
 }}
 
 \item{exec}{Execution mode for this step. One of "auto", "split",
@@ -144,10 +151,22 @@ p2  # "load", "clean", "fit" — inserted after "load"
 pip_add(p2, "preload", \(x = 1) x, after = 0)
 p2
 
-# --- Provide parameter values programmatically with 'params' ---
+# --- Provide parameter values with 'params' ---
+# 'params' override the defaults of the function ...
 p3 <- pip_new("params-demo") |>
-  pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
+  pip_add("data", \(x = c(1, NA, 3)) x) |>
+  pip_add("scale", \(x = ~data, factor = 1) x * factor,
+    params = list(factor = 10)
+  ) |>
+  # ... and give values to parameters without default, e.g. of mean()
+  pip_add("avg", mean, params = list(x = ~scale, na.rm = TRUE))
 pip_run(p3)
 p3
-p3[["load", "out"]] # c(1, size = 42) — extra params passed via `...`
+p3[["avg", "out"]] # 20
+
+# Extra params are passed via `...`
+p4 <- pip_new("dots-demo") |>
+  pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
+pip_run(p4)
+p4[["load", "out"]] # c(1, size = 42)
 }

@@ -219,12 +219,15 @@ the steps of \code{q} selected by \code{i} into the steps of \code{p} selected b
 length). In this form, \code{i} is required and \code{j} must be omitted. The
 properties are copied in the order \code{step}, \code{fun}, \code{params}, \code{out},
 \code{state}, \code{time}, \code{tags}, \code{locked}, \code{exec}: the step is renamed to the
-source name (a no-op when it is unchanged), the function is replaced with
-the source function (same as \code{\link[=pip_replace]{pip_replace()}}; its dependencies are recomputed
-against the steps of \code{p}), the unbound parameters of the source are
-applied on top of the new function defaults, and the runtime state and
-annotation columns are overwritten (locked steps included). The
-structural columns \code{nodeId}, \code{depends} and \code{unbound} are not copied.
+source name (a no-op when it is unchanged), the function and the params
+are replaced with those of the source (same as \code{\link[=pip_replace]{pip_replace()}} with the
+params of the source), and the runtime state and annotation columns are
+overwritten (locked steps included). A copied step refers to the steps
+that the source step depends on by name, also if it was defined with a
+relative reference such as \code{~-1}, and these steps are looked up in \code{p}.
+An unbound param stays unbound, also if its value is a formula (as set by
+\code{\link[=pip_set_params]{pip_set_params()}}). The structural columns \code{nodeId}, \code{depends} and
+\code{unbound} are not copied but recomputed against the steps of \code{p}.
 Instead of \code{p[i, j] <- q}, use \code{p[i, j] <- q[i, j]} to copy the values of
 a single property; the one-column table returned by the extraction form
 is unwrapped and assigned element-wise.

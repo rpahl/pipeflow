@@ -90,11 +90,11 @@
 #' returns the output of that step; several step names return a named list
 #' of their outputs.
 #' @param bind A named list of one-sided formulas, e.g.
-#' `list(input_df = ~split_df)`, that bind unbound params of `x` to steps
-#' of the outer pipeline the function is added to.
-#' The formal gets the formula as its default, as
-#' if it was written in the step function (`~try(step)` is possible as
-#' well).
+#' `list(df = ~outer_step)`, that bind unbound params of `x` to steps
+#' of the outer pipeline (`~try(outer_step)` also works).
+#' Binding them via `pip_add("inner", f_inner, params = list(df = ~outer_step))`
+#' would also work, but only the arguments named in `bind` tell the partitions
+#' apart (see Details), that is, caching will not be available this way.
 #' @param cache The number of run copies of `x` to keep for reuse, a whole
 #' number: `0` keeps none, `Inf` keeps all.
 #' @param on_error What to do when an inner step fails: `"stop"` (the

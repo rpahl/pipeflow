@@ -1568,6 +1568,43 @@ describe("cross-pipeline assignment", {
         expect_equal(unname(p[["depends"]][[2]]), "first")
     })
 
+    it("takes the references from the params, also after a rename", {
+        p <- test_pip()
+        q <- pip_clone(p)
+        pip_rename(q, "s1", "first")
+
+        p[1:2, ] <- q[1:2, ]
+
+        expect_equal(unname(p[["step"]]), c("first", "s2"))
+        expect_equal(p[["depends"]][["s2"]], c(x = "first"))
+    })
+
+    it("copies params that were given via params", {
+        p <- test_pip()
+        q <- pip_new("q") |>
+            pip_add("data", \(x = c(1, NA, 3)) x) |>
+            pip_add("avg", mean, params = list(x = ~data, na.rm = TRUE))
+
+        p[1:2, ] <- q[1:2, ]
+
+        expect_equal(unname(p[["step"]]), c("data", "avg"))
+        expect_equal(p[["params"]][["avg"]], q[["params"]][["avg"]])
+        expect_equal(p[["depends"]][["avg"]], c(x = "data"))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["avg", "out"]], 2)
+    })
+
+    it("copies params into a view of the target", {
+        p <- test_pip()
+        q <- pip_clone(p)
+        pip_replace(q, "s2", \(x = ~s1, ...) x, params = list(z = 99))
+
+        vp <- pip_view(p, step = "s2")
+        vp[1, ] <- q[2, ]
+
+        expect_equal(p[["params"]][["s2"]], list(x = ~s1, z = 99))
+    })
+
     it("errors when the source has a different number of steps", {
         p <- test_pip()
         q <- pip_clone(p)
@@ -1633,6 +1670,95 @@ describe("cross-pipeline assignment", {
 
         expect_equal(unname(p[["out"]]), list(3, 6))
         expect_equal(unname(p[["state"]]), c("done", "done"))
+    })
+
+    it("keeps the dependencies of relative references after an insertion", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = 2) x) |>
+            pip_add("c", \(x = ~ -1) x) |>
+            pip_add("d", \(x = ~b) x, params = list(x = ~ try(-2)))
+        pip_add(p, "inserted", \(x = 99) x, after = "b")
+
+        p[4:5, ] <- p[4:5, ]
+
+        expect_equal(p[["depends"]][["c"]], c(x = "b"))
+        expect_equal(p[["depends"]][["d"]], c(x = "b"))
+        expect_equal(formula_try_args(p[["d", "params"]]), "x")
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["c", "out"]], 2)
+    })
+
+    it("keeps the dependencies of relative references after a removal", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = 2) x) |>
+            pip_add("c", \(x = 0) x, params = list(x = ~ -2))
+        pip_remove(p, "b")
+
+        p[2, ] <- p[2, ]
+
+        expect_equal(p[["depends"]][["c"]], c(x = "a"))
+    })
+
+    it("refers to the steps of relative references by name", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = 2) x) |>
+            pip_add("extra", \(x = 3) x) |>
+            pip_add("c", \(x = 0) x)
+        q <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = 2) x) |>
+            pip_add("c", \(x = 0) x * 10, params = list(x = ~ -1))
+
+        p["c", ] <- q["c", ]
+
+        expect_equal(p[["depends"]][["c"]], c(x = "b"))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["c", "out"]], 20)
+    })
+
+    it("copies NULL values given via params", {
+        p <- test_pip()
+        q <- pip_new("q") |>
+            pip_add("s1", \(x) is.null(x), params = list(x = NULL)) |>
+            pip_add("s2", \(x = ~s1) x)
+
+        p[1:2, ] <- q[1:2, ]
+
+        expect_equal(p[["params"]][["s1"]], list(x = NULL))
+        pip_run(p, lgr = NULL)
+        expect_true(p[["s2", "out"]])
+    })
+
+    it("keeps a formula value of an unbound param as a value", {
+        q <- pip_new() |>
+            pip_add("s", \(model = NULL) model)
+        pip_set_params(q, list(model = ~x))
+
+        q["s", ] <- q["s", ]
+
+        expect_equal(q[["s", "params"]], list(model = ~x))
+        expect_equal(q[["depends"]][["s"]], character(0))
+        expect_equal(q[["unbound"]][["s"]], "model")
+    })
+
+    it("does not bind a formula value to a step of the same name", {
+        p <- pip_new() |>
+            pip_add("x", \() 1) |>
+            pip_add("s", \() 0)
+        q <- pip_new() |>
+            pip_add("x", \() 1) |>
+            pip_add("s", \(model = NULL, data = ~x) list(model, data))
+        pip_set_params(q, list(model = ~x))
+
+        p[2, ] <- q[2, ]
+
+        expect_equal(p[["depends"]][["s"]], c(data = "x"))
+        expect_equal(p[["unbound"]][["s"]], "model")
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["s", "out"]], list(~x, 1))
     })
 
     it("is a no-op for an empty row selection", {
@@ -1810,6 +1936,42 @@ describe("rbind", {
         nodes <- .pip_get_reachable_nodes(out, "s12")
         steps <- .pip_filter_nodes(out, nodes)[["step"]]
         expect_setequal(steps, c("s12", "s22"))
+    })
+
+    it("binds steps whose params were given via params", {
+        p1 <- test_pip("left")
+        p2 <- pip_new("right") |>
+            pip_add("s1", \(x = c(1, NA, 3)) x) |>
+            pip_add("avg", mean, params = list(x = ~s1, na.rm = TRUE))
+
+        out <- rbind(p1, p2)
+
+        expect_equal(out[["depends"]][["avg"]], c(x = "s12"))
+        expect_true(out[["params"]][["avg"]][["na.rm"]])
+        pip_run(out, lgr = NULL)
+        expect_equal(out[["avg", "out"]], 2)
+    })
+
+    it("keeps NULL values of params", {
+        p2 <- pip_new("right") |>
+            pip_add("n1", \(x = NULL) is.null(x)) |>
+            pip_add("n2", \(x = 1) is.null(x), params = list(x = NULL)) |>
+            pip_add("n3", \(x) is.null(x), params = list(x = NULL))
+
+        out <- rbind(test_pip("left"), p2)
+
+        for (step in c("n1", "n2", "n3")) {
+            expect_named(formals(out[[step, "fun"]]), "x")
+        }
+        pip_run(out, lgr = NULL)
+        expect_equal(
+            pip_collect(out[c("n1", "n2", "n3")]),
+            list(
+                n1 = TRUE,
+                n2 = TRUE,
+                n3 = TRUE
+            )
+        )
     })
 
     it("rebinds .self references to the bound pipeline", {
@@ -2111,6 +2273,18 @@ describe("rbind with bind", {
 
         pip_run(out, lgr = NULL)
         expect_equal(out[["fit", "out"]], 12)
+    })
+
+    it("binds a param without default that was given via params", {
+        b <- pip_new("b") |>
+            pip_add("avg", mean, params = list(x = 0, na.rm = TRUE))
+
+        out <- rbind(left_pip(), b, bind = list(x = ~prep))
+        expect_equal(out[["avg", "depends"]], c(x = "prep"))
+        expect_equal(out[["avg", "unbound"]], "na.rm")
+
+        pip_run(out, lgr = NULL)
+        expect_equal(out[["avg", "out"]], 2)
     })
 
     it("binds to steps with non-syntactic names", {

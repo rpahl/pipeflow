@@ -52,7 +52,7 @@ describe("as.function.pipeflow", {
 
     # The outer pipeline: split by batch, one inner pipeline per batch (`fun`),
     # one table.
-    demo_outer <- function(fun, data = demo_batches()) {
+    demo_outer <- function(fun, data = demo_batches(), params = list()) {
         outer <- pip_new("outer") |>
             pip_add("data", \(data = NULL) data) |>
             pip_add(
@@ -60,7 +60,7 @@ describe("as.function.pipeflow", {
                 \(data = ~data, byVar = "batch") split(data, data[[byVar]]),
                 exec = "split"
             ) |>
-            pip_add("by_batch", fun) |>
+            pip_add("by_batch", fun, params = params) |>
             pip_add(
                 "coef_table",
                 \(coefs = ~by_batch) {
@@ -166,6 +166,40 @@ describe("as.function.pipeflow", {
                 tolerance = 1e-8
             )
         })
+
+        it("takes the values of inner params from params of pip_add()", {
+            demo <- demo_nested()
+            outer <- demo_outer(demo$fun, params = list(digits = 1))
+
+            expect_equal(pip_get_params(outer)$digits, 1)
+            pip_run(outer, lgr = NULL)
+            expect_equal(
+                unname(outer[["by_batch", "out"]]$A),
+                c(1.3, 1.9),
+                tolerance = 1e-8
+            )
+        })
+
+        it("binds via params of pip_add(), but keeps one pipeline", {
+            calls <- new.env(parent = emptyenv())
+            calls$fit <- 0L
+            calls$coefs <- 0L
+            fun <- as.function(demo_inner(calls), out = "coefs")
+            outer <- demo_outer(fun, params = list(data = ~split_data))
+
+            expect_identical(
+                outer[["by_batch", "depends"]][["data"]],
+                "split_data"
+            )
+            pip_run(outer, lgr = NULL)
+            expect_equal(
+                outer[["coef_table", "out"]][[2L]],
+                c(1.28, 3.28, 5.28),
+                tolerance = 1e-8
+            )
+            # no bound argument tells the partitions apart
+            expect_length(.fun_pips(fun), 1L)
+        })
     })
 
     describe("as a plain function", {
@@ -187,6 +221,17 @@ describe("as.function.pipeflow", {
 
             expect_null(formals(f))
             expect_identical(f(), 42)
+        })
+
+        it("takes NULL values given via params of pip_add()", {
+            p <- pip_new("n") |>
+                pip_add("a", \(x) is.null(x), params = list(x = NULL))
+
+            f <- as.function(p, out = "a")
+
+            expect_named(formals(f), "x")
+            expect_true(f())
+            expect_false(f(x = 1))
         })
 
         it("returns all outputs for out = NULL", {

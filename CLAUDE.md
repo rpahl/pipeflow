@@ -77,8 +77,10 @@ on, then marks unprocessed downstream steps as `outdated`.
 `p[i, view = FALSE]` builds a standalone, compacted pipeline
 (`.pip_compact()` in `R/generic.pipeflow.R`).
 
-**Step dependencies.** Step functions must give every argument a default
-value. If a default is a formula, it refers to another step: `x = ~step1`
+**Step dependencies.** Every argument of a step function needs a value: its
+default, or an entry in `params` of `pip_add()`/`pip_replace()`, which
+overrides the default (`.extract_fun_params()`). If a value is a formula,
+it refers to another step: `x = ~step1`
 by name, or `x = ~-1` by relative position. `.extract_depends()` and
 `formula_deps()` resolve these references into `depends` and DAG edges. The
 pipeline is checked when steps are added, not when it runs. A reference
