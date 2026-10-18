@@ -388,7 +388,9 @@ dim.pipeflow <- function(x) {
 #' @param view For `[`, if `TRUE` (default), a view referencing the selected
 #' steps is returned. If `FALSE`, a new pipeline is returned that includes the
 #' selected steps and all their upstream dependencies. Ignored when `j` is
-#' provided.
+#' provided. With no selection, `v[, view = FALSE]` turns a view into a
+#' standalone pipeline of all its covered steps, which is also the way to
+#' get a copy of a view, as [pip_clone()] requires a full pipeline.
 #' @param value The value to assign (`[[<-`, `[<-`).
 #' @return For `[`, a pipeflow view (if `view = TRUE`) or a new pipeflow
 #' pipeline (if `view = FALSE`); if `j` is provided, a `data.table` with the
@@ -455,18 +457,23 @@ dim.pipeflow <- function(x) {
         return(dat[rows, j, with = FALSE])
     }
 
-    # x[] returns a copy of the pipeline (or the view itself)
-    if (missing(i)) {
-        if (.is_pipeflow_view(x)) {
-            return(x)
-        }
-        return(pip_clone(x))
-    }
-
     pipenv <- .pip_pipenv(x)
     name <- x[["name"]]
     dat <- pipenv[["data"]]
-    rows <- .pip_select_rows(x, substitute(i), parent.frame())
+
+    if (missing(i)) {
+        # x[] returns a copy of the pipeline, or the view itself. On a view,
+        # x[, view = FALSE] materializes all covered steps instead.
+        if (!.is_pipeflow_view(x)) {
+            return(pip_clone(x))
+        }
+        if (view) {
+            return(x)
+        }
+        rows <- .pip_view_rows(x)
+    } else {
+        rows <- .pip_select_rows(x, substitute(i), parent.frame())
+    }
 
     if (view) {
         # Return a view on the selected rows

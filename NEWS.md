@@ -38,6 +38,11 @@
 
 # pipeflow 0.5.0.9001
 
+## Bug fixes
+
+- `v[, view = FALSE]` returned the view instead of a standalone pipeline of
+  the covered steps, silently ignoring `view = FALSE`.
+
 ## Documentation
 
 - New hexagon logo with the package name, used in the README and as
