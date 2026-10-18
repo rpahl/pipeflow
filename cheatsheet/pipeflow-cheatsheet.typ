@@ -700,12 +700,14 @@
   columns: (1fr, 1fr, 1fr),
   column-gutter: 16pt,
   [
-    #section("Ways to connect steps", vignette: "v01-get-started")[
-      #fn[`\(x = ~numbers)`][`x` is the output of step `numbers`.]
-      #fn[`\(x = ~-1)`][
-        the output of the previous step (`~-2`: two steps back).
+    #section("Copy and save", vignette: "v03a-combine-pipelines")[
+      #pfn(clone-pic)[`q <- pip_clone(p)`][
+        an independent copy. After `q <- p`, both names refer to the same
+        pipeline.
       ]
-      #fn[`\(x = ~numbers, y = ~squared)`][several inputs.]
+      #fn[`saveRDS(p, "p.rds")`, `p <- readRDS("p.rds")`][
+        save and restore a pipeline with its outputs and states.
+      ]
     ]
 
     #section("Split · map · reduce", vignette: "v05a-split-map-reduce")[
@@ -749,16 +751,6 @@
 
   ],
   [
-    #section("Copy and save", vignette: "v03a-combine-pipelines")[
-      #pfn(clone-pic)[`q <- pip_clone(p)`][
-        an independent copy. After `q <- p`, both names refer to the same
-        pipeline.
-      ]
-      #fn[`saveRDS(p, "p.rds")`, `p <- readRDS("p.rds")`][
-        save and restore a pipeline with its outputs and states.
-      ]
-    ]
-
     #section("Handle failures", vignette: "v05c-error-handling")[
       #align(center, fail-pic)
       #fn[`pip_run(p, on_error = "continue")`][
@@ -793,6 +785,42 @@
         [went on after failures],
         chip("halted", fill: run-fill.halted), [a step called `.self$halt()`],
       )
+    ]
+
+    #section("Non-trivial parameter values", vignette: "v05d-param-value")[
+      pipeflow supports non-trivial parameter values.
+      #fn[
+        ```
+        my_param <- structure(
+            list(value = 1.23, label = "My label"),
+            class = "foo"
+        )
+        p <- pip_new("demo") |>
+            pip_add("step", \(x = my_param) x)
+        ```
+      ][]
+      #fn[
+        ```
+        # getter for class foo
+        pip_param_value.foo <- function(x, ...) x$value
+
+        # setter for class foo
+        `pip_param_value<-.foo` <- function(x, ..., value) {
+            if (inherits(value, "foo")) return(value)
+            x$value <- value
+            x
+        }
+        ```
+      ][
+        register getter and setter methods.
+      ]
+
+      #v(4pt)
+      #fn[`pip_run(p)`][the step function receives `1.23`, not the `foo` object.]
+      #fn[`pip_get_params(p)`][returns the stored `foo` object.]
+      #fn[`pip_set_params(p, list(x = 99))`][
+        sets the value to `99`; the label is kept.
+      ]
     ]
   ],
   [
