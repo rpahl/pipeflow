@@ -428,6 +428,16 @@ describe("as.function.pipeflow", {
             )
         })
 
+        it("rejects an invalid lgr", {
+            inner <- demo_inner(new.env())
+
+            expect_error(as.function(inner, lgr = "a"), "lgr must be a")
+            expect_error(
+                as.function(inner, lgr = \(x) x),
+                "lgr must be a function with arguments 'level' and 'msg'"
+            )
+        })
+
         it("accepts whole numbers as cache, also Inf and large ones", {
             inner <- demo_inner(new.env())
             d <- demo_batches()[1:6, ]
@@ -1037,6 +1047,64 @@ describe("as.function.pipeflow", {
             expect_identical(f(x = 1), 4)
             expect_identical(state$up, 1L)
             expect_length(.fun_pips(f), 1L)
+        })
+    })
+
+    describe("logging of the inner run", {
+        collect_logs <- function(logs) {
+            function(level, msg) logs$msgs <- c(logs$msgs, msg)
+        }
+
+        it("runs the inner pipeline silently by default", {
+            f <- as.function(demo_inner(new.env()), out = "coefs")
+
+            expect_silent(f(data = demo_batches()[1:6, ]))
+        })
+
+        it("logs the steps of the inner run with lgr", {
+            logs <- new.env()
+            f <- as.function(
+                demo_inner(new.env()),
+                out = "coefs",
+                lgr = collect_logs(logs)
+            )
+
+            f(data = demo_batches()[1:6, ])
+
+            expect_match(logs$msgs[[1L]], "Starting run of pipeflow 'inner'")
+            expect_true(any(grepl("Step 3/3 coefs", logs$msgs, fixed = TRUE)))
+        })
+
+        it("logs the steps that are skipped on a later call", {
+            logs <- new.env()
+            d <- demo_batches()[1:6, ]
+            f <- as.function(
+                demo_inner(new.env()),
+                out = "coefs",
+                lgr = collect_logs(logs)
+            )
+
+            f(data = d)
+            logs$msgs <- character()
+            f(data = d)
+
+            skipped <- grepl("skipping done step", logs$msgs, fixed = TRUE)
+            expect_identical(sum(skipped), 3L)
+        })
+
+        it("logs one inner run per partition", {
+            logs <- new.env()
+            fun <- as.function(
+                demo_inner(new.env()),
+                out = "coefs",
+                bind = list(data = ~split_data),
+                lgr = collect_logs(logs)
+            )
+
+            pip_run(demo_outer(fun), lgr = NULL)
+
+            starts <- grepl("Starting run", logs$msgs, fixed = TRUE)
+            expect_identical(sum(starts), 3L)
         })
     })
 

@@ -138,8 +138,15 @@ through the outer run's own mechanisms.
 ## Not in scope
 
 Partial results of a mapped outer step (per-key failures in pipeflow),
-inheriting other run options (`force`, `lgr`), a run context in pipeflow
+*inheriting* other run options from the outer run, a run context in pipeflow
 (option A) unless decided.
+
+Added afterwards in the same way as `on_error`, as an argument of
+`as.function()` fixed at conversion: `lgr` (default `NULL`, so the inner run
+stays silent), which makes the steps of the inner runs visible while
+debugging. `force` was left out: with it, a reused pipeline re-runs every
+non-locked step on each call, which `cache = 0` already does with less
+memory, so it would add no behaviour of its own.
 
 ## Open questions
 

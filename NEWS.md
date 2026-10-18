@@ -8,6 +8,9 @@
   reference inside the inner pipeline receives the failure. The function
   still fails if one of the steps named in `out` failed or was not run
   because an input failed.
+- `as.function()` gained the argument `lgr`, the logger of the inner run.
+  The inner pipeline is still run silently by default (`lgr = NULL`), but
+  its steps can now be logged, e.g. `as.function(x, lgr = pipeflow_lgr)`.
 
 # pipeflow 0.5.0.9006
 

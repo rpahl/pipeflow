@@ -27,9 +27,9 @@
 #' before, except for locked steps, which keep their outputs.
 #'
 #' @details
-#' The inner pipeline is run silently (`lgr = NULL`).
-#' Warnings and messages of its steps are passed on to the caller.
-#' A failing inner step results in an error of the caller, which in turn
+#' By default, the inner pipeline is run silently, but warnings and messages
+#' of its steps are still passed on to the caller.
+#' A failing inner step results in an error of the caller which in turn
 #' makes the outer step fail.
 #' Param values of the outer pipeline reach the function unwrapped
 #' (see [pip_param_value()]).
@@ -80,8 +80,8 @@
 #'   environment or another reference object (e.g. R6) is not seen: as for
 #'   [pip_set_params()] of a pipeline, which needs `force = TRUE`, the
 #'   steps stay up to date. A forced run of the outer pipeline
-#'   (`pip_run(force = TRUE)`) does not force the inner pipelines either.
-#'   Use `cache = 0` for such inputs.
+#'   (`pip_run(force = TRUE)`) does not force the inner pipelines either,
+#'   but you can force them by setting `cache = 0`.
 #'
 #' @param x A pipeflow pipeline (not a view; use `x[i, view = FALSE]` to turn
 #' a part of a pipeline into a function).
@@ -100,6 +100,9 @@
 #' @param on_error What to do when an inner step fails: `"stop"` (the
 #' default) ends the inner run at that step, `"continue"` runs the inner
 #' steps that do not depend on it, see Details and [pip_run()].
+#' @param lgr The logger of the inner run, see [pip_run()]. `NULL` (the
+#' default) runs the inner pipeline silently. To activate logging,
+#' set e.g. `lgr = pipeflow_lgr`.
 #' @param ... Not used.
 #' @return A function with the unbound params of `x` as arguments.
 #' @seealso [pip_add()]
@@ -131,8 +134,27 @@
 #'
 #' # Only the steps after the changed param run again, for each partition
 #' pip_set_params(outer, list(digits = 3))
+#' print(outer)
 #' pip_run(outer, lgr = NULL)
 #' outer[["table", "out"]]
+#'
+#' # With on_error = "continue", the inner pipeline handles a failed inner
+#' # step itself: `coefs` is run with the failure of `fit` and reports it.
+#' robust <- pip_new("robust") |>
+#'   pip_add("input", \(input_df = NULL) input_df) |>
+#'   pip_add("fit", \(data = ~input) {
+#'     if (nrow(data) < 3) stop("too few rows to fit")
+#'     lm(mpg ~ wt, data = data)
+#'   }) |>
+#'   pip_add("coefs", \(fit = ~try(fit), digits = 2) {
+#'     if (inherits(fit, "pipeflow_failure")) NULL else round(coef(fit), digits)
+#'   })
+#'
+#' f_robust <- as.function(robust, out = "coefs", on_error = "continue")
+#' f_robust(input_df = mtcars)
+#'
+#' # the continued inner run signals a warning instead of an error
+#' suppressWarnings(f_robust(input_df = mtcars[1:2, ]))
 #' @export
 as.function.pipeflow <- function(
     x,
@@ -140,6 +162,7 @@ as.function.pipeflow <- function(
     bind = list(),
     cache = 16L,
     on_error = c("stop", "continue"),
+    lgr = NULL,
     ...
 ) {
     .assert_pip(x)
@@ -147,6 +170,9 @@ as.function.pipeflow <- function(
     .assert_fun_bind(bind)
     .assert_fun_cache(cache)
     onError <- match.arg(on_error)
+    if (!is.null(lgr)) {
+        .assert_logger(lgr)
+    }
 
     template <- pip_clone(x)
     suppressMessages(pip_reset(template))
@@ -156,6 +182,7 @@ as.function.pipeflow <- function(
         template = template,
         out = out,
         onError = onError,
+        lgr = lgr,
         bindText = vapply(
             bind,
             \(f) paste(deparse(f), collapse = " "),
@@ -333,7 +360,7 @@ as.function.pipeflow <- function(
     # Keep before running: after a failure, the steps that did run are reused
     entry <- list(pip = pip, key = key, used = cache$tick)
     .fun_keep(cache, entry, i, ctx$size)
-    pip_run(pip, lgr = NULL, on_error = ctx$onError)
+    pip_run(pip, lgr = ctx$lgr, on_error = ctx$onError)
     .fun_check_run(pip, ctx$out)
     .fun_out(pip, ctx$out)
 }

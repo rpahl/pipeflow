@@ -325,13 +325,11 @@ A few things to know:
   called yet, or one made with `cache = 0`, is small.
 * Warnings and messages of the inner steps reach the outer run. If an inner
   step fails, the outer step fails with a message that names the partition and
-  the inner step.
-* With `as.function(on_error = "continue")` the inner pipeline continues
-  after a failed step, just as `pip_run(on_error = "continue")` does, which
-  is also what makes `~try()` references inside the inner pipeline work (see
-  ["Error handling"](v05c-error-handling.html)). The outer step still fails
-  if one of the steps named in `out` failed or was not run because an input
-  failed, so the outer run decides what happens to it as usual.
+  the inner step, unless the inner pipeline handles the failure itself (see
+  ["Handling failures"](v05c-error-handling.html)).
+* The inner pipelines are run silently. To follow their steps while
+  debugging, set `as.function(lgr = pipeflow_lgr)` (or any other logger):
+  each subset then logs a run of its own.
 
 
 ### Full control: running the inner pipeline yourself
