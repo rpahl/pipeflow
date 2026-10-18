@@ -494,6 +494,34 @@ describe("as.function.pipeflow", {
             expect_identical(demo$calls$fit, 6L)
         })
 
+        it("drops the least recently used, not the oldest pipeline", {
+            calls <- new.env()
+            calls$fit <- 0L
+            calls$coefs <- 0L
+            f <- as.function(
+                demo_inner(calls),
+                out = "coefs",
+                bind = list(data = ~split_data),
+                cache = 2
+            )
+            d <- demo_batches()
+            a <- d[d$batch == "A", ]
+            b <- d[d$batch == "B", ]
+            c <- d[d$batch == "C", ]
+
+            f(data = a)
+            f(data = b)
+            f(data = a) # A is now more recent than B
+            f(data = c) # B goes, not A
+            expect_identical(calls$fit, 3L)
+
+            f(data = a)
+            expect_identical(calls$fit, 3L) # A is still kept
+
+            f(data = b)
+            expect_identical(calls$fit, 4L) # B was dropped
+        })
+
         it("keeps all pipelines with cache = Inf", {
             demo <- demo_nested(cache = Inf)
             d <- demo_batches()[1:6, ]
@@ -547,20 +575,155 @@ describe("as.function.pipeflow", {
         })
 
         it("reuses the steps that ran before a failed one", {
-            demo <- demo_nested()
-            bad <- data.frame(batch = "D", x = 1:3, y = NA_real_)
-            good <- data.frame(batch = "D", x = 1:3, y = c(1, 2, 3.1))
-            data <- demo_batches()
+            state <- new.env()
+            state$up <- 0L
+            state$fail <- TRUE
+            inner <- pip_new("retry") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("up", \(x = ~input) {
+                    state$up <- state$up + 1L
+                    x + 1
+                }) |>
+                pip_add("down", \(u = ~up) {
+                    if (state$fail) stop("boom")
+                    u * 2
+                })
+            f <- as.function(inner, out = "down", bind = list(x = ~source))
 
-            pip_set_params(demo$outer, list(data = rbind(data, bad)))
-            expect_error(pip_run(demo$outer, lgr = NULL))
-            expect_identical(demo$calls$fit, 4L) # A, B, C and the failed D
+            expect_error(f(x = 1), "boom")
+            expect_identical(state$up, 1L)
 
-            pip_set_params(demo$outer, list(data = rbind(data, good)))
-            run_outer(demo)
+            # same input, so the same kept pipeline: only `down` runs again
+            state$fail <- FALSE
+            expect_identical(f(x = 1), 4)
+            expect_identical(state$up, 1L)
+            expect_length(.fun_pips(f), 1L)
+        })
+    })
 
-            expect_identical(demo$calls$fit, 5L) # D only
-            expect_named(demo$outer[["by_batch", "out"]], c("A", "B", "C", "D"))
+    describe("binding", {
+        it("takes relative references", {
+            inner <- pip_new("rel") |> pip_add("s", \(x = 1) x * 2)
+            outer <- pip_new("outer") |>
+                pip_add("a", \(v = 5) v) |>
+                pip_add(
+                    "run",
+                    as.function(inner, out = "s", bind = list(x = ~-1))
+                )
+
+            pip_run(outer, lgr = NULL)
+
+            expect_identical(outer[["run", "depends"]][["x"]], "a")
+            expect_identical(outer[["run", "out"]], 10)
+        })
+
+        it("hands the failure of ~try(step) to the inner pipeline", {
+            inner <- pip_new("try") |>
+                pip_add("s", \(x = 1) {
+                    failed <- inherits(x, "pipeflow_failure")
+                    if (failed) "failed upstream" else x
+                })
+            outer <- pip_new("outer") |>
+                pip_add("bad", \() stop("nope")) |>
+                pip_add(
+                    "run",
+                    as.function(inner, out = "s", bind = list(x = ~try(bad)))
+                )
+
+            suppressWarnings(
+                pip_run(outer, lgr = NULL, on_error = "continue")
+            )
+
+            expect_identical(outer[["bad", "state"]], "failed")
+            expect_identical(outer[["run", "out"]], "failed upstream")
+        })
+
+        it("matches on all bound arguments", {
+            calls <- new.env()
+            calls$n <- 0L
+            inner <- pip_new("two") |>
+                pip_add("in_a", \(a = NULL) a) |>
+                pip_add("in_b", \(b = NULL) b) |>
+                pip_add("total", \(a = ~in_a, b = ~in_b) {
+                    calls$n <- calls$n + 1L
+                    a + b
+                })
+            fun <- as.function(inner, out = "total", bind = list(
+                a = ~parts,
+                b = ~offset
+            ))
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "parts",
+                    \(values = list(p = 1, q = 2)) values,
+                    exec = "split"
+                ) |>
+                pip_add("offset", \(offset = 10) offset) |>
+                pip_add("run", fun)
+
+            run_outer(list(outer = outer))
+            expect_identical(calls$n, 2L)
+            expect_equal(unlist(outer[["run", "out"]]), c(p = 11, q = 12))
+
+            # a changed bound input is a new input: all partitions run
+            pip_set_params(outer, list(offset = 20))
+            run_outer(list(outer = outer))
+            expect_identical(calls$n, 4L)
+            expect_equal(unlist(outer[["run", "out"]]), c(p = 21, q = 22))
+
+            # back to the old input: the kept pipelines are found
+            pip_set_params(outer, list(offset = 10))
+            run_outer(list(outer = outer))
+            expect_identical(calls$n, 4L)
+            expect_length(.fun_pips(fun), 4L)
+
+            # only the partition with the changed input runs
+            pip_set_params(outer, list(values = list(p = 5, q = 2)))
+            run_outer(list(outer = outer))
+            expect_identical(calls$n, 5L)
+            expect_equal(unlist(outer[["run", "out"]]), c(p = 15, q = 12))
+        })
+    })
+
+    describe("limits of the reuse", {
+        it("takes the first default of params with the same name", {
+            p <- pip_new("same") |>
+                pip_add("a", \(x = 1) x) |>
+                pip_add("b", \(x = 2) x)
+            pip_run(p, lgr = NULL)
+
+            f <- as.function(p)
+
+            # the pipeline itself keeps both defaults ...
+            expect_identical(c(p[["a", "out"]], p[["b", "out"]]), c(1, 2))
+            # ... the function has one formal, as pip_get_params() has
+            expect_identical(formals(f)$x, 1)
+            expect_equal(unlist(f()), c(a = 1, b = 1))
+            expect_equal(unlist(f(x = 5)), c(a = 5, b = 5))
+        })
+
+        it("does not see changes made in place to a reference input", {
+            p <- pip_new("ref") |> pip_add("s", \(e = NULL) e$value)
+            e <- new.env()
+            e$value <- 1
+            f <- as.function(p, out = "s")
+
+            expect_identical(f(e = e), 1)
+            e$value <- 2
+
+            # as for the pipeline itself, which needs force = TRUE
+            expect_identical(f(e = e), 1)
+            expect_identical(as.function(p, out = "s", cache = 0)(e = e), 2)
+        })
+
+        it("does not rerun the inner pipelines in a forced outer run", {
+            demo <- run_outer(demo_nested())
+            expect_identical(demo$calls$fit, 3L)
+
+            pip_run(demo$outer, lgr = NULL, force = TRUE)
+
+            expect_identical(demo$calls$fit, 3L)
+            expect_identical(demo$outer[["by_batch", "state"]], "done")
         })
     })
 
