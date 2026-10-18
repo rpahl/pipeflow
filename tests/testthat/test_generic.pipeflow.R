@@ -1732,33 +1732,23 @@ describe("cross-pipeline assignment", {
         expect_true(p[["s2", "out"]])
     })
 
-    it("keeps a formula value of an unbound param as a value", {
-        q <- pip_new() |>
-            pip_add("s", \(model = NULL) model)
-        pip_set_params(q, list(model = ~x))
-
-        q["s", ] <- q["s", ]
-
-        expect_equal(q[["s", "params"]], list(model = ~x))
-        expect_equal(q[["depends"]][["s"]], character(0))
-        expect_equal(q[["unbound"]][["s"]], "model")
-    })
-
-    it("does not bind a formula value to a step of the same name", {
+    it("copies a param that was bound via pip_set_params()", {
         p <- pip_new() |>
             pip_add("x", \() 1) |>
+            pip_add("y", \() 2) |>
             pip_add("s", \() 0)
         q <- pip_new() |>
             pip_add("x", \() 1) |>
-            pip_add("s", \(model = NULL, data = ~x) list(model, data))
-        pip_set_params(q, list(model = ~x))
+            pip_add("y", \() 2) |>
+            pip_add("s", \(model = NULL) model)
+        pip_set_params(q, list(model = ~ try(y)))
 
-        p[2, ] <- q[2, ]
+        p[3, ] <- q[3, ]
 
-        expect_equal(p[["depends"]][["s"]], c(data = "x"))
-        expect_equal(p[["unbound"]][["s"]], "model")
+        expect_equal(p[["depends"]][["s"]], c(model = "y"))
+        expect_equal(formula_try_args(p[["s", "params"]]), "model")
         pip_run(p, lgr = NULL)
-        expect_equal(p[["s", "out"]], list(~x, 1))
+        expect_equal(p[["s", "out"]], 2)
     })
 
     it("is a no-op for an empty row selection", {

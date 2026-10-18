@@ -32,7 +32,9 @@
 #' A failing inner step results in an error of the caller which in turn
 #' makes the outer step fail.
 #' Param values of the outer pipeline reach the function unwrapped
-#' (see [pip_param_value()]).
+#' (see [pip_param_value()]). The arguments of the function are values, also
+#' if they are formulas: unlike in [pip_set_params()], a formula argument
+#' does not bind a param of `x` to a step.
 #'
 #' ## Continuing after errors of inner steps
 #' With `on_error = "continue"` the inner pipeline is run like
@@ -327,7 +329,8 @@ as.function.pipeflow <- function(
     } else {
         cache$entries[[i]]$pip
     }
-    pip_set_params(pip, args, unknown = "ignore")
+    # The arguments are values, also if they are formulas
+    .pip_set_params(pip, args, unknown = "ignore", bind = FALSE)
 
     # Keep before running: after a failure, the steps that did run are reused
     entry <- list(pip = pip, key = key, used = cache$tick)

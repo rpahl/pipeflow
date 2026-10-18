@@ -1,3 +1,27 @@
+# pipeflow 0.5.0.9010
+
+## Breaking changes
+
+- `pip_set_params()` binds a param to a step if its value is a one-sided
+  formula, e.g. `pip_set_params(p, list(model = ~fit))`, as a formula does
+  in the defaults of a step function and in `params` of `pip_add()`. Before,
+  the formula was set as value. To set a formula as value, give it as a
+  string and turn it into a formula in the step, e.g. with `as.formula()`.
+  Because of this, `as.function()` no longer turns such a value into a
+  reference to a step of the outer pipeline.
+
+## New features
+
+- `pip_set_params()` can bind params to steps. The param is bound in all
+  selected, unlocked steps that have it unbound, which must come after the
+  step it is bound to; a view selects the steps to bind. A bound param is no
+  longer unbound, and setting the same binding again does nothing.
+
+## Changes
+
+- The warning of `pip_set_params()` about unknown params no longer shows
+  the call.
+
 # pipeflow 0.5.0.9009
 
 ## Breaking changes

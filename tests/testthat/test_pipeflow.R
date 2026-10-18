@@ -5044,6 +5044,193 @@ describe("pip_set_params", {
             "params must be a list"
         )
     })
+
+    bind_pip <- function() {
+        pip_new() |>
+            pip_add("data", \(n = 4) seq_len(n)) |>
+            pip_add("fit1", \(x = ~data) mean(x)) |>
+            pip_add("fit2", \(x = ~data) max(x)) |>
+            pip_add("rep1", \(model = 0, k = 1) model * k) |>
+            pip_add("rep2", \(model = 0) model + 100)
+    }
+
+    it("binds a param to a step in all steps that have it unbound", {
+        p <- bind_pip()
+
+        pip_set_params(p, list(model = ~fit2))
+
+        expect_equal(p[["rep1", "params"]], list(model = ~fit2, k = 1))
+        expect_equal(p[["depends"]][["rep1"]], c(model = "fit2"))
+        expect_equal(p[["depends"]][["rep2"]], c(model = "fit2"))
+        expect_equal(p[["unbound"]][["rep1"]], "k")
+        expect_equal(p[["unbound"]][["rep2"]], character(0))
+        expect_false("model" %in% names(pip_get_params(p)))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["rep1", "out"]], 4)
+        expect_equal(p[["rep2", "out"]], 104)
+    })
+
+    it("adds the edges of a binding to the graph", {
+        p <- bind_pip()
+
+        pip_set_params(p, list(model = ~fit2))
+
+        edges <- pip_graph(p)[["edges"]]
+        ids <- stats::setNames(p[["nodeId"]], p[["step"]])
+        bindEdges <- edges[edges[["from"]] == ids[["fit2"]], ]
+        expect_setequal(bindEdges[["to"]], ids[c("rep1", "rep2")])
+
+        pip_run(p, lgr = NULL)
+        pip_set_params(p, list(n = 6))
+        expect_equal(unname(p[["state"]]), rep("outdated", 5))
+    })
+
+    it("outdates the bound steps and their downstream steps", {
+        p <- bind_pip() |>
+            pip_add("final", \(x = ~rep1) x)
+        pip_run(p, lgr = NULL)
+
+        pip_set_params(p["rep1"], list(model = ~fit1))
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "done", "done", "outdated", "done", "outdated")
+        )
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["final", "out"]], 2.5)
+    })
+
+    it("sets values and bindings in one call", {
+        p <- bind_pip()
+
+        pip_set_params(p, list(model = ~fit1, k = 2, n = 6))
+
+        expect_equal(p[["rep1", "params"]], list(model = ~fit1, k = 2))
+        expect_equal(p[["data", "params"]], list(n = 6))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["rep1", "out"]], 7)
+    })
+
+    it("keeps the try() wrapper of a binding", {
+        p <- pip_new() |>
+            pip_add("fail", \() stop("boom")) |>
+            pip_add("s", \(x = 0) inherits(x, "pipeflow_failure"))
+
+        pip_set_params(p, list(x = ~ try(fail)))
+
+        expect_equal(p[["depends"]][["s"]], c(x = "fail"))
+        expect_equal(formula_try_args(p[["s", "params"]]), "x")
+        suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+        expect_true(p[["s", "out"]])
+    })
+
+    it("binds only within a view and skips locked steps", {
+        p <- bind_pip()
+        pip_lock(p["rep2"])
+
+        pip_set_params(p[c("rep1", "rep2")], list(model = ~fit1))
+
+        expect_equal(p[["depends"]][["rep1"]], c(model = "fit1"))
+        expect_equal(p[["depends"]][["rep2"]], character(0))
+        expect_equal(p[["rep2", "params"]], list(model = 0))
+    })
+
+    it("does nothing when the binding is set again", {
+        p <- bind_pip()
+        pip_set_params(p, list(model = ~fit2))
+        pip_run(p, lgr = NULL)
+
+        expect_no_warning(pip_set_params(p, list(model = ~fit2)))
+        expect_no_warning(
+            pip_set_params(p, list(model = ~fit2), unknown = "error")
+        )
+
+        expect_equal(unname(p[["state"]]), rep("done", 5))
+    })
+
+    it("does not rebind a bound param", {
+        p <- bind_pip()
+        pip_set_params(p, list(model = ~fit2))
+
+        expect_warning(
+            pip_set_params(p, list(model = ~fit1)),
+            "Trying to set parameters not defined in the target: model"
+        )
+        expect_warning(
+            pip_set_params(p, list(model = ~ try(fit2))),
+            "not defined in the target: model"
+        )
+        expect_equal(p[["depends"]][["rep1"]], c(model = "fit2"))
+        expect_equal(formula_try_args(p[["rep1", "params"]]), character(0))
+    })
+
+    it("signals bindings to steps that don't come before, changing nothing", {
+        p <- pip_new() |>
+            pip_add("a", \(model = 0, k = 1) model) |>
+            pip_add("fit", \() 1) |>
+            pip_add("b", \(model = 0) model)
+
+        expect_error(
+            pip_set_params(p, list(model = ~fit, k = 2)),
+            paste(
+                "cannot bind 'model' to step 'fit' in steps that don't come",
+                "after it: 'a' - use a view"
+            )
+        )
+        expect_equal(p[["depends"]][["b"]], character(0))
+        expect_equal(p[["a", "params"]], list(model = 0, k = 1))
+
+        pip_set_params(p["b"], list(model = ~fit))
+        expect_equal(p[["depends"]][["b"]], c(model = "fit"))
+    })
+
+    it("signals a binding of a step to itself", {
+        p <- pip_new() |>
+            pip_add("s", \(model = 0) model)
+
+        expect_error(
+            pip_set_params(p, list(model = ~s)),
+            "in steps that don't come after it: 's'"
+        )
+        expect_equal(p[["unbound"]][["s"]], "model")
+    })
+
+    it("signals relative references", {
+        p <- bind_pip()
+
+        expect_error(
+            pip_set_params(p, list(model = ~ -1)),
+            "must refer to steps by name, not by relative position: model = ~-1"
+        )
+        expect_error(
+            pip_set_params(p, list(model = ~ try(-1))),
+            "not by relative position: model = ~try\\(-1\\)"
+        )
+        expect_equal(p[["depends"]][["rep1"]], character(0))
+    })
+
+    it("signals references to steps that are not in the pipeline", {
+        p <- bind_pip()
+
+        expect_error(
+            pip_set_params(p, list(k = 2, model = ~ a + b)),
+            paste(
+                "params refer to steps that are not in the pipeline:",
+                "model = ~a \\+ b - to set a formula as value, give it as a",
+                "string"
+            )
+        )
+        expect_equal(p[["rep1", "params"]], list(model = 0, k = 1))
+    })
+
+    it("binds via p[[step, 'params']] <- value", {
+        p <- bind_pip()
+
+        p[["rep2", "params"]] <- list(model = ~fit1)
+
+        expect_equal(p[["depends"]][["rep2"]], c(model = "fit1"))
+        expect_equal(p[["depends"]][["rep1"]], character(0))
+    })
 })
 
 

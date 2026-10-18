@@ -225,9 +225,8 @@ params of the source), and the runtime state and annotation columns are
 overwritten (locked steps included). A copied step refers to the steps
 that the source step depends on by name, also if it was defined with a
 relative reference such as \code{~-1}, and these steps are looked up in \code{p}.
-An unbound param stays unbound, also if its value is a formula (as set by
-\code{\link[=pip_set_params]{pip_set_params()}}). The structural columns \code{nodeId}, \code{depends} and
-\code{unbound} are not copied but recomputed against the steps of \code{p}.
+The structural columns \code{nodeId}, \code{depends} and \code{unbound} are not copied
+but recomputed against the steps of \code{p}.
 Instead of \code{p[i, j] <- q}, use \code{p[i, j] <- q[i, j]} to copy the values of
 a single property; the one-column table returned by the extraction form
 is unwrapped and assigned element-wise.

@@ -156,6 +156,25 @@ so are the steps of the first pipeline: the `data` step still has its param
 Steps are bound by name, not by relative position, and `bind` can only be
 used when combining exactly two pipelines.
 
+#### Binding params afterwards
+
+Params can also be bound after combining, with `pip_set_params()`: a
+one-sided formula binds the param to that step in all selected steps that
+have it unbound. Here the `data` step of the first pipeline has an unbound
+param `x` as well, but it comes before the `standardize` step, so it can't
+be bound to it. Therefore, we select the `data2` step with a view:
+
+```{r bind-after-combining}
+pip_later <- rbind(pip1, pip2)
+pip_set_params(pip_later["data2"], list(x = ~standardize))
+
+pip_later
+```
+
+Without the view, `pip_set_params()` would signal an error and leave the
+pipeline unchanged. Like with `bind`, the steps are bound by name, not by
+relative position.
+
 
 ### Combined pipeline results
 

@@ -234,6 +234,18 @@ describe("as.function.pipeflow", {
             expect_false(f(x = 1))
         })
 
+        it("takes formula arguments as values", {
+            p <- pip_new("n") |>
+                pip_add("x", \() 1) |>
+                pip_add("a", \(model = NULL) model)
+
+            f <- as.function(p, out = "a")
+
+            expect_equal(f(model = ~x), ~x)
+            expect_equal(f(model = 2), 2)
+            expect_equal(f(model = ~ x + y), ~ x + y)
+        })
+
         it("returns all outputs for out = NULL", {
             inner <- demo_inner(new.env())
             d <- demo_batches()[1:6, ]
