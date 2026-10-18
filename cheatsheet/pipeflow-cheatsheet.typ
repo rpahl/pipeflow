@@ -673,7 +673,12 @@
       ]
       #align(center, connect-pic)
       #fn[`pip_replace(p, "data2", \(x = ~prep) x)`][
-        connect the parts: first step of `p2` now uses last step of `p1`.
+        connects data2 with prep manually after the bind.
+      ]
+      #v(2pt)
+      To connect the parts in one go, use:
+      #v(-4pt)
+      #fn[`p <- rbind(p1, p2, bind = list(data = ~prep))`][
       ]
     ]
 
