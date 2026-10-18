@@ -116,29 +116,41 @@
     invisible(exec)
 }
 
-#' Warn about params that are shadowed by the defaults of a step function
+#' Check the params of a step
 #'
-#' The defaults of `fun` take precedence over `params` when both are merged,
-#' so values given in `params` for names that are also formals of `fun` are
-#' dropped. `...` is not counted as a formal.
+#' The params given to `pip_add()` or `pip_replace()` are merged with the
+#' defaults of the step function by name, so each of them needs a unique name.
 #'
-#' @param step The name of the step (used in the message).
-#' @param fun The step function.
-#' @param params Named list of parameter values passed to the step.
-#' @return The overlapping names, invisibly. Signals a warning if there are any.
+#' @param params The params given for the step.
+#' @return `params`, invisibly.
 #' @noRd
-.warn_params_overlap <- function(step, fun, params) {
-    overlap <- intersect(names(params), setdiff(names(formals(fun)), "..."))
-    if (length(overlap) > 0L) {
-        warning(
-            "step '",
-            step,
-            "': the defaults of fun take precedence over params: ",
-            toString(overlap),
-            call. = FALSE
+.assert_step_params <- function(params) {
+    parNames <- names(params)
+    if (length(params) > 0L && is.null(parNames)) {
+        parNames <- NA_character_
+    }
+    isValid <- is.list(params) &&
+        !anyNA(parNames) &&
+        all(nzchar(parNames)) &&
+        !anyDuplicated(parNames)
+    if (!isValid) {
+        stop_no_call("params must be a list with unique names")
+    }
+    invisible(params)
+}
+
+#' A pipeline is no step function, but can be turned into one
+#' @param fun The step function given to `pip_add()` or `pip_replace()`.
+#' @noRd
+.assert_fun_not_pipeline <- function(fun) {
+    if (.is_pipeflow(fun)) {
+        stop_no_call(
+            "fun must be a function, not a pipeline - to use a pipeline as ",
+            "a step, turn it into a function with as.function(), ",
+            "see ?as.function.pipeflow"
         )
     }
-    invisible(overlap)
+    invisible(fun)
 }
 
 .assert_logger <- function(lgr) {
@@ -242,7 +254,17 @@
 # ------------------------------
 # Parameter & dependency parsing
 # ------------------------------
-.extract_fun_params <- function(fun) {
+#' The params of a step: the defaults of its function, overridden by params
+#'
+#' @param fun The step function.
+#' @param params Named list of param values. They override the defaults of
+#' `fun` and give a value to arguments of `fun` that have no default. Names
+#' that are no arguments of `fun` are added.
+#' @return Named list: the arguments of `fun` (without `...`) in their order,
+#' followed by the other `params`. The defaults of `fun` are resolved in its
+#' environment, except for those that `params` override.
+#' @noRd
+.extract_fun_params <- function(fun, params = list()) {
     args <- formals(fun)
 
     # Remove potential "..." argument
@@ -250,22 +272,29 @@
     if (hasDots) {
         args <- args[!names(args) %in% "..."]
     }
+    isGiven <- names(args) %in% names(params)
 
-    # First verify that all args have default values
+    # First verify that all args that params don't give have default values
     is_missing_default <- function(x) {
         identical(x, quote(expr = ))
     }
-    undef <- names(Filter(args, f = is_missing_default))
+    undef <- names(Filter(args[!isGiven], f = is_missing_default))
     if (length(undef) > 0L) {
         stop_no_call(
             paste0("'", undef, "'", collapse = ", "),
             ifelse(length(undef) > 1L, " have ", " has "),
-            "no default value"
+            "no default value - set one in fun or give a value in params"
         )
     }
 
     # Make sure default values are returned as resolved values
-    lapply(args, \(x) eval(x, envir = environment(fun)))
+    values <- stats::setNames(vector("list", length(args)), names(args))
+    values[!isGiven] <- lapply(
+        args[!isGiven],
+        \(x) eval(x, envir = environment(fun))
+    )
+    values[names(params)] <- params
+    values
 }
 
 .extract_depends <- function(
@@ -1042,8 +1071,7 @@
 # -----------------
 
 .pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
-    funParams <- .extract_fun_params(fun)
-    params[names(funParams)] <- funParams
+    params <- .extract_fun_params(fun, params)
 
     # Determine and verify potential links to existing steps
     env <- .pip_pipenv(x)
@@ -1097,8 +1125,7 @@
 # the corresponding position of its topological order, leaving all existing
 # steps (and their runtime state) untouched.
 .pip_insert <- function(x, step, fun, tags, exec, params, pos) {
-    funParams <- .extract_fun_params(fun)
-    params[names(funParams)] <- funParams
+    params <- .extract_fun_params(fun, params)
 
     env <- .pip_pipenv(x)
     data <- env[["data"]]
@@ -1261,10 +1288,11 @@
             params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
         }
         # Fold current parameter values into the defaults of the existing
-        # function arguments.
+        # function arguments. `[<-` with list() keeps a NULL value, which
+        # `[[<-` would drop together with the argument.
         fml <- formals(fun)
         for (nm in intersect(names(params), setdiff(names(fml), "..."))) {
-            fml[[nm]] <- params[[nm]]
+            fml[nm] <- list(params[[nm]])
         }
         formals(fun) <- fml
 
@@ -1393,9 +1421,10 @@ pip_new <- function(name = "pipe") {
 #'
 #' @param x A pipeflow pipeline object.
 #' @param step Unique step name.
-#' @param fun Function to execute for the step. Each function parameter must
-#' have a default value. Default values that are simple constants are resolved
-#' immediately. Default values that are formulas like `~other_step` are
+#' @param fun Function to execute for the step. Each function parameter needs
+#' a value: a default value in `fun` or an entry in `params`.
+#' Default values that are simple constants are resolved immediately.
+#' Default values that are formulas like `~other_step` are
 #' treated as dependencies to those steps and resolved to the respective output
 #' values at runtime once the step is executed. A reference wrapped in `try()`,
 #' like `~try(other_step)`, accepts a failed input when the pipeline is run
@@ -1409,14 +1438,20 @@ pip_new <- function(name = "pipe") {
 #' @param after Optional position after which the new step should be inserted
 #' (defaults to last position). Can be a step name or an integer index. If
 #' set to 0, the new step will be inserted at the beginning of the pipeline.
-#' @param params Optional named list of parameter values, which will be merged
-#' with the defaults of `fun` (if overlapping names, the default values in `fun`
-#' take precedence). There are two use cases for `params`:
-#' 1. Provide param values programmatically when adding steps at runtime
-#' 2. Provide extra param values to "mark" dependencies that are defined in
-#'   pipelines nested in a step, which ensures that the step (and with that
-#'   the pipeline in the step) is re-executed when one of the respective
-#'   param values change.
+#' @param params Optional named list of parameter values. They override the
+#' defaults of `fun` and give a value to parameters of `fun` that have no
+#' default. As in the defaults of `fun`, a formula like `~other_step` refers
+#' to the output of another step. Names that are no parameters of `fun` add
+#' params to the step, which are passed on to `fun` as well, so `fun` needs a
+#' `...` argument for them. Use cases for `params` are:
+#' 1. Set param values programmatically, e.g. when adding steps in a loop or
+#'   at runtime.
+#' 2. Use existing functions whose parameters have no defaults, e.g.
+#'   `pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))`.
+#' 3. Provide extra param values to "mark" dependencies that are defined in
+#'   pipelines nested in a step, which ensures that it is re-executed when
+#'   one of the nested param values change. See the
+#'   \href{../doc/v05b-nested-pipeline.html}{nested pipelines vignette}.
 #' @param exec Execution mode for this step. One of "auto", "split",
 #' "reduce" or "plain".
 #' Using execution mode `exec = split`, the output of the step is marked as
@@ -1501,12 +1536,24 @@ pip_new <- function(name = "pipe") {
 #' pip_add(p2, "preload", \(x = 1) x, after = 0)
 #' p2
 #'
-#' # --- Provide parameter values programmatically with 'params' ---
+#' # --- Provide parameter values with 'params' ---
+#' # 'params' override the defaults of the function ...
 #' p3 <- pip_new("params-demo") |>
-#'   pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
+#'   pip_add("data", \(x = c(1, NA, 3)) x) |>
+#'   pip_add("scale", \(x = ~data, factor = 1) x * factor,
+#'     params = list(factor = 10)
+#'   ) |>
+#'   # ... and give values to parameters without default, e.g. of mean()
+#'   pip_add("avg", mean, params = list(x = ~scale, na.rm = TRUE))
 #' pip_run(p3)
 #' p3
-#' p3[["load", "out"]] # c(1, size = 42) — extra params passed via `...`
+#' p3[["avg", "out"]] # 20
+#'
+#' # Extra params are passed via `...`
+#' p4 <- pip_new("dots-demo") |>
+#'   pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
+#' pip_run(p4)
+#' p4[["load", "out"]] # c(1, size = 42)
 #' @export
 pip_add <- function(
     x,
@@ -1530,6 +1577,7 @@ pip_add <- function(
     if (.pip_step_exists(x, step)) {
         stop("step '", step, "' already exists in the pipeline")
     }
+    .assert_fun_not_pipeline(fun)
     if (!is.function(fun)) {
         stop("fun must be a function")
     }
@@ -1552,8 +1600,8 @@ pip_add <- function(
             "'.self' is a reserved parameter name and cannot be used in params"
         )
     }
+    .assert_step_params(params)
     .assert_exec_mode(exec)
-    .warn_params_overlap(step, fun, params)
 
     n <- length(x)
 
@@ -2350,6 +2398,7 @@ pip_replace <- function(
     if (!.pip_step_in_view(x, step)) {
         stop("step '", step, "' is not part of the view")
     }
+    .assert_fun_not_pipeline(fun)
     if (!is.function(fun)) {
         stop("fun must be a function")
     }
@@ -2373,10 +2422,10 @@ pip_replace <- function(
             "params - it is provided automatically"
         )
     }
+    .assert_step_params(params)
     if (!is.null(exec)) {
         .assert_exec_mode(exec)
     }
-    .warn_params_overlap(step, fun, params)
 
     env <- .pip_pipenv(x)
     data <- env[["data"]]
@@ -2390,15 +2439,25 @@ pip_replace <- function(
         exec <- data[["exec"]][[iStep]]
     }
 
-    funParams <- .extract_fun_params(fun)
-    params[names(funParams)] <- funParams
+    params <- .extract_fun_params(fun, params)
 
     # Dependencies of the replacement may only point to earlier steps
     prefixSteps <- data[["step"]][seq_len(iStep - 1L)]
     steps <- c(prefixSteps, step)
     depends <- .extract_depends(params = params, steps = steps)
     if (length(depends) > 0L) {
-        bad <- depends[!(depends %in% prefixSteps)]
+        bad <- unname(depends[!(depends %in% prefixSteps)])
+        # As in .pip_insert(), but a reference to the step itself is unknown
+        later <- bad[bad %in% data[["step"]][-seq_len(iStep)]]
+        if (length(later) > 0L) {
+            stop_no_call(
+                "while replacing step '",
+                step,
+                "' - cannot reference steps that come after the ",
+                "replaced step: ",
+                paste0("'", later, "'", collapse = ", ")
+            )
+        }
         if (length(bad) > 0L) {
             stop_no_call(
                 "while replacing step '",

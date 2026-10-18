@@ -24,11 +24,11 @@ returns the output of that step; several step names return a named list
 of their outputs.}
 
 \item{bind}{A named list of one-sided formulas, e.g.
-\code{list(input_df = ~split_df)}, that bind unbound params of \code{x} to steps
-of the outer pipeline the function is added to.
-The formal gets the formula as its default, as
-if it was written in the step function (\code{~try(step)} is possible as
-well).}
+\code{list(df = ~outer_step)}, that bind unbound params of \code{x} to steps
+of the outer pipeline (\code{~try(outer_step)} also works).
+Binding them via \code{pip_add("inner", f_inner, params = list(df = ~outer_step))}
+would also work, but only the arguments named in \code{bind} tell the partitions
+apart (see Details), that is, caching will not be available this way.}
 
 \item{cache}{The number of run copies of \code{x} to keep for reuse, a whole
 number: \code{0} keeps none, \code{Inf} keeps all.}

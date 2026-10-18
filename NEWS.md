@@ -1,3 +1,45 @@
+# pipeflow 0.5.0.9009
+
+## Breaking changes
+
+- `params` of `pip_add()` and `pip_replace()` now override the defaults of
+  `fun`, as they did before 0.4.0. Before, the defaults of `fun` won and
+  `pip_add()` warned that the values in `params` were dropped. A formula in
+  `params` makes the parameter a reference to another step, also if its
+  default is a value.
+
+## New features
+
+- `params` can give a value to parameters of `fun` that have no default, so
+  that existing functions can be steps without a wrapper, e.g.
+  `pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))`.
+
+## Changes
+
+- `params` of `pip_add()` and `pip_replace()` must be a list with unique
+  names.
+- The params of a step list the arguments of `fun` first, in their order,
+  followed by the other params (before: the given `params` came first).
+- `pip_add()` and `pip_replace()` point to `as.function()` if `fun` is a
+  pipeline.
+- Replacing a step with one that references a step which comes after it
+  now reports "cannot reference steps that come after the replaced step",
+  matching `pip_add()`, instead of "cannot reference unknown steps".
+
+## Bug fixes
+
+- Copying steps between pipelines with `p[i] <- q[j]` dropped the params
+  that were given via `params` (e.g. extra params passed via `...`), and
+  took references from the defaults of the function, ignoring a renamed
+  upstream step.
+- Copying steps with `p[i] <- q[j]`, also onto themselves, resolved
+  relative references such as `~-1` again, so that after inserting or
+  removing a step, the copied step depended on another step or failed. A
+  copied step now depends on the same steps as the source step, by name.
+- `rbind()` dropped the arguments with a `NULL` value from the step
+  functions of the second pipeline, so that these steps failed with
+  "unused argument".
+
 # pipeflow 0.5.0.9008
 
 ## New features

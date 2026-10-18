@@ -47,7 +47,7 @@
     # Since the source can be `x` itself, we will work on a snapshot to
     # prevent that any writes below would alter rows that are still to be
     # copied (e.g. pip_replace() marking downstream steps as outdated).
-    qSnapshot <- dataQ[rowsQ, props, with = FALSE]
+    qSnapshot <- dataQ[rowsQ, c(props, "depends"), with = FALSE]
 
     for (k in seq_len(n)) {
         pRow <- rowsP[[k]]
@@ -58,23 +58,24 @@
         # 1) Step name (a no-op when both pipelines use the same names).
         x[[dataP[["step"]][[pRow]], "step"]] <- qVals[["step"]]
 
-        # 2) Function. pip_replace() resets the params to the function
-        #    defaults and recomputes `depends` against the steps of `x`.
-        x[[iSelP[[k]], "fun"]] <- qVals[["fun"]]
-
-        # 3) Take over all unbound param values from q. Bound (formula)
-        #    params are pipeline-context specific and stay as recomputed.
-        parsP <- x[[iSelP[[k]], "params"]]
-        dep <- x[[iSelP[[k]], "depends"]]
-        unboundP <- setdiff(names(parsP), names(dep))
-        pars <- qVals[["params"]][
-            intersect(names(qVals[["params"]]), unboundP)
-        ]
-        if (length(pars) > 0L) {
-            x[[iSelP[[k]], "params"]] <- pars
+        # 2) Function and params. The params of q override the defaults of
+        #    the function. Their references are pointed to the steps that
+        #    the step of q depends on, by name, because a relative reference
+        #    (~-1) is stale once steps were inserted or removed before it.
+        #    pip_replace() then resolves them against the steps of `x`.
+        params <- qVals[["params"]]
+        depends <- qSnapshot[["depends"]][[k]]
+        for (arg in intersect(names(depends), names(params))) {
+            params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
         }
+        pip_replace(
+            x,
+            step = qVals[["step"]],
+            fun = qVals[["fun"]],
+            params = params
+        )
 
-        # 4) Runtime state and annotation columns.
+        # 3) Runtime state and annotation columns.
         for (prop in c("out", "state", "time", "tags", "locked", "exec")) {
             x[[iSelP[[k]], prop]] <- qVals[[prop]]
         }
@@ -793,12 +794,14 @@ dim.pipeflow <- function(x) {
 #' length). In this form, `i` is required and `j` must be omitted. The
 #' properties are copied in the order `step`, `fun`, `params`, `out`,
 #' `state`, `time`, `tags`, `locked`, `exec`: the step is renamed to the
-#' source name (a no-op when it is unchanged), the function is replaced with
-#' the source function (same as [pip_replace()]; its dependencies are recomputed
-#' against the steps of `p`), the unbound parameters of the source are
-#' applied on top of the new function defaults, and the runtime state and
-#' annotation columns are overwritten (locked steps included). The
-#' structural columns `nodeId`, `depends` and `unbound` are not copied.
+#' source name (a no-op when it is unchanged), the function and the params
+#' are replaced with those of the source (same as [pip_replace()] with the
+#' params of the source), and the runtime state and annotation columns are
+#' overwritten (locked steps included). A copied step refers to the steps
+#' that the source step depends on by name, also if it was defined with a
+#' relative reference such as `~-1`, and these steps are looked up in `p`.
+#' The structural columns `nodeId`, `depends` and `unbound` are not copied
+#' but recomputed against the steps of `p`.
 #' Instead of `p[i, j] <- q`, use `p[i, j] <- q[i, j]` to copy the values of
 #' a single property; the one-column table returned by the extraction form
 #' is unwrapped and assigned element-wise.

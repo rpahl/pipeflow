@@ -397,12 +397,12 @@ aspects are worth spelling out:
   parameters (`input_df`, `xVar`, `yVar`, `digits`) as parameters of the
   `inner_run` step. They show up in the step's `params` column, become part
   of the outer pipeline's parameter set, and changing them outdates the step.
-* **Precedence over function arguments**: when `params` overlaps with the
-  arguments of the step function, the function's default values take
-  precedence. This is why the `inner_run` step function above declares only
-  `dfList` plus `...` — had it declared e.g. `xVar = "x"`, that default
-  would win over the value coming from `params`,
-  and the forwarding would silently be ignored.
+* **`...` takes the forwarded parameters**: the parameters in `params` are
+  passed to the step function when the step runs, so a function that does not
+  declare them as arguments needs `...`. Where the names overlap, the values
+  in `params` override the defaults of the function: had the inner pipeline
+  an unbound parameter `dfList`, its value would replace the reference
+  `~split_df` of the `inner_run` step.
 
 Let us now run the manual pipeline to see it in action.
 
