@@ -223,9 +223,27 @@ as.function.pipeflow <- function(
             toString(unknown)
         )
     }
+    args <- .fun_quote(args)
     for (name in names(bind)) {
         args[[name]] <- call("~", bind[[name]][[2L]])
     }
+    args
+}
+
+
+#' Protect symbols and calls from being evaluated
+#'
+#' The stored params have been evaluated already (by `pip_add()`). A symbol
+#' or call among them, as default of a formal, would be evaluated once more
+#' when the function is called, in addition to the evaluation that the step
+#' does when it gets the value as its default, like in a plain pipeline.
+#'
+#' @param args Named list of param values.
+#' @return `args`, with the symbols and calls wrapped in `quote()`.
+#' @noRd
+.fun_quote <- function(args) {
+    isLang <- vapply(args, is.language, logical(1))
+    args[isLang] <- lapply(args[isLang], \(value) call("quote", value))
     args
 }
 

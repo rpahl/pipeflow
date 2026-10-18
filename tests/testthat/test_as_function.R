@@ -257,6 +257,19 @@ describe("as.function.pipeflow", {
             expect_identical(as.function(p, out = "s")(), 14)
         })
 
+        it("evaluates stored calls and symbols as a plain pipeline does", {
+            p <- pip_new("lang") |>
+                pip_add("s", \(x = quote(quote(1 + 2)), y = quote(pi)) {
+                    list(x = x, y = y)
+                })
+            pip_run(p, lgr = NULL)
+            expected <- p[["s", "out"]]
+            expect_identical(expected, list(x = quote(1 + 2), y = pi))
+
+            f <- as.function(p, out = "s")
+            expect_identical(f(), expected)
+        })
+
         it("takes a formula as the value of a bound argument", {
             p <- pip_new("formula") |> pip_add("s", \(model = NULL) model)
             f <- as.function(p, out = "s", bind = list(model = ~source))
