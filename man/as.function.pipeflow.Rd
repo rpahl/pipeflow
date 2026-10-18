@@ -74,6 +74,21 @@ and the name of the failed inner step.
 \item If the bound steps are not partitioned, cache = 1L is always enough.
 }
 }
+
+\subsection{Limits}{
+\itemize{
+\item Params that several steps of \code{x} share by name become one argument, with
+the default of the first step as in \code{\link[=pip_get_params]{pip_get_params()}}. Every call sets
+this value in all of these steps, so a step whose own default differs
+from it runs with the value of the argument.
+\item Inputs are compared as they are. A change made in place to an
+environment or another reference object (e.g. R6) is not seen: as for
+\code{\link[=pip_set_params]{pip_set_params()}} of a pipeline, which needs \code{force = TRUE}, the
+steps stay up to date. A forced run of the outer pipeline
+(\code{pip_run(force = TRUE)}) does not force the inner pipelines either.
+Use \code{cache = 0} for such inputs.
+}
+}
 }
 \note{
 The conversion is done by taking a snapshot of \code{x}. Later changes of \code{x}

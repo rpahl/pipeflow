@@ -163,18 +163,34 @@ the file layout avoids conflicts (new `R/as_function.R`, new test file; only
   (cloned) inner pipeline; with WP1 their outputs no longer keep it alive.
   Independent.
 
-## Status (2026-10-17)
+## Status (2026-10-18)
 
-Implemented in this worktree, not committed:
-- `R/as_function.R` (`as.function.pipeflow()`, helpers named `.fun_*`), `S3method(as.function, pipeflow)`, `man/as.function.pipeflow.Rd`,
+Implemented and committed in this worktree, rebased on `main`:
+- `R/as_function.R` (`as.function.pipeflow()`, helpers named `.fun_*`),
+  `S3method(as.function, pipeflow)`, `man/as.function.pipeflow.Rd`,
   `_pkgdown.yml` entry;
-- `tests/testthat/test_as_function.R` (89 expectations; fixtures inside the
-  `describe()` block, because closures from a helper file have the attached
-  package environment of `load_all()` as ancestor, which `serialize()` warns
+- `tests/testthat/test_as_function.R` (fixtures inside the `describe()`
+  block, because closures from a helper file have the attached package
+  environment of `load_all()` as ancestor, which `serialize()` warns
   about);
 - vignette v05b rewritten around `as.function()` (the manual clone/run
   pattern stays as "Full control"), NEWS bullet;
-- lint clean, `devtools::test()` all green, `rcmdcheck` 0/0/0.
+- lint clean, `devtools::test()` all green.
+
+Code review (2026-10-18, findings fixed in separate commits):
+- the body passes the formals explicitly with the functions inlined as
+  objects (the old `as.list(environment())` dropped dot-prefixed formals,
+  and formals named like a helper shadowed it); omitted bound arguments are
+  found with `missing()` flags, so a supplied formula is accepted;
+- the kept pipelines are owned by the function (see "Where the kept
+  pipelines live");
+- `cache` is checked at conversion: a whole number >= 0, `Inf` keeps all;
+- new tests: LRU recency, retry of a failed entry with the same input,
+  relative and `~try()` bindings, several bound arguments, explicit `NULL`,
+  collection through a step closure, serialisation;
+- documented limits (same-name params with different defaults, in-place
+  changes of reference inputs, forced outer runs): "Limits" in the roxygen
+  details and the vignette.
 
 Changes against the prototype:
 - `pip_collect()` instead of `pip_collect(simplify = FALSE)` for
@@ -193,9 +209,9 @@ inputs, and equal-but-new inputs hit like pointer-equal ones. Reuse pays
 when the inner steps cost more than that (documented). No `bench/` file was
 added (the existing one is a rendered report of the pipeline run).
 
-Still to do before the PR: rebase on `main` (other branches touch NEWS and
-`NAMESPACE`), bump the version as the last commit, open an issue for the
-`on_error` inheritance and one for `bind` in `rbind()`.
+Still to do before the PR: bump the version as the last commit (and move
+the NEWS bullet under the new heading), run `R CMD check`, open an issue for
+the `on_error` inheritance and one for `bind` in `rbind()`.
 
 ## Work (done, see Status)
 

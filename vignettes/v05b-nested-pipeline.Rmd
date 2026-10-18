@@ -315,6 +315,10 @@ A few things to know:
   and running the pipeline, so reuse pays when the inner steps are expensive.
 * A call that is matched to the "wrong" pipeline is only slower, never
   wrong.
+* Inputs are compared as they are, so a change made in place to an
+  environment or an R6 object is not seen (as in a plain pipeline), and a
+  forced run of the outer pipeline does not force the inner pipelines. Use
+  `cache = 0` for such inputs.
 * The pipelines belong to the function and are dropped with it. Serialising
   a function that has been called (e.g. to send it to a parallel worker)
   copies them, inputs and outputs included. A function that has not been

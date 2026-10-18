@@ -59,6 +59,18 @@
 #'   and the name of the failed inner step.
 #' * If the bound steps are not partitioned, cache = 1L is always enough.
 #'
+#' ## Limits
+#' * Params that several steps of `x` share by name become one argument, with
+#'   the default of the first step as in [pip_get_params()]. Every call sets
+#'   this value in all of these steps, so a step whose own default differs
+#'   from it runs with the value of the argument.
+#' * Inputs are compared as they are. A change made in place to an
+#'   environment or another reference object (e.g. R6) is not seen: as for
+#'   [pip_set_params()] of a pipeline, which needs `force = TRUE`, the
+#'   steps stay up to date. A forced run of the outer pipeline
+#'   (`pip_run(force = TRUE)`) does not force the inner pipelines either.
+#'   Use `cache = 0` for such inputs.
+#'
 #' @param x A pipeflow pipeline (not a view; use `x[i, view = FALSE]` to turn
 #' a part of a pipeline into a function).
 #' @param out The result of the function. `NULL` (the default) returns the
