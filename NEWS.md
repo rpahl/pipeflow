@@ -1,3 +1,18 @@
+# pipeflow 0.5.0.9005
+
+## Changes
+
+- Adding a step that references a step which exists but comes after the
+  insertion point now reports "cannot reference steps that come after the
+  insertion point" instead of "cannot reference unknown steps".
+- The error raised when `pip_add()`, `pip_clone()` or `rbind()` is given a
+  view now points at `x[, view = FALSE]`.
+
+## Bug fixes
+
+- `v[, view = FALSE]` returned the view instead of a standalone pipeline of
+  the covered steps, silently ignoring `view = FALSE`.
+
 # pipeflow 0.5.0.9004
 
 ## New features
@@ -37,19 +52,6 @@
   called after the run.
 
 # pipeflow 0.5.0.9001
-
-## Changes
-
-- Adding a step that references a step which exists but comes after the
-  insertion point now reports "cannot reference steps that come after the
-  insertion point" instead of "cannot reference unknown steps".
-- The error raised when `pip_add()`, `pip_clone()` or `rbind()` is given a
-  view now points at `x[, view = FALSE]`.
-
-## Bug fixes
-
-- `v[, view = FALSE]` returned the view instead of a standalone pipeline of
-  the covered steps, silently ignoring `view = FALSE`.
 
 ## Documentation
 
