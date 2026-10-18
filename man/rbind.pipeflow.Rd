@@ -4,13 +4,22 @@
 \alias{rbind.pipeflow}
 \title{Bind pipelines}
 \usage{
-\method{rbind}{pipeflow}(..., deparse.level = 1)
+\method{rbind}{pipeflow}(..., deparse.level = 1, bind = list())
 }
 \arguments{
 \item{...}{Two or more pipeflow pipeline objects.}
 
 \item{deparse.level}{Not used, for compatibility with the generic
 \code{rbind()}.}
+
+\item{bind}{A named list of one-sided formulas, e.g.
+\code{list(data = ~prep)}, that binds the unbound params of the second
+pipeline to steps of the first pipeline. If several steps of the second
+pipeline have a param of that name, all of them are bound. The steps are
+referred to by name (\code{~try(step)} is possible as well, see \code{\link[=pip_run]{pip_run()}}),
+not by relative position. Only possible if exactly two pipelines are
+bound; to bind more, chain the calls, e.g.
+\code{rbind(rbind(a, b, bind = ...), c, bind = ...)}.}
 }
 \value{
 A new pipeflow pipeline object representing the bound pipelines.
@@ -20,6 +29,15 @@ Binds two or more pipelines together by concatenating their steps. If the
 pipelines have steps with the same name, the step names of later pipelines
 are automatically adapted to avoid name clashes. A single pipeline is
 returned unchanged.
+}
+\details{
+To feed steps of the second pipeline with the output of steps of the
+first one, use the \code{bind} argument. As in \code{\link[=as.function.pipeflow]{as.function.pipeflow()}}, it
+binds unbound params of the second pipeline, which then become references
+to steps of the first one, as if they had been written as \code{param = ~step}
+in the step functions. The bound params are no longer params of the
+result (see \code{\link[=pip_get_params]{pip_get_params()}}), and bound steps that have been run
+before are marked \code{"outdated"}, together with their downstream steps.
 }
 \examples{
 a <- pip_new("a") |>
@@ -36,4 +54,12 @@ ab
 # Any number of pipelines can be combined
 abc <- rbind(a, b, b)
 abc
+
+# Feed the param `data` of the second pipeline with the output of "prep"
+d <- pip_new("d") |> pip_add("scale", \(data = 1, k = 3) data * k)
+ad <- rbind(a, d, bind = list(data = ~prep))
+ad[["scale", "depends"]]
+pip_get_params(ad) # `data` is no longer a param
+pip_run(ad)
+ad[["scale", "out"]]
 }

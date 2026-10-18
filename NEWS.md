@@ -1,3 +1,21 @@
+# pipeflow 0.5.0.9008
+
+## New features
+
+- `rbind()` of pipelines gained the argument `bind`, a named list of
+  one-sided formulas as in `as.function()`, e.g.
+  `rbind(a, b, bind = list(data = ~prep))`. It binds unbound params of the
+  second pipeline to steps of the first one, so that the pipelines are
+  connected without editing the second one first.
+
+## Bug fixes
+
+- Steps with non-syntactic names, e.g. `"source data"`, can be referenced
+  with backticks, ``x = ~`source data` ``. Before, `pip_add()` reported them
+  as unknown steps.
+- `rbind()` no longer fails if the second pipeline references a step with a
+  non-syntactic name, e.g. after `pip_rename()`.
+
 # pipeflow 0.5.0.9007
 
 ## New features

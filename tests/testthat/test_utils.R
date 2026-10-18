@@ -170,10 +170,46 @@ describe("formula_deps", {
         expect_equal(formula_deps(list(x = ~1)), c(x = "1"))
     })
 
-    it("handles backticked step names", {
+    it("returns non-syntactic step names without backticks", {
         expect_equal(
             formula_deps(list(x = ~`my step`)),
-            c(x = "`my step`")
+            c(x = "my step")
+        )
+        expect_equal(
+            formula_deps(list(x = ~`my-step`, y = ~`if`)),
+            c(x = "my-step", y = "if")
+        )
+        expect_equal(
+            formula_deps(list(x = ~ try(`my step`))),
+            c(x = "my step")
+        )
+    })
+})
+
+
+describe("formula_set_ref", {
+    it("points a reference to another step", {
+        expect_equal(formula_set_ref(~s1, "s2"), ~s2)
+        expect_equal(formula_set_ref(~ -1, "s2"), ~s2)
+    })
+
+    it("keeps a try() wrapper", {
+        expect_equal(formula_set_ref(~ try(s1), "s2"), ~ try(s2))
+        expect_equal(formula_set_ref(~ try(-1), "s2"), ~ try(s2))
+    })
+
+    it("refers to non-syntactic step names", {
+        expect_equal(formula_set_ref(~s1, "my step"), ~`my step`)
+        expect_equal(formula_set_ref(~ try(s1), "if"), ~ try(`if`))
+        fml <- formula_set_ref(~s1, "a-b")
+        expect_equal(formula_deps(list(x = fml)), c(x = "a-b"))
+    })
+
+    it("keeps the environment of the formula", {
+        fml <- local(~s1)
+        expect_identical(
+            environment(formula_set_ref(fml, "s2")),
+            environment(fml)
         )
     })
 })

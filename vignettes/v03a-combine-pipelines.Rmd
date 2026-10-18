@@ -134,6 +134,28 @@ The relative indexing mechanism allows to refer to steps positioned
 above the current step. The index `~-1` can be interpreted as "go one step back", `~-2`
 as "go two steps back", and so on.
 
+#### Binding params when combining
+
+Instead of replacing the step afterwards, the two pipelines can also be
+connected right away with the `bind` argument of `rbind()`. It takes a named
+list of one-sided formulas, which binds unbound params of the second pipeline
+to steps of the first one:
+
+```{r bind-when-combining}
+pip_bound <- rbind(pip1, pip2, bind = list(x = ~standardize))
+
+pip_bound
+```
+
+The param `x` of the `data2` step now refers to the `standardize` step, as if
+it had been defined as `\(x = ~standardize) x`. The same holds for any other
+step of the second pipeline with an unbound param `x`. Steps where `x` already
+refers to another step, like `fit` and `predict`, are left as they are, and
+so are the steps of the first pipeline: the `data` step still has its param
+`x`.
+Steps are bound by name, not by relative position, and `bind` can only be
+used when combining exactly two pipelines.
+
 
 ### Combined pipeline results
 

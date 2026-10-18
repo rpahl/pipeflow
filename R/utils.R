@@ -49,13 +49,19 @@ is_try_ref <- function(x) {
 #' @param x List of parameters. Its one-sided formulas are step references,
 #' where a reference wrapped in `try()` (see `is_try_ref()`) is unwrapped.
 #' @return Character vector of the referenced step names or relative
-#' positions (e.g. `"-1"`), named like the respective elements of `x`.
+#' positions (e.g. `"-1"`), named like the respective elements of `x`. A
+#' step name is returned as is, also if it is non-syntactic, e.g.
+#' `"source data"` for ``~`source data` ``.
 #' @noRd
 formula_deps <- function(x) {
     deps <- Filter(f = is_one_sided_formula, x = x) |>
         lapply(\(x) {
             ref <- if (is_try_ref(x)) x[[2L]][[2L]] else x[[2L]]
-            trimws(deparse1(ref, backtick = TRUE))
+            if (is.name(ref)) {
+                as.character(ref)
+            } else {
+                trimws(deparse1(ref, backtick = TRUE))
+            }
         }) |>
         unlist()
     if (is.null(deps)) character(0) else deps
@@ -69,4 +75,25 @@ formula_deps <- function(x) {
 #' @noRd
 formula_try_args <- function(x) {
     as.character(names(Filter(f = is_try_ref, x = x)))
+}
+
+#' Point a step reference to another step
+#'
+#' Only the referenced name is swapped, so that the formula keeps its
+#' environment and a `try()` wrapper (see `is_try_ref()`). Building the
+#' formula from a string instead would attach the calling frame and fail for
+#' non-syntactic step names.
+#'
+#' @param x One-sided formula that references a step.
+#' @param step Name of the step to refer to.
+#' @return `x`, referring to `step`.
+#' @noRd
+formula_set_ref <- function(x, step) {
+    ref <- as.name(step)
+    if (is_try_ref(x)) {
+        x[[2L]][[2L]] <- ref
+    } else {
+        x[[2L]] <- ref
+    }
+    x
 }
