@@ -218,6 +218,70 @@ describe("as.function.pipeflow", {
             expect_no_error(f(data = demo_batches()[1:6, ]))
         })
 
+        it("takes all arguments, also those starting with a dot", {
+            p <- pip_new("dot") |> pip_add("s", \(.x = 1, .y = 2) .x - .y)
+
+            f <- as.function(p, out = "s")
+
+            expect_named(formals(f), c(".x", ".y"))
+            expect_identical(f(), -1)
+            expect_identical(f(.x = 9), 7)
+            expect_identical(f(.y = 0), 1)
+        })
+
+        it("needs a bound argument that starts with a dot", {
+            p <- pip_new("dot") |> pip_add("s", \(.x = 1) .x)
+
+            f <- as.function(p, out = "s", bind = list(.x = ~input))
+
+            expect_error(f(), "'.x' is bound to a step \\(~input\\)")
+            expect_identical(f(.x = 9), 9)
+        })
+
+        it("is not confused by arguments named like the functions it uses", {
+            p <- pip_new("shadow") |>
+                pip_add(
+                    "s",
+                    \(
+                        list = \(x) x + 1,
+                        c = \(x) x + 2,
+                        missing = \(x) x + 3,
+                        .pipRunner = \(x) x + 4
+                    ) list(1) + c(1) + missing(1) + .pipRunner(1)
+                )
+
+            f <- as.function(p, out = "s", bind = list(c = ~input))
+
+            expect_identical(f(c = \(x) x * 10), 21)
+            expect_identical(f(c = \(x) x * 10, list = \(x) x), 20)
+            expect_identical(as.function(p, out = "s")(), 14)
+        })
+
+        it("takes a formula as the value of a bound argument", {
+            p <- pip_new("formula") |> pip_add("s", \(model = NULL) model)
+            f <- as.function(p, out = "s", bind = list(model = ~source))
+            model <- y ~ x
+
+            expect_identical(f(model = model), model)
+
+            outer <- pip_new("outer") |>
+                pip_add("source", \(source = NULL) source) |>
+                pip_add("run", f)
+            pip_set_params(outer, list(source = model))
+            pip_run(outer, lgr = NULL)
+
+            expect_identical(outer[["run", "out"]], model)
+        })
+
+        it("takes NULL as the value of a bound argument", {
+            p <- pip_new("null") |>
+                pip_add("s", \(x = 1) if (is.null(x)) "none" else x)
+            f <- as.function(p, out = "s", bind = list(x = ~source))
+
+            expect_identical(f(x = NULL), "none")
+            expect_identical(f(x = 2), 2)
+        })
+
         it("runs a pipeline with split and reduce steps", {
             inner <- pip_new("i") |>
                 pip_add("data", \(data = NULL) data) |>

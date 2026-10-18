@@ -135,14 +135,17 @@ as.function.pipeflow <- function(
         id = id,
         template = template,
         out = out,
-        bound = names(bind),
+        bindText = vapply(
+            bind,
+            \(f) paste(deparse(f), collapse = " "),
+            character(1)
+        ),
         size = as.integer(cache)
     )
     env <- new.env(parent = baseenv())
-    env[[".pipRunner"]] <- .fun_runner(ctx)
     reg.finalizer(env, .fun_finalizer(id), onexit = FALSE)
 
-    body <- quote(.pipRunner(as.list(environment())))
+    body <- .fun_body(.fun_runner(ctx), names(args), names(bind))
     as.function(c(args, list(body)), envir = env)
 }
 
@@ -213,9 +216,35 @@ as.function.pipeflow <- function(
 }
 
 
+#' The body of the function
+#'
+#' The body hands all formals and, for the bound ones, whether they were
+#' omitted to the runner: `runner(list(a = a, ...), c(b = missing(b)))`. The
+#' functions are put into the call as objects, not as names, so that a
+#' formal with the name of a function (`list`, `c`, ...) cannot shadow them.
+#'
+#' @param runner The function that runs the pipeline, see `.fun_runner()`.
+#' @param formalNames Names of all formals.
+#' @param bound Names of the bound formals.
+#' @return A call.
+#' @noRd
+.fun_body <- function(runner, formalNames, bound) {
+    values <- lapply(stats::setNames(formalNames, formalNames), as.name)
+    omitted <- lapply(
+        stats::setNames(bound, bound),
+        \(name) as.call(list(base::missing, as.name(name)))
+    )
+    as.call(list(
+        runner,
+        as.call(c(list(base::list), values)),
+        as.call(c(list(base::c), omitted))
+    ))
+}
+
+
 .fun_runner <- function(ctx) {
     force(ctx)
-    function(args) .fun_call(args, ctx)
+    function(args, omitted) .fun_call(args, omitted, ctx)
 }
 
 
@@ -258,13 +287,14 @@ as.function.pipeflow <- function(
 #' One call of the function: find or make the pipeline, set, run, extract
 #'
 #' @param args All arguments of the call, as a named list.
+#' @param omitted Named logical: was a bound argument omitted?
 #' @param ctx The context made by `as.function.pipeflow()`.
 #' @noRd
-.fun_call <- function(args, ctx) {
-    .assert_fun_supplied(args, ctx$bound)
+.fun_call <- function(args, omitted, ctx) {
+    .assert_fun_supplied(omitted, ctx$bindText)
     cache <- .fun_cache(ctx$id)
     cache$tick <- cache$tick + 1L
-    key <- args[ctx$bound]
+    key <- args[names(omitted)]
 
     i <- Position(\(e) identical(e$key, key), cache$entries)
     pip <- if (is.na(i)) {
@@ -282,23 +312,25 @@ as.function.pipeflow <- function(
 }
 
 
-#' A bound argument has the formula as default if it is not supplied
+#' A bound argument has the formula as default, which only works as part of
+#' an outer pipeline: if it is omitted in a direct call, there is no input
+#'
+#' @param omitted Named logical: was a bound argument omitted?
+#' @param bindText The bound formulas as text, for the message.
 #' @noRd
-.assert_fun_supplied <- function(args, bound) {
-    for (name in bound) {
-        if (inherits(args[[name]], "formula")) {
-            stop_no_call(
-                "argument '",
-                name,
-                "' is bound to a step ",
-                "(",
-                deparse(args[[name]]),
-                ") and must be supplied ",
-                "when the function is called directly"
-            )
-        }
+.assert_fun_supplied <- function(omitted, bindText) {
+    notSupplied <- names(omitted)[omitted]
+    if (length(notSupplied) > 0L) {
+        name <- notSupplied[[1L]]
+        stop_no_call(
+            "argument '",
+            name,
+            "' is bound to a step (",
+            bindText[[name]],
+            ") and must be supplied when the function is called directly"
+        )
     }
-    invisible(args)
+    invisible(omitted)
 }
 
 
@@ -337,7 +369,7 @@ as.function.pipeflow <- function(
 #' The id of a function made by `as.function.pipeflow()`
 #' @noRd
 .fun_id <- function(fun) {
-    environment(environment(fun)[[".pipRunner"]])[["ctx"]][["id"]]
+    environment(body(fun)[[1L]])[["ctx"]][["id"]]
 }
 
 
