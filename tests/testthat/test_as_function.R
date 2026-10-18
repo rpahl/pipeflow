@@ -83,7 +83,7 @@ describe("as.function.pipeflow", {
         fun <- as.function(
             inner,
             out = "coefs",
-            connect = list(data = ~split_data),
+            bind = list(data = ~split_data),
             cache = cache
         )
         list(outer = demo_outer(fun), inner = inner, fun = fun, calls = calls)
@@ -116,7 +116,7 @@ describe("as.function.pipeflow", {
             # the annotation travels with the stored value
             expect_s3_class(params$digits, "pf_annotated")
             expect_identical(params$digits$label, "Digits")
-            # the connected input is a reference to the split step
+            # the bound input is a reference to the split step
             expect_identical(
                 demo$outer[["by_batch", "depends"]][["data"]],
                 "split_data"
@@ -210,11 +210,11 @@ describe("as.function.pipeflow", {
             expect_named(two, c("data", "coefs"))
         })
 
-        it("needs the connected arguments in a direct call", {
+        it("needs the bound arguments in a direct call", {
             inner <- demo_inner(new.env())
-            f <- as.function(inner, connect = list(data = ~split_data))
+            f <- as.function(inner, bind = list(data = ~split_data))
 
-            expect_error(f(), "'data' is connected to a step")
+            expect_error(f(), "'data' is bound to a step")
             expect_no_error(f(data = demo_batches()[1:6, ]))
         })
 
@@ -303,25 +303,25 @@ describe("as.function.pipeflow", {
             expect_error(as.function(inner, out = NA_character_), "step names")
         })
 
-        it("rejects an invalid connect", {
+        it("rejects an invalid bind", {
             inner <- demo_inner(new.env())
             msg <- "named list of one-sided formulas"
 
-            expect_error(as.function(inner, connect = list(~x)), msg)
-            expect_error(as.function(inner, connect = list(data = "x")), msg)
-            expect_error(as.function(inner, connect = list(data = y ~ x)), msg)
-            expect_error(as.function(inner, connect = ~x), msg)
+            expect_error(as.function(inner, bind = list(~x)), msg)
+            expect_error(as.function(inner, bind = list(data = "x")), msg)
+            expect_error(as.function(inner, bind = list(data = y ~ x)), msg)
+            expect_error(as.function(inner, bind = ~x), msg)
             expect_error(
-                as.function(inner, connect = list(data = ~x, data = ~y)),
+                as.function(inner, bind = list(data = ~x, data = ~y)),
                 msg
             )
         })
 
-        it("rejects connections of unknown params", {
+        it("rejects bindings of unknown params", {
             inner <- demo_inner(new.env())
 
             expect_error(
-                as.function(inner, connect = list(nope = ~x)),
+                as.function(inner, bind = list(nope = ~x)),
                 "no unbound params of the pipeline: nope"
             )
         })
@@ -336,12 +336,12 @@ describe("as.function.pipeflow", {
             expect_error(as.function(inner, cache = NA_real_), msg)
         })
 
-        it("does not capture the environment of the caller in connect", {
+        it("does not capture the environment of the caller in bind", {
             inner <- demo_inner(new.env())
-            plain <- as.function(inner, connect = list(data = ~split_data))
+            plain <- as.function(inner, bind = list(data = ~split_data))
             f <- local({
                 big <- numeric(1e6)
-                as.function(inner, connect = list(data = ~split_data))
+                as.function(inner, bind = list(data = ~split_data))
             })
 
             diff <- length(serialize(f, NULL)) - length(serialize(plain, NULL))
@@ -416,7 +416,7 @@ describe("as.function.pipeflow", {
             expect_identical(demo$calls$fit, 6L)
         })
 
-        it("keeps one pipeline without connected arguments", {
+        it("keeps one pipeline without bound arguments", {
             calls <- new.env()
             calls$fit <- 0L
             calls$coefs <- 0L

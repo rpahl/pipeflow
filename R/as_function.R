@@ -21,10 +21,10 @@
 #' output of selected steps. The formals of the function are the unbound
 #' params of `x`, with their current values as defaults. As any other
 #' function, it can be added to another pipeline with [pip_add()]. Then the
-#' params of `x` become params of that step: [pip_get_params()] lists them,
-#' [pip_set_params()] sets them and a change outdates the step.
-#' To pass output from the outer pipeline as parameters to the inner pipeline,
-#' use the `connect` argument.
+#' unbound params of `x` become params of that step: [pip_get_params()] lists
+#' them, [pip_set_params()] sets them and a change outdates the step.
+#' To bind params of `x` to output of steps of the outer pipeline,
+#' use the `bind` argument.
 #'
 #' @note
 #' The conversion is done by taking a snapshot of `x`. Later changes of `x`
@@ -50,7 +50,7 @@
 #' own inner pipeline.
 #' Then a call is served by the inner pipeline that has already worked on the
 #' same partitioned input passed from the outer pipeline (i.e., passed
-#' to the arguments named in connect).
+#' to the arguments named in `bind`).
 #'
 #' * `cache` must be at least the number of partitions, otherwise the least
 #'   recently used copies are dropped before they are used again and nothing
@@ -62,7 +62,7 @@
 #'   function starts with an empty cache.
 #' * In case of an error, the error message includes the key of the partition
 #'   and the name of the failed inner step.
-#' * If the connected steps are not partitioned, cache = 1L is always enough.
+#' * If the bound steps are not partitioned, cache = 1L is always enough.
 #'
 #' @param x A pipeflow pipeline (not a view; use `x[i, view = FALSE]` to turn
 #' a part of a pipeline into a function).
@@ -70,11 +70,12 @@
 #' outputs of all steps as a named list, see [pip_collect()]; a step name
 #' returns the output of that step; several step names return a named list
 #' of their outputs.
-#' @param connect A named list of one-sided formulas, e.g.
-#' `list(data = ~split_data)`, that connect unbound params of `x` to steps
-#' of the pipeline the function is added to. The formal gets the formula as
-#' its default, as if it was written in the step function (`~try(step)` is
-#' possible as well), so the outer step depends on that step.
+#' @param bind A named list of one-sided formulas, e.g.
+#' `list(input_df = ~split_df)`, that bind unbound params of `x` to steps
+#' of the outer pipeline the function is added to.
+#' The formal gets the formula as its default, as
+#' if it was written in the step function (`~try(step)` is possible as
+#' well).
 #' @param cache The number of run copies of `x` to keep for reuse; `0` keeps
 #' none.
 #' @param ... Not used.
@@ -82,23 +83,23 @@
 #' @seealso [pip_add()]
 #' @examples
 #' inner <- pip_new("inner") |>
-#'   pip_add("data", \(data = NULL) data) |>
-#'   pip_add("fit", \(data = ~data, degree = 1) {
+#'   pip_add("input", \(input_df = NULL) input_df) |>
+#'   pip_add("fit", \(data = ~input, degree = 1) {
 #'     lm(mpg ~ poly(wt, degree, raw = TRUE), data = data)
 #'   }) |>
 #'   pip_add("coefs", \(fit = ~fit, digits = 2) round(coef(fit), digits))
 #'
-#' # A plain function; the unbound params are its arguments
-#' fitCoefs <- as.function(inner, out = "coefs")
-#' fitCoefs(data = mtcars, digits = 1)
+#' # As a plain function: the unbound params are its arguments
+#' f_inner <- as.function(inner, out = "coefs")
+#' f_inner(input_df = mtcars, digits = 1)
 #'
 #' # As a step: one inner pipeline per cylinder number
 #' outer <- pip_new("outer") |>
-#'   pip_add("data", \(data = mtcars) data) |>
-#'   pip_add("by_cyl", \(data = ~data) split(data, data$cyl), exec = "split") |>
+#'   pip_add("df", \(df = mtcars) df) |>
+#'   pip_add("by_cyl", \(df = ~df) split(df, df$cyl), exec = "split") |>
 #'   pip_add(
 #'     "coefs",
-#'     as.function(inner, out = "coefs", connect = list(data = ~by_cyl))
+#'     as.function(inner, out = "coefs", bind = list(input_df = ~by_cyl))
 #'   ) |>
 #'   pip_add("table", \(coefs = ~coefs) do.call(rbind, coefs), exec = "reduce")
 #'
@@ -114,27 +115,27 @@
 as.function.pipeflow <- function(
     x,
     out = NULL,
-    connect = list(),
+    bind = list(),
     cache = 16L,
     ...
 ) {
     .assert_pip(x)
     .assert_fun_out(x, out)
-    .assert_fun_connect(connect)
+    .assert_fun_bind(bind)
     if (!.is_single(cache, "numeric") || is.na(cache) || cache < 0) {
         stop_no_call("cache must be a single non-negative number")
     }
 
     template <- pip_clone(x)
     suppressMessages(pip_reset(template))
-    args <- .fun_connect(pip_get_params(template), connect)
+    args <- .fun_bind(pip_get_params(template), bind)
 
     id <- basename(tempfile("pip_fun_"))
     ctx <- list(
         id = id,
         template = template,
         out = out,
-        connected = names(connect),
+        bound = names(bind),
         size = as.integer(cache)
     )
     env <- new.env(parent = baseenv())
@@ -165,49 +166,48 @@ as.function.pipeflow <- function(
 }
 
 
-.assert_fun_connect <- function(connect) {
+.assert_fun_bind <- function(bind) {
     isOneSided <- \(f) inherits(f, "formula") && length(f) == 2L
-    connectNames <- names(connect)
-    hasValidNames <- length(connect) == 0L || (
-        !is.null(connectNames) &&
-            !anyNA(connectNames) &&
-            all(nzchar(connectNames)) &&
-            !anyDuplicated(connectNames)
-    )
+    bindNames <- names(bind)
+    hasNames <- !is.null(bindNames) &&
+        !anyNA(bindNames) &&
+        all(nzchar(bindNames)) &&
+        !anyDuplicated(bindNames)
+    hasValidNames <- length(bind) == 0L || hasNames
     if (
-        !is.list(connect) ||
+        !is.list(bind) ||
             !hasValidNames ||
-            !all(vapply(connect, isOneSided, logical(1)))
+            !all(vapply(bind, isOneSided, logical(1)))
     ) {
         stop_no_call(
-            "connect must be a named list of one-sided formulas, ",
+            "bind must be a named list of one-sided formulas, ",
             "e.g. list(data = ~step)"
         )
     }
-    invisible(connect)
+    invisible(bind)
 }
 
 
-#' Put the connections into the formals
+#' Put the bindings into the formals
 #'
 #' The default is a call to `~`, so that the formula is made in the
 #' function's own environment when the step is added, and does not capture
 #' the environment of the caller.
 #'
 #' @param args The unbound params of the pipeline.
-#' @param connect Named list of one-sided formulas.
-#' @return `args`, with the connected ones as `~step` calls.
+#' @param bind Named list of one-sided formulas.
+#' @return `args`, with the bound ones as `~step` calls.
 #' @noRd
-.fun_connect <- function(args, connect) {
-    unknown <- setdiff(names(connect), names(args))
+.fun_bind <- function(args, bind) {
+    unknown <- setdiff(names(bind), names(args))
     if (length(unknown) > 0L) {
         stop_no_call(
-            "connect has names that are no unbound params of the pipeline: ",
+            "bind has names that are no unbound params of the pipeline: ",
             toString(unknown)
         )
     }
-    for (name in names(connect)) {
-        args[[name]] <- call("~", connect[[name]][[2L]])
+    for (name in names(bind)) {
+        args[[name]] <- call("~", bind[[name]][[2L]])
     }
     args
 }
@@ -261,10 +261,10 @@ as.function.pipeflow <- function(
 #' @param ctx The context made by `as.function.pipeflow()`.
 #' @noRd
 .fun_call <- function(args, ctx) {
-    .assert_fun_supplied(args, ctx$connected)
+    .assert_fun_supplied(args, ctx$bound)
     cache <- .fun_cache(ctx$id)
     cache$tick <- cache$tick + 1L
-    key <- args[ctx$connected]
+    key <- args[ctx$bound]
 
     i <- Position(\(e) identical(e$key, key), cache$entries)
     pip <- if (is.na(i)) {
@@ -282,15 +282,15 @@ as.function.pipeflow <- function(
 }
 
 
-#' A connected argument has the formula as default if it is not supplied
+#' A bound argument has the formula as default if it is not supplied
 #' @noRd
-.assert_fun_supplied <- function(args, connected) {
-    for (name in connected) {
+.assert_fun_supplied <- function(args, bound) {
+    for (name in bound) {
         if (inherits(args[[name]], "formula")) {
             stop_no_call(
                 "argument '",
                 name,
-                "' is connected to a step ",
+                "' is bound to a step ",
                 "(",
                 deparse(args[[name]]),
                 ") and must be supplied ",

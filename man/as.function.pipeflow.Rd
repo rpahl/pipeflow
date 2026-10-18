@@ -4,7 +4,7 @@
 \alias{as.function.pipeflow}
 \title{Turn a pipeline into a function}
 \usage{
-\method{as.function}{pipeflow}(x, out = NULL, connect = list(), cache = 16L, ...)
+\method{as.function}{pipeflow}(x, out = NULL, bind = list(), cache = 16L, ...)
 }
 \arguments{
 \item{x}{A pipeflow pipeline (not a view; use \code{x[i, view = FALSE]} to turn
@@ -15,11 +15,12 @@ outputs of all steps as a named list, see \code{\link[=pip_collect]{pip_collect(
 returns the output of that step; several step names return a named list
 of their outputs.}
 
-\item{connect}{A named list of one-sided formulas, e.g.
-\code{list(data = ~split_data)}, that connect unbound params of \code{x} to steps
-of the pipeline the function is added to. The formal gets the formula as
-its default, as if it was written in the step function (\code{~try(step)} is
-possible as well), so the outer step depends on that step.}
+\item{bind}{A named list of one-sided formulas, e.g.
+\code{list(input_df = ~split_df)}, that bind unbound params of \code{x} to steps
+of the outer pipeline the function is added to.
+The formal gets the formula as its default, as
+if it was written in the step function (\code{~try(step)} is possible as
+well).}
 
 \item{cache}{The number of run copies of \code{x} to keep for reuse; \code{0} keeps
 none.}
@@ -34,10 +35,10 @@ Returns a function that runs a copy of the pipeline \code{x} and returns the
 output of selected steps. The formals of the function are the unbound
 params of \code{x}, with their current values as defaults. As any other
 function, it can be added to another pipeline with \code{\link[=pip_add]{pip_add()}}. Then the
-params of \code{x} become params of that step: \code{\link[=pip_get_params]{pip_get_params()}} lists them,
-\code{\link[=pip_set_params]{pip_set_params()}} sets them and a change outdates the step.
-To pass output from the outer pipeline as parameters to the inner pipeline,
-use the \code{connect} argument.
+unbound params of \code{x} become params of that step: \code{\link[=pip_get_params]{pip_get_params()}} lists
+them, \code{\link[=pip_set_params]{pip_set_params()}} sets them and a change outdates the step.
+To bind params of \code{x} to output of steps of the outer pipeline,
+use the \code{bind} argument.
 }
 \details{
 The inner pipeline is run silently (\code{lgr = NULL}).
@@ -57,7 +58,7 @@ for different partitioned inputs so that each partition should get its
 own inner pipeline.
 Then a call is served by the inner pipeline that has already worked on the
 same partitioned input passed from the outer pipeline (i.e., passed
-to the arguments named in connect).
+to the arguments named in \code{bind}).
 \itemize{
 \item \code{cache} must be at least the number of partitions, otherwise the least
 recently used copies are dropped before they are used again and nothing
@@ -69,7 +70,7 @@ dropped when the function is garbage collected. Serialising the function
 function starts with an empty cache.
 \item In case of an error, the error message includes the key of the partition
 and the name of the failed inner step.
-\item If the connected steps are not partitioned, cache = 1L is always enough.
+\item If the bound steps are not partitioned, cache = 1L is always enough.
 }
 }
 }
@@ -81,23 +82,23 @@ before, except for locked steps, which keep their outputs.
 }
 \examples{
 inner <- pip_new("inner") |>
-  pip_add("data", \(data = NULL) data) |>
-  pip_add("fit", \(data = ~data, degree = 1) {
+  pip_add("input", \(input_df = NULL) input_df) |>
+  pip_add("fit", \(data = ~input, degree = 1) {
     lm(mpg ~ poly(wt, degree, raw = TRUE), data = data)
   }) |>
   pip_add("coefs", \(fit = ~fit, digits = 2) round(coef(fit), digits))
 
-# A plain function; the unbound params are its arguments
-fitCoefs <- as.function(inner, out = "coefs")
-fitCoefs(data = mtcars, digits = 1)
+# As a plain function: the unbound params are its arguments
+f_inner <- as.function(inner, out = "coefs")
+f_inner(input_df = mtcars, digits = 1)
 
 # As a step: one inner pipeline per cylinder number
 outer <- pip_new("outer") |>
-  pip_add("data", \(data = mtcars) data) |>
-  pip_add("by_cyl", \(data = ~data) split(data, data$cyl), exec = "split") |>
+  pip_add("df", \(df = mtcars) df) |>
+  pip_add("by_cyl", \(df = ~df) split(df, df$cyl), exec = "split") |>
   pip_add(
     "coefs",
-    as.function(inner, out = "coefs", connect = list(data = ~by_cyl))
+    as.function(inner, out = "coefs", bind = list(input_df = ~by_cyl))
   ) |>
   pip_add("table", \(coefs = ~coefs) do.call(rbind, coefs), exec = "reduce")
 

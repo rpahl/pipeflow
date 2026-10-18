@@ -25,7 +25,7 @@ outer <- pip_new("outer") |>
         split(data, data[[byVar]])
     }, exec = "split") |>
     pip_add("by_batch", as.function(
-        inner, out = "coefs", connect = list(data = ~split_data)
+        inner, out = "coefs", bind = list(data = ~split_data)
     )) |>
     pip_add("table", \(coefs = ~by_batch) do.call(rbind, coefs),
             exec = "reduce")
@@ -64,7 +64,7 @@ prototype (3 partitions, a 0.1 s inner `fit`):
 - The function keeps up to `cache` (default 16) run inner pipelines, least
   recently used dropped; `cache = 0` keeps none.
 - A call is matched to a kept pipeline by its **bound inputs**: the
-  formals connected to outer steps with `connect` (the partition slice).
+  formals bound to outer steps with `bind` (the partition slice).
   Identical inputs (`identical()`) mean the same pipeline. This needs no
   partition key: `.pip_execute_step_call()` (pf:403) calls the function
   with the per-key arguments only.
@@ -100,7 +100,7 @@ Consequences to document:
 ## API
 
 ```r
-as.function(x, out = NULL, connect = list(), cache = 16L, ...)  # x: pipeline
+as.function(x, out = NULL, bind = list(), cache = 16L, ...)  # x: pipeline
 ```
 
 - `x`: a pipeline, not a view (`p[i, view = FALSE]` makes one). A snapshot
@@ -109,11 +109,11 @@ as.function(x, out = NULL, connect = list(), cache = 16L, ...)  # x: pipeline
 - `out`: `NULL` gives `pip_collect()` of the run pipeline (a flat named list
   of all outputs, by step); a step name gives that output; several names a
   named list.
-- `connect`: named list of one-sided formulas, `list(data = ~split_data)`: the
+- `bind`: named list of one-sided formulas, `list(data = ~split_data)`: the
   formal gets the default `~split_data` (an ordinary step reference, so the
   outer step depends on it) and becomes part of the match key. Names that
   are not unbound params of `x` are an error. Why an argument: the function
-  cannot tell from its arguments which ones are step outputs. A connected
+  cannot tell from its arguments which ones are step outputs. A bound
   formula that is not supplied in a direct call is an error (the default
   `~split_data` is no value).
 - The inner pipeline runs with `lgr = NULL` and the default `on_error`;
@@ -122,20 +122,21 @@ as.function(x, out = NULL, connect = list(), cache = 16L, ...)  # x: pipeline
   step: `step 'by_batch': key 'D': step 'fit': ...`.
 
 **Decided** (2026-10-17): the `as.function()` method (not a `pip_as_fun()`),
-kept pipelines in an R registry (not an external pointer), `connect` as an
-explicit argument.
+kept pipelines in an R registry (not an external pointer), `bind` as an
+explicit argument. It was called `connect` for a while and is
+`bind` again: the docs contrast bound and unbound params.
 
 **Open / later.**
 1. `pip_add(fun = <pipeline>)` as sugar later (`params` would then play the
-   role of `connect`, and pipeflow knows which params are references, so no
-   `connect` is needed there). Not in the first version.
+   role of `bind`, and pipeflow knows which params are references, so no
+   `bind` is needed there). Not in the first version.
 2. **Do not forget:** whether the inner run should inherit `on_error` from
    the outer run, so that a run with `on_error = "continue"` gives failure
    objects for the failed inner steps. Not in the first version; track it
    as an issue when the PR is opened.
-3. `connect` as a convenience of `rbind.pipeflow()`: connecting two
+3. `bind` as a convenience of `rbind.pipeflow()`: binding two
    pipelines by pointing an unbound param of the second at a step of the
-   first (`rbind(a, b, connect = list(data = "prep"))`). Separate PR; the
+   first (`rbind(a, b, bind = list(data = "prep"))`). Separate PR; the
    same one-sided-formula rewrite as here, applied to a step of `b`.
 
 ## Dependencies on the other plans
@@ -173,15 +174,14 @@ Implemented in this worktree, not committed:
 - lint clean, `devtools::test()` all green, `rcmdcheck` 0/0/0.
 
 Changes against the prototype:
-- `bind` is `connect`;
 - `pip_collect()` instead of `pip_collect(simplify = FALSE)` for
   `out = NULL` (the prototype returned each output nested one level deep);
 - the template is reset (`pip_reset()`), so the result does not depend on
   whether `x` was run before; locked steps keep their outputs;
-- a connected formal that is not supplied in a direct call is an error;
+- a bound formal that is not supplied in a direct call is an error;
 - the inner pipeline is kept before it is run, so after a failed inner step
   the steps that did run are reused;
-- input checks for `out`, `connect` and `cache`.
+- input checks for `out`, `bind` and `cache`.
 
 Measured (3 ms per partition and call, 200 partitions, 10 or 10 000 rows):
 the per-call overhead of `pip_clone()`/`pip_set_params()`/`pip_run()` is
@@ -192,7 +192,7 @@ added (the existing one is a rendered report of the pipeline run).
 
 Still to do before the PR: rebase on `main` (other branches touch NEWS and
 `NAMESPACE`), bump the version as the last commit, open an issue for the
-`on_error` inheritance and one for `connect` in `rbind()`.
+`on_error` inheritance and one for `bind` in `rbind()`.
 
 ## Work (done, see Status)
 
@@ -200,7 +200,7 @@ Still to do before the PR: rebase on `main` (other branches touch NEWS and
 
 Namespaced params (names stay global; an inner `digits` is the outer
 `digits`), per-key failures (F7), state reuse across processes,
-`pip_add(fun = <pipeline>)` sugar, inheriting `on_error`, `connect` in
+`pip_add(fun = <pipeline>)` sugar, inheriting `on_error`, `bind` in
 `rbind()`.
 
 ## Prototype
