@@ -706,6 +706,9 @@
         the output of the previous step (`~-2`: two steps back).
       ]
       #fn[`\(x = ~numbers, y = ~squared)`][several inputs.]
+      #fn[`\(x = ~try(model))`][
+        mitigate potential failure.
+      ]
     ]
 
     #section("Split · map · reduce", vignette: "v05a-split-map-reduce")[
