@@ -1264,6 +1264,67 @@ describe("as.function.pipeflow", {
                 tolerance = 1e-8
             )
         })
+
+        it("keeps the kept pipelines in a round trip of the outer pipeline", {
+            demo <- run_outer(demo_nested())
+            nKept <- length(.fun_pips(demo$outer[["by_batch", "fun"]]))
+            expect_gt(nKept, 0L)
+
+            copy <- save_and_read(demo$outer)
+
+            expect_length(
+                .fun_pips(copy[["by_batch", "fun"]]),
+                nKept
+            )
+            expect_identical(copy[["by_batch", "state"]], "done")
+            expect_equal(
+                copy[["coef_table", "out"]],
+                demo$outer[["coef_table", "out"]]
+            )
+        })
+
+        it("works after a round trip if nothing is kept", {
+            demo <- run_outer(demo_nested(cache = 0))
+
+            copy <- save_and_read(demo$outer)
+            expect_length(.fun_pips(copy[["by_batch", "fun"]]), 0L)
+
+            pip_set_params(copy, list(digits = 3))
+            run_outer(list(outer = copy))
+
+            expect_equal(
+                copy[["coef_table", "out"]][[2L]],
+                c(1.284, 3.284, 5.284),
+                tolerance = 1e-8
+            )
+        })
+
+        it("works after a round trip with an unlimited cache", {
+            demo <- run_outer(demo_nested(cache = Inf))
+
+            copy <- save_and_read(demo$outer)
+            pip_set_params(copy, list(degree = 2))
+            run_outer(list(outer = copy))
+
+            expect_identical(copy[["by_batch", "state"]], "done")
+            expect_identical(
+                unname(lengths(copy[["by_batch", "out"]])),
+                rep(3L, 3L)
+            )
+        })
+
+        it("works for a function that is saved on its own", {
+            demo <- demo_nested()
+            expected <- demo$fun(data = demo_batches()[1:6, ])
+
+            copy <- save_and_read(demo$fun)
+
+            expect_equal(copy(data = demo_batches()[1:6, ]), expected)
+            expect_equal(
+                copy(data = demo_batches()[7:12, ], digits = 3),
+                demo$fun(data = demo_batches()[7:12, ], digits = 3)
+            )
+        })
     })
 
     describe("lifetime", {
