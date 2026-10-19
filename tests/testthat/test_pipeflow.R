@@ -61,6 +61,96 @@ describe(".new_step", {
     })
 })
 
+describe(".pip_clone", {
+    test_pip <- function() {
+        pip_new("p") |>
+            pip_add("s1", \(n = 3) seq_len(n)) |>
+            pip_add("s2", \(x = ~s1) x * 2)
+    }
+    out_address <- function(p, step) {
+        data.table::address(p[["pipenv"]][["data"]][["out"]][[step]])
+    }
+
+    it("keeps the name of x by default, or takes the given one", {
+        p <- test_pip()
+
+        expect_identical(.pip_clone(p, deep = FALSE)[["name"]], "p")
+        expect_identical(.pip_clone(p, "q", deep = FALSE)[["name"]], "q")
+    })
+
+    it("shares the values with x in a light copy, not in a deep one", {
+        p <- pip_run(test_pip(), lgr = NULL)
+
+        light <- .pip_clone(p, deep = FALSE)
+        deep <- .pip_clone(p)
+
+        expect_identical(pip_collect(light), pip_collect(p))
+        expect_identical(out_address(light, 1L), out_address(p, 1L))
+        expect_false(out_address(deep, 1L) == out_address(p, 1L))
+    })
+
+    it("gives a light copy its own step table", {
+        p <- pip_run(test_pip(), lgr = NULL)
+        light <- .pip_clone(p, deep = FALSE)
+
+        data.table::set(
+            light[["pipenv"]][["data"]],
+            i = 1L,
+            j = c("state", "out"),
+            value = list("outdated", list("changed"))
+        )
+
+        expect_identical(p[["s1", "state"]], "done")
+        expect_identical(p[["s1", "out"]], 1:3)
+    })
+
+    it("gives a light copy its own DAG and step to node map", {
+        p <- test_pip()
+        light <- .pip_clone(p, deep = FALSE)
+
+        pip_add(light, "s3", \(x = ~s2) x + 1)
+        pip_rename(light, "s1", "first")
+
+        expect_identical(p[["step"]], c(s1 = "s1", s2 = "s2"))
+        stepsToNodes <- p[["pipenv"]][[".steps_to_nodes"]]
+        expect_identical(sort(ls(stepsToNodes)), c("s1", "s2"))
+        expect_identical(dag_size(p[["pipenv"]][[".dag"]]), 2L)
+        expect_identical(pip_run(p, lgr = NULL)[["s2", "out"]], c(2, 4, 6))
+    })
+
+    it("runs a light copy without changing x, and the other way round", {
+        p <- pip_run(test_pip(), lgr = NULL)
+        light <- .pip_clone(p, deep = FALSE)
+
+        pip_set_params(light, list(n = 2)) |> pip_run(lgr = NULL)
+        expect_identical(light[["s2", "out"]], c(2, 4))
+        expect_identical(p[["s2", "out"]], c(2, 4, 6))
+        expect_identical(p[["s2", "state"]], "done")
+
+        pip_set_params(p, list(n = 1)) |> pip_run(lgr = NULL)
+        expect_identical(p[["s2", "out"]], 2)
+        expect_identical(light[["s2", "out"]], c(2, 4))
+    })
+
+    it("lightly copies a pipeline read with readRDS()", {
+        p <- save_and_read(pip_run(test_pip(), lgr = NULL))
+        light <- .pip_clone(p, deep = FALSE)
+
+        pip_add(light, "s3", \(x = ~s2) x + 1) |> pip_run(lgr = NULL)
+
+        expect_identical(light[["s3", "out"]], c(3, 5, 7))
+        expect_identical(p[["step"]], c(s1 = "s1", s2 = "s2"))
+    })
+
+    it("lightly copies an empty pipeline", {
+        light <- .pip_clone(pip_new("empty"), deep = FALSE)
+
+        expect_identical(length(light), 0L)
+        pip_add(light, "s1", \(x = 1) x)
+        expect_identical(length(light), 1L)
+    })
+})
+
 # -------
 # Wrapper
 # -------

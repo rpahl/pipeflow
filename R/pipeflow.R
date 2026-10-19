@@ -43,6 +43,41 @@
     )
 }
 
+#' Clone a pipeline, deeply or lightly
+#'
+#' Both kinds of copy get their own step table, DAG and step to node map, so
+#' adding, removing or running steps of the copy does not change `x`. A deep
+#' copy also copies all values of the step table. A light copy shares them
+#' (params, outputs, functions) with `x`: its columns are new vectors, but
+#' their elements are the same objects. That is fast and takes no memory
+#' for the outputs, as long as a value is replaced rather than modified in
+#' place (e.g. with `:=` on a `data.table` output).
+#'
+#' @param x A pipeflow pipeline (not a view).
+#' @param name The name of the copy.
+#' @param deep `TRUE` for a deep copy, `FALSE` for a light one.
+#' @return The copy, a pipeflow pipeline.
+#' @noRd
+.pip_clone <- function(x, name = x[["name"]], deep = TRUE) {
+    out <- pip_new(name = name)
+    env <- .pip_pipenv(out)
+
+    env[[".dag"]] <- dag_clone(.pip_dag(.pip_pipenv(x)))
+    dat <- .pip_pipenv(x)[["data"]]
+    dat <- if (deep) data.table::copy(dat) else dat[seq_len(nrow(dat))]
+
+    # Clone steps to nodes mapping
+    stepsToNodes <- env[[".steps_to_nodes"]]
+    for (k in seq_len(nrow(dat))) {
+        step <- dat[["step"]][[k]]
+        nodeId <- dat[["nodeId"]][[k]]
+        stepsToNodes[[step]] <- nodeId
+    }
+    env[["data"]] <- dat
+
+    out
+}
+
 
 # ---------------
 # Type predicates
@@ -1693,22 +1728,7 @@ pip_clone <- function(x, name = NULL) {
     }
 
     newName <- if (is.null(name)) x[["name"]] else name
-    out <- pip_new(name = newName)
-    env <- .pip_pipenv(out)
-
-    env[[".dag"]] <- dag_clone(.pip_dag(.pip_pipenv(x)))
-    dat <- data.table::copy(.pip_pipenv(x)[["data"]])
-
-    # Clone steps to nodes mapping
-    stepsToNodes <- env[[".steps_to_nodes"]]
-    for (k in seq_len(nrow(dat))) {
-        step <- dat[["step"]][[k]]
-        nodeId <- dat[["nodeId"]][[k]]
-        stepsToNodes[[step]] <- nodeId
-    }
-    env[["data"]] <- dat
-
-    out
+    .pip_clone(x, name = newName)
 }
 
 
