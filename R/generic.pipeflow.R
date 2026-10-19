@@ -68,12 +68,33 @@
         for (arg in intersect(names(depends), names(params))) {
             params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
         }
+        # An unbound param can still have a formula as value: the function
+        # made by as.function() sets its arguments as values, also formulas,
+        # and a step can expose that pipeline, e.g. via pip_clone(.self).
+        # pip_replace() would take it as a reference, so it is replaced with
+        # a placeholder and its value is put back below.
+        isValue <- !(names(params) %in% names(depends)) &
+            vapply(params, is_one_sided_formula, logical(1))
+        values <- params[isValue]
+        params[isValue] <- list(NULL)
         pip_replace(
             x,
             step = qVals[["step"]],
             fun = qVals[["fun"]],
             params = params
         )
+        if (length(values) > 0L) {
+            dataX <- .pip_pipenv(x)[["data"]]
+            iRow <- data.table::chmatch(qVals[["step"]], dataX[["step"]])
+            stored <- dataX[["params"]][[iRow]]
+            stored[names(values)] <- values
+            data.table::set(
+                dataX,
+                i = iRow,
+                j = "params",
+                value = list(list(stored))
+            )
+        }
 
         # 3) Runtime state and annotation columns.
         for (prop in c("out", "state", "time", "tags", "locked", "exec")) {

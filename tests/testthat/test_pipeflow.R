@@ -5223,6 +5223,41 @@ describe("pip_set_params", {
         expect_equal(p[["rep1", "params"]], list(model = 0, k = 1))
     })
 
+    it("handles bindings of unknown params like other unknown params", {
+        p <- bind_pip()
+
+        pip_set_params(
+            p,
+            list(n = 6, unused = ~missing_step, other = ~ -1),
+            unknown = "ignore"
+        )
+        expect_equal(p[["data", "params"]], list(n = 6))
+
+        expect_warning(
+            pip_set_params(p, list(n = 7, unused = ~missing_step)),
+            "not defined in the target: unused"
+        )
+        expect_equal(p[["data", "params"]], list(n = 7))
+
+        expect_error(
+            pip_set_params(p, list(unused = ~missing_step), unknown = "error"),
+            "not defined in the target: unused"
+        )
+    })
+
+    it("does not check bindings of params that only locked steps have", {
+        p <- bind_pip()
+        pip_lock(p[c("rep1", "rep2")])
+
+        expect_message(
+            pip_set_params(p, list(n = 6, model = ~missing_step)),
+            NA
+        )
+
+        expect_equal(p[["data", "params"]], list(n = 6))
+        expect_equal(p[["rep1", "params"]], list(model = 0, k = 1))
+    })
+
     it("binds via p[[step, 'params']] <- value", {
         p <- bind_pip()
 
@@ -6142,6 +6177,23 @@ describe("pip_param_value<-", {
         pip_set_params(p, list(x = 5), factor = 10)
 
         expect_equal(pip_get_params(p)[["x"]][["value"]], 50)
+    })
+
+    it("passes options named like internal arguments on to the method", {
+        register_setter("sv_opts", function(x, bind = "none", ..., value) {
+            x[["value"]] <- value
+            x[["bind"]] <- bind
+            x
+        })
+        p <- pip_new() |>
+            pip_add("s0", \() 1) |>
+            pip_add("s", \(x = 1, y = 0) x + y)
+        pip_set_params(p, list(x = structure(list(), class = "sv_opts")))
+
+        pip_set_params(p, list(x = 5, y = ~s0), bind = FALSE)
+
+        expect_equal(pip_get_params(p)[["x"]][["bind"]], FALSE)
+        expect_equal(p[["depends"]][["s"]], c(y = "s0"))
     })
 
     it("reports all failing parameters at once and sets nothing", {

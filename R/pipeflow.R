@@ -3456,7 +3456,18 @@ pip_set_params <- function(
         stop("All parameters must be named")
     }
 
-    .pip_set_params(x, params, unknown = unknown, force = force, ...)
+    # The options in `...` go to the methods of `pip_param_value<-`() only,
+    # so that they can't clash with the arguments of .pip_set_params()
+    setValue <- \(current, value) {
+        `pip_param_value<-`(current, ..., value = value)
+    }
+    .pip_set_params(
+        x,
+        params,
+        unknown = unknown,
+        force = force,
+        setValue = setValue
+    )
 }
 
 
@@ -3466,11 +3477,13 @@ pip_set_params <- function(
 #'
 #' @param x A pipeflow pipeline or view.
 #' @param params Named list of the params to set.
-#' @param unknown,force,... As for [pip_set_params()].
+#' @param unknown,force As for [pip_set_params()].
 #' @param bind If `TRUE`, a one-sided formula in `params` binds the param to
 #' the step that it refers to. If `FALSE`, all params are set as values,
 #' which a call of the function made by [as.function.pipeflow()] needs: its
 #' arguments are values, also if they are formulas.
+#' @param setValue Function of the current and the given value that returns
+#' the value to store, by default `` `pip_param_value<-`() ``.
 #' @return `x`, invisibly.
 #' @noRd
 .pip_set_params <- function(
@@ -3479,7 +3492,7 @@ pip_set_params <- function(
     unknown = "warn",
     force = FALSE,
     bind = TRUE,
-    ...
+    setValue = `pip_param_value<-`
 ) {
     if (length(params) == 0L) {
         return(invisible(x))
@@ -3489,10 +3502,11 @@ pip_set_params <- function(
     dat <- env[["data"]]
     rows <- .pip_view_rows(x)
 
-    # A one-sided formula binds the param to the step it refers to
+    # A one-sided formula binds the param to the step it refers to. The
+    # references are checked only for the params that are bound below.
     isRef <- bind & vapply(params, is_one_sided_formula, logical(1))
     refs <- params[isRef]
-    targets <- .pip_bind_targets(x, refs)
+    targets <- formula_deps(refs)
 
     # Signal parameters that are not defined in any of the selected steps,
     # including the locked ones. A param that is bound as given already is
@@ -3535,7 +3549,14 @@ pip_set_params <- function(
         # Bindings must refer to a step that comes before the bound step,
         # which is checked before anything is changed.
         namesBound <- lapply(namesAffected, FUN = intersect, y = names(refs))
-        .pip_check_bind_order(dat, rowsAffected, namesBound, targets)
+        toBind <- unique(unlist(namesBound))
+        .pip_assert_bind_targets(x, refs[toBind])
+        .pip_check_bind_order(
+            dat,
+            rowsAffected,
+            namesBound,
+            targets[toBind]
+        )
 
         # Determine the value to store for every affected row and name
         # before anything is changed, so that a failing method leaves the
@@ -3549,11 +3570,7 @@ pip_set_params <- function(
             values <- stats::setNames(vector("list", length(names)), names)
             for (name in names) {
                 values[name] <- list(tryCatch(
-                    `pip_param_value<-`(
-                        rowPars[[name]],
-                        ...,
-                        value = params[[name]]
-                    ),
+                    setValue(rowPars[[name]], value = params[[name]]),
                     error = function(e) {
                         errors[[length(errors) + 1L]] <<- list(
                             step = dat[["step"]][[i]],
@@ -3609,18 +3626,17 @@ pip_set_params <- function(
 }
 
 
-#' The steps that the bindings of pip_set_params() refer to
+#' Check the steps that the bindings of pip_set_params() refer to
 #'
 #' @param x A pipeflow pipeline or view.
 #' @param refs Named list of one-sided formulas, e.g. `list(model = ~fit)`.
-#' @return Named character vector of the referenced step names. Signals an
-#' error for a relative reference (e.g. `~-1`) or a step that is not in the
-#' pipeline.
+#' @return `refs`, invisibly. Signals an error for a relative reference
+#' (e.g. `~-1`) or a step that is not in the pipeline.
 #' @noRd
-.pip_bind_targets <- function(x, refs) {
+.pip_assert_bind_targets <- function(x, refs) {
     targets <- formula_deps(refs)
     if (length(targets) == 0L) {
-        return(targets)
+        return(invisible(refs))
     }
     text <- paste0(names(refs), " = ", vapply(refs, deparse1, character(1)))
     isRelative <- startsWith(targets, "-")
@@ -3639,7 +3655,7 @@ pip_set_params <- function(
             "into a formula in the step, e.g. with as.formula()"
         )
     }
-    targets
+    invisible(refs)
 }
 
 
