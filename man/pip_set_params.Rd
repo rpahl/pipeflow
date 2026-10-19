@@ -18,7 +18,8 @@ pip_set_params(
 \arguments{
 \item{x}{A pipeflow pip or view.}
 
-\item{params}{Named list of parameters to set}
+\item{params}{Named list of parameters to set. A one-sided formula binds
+the parameter to a step, see Binding parameters to steps.}
 
 \item{unknown}{How to handle \code{params} that are not defined in any of the
 selected steps, including locked ones: \code{"warn"} (default) signals a
@@ -44,7 +45,8 @@ updated pipeline or view, invisibly.
 parameters of a pipeline or view (parameters wired to another step's
 output via \code{~step_name} are excluded).
 \code{\link[=pip_set_params]{pip_set_params()}} updates these parameters for the whole pipeline or
-view except for locked steps.
+view except for locked steps. A one-sided formula binds a parameter to
+the output of a step instead (see below).
 Steps whose values change are marked as outdated, together with
 their downstream dependents (steps that have never run stay \code{"new"}).
 Values that are \code{\link[=identical]{identical()}} to the stored ones are skipped and don't
@@ -75,6 +77,28 @@ method fails, nothing is set and an error of class
 \code{pipeflow_set_params_error} reports every failure at once. The merged
 value is also what is compared with the stored one, so setting a plain
 value that an annotated object already holds doesn't outdate the step.
+}
+
+\section{Binding parameters to steps}{
+
+A one-sided formula binds a parameter to the output of a step, e.g.
+\code{pip_set_params(p, list(model = ~fit))}, as it does in the defaults of a
+step function or in \code{params} of \code{\link[=pip_add]{pip_add()}}. The parameter is bound in
+all selected steps that have it unbound, except for locked steps. These
+steps must come after the step that the formula refers to, otherwise an
+error is signalled and nothing is changed. If you want to bind parameters
+only for certain steps, use a view to select the desired steps.
+A relative reference such as \code{~-1} is not allowed, but
+\code{~try(fit)} works as in \code{\link[=pip_add]{pip_add()}}.
+
+A bound parameter is no longer unbound: \code{\link[=pip_get_params]{pip_get_params()}} doesn't return
+it, and \code{\link[=pip_set_params]{pip_set_params()}} can't change it any more. Setting the same
+binding again does nothing, and any other value is taken as an unknown
+parameter (see \code{unknown}). To unbind or rebind it, replace the step with
+\code{\link[=pip_replace]{pip_replace()}}.
+Therefore, a one-sided formula can't be set as value. Give it as a string
+instead and turn it into a formula in the step, e.g. with
+\code{\link[stats:as.formula]{stats::as.formula()}}.
 }
 
 \examples{
@@ -112,4 +136,15 @@ try(pip_set_params(p, params = list(nope = 1), unknown = "error"))
 pip_lock(p["load"])
 pip_get_params(p) # list(n = 5, factor = 2.0)
 pip_get_params(p[!locked]) # list(factor = 2.0)
+
+# A formula binds a parameter to the output of a step
+q <- pip_new() |>
+  pip_add("load", \(n = 5) seq_len(n)) |>
+  pip_add("fit_mean", \(x = ~load) mean(x)) |>
+  pip_add("fit_max", \(x = ~load) max(x)) |>
+  pip_add("report", \(model = NA) paste("result:", model))
+pip_set_params(q, params = list(model = ~fit_max))
+q
+pip_run(q)
+q[["report", "out"]]
 }

@@ -1732,10 +1732,15 @@ describe("cross-pipeline assignment", {
         expect_true(p[["s2", "out"]])
     })
 
+    # The function made by as.function() sets formula arguments as values
+    set_formula_value <- function(x, ...) {
+        .pip_set_params(x, list(...), bind = FALSE)
+    }
+
     it("keeps a formula value of an unbound param as a value", {
         q <- pip_new() |>
             pip_add("s", \(model = NULL) model)
-        pip_set_params(q, list(model = ~x))
+        set_formula_value(q, model = ~x)
 
         q["s", ] <- q["s", ]
 
@@ -1751,7 +1756,7 @@ describe("cross-pipeline assignment", {
         q <- pip_new() |>
             pip_add("x", \() 1) |>
             pip_add("s", \(model = NULL, data = ~x) list(model, data))
-        pip_set_params(q, list(model = ~x))
+        set_formula_value(q, model = ~x)
 
         p[2, ] <- q[2, ]
 
@@ -1759,6 +1764,39 @@ describe("cross-pipeline assignment", {
         expect_equal(p[["unbound"]][["s"]], "model")
         pip_run(p, lgr = NULL)
         expect_equal(p[["s", "out"]], list(~x, 1))
+    })
+
+    it("keeps formula values in a pipeline of an as.function() run", {
+        inner <- pip_new("inner") |>
+            pip_add("x", \() 1) |>
+            pip_add("s", \(model = NULL) model) |>
+            pip_add("snap", \(dummy = ~s) pip_clone(.self))
+        snap <- as.function(inner, out = "snap")(model = ~x)
+
+        snap["s", ] <- snap["s", ]
+
+        expect_equal(snap[["depends"]][["s"]], character(0))
+        pip_run(snap, force = TRUE, lgr = NULL)
+        expect_equal(snap[["s", "out"]], ~x)
+    })
+
+    it("copies a param that was bound via pip_set_params()", {
+        p <- pip_new() |>
+            pip_add("x", \() 1) |>
+            pip_add("y", \() 2) |>
+            pip_add("s", \() 0)
+        q <- pip_new() |>
+            pip_add("x", \() 1) |>
+            pip_add("y", \() 2) |>
+            pip_add("s", \(model = NULL) model)
+        pip_set_params(q, list(model = ~ try(y)))
+
+        p[3, ] <- q[3, ]
+
+        expect_equal(p[["depends"]][["s"]], c(model = "y"))
+        expect_equal(formula_try_args(p[["s", "params"]]), "model")
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["s", "out"]], 2)
     })
 
     it("is a no-op for an empty row selection", {

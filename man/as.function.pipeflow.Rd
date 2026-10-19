@@ -62,7 +62,9 @@ of its steps are still passed on to the caller.
 A failing inner step results in an error of the caller which in turn
 makes the outer step fail.
 Param values of the outer pipeline reach the function unwrapped
-(see \code{\link[=pip_param_value]{pip_param_value()}}).
+(see \code{\link[=pip_param_value]{pip_param_value()}}). The arguments of the function are values, also
+if they are formulas: unlike in \code{\link[=pip_set_params]{pip_set_params()}}, a formula argument
+does not bind a param of \code{x} to a step.
 \subsection{Continuing after errors of inner steps}{
 
 With \code{on_error = "continue"} the inner pipeline is run like
