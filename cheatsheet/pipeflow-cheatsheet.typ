@@ -673,7 +673,12 @@
       ]
       #align(center, connect-pic)
       #fn[`pip_replace(p, "data2", \(x = ~prep) x)`][
-        connect the parts: first step of `p2` now uses last step of `p1`.
+        connects data2 with prep manually after the bind.
+      ]
+      #v(2pt)
+      To connect the parts in one go, use:
+      #v(-4pt)
+      #fn[`p <- rbind(p1, p2, bind = list(data = ~prep))`][
       ]
     ]
 
@@ -701,6 +706,12 @@
         the output of the previous step (`~-2`: two steps back).
       ]
       #fn[`\(x = ~numbers, y = ~squared)`][several inputs.]
+      #fn[`\(x = ~try(model))`][
+        mitigate potential failure.
+      ]
+      #fn[`pip_set_params(p, list(x = ~numbers))`][
+        bulk-connect parameter after pipeline creation.
+      ]
     ]
 
     #section("Split · map · reduce", vignette: "v05a-split-map-reduce")[
@@ -726,17 +737,19 @@
       A step can run a copy of another pipeline:
       #v(2pt)
       #align(center, nested-pic)
+      #fn[`f <- as.function(inner, out = "coefs")`][
+        a function that runs a copy of `inner`. Its arguments are the unbound
+        params of `inner`; `out` is the step output it returns.
+      ]
       #fn[
         ```
-        pip_add(outer, "fit", \(d = ~prep) {
-            q <- pip_clone(inner)
-            pip_set_params(q, list(data = d)) |> pip_run()
-            q[["coefs", "out"]]
-        })
+        pip_add(outer, "fit",
+                as.function(inner, out = "coefs",
+                            bind = list(data = ~prep)))
         ```
       ][
-        the input goes in as a parameter, and an output of the copy comes
-        out.
+        as a step: `bind` connects the param `data` to step `prep`. The other
+        unbound params of `inner` become params of `fit`.
       ]
     ]
 
@@ -787,6 +800,18 @@
         chip("halted", fill: run-fill.halted), [a step called `.self$halt()`],
       )
     ]
+
+    #v(20pt)
+    #greybox[
+      #text(size: 9pt, fill: orange)[Good to know]
+      #v(2pt)
+      - `pip_*()` functions change the pipeline in place and return it
+        invisibly, so they can be chained with `|>`.
+      - `p$add(...)` is short for `pip_add(p, ...)`; likewise `$run()`,
+        `$set_params()`, `$collect()`, ...
+      - Every argument of a step function needs a default. Primitives
+        like `sum` have none: wrap them, `\(x = ~-1) sum(x)`.
+    ]
   ],
   [
     #section("Self-modifying pipelines", vignette: "v06-self-modify-pipeline")[
@@ -814,16 +839,40 @@
       ]
     ]
 
-    #v(20pt)
-    #greybox[
-      #text(size: 9pt, fill: orange)[Good to know]
-      #v(2pt)
-      - `pip_*()` functions change the pipeline in place and return it
-        invisibly, so they can be chained with `|>`.
-      - `p$add(...)` is short for `pip_add(p, ...)`; likewise `$run()`,
-        `$set_params()`, `$collect()`, ...
-      - Every argument of a step function needs a default. Primitives
-        like `sum` have none: wrap them, `\(x = ~-1) sum(x)`.
+    #section("Non-trivial parameter values", vignette: "v05d-param-value")[
+      pipeflow supports non-trivial parameter values.
+      #fn[
+        ```
+        my_param <- structure(
+            list(value = 1.23, label = "My label"),
+            class = "foo"
+        )
+        p <- pip_new("demo") |>
+            pip_add("step", \(x = my_param) x)
+        ```
+      ][]
+      #fn[
+        ```
+        # getter for class foo
+        pip_param_value.foo <- function(x, ...) x$value
+
+        # setter for class foo
+        `pip_param_value<-.foo` <- function(x, ..., value) {
+            if (inherits(value, "foo")) return(value)
+            x$value <- value
+            x
+        }
+        ```
+      ][
+        register getter and setter methods.
+      ]
+
+      #v(4pt)
+      #fn[`pip_run(p)`][the step function receives `1.23`, not the `foo` object.]
+      #fn[`pip_get_params(p)`][returns the stored `foo` object.]
+      #fn[`pip_set_params(p, list(x = 99))`][
+        sets the value to `99`; the label is kept.
+      ]
     ]
   ],
 )

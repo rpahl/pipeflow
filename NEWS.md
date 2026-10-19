@@ -1,3 +1,9 @@
+# pipeflow 0.5.0.9011
+
+## Documentation
+
+- The cheat sheet shows "Ways to connect steps" again on page 2.
+
 # pipeflow 0.5.0.9010
 
 ## Breaking changes
