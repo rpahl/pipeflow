@@ -709,6 +709,9 @@
       #fn[`\(x = ~try(model))`][
         mitigate potential failure.
       ]
+      #fn[`pip_set_params(p, list(x = ~numbers))`][
+        bulk-connect parameter after pipeline creation.
+      ]
     ]
 
     #section("Split · map · reduce", vignette: "v05a-split-map-reduce")[

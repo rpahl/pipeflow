@@ -37,6 +37,15 @@ Rscript -e "rcmdcheck::rcmdcheck(args='--no-manual', error_on='warning')"
 Rscript -e "devtools::build_readme()"              # README.md is generated from README.Rmd
 ```
 
+Cheat sheet (`cheatsheet/pipeflow-cheatsheet.typ`, exactly 2 pages). Run from
+the repo root. `typst` is a snap that is not on PATH in the VS Code terminal,
+so use the full path:
+
+```sh
+/snap/bin/typst compile --root . cheatsheet/pipeflow-cheatsheet.typ cheatsheet/pipeflow-cheatsheet.pdf
+cheatsheet/build.sh   # also checks page count/fonts and rebuilds man/figures/cheatsheet-*.png
+```
+
 Before opening a PR, run the full check in this order: lint, then tests,
 then `rcmdcheck`. The target is 0 errors and 0 warnings, with 0 notes if
 possible. CI (`.github/workflows/ci.yaml`) runs lint, then R CMD check on
