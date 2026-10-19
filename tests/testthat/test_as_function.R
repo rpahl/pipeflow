@@ -375,6 +375,234 @@ describe("as.function.pipeflow", {
         })
     })
 
+    describe("out as a function", {
+        new_calls <- function() {
+            calls <- new.env(parent = emptyenv())
+            calls$fit <- 0L
+            calls$coefs <- 0L
+            calls
+        }
+
+        # The demo inner pipeline, `data` tagged "input", the others "model"
+        tagged_inner <- function(calls = new_calls()) {
+            inner <- demo_inner(calls)
+            pip_tag(inner["data"], "input")
+            pip_tag(inner[c("fit", "coefs")], "model")
+            inner
+        }
+
+        by_tags <- \(p) pip_collect(p, by = "tags")
+
+        split_outer <- function(fun) {
+            outer <- pip_new("outer") |>
+                pip_add("data", \(data = NULL) data) |>
+                pip_add(
+                    "split_data",
+                    \(data = ~data) split(data, data$batch),
+                    exec = "split"
+                ) |>
+                pip_add("by_batch", fun)
+            pip_set_params(outer, list(data = demo_batches()))
+            outer
+        }
+
+        batch <- function(key) {
+            d <- demo_batches()
+            d[d$batch == key, ]
+        }
+
+        coefs_of <- function(key, digits = 2) {
+            fit <- stats::lm(y ~ x, data = batch(key))
+            unname(round(stats::coef(fit), digits))
+        }
+
+        it("returns the result of out in a direct call", {
+            f <- as.function(tagged_inner(), out = by_tags)
+
+            res <- f(data = batch("A"))
+
+            expect_named(res, c("input", "model"))
+            expect_identical(res$input$data, batch("A"))
+            expect_named(res$model, c("fit", "coefs"))
+            expect_equal(unname(res$model$coefs), coefs_of("A"))
+        })
+
+        it("returns the result of out per partition in an outer step", {
+            fun <- as.function(
+                tagged_inner(),
+                out = by_tags,
+                bind = list(data = ~split_data)
+            )
+            outer <- split_outer(fun)
+
+            pip_run(outer, lgr = NULL)
+
+            res <- outer[["by_batch", "out"]]
+            expect_s3_class(res, "pipeflow_partitioned")
+            expect_named(res, c("A", "B", "C"))
+            for (key in names(res)) {
+                expect_named(res[[key]], c("input", "model"))
+                expect_identical(res[[key]]$input$data, batch(key))
+                expect_equal(unname(res[[key]]$model$coefs), coefs_of(key))
+            }
+        })
+
+        it("reuses the inner pipelines", {
+            calls <- new_calls()
+            fun <- as.function(
+                tagged_inner(calls),
+                out = by_tags,
+                bind = list(data = ~split_data)
+            )
+            outer <- split_outer(fun)
+            pip_run(outer, lgr = NULL)
+            expect_identical(c(calls$fit, calls$coefs), c(3L, 3L))
+
+            pip_set_params(outer, list(digits = 3))
+            pip_run(outer, lgr = NULL)
+
+            expect_identical(c(calls$fit, calls$coefs), c(3L, 6L))
+            res <- outer[["by_batch", "out"]]
+            expect_equal(unname(res$B$model$coefs), coefs_of("B", 3))
+        })
+
+        it("gets a light copy that shares the values of the kept pipeline", {
+            f <- as.function(demo_inner(new_calls()), out = \(p) p)
+
+            res <- f(data = batch("A"))
+
+            kept <- .fun_pips(f)[[1L]]
+            expect_true(.is_pipeflow(res))
+            expect_false(identical(res[["pipenv"]], kept[["pipenv"]]))
+            expect_identical(
+                data.table::address(res[["data", "out"]]),
+                data.table::address(kept[["data", "out"]])
+            )
+        })
+
+        it("returns a pipeline that later calls don't change", {
+            calls <- new_calls()
+            f <- as.function(demo_inner(calls), out = \(p) p)
+
+            # without bound arguments, both calls run the same kept pipeline
+            resA <- f(data = batch("A"))
+            resB <- f(data = batch("B"))
+
+            expect_length(.fun_pips(f), 1L)
+            expect_identical(resA[["data", "out"]], batch("A"))
+            expect_equal(unname(resA[["coefs", "out"]]), coefs_of("A"))
+            expect_identical(resB[["data", "out"]], batch("B"))
+            expect_equal(unname(resB[["coefs", "out"]]), coefs_of("B"))
+        })
+
+        it("makes the copy before out is called", {
+            p <- pip_new("value") |> pip_add("value", \(x = 1) x)
+            # out does not use the pipeline until the closure is called
+            f <- as.function(p, out = \(p) \() p[["value", "out"]])
+
+            first <- f(x = 1)
+            f(x = 2)
+
+            expect_identical(first(), 1)
+        })
+
+        it("gives the copy the run state and last run of the kept one", {
+            p <- pip_new("halting") |>
+                pip_add("first", \(x = 1) x) |>
+                pip_add("halt", \(x = ~first) {
+                    .self$halt()
+                    x
+                }) |>
+                pip_add("last", \(x = ~halt) x)
+            f <- as.function(p, out = \(p) p)
+
+            res <- f(x = 1)
+
+            kept <- .fun_pips(f)[[1L]]
+            expect_identical(pip_run_state(kept), "halted")
+            expect_identical(pip_run_state(res), "halted")
+            expect_identical(
+                res[["pipenv"]][[".last_run"]],
+                kept[["pipenv"]][[".last_run"]]
+            )
+
+            # the copy has its own run state
+            pip_run(res, lgr = NULL)
+            expect_identical(pip_run_state(res), "ready")
+            expect_identical(pip_run_state(kept), "halted")
+        })
+
+        it("returns a pipeline whose changes don't change the kept one", {
+            calls <- new_calls()
+            f <- as.function(demo_inner(calls), out = \(p) p)
+            res <- f(data = batch("A"))
+
+            pip_set_params(res, list(digits = 3))
+            pip_run(res, lgr = NULL)
+            pip_add(res, "extra", \(x = ~coefs) x)
+
+            kept <- .fun_pips(f)[[1L]]
+            expect_false("extra" %in% kept[["step"]])
+            expect_identical(kept[["coefs", "state"]], "done")
+            expect_equal(unname(kept[["coefs", "out"]]), coefs_of("A"))
+
+            # the kept pipeline is still up to date for the same input
+            expect_equal(
+                unname(f(data = batch("A"))[["coefs", "out"]]),
+                coefs_of("A")
+            )
+            expect_identical(c(calls$fit, calls$coefs), c(1L, 2L))
+        })
+
+        it("returns pipelines that runs of a clone of the outer don't change", {
+            fun <- as.function(
+                demo_inner(new_calls()),
+                out = \(p) p,
+                bind = list(data = ~split_data)
+            )
+            outer <- pip_run(split_outer(fun), lgr = NULL)
+            resA <- outer[["by_batch", "out"]]$A
+
+            # the clone shares the function and with it the kept pipelines
+            clone <- pip_clone(outer)
+            pip_set_params(clone, list(digits = 3))
+            pip_run(clone, lgr = NULL)
+
+            cloneA <- clone[["by_batch", "out"]]$A
+            expect_equal(unname(cloneA[["coefs", "out"]]), coefs_of("A", 3))
+            expect_equal(unname(resA[["coefs", "out"]]), coefs_of("A"))
+            expect_equal(
+                unname(outer[["by_batch", "out"]]$A[["coefs", "out"]]),
+                coefs_of("A")
+            )
+        })
+
+        it("fails for a failed step with on_error = continue", {
+            inner <- pip_new("failing") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("bad", \(x = ~input) {
+                    if (identical(x, "boom")) {
+                        stop("boom")
+                    }
+                    x
+                }) |>
+                pip_add("other", \(x = ~input) "other output")
+            f <- as.function(inner, out = pip_collect, on_error = "continue")
+
+            expect_error(suppressWarnings(f(x = "boom")), "step 'bad': boom")
+            expect_identical(
+                f(x = "fine"),
+                list(input = "fine", bad = "fine", other = "other output")
+            )
+        })
+
+        it("passes on an error of out", {
+            f <- as.function(demo_inner(new_calls()), out = \(p) stop("no out"))
+
+            expect_error(f(data = batch("A")), "no out")
+        })
+    })
+
     describe("snapshot of the pipeline", {
         it("does not change the pipeline it was made from", {
             demo <- run_outer(demo_nested())
@@ -437,6 +665,22 @@ describe("as.function.pipeflow", {
             expect_error(as.function(inner, out = 1L), "step names")
             expect_error(as.function(inner, out = character()), "step names")
             expect_error(as.function(inner, out = NA_character_), "step names")
+            expect_error(
+                as.function(inner, out = \() 1),
+                "a function with at least one argument"
+            )
+            expect_error(
+                as.function(inner, out = `if`),
+                "a function with at least one argument"
+            )
+        })
+
+        it("accepts a function with at least one argument as out", {
+            inner <- demo_inner(new.env())
+
+            expect_no_error(as.function(inner, out = \(...) 1))
+            expect_no_error(as.function(inner, out = length))
+            expect_no_error(as.function(inner, out = pip_collect))
         })
 
         it("rejects an invalid bind", {

@@ -36,6 +36,17 @@
 #' if they are formulas: unlike in [pip_set_params()], a formula argument
 #' does not bind a param of `x` to a step.
 #'
+#' ## Choosing the output
+#' With step names in `out`, the function returns their outputs. If `out` is
+#' a function, it is called with the run inner pipeline, and its result is
+#' the result of the function, e.g. `out = \(p) pip_collect(p, by = "tags")`
+#' groups the outputs by tags. The pipeline that `out` gets is a light copy of
+#' the kept one: it has its own steps, but the values (params and outputs)
+#' are the same objects. Returning it, or a view of it, therefore keeps no
+#' extra copy of the data, and later calls of the function don't change it.
+#' Since the values are shared, don't modify them in place (e.g. with `:=` on
+#' a `data.table` output).
+#'
 #' ## Continuing after errors of inner steps
 #' With `on_error = "continue"` the inner pipeline is run like
 #' `pip_run(on_error = "continue")`, that is, a failing inner step gets state
@@ -44,9 +55,9 @@
 #' failure.
 #'
 #' The function still fails if one of the steps named in `out` failed or was
-#' not run because an input failed. Since with `out = NULL` *all* steps are
-#' requested, you need to name the relevant steps in `out` to profit from
-#' a continuing inner run.
+#' not run because an input failed. Since with `out = NULL` or a function
+#' `out` *all* steps are requested, you need to name the relevant steps in
+#' `out` to profit from a continuing inner run.
 #'
 #' ## Pipeline functions with partitioned inputs
 #' If the step with the pipeline function happens to receive partitioned inputs
@@ -90,7 +101,9 @@
 #' @param out The result of the function. `NULL` (the default) returns the
 #' outputs of all steps as a named list, see [pip_collect()]; a step name
 #' returns the output of that step; several step names return a named list
-#' of their outputs.
+#' of their outputs. A function with at least one argument is called with
+#' (a light copy of) the run inner pipeline and returns the result, see
+#' Details.
 #' @param bind A named list of one-sided formulas, e.g.
 #' `list(df = ~outer_step)`, that bind unbound params of `x` to steps
 #' of the outer pipeline (`~try(outer_step)` also works).
@@ -139,6 +152,18 @@
 #' print(outer)
 #' pip_run(outer, lgr = NULL)
 #' outer[["table", "out"]]
+#'
+#' # A function as out: the outputs grouped by tags
+#' tagged <- pip_new("tagged") |>
+#'   pip_add("input", \(input_df = NULL) input_df) |>
+#'   pip_add("n", \(data = ~input) nrow(data), tags = "summary") |>
+#'   pip_add("mpg", \(data = ~input) mean(data$mpg), tags = "summary") |>
+#'   pip_add("fit", \(data = ~input) lm(mpg ~ wt, data = data), tags = "model")
+#'
+#' f_tagged <- as.function(tagged, out = \(p) pip_collect(p, by = "tags"))
+#' res <- f_tagged(input_df = mtcars)
+#' names(res)
+#' res$summary
 #'
 #' # With on_error = "continue", the inner pipeline handles a failed inner
 #' # step itself: `coefs` is run with the failure of `fit` and reports it.
@@ -202,9 +227,22 @@ as.function.pipeflow <- function(
     if (is.null(out)) {
         return(invisible(out))
     }
+    msg <- paste(
+        "out must be NULL, a character vector of step names or a function",
+        "with at least one argument"
+    )
+    if (is.function(out)) {
+        # args() also gives the formals of a primitive, e.g. length(), and
+        # NULL for a language construct such as `if`
+        outArgs <- args(out)
+        if (is.null(outArgs) || length(formals(outArgs)) == 0L) {
+            stop_no_call(msg)
+        }
+        return(invisible(out))
+    }
     steps <- .pip_pipenv(x)[["data"]][["step"]]
     if (!is.character(out) || anyNA(out) || length(out) == 0L) {
-        stop_no_call("out must be NULL or a character vector of step names")
+        stop_no_call(msg)
     }
     missingSteps <- setdiff(out, steps)
     if (length(missingSteps) > 0L) {
@@ -394,7 +432,7 @@ as.function.pipeflow <- function(
 #' signalled as `pip_run(on_error = "stop")` would have signalled it.
 #'
 #' @param pip The inner pipeline, after the run.
-#' @param out The requested steps, `NULL` for all of them.
+#' @param out The requested steps, `NULL` or a function for all of them.
 #' @return `NULL`, invisibly, if no requested step is affected.
 #' @noRd
 .fun_check_run <- function(pip, out) {
@@ -405,7 +443,11 @@ as.function.pipeflow <- function(
         return(invisible(NULL))
     }
     causes <- .fun_failure_causes(dat)
-    requested <- if (is.null(out)) dat[["step"]] else out
+    requested <- if (is.null(out) || is.function(out)) {
+        dat[["step"]]
+    } else {
+        out
+    }
     affected <- intersect(names(causes), requested)
     if (length(affected) == 0L) {
         return(invisible(NULL))
@@ -449,12 +491,44 @@ as.function.pipeflow <- function(
 }
 
 
+#' The result of a call: the outputs of the requested steps
+#'
+#' A function `out` gets a light copy of the pipeline, so that the later calls
+#' that update the kept pipeline don't change what it returned. The copy is
+#' made before `out` is called: `out` may not use its argument at once, e.g.
+#' if it returns a closure.
+#'
+#' @param pip The inner pipeline, after the run.
+#' @param out The `out` of `as.function.pipeflow()`.
+#' @noRd
 .fun_out <- function(pip, out) {
     if (is.null(out)) {
         return(pip_collect(pip))
     }
+    if (is.function(out)) {
+        snapshot <- .fun_snapshot(pip)
+        return(out(snapshot))
+    }
     outs <- stats::setNames(lapply(out, \(s) pip[[s, "out"]]), out)
     if (length(out) == 1L) outs[[1L]] else outs
+}
+
+
+#' A light copy of the run inner pipeline, for a function `out`
+#'
+#' Unlike a new pipeline, the copy has the run state and the time of the last
+#' run of `pip`, since it shows `pip` as that run left it.
+#'
+#' @param pip The inner pipeline, after the run.
+#' @return A light copy of `pip`, see `.pip_clone()`.
+#' @noRd
+.fun_snapshot <- function(pip) {
+    snapshot <- .pip_clone(pip, deep = FALSE)
+    from <- .pip_pipenv(pip)
+    to <- .pip_pipenv(snapshot)
+    to[[".run_state"]] <- from[[".run_state"]]
+    to[[".last_run"]] <- from[[".last_run"]]
+    snapshot
 }
 
 

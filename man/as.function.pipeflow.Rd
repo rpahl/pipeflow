@@ -21,7 +21,9 @@ a part of a pipeline into a function).}
 \item{out}{The result of the function. \code{NULL} (the default) returns the
 outputs of all steps as a named list, see \code{\link[=pip_collect]{pip_collect()}}; a step name
 returns the output of that step; several step names return a named list
-of their outputs.}
+of their outputs. A function with at least one argument is called with
+(a light copy of) the run inner pipeline and returns the result, see
+Details.}
 
 \item{bind}{A named list of one-sided formulas, e.g.
 \code{list(df = ~outer_step)}, that bind unbound params of \code{x} to steps
@@ -65,6 +67,19 @@ Param values of the outer pipeline reach the function unwrapped
 (see \code{\link[=pip_param_value]{pip_param_value()}}). The arguments of the function are values, also
 if they are formulas: unlike in \code{\link[=pip_set_params]{pip_set_params()}}, a formula argument
 does not bind a param of \code{x} to a step.
+\subsection{Choosing the output}{
+
+With step names in \code{out}, the function returns their outputs. If \code{out} is
+a function, it is called with the run inner pipeline, and its result is
+the result of the function, e.g. \verb{out = \\(p) pip_collect(p, by = "tags")}
+groups the outputs by tags. The pipeline that \code{out} gets is a light copy of
+the kept one: it has its own steps, but the values (params and outputs)
+are the same objects. Returning it, or a view of it, therefore keeps no
+extra copy of the data, and later calls of the function don't change it.
+Since the values are shared, don't modify them in place (e.g. with \verb{:=} on
+a \code{data.table} output).
+}
+
 \subsection{Continuing after errors of inner steps}{
 
 With \code{on_error = "continue"} the inner pipeline is run like
@@ -74,9 +89,9 @@ inner step that refers to it via \code{~try(step)} runs and receives the
 failure.
 
 The function still fails if one of the steps named in \code{out} failed or was
-not run because an input failed. Since with \code{out = NULL} \emph{all} steps are
-requested, you need to name the relevant steps in \code{out} to profit from
-a continuing inner run.
+not run because an input failed. Since with \code{out = NULL} or a function
+\code{out} \emph{all} steps are requested, you need to name the relevant steps in
+\code{out} to profit from a continuing inner run.
 }
 
 \subsection{Pipeline functions with partitioned inputs}{
@@ -159,6 +174,18 @@ pip_set_params(outer, list(digits = 3))
 print(outer)
 pip_run(outer, lgr = NULL)
 outer[["table", "out"]]
+
+# A function as out: the outputs grouped by tags
+tagged <- pip_new("tagged") |>
+  pip_add("input", \(input_df = NULL) input_df) |>
+  pip_add("n", \(data = ~input) nrow(data), tags = "summary") |>
+  pip_add("mpg", \(data = ~input) mean(data$mpg), tags = "summary") |>
+  pip_add("fit", \(data = ~input) lm(mpg ~ wt, data = data), tags = "model")
+
+f_tagged <- as.function(tagged, out = \(p) pip_collect(p, by = "tags"))
+res <- f_tagged(input_df = mtcars)
+names(res)
+res$summary
 
 # With on_error = "continue", the inner pipeline handles a failed inner
 # step itself: `coefs` is run with the failure of `fit` and reports it.
