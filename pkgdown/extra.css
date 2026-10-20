@@ -1,27 +1,17 @@
-/* Widen the page on large screens (Bootstrap defaults: 1140px / 1320px). */
-@media (min-width: 1200px) {
-  .container {
-    max-width: 1500px;
-  }
+/* Home page: logo left of the package name, as on the tidyverse sites
+   (pkgdown floats it to the right by default). */
+.template-home .page-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
-@media (min-width: 1400px) {
-  .container {
-    max-width: 1700px;
-  }
+.template-home .page-header h1 {
+  margin: 0;
 }
 
-/* Give the main column a bit more room by trimming the sidebar. */
-@media (min-width: 768px) {
-  aside.col-md-3 {
-    flex: 0 0 auto;
-    width: 20%;
-  }
-
-  main#main.col-md-9 {
-    flex: 0 0 auto;
-    width: 80%;
-  }
+.template-home img.logo {
+  margin-left: 0;
 }
 
 /* Match the base font size of the official CRAN/rmarkdown vignettes

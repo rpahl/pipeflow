@@ -64,6 +64,47 @@
 # -------
 # Asserts
 # -------
+#' Check a list of bindings
+#'
+#' A binding turns an unbound param into a reference to a step, as in the
+#' `bind` argument of [as.function.pipeflow()] and [rbind.pipeflow()].
+#'
+#' @param bind Named list of one-sided formulas, e.g. `list(data = ~step)`.
+#' @param unbound Character vector of the names of the unbound params that
+#' can be bound. If missing, only the form of `bind` is checked.
+#' @return `bind`, invisibly. Signals an error if `bind` is no named list of
+#' one-sided formulas or has names that are not in `unbound`.
+#' @noRd
+.assert_bind <- function(bind, unbound) {
+    bindNames <- names(bind)
+    hasNames <- !is.null(bindNames) &&
+        !anyNA(bindNames) &&
+        all(nzchar(bindNames)) &&
+        !anyDuplicated(bindNames)
+    hasValidNames <- length(bind) == 0L || hasNames
+    if (
+        !is.list(bind) ||
+            !hasValidNames ||
+            !all(vapply(bind, is_one_sided_formula, logical(1)))
+    ) {
+        stop_no_call(
+            "bind must be a named list of one-sided formulas, ",
+            "e.g. list(data = ~step)"
+        )
+    }
+    if (missing(unbound)) {
+        return(invisible(bind))
+    }
+    unknown <- setdiff(bindNames, unbound)
+    if (length(unknown) > 0L) {
+        stop_no_call(
+            "bind has names that are no unbound params of the pipeline: ",
+            toString(unknown)
+        )
+    }
+    invisible(bind)
+}
+
 .assert_exec_mode <- function(exec) {
     if (!.is_single(exec, "character") || is.na(exec)) {
         stop("exec must be a single string")
@@ -75,29 +116,41 @@
     invisible(exec)
 }
 
-#' Warn about params that are shadowed by the defaults of a step function
+#' Check the params of a step
 #'
-#' The defaults of `fun` take precedence over `params` when both are merged,
-#' so values given in `params` for names that are also formals of `fun` are
-#' dropped. `...` is not counted as a formal.
+#' The params given to `pip_add()` or `pip_replace()` are merged with the
+#' defaults of the step function by name, so each of them needs a unique name.
 #'
-#' @param step The name of the step (used in the message).
-#' @param fun The step function.
-#' @param params Named list of parameter values passed to the step.
-#' @return The overlapping names, invisibly. Signals a warning if there are any.
+#' @param params The params given for the step.
+#' @return `params`, invisibly.
 #' @noRd
-.warn_params_overlap <- function(step, fun, params) {
-    overlap <- intersect(names(params), setdiff(names(formals(fun)), "..."))
-    if (length(overlap) > 0L) {
-        warning(
-            "step '",
-            step,
-            "': the defaults of fun take precedence over params: ",
-            toString(overlap),
-            call. = FALSE
+.assert_step_params <- function(params) {
+    parNames <- names(params)
+    if (length(params) > 0L && is.null(parNames)) {
+        parNames <- NA_character_
+    }
+    isValid <- is.list(params) &&
+        !anyNA(parNames) &&
+        all(nzchar(parNames)) &&
+        !anyDuplicated(parNames)
+    if (!isValid) {
+        stop_no_call("params must be a list with unique names")
+    }
+    invisible(params)
+}
+
+#' A pipeline is no step function, but can be turned into one
+#' @param fun The step function given to `pip_add()` or `pip_replace()`.
+#' @noRd
+.assert_fun_not_pipeline <- function(fun) {
+    if (.is_pipeflow(fun)) {
+        stop_no_call(
+            "fun must be a function, not a pipeline - to use a pipeline as ",
+            "a step, turn it into a function with as.function(), ",
+            "see ?as.function.pipeflow"
         )
     }
-    invisible(overlap)
+    invisible(fun)
 }
 
 .assert_logger <- function(lgr) {
@@ -123,7 +176,10 @@
         stop_no_call("x must be a pipeflow pip")
     }
     if (.is_pipeflow_view(x)) {
-        stop_no_call("x must be a full pipeline, not a view")
+        stop_no_call(
+            "x must be a full pipeline, not a view - use ",
+            "x[, view = FALSE] to turn the view into a standalone pipeline"
+        )
     }
     invisible(x)
 }
@@ -177,10 +233,38 @@
     fun
 }
 
+#' Release the pipeline that was provided as `.self` for one step call
+#'
+#' Removes `.self` from the environment that `.wrap_self()` created for a
+#' single step call, so that whatever the step returned and that captured
+#' the call frame doesn't keep the pipeline alive. The environment of the
+#' user's function is never touched, since `.wrap_self()` only ever adds
+#' `.self` to a child environment of its own.
+#'
+#' @param env The environment that `.wrap_self()` created.
+#' @return `NULL`, invisibly.
+#' @noRd
+.release_self <- function(env) {
+    if (exists(".self", envir = env, inherits = FALSE)) {
+        rm(list = ".self", envir = env)
+    }
+    invisible()
+}
+
 # ------------------------------
 # Parameter & dependency parsing
 # ------------------------------
-.extract_fun_params <- function(fun) {
+#' The params of a step: the defaults of its function, overridden by params
+#'
+#' @param fun The step function.
+#' @param params Named list of param values. They override the defaults of
+#' `fun` and give a value to arguments of `fun` that have no default. Names
+#' that are no arguments of `fun` are added.
+#' @return Named list: the arguments of `fun` (without `...`) in their order,
+#' followed by the other `params`. The defaults of `fun` are resolved in its
+#' environment, except for those that `params` override.
+#' @noRd
+.extract_fun_params <- function(fun, params = list()) {
     args <- formals(fun)
 
     # Remove potential "..." argument
@@ -188,22 +272,29 @@
     if (hasDots) {
         args <- args[!names(args) %in% "..."]
     }
+    isGiven <- names(args) %in% names(params)
 
-    # First verify that all args have default values
+    # First verify that all args that params don't give have default values
     is_missing_default <- function(x) {
         identical(x, quote(expr = ))
     }
-    undef <- names(Filter(args, f = is_missing_default))
+    undef <- names(Filter(args[!isGiven], f = is_missing_default))
     if (length(undef) > 0L) {
         stop_no_call(
             paste0("'", undef, "'", collapse = ", "),
             ifelse(length(undef) > 1L, " have ", " has "),
-            "no default value"
+            "no default value - set one in fun or give a value in params"
         )
     }
 
     # Make sure default values are returned as resolved values
-    lapply(args, \(x) eval(x, envir = environment(fun)))
+    values <- stats::setNames(vector("list", length(args)), names(args))
+    values[!isGiven] <- lapply(
+        args[!isGiven],
+        \(x) eval(x, envir = environment(fun))
+    )
+    values[names(params)] <- params
+    values
 }
 
 .extract_depends <- function(
@@ -301,8 +392,9 @@
 #' Create a partition key error condition
 #'
 #' Error signalled by `.pip_execute_step_call()` when a step function fails
-#' for one key of its partitioned inputs. It keeps the original condition as
-#' `parent`.
+#' for one key of its partitioned inputs, and by `.pip_annotate_output()`
+#' when `pip_output_value()` fails for one key of a partitioned output. It
+#' keeps the original condition as `parent`.
 #'
 #' @param key The partition key for which the step function failed.
 #' @param parent The original condition raised by the step function.
@@ -318,6 +410,60 @@
             call = NULL,
             key = key,
             parent = parent
+        )
+    )
+}
+
+#' Create the error of a failed pip_set_params() call
+#'
+#' Error signalled by `pip_set_params()` when `pip_param_value<-()` failed
+#' for one or more of the parameters that were to be set. All of them are
+#' reported at once, and nothing is set.
+#'
+#' @param errors List of the collected failures, each a list with the
+#' elements `step`, `name` and `parent`.
+#' @return A condition of class
+#' `c("pipeflow_set_params_error", "error", "condition")` with the fields
+#' `errors` (a data frame with the columns `step`, `name` and `message`) and
+#' `parents` (the list of the original conditions).
+#' @noRd
+.pip_set_params_error <- function(errors) {
+    steps <- vapply(errors, FUN = `[[`, "step", FUN.VALUE = character(1))
+    names <- vapply(errors, FUN = `[[`, "name", FUN.VALUE = character(1))
+    parents <- lapply(errors, FUN = `[[`, "parent")
+    messages <- vapply(
+        parents,
+        FUN = conditionMessage,
+        FUN.VALUE = character(1)
+    )
+
+    msg <- paste0(
+        sprintf(
+            "Cannot set %s: nothing was set.\n",
+            if (length(errors) == 1L) {
+                "1 parameter"
+            } else {
+                sprintf("%d parameters", length(errors))
+            }
+        ),
+        paste0(
+            sprintf("  step '%s', parameter '%s': %s", steps, names, messages),
+            collapse = "\n"
+        )
+    )
+
+    structure(
+        class = c("pipeflow_set_params_error", "error", "condition"),
+        list(
+            message = msg,
+            call = NULL,
+            errors = data.frame(
+                step = steps,
+                name = names,
+                message = messages,
+                stringsAsFactors = FALSE
+            ),
+            parents = parents
         )
     )
 }
@@ -506,15 +652,26 @@
     step <- dat[["step"]][[i]]
 
     # Provide `.self` (the full pipeline being run) to a step function that
-    # refers to it, in an environment of its own for this call.
-    fun <- .wrap_self(fun, self = x)
+    # refers to it, in an environment of its own for this call. That
+    # environment is released once the step returned (or failed), so that
+    # outputs capturing the call frame don't keep the pipeline alive.
+    funSelf <- .wrap_self(fun, self = x)
+    if (!identical(environment(funSelf), environment(fun))) {
+        on.exit(.release_self(environment(funSelf)), add = TRUE)
+    }
+    fun <- funSelf
 
     unbound <- dat[["unbound"]][[i]]
 
     out <- withCallingHandlers(
         {
             args <- .pip_unwrap_params(args, unbound)
-            .pip_execute_step_call(fun = fun, args = args, exec = exec)
+            res <- .pip_execute_step_call(fun = fun, args = args, exec = exec)
+
+            # One time stamp for the whole step, also for all keys of a
+            # partitioned output, and the one that is stored below.
+            runTime <- Sys.time()
+            .pip_annotate_output(res, step = step, time = runTime)
         },
         error = function(e) {
             data.table::set(
@@ -547,7 +704,7 @@
             j = c("out", "time", "state"),
             value = list(
                 list(out),
-                Sys.time(),
+                runTime,
                 .step_states[["done"]][["name"]]
             )
         )
@@ -914,8 +1071,7 @@
 # -----------------
 
 .pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
-    funParams <- .extract_fun_params(fun)
-    params[names(funParams)] <- funParams
+    params <- .extract_fun_params(fun, params)
 
     # Determine and verify potential links to existing steps
     env <- .pip_pipenv(x)
@@ -969,8 +1125,7 @@
 # the corresponding position of its topological order, leaving all existing
 # steps (and their runtime state) untouched.
 .pip_insert <- function(x, step, fun, tags, exec, params, pos) {
-    funParams <- .extract_fun_params(fun)
-    params[names(funParams)] <- funParams
+    params <- .extract_fun_params(fun, params)
 
     env <- .pip_pipenv(x)
     data <- env[["data"]]
@@ -982,13 +1137,23 @@
     steps <- c(prefixSteps, step)
     depends <- .extract_depends(params = params, steps = steps)
     if (length(depends) > 0L) {
-        forbidden <- depends[!(depends %in% prefixSteps)]
+        forbidden <- unname(depends[!(depends %in% prefixSteps)])
         if (length(forbidden) > 0L) {
+            later <- forbidden[forbidden %in% data[["step"]]]
+            if (length(later) > 0L) {
+                stop_no_call(
+                    "while adding step '",
+                    step,
+                    "' - cannot reference steps that come after the ",
+                    "insertion point: ",
+                    paste0("'", later, "'", collapse = ", ")
+                )
+            }
             stop_no_call(
                 "while adding step '",
                 step,
                 "' - cannot reference unknown steps: ",
-                paste0("'", unname(forbidden), "'", collapse = ", ")
+                paste0("'", forbidden, "'", collapse = ", ")
             )
         }
     }
@@ -1040,8 +1205,32 @@
 }
 
 
-# Bind two pipelines together by concatenating their steps.
-.pip_bind <- function(x, y) {
+# Bind two pipelines together by concatenating their steps. `bind` turns
+# unbound params of steps of y into references to steps of x.
+.pip_bind <- function(x, y, bind = list()) {
+    .assert_bind(
+        bind,
+        unbound = unique(unlist(.pip_pipenv(y)[["data"]][["unbound"]]))
+    )
+    # The bound steps are resolved in x before the steps of y are appended,
+    # so that a binding can't point to a step of y.
+    targets <- formula_deps(bind)
+    isRelative <- startsWith(targets, "-")
+    if (any(isRelative)) {
+        relative <- paste0(names(targets), " = ~", targets)[isRelative]
+        stop_no_call(
+            "bind must refer to steps by name, not by relative position: ",
+            toString(relative)
+        )
+    }
+    missingSteps <- setdiff(targets, .pip_pipenv(x)[["data"]][["step"]])
+    if (length(missingSteps) > 0L) {
+        stop_no_call(
+            "bind refers to steps that are not in the first pipeline: ",
+            toString(missingSteps)
+        )
+    }
+
     out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
     yy <- pip_clone(y)
     yyDat <- .pip_pipenv(yy)[["data"]]
@@ -1073,6 +1262,7 @@
     d <- .pip_dag(outEnv)
     stepsToNodes <- outEnv[[".steps_to_nodes"]]
     rows <- vector("list", nrow(yyDat))
+    boundSteps <- character()
     for (k in seq_len(nrow(yyDat))) {
         step <- yyDat[["step"]][[k]]
         fun <- yyDat[["fun"]][[k]]
@@ -1081,22 +1271,28 @@
         params <- yyDat[["params"]][[k]]
         depends <- yyDat[["depends"]][[k]]
 
-        # Re-create the formula dependencies in the target pipeline's context
-        # so that they point to the (renamed) steps of y. References wrapped
+        # Bind the unbound params named in `bind`: they become references,
+        # which are then re-created like the existing ones.
+        bound <- intersect(names(targets), yyDat[["unbound"]][[k]])
+        if (length(bound) > 0L) {
+            params[bound] <- bind[bound]
+            depends[bound] <- targets[bound]
+            depends <- depends[order(match(names(depends), names(params)))]
+            boundSteps <- c(boundSteps, step)
+        }
+
+        # Point the formula dependencies to the (renamed) steps of y, which
+        # also turns relative references into step names. References wrapped
         # in try() stay wrapped.
-        tryArgs <- formula_try_args(params)
         for (arg in intersect(names(depends), names(params))) {
-            ref <- depends[[arg]]
-            if (arg %in% tryArgs) {
-                ref <- sprintf("try(%s)", ref)
-            }
-            params[[arg]] <- stats::as.formula(paste("~", ref))
+            params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
         }
         # Fold current parameter values into the defaults of the existing
-        # function arguments.
+        # function arguments. `[<-` with list() keeps a NULL value, which
+        # `[[<-` would drop together with the argument.
         fml <- formals(fun)
         for (nm in intersect(names(params), setdiff(names(fml), "..."))) {
-            fml[[nm]] <- params[[nm]]
+            fml[nm] <- list(params[[nm]])
         }
         formals(fun) <- fml
 
@@ -1133,6 +1329,8 @@
         list(outEnv[["data"]], appRows),
         use.names = TRUE
     )
+    # The bound steps get new inputs, so their outputs are no longer valid.
+    .pip_outdate_downstream(out, boundSteps)
     out
 }
 
@@ -1223,9 +1421,10 @@ pip_new <- function(name = "pipe") {
 #'
 #' @param x A pipeflow pipeline object.
 #' @param step Unique step name.
-#' @param fun Function to execute for the step. Each function parameter must
-#' have a default value. Default values that are simple constants are resolved
-#' immediately. Default values that are formulas like `~other_step` are
+#' @param fun Function to execute for the step. Each function parameter needs
+#' a value: a default value in `fun` or an entry in `params`.
+#' Default values that are simple constants are resolved immediately.
+#' Default values that are formulas like `~other_step` are
 #' treated as dependencies to those steps and resolved to the respective output
 #' values at runtime once the step is executed. A reference wrapped in `try()`,
 #' like `~try(other_step)`, accepts a failed input when the pipeline is run
@@ -1239,14 +1438,20 @@ pip_new <- function(name = "pipe") {
 #' @param after Optional position after which the new step should be inserted
 #' (defaults to last position). Can be a step name or an integer index. If
 #' set to 0, the new step will be inserted at the beginning of the pipeline.
-#' @param params Optional named list of parameter values, which will be merged
-#' with the defaults of `fun` (if overlapping names, the default values in `fun`
-#' take precedence). There are two use cases for `params`:
-#' 1. Provide param values programmatically when adding steps at runtime
-#' 2. Provide extra param values to "mark" dependencies that are defined in
-#'   pipelines nested in a step, which ensures that the step (and with that
-#'   the pipeline in the step) is re-executed when one of the respective
-#'   param values change.
+#' @param params Optional named list of parameter values. They override the
+#' defaults of `fun` and give a value to parameters of `fun` that have no
+#' default. As in the defaults of `fun`, a formula like `~other_step` refers
+#' to the output of another step. Names that are no parameters of `fun` add
+#' params to the step, which are passed on to `fun` as well, so `fun` needs a
+#' `...` argument for them. Use cases for `params` are:
+#' 1. Set param values programmatically, e.g. when adding steps in a loop or
+#'   at runtime.
+#' 2. Use existing functions whose parameters have no defaults, e.g.
+#'   `pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))`.
+#' 3. Provide extra param values to "mark" dependencies that are defined in
+#'   pipelines nested in a step, which ensures that it is re-executed when
+#'   one of the nested param values change. See the
+#'   \href{../doc/v05b-nested-pipeline.html}{nested pipelines vignette}.
 #' @param exec Execution mode for this step. One of "auto", "split",
 #' "reduce" or "plain".
 #' Using execution mode `exec = split`, the output of the step is marked as
@@ -1281,6 +1486,11 @@ pip_new <- function(name = "pipe") {
 #' in the body). Indirect access, such as `get(".self")`, is not detected.
 #' `.self` is a reserved name: it can't be an argument of `fun` or a name in
 #' `params`.
+#'
+#' `.self` is valid while the step runs only. It is released once the step
+#' returned, so that outputs of the step don't keep the pipeline alive. A
+#' step that returns a function which refers to `.self` therefore fails
+#' with `object '.self' not found` when that function is called later.
 #'
 #' @return The updated pipeline, invisibly.
 #' @examples
@@ -1326,12 +1536,24 @@ pip_new <- function(name = "pipe") {
 #' pip_add(p2, "preload", \(x = 1) x, after = 0)
 #' p2
 #'
-#' # --- Provide parameter values programmatically with 'params' ---
+#' # --- Provide parameter values with 'params' ---
+#' # 'params' override the defaults of the function ...
 #' p3 <- pip_new("params-demo") |>
-#'   pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
+#'   pip_add("data", \(x = c(1, NA, 3)) x) |>
+#'   pip_add("scale", \(x = ~data, factor = 1) x * factor,
+#'     params = list(factor = 10)
+#'   ) |>
+#'   # ... and give values to parameters without default, e.g. of mean()
+#'   pip_add("avg", mean, params = list(x = ~scale, na.rm = TRUE))
 #' pip_run(p3)
 #' p3
-#' p3[["load", "out"]] # c(1, size = 42) — extra params passed via `...`
+#' p3[["avg", "out"]] # 20
+#'
+#' # Extra params are passed via `...`
+#' p4 <- pip_new("dots-demo") |>
+#'   pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
+#' pip_run(p4)
+#' p4[["load", "out"]] # c(1, size = 42)
 #' @export
 pip_add <- function(
     x,
@@ -1355,6 +1577,7 @@ pip_add <- function(
     if (.pip_step_exists(x, step)) {
         stop("step '", step, "' already exists in the pipeline")
     }
+    .assert_fun_not_pipeline(fun)
     if (!is.function(fun)) {
         stop("fun must be a function")
     }
@@ -1377,8 +1600,8 @@ pip_add <- function(
             "'.self' is a reserved parameter name and cannot be used in params"
         )
     }
+    .assert_step_params(params)
     .assert_exec_mode(exec)
-    .warn_params_overlap(step, fun, params)
 
     n <- length(x)
 
@@ -2083,15 +2306,7 @@ pip_rename <- function(x, from, to) {
         for (arg in names(dep)) {
             fml <- newParams[[i]][[arg]]
             if (inherits(fml, "formula")) {
-                # Only swap the referenced name to keep the formula's
-                # environment (as.formula() would attach this frame) and
-                # a try() wrapper.
-                if (is_try_ref(fml)) {
-                    fml[[2L]][[2L]] <- as.name(dep[[arg]])
-                } else {
-                    fml[[2L]] <- as.name(dep[[arg]])
-                }
-                newParams[[i]][[arg]] <- fml
+                newParams[[i]][[arg]] <- formula_set_ref(fml, dep[[arg]])
             }
         }
     }
@@ -2183,6 +2398,7 @@ pip_replace <- function(
     if (!.pip_step_in_view(x, step)) {
         stop("step '", step, "' is not part of the view")
     }
+    .assert_fun_not_pipeline(fun)
     if (!is.function(fun)) {
         stop("fun must be a function")
     }
@@ -2206,10 +2422,10 @@ pip_replace <- function(
             "params - it is provided automatically"
         )
     }
+    .assert_step_params(params)
     if (!is.null(exec)) {
         .assert_exec_mode(exec)
     }
-    .warn_params_overlap(step, fun, params)
 
     env <- .pip_pipenv(x)
     data <- env[["data"]]
@@ -2223,15 +2439,25 @@ pip_replace <- function(
         exec <- data[["exec"]][[iStep]]
     }
 
-    funParams <- .extract_fun_params(fun)
-    params[names(funParams)] <- funParams
+    params <- .extract_fun_params(fun, params)
 
     # Dependencies of the replacement may only point to earlier steps
     prefixSteps <- data[["step"]][seq_len(iStep - 1L)]
     steps <- c(prefixSteps, step)
     depends <- .extract_depends(params = params, steps = steps)
     if (length(depends) > 0L) {
-        bad <- depends[!(depends %in% prefixSteps)]
+        bad <- unname(depends[!(depends %in% prefixSteps)])
+        # As in .pip_insert(), but a reference to the step itself is unknown
+        later <- bad[bad %in% data[["step"]][-seq_len(iStep)]]
+        if (length(later) > 0L) {
+            stop_no_call(
+                "while replacing step '",
+                step,
+                "' - cannot reference steps that come after the ",
+                "replaced step: ",
+                paste0("'", later, "'", collapse = ", ")
+            )
+        }
         if (length(bad) > 0L) {
             stop_no_call(
                 "while replacing step '",
@@ -2361,8 +2587,10 @@ pip_replace <- function(
 #' field `step` names the failed step and its field `parent` holds the
 #' original error condition with its class, which can be caught via
 #' `tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)`.
-#' If the step was mapped over partitioned inputs (see `exec` in
-#' [pip_add()]), `parent` is a condition of class
+#' If the error belongs to a single partition key (see `exec` in
+#' [pip_add()]) — a step mapped over partitioned inputs, or
+#' [pip_output_value()] failing for one key of a partitioned output —
+#' `parent` is a condition of class
 #' `c("pipeflow_key_error", "error", "condition")` instead. Its message is
 #' prefixed with `"key '<key>': "`, its field `key` names the failed
 #' partition key and its field `parent` holds the original error condition.
@@ -2370,8 +2598,8 @@ pip_replace <- function(
 #' ## Continuing after errors
 #' With `on_error = "continue"`, a failing step gets state `"failed"`, its
 #' error condition is stored as its output, and the run goes on. For a step
-#' mapped over partitioned inputs, the stored condition is the
-#' `pipeflow_key_error` described above. An input of a step is *failed* if
+#' whose error belongs to a single partition key, the stored condition is
+#' the `pipeflow_key_error` described above. An input of a step is *failed* if
 #' its step failed or was not run because a step upstream of it failed in
 #' this run.
 #'
@@ -2845,15 +3073,20 @@ pip_run_state <- function(x) {
 }
 
 
-#' Unwrap a parameter value before a step function is called
+#' Annotated parameter values
 #'
-#' `pip_param_value()` is an extension point for packages that store annotated
-#' values (e.g. values with units or labels, or parameter objects that carry
-#' UI metadata) as step parameters. When a step runs, the generic is applied
-#' once to each unbound argument of the step, that is, to the values that
-#' come from `params` or from the defaults of the step function, and its
-#' result is what the step function receives. The stored parameters are not
-#' changed.
+#' `pip_param_value()` is an extension point for handling non-trivial
+#' parameter values (e.g. values with units or labels, or
+#' parameter objects that carry UI metadata) as step parameters.
+#' It can be thought of as a hook that allows you to preprocess or
+#' unwrap parameter values before they are passed to the step function.
+#' When a step runs, the generic is applied to each unbound argument of the
+#' step, that is, to the values that come from `params` or from the
+#' defaults of the step function, and its result is what the step
+#' function receives. The stored parameters are not changed, and a method
+#' should not change them either: it is called with the stored value, so a
+#' method that modifies a reference-backed `x` such as an environment or
+#' an R6 object in place changes the step's parameter on every run.
 #'
 #' The default method returns `x` unchanged. Methods are meant for your own
 #' classes, not for base classes such as `numeric` or `character`. Note that
@@ -2885,7 +3118,7 @@ pip_run_state <- function(x) {
 #' pip_set_params(p, list(x = my_number))
 #' pip_run(p, lgr = NULL)
 #' pip_collect(p)
-#' @seealso [pip_set_params()], [pip_run()]
+#' @seealso [pip_set_params()], [pip_output_value()], [pip_run()]
 #' @export
 pip_param_value <- function(x, ...) {
     UseMethod("pip_param_value")
@@ -2894,6 +3127,64 @@ pip_param_value <- function(x, ...) {
 #' @export
 pip_param_value.default <- function(x, ...) {
     x
+}
+
+#' @details
+#' `` `pip_param_value<-`() `` is the write side of the same extension point.
+#' It turns a plain value into the value that is stored in the step, so that
+#' [pip_set_params()] can keep the annotations of a stored object when it is
+#' given a plain value. Dispatch is on `x`, the value as it is currently
+#' stored, and `value` is the requested value. The default method just returns
+#' `value`.
+#' A method decides what a plain `value` and what an object of its own class
+#' means, for example whether to merge it into the stored object or to use
+#' it as is.
+#'
+#' Like `pip_param_value()`, this is a hook, not an accessor: `x` is a stored
+#' value, and the parameters of a pipeline are changed with
+#' [pip_set_params()]. The two sides belong together, so that applying
+#' `pip_param_value()` to the result of the setter gives back the plain value
+#' that was set:
+#'
+#' ```r
+#' pip_param_value(`pip_param_value<-`(x, value = v))   # v
+#' ```
+#'
+#' [pip_set_params()] computes the stored value of every affected step *before*
+#' it changes any parameters in the pipeline. If one or more methods fail,
+#' an error of class `pipeflow_set_params_error` reports all failures. This
+#' two-phase approach ensures that either all parameter changes are applied
+#' successfully or, in case of an error, the pipeline stays unchanged.
+#' For that to hold, a method should not modify `x` in place as this would
+#' change pipeline parameters directly. A reference-backed `x` such as an
+#' environment or an R6 object therefore should be copied first.
+#'
+#' @param value The plain value to set into the stored value `x`.
+#' @examples
+#'
+#' # The write side keeps the annotations when a plain value is set
+#' `pip_param_value<-.foo` <- function(x, ..., value) {
+#'     if (inherits(value, "foo")) {
+#'         return(value)
+#'     }
+#'     x$value <- value
+#'     x
+#' }
+#' registerS3method("pip_param_value<-", "foo", `pip_param_value<-.foo`)
+#'
+#' pip_set_params(p, list(x = 42))
+#' pip_get_params(p) # still a "foo" object, now holding 42
+#' pip_run(p, lgr = NULL)
+#' pip_collect(p)
+#' @rdname pip_param_value
+#' @export
+`pip_param_value<-` <- function(x, ..., value) {
+    UseMethod("pip_param_value<-")
+}
+
+#' @export
+`pip_param_value<-.default` <- function(x, ..., value) {
+    value
 }
 
 #' Apply pip_param_value() to the unbound arguments of a step call
@@ -2911,30 +3202,174 @@ pip_param_value.default <- function(x, ...) {
     args
 }
 
+#' Annotated step outputs
+#'
+#' `pip_output_value()` is an extension point for annotating the outputs
+#' of a pipeline, for example to stamp a result with the step it came
+#' from or the time it was computed.
+#' It can be thought of as a hook that allows you to postprocess or annotate
+#' the output of a step before it is stored.
+#' The generic is applied to the output of a step right after the step
+#' function returns, and its result is what is stored as the step's output.
+#'
+#' The default method returns `x` unchanged. Methods are meant for your own
+#' classes, not for base classes such as `numeric` or `character`.
+#'
+#' The generic is applied once to the output as a whole, so a method sees
+#' the whole object a step returned. The one exception is a partitioned
+#' output (a step with `exec = "split"`, or a step that was mapped over a
+#' partitioned input): there the generic is applied once per partition, and
+#' each partition gets its key in `ctx$key`.
+#'
+#' If you want to annotate an output element-wise instead of the whole
+#' object, just write a method that walks over each element. For example,
+#' for a plain list, a method could look something like this:
+#'
+#' ```r
+#' pip_output_value.list <- function(x, ctx = list(), ...) {
+#'     x[] <- lapply(x, FUN = pip_output_value, ctx = ctx)
+#'     x
+#' }
+#' ```
+#'
+#' The generic is *not* applied to the outputs of failed steps (see
+#' `pip_run(on_error = "continue")`), which remain the condition of the
+#' failure, nor to the inputs a step receives from other steps: it acts on
+#' what a step returns, once. An error in a method is an error of the step
+#' and is handled like any other step error; for a partitioned output it
+#' names the partition key the method failed for.
+#'
+#' @param x The output value of a step, or one of its partitions if the
+#' output is partitioned.
+#' @param ctx Named list describing the context of the value:
+#' * `step`: the name of the step, as it was before the step ran.
+#' * `key`: the partition key, or `NULL` if the output is not partitioned.
+#' * `time`: the time stamp of the step's run, which is the same for all
+#'   partition keys and is also stored as the step's `time`.
+#' @param ... Currently unused, reserved for future extensions. Methods
+#' should accept it.
+#' @return The value that is stored as the step's output.
+#' @examples
+#' # Stamp every output with the step it came from
+#' stamped <- function(x) structure(x, class = "stamped")
+#'
+#' pip_output_value.stamped <- function(x, ctx = list(), ...) {
+#'     attr(x, "step") <- ctx[["step"]]
+#'     x
+#' }
+#' registerS3method("pip_output_value", "stamped", pip_output_value.stamped)
+#'
+#' p <- pip_new() |>
+#'     pip_add("make", \(n = 3) stamped(seq_len(n)))
+#' pip_run(p, lgr = NULL)
+#' attr(p[["make", "out"]], "step")
+#' @seealso [pip_param_value()], [pip_run()]
+#' @export
+pip_output_value <- function(x, ctx = list(), ...) {
+    UseMethod("pip_output_value")
+}
+
+#' @export
+pip_output_value.default <- function(x, ctx = list(), ...) {
+    x
+}
+
+#' Apply pip_output_value() to the output of a step
+#'
+#' A partitioned output is annotated per key, so that each partition gets
+#' its key in `ctx$key`, and every other output is annotated as a whole.
+#' `[<-` is used to rebuild a partitioned output, because `[[<-` would
+#' drop a partition whose result is `NULL`. An error for one key is
+#' re-raised as a `pipeflow_key_error`, as in `.pip_execute_step_call()`.
+#'
+#' @param out The output of the step call.
+#' @param step The name of the step.
+#' @param time The time stamp of the step's run.
+#' @return `out`, passed through [pip_output_value()].
+#' @noRd
+.pip_annotate_output <- function(out, step, time) {
+    if (.is_pipeflow_partitioned(out)) {
+        keys <- names(out)
+        out[keys] <- lapply(keys, FUN = function(key) {
+            # As in `.pip_execute_step_call()`, errors are re-raised with the
+            # key name, so a failing partition can be located.
+            tryCatch(
+                expr = pip_output_value(
+                    out[[key]],
+                    ctx = list(step = step, key = key, time = time)
+                ),
+                error = function(e) {
+                    stop(.pip_key_error(key, parent = e))
+                }
+            )
+        })
+        return(out)
+    }
+
+    pip_output_value(out, ctx = list(step = step, key = NULL, time = time))
+}
+
 
 #' Get or set unbound parameters
 #'
 #' [pip_get_params()] returns the current default values of all unbound
 #' parameters of a pipeline or view (parameters wired to another step's
-#' output via `~step_name` are excluded), including those of locked steps.
+#' output via `~step_name` are excluded).
 #' [pip_set_params()] updates these parameters for the whole pipeline or
-#' view. Steps whose values change are marked as outdated, together with
+#' view except for locked steps. A one-sided formula binds a parameter to
+#' the output of a step instead (see below).
+#' Steps whose values change are marked as outdated, together with
 #' their downstream dependents (steps that have never run stay `"new"`).
 #' Values that are [identical()] to the stored ones are skipped and don't
 #' outdate any step, unless `force = TRUE`.
+#'
+#' @section Storing annotated values:
+#' The value that is stored for a step is the result of
+#' `` `pip_param_value<-`() `` applied to the value the step currently
+#' holds, which by default is the given value. A method of that generic
+#' can merge the given value into an annotated object instead, so that
+#' its annotations survive (see [pip_param_value()]). The merged values
+#' of all affected steps are computed before anything is changed: if a
+#' method fails, nothing is set and an error of class
+#' `pipeflow_set_params_error` reports every failure at once. The merged
+#' value is also what is compared with the stored one, so setting a plain
+#' value that an annotated object already holds doesn't outdate the step.
+#'
+#' @section Binding parameters to steps:
+#' A one-sided formula binds a parameter to the output of a step, e.g.
+#' `pip_set_params(p, list(model = ~fit))`, as it does in the defaults of a
+#' step function or in `params` of [pip_add()]. The parameter is bound in
+#' all selected steps that have it unbound, except for locked steps. These
+#' steps must come after the step that the formula refers to, otherwise an
+#' error is signalled and nothing is changed. If you want to bind parameters
+#' only for certain steps, use a view to select the desired steps.
+#' A relative reference such as `~-1` is not allowed, but
+#' `~try(fit)` works as in [pip_add()].
+#'
+#' A bound parameter is no longer unbound: [pip_get_params()] doesn't return
+#' it, and [pip_set_params()] can't change it any more. Setting the same
+#' binding again does nothing, and any other value is taken as an unknown
+#' parameter (see `unknown`). To unbind or rebind it, replace the step with
+#' [pip_replace()].
+#' Therefore, a one-sided formula can't be set as value. Give it as a string
+#' instead and turn it into a formula in the step, e.g. with
+#' [stats::as.formula()].
 #'
 #' @note Parameters of locked steps are never changed and their state
 #' remains unchanged. [pip_get_params()] still returns them, so if a locked
 #' step comes first among the steps that share a parameter name,
 #' [pip_get_params()] keeps returning the locked step's value after the
 #' parameter was set.
+#' To read the parameters of the unlocked steps only, use a view that
+#' excludes the locked ones, `pip_get_params(p[!locked])`.
 #'
 #' An environment (or a reference object such as an R6 object) that was
 #' modified in place is identical to the stored one, so setting it again
 #' doesn't outdate the step unless `force = TRUE`.
 #'
 #' @param x A pipeflow pip or view.
-#' @param params Named list of parameters to set
+#' @param params Named list of parameters to set. A one-sided formula binds
+#' the parameter to a step, see Binding parameters to steps.
 #' @param unknown How to handle `params` that are not defined in any of the
 #' selected steps, including locked ones: `"warn"` (default) signals a
 #' warning and sets the remaining parameters, `"ignore"` does so silently, and
@@ -2943,6 +3378,8 @@ pip_param_value.default <- function(x, ...) {
 #' is outdated (together with its downstream steps), even if the values are
 #' [identical()] to the stored ones. This refreshes steps whose inputs are
 #' environments or reference objects that were modified in place.
+#' @param ... Passed on to the methods of `` `pip_param_value<-`() ``,
+#' which [pip_set_params()] uses to determine the value to store.
 #' @return For [pip_get_params()], a named list of unbound parameter values;
 #' if the same parameter name appears in multiple steps, the first
 #' occurrence in pipeline order is returned. For [pip_set_params()], the
@@ -2977,12 +3414,29 @@ pip_param_value.default <- function(x, ...) {
 #' # ... which can be silenced or turned into an error
 #' pip_set_params(p, params = list(nope = 1), unknown = "ignore")
 #' try(pip_set_params(p, params = list(nope = 1), unknown = "error"))
+#'
+#' # pip_get_params() includes locked steps; a view can exclude them
+#' pip_lock(p["load"])
+#' pip_get_params(p) # list(n = 5, factor = 2.0)
+#' pip_get_params(p[!locked]) # list(factor = 2.0)
+#'
+#' # A formula binds a parameter to the output of a step
+#' q <- pip_new() |>
+#'   pip_add("load", \(n = 5) seq_len(n)) |>
+#'   pip_add("fit_mean", \(x = ~load) mean(x)) |>
+#'   pip_add("fit_max", \(x = ~load) max(x)) |>
+#'   pip_add("report", \(model = NA) paste("result:", model))
+#' pip_set_params(q, params = list(model = ~fit_max))
+#' q
+#' pip_run(q)
+#' q[["report", "out"]]
 #' @export
 pip_set_params <- function(
     x,
     params = list(),
     unknown = c("warn", "ignore", "error"),
-    force = FALSE
+    force = FALSE,
+    ...
 ) {
     # Input checking
     .assert_pip_or_view(x)
@@ -3002,14 +3456,70 @@ pip_set_params <- function(
         stop("All parameters must be named")
     }
 
+    # The options in `...` go to the methods of `pip_param_value<-`() only,
+    # so that they can't clash with the arguments of .pip_set_params()
+    setValue <- \(current, value) {
+        `pip_param_value<-`(current, ..., value = value)
+    }
+    .pip_set_params(
+        x,
+        params,
+        unknown = unknown,
+        force = force,
+        setValue = setValue
+    )
+}
+
+
+#' Set the unbound params of the selected steps
+#'
+#' Does the work of [pip_set_params()], whose inputs are checked.
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param params Named list of the params to set.
+#' @param unknown,force As for [pip_set_params()].
+#' @param bind If `TRUE`, a one-sided formula in `params` binds the param to
+#' the step that it refers to. If `FALSE`, all params are set as values,
+#' which a call of the function made by [as.function.pipeflow()] needs: its
+#' arguments are values, also if they are formulas.
+#' @param setValue Function of the current and the given value that returns
+#' the value to store, by default `` `pip_param_value<-`() ``.
+#' @return `x`, invisibly.
+#' @noRd
+.pip_set_params <- function(
+    x,
+    params,
+    unknown = "warn",
+    force = FALSE,
+    bind = TRUE,
+    setValue = `pip_param_value<-`
+) {
+    if (length(params) == 0L) {
+        return(invisible(x))
+    }
+    parNames <- names(params)
     env <- .pip_pipenv(x)
     dat <- env[["data"]]
     rows <- .pip_view_rows(x)
 
+    # A one-sided formula binds the param to the step it refers to. The
+    # references are checked only for the params that are bound below.
+    isRef <- bind & vapply(params, is_one_sided_formula, logical(1))
+    refs <- params[isRef]
+    targets <- formula_deps(refs)
+
     # Signal parameters that are not defined in any of the selected steps,
-    # including the locked ones
+    # including the locked ones. A param that is bound as given already is
+    # not unknown, so that setting the binding again just does nothing.
     defined <- unique(unlist(dat[["unbound"]][rows]))
-    undefined <- setdiff(parNames, defined)
+    isBound <- vapply(
+        names(refs),
+        \(name) {
+            .pip_has_binding(dat, rows, name, refs[[name]], targets[[name]])
+        },
+        logical(1)
+    )
+    undefined <- setdiff(parNames, c(defined, names(refs)[isBound]))
     if (length(undefined) > 0L && unknown != "ignore") {
         msg <- paste0(
             "Trying to set parameters not defined in the target: ",
@@ -3018,7 +3528,7 @@ pip_set_params <- function(
         if (unknown == "error") {
             stop_no_call(msg)
         }
-        warning(msg)
+        warning(msg, call. = FALSE)
     }
 
     # Narrow down the considered rows
@@ -3036,26 +3546,73 @@ pip_set_params <- function(
     rowsAffected <- rowsConsidered[hasOverlap]
 
     if (any(hasOverlap)) {
+        # Bindings must refer to a step that comes before the bound step,
+        # which is checked before anything is changed.
+        namesBound <- lapply(namesAffected, FUN = intersect, y = names(refs))
+        toBind <- unique(unlist(namesBound))
+        .pip_assert_bind_targets(x, refs[toBind])
+        .pip_check_bind_order(
+            dat,
+            rowsAffected,
+            namesBound,
+            targets[toBind]
+        )
+
+        # Determine the value to store for every affected row and name
+        # before anything is changed, so that a failing method leaves the
+        # pipeline untouched and all failures are reported at once.
+        merged <- vector("list", length(rowsAffected))
+        errors <- list()
+        for (j in seq_along(rowsAffected)) {
+            i <- rowsAffected[[j]]
+            rowPars <- dat[["params"]][[i]]
+            names <- setdiff(namesAffected[[j]], namesBound[[j]])
+            values <- stats::setNames(vector("list", length(names)), names)
+            for (name in names) {
+                values[name] <- list(tryCatch(
+                    setValue(rowPars[[name]], value = params[[name]]),
+                    error = function(e) {
+                        errors[[length(errors) + 1L]] <<- list(
+                            step = dat[["step"]][[i]],
+                            name = name,
+                            parent = e
+                        )
+                        NULL
+                    }
+                ))
+            }
+            merged[[j]] <- values
+        }
+        if (length(errors) > 0L) {
+            stop(.pip_set_params_error(errors))
+        }
+
         # Update parameters in all affected rows, skipping values that are
-        # identical to the stored ones (unless forced)
+        # identical to the stored ones (unless forced), and bind params,
+        # which always changes the step
         isChanged <- logical(length(rowsAffected))
         for (j in seq_along(rowsAffected)) {
             i <- rowsAffected[[j]]
             rowPars <- dat[["params"]][[i]]
-            names <- namesAffected[[j]]
+            values <- merged[[j]]
+            names <- names(values)
             if (!force) {
                 names <- Filter(
-                    \(name) !identical(rowPars[[name]], params[[name]]),
+                    \(name) !identical(rowPars[[name]], values[[name]]),
                     names
                 )
             }
-            if (length(names) == 0L) {
-                next
+            if (length(names) > 0L) {
+                rowPars[names] <- values[names]
+                value <- list(list(rowPars)) # need to wrap in list() for set
+                data.table::set(dat, i = i, j = "params", value = value)
+                isChanged[[j]] <- TRUE
             }
-            rowPars[names] <- params[names]
-            value <- list(list(rowPars)) # need to wrap in list() for call below
-            data.table::set(dat, i = i, j = "params", value = value)
-            isChanged[[j]] <- TRUE
+            bound <- namesBound[[j]]
+            if (length(bound) > 0L) {
+                .pip_bind_row(env, i, refs[bound], targets[bound])
+                isChanged[[j]] <- TRUE
+            }
         }
 
         # Update states of changed steps and their downstream steps
@@ -3066,6 +3623,141 @@ pip_set_params <- function(
     }
 
     invisible(x)
+}
+
+
+#' Check the steps that the bindings of pip_set_params() refer to
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param refs Named list of one-sided formulas, e.g. `list(model = ~fit)`.
+#' @return `refs`, invisibly. Signals an error for a relative reference
+#' (e.g. `~-1`) or a step that is not in the pipeline.
+#' @noRd
+.pip_assert_bind_targets <- function(x, refs) {
+    targets <- formula_deps(refs)
+    if (length(targets) == 0L) {
+        return(invisible(refs))
+    }
+    text <- paste0(names(refs), " = ", vapply(refs, deparse1, character(1)))
+    isRelative <- startsWith(targets, "-")
+    if (any(isRelative)) {
+        stop_no_call(
+            "params must refer to steps by name, not by relative position: ",
+            toString(text[isRelative])
+        )
+    }
+    isUnknown <- !(targets %in% .pip_pipenv(x)[["data"]][["step"]])
+    if (any(isUnknown)) {
+        stop_no_call(
+            "params refer to steps that are not in the pipeline: ",
+            toString(text[isUnknown]),
+            " - to set a formula as value, give it as a string and turn it ",
+            "into a formula in the step, e.g. with as.formula()"
+        )
+    }
+    invisible(refs)
+}
+
+
+#' Is a param bound as given in one of the rows?
+#'
+#' @param dat The step table.
+#' @param rows Row indices of `dat`.
+#' @param name Name of the param.
+#' @param ref The one-sided formula that binds the param.
+#' @param target The step that `ref` refers to.
+#' @return `TRUE` if the param of one of the `rows` refers to `target`, and
+#' is wrapped in `try()` just like `ref`.
+#' @noRd
+.pip_has_binding <- function(dat, rows, name, ref, target) {
+    for (i in rows) {
+        depends <- dat[["depends"]][[i]]
+        if (identical(unname(depends[name]), target)) {
+            isTry <- is_try_ref(dat[["params"]][[i]][[name]])
+            if (isTry == is_try_ref(ref)) {
+                return(TRUE)
+            }
+        }
+    }
+    FALSE
+}
+
+
+#' Check that params are bound to steps that come before
+#'
+#' @param dat The step table.
+#' @param rows Row indices of the steps whose params are bound.
+#' @param bound List with the names of the bound params of each of the
+#' `rows`.
+#' @param targets Named character vector: the step that each param is bound
+#' to.
+#' @return `NULL`, invisibly. Signals an error if a param is bound to a step
+#' that is the step itself or comes after it.
+#' @noRd
+.pip_check_bind_order <- function(dat, rows, bound, targets) {
+    for (name in names(targets)) {
+        target <- targets[[name]]
+        isBound <- vapply(bound, \(nms) name %in% nms, logical(1))
+        bad <- rows[
+            isBound & rows <= data.table::chmatch(target, dat[["step"]])
+        ]
+        if (length(bad) > 0L) {
+            stop_no_call(
+                "cannot bind '",
+                name,
+                "' to step '",
+                target,
+                "' in steps that don't come after it: ",
+                paste0("'", dat[["step"]][bad], "'", collapse = ", "),
+                " - use a view to select the steps to bind"
+            )
+        }
+    }
+    invisible(NULL)
+}
+
+
+#' Bind params of a step to other steps
+#'
+#' The params become references, like those in the defaults of the step
+#' function: they are added to `depends`, removed from `unbound`, and the DAG
+#' gets edges from the steps they refer to.
+#'
+#' @param env The inner pipeline environment.
+#' @param i Row index of the step.
+#' @param refs Named list of one-sided formulas, the bound params.
+#' @param targets Named character vector, the steps that `refs` refer to.
+#' @return `NULL`, invisibly.
+#' @noRd
+.pip_bind_row <- function(env, i, refs, targets) {
+    dat <- env[["data"]]
+    params <- dat[["params"]][[i]]
+    params[names(refs)] <- refs
+    oldDepends <- dat[["depends"]][[i]]
+    depends <- c(oldDepends, targets)
+    depends <- depends[order(match(names(depends), names(params)))]
+
+    newSteps <- setdiff(unique(targets), oldDepends)
+    if (length(newSteps) > 0L) {
+        from <- mget(
+            newSteps,
+            envir = env[[".steps_to_nodes"]],
+            inherits = FALSE
+        )
+        dag_add_edges_to(
+            .pip_dag(env),
+            from = as.integer(unlist(from)),
+            to = dat[["nodeId"]][[i]]
+        )
+    }
+
+    values <- list(
+        "params" = list(params),
+        "depends" = list(depends),
+        "unbound" = list(setdiff(dat[["unbound"]][[i]], names(refs)))
+    )
+    data.table::set(dat, i = i, j = names(values), value = values)
+    invisible(NULL)
 }
 
 
