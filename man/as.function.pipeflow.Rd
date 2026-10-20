@@ -238,5 +238,5 @@ f_robust(input_df = mtcars)
 suppressWarnings(f_robust(input_df = mtcars[1:2, ]))
 }
 \seealso{
-\code{\link[=pip_add]{pip_add()}}
+\code{\link[=pip_add]{pip_add()}}, \code{\link[=pip_inner]{pip_inner()}} to look at the kept inner pipelines
 }

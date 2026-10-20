@@ -50,6 +50,7 @@ reference:
   - rbind.pipeflow
   - pip_clone
   - as.function.pipeflow
+  - pip_inner
 
 - title: "Running pipelines"
   desc: Execute pipeline steps or views.

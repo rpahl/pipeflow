@@ -1351,6 +1351,84 @@ describe("as.function.pipeflow", {
         })
     })
 
+    describe("pip_inner", {
+        it("returns the pipelines by partition key", {
+            demo <- run_outer(demo_nested())
+
+            inner <- pip_inner(demo$outer, "by_batch")
+
+            expect_named(inner, c("A", "B", "C"))
+            expect_true(all(vapply(
+                inner,
+                \(p) inherits(p, "pipeflow"),
+                logical(1)
+            )))
+            expect_identical(
+                inner$B[["coefs", "out"]],
+                demo$outer[["by_batch", "out"]]$B
+            )
+        })
+
+        it("returns the pipeline of an unpartitioned step", {
+            f <- as.function(pip_new("p") |> pip_add("s", \(x = 1) x + 1))
+            outer <- pip_new("outer") |>
+                pip_add("step", f, params = list(x = 5))
+            pip_run(outer, lgr = NULL)
+
+            inner <- pip_inner(outer, "step")
+
+            expect_s3_class(inner, "pipeflow")
+            expect_identical(inner[["s", "out"]], 6)
+        })
+
+        it("returns an empty list before the first run", {
+            demo <- demo_nested()
+
+            expect_identical(pip_inner(demo$outer, "by_batch"), list())
+        })
+
+        it("returns an empty list with cache = FALSE", {
+            demo <- run_outer(demo_nested(cache = FALSE))
+
+            expect_identical(pip_inner(demo$outer, "by_batch"), list())
+        })
+
+        it("returns copies that are independent of the kept pipelines", {
+            demo <- run_outer(demo_nested())
+
+            inner <- pip_inner(demo$outer, "by_batch")
+            pip_set_params(inner$A, list(digits = 0))
+            pip_run(inner$A, lgr = NULL)
+            pip_remove(inner$B, "coefs")
+
+            kept <- .fun_pips(demo$fun)
+            expect_identical(kept$A[["coefs", "state"]], "done")
+            expect_true(.pip_step_exists(kept$B, "coefs"))
+            expect_false(
+                identical(
+                    pip_get_params(kept$A)$digits,
+                    pip_get_params(inner$A)$digits
+                )
+            )
+        })
+
+        it("rejects steps whose function is not a pipeline function", {
+            outer <- pip_new("outer") |> pip_add("s", \(x = 1) x)
+
+            expect_error(
+                pip_inner(outer, "s"),
+                "step 's' was not made by as.function()",
+                fixed = TRUE
+            )
+            expect_error(
+                pip_inner(outer, "nope"),
+                "step 'nope' does not exist",
+                fixed = TRUE
+            )
+            expect_error(pip_inner("outer", "s"))
+        })
+    })
+
     describe("binding", {
         it("takes relative references", {
             inner <- pip_new("rel") |> pip_add("s", \(x = 1) x * 2)

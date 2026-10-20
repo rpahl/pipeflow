@@ -127,7 +127,7 @@
 #' set e.g. `lgr = pipeflow_lgr`.
 #' @param ... Not used.
 #' @return A function with the unbound params of `x` as arguments.
-#' @seealso [pip_add()]
+#' @seealso [pip_add()], [pip_inner()] to look at the kept inner pipelines
 #' @examples
 #' inner <- pip_new("inner") |>
 #'   pip_add("input", \(input_df = NULL) input_df) |>
@@ -583,4 +583,60 @@ as.function.pipeflow <- function(
 .fun_pips <- function(fun) {
     cache <- .fun_cache(fun)
     as.list(unlist(unname(cache$slots), recursive = FALSE))
+}
+
+
+#' Inner pipelines of a pipeline function step
+#'
+#' Returns the inner pipelines that the function of `step`, made by
+#' [as.function.pipeflow()], has kept, e.g. to debug an inner run or to look
+#' at the steps behind the returned output.
+#'
+#' @param x A pipeflow pipeline object, the "outer" pipeline.
+#' @param step Name of a step of `x` whose function was made by
+#' [as.function.pipeflow()].
+#' @return For a step that is mapped over partitions, a list of pipelines
+#' named by partition key, otherwise the pipeline of the last call of the
+#' step. The pipelines are copies that share the values of the kept ones, so
+#' don't modify the values in place. An empty list is returned if the function
+#' has kept nothing (yet), e.g. before the first run or with
+#' `cache = FALSE`.
+#' @seealso [as.function.pipeflow()]
+#' @examples
+#' inner <- pip_new("inner") |>
+#'   pip_add("data", \(input_df = NULL) input_df) |>
+#'   pip_add("fit", \(data = ~data) lm(mpg ~ wt, data = data))
+#'
+#' outer <- pip_new("outer") |>
+#'   pip_add("df", \(df = mtcars) df) |>
+#'   pip_add("by_cyl", \(df = ~df) split(df, df$cyl), exec = "split") |>
+#'   pip_add(
+#'     "fits",
+#'     as.function(inner, out = "fit"),
+#'     params = list(input_df = ~by_cyl)
+#'   )
+#' pip_run(outer, lgr = NULL)
+#'
+#' fits <- pip_inner(outer, "fits")
+#' names(fits)
+#' fits[["6"]]
+#' @export
+pip_inner <- function(x, step) {
+    .assert_pip_or_view(x)
+    if (!.pip_step_exists(x, step)) {
+        stop_no_call("step '", step, "' does not exist")
+    }
+    cache <- .fun_cache(x[[step, "fun"]])
+    if (is.null(cache)) {
+        stop_no_call(
+            "the function of step '",
+            step,
+            "' was not made by as.function()"
+        )
+    }
+    pips <- lapply(cache$slots[[step]], .fun_snapshot)
+    if (identical(names(pips), .fun_key_single)) {
+        return(pips[[1L]])
+    }
+    as.list(pips)
 }
