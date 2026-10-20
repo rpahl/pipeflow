@@ -2396,6 +2396,9 @@ pip_rename <- function(x, from, to) {
     stepsToNodes[[to]] <- nodeId
     rm(list = from, envir = stepsToNodes, inherits = FALSE)
 
+    # The kept inner pipelines of a pipeline function are found by step name
+    .fun_rename(dat[["fun"]][[match(to, newSteps)]], from = from, to = to)
+
     data.table::setindexv(dat, list("step", "nodeId"))
     invisible(x)
 }

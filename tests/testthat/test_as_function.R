@@ -1412,6 +1412,36 @@ describe("as.function.pipeflow", {
             )
         })
 
+        it("keeps the pipelines of a renamed step", {
+            demo <- run_outer(demo_nested())
+
+            pip_rename(demo$outer, from = "by_batch", to = "fits")
+
+            expect_named(pip_inner(demo$outer, "fits"), c("A", "B", "C"))
+            pip_set_params(demo$outer, list(digits = 3))
+            pip_run(demo$outer, lgr = NULL)
+            expect_identical(c(demo$calls$fit, demo$calls$coefs), c(3L, 6L))
+            expect_length(.fun_pips(demo$fun), 3L)
+        })
+
+        it("returns a list for a partition named as the single key", {
+            f <- as.function(
+                pip_new("i") |> pip_add("s", \(x = NULL) x * 2),
+                out = "s"
+            )
+            parts <- stats::setNames(list(1), .fun_key_single)
+            outer <- pip_new("outer") |>
+                pip_add("parts", \(values = parts) values, exec = "split") |>
+                pip_add("run", f, params = list(x = ~parts))
+            pip_run(outer, lgr = NULL)
+
+            inner <- pip_inner(outer, "run")
+
+            expect_type(inner, "list")
+            expect_named(inner, .fun_key_single)
+            expect_identical(inner[[.fun_key_single]][["s", "out"]], 2)
+        })
+
         it("rejects steps whose function is not a pipeline function", {
             outer <- pip_new("outer") |> pip_add("s", \(x = 1) x)
 

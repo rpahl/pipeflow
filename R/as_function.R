@@ -336,8 +336,8 @@ as.function.pipeflow <- function(
 #' The function that runs the pipeline
 #'
 #' Its environment holds the kept pipelines, `slots`: a list by step name of
-#' lists of pipelines by partition key. They belong to the function and not
-#' to a registry, so that they are dropped with it, also if a step closure
+#' the slots of the step, see `.fun_slots()`. They belong to the function and
+#' not to a registry, so that they are dropped with it, also if a step closure
 #' refers to the function. `active` holds the pipelines that run, see
 #' `.fun_pip()`. The class marks the environment as the cache of a function
 #' made by `as.function.pipeflow()`, see `.fun_cache()`.
@@ -385,7 +385,8 @@ as.function.pipeflow <- function(
 #' is not made by a step, the step `.fun_step_direct`. The slots of the step
 #' whose key is not among the keys of the call are dropped, so that the step
 #' keeps one pipeline per partition, and a single one if it is no longer
-#' mapped (or the other way round). Nothing is kept with `cache = FALSE`.
+#' mapped (or the other way round), see `.fun_keep_keys()`. Nothing is kept
+#' with `cache = FALSE`.
 #'
 #' A slot whose pipeline is running (see `cache$active`) is not handed out a
 #' second time: a call that the run itself makes (a recursive function) gets
@@ -408,17 +409,22 @@ as.function.pipeflow <- function(
     }
     key <- stepCall$key
     keys <- stepCall$keys
-    if (is.null(key)) {
+    mapped <- !is.null(key)
+    if (!mapped) {
         key <- keys <- .fun_key_single
     }
 
     slots <- cache$slots[[step]]
-    pip <- slots[[key]]
+    if (is.null(slots)) {
+        slots <- .fun_slots()
+        cache$slots[[step]] <- slots
+    }
+    .fun_keep_keys(slots, keys, mapped)
+    pip <- slots$pips[[key]]
     if (is.null(pip)) {
         pip <- pip_clone(ctx$template)
-        slots <- c(slots, stats::setNames(list(pip), key))
+        assign(key, pip, envir = slots$pips)
     }
-    cache$slots[[step]] <- slots[intersect(keys, names(slots))]
     isActive <- vapply(
         cache$active,
         identical,
@@ -429,6 +435,57 @@ as.function.pipeflow <- function(
         return(pip_clone(ctx$template))
     }
     pip
+}
+
+
+#' The slots of a step
+#'
+#' @return An environment with `pips`, a hashed environment of the kept
+#' pipelines by partition key, `keys`, the keys of the last call, which give
+#' the order of the pipelines, and `mapped`, whether the last call was mapped
+#' over partitions. A partition may be named as the single key, so `mapped`
+#' and not the key tells a mapped call from a single one.
+#' @noRd
+.fun_slots <- function() {
+    slots <- new.env(parent = emptyenv())
+    slots$pips <- new.env(parent = emptyenv(), hash = TRUE)
+    slots$keys <- character()
+    slots$mapped <- FALSE
+    slots
+}
+
+
+#' Keep the slots of the keys of a call and drop the others
+#'
+#' All calls of one run of a mapped step get the same `keys` object, for
+#' which `identical()` returns at once, so the slots are reconciled once per
+#' run of the step and not once per partition.
+#'
+#' @param slots The slots of the step, see `.fun_slots()`.
+#' @param keys All partition keys of the call, or the single key.
+#' @param mapped Whether the call is mapped over partitions.
+#' @return `NULL`, invisibly.
+#' @noRd
+.fun_keep_keys <- function(slots, keys, mapped) {
+    if (identical(keys, slots$keys) && identical(mapped, slots$mapped)) {
+        return(invisible(NULL))
+    }
+    gone <- setdiff(names(slots$pips), keys)
+    rm(list = gone, envir = slots$pips)
+    slots$keys <- keys
+    slots$mapped <- mapped
+    invisible(NULL)
+}
+
+
+#' The kept pipelines of a step, in the order of its partition keys
+#'
+#' @param slots The slots of the step, see `.fun_slots()`.
+#' @return A list of pipelines, named by partition key.
+#' @noRd
+.fun_slot_pips <- function(slots) {
+    keys <- intersect(slots$keys, names(slots$pips))
+    mget(keys, envir = slots$pips)
 }
 
 
@@ -463,6 +520,23 @@ as.function.pipeflow <- function(
     cache <- .fun_cache(fun)
     if (!is.null(cache)) {
         cache$slots[[step]] <- NULL
+    }
+    invisible(NULL)
+}
+
+
+#' Move the kept pipelines of a renamed step to its new name
+#'
+#' @param fun The function of the step.
+#' @param from,to The old and the new name of the step.
+#' @return `NULL`, invisibly. Nothing happens if `fun` was not made by
+#' `as.function.pipeflow()`.
+#' @noRd
+.fun_rename <- function(fun, from, to) {
+    cache <- .fun_cache(fun)
+    if (!is.null(cache) && !is.null(cache$slots[[from]])) {
+        cache$slots[[to]] <- cache$slots[[from]]
+        cache$slots[[from]] <- NULL
     }
     invisible(NULL)
 }
@@ -582,7 +656,8 @@ as.function.pipeflow <- function(
 #' @noRd
 .fun_pips <- function(fun) {
     cache <- .fun_cache(fun)
-    as.list(unlist(unname(cache$slots), recursive = FALSE))
+    pips <- lapply(unname(cache$slots), .fun_slot_pips)
+    as.list(unlist(pips, recursive = FALSE))
 }
 
 
@@ -634,9 +709,13 @@ pip_inner <- function(x, step) {
             "' was not made by as.function()"
         )
     }
-    pips <- lapply(cache$slots[[step]], .fun_snapshot)
-    if (identical(names(pips), .fun_key_single)) {
+    slots <- cache$slots[[step]]
+    if (is.null(slots) || length(slots$pips) == 0L) {
+        return(list())
+    }
+    pips <- lapply(.fun_slot_pips(slots), .fun_snapshot)
+    if (!slots$mapped) {
         return(pips[[1L]])
     }
-    as.list(pips)
+    pips
 }
