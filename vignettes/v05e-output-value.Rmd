@@ -1,0 +1,255 @@
+---
+title: "Annotated step outputs"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+description: >
+  Shows how to annotate the output of a step when the step returns, for
+  example to stamp a result with the step it came from and the time it was
+  computed, using the pip_output_value() generic.
+vignette: >
+  %\VignetteIndexEntry{Annotated step outputs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r knitr-setup, include = FALSE}
+knitr::opts_chunk$set(
+    comment = "#",
+    prompt = FALSE,
+    tidy = FALSE,
+    cache = FALSE,
+    collapse = TRUE
+)
+
+old <- options(width = 100L)
+```
+
+
+Packages that build on pipeflow may want to know where a result came
+from: which step produced it, which partition it belongs to, and when it was
+computed. A cache, for example, can only tell two runs apart if the results
+carry that information.
+
+Without further help, every step function would have to add it itself, or be
+wrapped in a function that does so. The generic `pip_output_value()` is a
+single hook for this. You write one method for your class, and the pipeline
+applies it whenever a step returns.
+
+### An annotated output
+
+Let's use a class that carries the step it came from and the time of the
+run.
+
+```{r stamped-class}
+library(pipeflow)
+
+stamped <- function(x) structure(x, class = "stamped")
+
+print.stamped <- function(x, ...) {
+    cat("<stamped>", unclass(x), "\n")
+    cat("  step:", attr(x, "step"), "\n")
+    cat("  key :", attr(x, "key"), "\n")
+    invisible(x)
+}
+```
+
+A step marks its result as `stamped`, but it doesn't know its own name or
+the time of the run.
+
+```{r stamped-pipeline}
+p <- pip_new("report") |>
+    pip_add("load", \(n = 3) stamped(seq_len(n))) |>
+    pip_add("total", \(x = ~load) stamped(sum(x)))
+
+pip_run(p, lgr = NULL)
+p[["total", "out"]]
+```
+
+Nothing was filled in, because no method is registered yet.
+
+
+### Write and register a method
+
+`pip_output_value()` is an S3 generic, which has a default method that
+returns the output unchanged. For our class we add a method that fills in
+the context.
+
+```{r stamped-method}
+pip_output_value.stamped <- function(x, ctx = list(), ...) {
+    attr(x, "step") <- ctx[["step"]]
+    attr(x, "key") <- ctx[["key"]]
+    attr(x, "time") <- ctx[["time"]]
+    x
+}
+```
+
+Inside a script, register the method with `registerS3method()`:
+
+```{r register-method}
+registerS3method("pip_output_value", "stamped", pip_output_value.stamped)
+```
+
+In a package, register it in the `NAMESPACE` file instead, either directly
+with `S3method(pipeflow::pip_output_value, stamped)` or, if you use roxygen,
+by tagging the method with `@exportS3Method pipeflow::pip_output_value`.
+Methods are meant for your own classes, not for base classes such as
+`numeric` or `character`.
+
+Now every output is stamped when its step returns.
+
+```{r stamped-with-method}
+pip_run(p, force = TRUE, lgr = NULL)
+p[["load", "out"]]
+p[["total", "out"]]
+```
+
+The time stamp is the one the pipeline stores for the step, so it matches
+what the step table shows.
+
+```{r stamped-time}
+identical(
+    as.numeric(attr(p[["load", "out"]], "time")),
+    as.numeric(p[["load", "time"]])
+)
+```
+
+
+### Where the method is applied
+
+The generic is applied once to the output of a step, right after the step
+function returned, and its result is what is stored as the output. A
+downstream step therefore receives the annotated value.
+
+```{r downstream}
+p2 <- pip_new("downstream") |>
+    pip_add("make", \(v = 1) stamped(v)) |>
+    pip_add("inspect", \(x = ~make) attr(x, "step"))
+
+pip_run(p2, lgr = NULL)
+p2[["inspect", "out"]]
+```
+
+A partitioned output is the one exception: there the generic is applied once
+per partition, and each partition gets its key in `ctx$key`. This holds both
+for a step with `exec = "split"` and for a step that was mapped over a
+partitioned input.
+
+```{r partitions}
+p3 <- pip_new("partitions") |>
+    pip_add(
+        "split",
+        \(x = 1) list(low = stamped(1), high = stamped(2)),
+        exec = "split"
+    ) |>
+    pip_add("double", \(x = ~split) stamped(unclass(x) * 2))
+
+pip_run(p3, lgr = NULL)
+p3[["double", "out"]][["high"]]
+```
+
+Two partitions of one step share the step name and the time stamp, so
+`ctx$key` is what tells them apart.
+
+The generic is *not* applied to
+
+* the output of a failed step, which stays the condition of the failure
+  (see `pip_run(on_error = "continue")`), and
+* the inputs a step receives from other steps: it acts on what a step
+  returns, once.
+
+
+#### Annotating the elements of an output
+
+Since the generic sees the output as a whole, a plain list is passed to a
+method as it is, and its elements are not visited. If you want to annotate
+the elements, write a method that walks the output itself and applies the
+generic to the elements.
+
+```{r bundle-class}
+bundle <- function(...) structure(list(...), class = "bundle")
+
+pip_output_value.bundle <- function(x, ctx = list(), ...) {
+    x[] <- lapply(x, FUN = pip_output_value, ctx = ctx)
+    x
+}
+registerS3method("pip_output_value", "bundle", pip_output_value.bundle)
+
+p4 <- pip_new("bundle") |>
+    pip_add("make", \(v = 1) bundle(a = stamped(v), b = stamped(v + 1)))
+
+pip_run(p4, lgr = NULL)
+p4[["make", "out"]][["b"]]
+```
+
+
+### Errors in a method
+
+A method runs as part of the step call. An error in a method is therefore an
+error of the step, handled like any other step error as described in the
+vignette on [handling failures](v05c-error-handling.html). For a partitioned
+output, the error names the partition the method failed for, just as for a
+step function that fails for one key.
+
+```{r checked-class}
+checked <- function(x) structure(x, class = "checked")
+
+pip_output_value.checked <- function(x, ctx = list(), ...) {
+    if (length(x) == 0L) {
+        stop("empty output of step '", ctx[["step"]], "'")
+    }
+    x
+}
+registerS3method("pip_output_value", "checked", pip_output_value.checked)
+
+p5 <- pip_new("errors") |>
+    pip_add("empty", \(x = 1) checked(numeric(0))) |>
+    pip_add("fine", \(x = 1) x + 1)
+```
+
+By default, the run stops and the message tells which step failed:
+
+```{r method-error-stop}
+tryCatch(
+    pip_run(p5, lgr = NULL),
+    error = \(e) conditionMessage(e)
+)
+```
+
+With `on_error = "continue"`, the step is marked as failed and the run goes
+on with the steps that don't depend on it. The run also signals a
+`pipeflow_run_failed` warning, which we suppress here.
+
+```{r method-error-continue}
+suppressWarnings(
+    pip_run(p5, lgr = NULL, on_error = "continue")
+)
+
+pip_data(p5)[, c("step", "state")]
+```
+
+As usual, the condition of the failed step is stored as its output, and the
+hook is not applied to it.
+
+```{r method-error-condition}
+conditionMessage(p5[["empty", "out"]])
+```
+
+
+### Summary
+
+* `pip_output_value(x, ctx)` annotates the output of a step right after the
+  step function returned, and its result is stored as the output.
+* `ctx` holds the name of the `step`, the partition `key` (or `NULL`) and
+  the `time` stamp of the run, which is the one stored for the step.
+* The output is passed as a whole; a partitioned output is passed once per
+  partition. To annotate the elements of an output, write a method that
+  walks it.
+* It is not applied to the outputs of failed steps or to the inputs a step
+  receives from other steps.
+* An error in a method is a step error, so `on_error` applies.
+
+```{r, include = FALSE}
+options(old)
+```

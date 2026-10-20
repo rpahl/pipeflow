@@ -156,10 +156,7 @@ the input.
 Note that `.self` does not need to be declared as an argument. {pipeflow}
 provides it each time it calls a step function whose body refers to `.self`
 (also within functions defined in the body). Access that is not visible in
-the body, such as `get(".self")`, is not detected. Step functions that don't
-mention `.self` don't get it, so their outputs, for example a plot or a
-closure that keeps its environment, don't drag the whole pipeline along when
-they are saved or sent to another process.
+the body, such as `get(".self")`, is not detected.
 
 To see this, let's try it with an input of 15.
 
@@ -319,3 +316,38 @@ dependency graph.
 On the other hand, changing entries in columns such as
 `tags`, `time`, `state` or `output` is generally not critical.
 If in doubt, just try and see what works.
+
+### The lifetime of `.self`
+
+`.self` is provided for the duration of the step call and released as soon
+as the step returns. This keeps the pipeline out of the step's output: a
+step that returns a closure, a formula or any other object that captures its
+call frame would otherwise carry the whole pipeline along, which shows up
+when the output is serialized, cached or sent to another process.
+
+As a consequence, `.self` must be used while the step runs. A function that
+is returned by a step and refers to `.self` fails when it is called later.
+
+```{r self-lifetime}
+pip <- pip_new("lifetime") |>
+    pip_add("make", \(x = 1) function() .self[["name"]])
+
+pip_run(pip, lgr = NULL)
+
+getName <- pip[["make", "out"]]
+tryCatch(getName(), error = \(e) conditionMessage(e))
+```
+
+If a step needs pipeline information later on, read it during the run and
+return the value instead of the pipeline.
+
+```{r self-lifetime-fix}
+pip <- pip_new("lifetime") |>
+    pip_add("make", \(x = 1) {
+        nm <- .self[["name"]]
+        function() nm
+    })
+
+pip_run(pip, lgr = NULL)
+pip[["make", "out"]]()
+```

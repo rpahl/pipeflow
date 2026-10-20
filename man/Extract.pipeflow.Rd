@@ -40,7 +40,9 @@ to extract. For \verb{[<-}, the single step property to assign. For \code{[[} an
 \item{view}{For \code{[}, if \code{TRUE} (default), a view referencing the selected
 steps is returned. If \code{FALSE}, a new pipeline is returned that includes the
 selected steps and all their upstream dependencies. Ignored when \code{j} is
-provided.}
+provided. With no selection, \code{v[, view = FALSE]} turns a view into a
+standalone pipeline of all its covered steps, which is also the way to
+get a copy of a view, as \code{\link[=pip_clone]{pip_clone()}} requires a full pipeline.}
 
 \item{value}{The value to assign (\verb{[[<-}, \verb{[<-}).}
 }
@@ -217,12 +219,14 @@ the steps of \code{q} selected by \code{i} into the steps of \code{p} selected b
 length). In this form, \code{i} is required and \code{j} must be omitted. The
 properties are copied in the order \code{step}, \code{fun}, \code{params}, \code{out},
 \code{state}, \code{time}, \code{tags}, \code{locked}, \code{exec}: the step is renamed to the
-source name (a no-op when it is unchanged), the function is replaced with
-the source function (same as \code{\link[=pip_replace]{pip_replace()}}; its dependencies are recomputed
-against the steps of \code{p}), the unbound parameters of the source are
-applied on top of the new function defaults, and the runtime state and
-annotation columns are overwritten (locked steps included). The
-structural columns \code{nodeId}, \code{depends} and \code{unbound} are not copied.
+source name (a no-op when it is unchanged), the function and the params
+are replaced with those of the source (same as \code{\link[=pip_replace]{pip_replace()}} with the
+params of the source), and the runtime state and annotation columns are
+overwritten (locked steps included). A copied step refers to the steps
+that the source step depends on by name, also if it was defined with a
+relative reference such as \code{~-1}, and these steps are looked up in \code{p}.
+The structural columns \code{nodeId}, \code{depends} and \code{unbound} are not copied
+but recomputed against the steps of \code{p}.
 Instead of \code{p[i, j] <- q}, use \code{p[i, j] <- q[i, j]} to copy the values of
 a single property; the one-column table returned by the extraction form
 is unwrapped and assigned element-wise.
