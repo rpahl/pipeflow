@@ -1,3 +1,35 @@
+# pipeflow 0.5.0.9012
+
+## Breaking changes
+
+- `as.function()` lost the argument `bind`. Bind the inputs of the function
+  with `params` of `pip_add()` instead, as for any other step function, e.g.
+  `pip_add(outer, "step", f, params = list(input_df = ~split))`.
+- The argument `cache` of `as.function()` is now `TRUE` (the default) or
+  `FALSE` instead of the number of inner pipelines to keep.
+
+## New features
+
+- `out` of `as.function()` can be a function. It is called with a light copy
+  of the run inner pipeline, and its result is the result of the function,
+  e.g. `out = \(p) pip_collect(p, by = "tags")`.
+- New `pip_inner(x, step)` returns the inner pipelines that the function of
+  a step, made by `as.function()`, has kept: one per partition key for a
+  mapped step. Use it e.g. to debug an inner run.
+
+## Changes
+
+- A function made by `as.function()` keeps one inner pipeline per outer step
+  and partition key, so a later call only reruns the inner steps whose
+  params or inputs changed, for any number of partitions. This also works
+  for inputs bound via `params` of `pip_add()`.
+
+## Documentation
+
+- The "Nested pipelines" vignette shows a function as `out` and
+  `pip_inner()`, and its "Full control" example forwards the step's params
+  with `pip_set_params(p, list(...))`.
+
 # pipeflow 0.5.0.9011
 
 ## Documentation
@@ -109,7 +141,7 @@
 - `as.function()` turns a pipeline into a function whose arguments are the
   unbound params of the pipeline, so that a pipeline can be a step of
   another pipeline, e.g.
-  `pip_add(outer, "step", as.function(inner, bind = list(input_df = ~split)))`.
+  `pip_add(outer, "step", as.function(inner), params = list(df = ~split))`.
   The params of the inner pipeline become params of the outer step, the exec
   modes map it over partitions, and the function keeps the inner pipelines it
   has run, so that a changed param only reruns the affected inner steps. See

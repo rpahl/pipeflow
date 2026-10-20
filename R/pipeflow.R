@@ -43,6 +43,41 @@
     )
 }
 
+#' Clone a pipeline, deeply or lightly
+#'
+#' Both kinds of copy get their own step table, DAG and step to node map, so
+#' adding, removing or running steps of the copy does not change `x`. A deep
+#' copy also copies all values of the step table. A light copy shares them
+#' (params, outputs, functions) with `x`: its columns are new vectors, but
+#' their elements are the same objects. That is fast and takes no memory
+#' for the outputs, as long as a value is replaced rather than modified in
+#' place (e.g. with `:=` on a `data.table` output).
+#'
+#' @param x A pipeflow pipeline (not a view).
+#' @param name The name of the copy.
+#' @param deep `TRUE` for a deep copy, `FALSE` for a light one.
+#' @return The copy, a pipeflow pipeline.
+#' @noRd
+.pip_clone <- function(x, name = x[["name"]], deep = TRUE) {
+    out <- pip_new(name = name)
+    env <- .pip_pipenv(out)
+
+    env[[".dag"]] <- dag_clone(.pip_dag(.pip_pipenv(x)))
+    dat <- .pip_pipenv(x)[["data"]]
+    dat <- if (deep) data.table::copy(dat) else dat[seq_len(nrow(dat))]
+
+    # Clone steps to nodes mapping
+    stepsToNodes <- env[[".steps_to_nodes"]]
+    for (k in seq_len(nrow(dat))) {
+        step <- dat[["step"]][[k]]
+        nodeId <- dat[["nodeId"]][[k]]
+        stepsToNodes[[step]] <- nodeId
+    }
+    env[["data"]] <- dat
+
+    out
+}
+
 
 # ---------------
 # Type predicates
@@ -67,7 +102,7 @@
 #' Check a list of bindings
 #'
 #' A binding turns an unbound param into a reference to a step, as in the
-#' `bind` argument of [as.function.pipeflow()] and [rbind.pipeflow()].
+#' `bind` argument of [rbind.pipeflow()].
 #'
 #' @param bind Named list of one-sided formulas, e.g. `list(data = ~step)`.
 #' @param unbound Character vector of the names of the unbound params that
@@ -546,7 +581,46 @@
     )
 }
 
-.pip_execute_step_call <- function(fun, args, exec) {
+#' The step call that runs
+#'
+#' @return A list of `step`, `key` and `keys`, see `.pip_call_step()`. All
+#' of them are `NULL` outside of a run.
+#' @noRd
+.pip_step_call <- function() {
+    mget(c("step", "key", "keys"), envir = .step_call)
+}
+
+#' Call a step function as the step call that runs
+#'
+#' Sets the step call (see `.pip_step_call()`) for the time of the call and
+#' restores the one of the caller on exit, also on error, so that a nested
+#' run (e.g. of an inner pipeline of a function made by
+#' `as.function.pipeflow()`) leaves it as it was.
+#'
+#' @param fun The step function.
+#' @param args Named list of the arguments.
+#' @param step The name of the step.
+#' @param key,keys For a call mapped over partitions, its partition key and
+#' all keys; `NULL` for a single call.
+#' @return The result of the call.
+#' @noRd
+.pip_call_step <- function(fun, args, step, key = NULL, keys = NULL) {
+    caller <- .pip_step_call()
+    on.exit(list2env(caller, envir = .step_call), add = TRUE)
+    list2env(list(step = step, key = key, keys = keys), envir = .step_call)
+    do.call(fun, args = args)
+}
+
+#' Call a step function according to its exec mode
+#'
+#' @param fun The step function.
+#' @param args Named list of the arguments, with the outputs of the steps it
+#' depends on.
+#' @param exec The exec mode of the step.
+#' @param step The name of the step.
+#' @return The output of the step.
+#' @noRd
+.pip_execute_step_call <- function(fun, args, exec, step) {
     # A partitioned argument is a list of per-key values produced by a
     # step with exec = "split" and tagged with class "pipeflow_partitioned".
     partIdx <- which(vapply(
@@ -558,7 +632,7 @@
     # Split mode: run the function once on the full (unpartitioned) inputs and
     # mark the result as partitioned so downstream steps can map over it.
     if (exec == "split") {
-        out <- do.call(fun, args = args)
+        out <- .pip_call_step(fun, args = args, step = step)
         return(.as_pipeflow_partitioned(out))
     }
 
@@ -590,7 +664,7 @@
     # 2) plain mode was explicitly requested (to ensure non-split mode)
     # 3) reduce mode was requested to re-combine partitioned inputs
     if (length(partIdx) == 0L || exec == "plain" || exec == "reduce") {
-        return(do.call(fun, args = args))
+        return(.pip_call_step(fun, args = args, step = step))
     }
 
     # Auto mode with partitioned inputs: map the function over the partition
@@ -601,6 +675,12 @@
         if (!identical(kk, keys)) {
             stop("partitioned arguments must share identical keys")
         }
+    }
+
+    # With no key there is no call, which could tell a pipeline function that
+    # the keys it keeps pipelines for are gone.
+    if (length(keys) == 0L) {
+        .fun_release(fun, step)
     }
 
     # ...and each key is computed separately by slicing all partitioned
@@ -615,7 +695,13 @@
         # Errors are re-raised with the key name so a failing partition can
         # be located without inspecting the whole output.
         out[[key]] <- tryCatch(
-            expr = do.call(fun, args = keyArgs),
+            expr = .pip_call_step(
+                fun,
+                args = keyArgs,
+                step = step,
+                key = key,
+                keys = keys
+            ),
             error = function(e) {
                 stop(.pip_key_error(key, parent = e))
             }
@@ -666,7 +752,12 @@
     out <- withCallingHandlers(
         {
             args <- .pip_unwrap_params(args, unbound)
-            res <- .pip_execute_step_call(fun = fun, args = args, exec = exec)
+            res <- .pip_execute_step_call(
+                fun = fun,
+                args = args,
+                exec = exec,
+                step = step
+            )
 
             # One time stamp for the whole step, also for all keys of a
             # partitioned output, and the one that is stored below.
@@ -1693,22 +1784,7 @@ pip_clone <- function(x, name = NULL) {
     }
 
     newName <- if (is.null(name)) x[["name"]] else name
-    out <- pip_new(name = newName)
-    env <- .pip_pipenv(out)
-
-    env[[".dag"]] <- dag_clone(.pip_dag(.pip_pipenv(x)))
-    dat <- data.table::copy(.pip_pipenv(x)[["data"]])
-
-    # Clone steps to nodes mapping
-    stepsToNodes <- env[[".steps_to_nodes"]]
-    for (k in seq_len(nrow(dat))) {
-        step <- dat[["step"]][[k]]
-        nodeId <- dat[["nodeId"]][[k]]
-        stepsToNodes[[step]] <- nodeId
-    }
-    env[["data"]] <- dat
-
-    out
+    .pip_clone(x, name = newName)
 }
 
 
@@ -2319,6 +2395,9 @@ pip_rename <- function(x, from, to) {
     nodeId <- stepsToNodes[[from]]
     stepsToNodes[[to]] <- nodeId
     rm(list = from, envir = stepsToNodes, inherits = FALSE)
+
+    # The kept inner pipelines of a pipeline function are found by step name
+    .fun_rename(dat[["fun"]][[match(to, newSteps)]], from = from, to = to)
 
     data.table::setindexv(dat, list("step", "nodeId"))
     invisible(x)

@@ -7,8 +7,7 @@
 \method{as.function}{pipeflow}(
   x,
   out = NULL,
-  bind = list(),
-  cache = 16L,
+  cache = TRUE,
   on_error = c("stop", "continue"),
   lgr = NULL,
   ...
@@ -21,17 +20,13 @@ a part of a pipeline into a function).}
 \item{out}{The result of the function. \code{NULL} (the default) returns the
 outputs of all steps as a named list, see \code{\link[=pip_collect]{pip_collect()}}; a step name
 returns the output of that step; several step names return a named list
-of their outputs.}
+of their outputs. A function with at least one argument is called with
+(a light copy of) the run inner pipeline and returns the result, see
+Details.}
 
-\item{bind}{A named list of one-sided formulas, e.g.
-\code{list(df = ~outer_step)}, that bind unbound params of \code{x} to steps
-of the outer pipeline (\code{~try(outer_step)} also works).
-Binding them via \code{pip_add("inner", f_inner, params = list(df = ~outer_step))}
-would also work, but only the arguments named in \code{bind} tell the partitions
-apart (see Details), that is, caching will not be available this way.}
-
-\item{cache}{The number of run copies of \code{x} to keep for reuse, a whole
-number: \code{0} keeps none, \code{Inf} keeps all.}
+\item{cache}{Whether to keep the run copies of \code{x} for reuse, \code{TRUE} (the
+default) or \code{FALSE}. The function keeps one copy per outer step and
+partition, see Details.}
 
 \item{on_error}{What to do when an inner step fails: \code{"stop"} (the
 default) ends the inner run at that step, \code{"continue"} runs the inner
@@ -54,7 +49,8 @@ function, it can be added to an "outer" pipeline with \code{\link[=pip_add]{pip_
 in which case the unbound parameters of \code{x} become parameters of that
 pipeline.
 To bind parameters of \code{x} to output of steps of the outer pipeline,
-use the \code{bind} argument.
+pass them as references in \code{params} of \code{\link[=pip_add]{pip_add()}}, e.g.
+\code{pip_add(outer, "inner", f_inner, params = list(df = ~outer_step))}.
 }
 \details{
 By default, the inner pipeline is run silently, but warnings and messages
@@ -65,6 +61,19 @@ Param values of the outer pipeline reach the function unwrapped
 (see \code{\link[=pip_param_value]{pip_param_value()}}). The arguments of the function are values, also
 if they are formulas: unlike in \code{\link[=pip_set_params]{pip_set_params()}}, a formula argument
 does not bind a param of \code{x} to a step.
+\subsection{Choosing the output}{
+
+With step names in \code{out}, the function returns their outputs. If \code{out} is
+a function, it is called with the run inner pipeline, and its result is
+the result of the function, e.g. \verb{out = \\(p) pip_collect(p, by = "tags")}
+groups the outputs by tags. The pipeline that \code{out} gets is a light copy of
+the kept one: it has its own steps, but the values (params and outputs)
+are the same objects. Returning it, or a view of it, therefore keeps no
+extra copy of the data, and later calls of the function don't change it.
+Since the values are shared, don't modify them in place (e.g. with \verb{:=} on
+a \code{data.table} output).
+}
+
 \subsection{Continuing after errors of inner steps}{
 
 With \code{on_error = "continue"} the inner pipeline is run like
@@ -74,36 +83,36 @@ inner step that refers to it via \code{~try(step)} runs and receives the
 failure.
 
 The function still fails if one of the steps named in \code{out} failed or was
-not run because an input failed. Since with \code{out = NULL} \emph{all} steps are
-requested, you need to name the relevant steps in \code{out} to profit from
-a continuing inner run.
+not run because an input failed. Since with \code{out = NULL} or a function
+\code{out} \emph{all} steps are requested, you need to name the relevant steps in
+\code{out} to profit from a continuing inner run.
 }
 
 \subsection{Pipeline functions with partitioned inputs}{
 
-If the step with the pipeline function happens to receive partitioned inputs
-(from an earlier step with \code{exec = "split"}), changing inner pipeline
-parameters often would require multiple reruns of the whole inner pipeline,
-because of the different partitioned inputs.
-For this reason, the function keeps up to \code{cache} inner pipelines of \code{x},
-for different partitioned inputs so that each partition should get its
-own inner pipeline.
-Then a call is served by the inner pipeline that has already worked on the
-same partitioned input passed from the outer pipeline (i.e., passed
-to the arguments named in \code{bind}).
+If the step with the pipeline function receives partitioned inputs (from
+an earlier step with \code{exec = "split"}), the function is called once per
+partition caching one inner pipeline of \code{x} per step and partition key.
+A call updates its parameters and inputs in the respective pipeline, so that
+(as usual in pipelines) only outdated inner steps are run again.
+This works for inputs bound via \code{params} of \code{\link[=pip_add]{pip_add()}} as well as for
+those bound in the step function.
 \itemize{
-\item \code{cache} must be at least the number of partitions, otherwise the least
-recently used copies are dropped before they are used again and nothing
-is reused. The kept copies hold their inputs and outputs, so the memory
-grows with \code{cache}.
-\item The copies belong to the function and are dropped with it. Serialising a
-function that has been called copies them as well (e.g. when sending it
-to another process): the copy starts with the same cache, but does not
-share it. A function that has not been called yet, or one made with
-\code{cache = 0}, is small.
+\item A partition caches one pipeline for each key, which hold their inputs
+and outputs, so they need memory.
+\item A step without partitioned inputs keeps a single pipeline.
+\item Pure calls of the pipeline function (outside of a step) always share
+one pipeline, e.g. \code{lapply(subsets, f_pip)} don't cache anything.
+\item Do \emph{not} use the same pipeline function in two different pipelines -
+this avoids name clash of keys, which would prevent proper caching
+(not wrong but slower).
+\item Cached pipelines are stored in the function. If you save the function
+or send it to another process, they are copied, including their data
+and output, so new runs work independently from the original.
+A function that has not been called yet, or one made with
+\code{cache = FALSE}, has no pipelines and therefore is small to copy.
 \item In case of an error, the error message includes the key of the partition
 and the name of the failed inner step.
-\item If the bound steps are not partitioned, cache = 1L is always enough.
 }
 }
 
@@ -118,7 +127,7 @@ environment or another reference object (e.g. R6) is not seen: as for
 \code{\link[=pip_set_params]{pip_set_params()}} of a pipeline, which needs \code{force = TRUE}, the
 steps stay up to date. A forced run of the outer pipeline
 (\code{pip_run(force = TRUE)}) does not force the inner pipelines either,
-but you can force them by setting \code{cache = 0}.
+but you can force them by setting \code{cache = FALSE}.
 }
 }
 }
@@ -140,13 +149,27 @@ inner <- pip_new("inner") |>
 f_inner <- as.function(inner, out = "coefs")
 f_inner(input_df = mtcars, digits = 1)
 
-# As a step: one inner pipeline per cylinder number
+# As a step: one inner pipeline
+single <- pip_new("single") |>
+  pip_add("df", \(df = mtcars) df) |>
+  pip_add("coefs", f_inner, params = list(input_df = ~df))
+
+pip_run(single, lgr = NULL)
+single[["coefs", "out"]]
+
+# Only the inner steps after the changed param run again
+pip_set_params(single, list(digits = 3))
+pip_run(single, lgr = NULL)
+single[["coefs", "out"]]
+
+# With partioned inputs: one inner pipeline per cylinder number
 outer <- pip_new("outer") |>
   pip_add("df", \(df = mtcars) df) |>
   pip_add("by_cyl", \(df = ~df) split(df, df$cyl), exec = "split") |>
   pip_add(
     "coefs",
-    as.function(inner, out = "coefs", bind = list(input_df = ~by_cyl))
+    as.function(inner, out = "coefs"),
+    params = list(input_df = ~by_cyl)
   ) |>
   pip_add("table", \(coefs = ~coefs) do.call(rbind, coefs), exec = "reduce")
 
@@ -159,6 +182,42 @@ pip_set_params(outer, list(digits = 3))
 print(outer)
 pip_run(outer, lgr = NULL)
 outer[["table", "out"]]
+
+# Don't use the same function for the same step name in two pipelines:
+# this breaks the caching (results are still correct, but it is slower)
+a <- pip_new("a") |>
+  pip_add("df", \(df = mtcars) df) |>
+  pip_add("coefs", f_inner, params = list(input_df = ~df))
+b <- pip_new("b") |>
+  pip_add("df", \(df = mtcars[mtcars$am == 1, ]) df) |>
+  pip_add("coefs", f_inner, params = list(input_df = ~df))
+
+pip_run(a, lgr = NULL)
+pip_run(b, lgr = NULL)
+
+# The inner pipeline now holds the input of `b`, so all its steps run again
+# for `a`, not only the ones after `digits`
+pip_set_params(a, list(digits = 3))
+pip_run(a, lgr = NULL)
+a[["coefs", "out"]]
+
+# Better: make one function per pipeline
+pip_replace(
+  a, "coefs", as.function(inner, out = "coefs"),
+  params = list(input_df = ~df)
+)
+
+# A function as out: the outputs grouped by tags
+tagged <- pip_new("tagged") |>
+  pip_add("input", \(input_df = NULL) input_df) |>
+  pip_add("n", \(data = ~input) nrow(data), tags = "summary") |>
+  pip_add("mpg", \(data = ~input) mean(data$mpg), tags = "summary") |>
+  pip_add("fit", \(data = ~input) lm(mpg ~ wt, data = data), tags = "model")
+
+f_tagged <- as.function(tagged, out = \(p) pip_collect(p, by = "tags"))
+res <- f_tagged(input_df = mtcars)
+names(res)
+res$summary
 
 # With on_error = "continue", the inner pipeline handles a failed inner
 # step itself: `coefs` is run with the failure of `fit` and reports it.
@@ -179,5 +238,5 @@ f_robust(input_df = mtcars)
 suppressWarnings(f_robust(input_df = mtcars[1:2, ]))
 }
 \seealso{
-\code{\link[=pip_add]{pip_add()}}
+\code{\link[=pip_add]{pip_add()}}, \code{\link[=pip_inner]{pip_inner()}} to look at the kept inner pipelines
 }

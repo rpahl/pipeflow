@@ -1036,12 +1036,12 @@ str.pipeflow <- function(object, ...) {
 #' returned unchanged.
 #'
 #' To feed steps of the second pipeline with the output of steps of the
-#' first one, use the `bind` argument. As in [as.function.pipeflow()], it
-#' binds unbound params of the second pipeline, which then become references
-#' to steps of the first one, as if they had been written as `param = ~step`
-#' in the step functions. The bound params are no longer params of the
-#' result (see [pip_get_params()]), and bound steps that have been run
-#' before are marked `"outdated"`, together with their downstream steps.
+#' first one, use the `bind` argument. It binds unbound params of the second
+#' pipeline, which then become references to steps of the first one, as if
+#' they had been written as `param = ~step` in the step functions. The bound
+#' params are no longer params of the result (see [pip_get_params()]), and
+#' bound steps that have been run before are marked `"outdated"`, together
+#' with their downstream steps.
 #' @param ... Two or more pipeflow pipeline objects.
 #' @param deparse.level Not used, for compatibility with the generic
 #' `rbind()`.

@@ -13,6 +13,14 @@
 .step_states[["outdated"]] <- c(name = "outdated", color = "#ffa040ff")
 .step_states[["failed"]] <- c(name = "failed", color = "#ff4c4cff")
 
+# The step call that runs (see `.pip_call_step()`): the name of the step,
+# and for a call mapped over partitions its partition key and all keys
+# (`NULL` for a single call). All `NULL` outside of a run.
+.step_call <- new.env(parent = emptyenv())
+.step_call[["step"]] <- NULL
+.step_call[["key"]] <- NULL
+.step_call[["keys"]] <- NULL
+
 # Run states of a pipeline (see `pip_run_state()`). A list, not an
 # environment, since the order defines the levels of `.run_state`.
 .run_states <- list(

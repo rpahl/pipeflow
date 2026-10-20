@@ -29,8 +29,8 @@ old <- options(width = 100L)
 
 A pipeline can be a step of another pipeline. This allows to reuse a
 standard analysis pipeline inside a larger workflow. The key is
-`as.function()`, which turns a pipeline into a function, and functions are
-what steps are made of.
+`as.function()`, which turns a pipeline into a function that
+can be used in pipeline steps.
 
 ### Inner pipeline
 
@@ -44,13 +44,16 @@ library(pipeflow)
 
 inner <- pip_new("coefficients") |>
     pip_add("input", \(input_df = NULL) input_df) |>
-    pip_add(
-        "fit",
+    pip_add("fit",
         \(data = ~input, xVar = "x", yVar = "y") {
             lm(paste(yVar, "~", xVar), data = data)
         }
     ) |>
-    pip_add("coefs", \(fit = ~fit, digits = 3) round(coefficients(fit), digits))
+    pip_add("coefs",
+        \(fit = ~fit, digits = 3) {
+            round(coefficients(fit), digits)
+        }
+    )
 
 inner
 ```
@@ -60,7 +63,7 @@ inner
 
 `as.function()` returns a function whose arguments are the unbound parameters
 of the pipeline, with the current values as defaults, and whose result is the
-output of the steps defined by `out`.
+output of the step(s) defined by `out`.
 
 ```{r as-function}
 f_inner <- as.function(inner, out = "coefs")
@@ -69,7 +72,7 @@ formals(f_inner) |> str()
 ```
 
 As you see, the function version of the inner pipeline has the same
-default parameters as the pipeline itself.
+default params as the pipeline itself.
 
 Under the hood, the function runs a copy of the inner pipeline. Let's
 see this now:
@@ -97,22 +100,17 @@ outer_all <- pip_new("analysis") |>
     pip_add("df", \(df = NULL) df) |>
     pip_add(
         "inner_run",
-        as.function(
-            inner,
-            bind = list(input_df = ~df),   # df is passed to the inner pipeline
-            out = "coefs"                  # coefs is returned from inner run
-        )
+        as.function(inner, out = "coefs"),  # coefs is returned from inner run
+        params = list(input_df = ~df)       # df is passed to the inner pipeline
     )
 
 outer_all
 ```
 
-The argument `bind` wires the function into the outer pipeline.
-`list(input_df = ~df)` reads: the argument `input_df` of the function is
-*bound* to the output of the step `df` from the outer pipeline.
-This is the same as writing
-`input_df = ~df` as an argument of a step function, so the step `inner_run`
-now depends on `df`.
+As for any other step function, `params` of `pip_add()` wires the function
+into the outer pipeline. `list(input_df = ~df)` reads: the argument
+`input_df` of the function is *bound* to the output of the step `df` from the
+outer pipeline, that is, the step `inner_run` now depends on `df`.
 
 The remaining arguments of the function, `xVar`, `yVar` and `digits`, are not
 bound. They stay unbound parameters, and as such are parameters of the outer
@@ -139,6 +137,28 @@ outer_all[["inner_run", "out"]]
 The inner pipeline was run as a single step and returned the same coefficients
 as above where we called the function directly.
 
+#### Returning something computed
+
+Instead of step names, `out` can also be a function. It receives the inner
+pipeline after the run and returns whatever you need from it, e.g. a value
+computed from several steps:
+
+```{r out-function}
+f_summary <- as.function(
+    inner,
+    out = \(p) list(
+        r2 = summary(p[["fit", "out"]])$r.squared,
+        coefs = p[["coefs", "out"]]
+    )
+)
+
+f_summary(input_df = iris, xVar = "Sepal.Length", yVar = "Sepal.Width")
+```
+
+To simply return the outputs of some steps, use `out = c("fit", "coefs")`.
+Functions like `pip_collect()` are useful in `out` when you want more, e.g. to
+collect the outputs by tags (see `?as.function.pipeflow`).
+
 
 ### Outer pipeline with split data
 
@@ -158,11 +178,8 @@ outer <- pip_new("full analysis") |>
     ) |>
     pip_add(
         "inner_run",
-        as.function(
-            inner,
-            bind = list(input_df = ~split_df),    # bind to split data
-            out = "coefs"
-        )
+        as.function(inner, out = "coefs"),
+        params = list(input_df = ~split_df)    # bind to split data
     ) |>
     pip_add(
         "combine",
@@ -226,11 +243,12 @@ downstream steps have been marked as "outdated".
 
 ### Caching of inner pipelines
 
-When converting a pipeline into a function, {pipeflow} caches the pipelines it
-has run (up to `cache` of them, 16 by default) and finds the one that belongs
-to a call by the bound arguments.
-A later call sets all parameters and inputs in that pipeline, so that exactly
-the steps that are outdated by the change are run again.
+A pipeline function by default caches the inner pipelines it has run: one
+for each step and subset.
+In a step that is mapped over subsets, each subset gets an inner pipeline
+of its own.
+A later call sets all parameters and inputs in the pipeline of its subset, so
+that exactly the steps that are outdated by the change are run again.
 
 To see this at work, we use a minimal toy example. The inner pipeline squares
 numbers and scales the result. The counters tell us how often each step has
@@ -242,7 +260,7 @@ runs$square <- runs$scale <- 0L
 count <- function(step) runs[[step]] <- runs[[step]] + 1L
 n_runs <- function() unlist(mget(c("square", "scale"), envir = runs))
 
-toy <- pip_new("toy") |>
+toy_inner <- pip_new("toy inner") |>
     pip_add("input", \(x = NULL) x) |>
     pip_add("square", \(x = ~input) {
         count("square")
@@ -255,7 +273,7 @@ toy <- pip_new("toy") |>
 ```
 
 The outer pipeline splits a list of two number vectors, `a` and `b`, and runs
-the toy pipeline on each of them.
+the inner pipeline on each of them.
 
 ```{r toy-outer}
 toy_outer <- pip_new("toy outer") |>
@@ -265,8 +283,9 @@ toy_outer <- pip_new("toy outer") |>
         exec = "split"
     ) |>
     pip_add(
-        "toy_run",
-        as.function(toy, bind = list(x = ~numbers), out = "scale")
+        "inner_run",
+        as.function(toy_inner, out = "scale"),
+        params = list(x = ~numbers)
     )
 
 pip_run(toy_outer, lgr = NULL)
@@ -284,52 +303,41 @@ n_runs()
 ```
 
 Next we change the input data and give `a` other numbers while `b` stays the
-same. The new numbers are a new input for the function, so they get a new
-inner pipeline, in which all steps run. For `b` nothing runs.
+same, so that we expect that the inner pipeline is run *once* for `a`.
 
 ```{r toy-input}
 pip_set_params(toy_outer, list(values = list(a = 1:4, b = 4:6)))
 pip_run(toy_outer, lgr = NULL)
 n_runs()
+
+toy_outer[["inner_run", "out"]]
 ```
 
-The cache now holds three inner pipelines, because the one for the old numbers
-of `a` is still there. When we go back to the original numbers, nothing needs
-to run at all:
+To look at the kept inner pipelines, e.g. while debugging, use
+`pip_inner()`. For a mapped step, it returns one pipeline per partition key:
 
-```{r toy-back}
-pip_set_params(toy_outer, list(values = list(a = 1:3, b = 4:6)))
-pip_run(toy_outer, lgr = NULL)
-n_runs()
+```{r toy-inner-pips}
+inner_pips <- pip_inner(toy_outer, "inner_run")
+names(inner_pips)
 
-toy_outer[["toy_run", "out"]]
+inner_pips[["a"]]
 ```
 
 A few things to know:
 
-* `cache` should be at least the number of subsets. If it is smaller, the
-  least recently used pipelines are dropped before they are needed again, and
-  nothing is reused (`cache = 0` turns the reuse off). The kept pipelines hold
-  their inputs and outputs, so they need memory.
 * Each call has an overhead of a few milliseconds for setting the parameters
   and running the pipeline, so reuse pays when the inner steps are expensive.
-* A call that is matched to the "wrong" pipeline is only slower, never
-  wrong.
 * Inputs are compared as they are, so a change made in place to an
-  environment or an R6 object is not seen (as in a plain pipeline), and a
-  forced run of the outer pipeline does not force the inner pipelines. Use
-  `cache = 0` for such inputs.
-* The pipelines belong to the function and are dropped with it. Serialising
-  a function that has been called (e.g. to send it to a parallel worker)
-  copies them, inputs and outputs included. A function that has not been
-  called yet, or one made with `cache = 0`, is small.
+  environment or an R6 object is not seen (as in a plain pipeline). Use
+  `cache = FALSE` for such inputs.
 * Warnings and messages of the inner steps reach the outer run. If an inner
-  step fails, the outer step fails with a message that names the partition and
-  the inner step, unless the inner pipeline handles the failure itself (see
-  ["Handling failures"](v05c-error-handling.html)).
+  step fails, the outer step fails, unless the inner pipeline handles the
+  failure itself (see ["Handling failures"](v05c-error-handling.html)).
 * The inner pipelines are run silently. To follow their steps while
-  debugging, set `as.function(lgr = pipeflow_lgr)` (or any other logger):
-  each subset then logs a run of its own.
+  debugging, set `as.function(lgr = pipeflow_lgr)` (or any other logger).
+
+See the "Pipeline functions with partitioned inputs" section of
+`?as.function.pipeflow` for how the inner pipelines are kept and reused.
 
 
 ### Full control: running the inner pipeline yourself
@@ -361,8 +369,8 @@ manual <- pip_new("full analysis") |>
         \(dfList = ~split_df, ...) {
             p <- pip_clone(inner)
 
-            # Forward all parameters (from outer and inner)
-            pip_set_params(p, .self$get_params(), unknown = "ignore")
+            # Forward the parameters of the step to the inner pipeline
+            pip_set_params(p, list(...))
 
             Map(
                 f = run_inner_pip,
@@ -384,25 +392,22 @@ manual
 In this version, the `inner_run` step does not declare the parameters of the
 inner pipeline as arguments. Instead, its parameters are seeded with the inner
 pipeline's parameters via `params = pip_get_params(inner)`, and the step
-forwards the combined set of *all* existing parameters at run time. Three
-aspects are worth spelling out:
+forwards them to the inner pipeline at run time:
 
-* **`.self`** refers to the pipeline that is currently being run and is
-  available inside every step function that refers to it, without having
-  to declare it. It exposes the usual pipeline interface, so
-  `.self$get_params()` returns the current unbound parameters of the outer
-  pipeline. For more examples on this mechanism see the
-  [self-modifying pipelines](v06-self-modify-pipeline.html) vignette.
 * **`params = pip_get_params(inner)`** registers the inner pipeline's unbound
   parameters (`input_df`, `xVar`, `yVar`, `digits`) as parameters of the
   `inner_run` step. They show up in the step's `params` column, become part
   of the outer pipeline's parameter set, and changing them outdates the step.
-* **`...` takes the forwarded parameters**: the parameters in `params` are
-  passed to the step function when the step runs, so a function that does not
-  declare them as arguments needs `...`. Where the names overlap, the values
-  in `params` override the defaults of the function: had the inner pipeline
-  an unbound parameter `dfList`, its value would replace the reference
-  `~split_df` of the `inner_run` step.
+* **`...`** *takes the forwarded parameters*: since the `inner_run` step only
+  declares `dfList` as an argument, the registered parameters reach the step
+  function via `...`. It carries exactly the parameters of this step, with
+  their current values (unwrapped, see `?pip_param_value`), so
+  `pip_set_params(p, list(...))` sets them in the inner pipeline, without
+  any unknown parameters to ignore.
+  Where the names overlap, the values in `params` would override the function
+  defaults: had the inner pipeline an unbound parameter `dfList`, its value
+  would replace the reference `~split_df` of the `inner_run` step,
+  something to be aware of.
 
 Let us now run the manual pipeline to see it in action.
 
@@ -435,7 +440,7 @@ fits into the steps of a single pipeline, while nested pipelines are the more
 general tool. As a rule of thumb:
 
 * **Code**: the built-in modes are declarative and need no extra code.
-  `as.function()` needs one step and the `bind` list. Running the inner
+  `as.function()` needs one step that binds its inputs. Running the inner
   pipeline yourself requires cloning, mapping, and forwarding parameters.
 * **Map shape**: the built-in modes handle a single split point in the
   pipeline, while nested pipelines can be mapped over the partitions of a
@@ -444,7 +449,7 @@ general tool. As a rule of thumb:
   cross-validation folds or several data sets).
 * **Run log and state**: the built-in modes produce one unified run over all
   partitions, while a nested pipeline is run as one step of the outer
-  pipeline, with its own log silenced.
+  pipeline, with its own log silenced by default.
 * **Parallelism**: the built-in modes are handled by {pipeflow}, whereas with
   a manual loop you control it and can parallelize it yourself.
 
