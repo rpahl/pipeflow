@@ -47,7 +47,9 @@
 
 # Misc artifacts
 ^workflows\.zip$
-^logo/logo.xcf$
+^logo$
+^cheatsheet$
+^man/figures/cheatsheet-.*\.png$
 ^LICENSE\.md$
 
 ^scratch.md$

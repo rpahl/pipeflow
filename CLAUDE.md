@@ -37,6 +37,15 @@ Rscript -e "rcmdcheck::rcmdcheck(args='--no-manual', error_on='warning')"
 Rscript -e "devtools::build_readme()"              # README.md is generated from README.Rmd
 ```
 
+Cheat sheet (`cheatsheet/pipeflow-cheatsheet.typ`, exactly 2 pages). Run from
+the repo root. `typst` is a snap that is not on PATH in the VS Code terminal,
+so use the full path:
+
+```sh
+/snap/bin/typst compile --root . cheatsheet/pipeflow-cheatsheet.typ cheatsheet/pipeflow-cheatsheet.pdf
+cheatsheet/build.sh   # also checks page count/fonts and rebuilds man/figures/cheatsheet-*.png
+```
+
 Before opening a PR, run the full check in this order: lint, then tests,
 then `rcmdcheck`. The target is 0 errors and 0 warnings, with 0 notes if
 possible. CI (`.github/workflows/ci.yaml`) runs lint, then R CMD check on
@@ -64,16 +73,23 @@ Because `pipenv` is a reference, functions mostly mutate it in place (often
 with `data.table::set` or `:=`) and return `x` invisibly. `pip_clone()` or
 `p[]` makes a real copy, and that copy includes the DAG via `dag_clone()`.
 
-**Views.** A view is a `pipeflow` whose `view` field holds row indices.
-Views come from `pip_view()` or `p[i]` and share the same `pipenv`.
-Structural operations call `.assert_pip()` and reject views. Read and run
-operations call `.assert_pip_or_view()`. Running a view also runs the
-upstream steps it depends on, then marks unprocessed downstream steps as
-`outdated`. `p[i, view = FALSE]` builds a standalone, compacted pipeline
+**Views.** A view is a `pipeflow` whose `view` field holds the node ids of
+the steps it covers (`v[["view"]]` shows them as step names). Views come
+from `pip_view()` or `p[i]` and share the same `pipenv`. Most functions
+call `.assert_pip_or_view()`; `pip_add()`, `pip_clone()` and `rbind()` call
+`.assert_pip()` and reject views. `pip_remove()`, `pip_rename()` and
+`pip_replace()` edit the shared pipeline through a view and gate the step
+they name with `.pip_step_in_view()`. Because the selector lives in the
+view object and not in `pipenv`, a view shrinks by reference but cannot
+grow by reference. Running a view also runs the upstream steps it depends
+on, then marks unprocessed downstream steps as `outdated`.
+`p[i, view = FALSE]` builds a standalone, compacted pipeline
 (`.pip_compact()` in `R/generic.pipeflow.R`).
 
-**Step dependencies.** Step functions must give every argument a default
-value. If a default is a formula, it refers to another step: `x = ~step1`
+**Step dependencies.** Every argument of a step function needs a value: its
+default, or an entry in `params` of `pip_add()`/`pip_replace()`, which
+overrides the default (`.extract_fun_params()`). If a value is a formula,
+it refers to another step: `x = ~step1`
 by name, or `x = ~-1` by relative position. `.extract_depends()` and
 `formula_deps()` resolve these references into `depends` and DAG edges. The
 pipeline is checked when steps are added, not when it runs. A reference
@@ -81,6 +97,10 @@ wrapped in `try()` (`x = ~try(step1)`, also `~try(-1)`) marks an argument
 that may receive a failed input in a continuing run (see Execution). The
 marker lives in the step's `params`, read via `formula_try_args()`; rename
 and `rbind()` rebuild reference formulas and must keep the `try()` wrapper.
+A one-sided formula in `params` is always a reference: `pip_set_params()`
+binds an unbound param to the step (`.pip_bind_row()`), like `bind` of
+`rbind()` and `as.function()`. Only the function made by `as.function()`
+sets formula arguments as values (`.pip_set_params(bind = FALSE)`).
 
 **C++ DAG (`src/dag.cpp`).** Nodes are stored by a running id. A separate
 `nodes_order` vector stores the topological order, so inserting a step only

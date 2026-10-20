@@ -45,10 +45,11 @@ reference:
   - pip_set_params
 
 - title: "Pipeline composition"
-  desc: Combine or clone pipelines.
+  desc: Combine or clone pipelines, or turn a pipeline into a function.
   contents:
   - rbind.pipeflow
   - pip_clone
+  - as.function.pipeflow
 
 - title: "Running pipelines"
   desc: Execute pipeline steps or views.
@@ -56,6 +57,7 @@ reference:
   - pip_run
   - pip_run_state
   - pip_param_value
+  - pip_output_value
   - pipeflow_lgr
 
 - title: "Locking and tagging"
@@ -136,6 +138,8 @@ navbar:
         href: articles/v05c-error-handling.html
       - text: "Annotated parameter values"
         href: articles/v05d-param-value.html
+      - text: "Annotated step outputs"
+        href: articles/v05e-output-value.html
       - text: "Self-modifying pipelines"
         href: articles/v06-self-modify-pipeline.html
       - text: ----

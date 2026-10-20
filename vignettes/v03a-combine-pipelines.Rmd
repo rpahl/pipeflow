@@ -134,6 +134,47 @@ The relative indexing mechanism allows to refer to steps positioned
 above the current step. The index `~-1` can be interpreted as "go one step back", `~-2`
 as "go two steps back", and so on.
 
+#### Binding params when combining
+
+Instead of replacing the step afterwards, the two pipelines can also be
+connected right away with the `bind` argument of `rbind()`. It takes a named
+list of one-sided formulas, which binds unbound params of the second pipeline
+to steps of the first one:
+
+```{r bind-when-combining}
+pip_bound <- rbind(pip1, pip2, bind = list(x = ~standardize))
+
+pip_bound
+```
+
+The param `x` of the `data2` step now refers to the `standardize` step, as if
+it had been defined as `\(x = ~standardize) x`. The same holds for any other
+step of the second pipeline with an unbound param `x`. Steps where `x` already
+refers to another step, like `fit` and `predict`, are left as they are, and
+so are the steps of the first pipeline: the `data` step still has its param
+`x`.
+Steps are bound by name, not by relative position, and `bind` can only be
+used when combining exactly two pipelines.
+
+#### Binding params afterwards
+
+Params can also be bound after combining, with `pip_set_params()`: a
+one-sided formula binds the param to that step in all selected steps that
+have it unbound. Here the `data` step of the first pipeline has an unbound
+param `x` as well, but it comes before the `standardize` step, so it can't
+be bound to it. Therefore, we select the `data2` step with a view:
+
+```{r bind-after-combining}
+pip_later <- rbind(pip1, pip2)
+pip_set_params(pip_later["data2"], list(x = ~standardize))
+
+pip_later
+```
+
+Without the view, `pip_set_params()` would signal an error and leave the
+pipeline unchanged. Like with `bind`, the steps are bound by name, not by
+relative position.
+
 
 ### Combined pipeline results
 

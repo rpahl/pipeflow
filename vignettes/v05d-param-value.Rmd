@@ -212,6 +212,126 @@ conditionMessage(p4[["double", "out"]])
 ```
 
 
+### Setting a plain value
+
+So far the annotated values were set as whole objects. A user interface,
+however, usually hands back a plain value: the number the user typed, not
+the `quantity` object around it. Setting it with `pip_set_params()` would
+replace the stored object and lose its unit.
+
+```{r plain-value-default}
+p5 <- pip_new("speed") |>
+    pip_add("speed", \(distance = 1) distance)
+
+pip_set_params(p5, list(distance = quantity(120, "km")))
+pip_set_params(p5, list(distance = 150))
+
+pip_get_params(p5)
+```
+
+The write side of the same extension point fixes this. `pip_param_value<-()`
+turns a plain value into the value that is stored, and it dispatches on the
+value that the step currently holds.
+
+```{r quantity-setter}
+`pip_param_value<-.quantity` <- function(x, ..., value) {
+    if (inherits(value, "quantity")) {
+        return(value)
+    }
+    x$value <- value
+    x
+}
+
+registerS3method(
+    "pip_param_value<-",
+    "quantity",
+    `pip_param_value<-.quantity`
+)
+```
+
+Now a plain value is merged into the stored object, and the unit survives.
+
+```{r plain-value-merged}
+p6 <- pip_new("speed") |>
+    pip_add("speed", \(distance = 1) distance)
+
+pip_set_params(p6, list(distance = quantity(120, "km")))
+pip_set_params(p6, list(distance = 150))
+
+pip_get_params(p6)
+```
+
+The step function still receives the plain value, because the two sides
+belong together.
+
+```{r plain-value-run}
+pip_run(p6, lgr = NULL)
+p6[["speed", "out"]]
+```
+
+The default method replaces the stored value, which is what pipelines
+without any method do. A method decides for itself what a plain value and
+what an object of its own class means; the method above uses an object as
+it is and merges anything else.
+
+Because the merged value is what `pip_set_params()` compares with the stored
+one, setting a plain value that the stored object already holds doesn't
+outdate the step.
+
+```{r plain-value-identical}
+pip_set_params(p6, list(distance = 150))
+p6
+```
+
+
+#### Errors while setting
+
+`pip_set_params()` computes the value to store for every affected step
+before it changes anything. If a method fails, nothing is set and the error
+reports all failures at once.
+
+```{r setter-error}
+`pip_param_value<-.checked` <- function(x, ..., value) {
+    if (!is.numeric(value)) {
+        stop("value must be numeric")
+    }
+    x$value <- value
+    x
+}
+registerS3method(
+    "pip_param_value<-",
+    "checked",
+    `pip_param_value<-.checked`
+)
+
+p7 <- pip_new("checked") |>
+    pip_add("a", \(x = 1) x) |>
+    pip_add("b", \(y = 2) y)
+pip_set_params(p7, list(x = checked(1, "m"), y = checked(2, "m")))
+
+err <- tryCatch(
+    pip_set_params(p7, list(x = "no", y = "no")),
+    error = \(e) e
+)
+cat(conditionMessage(err))
+```
+
+The condition has class `pipeflow_set_params_error` and carries a table of
+the failures, which a user interface can show next to the respective
+inputs.
+
+```{r setter-error-fields}
+class(err)
+err$errors
+```
+
+Nothing was set:
+
+```{r setter-error-unchanged}
+pip_get_params(p7)
+```
+
+
 ### Summary
 
 * `pip_param_value(x)` unwraps a stored parameter value right before the
@@ -220,6 +340,10 @@ conditionMessage(p4[["double", "out"]])
 * It applies to unbound arguments only (`params`, defaults, and `...`), not
   to step outputs, partitions or failure objects.
 * An error in a method is a step error, so `on_error` applies.
+* `` `pip_param_value<-`() `` is the write side: it turns a plain value
+  into the value that is stored, so that annotations survive a
+  `pip_set_params()` call that passes a plain value.
+* Either method returns a value; neither should modify its `x` in place.
 
 ```{r, include = FALSE}
 options(old)

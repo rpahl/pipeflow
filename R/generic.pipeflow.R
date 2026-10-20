@@ -47,7 +47,7 @@
     # Since the source can be `x` itself, we will work on a snapshot to
     # prevent that any writes below would alter rows that are still to be
     # copied (e.g. pip_replace() marking downstream steps as outdated).
-    qSnapshot <- dataQ[rowsQ, props, with = FALSE]
+    qSnapshot <- dataQ[rowsQ, c(props, "depends"), with = FALSE]
 
     for (k in seq_len(n)) {
         pRow <- rowsP[[k]]
@@ -58,23 +58,45 @@
         # 1) Step name (a no-op when both pipelines use the same names).
         x[[dataP[["step"]][[pRow]], "step"]] <- qVals[["step"]]
 
-        # 2) Function. pip_replace() resets the params to the function
-        #    defaults and recomputes `depends` against the steps of `x`.
-        x[[iSelP[[k]], "fun"]] <- qVals[["fun"]]
-
-        # 3) Take over all unbound param values from q. Bound (formula)
-        #    params are pipeline-context specific and stay as recomputed.
-        parsP <- x[[iSelP[[k]], "params"]]
-        dep <- x[[iSelP[[k]], "depends"]]
-        unboundP <- setdiff(names(parsP), names(dep))
-        pars <- qVals[["params"]][
-            intersect(names(qVals[["params"]]), unboundP)
-        ]
-        if (length(pars) > 0L) {
-            x[[iSelP[[k]], "params"]] <- pars
+        # 2) Function and params. The params of q override the defaults of
+        #    the function. Their references are pointed to the steps that
+        #    the step of q depends on, by name, because a relative reference
+        #    (~-1) is stale once steps were inserted or removed before it.
+        #    pip_replace() then resolves them against the steps of `x`.
+        params <- qVals[["params"]]
+        depends <- qSnapshot[["depends"]][[k]]
+        for (arg in intersect(names(depends), names(params))) {
+            params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
+        }
+        # An unbound param can still have a formula as value: the function
+        # made by as.function() sets its arguments as values, also formulas,
+        # and a step can expose that pipeline, e.g. via pip_clone(.self).
+        # pip_replace() would take it as a reference, so it is replaced with
+        # a placeholder and its value is put back below.
+        isValue <- !(names(params) %in% names(depends)) &
+            vapply(params, is_one_sided_formula, logical(1))
+        values <- params[isValue]
+        params[isValue] <- list(NULL)
+        pip_replace(
+            x,
+            step = qVals[["step"]],
+            fun = qVals[["fun"]],
+            params = params
+        )
+        if (length(values) > 0L) {
+            dataX <- .pip_pipenv(x)[["data"]]
+            iRow <- data.table::chmatch(qVals[["step"]], dataX[["step"]])
+            stored <- dataX[["params"]][[iRow]]
+            stored[names(values)] <- values
+            data.table::set(
+                dataX,
+                i = iRow,
+                j = "params",
+                value = list(list(stored))
+            )
         }
 
-        # 4) Runtime state and annotation columns.
+        # 3) Runtime state and annotation columns.
         for (prop in c("out", "state", "time", "tags", "locked", "exec")) {
             x[[iSelP[[k]], prop]] <- qVals[[prop]]
         }
@@ -388,7 +410,9 @@ dim.pipeflow <- function(x) {
 #' @param view For `[`, if `TRUE` (default), a view referencing the selected
 #' steps is returned. If `FALSE`, a new pipeline is returned that includes the
 #' selected steps and all their upstream dependencies. Ignored when `j` is
-#' provided.
+#' provided. With no selection, `v[, view = FALSE]` turns a view into a
+#' standalone pipeline of all its covered steps, which is also the way to
+#' get a copy of a view, as [pip_clone()] requires a full pipeline.
 #' @param value The value to assign (`[[<-`, `[<-`).
 #' @return For `[`, a pipeflow view (if `view = TRUE`) or a new pipeflow
 #' pipeline (if `view = FALSE`); if `j` is provided, a `data.table` with the
@@ -455,18 +479,23 @@ dim.pipeflow <- function(x) {
         return(dat[rows, j, with = FALSE])
     }
 
-    # x[] returns a copy of the pipeline (or the view itself)
-    if (missing(i)) {
-        if (.is_pipeflow_view(x)) {
-            return(x)
-        }
-        return(pip_clone(x))
-    }
-
     pipenv <- .pip_pipenv(x)
     name <- x[["name"]]
     dat <- pipenv[["data"]]
-    rows <- .pip_select_rows(x, substitute(i), parent.frame())
+
+    if (missing(i)) {
+        # x[] returns a copy of the pipeline, or the view itself. On a view,
+        # x[, view = FALSE] materializes all covered steps instead.
+        if (!.is_pipeflow_view(x)) {
+            return(pip_clone(x))
+        }
+        if (view) {
+            return(x)
+        }
+        rows <- .pip_view_rows(x)
+    } else {
+        rows <- .pip_select_rows(x, substitute(i), parent.frame())
+    }
 
     if (view) {
         # Return a view on the selected rows
@@ -786,12 +815,14 @@ dim.pipeflow <- function(x) {
 #' length). In this form, `i` is required and `j` must be omitted. The
 #' properties are copied in the order `step`, `fun`, `params`, `out`,
 #' `state`, `time`, `tags`, `locked`, `exec`: the step is renamed to the
-#' source name (a no-op when it is unchanged), the function is replaced with
-#' the source function (same as [pip_replace()]; its dependencies are recomputed
-#' against the steps of `p`), the unbound parameters of the source are
-#' applied on top of the new function defaults, and the runtime state and
-#' annotation columns are overwritten (locked steps included). The
-#' structural columns `nodeId`, `depends` and `unbound` are not copied.
+#' source name (a no-op when it is unchanged), the function and the params
+#' are replaced with those of the source (same as [pip_replace()] with the
+#' params of the source), and the runtime state and annotation columns are
+#' overwritten (locked steps included). A copied step refers to the steps
+#' that the source step depends on by name, also if it was defined with a
+#' relative reference such as `~-1`, and these steps are looked up in `p`.
+#' The structural columns `nodeId`, `depends` and `unbound` are not copied
+#' but recomputed against the steps of `p`.
 #' Instead of `p[i, j] <- q`, use `p[i, j] <- q[i, j]` to copy the values of
 #' a single property; the one-column table returned by the extraction form
 #' is unwrapped and assigned element-wise.
@@ -1003,9 +1034,25 @@ str.pipeflow <- function(object, ...) {
 #' pipelines have steps with the same name, the step names of later pipelines
 #' are automatically adapted to avoid name clashes. A single pipeline is
 #' returned unchanged.
+#'
+#' To feed steps of the second pipeline with the output of steps of the
+#' first one, use the `bind` argument. As in [as.function.pipeflow()], it
+#' binds unbound params of the second pipeline, which then become references
+#' to steps of the first one, as if they had been written as `param = ~step`
+#' in the step functions. The bound params are no longer params of the
+#' result (see [pip_get_params()]), and bound steps that have been run
+#' before are marked `"outdated"`, together with their downstream steps.
 #' @param ... Two or more pipeflow pipeline objects.
 #' @param deparse.level Not used, for compatibility with the generic
 #' `rbind()`.
+#' @param bind A named list of one-sided formulas, e.g.
+#' `list(data = ~prep)`, that binds the unbound params of the second
+#' pipeline to steps of the first pipeline. If several steps of the second
+#' pipeline have a param of that name, all of them are bound. The steps are
+#' referred to by name (`~try(step)` is possible as well, see [pip_run()]),
+#' not by relative position. Only possible if exactly two pipelines are
+#' bound; to bind more, chain the calls, e.g.
+#' `rbind(rbind(a, b, bind = ...), c, bind = ...)`.
 #' @return A new pipeflow pipeline object representing the bound pipelines.
 #' @examples
 #' a <- pip_new("a") |>
@@ -1022,14 +1069,29 @@ str.pipeflow <- function(object, ...) {
 #' # Any number of pipelines can be combined
 #' abc <- rbind(a, b, b)
 #' abc
+#'
+#' # Feed the param `data` of the second pipeline with the output of "prep"
+#' d <- pip_new("d") |> pip_add("scale", \(data = 1, k = 3) data * k)
+#' ad <- rbind(a, d, bind = list(data = ~prep))
+#' ad[["scale", "depends"]]
+#' pip_get_params(ad) # `data` is no longer a param
+#' pip_run(ad)
+#' ad[["scale", "out"]]
 #' @export
-rbind.pipeflow <- function(..., deparse.level = 1) {
+rbind.pipeflow <- function(..., deparse.level = 1, bind = list()) {
     pips <- list(...)
     if (length(pips) == 0L) {
         stop("at least one pipeflow pipeline must be provided")
     }
     for (pip in pips) {
         .assert_pip(pip)
+    }
+    .assert_bind(bind)
+    if (length(bind) > 0L && length(pips) != 2L) {
+        stop_no_call(
+            "bind can only be used to bind exactly two pipelines, ",
+            "e.g. rbind(a, b, bind = list(data = ~step))"
+        )
     }
 
     out <- pips[[1L]]
@@ -1038,7 +1100,7 @@ rbind.pipeflow <- function(..., deparse.level = 1) {
     }
 
     for (pip in pips[-1L]) {
-        out <- .pip_bind(out, pip)
+        out <- .pip_bind(out, pip, bind = bind)
     }
     out
 }
