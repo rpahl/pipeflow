@@ -34,7 +34,7 @@ env:
 jobs:
   pkgdown:
     name: Build and deploy site
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
       contents: write          # push to the gh-pages branch
