@@ -17,9 +17,9 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <meta property="og:title" content="Nested pipelines">
-<meta name="description" content="Shows how to embed pipelines within pipeline steps and how to mark their parameters so that changing them re-executes the outer step.
+<meta name="description" content="Shows how to run a pipeline as a step of another pipeline with as.function(), so that changing its parameters re-executes the outer step and only the inner steps that are affected.
 ">
-<meta property="og:description" content="Shows how to embed pipelines within pipeline steps and how to mark their parameters so that changing them re-executes the outer step.
+<meta property="og:description" content="Shows how to run a pipeline as a step of another pipeline with as.function(), so that changing its parameters re-executes the outer step and only the inner steps that are affected.
 ">
 <meta property="og:image" content="https://rpahl.github.io/pipeflow/logo.png">
 <meta name="robots" content="noindex">
@@ -32,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9001</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9012</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,6 +71,7 @@
     <li><a class="dropdown-item" href="../articles/v05b-nested-pipeline.html">Nested pipelines</a></li>
     <li><a class="dropdown-item" href="../articles/v05c-error-handling.html">Handling failures</a></li>
     <li><a class="dropdown-item" href="../articles/v05d-param-value.html">Annotated parameter values</a></li>
+    <li><a class="dropdown-item" href="../articles/v05e-output-value.html">Annotated step outputs</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
@@ -104,10 +105,10 @@
 
     
     
-<p>A pipeline step can contain another pipeline: instead of computing a
-result directly, the step builds an inner pipeline and returns it. This
-allows to reuse a standard analysis pipeline inside a larger
-workflow.</p>
+<p>A pipeline can be a step of another pipeline. This allows to reuse a
+standard analysis pipeline inside a larger workflow. The key is
+<code><a href="https://rdrr.io/r/base/as.function.html" class="external-link">as.function()</a></code>, which turns a pipeline into a function that
+can be used in pipeline steps.</p>
 <div class="section level3">
 <h3 id="inner-pipeline">Inner pipeline<a class="anchor" aria-label="anchor" href="#inner-pipeline"></a>
 </h3>
@@ -118,307 +119,496 @@ as our inner pipeline.</p>
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpahl.github.io/pipeflow/">pipeflow</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">inner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"coefficients"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"data"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="va">data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"fit"</span>,</span>
-<span>        \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">xVar</span> <span class="op">=</span> <span class="st">"x"</span>, <span class="va">yVar</span> <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"input"</span>, \<span class="op">(</span><span class="va">input_df</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="va">input_df</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"fit"</span>,</span>
+<span>        \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">input</span>, <span class="va">xVar</span> <span class="op">=</span> <span class="st">"x"</span>, <span class="va">yVar</span> <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="va">yVar</span>, <span class="st">"~"</span>, <span class="va">xVar</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
 <span>        <span class="op">}</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"coefs"</span>, \<span class="op">(</span><span class="va">fit</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"coefs"</span>,</span>
+<span>        \<span class="op">(</span><span class="va">fit</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span>, <span class="va">digits</span> <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="op">{</span></span>
+<span>            <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coefficients</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>, <span class="va">digits</span><span class="op">)</span></span>
+<span>        <span class="op">}</span></span>
+<span>    <span class="op">)</span></span>
 <span></span>
 <span><span class="va">inner</span></span>
 <span><span class="co"># &lt;pipeflow&gt; coefficients (3 steps)</span></span>
 <span><span class="co"># ---------------------------------</span></span>
 <span><span class="co">#     step         params depends state</span></span>
-<span><span class="co"># 1:  data           data           new</span></span>
-<span><span class="co"># 2:   fit data,xVar,yVar    data   new</span></span>
-<span><span class="co"># 3: coefs            fit     fit   new</span></span>
+<span><span class="co"># 1: input       input_df           new</span></span>
+<span><span class="co"># 2:   fit data,xVar,yVar   input   new</span></span>
+<span><span class="co"># 3: coefs     fit,digits     fit   new</span></span>
 <span><span class="co"># ---------------------------------</span></span>
 <span><span class="co"># &lt;ready&gt; last run: never</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="a-pipeline-as-a-function">A pipeline as a function<a class="anchor" aria-label="anchor" href="#a-pipeline-as-a-function"></a>
+</h3>
+<p><code><a href="https://rdrr.io/r/base/as.function.html" class="external-link">as.function()</a></code> returns a function whose arguments are the
+unbound parameters of the pipeline, with the current values as defaults,
+and whose result is the output of the step(s) defined by
+<code>out</code>.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">f_inner</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.function.html" class="external-link">as.function</a></span><span class="op">(</span><span class="va">inner</span>, out <span class="op">=</span> <span class="st">"coefs"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/formals.html" class="external-link">formals</a></span><span class="op">(</span><span class="va">f_inner</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># Dotted pair list of 4</span></span>
+<span><span class="co">#  $ input_df: NULL</span></span>
+<span><span class="co">#  $ xVar    : chr "x"</span></span>
+<span><span class="co">#  $ yVar    : chr "y"</span></span>
+<span><span class="co">#  $ digits  : num 3</span></span></code></pre></div>
+<p>As you see, the function version of the inner pipeline has the same
+default params as the pipeline itself.</p>
+<p>Under the hood, the function runs a copy of the inner pipeline. Let’s
+see this now:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">params</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>input_df <span class="op">=</span> <span class="va">iris</span>, xVar <span class="op">=</span> <span class="st">"Sepal.Length"</span>, yVar <span class="op">=</span> <span class="st">"Sepal.Width"</span><span class="op">)</span></span>
+<span><span class="va">inner</span><span class="op">$</span><span class="fu">set_params</span><span class="op">(</span><span class="va">params</span><span class="op">)</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.122 UTC]: Starting run of pipeflow 'coefficients'</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.122 UTC]: Step 1/3 input</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.124 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.127 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.128 UTC]: Finished run of pipeflow 'coefficients'</span></span>
+<span></span>
+<span><span class="va">inner</span><span class="op">[[</span><span class="st">"coefs"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="co">#  (Intercept) Sepal.Length </span></span>
+<span><span class="co">#        3.419       -0.062</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">f_inner</span>, <span class="va">params</span><span class="op">)</span></span>
+<span><span class="co">#  (Intercept) Sepal.Length </span></span>
+<span><span class="co">#        3.419       -0.062</span></span></code></pre></div>
+<p>Note that since <code>f_inner</code> gets its own copy of the inner
+pipeline, later changes to the inner pipeline will <em>not</em> change
+the function.</p>
+</div>
+<div class="section level3">
 <h3 id="outer-pipeline">Outer pipeline<a class="anchor" aria-label="anchor" href="#outer-pipeline"></a>
 </h3>
-<p>The outer pipeline splits the data into subsets and derives the model
-coefficients by running the inner pipeline for each split.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<p>As any other function, the function can be added as a step of another
+pipeline. We start with the simplest case, where the outer pipeline
+provides the data and the inner pipeline analyses it as a whole.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">outer_all</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"analysis"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"df"</span>, \<span class="op">(</span><span class="va">df</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="va">df</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
+<span>        <span class="st">"inner_run"</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/as.function.html" class="external-link">as.function</a></span><span class="op">(</span><span class="va">inner</span>, out <span class="op">=</span> <span class="st">"coefs"</span><span class="op">)</span>,  <span class="co"># coefs is returned from inner run</span></span>
+<span>        params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>input_df <span class="op">=</span> <span class="op">~</span><span class="va">df</span><span class="op">)</span>       <span class="co"># df is passed to the inner pipeline</span></span>
+<span>    <span class="op">)</span></span>
+<span></span>
+<span><span class="va">outer_all</span></span>
+<span><span class="co"># &lt;pipeflow&gt; analysis (2 steps)</span></span>
+<span><span class="co"># -----------------------------</span></span>
+<span><span class="co">#         step                    params depends state</span></span>
+<span><span class="co"># 1:        df                        df           new</span></span>
+<span><span class="co"># 2: inner_run input_df,xVar,yVar,digits      df   new</span></span>
+<span><span class="co"># -----------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: never</span></span></code></pre></div>
+<p>As for any other step function, <code>params</code> of
+<code><a href="../reference/pip_add.html">pip_add()</a></code> wires the function into the outer pipeline.
+<code>list(input_df = ~df)</code> reads: the argument
+<code>input_df</code> of the function is <em>bound</em> to the output of
+the step <code>df</code> from the outer pipeline, that is, the step
+<code>inner_run</code> now depends on <code>df</code>.</p>
+<p>The remaining arguments of the function, <code>xVar</code>,
+<code>yVar</code> and <code>digits</code>, are not bound. They stay
+unbound parameters, and as such are parameters of the outer pipeline,
+without having to forward them:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_get_params</a></span><span class="op">(</span><span class="va">outer_all</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># List of 4</span></span>
+<span><span class="co">#  $ df    : NULL</span></span>
+<span><span class="co">#  $ xVar  : chr "Sepal.Length"</span></span>
+<span><span class="co">#  $ yVar  : chr "Sepal.Width"</span></span>
+<span><span class="co">#  $ digits: num 3</span></span></code></pre></div>
+<p>The <code>df</code> listed here belongs to the outer step
+<code>df</code>.</p>
+<p>Let’s set the analysis parameters and run the outer pipeline:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">outer_all</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>df <span class="op">=</span> <span class="va">iris</span>, xVar <span class="op">=</span> <span class="st">"Sepal.Length"</span>, yVar <span class="op">=</span> <span class="st">"Sepal.Width"</span><span class="op">)</span></span>
+<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.334 UTC]: Starting run of pipeflow 'analysis'</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.334 UTC]: Step 1/2 df</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.335 UTC]: Step 2/2 inner_run</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.358 UTC]: Finished run of pipeflow 'analysis'</span></span>
+<span></span>
+<span><span class="va">outer_all</span><span class="op">[[</span><span class="st">"inner_run"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="co">#  (Intercept) Sepal.Length </span></span>
+<span><span class="co">#        3.419       -0.062</span></span></code></pre></div>
+<p>The inner pipeline was run as a single step and returned the same
+coefficients as above where we called the function directly.</p>
+<div class="section level4">
+<h4 id="returning-something-computed">Returning something computed<a class="anchor" aria-label="anchor" href="#returning-something-computed"></a>
+</h4>
+<p>Instead of step names, <code>out</code> can also be a function. It
+receives the inner pipeline after the run and returns whatever you need
+from it, e.g. a value computed from several steps:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">f_summary</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.function.html" class="external-link">as.function</a></span><span class="op">(</span></span>
+<span>    <span class="va">inner</span>,</span>
+<span>    out <span class="op">=</span> \<span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>        r2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">p</span><span class="op">[[</span><span class="st">"fit"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">$</span><span class="va">r.squared</span>,</span>
+<span>        coefs <span class="op">=</span> <span class="va">p</span><span class="op">[[</span><span class="st">"coefs"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
+<span>    <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">f_summary</span><span class="op">(</span>input_df <span class="op">=</span> <span class="va">iris</span>, xVar <span class="op">=</span> <span class="st">"Sepal.Length"</span>, yVar <span class="op">=</span> <span class="st">"Sepal.Width"</span><span class="op">)</span></span>
+<span><span class="co"># $r2</span></span>
+<span><span class="co"># [1] 0.01382265</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $coefs</span></span>
+<span><span class="co">#  (Intercept) Sepal.Length </span></span>
+<span><span class="co">#        3.419       -0.062</span></span></code></pre></div>
+<p>To simply return the outputs of some steps, use
+<code>out = c("fit", "coefs")</code>. Functions like
+<code><a href="../reference/pip_collect.html">pip_collect()</a></code> are useful in <code>out</code> when you want
+more, e.g. to collect the outputs by tags (see
+<code><a href="../reference/as.function.pipeflow.html">?as.function.pipeflow</a></code>).</p>
+</div>
+</div>
+<div class="section level3">
+<h3 id="outer-pipeline-with-split-data">Outer pipeline with split data<a class="anchor" aria-label="anchor" href="#outer-pipeline-with-split-data"></a>
+</h3>
+<p>The real strength shows when the inner pipeline is used multiple
+times in a “split-data” scenario. Here, the outer pipeline splits the
+data into subsets (see also the <a href="v05a-split-map-reduce.html">previous vignette</a>), and
+<code>input_df</code> is bound to the output of the split step. Then the
+function is called once per subset.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">outer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"full analysis"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"df"</span>, \<span class="op">(</span><span class="va">df</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="va">df</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
+<span>        <span class="st">"split_df"</span>,</span>
+<span>        \<span class="op">(</span><span class="va">df</span> <span class="op">=</span> <span class="op">~</span><span class="va">df</span>, <span class="va">byVar</span> <span class="op">=</span> <span class="st">"by"</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">df</span>, f <span class="op">=</span> <span class="va">df</span><span class="op">[[</span><span class="va">byVar</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>        exec <span class="op">=</span> <span class="st">"split"</span></span>
+<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
+<span>        <span class="st">"inner_run"</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/as.function.html" class="external-link">as.function</a></span><span class="op">(</span><span class="va">inner</span>, out <span class="op">=</span> <span class="st">"coefs"</span><span class="op">)</span>,</span>
+<span>        params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>input_df <span class="op">=</span> <span class="op">~</span><span class="va">split_df</span><span class="op">)</span>    <span class="co"># bind to split data</span></span>
+<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
+<span>        <span class="st">"combine"</span>,</span>
+<span>        \<span class="op">(</span><span class="va">coefs</span> <span class="op">=</span> <span class="op">~</span><span class="va">inner_run</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">coefs</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>        exec <span class="op">=</span> <span class="st">"reduce"</span></span>
+<span>    <span class="op">)</span></span>
+<span></span>
+<span><span class="va">outer</span></span>
+<span><span class="co"># &lt;pipeflow&gt; full analysis (4 steps)</span></span>
+<span><span class="co"># ----------------------------------</span></span>
+<span><span class="co">#         step                    params   depends state   exec</span></span>
+<span><span class="co"># 1:        df                        df             new   auto</span></span>
+<span><span class="co"># 2:  split_df                  df,byVar        df   new  split</span></span>
+<span><span class="co"># 3: inner_run input_df,xVar,yVar,digits  split_df   new   auto</span></span>
+<span><span class="co"># 4:   combine                     coefs inner_run   new reduce</span></span>
+<span><span class="co"># ----------------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: never</span></span></code></pre></div>
+<p>The split output is partitioned, so the function is called once per
+subset, and its output is partitioned as well. The <code>combine</code>
+step is a <code>reduce</code> step and receives all partitions. As
+before, the unbound parameters of the inner pipeline are parameters of
+the outer pipeline, now next to <code>byVar</code> of the split
+step:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_get_params</a></span><span class="op">(</span><span class="va">outer</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># List of 5</span></span>
+<span><span class="co">#  $ df    : NULL</span></span>
+<span><span class="co">#  $ byVar : chr "by"</span></span>
+<span><span class="co">#  $ xVar  : chr "Sepal.Length"</span></span>
+<span><span class="co">#  $ yVar  : chr "Sepal.Width"</span></span>
+<span><span class="co">#  $ digits: num 3</span></span></code></pre></div>
+<p>Let’s set the analysis parameters and run the full pipeline:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">outer</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span></span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>            df <span class="op">=</span> <span class="va">iris</span>,</span>
+<span>            xVar <span class="op">=</span> <span class="st">"Sepal.Length"</span>,</span>
+<span>            yVar <span class="op">=</span> <span class="st">"Sepal.Width"</span>,</span>
+<span>            byVar <span class="op">=</span> <span class="st">"Species"</span></span>
+<span>        <span class="op">)</span></span>
+<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.637 UTC]: Starting run of pipeflow 'full analysis'</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.637 UTC]: Step 1/4 df</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.638 UTC]: Step 2/4 split_df</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.639 UTC]: Step 3/4 inner_run</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.657 UTC]: Step 4/4 combine</span></span>
+<span><span class="co"># info [2026-10-20 18:52:03.658 UTC]: Finished run of pipeflow 'full analysis'</span></span></code></pre></div>
+<p>The output of the <code>inner_run</code> step is a partitioned list
+of coefficient vectors, one for each species,</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">outer</span><span class="op">[[</span><span class="st">"inner_run"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="co"># $setosa</span></span>
+<span><span class="co">#  (Intercept) Sepal.Length </span></span>
+<span><span class="co">#       -0.569        0.799 </span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $versicolor</span></span>
+<span><span class="co">#  (Intercept) Sepal.Length </span></span>
+<span><span class="co">#        0.872        0.320 </span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $virginica</span></span>
+<span><span class="co">#  (Intercept) Sepal.Length </span></span>
+<span><span class="co">#        1.446        0.232 </span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># attr(,"class")</span></span>
+<span><span class="co"># [1] "list"                 "pipeflow_partitioned"</span></span></code></pre></div>
+<p>and the <code>combine</code> step returns the expected combined
+table.</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">outer</span><span class="op">[[</span><span class="st">"combine"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="co">#            (Intercept) Sepal.Length</span></span>
+<span><span class="co"># setosa          -0.569        0.799</span></span>
+<span><span class="co"># versicolor       0.872        0.320</span></span>
+<span><span class="co"># virginica        1.446        0.232</span></span></code></pre></div>
+<p>Now suppose we want to change one of the model settings, say use
+<code>Petal.Length</code> instead of <code>Sepal.Length</code> as the
+predictor.</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">outer</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Petal.Length"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">outer</span></span>
+<span><span class="co"># &lt;pipeflow&gt; full analysis (4 steps)</span></span>
+<span><span class="co"># ----------------------------------</span></span>
+<span><span class="co">#         step                    params   depends    state                 out   exec</span></span>
+<span><span class="co"># 1:        df                        df               done &lt;data.frame[150x5]&gt;   auto</span></span>
+<span><span class="co"># 2:  split_df                  df,byVar        df     done           &lt;list[3]&gt;  split</span></span>
+<span><span class="co"># 3: inner_run input_df,xVar,yVar,digits  split_df outdated           &lt;list[3]&gt;   auto</span></span>
+<span><span class="co"># 4:   combine                     coefs inner_run outdated   &lt;data.frame[3x2]&gt; reduce</span></span>
+<span><span class="co"># ----------------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-20 18:52:03</span></span></code></pre></div>
+<p>Since <code>xVar</code> is a parameter of the <code>inner_run</code>
+step, this step and its downstream steps have been marked as
+“outdated”.</p>
+</div>
+<div class="section level3">
+<h3 id="caching-of-inner-pipelines">Caching of inner pipelines<a class="anchor" aria-label="anchor" href="#caching-of-inner-pipelines"></a>
+</h3>
+<p>A pipeline function by default caches the inner pipelines it has run:
+one for each step and subset. In a step that is mapped over subsets,
+each subset gets an inner pipeline of its own. A later call sets all
+parameters and inputs in the pipeline of its subset, so that exactly the
+steps that are outdated by the change are run again.</p>
+<p>To see this at work, we use a minimal toy example. The inner pipeline
+squares numbers and scales the result. The counters tell us how often
+each step has actually run.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">runs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">runs</span><span class="op">$</span><span class="va">square</span> <span class="op">&lt;-</span> <span class="va">runs</span><span class="op">$</span><span class="va">scale</span> <span class="op">&lt;-</span> <span class="fl">0L</span></span>
+<span><span class="va">count</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">step</span><span class="op">)</span> <span class="va">runs</span><span class="op">[[</span><span class="va">step</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">runs</span><span class="op">[[</span><span class="va">step</span><span class="op">]</span><span class="op">]</span> <span class="op">+</span> <span class="fl">1L</span></span>
+<span><span class="va">n_runs</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/unlist.html" class="external-link">unlist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/get.html" class="external-link">mget</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"square"</span>, <span class="st">"scale"</span><span class="op">)</span>, envir <span class="op">=</span> <span class="va">runs</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">toy_inner</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"toy inner"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"input"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="va">x</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"square"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">input</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="fu">count</span><span class="op">(</span><span class="st">"square"</span><span class="op">)</span></span>
+<span>        <span class="va">x</span><span class="op">^</span><span class="fl">2</span></span>
+<span>    <span class="op">}</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"scale"</span>, \<span class="op">(</span><span class="va">sq</span> <span class="op">=</span> <span class="op">~</span><span class="va">square</span>, <span class="va">factor</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="fu">count</span><span class="op">(</span><span class="st">"scale"</span><span class="op">)</span></span>
+<span>        <span class="va">sq</span> <span class="op">*</span> <span class="va">factor</span></span>
+<span>    <span class="op">}</span><span class="op">)</span></span></code></pre></div>
+<p>The outer pipeline splits a list of two number vectors,
+<code>a</code> and <code>b</code>, and runs the inner pipeline on each
+of them.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">toy_outer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"toy outer"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
+<span>        <span class="st">"numbers"</span>,</span>
+<span>        \<span class="op">(</span><span class="va">values</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>a <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, b <span class="op">=</span> <span class="fl">4</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span><span class="op">)</span> <span class="va">values</span>,</span>
+<span>        exec <span class="op">=</span> <span class="st">"split"</span></span>
+<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
+<span>        <span class="st">"inner_run"</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/r/base/as.function.html" class="external-link">as.function</a></span><span class="op">(</span><span class="va">toy_inner</span>, out <span class="op">=</span> <span class="st">"scale"</span><span class="op">)</span>,</span>
+<span>        params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="op">~</span><span class="va">numbers</span><span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">toy_outer</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu">n_runs</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># square  scale </span></span>
+<span><span class="co">#      2      2</span></span></code></pre></div>
+<p>Each step ran twice, once in the inner pipeline of <code>a</code> and
+once in the one of <code>b</code>. Now we change <code>factor</code>,
+which only the last step uses. Only this step is outdated in the inner
+pipelines, so only this step runs again:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">toy_outer</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>factor <span class="op">=</span> <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">toy_outer</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu">n_runs</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># square  scale </span></span>
+<span><span class="co">#      2      4</span></span></code></pre></div>
+<p>Next we change the input data and give <code>a</code> other numbers
+while <code>b</code> stays the same, so that we expect that the inner
+pipeline is run <em>once</em> for <code>a</code>.</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">toy_outer</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>values <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>a <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">4</span>, b <span class="op">=</span> <span class="fl">4</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">toy_outer</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu">n_runs</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># square  scale </span></span>
+<span><span class="co">#      3      5</span></span>
+<span></span>
+<span><span class="va">toy_outer</span><span class="op">[[</span><span class="st">"inner_run"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="co"># $a</span></span>
+<span><span class="co"># [1]  10  40  90 160</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $b</span></span>
+<span><span class="co"># [1] 160 250 360</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># attr(,"class")</span></span>
+<span><span class="co"># [1] "list"                 "pipeflow_partitioned"</span></span></code></pre></div>
+<p>To look at the kept inner pipelines, e.g. while debugging, use
+<code><a href="../reference/pip_inner.html">pip_inner()</a></code>. For a mapped step, it returns one pipeline per
+partition key:</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">inner_pips</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_inner.html">pip_inner</a></span><span class="op">(</span><span class="va">toy_outer</span>, <span class="st">"inner_run"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">inner_pips</span><span class="op">)</span></span>
+<span><span class="co"># [1] "a" "b"</span></span>
+<span></span>
+<span><span class="va">inner_pips</span><span class="op">[[</span><span class="st">"a"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="co"># &lt;pipeflow&gt; toy inner (3 steps)</span></span>
+<span><span class="co"># ------------------------------</span></span>
+<span><span class="co">#      step    params depends state             out</span></span>
+<span><span class="co"># 1:  input         x          done         1,2,3,4</span></span>
+<span><span class="co"># 2: square         x   input  done      1, 4, 9,16</span></span>
+<span><span class="co"># 3:  scale sq,factor  square  done  10, 40, 90,160</span></span>
+<span><span class="co"># ------------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-20 18:52:04</span></span></code></pre></div>
+<p>A few things to know:</p>
+<ul>
+<li>Each call has an overhead of a few milliseconds for setting the
+parameters and running the pipeline, so reuse pays when the inner steps
+are expensive.</li>
+<li>Inputs are compared as they are, so a change made in place to an
+environment or an R6 object is not seen (as in a plain pipeline). Use
+<code>cache = FALSE</code> for such inputs.</li>
+<li>Warnings and messages of the inner steps reach the outer run. If an
+inner step fails, the outer step fails, unless the inner pipeline
+handles the failure itself (see <a href="v05c-error-handling.html">“Handling failures”</a>).</li>
+<li>The inner pipelines are run silently. To follow their steps while
+debugging, set <code>as.function(lgr = pipeflow_lgr)</code> (or any
+other logger).</li>
+</ul>
+<p>See the “Pipeline functions with partitioned inputs” section of
+<code><a href="../reference/as.function.pipeflow.html">?as.function.pipeflow</a></code> for how the inner pipelines are kept
+and reused.</p>
+</div>
+<div class="section level3">
+<h3 id="full-control-running-the-inner-pipeline-yourself">Full control: running the inner pipeline yourself<a class="anchor" aria-label="anchor" href="#full-control-running-the-inner-pipeline-yourself"></a>
+</h3>
+<p><code><a href="https://rdrr.io/r/base/as.function.html" class="external-link">as.function()</a></code> shares the parameters of the inner
+pipeline between all subsets. If you need more control, e.g. different
+settings per group or mapping over something else than the output of a
+split step, you can always “manually” clone and run the inner pipeline
+in a step function yourself.</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Helper to run inner pipeline</span></span>
-<span><span class="va">run_inner_pip</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pip</span>, <span class="va">name</span>, <span class="va">data</span><span class="op">)</span> <span class="op">{</span></span>
+<span><span class="va">run_inner_pip</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">pip</span>, <span class="va">name</span>, <span class="va">df</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">pip</span><span class="op">$</span><span class="va">name</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"coefs for *%s*"</span>, <span class="va">name</span><span class="op">)</span></span>
 <span></span>
 <span>    <span class="co"># Set data subset for inner pipeline and run it</span></span>
-<span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">pip</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">data</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">pip</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>input_df <span class="op">=</span> <span class="va">df</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span>lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span>    <span class="va">pip</span><span class="op">[[</span><span class="st">"coefs"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="op">}</span></span>
 <span></span>
-<span><span class="va">outer</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"full analysis"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"data"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="va">data</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span><span class="va">manual</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"full analysis"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"df"</span>, \<span class="op">(</span><span class="va">df</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="va">df</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
-<span>        <span class="st">"split_data"</span>, \<span class="op">(</span><span class="va">data</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span>, <span class="va">byVar</span> <span class="op">=</span> <span class="st">"by"</span><span class="op">)</span> <span class="op">{</span></span>
-<span>            <span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">data</span>, f <span class="op">=</span> <span class="va">data</span><span class="op">[[</span><span class="va">byVar</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
-<span>        <span class="op">}</span></span>
+<span>        <span class="st">"split_df"</span>,</span>
+<span>        \<span class="op">(</span><span class="va">df</span> <span class="op">=</span> <span class="op">~</span><span class="va">df</span>, <span class="va">byVar</span> <span class="op">=</span> <span class="st">"by"</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">df</span>, f <span class="op">=</span> <span class="va">df</span><span class="op">[[</span><span class="va">byVar</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"inner_run"</span>,</span>
-<span>        \<span class="op">(</span><span class="va">dataList</span> <span class="op">=</span> <span class="op">~</span><span class="va">split_data</span>, <span class="va">xVar</span> <span class="op">=</span> <span class="st">"x"</span>, <span class="va">yVar</span> <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        \<span class="op">(</span><span class="va">dfList</span> <span class="op">=</span> <span class="op">~</span><span class="va">split_df</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
 <span>            <span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_clone.html">pip_clone</a></span><span class="op">(</span><span class="va">inner</span><span class="op">)</span></span>
 <span></span>
-<span>            <span class="co"># Forward parameters to inner</span></span>
-<span>            <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="va">xVar</span>, yVar <span class="op">=</span> <span class="va">yVar</span><span class="op">)</span><span class="op">)</span></span>
+<span>            <span class="co"># Forward the parameters of the step to the inner pipeline</span></span>
+<span>            <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span>            <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Map</a></span><span class="op">(</span></span>
 <span>                f <span class="op">=</span> <span class="va">run_inner_pip</span>,</span>
-<span>                name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">dataList</span><span class="op">)</span>,</span>
-<span>                data <span class="op">=</span> <span class="va">dataList</span>,</span>
+<span>                name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">dfList</span><span class="op">)</span>,</span>
+<span>                df <span class="op">=</span> <span class="va">dfList</span>,</span>
 <span>                MoreArgs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>pip <span class="op">=</span> <span class="va">p</span><span class="op">)</span></span>
 <span>            <span class="op">)</span></span>
-<span>        <span class="op">}</span></span>
+<span>        <span class="op">}</span>,</span>
+<span>        params <span class="op">=</span> <span class="fu"><a href="../reference/pip_set_params.html">pip_get_params</a></span><span class="op">(</span><span class="va">inner</span><span class="op">)</span> <span class="co"># &lt;--- default parameters of inner</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span></span>
 <span>        <span class="st">"combine"</span>,</span>
 <span>        \<span class="op">(</span><span class="va">coefs</span> <span class="op">=</span> <span class="op">~</span><span class="va">inner_run</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">coefs</span><span class="op">)</span><span class="op">)</span></span>
 <span>    <span class="op">)</span></span>
 <span></span>
-<span><span class="va">outer</span></span>
+<span><span class="va">manual</span></span>
 <span><span class="co"># &lt;pipeflow&gt; full analysis (4 steps)</span></span>
 <span><span class="co"># ----------------------------------</span></span>
-<span><span class="co">#          step             params    depends state</span></span>
-<span><span class="co"># 1:       data               data              new</span></span>
-<span><span class="co"># 2: split_data         data,byVar       data   new</span></span>
-<span><span class="co"># 3:  inner_run dataList,xVar,yVar split_data   new</span></span>
-<span><span class="co"># 4:    combine              coefs  inner_run   new</span></span>
+<span><span class="co">#         step                           params   depends state</span></span>
+<span><span class="co"># 1:        df                               df             new</span></span>
+<span><span class="co"># 2:  split_df                         df,byVar        df   new</span></span>
+<span><span class="co"># 3: inner_run dfList,input_df,xVar,yVar,digits  split_df   new</span></span>
+<span><span class="co"># 4:   combine                            coefs inner_run   new</span></span>
 <span><span class="co"># ----------------------------------</span></span>
 <span><span class="co"># &lt;ready&gt; last run: never</span></span></code></pre></div>
-<p>Note the <code>inner_run</code> step: its parameters
-<code>xVar</code> and <code>yVar</code> are forwarded to the inner
-pipeline.</p>
-</div>
-<div class="section level3">
-<h3 id="run-nested-pipeline">Run nested pipeline<a class="anchor" aria-label="anchor" href="#run-nested-pipeline"></a>
-</h3>
-<p>Let’s now set the analysis parameters and run the full pipeline:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">outer</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span></span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>            data <span class="op">=</span> <span class="va">iris</span>,</span>
-<span>            xVar <span class="op">=</span> <span class="st">"Sepal.Length"</span>,</span>
-<span>            yVar <span class="op">=</span> <span class="st">"Sepal.Width"</span>,</span>
-<span>            byVar <span class="op">=</span> <span class="st">"Species"</span></span>
-<span>        <span class="op">)</span></span>
-<span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-15 10:42:02.917 UTC]: Starting run of pipeflow 'full analysis'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:02.917 UTC]: Step 1/4 data</span></span>
-<span><span class="co"># info [2026-10-15 10:42:02.919 UTC]: Step 2/4 split_data</span></span>
-<span><span class="co"># info [2026-10-15 10:42:02.920 UTC]: Step 3/4 inner_run</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.020 UTC]: Starting run of pipeflow 'coefs for *setosa*'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.020 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.021 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.024 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.026 UTC]: Finished run of pipeflow 'coefs for *setosa*'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.042 UTC]: Starting run of pipeflow 'coefs for *versicolor*'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.042 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.043 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.046 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.048 UTC]: Finished run of pipeflow 'coefs for *versicolor*'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.050 UTC]: Starting run of pipeflow 'coefs for *virginica*'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.050 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.051 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.052 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.054 UTC]: Finished run of pipeflow 'coefs for *virginica*'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.055 UTC]: Step 4/4 combine</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.056 UTC]: Finished run of pipeflow 'full analysis'</span></span></code></pre></div>
-<p>The output of the <code>inner_run</code> step is a list of
-coefficient vectors, one for each species,</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">outer</span><span class="op">[[</span><span class="st">"inner_run"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="co"># $setosa</span></span>
-<span><span class="co">#  (Intercept) Sepal.Length </span></span>
-<span><span class="co">#   -0.5694327    0.7985283 </span></span>
-<span><span class="co"># </span></span>
-<span><span class="co"># $versicolor</span></span>
-<span><span class="co">#  (Intercept) Sepal.Length </span></span>
-<span><span class="co">#    0.8721460    0.3197193 </span></span>
-<span><span class="co"># </span></span>
-<span><span class="co"># $virginica</span></span>
-<span><span class="co">#  (Intercept) Sepal.Length </span></span>
-<span><span class="co">#    1.4463054    0.2318905</span></span></code></pre></div>
-<p>and the <code>combine</code> step returns the expected combined
-table.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">outer</span><span class="op">[[</span><span class="st">"combine"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="co">#            (Intercept) Sepal.Length</span></span>
-<span><span class="co"># setosa      -0.5694327    0.7985283</span></span>
-<span><span class="co"># versicolor   0.8721460    0.3197193</span></span>
-<span><span class="co"># virginica    1.4463054    0.2318905</span></span></code></pre></div>
-<p>Now suppose we want to change one of the model settings, say use
-<code>Petal.Length</code> instead of <code>Sepal.Length</code> as the
-predictor.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">outer</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Petal.Length"</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">outer</span></span>
-<span><span class="co"># &lt;pipeflow&gt; full analysis (4 steps)</span></span>
-<span><span class="co"># ----------------------------------</span></span>
-<span><span class="co">#          step             params    depends    state                 out</span></span>
-<span><span class="co"># 1:       data               data                done &lt;data.frame[150x5]&gt;</span></span>
-<span><span class="co"># 2: split_data         data,byVar       data     done           &lt;list[3]&gt;</span></span>
-<span><span class="co"># 3:  inner_run dataList,xVar,yVar split_data outdated           &lt;list[3]&gt;</span></span>
-<span><span class="co"># 4:    combine              coefs  inner_run outdated   &lt;data.frame[3x2]&gt;</span></span>
-<span><span class="co"># ----------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-15 10:42:03</span></span></code></pre></div>
-<p>Since the <code>xVar</code> parameter is part of the
-<code>inner_run</code> step’s function arguments, the
-<code>inner_run</code> step’s state (and its downstream dependencies)
-correctly has now been marked as “outdated”.</p>
-</div>
-<div class="section level3">
-<h3 id="forward-inner-pipeline-parameters-programmatically">Forward inner pipeline parameters programmatically<a class="anchor" aria-label="anchor" href="#forward-inner-pipeline-parameters-programmatically"></a>
-</h3>
-<p>While forwarding the parameters <em>manually</em> to the inner
-pipeline is straight-forward in our toy example, trying to
-<em>manually</em> synchronize real-world parameter sets between the
-outer and inner pipeline quickly becomes a unfeasible and a source for
-bugs that are hard to detect.</p>
-<p>For this reason, in practice, the following pattern should be used,
-which basically just forwards the combined set of <em>all</em> existing
-parameters. To do this, we replace the <code>inner_run</code> step as
-follows:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">outer</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_replace.html">pip_replace</a></span><span class="op">(</span></span>
-<span>    <span class="st">"inner_run"</span>,</span>
-<span>    \<span class="op">(</span><span class="va">dataList</span> <span class="op">=</span> <span class="op">~</span><span class="va">split_data</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
-<span>        <span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_clone.html">pip_clone</a></span><span class="op">(</span><span class="va">inner</span><span class="op">)</span></span>
-<span></span>
-<span>        <span class="co"># Forward all parameters (from outer and inner)</span></span>
-<span>        <span class="va">all_params</span> <span class="op">&lt;-</span> <span class="va">.self</span><span class="op">$</span><span class="fu">get_params</span><span class="op">(</span><span class="op">)</span></span>
-<span>        <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p</span>, <span class="va">all_params</span>, unknown <span class="op">=</span> <span class="st">"ignore"</span><span class="op">)</span></span>
-<span></span>
-<span>        <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Map</a></span><span class="op">(</span></span>
-<span>            f <span class="op">=</span> <span class="va">run_inner_pip</span>,</span>
-<span>            name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">dataList</span><span class="op">)</span>,</span>
-<span>            data <span class="op">=</span> <span class="va">dataList</span>,</span>
-<span>            MoreArgs <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>pip <span class="op">=</span> <span class="va">p</span><span class="op">)</span></span>
-<span>        <span class="op">)</span></span>
-<span>    <span class="op">}</span>,</span>
-<span>    params <span class="op">=</span> <span class="fu"><a href="../reference/pip_set_params.html">pip_get_params</a></span><span class="op">(</span><span class="va">inner</span><span class="op">)</span> <span class="co"># &lt;--- default parameters of inner pipeline</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">outer</span></span>
-<span><span class="co"># &lt;pipeflow&gt; full analysis (4 steps)</span></span>
-<span><span class="co"># ----------------------------------</span></span>
-<span><span class="co">#          step                  params    depends    state                 out</span></span>
-<span><span class="co"># 1:       data                    data                done &lt;data.frame[150x5]&gt;</span></span>
-<span><span class="co"># 2: split_data              data,byVar       data     done           &lt;list[3]&gt;</span></span>
-<span><span class="co"># 3:  inner_run data,xVar,yVar,dataList split_data      new              [NULL]</span></span>
-<span><span class="co"># 4:    combine                   coefs  inner_run outdated   &lt;data.frame[3x2]&gt;</span></span>
-<span><span class="co"># ----------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-15 10:42:03</span></span></code></pre></div>
-<p>In this version, the <code>inner_run</code> step no longer declares
-<code>xVar</code> and <code>yVar</code> as its own arguments. Instead,
-its parameters are seeded with the inner pipeline’s parameters via
-<code>params = pip_get_params(inner)</code>, and the step forwards the
-combined parameter set at run time. Three aspects are worth spelling
-out:</p>
+<p>In this version, the <code>inner_run</code> step does not declare the
+parameters of the inner pipeline as arguments. Instead, its parameters
+are seeded with the inner pipeline’s parameters via
+<code>params = pip_get_params(inner)</code>, and the step forwards them
+to the inner pipeline at run time:</p>
 <ul>
 <li>
-<strong><code>.self</code></strong> refers to the pipeline that is
-currently being run and is available inside every step function that
-refers to it, without having to declare it. It exposes the usual
-pipeline interface, so <code>.self$get_params()</code> returns the
-current unbound parameters of the outer pipeline, and things like
-<code>.self$name</code> or <code>.self$run()</code> work as expected.
-For more examples on this mechanism see the <a href="v06-self-modify-pipeline.html">self-modifying pipelines</a>
-vignette.</li>
-<li>
 <strong><code>params = pip_get_params(inner)</code></strong>
-registers the inner pipeline’s unbound parameters (<code>data</code>,
-<code>xVar</code>, <code>yVar</code>) as parameters of the
-<code>inner_run</code> step. They therefore show up in the step’s
-<code>params</code> column, become part of the outer pipeline’s
-parameter set (and can be updated with
-<code>pip_set_params(outer, ...)</code>), and are passed to the step
-function when it runs.</li>
+registers the inner pipeline’s unbound parameters
+(<code>input_df</code>, <code>xVar</code>, <code>yVar</code>,
+<code>digits</code>) as parameters of the <code>inner_run</code> step.
+They show up in the step’s <code>params</code> column, become part of
+the outer pipeline’s parameter set, and changing them outdates the
+step.</li>
 <li>
-<strong>Precedence over function arguments</strong>: when
-<code>params</code> overlaps with the arguments of the step function,
-the function’s default values take precedence. This is why the
-replacement function above declares only <code>dataList</code> and
-<code>...</code> — had it declared e.g. <code>xVar = "x"</code>, that
-default would win over the value coming from <code>params</code>, and
-the forwarding would silently be ignored. As another example,
-<code>pip_add("s", \(x = 99, ...) x, params = list(x = 1))</code> stores
-<code>x = 99</code>, not <code>x = 1</code>.</li>
+<strong><code>...</code></strong> <em>takes the forwarded
+parameters</em>: since the <code>inner_run</code> step only declares
+<code>dfList</code> as an argument, the registered parameters reach the
+step function via <code>...</code>. It carries exactly the parameters of
+this step, with their current values (unwrapped, see
+<code><a href="../reference/pip_param_value.html">?pip_param_value</a></code>), so
+<code>pip_set_params(p, list(...))</code> sets them in the inner
+pipeline, without any unknown parameters to ignore. Where the names
+overlap, the values in <code>params</code> would override the function
+defaults: had the inner pipeline an unbound parameter
+<code>dfList</code>, its value would replace the reference
+<code>~split_df</code> of the <code>inner_run</code> step, something to
+be aware of.</li>
 </ul>
-<p>Let’s re-run the full pipeline.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">outer</span> <span class="op">|&gt;</span></span>
+<p>Let us now run the manual pipeline to see it in action.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">manual</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span></span>
 <span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>            data <span class="op">=</span> <span class="va">iris</span>,</span>
+<span>            df <span class="op">=</span> <span class="va">iris</span>,</span>
 <span>            xVar <span class="op">=</span> <span class="st">"Sepal.Length"</span>,</span>
 <span>            yVar <span class="op">=</span> <span class="st">"Sepal.Width"</span>,</span>
 <span>            byVar <span class="op">=</span> <span class="st">"Species"</span></span>
 <span>        <span class="op">)</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.392 UTC]: Starting run of pipeflow 'full analysis'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.392 UTC]: Step 1/4 data - skipping done step</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.392 UTC]: Step 2/4 split_data - skipping done step</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.392 UTC]: Step 3/4 inner_run</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.397 UTC]: Starting run of pipeflow 'coefs for *setosa*'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.398 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.398 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.400 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.402 UTC]: Finished run of pipeflow 'coefs for *setosa*'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.404 UTC]: Starting run of pipeflow 'coefs for *versicolor*'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.404 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.405 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.407 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.408 UTC]: Finished run of pipeflow 'coefs for *versicolor*'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.411 UTC]: Starting run of pipeflow 'coefs for *virginica*'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.411 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.412 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.414 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.415 UTC]: Finished run of pipeflow 'coefs for *virginica*'</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.416 UTC]: Step 4/4 combine</span></span>
-<span><span class="co"># info [2026-10-15 10:42:03.419 UTC]: Finished run of pipeflow 'full analysis'</span></span></code></pre></div>
-<p>Note the <code>unknown = "ignore"</code> in the replacement function
-above. <code>.self$get_params()</code> returns the outer pipeline’s
-<em>entire</em> parameter set, which includes <code>byVar</code> (from
-the <code>split_data</code> step) while the inner pipeline only defines
-<code>data</code>, <code>xVar</code>, and <code>yVar</code>. By default,
-<code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> warns about parameters that are not
-defined in the target. With <code>unknown = "ignore"</code>, it silently
-leaves them unset, so the inner pipeline still receives all parameters
-it knows and the result is unaffected. Unlike
-<code><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings()</a></code>, this does not hide any other
-warning.</p>
-<p>Alternatively, you could first restrict the forwarded parameters to
-those the inner pipeline actually knows. That has the same effect but
-adds code, and since forwarding the full parameter set is the whole
-point of this pattern, there is no need for it.</p>
-<p>Again, changing one of the inner parameters will correctly outdate
-the <code>inner_run</code> step plus downstream dependencies.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">outer</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>xVar <span class="op">=</span> <span class="st">"Petal.Length"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># info [2026-10-20 18:52:04.354 UTC]: Starting run of pipeflow 'full analysis'</span></span>
+<span><span class="co"># info [2026-10-20 18:52:04.354 UTC]: Step 1/4 df</span></span>
+<span><span class="co"># info [2026-10-20 18:52:04.355 UTC]: Step 2/4 split_df</span></span>
+<span><span class="co"># info [2026-10-20 18:52:04.356 UTC]: Step 3/4 inner_run</span></span>
+<span><span class="co"># info [2026-10-20 18:52:04.376 UTC]: Step 4/4 combine</span></span>
+<span><span class="co"># info [2026-10-20 18:52:04.377 UTC]: Finished run of pipeflow 'full analysis'</span></span>
 <span></span>
-<span><span class="va">outer</span></span>
-<span><span class="co"># &lt;pipeflow&gt; full analysis (4 steps)</span></span>
-<span><span class="co"># ----------------------------------</span></span>
-<span><span class="co">#          step                  params    depends    state                 out</span></span>
-<span><span class="co"># 1:       data                    data                done &lt;data.frame[150x5]&gt;</span></span>
-<span><span class="co"># 2: split_data              data,byVar       data     done           &lt;list[3]&gt;</span></span>
-<span><span class="co"># 3:  inner_run data,xVar,yVar,dataList split_data outdated           &lt;list[3]&gt;</span></span>
-<span><span class="co"># 4:    combine                   coefs  inner_run outdated   &lt;data.frame[3x2]&gt;</span></span>
-<span><span class="co"># ----------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-15 10:42:03</span></span></code></pre></div>
-<p>With the above pattern, you can now change both the inner and outer
-pipeline, adding and/or removing any steps or parameters, without having
-to worry about parameter synchronization.</p>
+<span><span class="va">manual</span><span class="op">[[</span><span class="st">"combine"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="co">#            (Intercept) Sepal.Length</span></span>
+<span><span class="co"># setosa          -0.569        0.799</span></span>
+<span><span class="co"># versicolor       0.872        0.320</span></span>
+<span><span class="co"># virginica        1.446        0.232</span></span></code></pre></div>
+<p>This version runs each subset from scratch every time the step is
+outdated. With <code><a href="https://rdrr.io/r/base/as.function.html" class="external-link">as.function()</a></code>, the same result is obtained
+with less code and with caching.</p>
 </div>
 <div class="section level3">
 <h3 id="built-in-exec-modes-vs--nested-pipelines">Built-in exec modes vs. nested pipelines<a class="anchor" aria-label="anchor" href="#built-in-exec-modes-vs--nested-pipelines"></a>
@@ -427,29 +617,29 @@ to worry about parameter synchronization.</p>
 vignette</a> solve the same “split, apply, and combine” problem. The
 built-in execution modes
 (<code>exec = "split"</code>/<code>"reduce"</code>) are the recommended
-default whenever they fit while nested pipelines can be considered the
-more general tool. As a rule of thumb:</p>
+default whenever the work fits into the steps of a single pipeline,
+while nested pipelines are the more general tool. As a rule of
+thumb:</p>
 <ul>
 <li>
 <strong>Code</strong>: the built-in modes are declarative and need
-no extra code, while the nested pattern requires cloning, mapping, and
-forwarding parameters.</li>
+no extra code. <code><a href="https://rdrr.io/r/base/as.function.html" class="external-link">as.function()</a></code> needs one step that binds its
+inputs. Running the inner pipeline yourself requires cloning, mapping,
+and forwarding parameters.</li>
 <li>
 <strong>Map shape</strong>: the built-in modes handle a single split
-point in the pipeline, while nested pipelines can map over arbitrary
-inputs (e.g. cross-validation folds, several data sets, or per-group
-settings) and multiple levels (nested splits).</li>
-<li>
-<strong>Reuse</strong>: with nested pipelines the inner pipeline is
-a standalone, reusable artifact, whereas with the built-in modes the
-steps live in a single pipeline.</li>
+point in the pipeline, while nested pipelines can be mapped over the
+partitions of a split step <em>and</em> can contain their own splits
+(nested splits). Running the inner pipeline yourself can map over
+arbitrary inputs (e.g. cross-validation folds or several data
+sets).</li>
 <li>
 <strong>Run log and state</strong>: the built-in modes produce one
-unified run over all partitions, while nested pipelines are run
-separately.</li>
+unified run over all partitions, while a nested pipeline is run as one
+step of the outer pipeline, with its own log silenced by default.</li>
 <li>
 <strong>Parallelism</strong>: the built-in modes are handled by
-{pipeflow}, whereas with nested pipelines you control the loop and can
+{pipeflow}, whereas with a manual loop you control it and can
 parallelize it yourself.</li>
 </ul>
 </div>

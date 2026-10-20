@@ -1,5 +1,254 @@
 # Changelog
 
+## pipeflow 0.5.0.9012
+
+### Breaking changes
+
+- [`as.function()`](https://rdrr.io/r/base/as.function.html) lost the
+  argument `bind`. Bind the inputs of the function with `params` of
+  [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
+  instead, as for any other step function, e.g.
+  `pip_add(outer, "step", f, params = list(input_df = ~split))`.
+- The argument `cache` of
+  [`as.function()`](https://rdrr.io/r/base/as.function.html) is now
+  `TRUE` (the default) or `FALSE` instead of the number of inner
+  pipelines to keep.
+
+### New features
+
+- `out` of [`as.function()`](https://rdrr.io/r/base/as.function.html)
+  can be a function. It is called with a light copy of the run inner
+  pipeline, and its result is the result of the function,
+  e.g. `out = \(p) pip_collect(p, by = "tags")`.
+- New `pip_inner(x, step)` returns the inner pipelines that the function
+  of a step, made by
+  [`as.function()`](https://rdrr.io/r/base/as.function.html), has kept:
+  one per partition key for a mapped step. Use it e.g. to debug an inner
+  run.
+
+### Changes
+
+- A function made by
+  [`as.function()`](https://rdrr.io/r/base/as.function.html) keeps one
+  inner pipeline per outer step and partition key, so a later call only
+  reruns the inner steps whose params or inputs changed, for any number
+  of partitions. This also works for inputs bound via `params` of
+  [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md).
+
+### Documentation
+
+- The “Nested pipelines” vignette shows a function as `out` and
+  [`pip_inner()`](https://rpahl.github.io/pipeflow/dev/reference/pip_inner.md),
+  and its “Full control” example forwards the step’s params with
+  `pip_set_params(p, list(...))`.
+
+## pipeflow 0.5.0.9011
+
+### Documentation
+
+- The cheat sheet shows “Ways to connect steps” again on page 2.
+
+## pipeflow 0.5.0.9010
+
+### Breaking changes
+
+- [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+  binds a param to a step if its value is a one-sided formula,
+  e.g. `pip_set_params(p, list(model = ~fit))`, as a formula does in the
+  defaults of a step function and in `params` of
+  [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md).
+  Before, the formula was set as value. To set a formula as value, give
+  it as a string and turn it into a formula in the step, e.g. with
+  [`as.formula()`](https://rdrr.io/r/stats/formula.html). Because of
+  this, [`as.function()`](https://rdrr.io/r/base/as.function.html) no
+  longer turns such a value into a reference to a step of the outer
+  pipeline.
+
+### New features
+
+- [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+  can bind params to steps. The param is bound in all selected, unlocked
+  steps that have it unbound, which must come after the step it is bound
+  to; a view selects the steps to bind. A bound param is no longer
+  unbound, and setting the same binding again does nothing.
+
+### Changes
+
+- The warning of
+  [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+  about unknown params no longer shows the call.
+
+## pipeflow 0.5.0.9009
+
+### Breaking changes
+
+- `params` of
+  [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
+  and
+  [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
+  now override the defaults of `fun`, as they did before 0.4.0. Before,
+  the defaults of `fun` won and
+  [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
+  warned that the values in `params` were dropped. A formula in `params`
+  makes the parameter a reference to another step, also if its default
+  is a value.
+
+### New features
+
+- `params` can give a value to parameters of `fun` that have no default,
+  so that existing functions can be steps without a wrapper, e.g.
+  `pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))`.
+
+### Changes
+
+- `params` of
+  [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
+  and
+  [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
+  must be a list with unique names.
+- The params of a step list the arguments of `fun` first, in their
+  order, followed by the other params (before: the given `params` came
+  first).
+- [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
+  and
+  [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
+  point to [`as.function()`](https://rdrr.io/r/base/as.function.html) if
+  `fun` is a pipeline.
+- Replacing a step with one that references a step which comes after it
+  now reports “cannot reference steps that come after the replaced
+  step”, matching
+  [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md),
+  instead of “cannot reference unknown steps”.
+
+### Bug fixes
+
+- Copying steps between pipelines with `p[i] <- q[j]` dropped the params
+  that were given via `params` (e.g. extra params passed via `...`), and
+  took references from the defaults of the function, ignoring a renamed
+  upstream step.
+- Copying steps with `p[i] <- q[j]`, also onto themselves, resolved
+  relative references such as `~-1` again, so that after inserting or
+  removing a step, the copied step depended on another step or failed. A
+  copied step now depends on the same steps as the source step, by name.
+- [`rbind()`](https://rdrr.io/r/base/cbind.html) dropped the arguments
+  with a `NULL` value from the step functions of the second pipeline, so
+  that these steps failed with “unused argument”.
+
+## pipeflow 0.5.0.9008
+
+### New features
+
+- [`rbind()`](https://rdrr.io/r/base/cbind.html) of pipelines gained the
+  argument `bind`, a named list of one-sided formulas as in
+  [`as.function()`](https://rdrr.io/r/base/as.function.html), e.g.
+  `rbind(a, b, bind = list(data = ~prep))`. It binds unbound params of
+  the second pipeline to steps of the first one, so that the pipelines
+  are connected without editing the second one first.
+
+### Bug fixes
+
+- Steps with non-syntactic names, e.g. `"source data"`, can be
+  referenced with backticks, `` x = ~`source data` ``. Before,
+  [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
+  reported them as unknown steps.
+- [`rbind()`](https://rdrr.io/r/base/cbind.html) no longer fails if the
+  second pipeline references a step with a non-syntactic name,
+  e.g. after
+  [`pip_rename()`](https://rpahl.github.io/pipeflow/dev/reference/pip_rename.md).
+
+## pipeflow 0.5.0.9007
+
+### New features
+
+- [`as.function()`](https://rdrr.io/r/base/as.function.html) gained the
+  argument `on_error`. Set to `"continue"`, the inner pipeline is run as
+  `pip_run(on_error = "continue")` runs it: inner steps that do not
+  depend on a failed step still run, and a `~try(step)` reference inside
+  the inner pipeline receives the failure. The function still fails if
+  one of the steps named in `out` failed or was not run because an input
+  failed.
+- [`as.function()`](https://rdrr.io/r/base/as.function.html) gained the
+  argument `lgr`, the logger of the inner run. The inner pipeline is
+  still run silently by default (`lgr = NULL`), but its steps can now be
+  logged, e.g. `as.function(x, lgr = pipeflow_lgr)`.
+
+## pipeflow 0.5.0.9006
+
+### New features
+
+- [`as.function()`](https://rdrr.io/r/base/as.function.html) turns a
+  pipeline into a function whose arguments are the unbound params of the
+  pipeline, so that a pipeline can be a step of another pipeline, e.g.
+  `pip_add(outer, "step", as.function(inner), params = list(df = ~split))`.
+  The params of the inner pipeline become params of the outer step, the
+  exec modes map it over partitions, and the function keeps the inner
+  pipelines it has run, so that a changed param only reruns the affected
+  inner steps. See
+  [`?as.function.pipeflow`](https://rpahl.github.io/pipeflow/dev/reference/as.function.pipeflow.md)
+  and the “Nested pipelines” vignette.
+
+## pipeflow 0.5.0.9005
+
+### Changes
+
+- Adding a step that references a step which exists but comes after the
+  insertion point now reports “cannot reference steps that come after
+  the insertion point” instead of “cannot reference unknown steps”.
+- The error raised when
+  [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md),
+  [`pip_clone()`](https://rpahl.github.io/pipeflow/dev/reference/pip_clone.md)
+  or [`rbind()`](https://rdrr.io/r/base/cbind.html) is given a view now
+  points at `x[, view = FALSE]`.
+
+### Bug fixes
+
+- `v[, view = FALSE]` returned the view instead of a standalone pipeline
+  of the covered steps, silently ignoring `view = FALSE`.
+
+## pipeflow 0.5.0.9004
+
+### New features
+
+- [`` `pip_param_value<-`() ``](https://rpahl.github.io/pipeflow/dev/reference/pip_param_value.md)
+  is the write side of
+  [`pip_param_value()`](https://rpahl.github.io/pipeflow/dev/reference/pip_param_value.md):
+  a generic that turns a plain value into the value stored in a step, so
+  that
+  [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+  keeps the annotations of a stored object when it is given a plain
+  value.
+- [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+  gained `...`, which is passed on to the methods of
+  [`` `pip_param_value<-`() ``](https://rpahl.github.io/pipeflow/dev/reference/pip_param_value.md).
+  It now determines the value to store for every affected step before it
+  changes anything: if a method fails, nothing is set and an error of
+  class `pipeflow_set_params_error` reports all failures at once.
+
+### Documentation
+
+- [`pip_get_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+  notes that a view excludes locked steps, `pip_get_params(p[!locked])`.
+
+## pipeflow 0.5.0.9003
+
+### New features
+
+- [`pip_output_value()`](https://rpahl.github.io/pipeflow/dev/reference/pip_output_value.md)
+  is a generic for annotating the output of a step when the step
+  returns, for example to stamp a result with the step it came from and
+  the time of the run. It is applied once to the output, and once per
+  partition for a partitioned output, which gets its key in `ctx$key`.
+  See the new vignette “Annotated step outputs”.
+
+## pipeflow 0.5.0.9002
+
+### Breaking changes
+
+- `.self` is released when a step returns, so that step outputs no
+  longer keep the pipeline alive. A step that returns a function which
+  refers to `.self` now fails with `object '.self' not found` when that
+  function is called after the run.
+
 ## pipeflow 0.5.0.9001
 
 ### Documentation

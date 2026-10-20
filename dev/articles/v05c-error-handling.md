@@ -37,10 +37,10 @@ stops at the first step that fails.
 ``` r
 
 pip_run(pip)
-# info [2026-10-15 10:42:08.793 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-10-15 10:42:08.793 UTC]: Step 1/4 data
-# info [2026-10-15 10:42:08.794 UTC]: Step 2/4 check
-# error [2026-10-15 10:42:08.797 UTC]: data exceeds limit
+# info [2026-10-20 18:52:10.474 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-10-20 18:52:10.474 UTC]: Step 1/4 data
+# info [2026-10-20 18:52:10.476 UTC]: Step 2/4 check
+# error [2026-10-20 18:52:10.478 UTC]: data exceeds limit
 # Error:
 # ! step 'check': data exceeds limit
 
@@ -53,7 +53,7 @@ pip
 # 3: model       x   check    new    [NULL]
 # 4: total       x    data    new    [NULL]
 # -----------------------------
-# <failed> last run: 2026-10-15 10:42:08
+# <failed> last run: 2026-10-20 18:52:10
 
 pip_run_state(pip)
 # [1] "failed"
@@ -99,14 +99,14 @@ all other steps that do not depend on it:
 pip$reset()
 
 suppressWarnings(pip_run(pip, on_error = "continue"))
-# info [2026-10-15 10:42:09.181 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-10-15 10:42:09.181 UTC]: Step 1/4 data
-# info [2026-10-15 10:42:09.182 UTC]: Step 2/4 check
-# error [2026-10-15 10:42:09.184 UTC]: data exceeds limit
-# info [2026-10-15 10:42:09.184 UTC]: Step 3/4 model - skipping step, input 'x' failed
-# info [2026-10-15 10:42:09.184 UTC]: Step 4/4 total
-# info [2026-10-15 10:42:09.185 UTC]: Finished run of pipeflow 'analysis'
-# warn [2026-10-15 10:42:09.186 UTC]: Run of pipeline 'analysis' continued after 1 failed step:
+# info [2026-10-20 18:52:10.761 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-10-20 18:52:10.761 UTC]: Step 1/4 data
+# info [2026-10-20 18:52:10.763 UTC]: Step 2/4 check
+# error [2026-10-20 18:52:10.764 UTC]: data exceeds limit
+# info [2026-10-20 18:52:10.764 UTC]: Step 3/4 model - skipping step, input 'x' failed
+# info [2026-10-20 18:52:10.764 UTC]: Step 4/4 total
+# info [2026-10-20 18:52:10.765 UTC]: Finished run of pipeflow 'analysis'
+# warn [2026-10-20 18:52:10.766 UTC]: Run of pipeline 'analysis' continued after 1 failed step:
 #   'check': data exceeds limit
 # Steps not run because an input failed: 'model'
 
@@ -119,7 +119,7 @@ pip
 # 3: model       x   check    new              [NULL]
 # 4: total       x    data   done                  15
 # -----------------------------
-# <continued> last run: 2026-10-15 10:42:09
+# <continued> last run: 2026-10-20 18:52:10
 
 pip_run_state(pip)
 # [1] "continued"
@@ -183,15 +183,15 @@ pip_add(
 )
 
 suppressWarnings(pip_run(pip, on_error = "continue"))
-# info [2026-10-15 10:42:09.389 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-10-15 10:42:09.389 UTC]: Step 1/5 data - skipping done step
-# info [2026-10-15 10:42:09.389 UTC]: Step 2/5 check
-# error [2026-10-15 10:42:09.391 UTC]: data exceeds limit
-# info [2026-10-15 10:42:09.391 UTC]: Step 3/5 model - skipping step, input 'x' failed
-# info [2026-10-15 10:42:09.391 UTC]: Step 4/5 total - skipping done step
-# info [2026-10-15 10:42:09.392 UTC]: Step 5/5 report
-# info [2026-10-15 10:42:09.393 UTC]: Finished run of pipeflow 'analysis'
-# warn [2026-10-15 10:42:09.394 UTC]: Run of pipeline 'analysis' continued after 1 failed step:
+# info [2026-10-20 18:52:10.966 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-10-20 18:52:10.966 UTC]: Step 1/5 data - skipping done step
+# info [2026-10-20 18:52:10.966 UTC]: Step 2/5 check
+# error [2026-10-20 18:52:10.968 UTC]: data exceeds limit
+# info [2026-10-20 18:52:10.968 UTC]: Step 3/5 model - skipping step, input 'x' failed
+# info [2026-10-20 18:52:10.968 UTC]: Step 4/5 total - skipping done step
+# info [2026-10-20 18:52:10.968 UTC]: Step 5/5 report
+# info [2026-10-20 18:52:10.969 UTC]: Finished run of pipeflow 'analysis'
+# warn [2026-10-20 18:52:10.970 UTC]: Run of pipeline 'analysis' continued after 1 failed step:
 #   'check': data exceeds limit
 # Steps not run because an input failed: 'model'
 
@@ -225,13 +225,13 @@ again. Let’s fix the cause by raising the limit and re-run:
 
 pip_set_params(pip, list(limit = 10))
 pip_run(pip)
-# info [2026-10-15 10:42:09.461 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-10-15 10:42:09.462 UTC]: Step 1/5 data - skipping done step
-# info [2026-10-15 10:42:09.462 UTC]: Step 2/5 check
-# info [2026-10-15 10:42:09.463 UTC]: Step 3/5 model
-# info [2026-10-15 10:42:09.464 UTC]: Step 4/5 total - skipping done step
-# info [2026-10-15 10:42:09.464 UTC]: Step 5/5 report
-# info [2026-10-15 10:42:09.468 UTC]: Finished run of pipeflow 'analysis'
+# info [2026-10-20 18:52:11.037 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-10-20 18:52:11.038 UTC]: Step 1/5 data - skipping done step
+# info [2026-10-20 18:52:11.038 UTC]: Step 2/5 check
+# info [2026-10-20 18:52:11.039 UTC]: Step 3/5 model
+# info [2026-10-20 18:52:11.040 UTC]: Step 4/5 total - skipping done step
+# info [2026-10-20 18:52:11.040 UTC]: Step 5/5 report
+# info [2026-10-20 18:52:11.048 UTC]: Finished run of pipeflow 'analysis'
 
 pip
 # <pipeflow> analysis (5 steps)
@@ -243,7 +243,7 @@ pip
 # 4:  total       x        data  done                  15
 # 5: report total,m total,model  done total: 15 - mean: 3
 # -----------------------------
-# <ready> last run: 2026-10-15 10:42:09
+# <ready> last run: 2026-10-20 18:52:11
 ```
 
 The run log shows that `data` and `total` were skipped, since they were
@@ -300,14 +300,14 @@ condition tells the failed key and keeps the original one as `parent`:
 ``` r
 
 suppressWarnings(pip_run(pip, on_error = "continue"))
-# info [2026-10-15 10:42:09.670 UTC]: Starting run of pipeflow 'groups'
-# info [2026-10-15 10:42:09.670 UTC]: Step 1/4 data
-# info [2026-10-15 10:42:09.671 UTC]: Step 2/4 by_group
-# info [2026-10-15 10:42:09.672 UTC]: Step 3/4 spread
-# error [2026-10-15 10:42:09.676 UTC]: key 'c': need at least 2 rows
-# info [2026-10-15 10:42:09.676 UTC]: Step 4/4 combine
-# info [2026-10-15 10:42:09.677 UTC]: Finished run of pipeflow 'groups'
-# warn [2026-10-15 10:42:09.678 UTC]: Run of pipeline 'groups' continued after 1 failed step:
+# info [2026-10-20 18:52:11.246 UTC]: Starting run of pipeflow 'groups'
+# info [2026-10-20 18:52:11.246 UTC]: Step 1/4 data
+# info [2026-10-20 18:52:11.247 UTC]: Step 2/4 by_group
+# info [2026-10-20 18:52:11.248 UTC]: Step 3/4 spread
+# error [2026-10-20 18:52:11.252 UTC]: key 'c': need at least 2 rows
+# info [2026-10-20 18:52:11.252 UTC]: Step 4/4 combine
+# info [2026-10-20 18:52:11.253 UTC]: Finished run of pipeflow 'groups'
+# warn [2026-10-20 18:52:11.254 UTC]: Run of pipeline 'groups' continued after 1 failed step:
 #   'spread': key 'c': need at least 2 rows
 
 pip
@@ -319,7 +319,7 @@ pip
 # 3:   spread      d by_group failed                  <error/pipeflow_key_error>   auto
 # 4:  combine      s   spread   done step 'spread' failed: key 'c': need at l... reduce
 # ---------------------------
-# <continued> last run: 2026-10-15 10:42:09
+# <continued> last run: 2026-10-20 18:52:11
 
 err <- pip[["spread", "out"]]
 class(err)
@@ -355,17 +355,143 @@ pipeline completes:
 
 pip_set_params(pip, list(data = d[d$g != "c", ]))
 pip_run(pip)
-# info [2026-10-15 10:42:09.814 UTC]: Starting run of pipeflow 'groups'
-# info [2026-10-15 10:42:09.815 UTC]: Step 1/4 data
-# info [2026-10-15 10:42:09.816 UTC]: Step 2/4 by_group
-# info [2026-10-15 10:42:09.818 UTC]: Step 3/4 spread
-# info [2026-10-15 10:42:09.820 UTC]: Step 4/4 combine
-# info [2026-10-15 10:42:09.823 UTC]: Finished run of pipeflow 'groups'
+# info [2026-10-20 18:52:11.388 UTC]: Starting run of pipeflow 'groups'
+# info [2026-10-20 18:52:11.389 UTC]: Step 1/4 data
+# info [2026-10-20 18:52:11.390 UTC]: Step 2/4 by_group
+# info [2026-10-20 18:52:11.392 UTC]: Step 3/4 spread
+# info [2026-10-20 18:52:11.393 UTC]: Step 4/4 combine
+# info [2026-10-20 18:52:11.396 UTC]: Finished run of pipeflow 'groups'
 
 pip[["combine", "out"]]
 # a b 
 # 1 2
 ```
+
+### Failures in nested pipelines
+
+A pipeline can be turned into a function with
+[`as.function()`](https://rdrr.io/r/base/as.function.html) and added as
+a step to another pipeline, as described in the vignette on [nested
+pipelines](https://rpahl.github.io/pipeflow/dev/articles/v05b-nested-pipeline.md).
+Such a step runs a pipeline of its own, which means it also has its own
+error handling.
+
+Let’s put the `spread` step of the previous section into an inner
+pipeline that reports on it, and map that pipeline over the groups:
+
+``` r
+
+inner <- pip_new("inner") |>
+    pip_add("data", \(data = NULL) data) |>
+    pip_add("spread", \(d = ~data) {
+        if (nrow(d) < 2) stop("need at least 2 rows")
+        diff(range(d$y))
+    }) |>
+    pip_add("report", \(s = ~try(spread)) {
+        if (inherits(s, "pipeflow_failure")) "no spread" else s
+    })
+
+nested <- pip_new("nested") |>
+    pip_add("data", \(data = NULL) data) |>
+    pip_add("by_group", \(data = ~data) split(data, data$g), exec = "split") |>
+    pip_add(
+        "per_group",
+        as.function(inner, out = "report"),
+        params = list(data = ~by_group)
+    )
+
+pip_set_params(nested, list(data = d))
+```
+
+By default, the inner pipeline is run with `on_error = "stop"`, so it
+ends at the first failed inner step and the outer step fails with it.
+The [`try()`](https://rdrr.io/r/base/try.html) reference of the `report`
+step has no effect here, because
+[`try()`](https://rdrr.io/r/base/try.html) only matters in a
+*continuing* run:
+
+``` r
+
+pip_run(nested)
+# info [2026-10-20 18:52:11.530 UTC]: Starting run of pipeflow 'nested'
+# info [2026-10-20 18:52:11.531 UTC]: Step 1/3 data
+# info [2026-10-20 18:52:11.531 UTC]: Step 2/3 by_group
+# info [2026-10-20 18:52:11.533 UTC]: Step 3/3 per_group
+# error [2026-10-20 18:52:11.549 UTC]: key 'c': step 'spread': need at least 2 rows
+# Error:
+# ! step 'per_group': key 'c': step 'spread': need at least 2 rows
+```
+
+With `as.function(on_error = "continue")`, the inner pipeline is run as
+`pip_run(on_error = "continue")` runs it: inner steps that do not depend
+on the failed step still run, and `~try(spread)` gives the `report` step
+the failure object. Group `c` is handled inside the inner pipeline, and
+the outer run completes:
+
+``` r
+
+pip_replace(
+    nested,
+    "per_group",
+    as.function(inner, out = "report", on_error = "continue"),
+    params = list(data = ~by_group)
+)
+
+pip_run(nested)
+# info [2026-10-20 18:52:11.629 UTC]: Starting run of pipeflow 'nested'
+# info [2026-10-20 18:52:11.629 UTC]: Step 1/3 data - skipping done step
+# info [2026-10-20 18:52:11.630 UTC]: Step 2/3 by_group - skipping done step
+# info [2026-10-20 18:52:11.630 UTC]: Step 3/3 per_group
+# warn [2026-10-20 18:52:11.645 UTC]: Run of pipeline 'inner' continued after 1 failed step:
+#   'spread': need at least 2 rows
+# Warning: Run of pipeline 'inner' continued after 1 failed step:
+#   'spread': need at least 2 rows
+# info [2026-10-20 18:52:11.647 UTC]: Finished run of pipeflow 'nested'
+
+nested[["per_group", "out"]]
+# $a
+# [1] 1
+# 
+# $b
+# [1] 2
+# 
+# $c
+# [1] "no spread"
+# 
+# attr(,"class")
+# [1] "list"                 "pipeflow_partitioned"
+```
+
+The warning of the continued inner run is passed on like any other
+warning of a step, so the outer run logs it and the result of every
+group is available.
+
+The function still fails if one of the steps named in `out` failed or
+was not run because an input failed: the inner pipeline handles what it
+can, and everything else is left to the outer run, as before.
+
+``` r
+
+pip_replace(
+    nested,
+    "per_group",
+    as.function(
+        inner,
+        out = "spread",
+        on_error = "continue"           # <--- this time we continue
+    ),
+    params = list(data = ~by_group)
+)
+
+pip_run(nested, lgr = NULL)
+# Warning: Run of pipeline 'inner' continued after 1 failed step:
+#   'spread': need at least 2 rows
+# Error:
+# ! step 'per_group': key 'c': step 'spread': need at least 2 rows
+```
+
+Since `out = NULL` requests the output of *all* inner steps, name the
+steps you need in `out` to profit from a continuing inner run.
 
 ### Summary
 
@@ -384,3 +510,10 @@ pip[["combine", "out"]]
   partition is a `pipeflow_key_error` with the field `key`. A `reduce`
   step with a [`try()`](https://rdrr.io/r/base/try.html) reference
   receives the failure.
+- A step made with
+  [`as.function()`](https://rdrr.io/r/base/as.function.html) runs a
+  pipeline of its own. `as.function(on_error = "continue")` lets that
+  inner pipeline continue after a failed inner step, which is also what
+  makes [`try()`](https://rdrr.io/r/base/try.html) references inside it
+  work. The step still fails if one of the steps named in `out` failed
+  or was not run.

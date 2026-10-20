@@ -33,12 +33,16 @@ Replace, rename, remove, reset, or re-configure steps.
 
 ## Pipeline composition
 
-Combine or clone pipelines.
+Combine or clone pipelines, or turn a pipeline into a function.
 
 - [`rbind(`*`<pipeflow>`*`)`](https://rpahl.github.io/pipeflow/dev/reference/rbind.pipeflow.md)
   : Bind pipelines
 - [`pip_clone()`](https://rpahl.github.io/pipeflow/dev/reference/pip_clone.md)
   : Clone a pipeline
+- [`as.function(`*`<pipeflow>`*`)`](https://rpahl.github.io/pipeflow/dev/reference/as.function.pipeflow.md)
+  : Turn a pipeline into a function
+- [`pip_inner()`](https://rpahl.github.io/pipeflow/dev/reference/pip_inner.md)
+  : Inner pipelines of a pipeline function step
 
 ## Running pipelines
 
@@ -49,7 +53,10 @@ Execute pipeline steps or views.
 - [`pip_run_state()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run_state.md)
   : Get the run state of a pipeline
 - [`pip_param_value()`](https://rpahl.github.io/pipeflow/dev/reference/pip_param_value.md)
-  : Unwrap a parameter value before a step function is called
+  [`` `pip_param_value<-`() ``](https://rpahl.github.io/pipeflow/dev/reference/pip_param_value.md)
+  : Annotated parameter values
+- [`pip_output_value()`](https://rpahl.github.io/pipeflow/dev/reference/pip_output_value.md)
+  : Annotated step outputs
 - [`pipeflow_lgr()`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow_lgr.md)
   : Default logger of pipeflow
 

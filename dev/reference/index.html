@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9001</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9012</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,6 +42,7 @@
     <li><a class="dropdown-item" href="../articles/v05b-nested-pipeline.html">Nested pipelines</a></li>
     <li><a class="dropdown-item" href="../articles/v05c-error-handling.html">Handling failures</a></li>
     <li><a class="dropdown-item" href="../articles/v05d-param-value.html">Annotated parameter values</a></li>
+    <li><a class="dropdown-item" href="../articles/v05e-output-value.html">Annotated step outputs</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
@@ -145,7 +146,7 @@
       </dl></div><div class="section level2">
       <h2 id="pipeline-composition">Pipeline composition<a class="anchor" aria-label="anchor" href="#pipeline-composition"></a></h2>
 
-      <div class="section-desc"><p>Combine or clone pipelines.</p></div>
+      <div class="section-desc"><p>Combine or clone pipelines, or turn a pipeline into a function.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -165,6 +166,20 @@
 
         </dt>
         <dd>Clone a pipeline</dd>
+
+        <dt>
+
+          <code><a href="as.function.pipeflow.html">as.function(<i>&lt;pipeflow&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Turn a pipeline into a function</dd>
+
+        <dt>
+
+          <code><a href="pip_inner.html">pip_inner()</a></code>
+
+        </dt>
+        <dd>Inner pipelines of a pipeline function step</dd>
       </dl></div><div class="section level2">
       <h2 id="running-pipelines">Running pipelines<a class="anchor" aria-label="anchor" href="#running-pipelines"></a></h2>
 
@@ -191,10 +206,17 @@
 
         <dt>
 
-          <code><a href="pip_param_value.html">pip_param_value()</a></code>
+          <code><a href="pip_param_value.html">pip_param_value()</a></code> <code><a href="pip_param_value.html">`pip_param_value&lt;-`()</a></code>
 
         </dt>
-        <dd>Unwrap a parameter value before a step function is called</dd>
+        <dd>Annotated parameter values</dd>
+
+        <dt>
+
+          <code><a href="pip_output_value.html">pip_output_value()</a></code>
+
+        </dt>
+        <dd>Annotated step outputs</dd>
 
         <dt>
 

@@ -11,12 +11,14 @@
 <url><loc>https://rpahl.github.io/pipeflow/dev/articles/v05b-nested-pipeline.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/articles/v05c-error-handling.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/articles/v05d-param-value.html</loc></url>
+<url><loc>https://rpahl.github.io/pipeflow/dev/articles/v05e-output-value.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/articles/v06-self-modify-pipeline.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/articles/v07-vs-targets.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/authors.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/index.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/news/index.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/Extract.pipeflow.html</loc></url>
+<url><loc>https://rpahl.github.io/pipeflow/dev/reference/as.function.pipeflow.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/dim.pipeflow.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/index.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_add.html</loc></url>
@@ -24,8 +26,10 @@
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_collect.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_data.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_graph.html</loc></url>
+<url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_inner.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_lock.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_new.html</loc></url>
+<url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_output_value.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_param_value.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_remove.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_rename.html</loc></url>

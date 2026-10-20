@@ -215,6 +215,173 @@ conditionMessage(p4[["double", "out"]])
 # [1] "unknown unit 'ft'"
 ```
 
+### Setting a plain value
+
+So far the annotated values were set as whole objects. A user interface,
+however, usually hands back a plain value: the number the user typed,
+not the `quantity` object around it. Setting it with
+[`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+would replace the stored object and lose its unit.
+
+``` r
+
+p5 <- pip_new("speed") |>
+    pip_add("speed", \(distance = 1) distance)
+
+pip_set_params(p5, list(distance = quantity(120, "km")))
+pip_set_params(p5, list(distance = 150))
+
+pip_get_params(p5)
+# $distance
+# [1] 150
+```
+
+The write side of the same extension point fixes this.
+`pip_param_value<-()` turns a plain value into the value that is stored,
+and it dispatches on the value that the step currently holds.
+
+``` r
+
+`pip_param_value<-.quantity` <- function(x, ..., value) {
+    if (inherits(value, "quantity")) {
+        return(value)
+    }
+    x$value <- value
+    x
+}
+
+registerS3method(
+    "pip_param_value<-",
+    "quantity",
+    `pip_param_value<-.quantity`
+)
+```
+
+Now a plain value is merged into the stored object, and the unit
+survives.
+
+``` r
+
+p6 <- pip_new("speed") |>
+    pip_add("speed", \(distance = 1) distance)
+
+pip_set_params(p6, list(distance = quantity(120, "km")))
+pip_set_params(p6, list(distance = 150))
+
+pip_get_params(p6)
+# $distance
+# <quantity> 150 km
+```
+
+The step function still receives the plain value, because the two sides
+belong together.
+
+``` r
+
+pip_run(p6, lgr = NULL)
+p6[["speed", "out"]]
+# [1] 150
+```
+
+The default method replaces the stored value, which is what pipelines
+without any method do. A method decides for itself what a plain value
+and what an object of its own class means; the method above uses an
+object as it is and merges anything else.
+
+Because the merged value is what
+[`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+compares with the stored one, setting a plain value that the stored
+object already holds doesn’t outdate the step.
+
+``` r
+
+pip_set_params(p6, list(distance = 150))
+p6
+# <pipeflow> speed (1 step)
+# -------------------------
+#     step   params depends state out
+# 1: speed distance          done 150
+# -------------------------
+# <ready> last run: 2026-10-20 18:52:18
+```
+
+#### Errors while setting
+
+[`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+computes the value to store for every affected step before it changes
+anything. If a method fails, nothing is set and the error reports all
+failures at once.
+
+``` r
+
+`pip_param_value<-.checked` <- function(x, ..., value) {
+    if (!is.numeric(value)) {
+        stop("value must be numeric")
+    }
+    x$value <- value
+    x
+}
+registerS3method(
+    "pip_param_value<-",
+    "checked",
+    `pip_param_value<-.checked`
+)
+
+p7 <- pip_new("checked") |>
+    pip_add("a", \(x = 1) x) |>
+    pip_add("b", \(y = 2) y)
+pip_set_params(p7, list(x = checked(1, "m"), y = checked(2, "m")))
+
+err <- tryCatch(
+    pip_set_params(p7, list(x = "no", y = "no")),
+    error = \(e) e
+)
+cat(conditionMessage(err))
+# Cannot set 2 parameters: nothing was set.
+#   step 'a', parameter 'x': value must be numeric
+#   step 'b', parameter 'y': value must be numeric
+```
+
+The condition has class `pipeflow_set_params_error` and carries a table
+of the failures, which a user interface can show next to the respective
+inputs.
+
+``` r
+
+class(err)
+# [1] "pipeflow_set_params_error" "error"                     "condition"
+err$errors
+#   step name               message
+# 1    a    x value must be numeric
+# 2    b    y value must be numeric
+```
+
+Nothing was set:
+
+``` r
+
+pip_get_params(p7)
+# $x
+# $value
+# [1] 1
+# 
+# $unit
+# [1] "m"
+# 
+# attr(,"class")
+# [1] "checked"
+# 
+# $y
+# $value
+# [1] 2
+# 
+# $unit
+# [1] "m"
+# 
+# attr(,"class")
+# [1] "checked"
+```
+
 ### Summary
 
 - `pip_param_value(x)` unwraps a stored parameter value right before the
@@ -223,3 +390,9 @@ conditionMessage(p4[["double", "out"]])
 - It applies to unbound arguments only (`params`, defaults, and `...`),
   not to step outputs, partitions or failure objects.
 - An error in a method is a step error, so `on_error` applies.
+- [`` `pip_param_value<-`() ``](https://rpahl.github.io/pipeflow/dev/reference/pip_param_value.md)
+  is the write side: it turns a plain value into the value that is
+  stored, so that annotations survive a
+  [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+  call that passes a plain value.
+- Either method returns a value; neither should modify its `x` in place.

@@ -23,7 +23,7 @@ str(pip)
 # List of 3
 #  $ name  : chr "my-pipeline"
 #  $ view  : NULL
-#  $ pipenv:<environment: 0x55bdaf0c6508>
+#  $ pipenv:<environment: 0x56254e46e660>
 ```
 
 There is the `name` of the pipeline, which is just a character string,
@@ -48,10 +48,10 @@ pipeline’s step table as a `data.table` with one row per step:
 pip$pipenv$data # or pip_data(pip)
 #      step           fun    params    out  state   tags locked   exec                time depends unbound nodeId
 #    <char>        <list>    <list> <list> <char> <list> <lgcl> <char>              <POSc>  <list>  <list>  <int>
-# 1:   init <function[1]> <list[1]> [NULL]    new         FALSE   auto 2026-10-15 10:42:20           xInit      0
-# 2:     f1 <function[1]> <list[1]> [NULL]    new         FALSE   auto 2026-10-15 10:42:20    init              1
-# 3:     f2 <function[1]> <list[1]> [NULL]    new         FALSE   auto 2026-10-15 10:42:20      f1              2
-# 4:     f3 <function[1]> <list[1]> [NULL]    new         FALSE   auto 2026-10-15 10:42:20      f2              3
+# 1:   init <function[1]> <list[1]> [NULL]    new         FALSE   auto 2026-10-20 18:52:32           xInit      0
+# 2:     f1 <function[1]> <list[1]> [NULL]    new         FALSE   auto 2026-10-20 18:52:32    init              1
+# 3:     f2 <function[1]> <list[1]> [NULL]    new         FALSE   auto 2026-10-20 18:52:32      f1              2
+# 4:     f3 <function[1]> <list[1]> [NULL]    new         FALSE   auto 2026-10-20 18:52:32      f2              3
 ```
 
 Many of the columns should be already familar to you and most of them
@@ -143,12 +143,12 @@ pip <- pip_new("my-pipeline") |>
     pip_add("f3", \(x = ~f2) x + 3)
 
 (pip_run(pip))
-# info [2026-10-15 10:42:21.718 UTC]: Starting run of pipeflow 'my-pipeline'
-# info [2026-10-15 10:42:21.718 UTC]: Step 1/4 init
-# info [2026-10-15 10:42:21.719 UTC]: Step 2/4 f1
-# info [2026-10-15 10:42:21.721 UTC]: Step 3/4 f2
-# info [2026-10-15 10:42:21.722 UTC]: Step 4/4 f3
-# info [2026-10-15 10:42:21.723 UTC]: Finished run of pipeflow 'my-pipeline'
+# info [2026-10-20 18:52:32.963 UTC]: Starting run of pipeflow 'my-pipeline'
+# info [2026-10-20 18:52:32.963 UTC]: Step 1/4 init
+# info [2026-10-20 18:52:32.964 UTC]: Step 2/4 f1
+# info [2026-10-20 18:52:32.967 UTC]: Step 3/4 f2
+# info [2026-10-20 18:52:32.968 UTC]: Step 4/4 f3
+# info [2026-10-20 18:52:32.969 UTC]: Finished run of pipeflow 'my-pipeline'
 # <pipeflow> my-pipeline (4 steps)
 # --------------------------------
 #    step params depends state out
@@ -157,7 +157,7 @@ pip <- pip_new("my-pipeline") |>
 # 3:   f2      x      f1  done   3
 # 4:   f3      x      f2  done   6
 # --------------------------------
-# <ready> last run: 2026-10-15 10:42:21
+# <ready> last run: 2026-10-20 18:52:32
 ```
 
 This pipeline just adds 1, 2, and 3 to the initial value, respectively.
@@ -189,10 +189,7 @@ Note that `.self` does not need to be declared as an argument.
 {pipeflow} provides it each time it calls a step function whose body
 refers to `.self` (also within functions defined in the body). Access
 that is not visible in the body, such as `get(".self")`, is not
-detected. Step functions that don’t mention `.self` don’t get it, so
-their outputs, for example a plot or a closure that keeps its
-environment, don’t drag the whole pipeline along when they are saved or
-sent to another process.
+detected.
 
 To see this, let’s try it with an input of 15.
 
@@ -201,12 +198,12 @@ To see this, let’s try it with an input of 15.
 pip |>
     pip_set_params(list(xInit = 15)) |>
     pip_run()
-# info [2026-10-15 10:42:21.858 UTC]: Starting run of pipeflow 'my-pipeline'
-# info [2026-10-15 10:42:21.858 UTC]: Step 1/4 init
-# info [2026-10-15 10:42:21.859 UTC]: Step 2/4 f1
-# info [2026-10-15 10:42:21.861 UTC]: Step 3/4 f2
-# info [2026-10-15 10:42:21.864 UTC]: Step 4/4 f3
-# info [2026-10-15 10:42:21.865 UTC]: Finished run of pipeflow 'my-pipeline'
+# info [2026-10-20 18:52:33.110 UTC]: Starting run of pipeflow 'my-pipeline'
+# info [2026-10-20 18:52:33.111 UTC]: Step 1/4 init
+# info [2026-10-20 18:52:33.112 UTC]: Step 2/4 f1
+# info [2026-10-20 18:52:33.114 UTC]: Step 3/4 f2
+# info [2026-10-20 18:52:33.117 UTC]: Step 4/4 f3
+# info [2026-10-20 18:52:33.118 UTC]: Finished run of pipeflow 'my-pipeline'
 
 pip
 # <pipeflow> my-pipeline (4 steps)
@@ -217,7 +214,7 @@ pip
 # 3:   f2      x      f1  done   8
 # 4:   f3      x      f1  done  48
 # --------------------------------
-# <ready> last run: 2026-10-15 10:42:21
+# <ready> last run: 2026-10-20 18:52:33
 ```
 
 We see that both the output of the pipeline and the dependencies of the
@@ -229,7 +226,7 @@ last step.
 pip[["f3", "fun"]]
 # function (x = ~f1) 
 # x * 3
-# <environment: 0x55bdb6c5ee28>
+# <environment: 0x562551eb53c8>
 ```
 
 #### Insert and remove steps
@@ -267,12 +264,12 @@ original output.
 ``` r
 
 pip_run(pip)
-# info [2026-10-15 10:42:22.062 UTC]: Starting run of pipeflow 'hicky-hacky'
-# info [2026-10-15 10:42:22.063 UTC]: Step 1/4 init
-# info [2026-10-15 10:42:22.063 UTC]: Step 2/4 f1
-# info [2026-10-15 10:42:22.065 UTC]: Step 3/4 f2
-# info [2026-10-15 10:42:22.066 UTC]: Step 4/4 f3
-# info [2026-10-15 10:42:22.067 UTC]: Finished run of pipeflow 'hicky-hacky'
+# info [2026-10-20 18:52:33.310 UTC]: Starting run of pipeflow 'hicky-hacky'
+# info [2026-10-20 18:52:33.310 UTC]: Step 1/4 init
+# info [2026-10-20 18:52:33.311 UTC]: Step 2/4 f1
+# info [2026-10-20 18:52:33.312 UTC]: Step 3/4 f2
+# info [2026-10-20 18:52:33.313 UTC]: Step 4/4 f3
+# info [2026-10-20 18:52:33.314 UTC]: Finished run of pipeflow 'hicky-hacky'
 
 pip
 # <pipeflow> hicky-hacky (4 steps)
@@ -283,7 +280,7 @@ pip
 # 3:   f2      x      f1  done   3
 # 4:   f3      x      f2  done   6
 # --------------------------------
-# <ready> last run: 2026-10-15 10:42:22
+# <ready> last run: 2026-10-20 18:52:33
 ```
 
 Next, we set the initial value to 11 to trigger the changes.
@@ -293,12 +290,12 @@ Next, we set the initial value to 11 to trigger the changes.
 pip |>
     pip_set_params(list(xInit = 11)) |>
     pip_run()
-# info [2026-10-15 10:42:22.136 UTC]: Starting run of pipeflow 'hicky-hacky'
-# info [2026-10-15 10:42:22.137 UTC]: Step 1/4 init
-# info [2026-10-15 10:42:22.137 UTC]: Step 2/4 f1
-# info [2026-10-15 10:42:22.138 UTC]: Step 3/4 f2
-# info [2026-10-15 10:42:22.143 UTC]: Step 4/4 f3
-# info [2026-10-15 10:42:22.144 UTC]: Finished run of pipeflow 'hicky-hacky'
+# info [2026-10-20 18:52:33.381 UTC]: Starting run of pipeflow 'hicky-hacky'
+# info [2026-10-20 18:52:33.381 UTC]: Step 1/4 init
+# info [2026-10-20 18:52:33.382 UTC]: Step 2/4 f1
+# info [2026-10-20 18:52:33.383 UTC]: Step 3/4 f2
+# info [2026-10-20 18:52:33.387 UTC]: Step 4/4 f3
+# info [2026-10-20 18:52:33.389 UTC]: Finished run of pipeflow 'hicky-hacky'
 
 pip
 # <pipeflow> hicky-hacky (5 steps)
@@ -310,7 +307,7 @@ pip
 # 4:  f2b      x     f2a  done       
 # 5:   f3      x     f2b   new [NULL]
 # --------------------------------
-# <ready> last run: 2026-10-15 10:42:22
+# <ready> last run: 2026-10-20 18:52:33
 ```
 
 While the structure has changed as expected, some steps were not yet
@@ -326,13 +323,13 @@ to re-run the pipeline.
 pip |>
     pip_set_params(list(xInit = 11)) |>
     pip_run()
-# info [2026-10-15 10:42:22.212 UTC]: Starting run of pipeflow 'hicky-hacky'
-# info [2026-10-15 10:42:22.213 UTC]: Step 1/5 init - skipping done step
-# info [2026-10-15 10:42:22.213 UTC]: Step 2/5 f1 - skipping done step
-# info [2026-10-15 10:42:22.213 UTC]: Step 3/5 f2a
-# info [2026-10-15 10:42:22.214 UTC]: Step 4/5 f2b
-# info [2026-10-15 10:42:22.216 UTC]: Step 5/5 f3
-# info [2026-10-15 10:42:22.217 UTC]: Finished run of pipeflow 'hicky-hacky'
+# info [2026-10-20 18:52:33.454 UTC]: Starting run of pipeflow 'hicky-hacky'
+# info [2026-10-20 18:52:33.454 UTC]: Step 1/5 init - skipping done step
+# info [2026-10-20 18:52:33.454 UTC]: Step 2/5 f1 - skipping done step
+# info [2026-10-20 18:52:33.455 UTC]: Step 3/5 f2a
+# info [2026-10-20 18:52:33.456 UTC]: Step 4/5 f2b
+# info [2026-10-20 18:52:33.457 UTC]: Step 5/5 f3
+# info [2026-10-20 18:52:33.458 UTC]: Finished run of pipeflow 'hicky-hacky'
 
 pip
 # <pipeflow> hicky-hacky (5 steps)
@@ -344,7 +341,7 @@ pip
 # 4:  f2b      x     f2a  done  55
 # 5:   f3      x     f2b  done  85
 # --------------------------------
-# <ready> last run: 2026-10-15 10:42:22
+# <ready> last run: 2026-10-20 18:52:33
 ```
 
 Now the output of all steps is as expected. If we want to use {pipeflow}
@@ -391,18 +388,18 @@ Second, you just run the pipeline as usual.
 pip |>
     pip_set_params(list(xInit = 11)) |>
     pip_run()
-# info [2026-10-15 10:42:22.356 UTC]: Starting run of pipeflow 'hacky-with-restart'
-# info [2026-10-15 10:42:22.356 UTC]: Step 1/4 init
-# info [2026-10-15 10:42:22.357 UTC]: Step 2/4 f1
-# info [2026-10-15 10:42:22.358 UTC]: Step 3/4 f2
-# info [2026-10-15 10:42:22.363 UTC]: Restarting pipeline execution.
-# info [2026-10-15 10:42:22.364 UTC]: Restarting run of pipeflow 'hacky-with-restart'
-# info [2026-10-15 10:42:22.364 UTC]: Step 1/5 init
-# info [2026-10-15 10:42:22.364 UTC]: Step 2/5 f1
-# info [2026-10-15 10:42:22.365 UTC]: Step 3/5 f2a
-# info [2026-10-15 10:42:22.366 UTC]: Step 4/5 f2b
-# info [2026-10-15 10:42:22.367 UTC]: Step 5/5 f3
-# info [2026-10-15 10:42:22.368 UTC]: Finished run of pipeflow 'hacky-with-restart'
+# info [2026-10-20 18:52:33.590 UTC]: Starting run of pipeflow 'hacky-with-restart'
+# info [2026-10-20 18:52:33.590 UTC]: Step 1/4 init
+# info [2026-10-20 18:52:33.591 UTC]: Step 2/4 f1
+# info [2026-10-20 18:52:33.592 UTC]: Step 3/4 f2
+# info [2026-10-20 18:52:33.596 UTC]: Restarting pipeline execution.
+# info [2026-10-20 18:52:33.597 UTC]: Restarting run of pipeflow 'hacky-with-restart'
+# info [2026-10-20 18:52:33.597 UTC]: Step 1/5 init
+# info [2026-10-20 18:52:33.597 UTC]: Step 2/5 f1
+# info [2026-10-20 18:52:33.598 UTC]: Step 3/5 f2a
+# info [2026-10-20 18:52:33.599 UTC]: Step 4/5 f2b
+# info [2026-10-20 18:52:33.600 UTC]: Step 5/5 f3
+# info [2026-10-20 18:52:33.602 UTC]: Finished run of pipeflow 'hacky-with-restart'
 ```
 
 As you can see, the run was aborted right after step `f2` and re-run
@@ -424,7 +421,7 @@ pip
 # 4:  f2b      x     f2a  done  55
 # 5:   f3      x     f2b  done  85
 # ---------------------------------------
-# <ready> last run: 2026-10-15 10:42:22
+# <ready> last run: 2026-10-20 18:52:33
 ```
 
 Of course, this was just a toy example to show some possibilities, but I
@@ -442,6 +439,47 @@ would invalidate the internal consistency of the dependency graph.
 On the other hand, changing entries in columns such as `tags`, `time`,
 `state` or `output` is generally not critical. If in doubt, just try and
 see what works.
+
+### The lifetime of `.self`
+
+`.self` is provided for the duration of the step call and released as
+soon as the step returns. This keeps the pipeline out of the step’s
+output: a step that returns a closure, a formula or any other object
+that captures its call frame would otherwise carry the whole pipeline
+along, which shows up when the output is serialized, cached or sent to
+another process.
+
+As a consequence, `.self` must be used while the step runs. A function
+that is returned by a step and refers to `.self` fails when it is called
+later.
+
+``` r
+
+pip <- pip_new("lifetime") |>
+    pip_add("make", \(x = 1) function() .self[["name"]])
+
+pip_run(pip, lgr = NULL)
+
+getName <- pip[["make", "out"]]
+tryCatch(getName(), error = \(e) conditionMessage(e))
+# [1] "object '.self' not found"
+```
+
+If a step needs pipeline information later on, read it during the run
+and return the value instead of the pipeline.
+
+``` r
+
+pip <- pip_new("lifetime") |>
+    pip_add("make", \(x = 1) {
+        nm <- .self[["name"]]
+        function() nm
+    })
+
+pip_run(pip, lgr = NULL)
+pip[["make", "out"]]()
+# [1] "lifetime"
+```
 
 [^1]: By default, [`ls()`](https://rdrr.io/r/base/ls.html) hides names
     starting with a dot. The internal entries, which become visible via

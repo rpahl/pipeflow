@@ -38,8 +38,9 @@
 - [Nested
   pipelines](https://rpahl.github.io/pipeflow/dev/articles/v05b-nested-pipeline.md):
 
-  Shows how to embed pipelines within pipeline steps and how to mark
-  their parameters so that changing them re-executes the outer step.
+  Shows how to run a pipeline as a step of another pipeline with
+  as.function(), so that changing its parameters re-executes the outer
+  step and only the inner steps that are affected.
 
 - [Handling
   failures](https://rpahl.github.io/pipeflow/dev/articles/v05c-error-handling.md):
@@ -54,6 +55,13 @@
   Shows how to store annotated values (e.g. values with units or labels)
   as step parameters and how to unwrap them right before a step function
   is called, using the pip_param_value() generic.
+
+- [Annotated step
+  outputs](https://rpahl.github.io/pipeflow/dev/articles/v05e-output-value.md):
+
+  Shows how to annotate the output of a step when the step returns, for
+  example to stamp a result with the step it came from and the time it
+  was computed, using the pip_output_value() generic.
 
 - [Self-modifying
   pipelines](https://rpahl.github.io/pipeflow/dev/articles/v06-self-modify-pipeline.md):

@@ -44,7 +44,7 @@ before we move on.
 # 3:    fit      x   clean  done             30 model,core
 # 4: report      x     fit  done     result: 30     report
 # ---------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 ```
 
 ## Creating views
@@ -62,7 +62,7 @@ pip_view(pip, tags = "core")
 # 1: clean      x    load  done  2, 4, 6, 8,10    io,core
 # 2:   fit      x   clean  done             30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 ```
 
 Filters can be combined. By default, steps must match *all* filters
@@ -78,7 +78,7 @@ pip_view(pip, tags = "core", state = "done")
 # 1: clean      x    load  done  2, 4, 6, 8,10    io,core
 # 2:   fit      x   clean  done             30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 
 pip_view(pip, step = c("clean", "fit"))
 # <pipeflow_view> my-pip (2 of 4 steps)
@@ -87,7 +87,7 @@ pip_view(pip, step = c("clean", "fit"))
 # 1: clean      x    load  done  2, 4, 6, 8,10    io,core
 # 2:   fit      x   clean  done             30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 ```
 
 `join = "union"` keeps steps that match *any* filter:
@@ -101,7 +101,7 @@ pip_view(pip, tags = "report", step = "clean", join = "union")
 # 1:  clean      x    load  done  2, 4, 6, 8,10 io,core
 # 2: report      x     fit  done     result: 30  report
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 ```
 
 With `fixed = FALSE`, filter values are interpreted as regular
@@ -115,7 +115,7 @@ pip_view(pip, step = "^f", fixed = FALSE)
 #    step params depends state out       tags
 # 1:  fit      x   clean  done  30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 ```
 
 The available filters are `step`, `params`, `state`, `exec`, `tags`, and
@@ -150,7 +150,7 @@ pip[c("load", "fit")]
 # 1: load      n          done 1,2,3,4,5   io,daily
 # 2:  fit      x   clean  done        30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 
 pip[1:3]
 # <pipeflow_view> my-pip (3 of 4 steps)
@@ -160,7 +160,7 @@ pip[1:3]
 # 2: clean      x    load  done  2, 4, 6, 8,10    io,core
 # 3:   fit      x   clean  done             30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 ```
 
 Boolean filters are evaluated in the context of the step table, so the
@@ -177,7 +177,7 @@ pip[tags %like% "core"]
 # 1: clean      x    load  done  2, 4, 6, 8,10    io,core
 # 2:   fit      x   clean  done             30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 
 pip[step %in% c("clean", "fit") & state == "done"]
 # <pipeflow_view> my-pip (2 of 4 steps)
@@ -186,7 +186,7 @@ pip[step %in% c("clean", "fit") & state == "done"]
 # 1: clean      x    load  done  2, 4, 6, 8,10    io,core
 # 2:   fit      x   clean  done             30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 ```
 
 Note that `%like%` matches the tags of each step as a single string,
@@ -206,7 +206,7 @@ pip[-2]
 # 2:    fit      x   clean  done         30 model,core
 # 3: report      x     fit  done result: 30     report
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 ```
 
 `p[]` returns a copy of the pipeline, and using two indices (`p[i, j]`)
@@ -269,7 +269,7 @@ v1
 # 1:  load      n          done      1,2,3,4,5 io,daily
 # 2: clean      x    load  done  2, 4, 6, 8,10  io,core
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 
 v2 <- v1 |> pip_view(tags = "core") # clean only
 v2
@@ -278,7 +278,7 @@ v2
 #     step params depends state            out    tags
 # 1: clean      x    load  done  2, 4, 6, 8,10 io,core
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 ```
 
 ## The `view` meta field
@@ -303,7 +303,7 @@ w
 # 1:  load      n          done      1,2,3,4,5 io,daily
 # 2: clean      x    load  done  2, 4, 6, 8,10  io,core
 # -------------------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 
 w[["view"]] <- NULL # back to the full pipeline
 w
@@ -315,7 +315,7 @@ w
 # 3:    fit      x   clean  done             30 model,core
 # 4: report      x     fit  done     result: 30     report
 # ---------------------------
-# <ready> last run: 2026-10-15 10:41:44
+# <ready> last run: 2026-10-20 18:51:43
 ```
 
 ## When the pipeline changes
@@ -376,12 +376,12 @@ dependencies as `[upstream]`:
 
 pip_reset(pip)
 pip_run(pip_view(pip, step = "report"))
-# info [2026-10-15 10:41:45.482 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-10-15 10:41:45.482 UTC]: Step 1/4 [upstream] load
-# info [2026-10-15 10:41:45.483 UTC]: Step 2/4 [upstream] clean
-# info [2026-10-15 10:41:45.484 UTC]: Step 3/4 [upstream] fit
-# info [2026-10-15 10:41:45.485 UTC]: Step 4/4 [view] report
-# info [2026-10-15 10:41:45.486 UTC]: Finished run of pipeflow 'my-pip'
+# info [2026-10-20 18:51:44.096 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-10-20 18:51:44.097 UTC]: Step 1/4 [upstream] load
+# info [2026-10-20 18:51:44.097 UTC]: Step 2/4 [upstream] clean
+# info [2026-10-20 18:51:44.098 UTC]: Step 3/4 [upstream] fit
+# info [2026-10-20 18:51:44.100 UTC]: Step 4/4 [view] report
+# info [2026-10-20 18:51:44.101 UTC]: Finished run of pipeflow 'my-pip'
 ```
 
 Afterwards, the original pipeline is up to date for the covered steps.

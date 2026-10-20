@@ -32,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9001</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9012</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,6 +71,7 @@
     <li><a class="dropdown-item" href="../articles/v05b-nested-pipeline.html">Nested pipelines</a></li>
     <li><a class="dropdown-item" href="../articles/v05c-error-handling.html">Handling failures</a></li>
     <li><a class="dropdown-item" href="../articles/v05d-param-value.html">Annotated parameter values</a></li>
+    <li><a class="dropdown-item" href="../articles/v05e-output-value.html">Annotated step outputs</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
@@ -279,6 +280,143 @@ output.</p>
 <span><span class="co"># [1] "unknown unit 'ft'"</span></span></code></pre></div>
 </div>
 <div class="section level3">
+<h3 id="setting-a-plain-value">Setting a plain value<a class="anchor" aria-label="anchor" href="#setting-a-plain-value"></a>
+</h3>
+<p>So far the annotated values were set as whole objects. A user
+interface, however, usually hands back a plain value: the number the
+user typed, not the <code>quantity</code> object around it. Setting it
+with <code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> would replace the stored object and
+lose its unit.</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">p5</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"speed"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"speed"</span>, \<span class="op">(</span><span class="va">distance</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">distance</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p5</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>distance <span class="op">=</span> <span class="fu">quantity</span><span class="op">(</span><span class="fl">120</span>, <span class="st">"km"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p5</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>distance <span class="op">=</span> <span class="fl">150</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/pip_set_params.html">pip_get_params</a></span><span class="op">(</span><span class="va">p5</span><span class="op">)</span></span>
+<span><span class="co"># $distance</span></span>
+<span><span class="co"># [1] 150</span></span></code></pre></div>
+<p>The write side of the same extension point fixes this.
+<code>pip_param_value&lt;-()</code> turns a plain value into the value
+that is stored, and it dispatches on the value that the step currently
+holds.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">`pip_param_value&lt;-.quantity`</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, <span class="va">value</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">value</span>, <span class="st">"quantity"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>    <span class="va">x</span><span class="op">$</span><span class="va">value</span> <span class="op">&lt;-</span> <span class="va">value</span></span>
+<span>    <span class="va">x</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">registerS3method</a></span><span class="op">(</span></span>
+<span>    <span class="st">"pip_param_value&lt;-"</span>,</span>
+<span>    <span class="st">"quantity"</span>,</span>
+<span>    <span class="va">`pip_param_value&lt;-.quantity`</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Now a plain value is merged into the stored object, and the unit
+survives.</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">p6</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"speed"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"speed"</span>, \<span class="op">(</span><span class="va">distance</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">distance</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p6</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>distance <span class="op">=</span> <span class="fu">quantity</span><span class="op">(</span><span class="fl">120</span>, <span class="st">"km"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p6</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>distance <span class="op">=</span> <span class="fl">150</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="../reference/pip_set_params.html">pip_get_params</a></span><span class="op">(</span><span class="va">p6</span><span class="op">)</span></span>
+<span><span class="co"># $distance</span></span>
+<span><span class="co"># &lt;quantity&gt; 150 km</span></span></code></pre></div>
+<p>The step function still receives the plain value, because the two
+sides belong together.</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p6</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="va">p6</span><span class="op">[[</span><span class="st">"speed"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="co"># [1] 150</span></span></code></pre></div>
+<p>The default method replaces the stored value, which is what pipelines
+without any method do. A method decides for itself what a plain value
+and what an object of its own class means; the method above uses an
+object as it is and merges anything else.</p>
+<p>Because the merged value is what <code><a href="../reference/pip_set_params.html">pip_set_params()</a></code>
+compares with the stored one, setting a plain value that the stored
+object already holds doesn’t outdate the step.</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p6</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>distance <span class="op">=</span> <span class="fl">150</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">p6</span></span>
+<span><span class="co"># &lt;pipeflow&gt; speed (1 step)</span></span>
+<span><span class="co"># -------------------------</span></span>
+<span><span class="co">#     step   params depends state out</span></span>
+<span><span class="co"># 1: speed distance          done 150</span></span>
+<span><span class="co"># -------------------------</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-20 18:52:18</span></span></code></pre></div>
+<div class="section level4">
+<h4 id="errors-while-setting">Errors while setting<a class="anchor" aria-label="anchor" href="#errors-while-setting"></a>
+</h4>
+<p><code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> computes the value to store for every
+affected step before it changes anything. If a method fails, nothing is
+set and the error reports all failures at once.</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">`pip_param_value&lt;-.checked`</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, <span class="va">value</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">is.numeric</a></span><span class="op">(</span><span class="va">value</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="kw"><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop</a></span><span class="op">(</span><span class="st">"value must be numeric"</span><span class="op">)</span></span>
+<span>    <span class="op">}</span></span>
+<span>    <span class="va">x</span><span class="op">$</span><span class="va">value</span> <span class="op">&lt;-</span> <span class="va">value</span></span>
+<span>    <span class="va">x</span></span>
+<span><span class="op">}</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/ns-internal.html" class="external-link">registerS3method</a></span><span class="op">(</span></span>
+<span>    <span class="st">"pip_param_value&lt;-"</span>,</span>
+<span>    <span class="st">"checked"</span>,</span>
+<span>    <span class="va">`pip_param_value&lt;-.checked`</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">p7</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"checked"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"a"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">x</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"b"</span>, \<span class="op">(</span><span class="va">y</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="va">y</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p7</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fu">checked</span><span class="op">(</span><span class="fl">1</span>, <span class="st">"m"</span><span class="op">)</span>, y <span class="op">=</span> <span class="fu">checked</span><span class="op">(</span><span class="fl">2</span>, <span class="st">"m"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">err</span> <span class="op">&lt;-</span> <span class="kw"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">tryCatch</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p7</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="st">"no"</span>, y <span class="op">=</span> <span class="st">"no"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    error <span class="op">=</span> \<span class="op">(</span><span class="va">e</span><span class="op">)</span> <span class="va">e</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/conditions.html" class="external-link">conditionMessage</a></span><span class="op">(</span><span class="va">err</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># Cannot set 2 parameters: nothing was set.</span></span>
+<span><span class="co">#   step 'a', parameter 'x': value must be numeric</span></span>
+<span><span class="co">#   step 'b', parameter 'y': value must be numeric</span></span></code></pre></div>
+<p>The condition has class <code>pipeflow_set_params_error</code> and
+carries a table of the failures, which a user interface can show next to
+the respective inputs.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">err</span><span class="op">)</span></span>
+<span><span class="co"># [1] "pipeflow_set_params_error" "error"                     "condition"</span></span>
+<span><span class="va">err</span><span class="op">$</span><span class="va">errors</span></span>
+<span><span class="co">#   step name               message</span></span>
+<span><span class="co"># 1    a    x value must be numeric</span></span>
+<span><span class="co"># 2    b    y value must be numeric</span></span></code></pre></div>
+<p>Nothing was set:</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_set_params.html">pip_get_params</a></span><span class="op">(</span><span class="va">p7</span><span class="op">)</span></span>
+<span><span class="co"># $x</span></span>
+<span><span class="co"># $value</span></span>
+<span><span class="co"># [1] 1</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $unit</span></span>
+<span><span class="co"># [1] "m"</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># attr(,"class")</span></span>
+<span><span class="co"># [1] "checked"</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $y</span></span>
+<span><span class="co"># $value</span></span>
+<span><span class="co"># [1] 2</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># $unit</span></span>
+<span><span class="co"># [1] "m"</span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># attr(,"class")</span></span>
+<span><span class="co"># [1] "checked"</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level3">
 <h3 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
 </h3>
 <ul>
@@ -293,6 +431,12 @@ and <code>...</code>), not to step outputs, partitions or failure
 objects.</li>
 <li>An error in a method is a step error, so <code>on_error</code>
 applies.</li>
+<li>
+<code><a href="../reference/pip_param_value.html">`pip_param_value&lt;-`()</a></code> is the write side: it turns a
+plain value into the value that is stored, so that annotations survive a
+<code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> call that passes a plain value.</li>
+<li>Either method returns a value; neither should modify its
+<code>x</code> in place.</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

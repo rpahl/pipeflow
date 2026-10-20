@@ -141,12 +141,16 @@ Replace, rename, remove, reset, or re-configure steps.
 
 ## Pipeline composition
 
-Combine or clone pipelines.
+Combine or clone pipelines, or turn a pipeline into a function.
 
 - [`rbind(`*`<pipeflow>`*`)`](https://rpahl.github.io/pipeflow/dev/reference/rbind.pipeflow.md)
   : Bind pipelines
 - [`pip_clone()`](https://rpahl.github.io/pipeflow/dev/reference/pip_clone.md)
   : Clone a pipeline
+- [`as.function(`*`<pipeflow>`*`)`](https://rpahl.github.io/pipeflow/dev/reference/as.function.pipeflow.md)
+  : Turn a pipeline into a function
+- [`pip_inner()`](https://rpahl.github.io/pipeflow/dev/reference/pip_inner.md)
+  : Inner pipelines of a pipeline function step
 
 ## Running pipelines
 
@@ -157,7 +161,10 @@ Execute pipeline steps or views.
 - [`pip_run_state()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run_state.md)
   : Get the run state of a pipeline
 - [`pip_param_value()`](https://rpahl.github.io/pipeflow/dev/reference/pip_param_value.md)
-  : Unwrap a parameter value before a step function is called
+  [`` `pip_param_value<-`() ``](https://rpahl.github.io/pipeflow/dev/reference/pip_param_value.md)
+  : Annotated parameter values
+- [`pip_output_value()`](https://rpahl.github.io/pipeflow/dev/reference/pip_output_value.md)
+  : Annotated step outputs
 - [`pipeflow_lgr()`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow_lgr.md)
   : Default logger of pipeflow
 
@@ -264,8 +271,9 @@ expressions.
 - [Nested
   pipelines](https://rpahl.github.io/pipeflow/dev/articles/v05b-nested-pipeline.md):
 
-  Shows how to embed pipelines within pipeline steps and how to mark
-  their parameters so that changing them re-executes the outer step.
+  Shows how to run a pipeline as a step of another pipeline with
+  as.function(), so that changing its parameters re-executes the outer
+  step and only the inner steps that are affected.
 
 - [Handling
   failures](https://rpahl.github.io/pipeflow/dev/articles/v05c-error-handling.md):
@@ -280,6 +288,13 @@ expressions.
   Shows how to store annotated values (e.g. values with units or labels)
   as step parameters and how to unwrap them right before a step function
   is called, using the pip_param_value() generic.
+
+- [Annotated step
+  outputs](https://rpahl.github.io/pipeflow/dev/articles/v05e-output-value.md):
+
+  Shows how to annotate the output of a step when the step returns, for
+  example to stamp a result with the step it came from and the time it
+  was computed, using the pip_output_value() generic.
 
 - [Self-modifying
   pipelines](https://rpahl.github.io/pipeflow/dev/articles/v06-self-modify-pipeline.md):

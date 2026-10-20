@@ -32,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9001</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9012</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,6 +71,7 @@
     <li><a class="dropdown-item" href="../articles/v05b-nested-pipeline.html">Nested pipelines</a></li>
     <li><a class="dropdown-item" href="../articles/v05c-error-handling.html">Handling failures</a></li>
     <li><a class="dropdown-item" href="../articles/v05d-param-value.html">Annotated parameter values</a></li>
+    <li><a class="dropdown-item" href="../articles/v05e-output-value.html">Annotated step outputs</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
@@ -166,11 +167,11 @@ fits a linear model and outputs the model coefficients.</p>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.652 UTC]: Starting run of pipeflow 'linear-model-coeffs'</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.652 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.654 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.658 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.660 UTC]: Finished run of pipeflow 'linear-model-coeffs'</span></span></code></pre></div>
+<span><span class="co"># info [2026-10-20 18:51:56.286 UTC]: Starting run of pipeflow 'linear-model-coeffs'</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.287 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.288 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.292 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.294 UTC]: Finished run of pipeflow 'linear-model-coeffs'</span></span></code></pre></div>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[[</span><span class="st">"coefs"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co">#  (Intercept) Sepal.Length </span></span>
@@ -191,21 +192,21 @@ for each subset. For example:</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/split.html" class="external-link">split</a></span><span class="op">(</span><span class="va">iris</span>, <span class="va">iris</span><span class="op">$</span><span class="va">Species</span><span class="op">)</span>, FUN <span class="op">=</span> <span class="va">run_pipeline_helper</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.792 UTC]: Starting run of pipeflow 'linear-model-coeffs'</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.792 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.794 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.798 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.800 UTC]: Finished run of pipeflow 'linear-model-coeffs'</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.805 UTC]: Starting run of pipeflow 'linear-model-coeffs'</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.805 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.806 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.808 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.809 UTC]: Finished run of pipeflow 'linear-model-coeffs'</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.811 UTC]: Starting run of pipeflow 'linear-model-coeffs'</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.812 UTC]: Step 1/3 data</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.812 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.814 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-10-15 10:41:56.815 UTC]: Finished run of pipeflow 'linear-model-coeffs'</span></span></code></pre></div>
+<span><span class="co"># info [2026-10-20 18:51:56.430 UTC]: Starting run of pipeflow 'linear-model-coeffs'</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.430 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.431 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.434 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.436 UTC]: Finished run of pipeflow 'linear-model-coeffs'</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.440 UTC]: Starting run of pipeflow 'linear-model-coeffs'</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.440 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.441 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.442 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.443 UTC]: Finished run of pipeflow 'linear-model-coeffs'</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.445 UTC]: Starting run of pipeflow 'linear-model-coeffs'</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.445 UTC]: Step 1/3 data</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.446 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.447 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.449 UTC]: Finished run of pipeflow 'linear-model-coeffs'</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">results</span></span>
 <span><span class="co"># $setosa</span></span>
@@ -286,12 +287,12 @@ step.</p>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.217 UTC]: Starting run of pipeflow 'my-split-pip'</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.217 UTC]: Step 1/4 data</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.218 UTC]: Step 2/4 split_data</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.219 UTC]: Step 3/4 fit</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.222 UTC]: Step 4/4 coefs</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.223 UTC]: Finished run of pipeflow 'my-split-pip'</span></span></code></pre></div>
+<span><span class="co"># info [2026-10-20 18:51:56.831 UTC]: Starting run of pipeflow 'my-split-pip'</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.832 UTC]: Step 1/4 data</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.832 UTC]: Step 2/4 split_data</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.834 UTC]: Step 3/4 fit</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.836 UTC]: Step 4/4 coefs</span></span>
+<span><span class="co"># info [2026-10-20 18:51:56.838 UTC]: Finished run of pipeflow 'my-split-pip'</span></span></code></pre></div>
 <p>Looking at the pipeline overview, we see that the
 <code>out</code>puts following the <code>split_data</code> steps are now
 all lists of results.</p>
@@ -305,7 +306,7 @@ all lists of results.</p>
 <span><span class="co"># 3:        fit data,xVar,yVar split_data  done           &lt;list[3]&gt;  auto</span></span>
 <span><span class="co"># 4:      coefs            fit        fit  done           &lt;list[3]&gt;  auto</span></span>
 <span><span class="co"># ---------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-15 10:41:57</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-20 18:51:56</span></span></code></pre></div>
 <p>Inspecting in particular the output of the <code>coefs</code> step,
 we see that it is now a list of coefficient tables, one for each
 species.</p>
@@ -357,7 +358,7 @@ Let’s for this matter extend our pipeline by one step at the end.</p>
 <span><span class="co"># 4:         coefs            fit        fit  done           &lt;list[3]&gt;   auto</span></span>
 <span><span class="co"># 5: combine_coefs          coefs      coefs   new              [NULL] reduce</span></span>
 <span><span class="co"># ---------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-15 10:41:57</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-20 18:51:56</span></span></code></pre></div>
 <p>Again, we see that the new step is marked with the execution mode
 (<code>reduce</code>) in the overview. Graphically, this mode is
 represented by a circle.</p>
@@ -368,13 +369,13 @@ represented by a circle.</p>
 <code>combine_coefs</code> step is a combined table of coefficients.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.676 UTC]: Starting run of pipeflow 'my-split-pip'</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.676 UTC]: Step 1/5 data - skipping done step</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.676 UTC]: Step 2/5 split_data - skipping done step</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.676 UTC]: Step 3/5 fit - skipping done step</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.676 UTC]: Step 4/5 coefs - skipping done step</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.676 UTC]: Step 5/5 combine_coefs</span></span>
-<span><span class="co"># info [2026-10-15 10:41:57.678 UTC]: Finished run of pipeflow 'my-split-pip'</span></span>
+<span><span class="co"># info [2026-10-20 18:51:57.287 UTC]: Starting run of pipeflow 'my-split-pip'</span></span>
+<span><span class="co"># info [2026-10-20 18:51:57.287 UTC]: Step 1/5 data - skipping done step</span></span>
+<span><span class="co"># info [2026-10-20 18:51:57.287 UTC]: Step 2/5 split_data - skipping done step</span></span>
+<span><span class="co"># info [2026-10-20 18:51:57.287 UTC]: Step 3/5 fit - skipping done step</span></span>
+<span><span class="co"># info [2026-10-20 18:51:57.287 UTC]: Step 4/5 coefs - skipping done step</span></span>
+<span><span class="co"># info [2026-10-20 18:51:57.288 UTC]: Step 5/5 combine_coefs</span></span>
+<span><span class="co"># info [2026-10-20 18:51:57.289 UTC]: Finished run of pipeflow 'my-split-pip'</span></span>
 <span></span>
 <span><span class="va">pip</span><span class="op">[[</span><span class="st">"combine_coefs"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co">#            (Intercept) Sepal.Length</span></span>
