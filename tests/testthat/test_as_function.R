@@ -75,7 +75,7 @@ describe("as.function.pipeflow", {
         outer
     }
 
-    demo_nested <- function(delay = 0, cache = 16L) {
+    demo_nested <- function(delay = 0, cache = TRUE) {
         calls <- new.env(parent = emptyenv())
         calls$fit <- 0L
         calls$coefs <- 0L
@@ -180,7 +180,7 @@ describe("as.function.pipeflow", {
             )
         })
 
-        it("binds via params of pip_add(), but keeps one pipeline", {
+        it("binds via params of pip_add(), with a pipeline per partition", {
             calls <- new.env(parent = emptyenv())
             calls$fit <- 0L
             calls$coefs <- 0L
@@ -197,8 +197,11 @@ describe("as.function.pipeflow", {
                 c(1.28, 3.28, 5.28),
                 tolerance = 1e-8
             )
-            # no bound argument tells the partitions apart
-            expect_length(.fun_pips(fun), 1L)
+            expect_named(.fun_pips(fun), c("A", "B", "C"))
+
+            pip_set_params(outer, list(digits = 3))
+            pip_run(outer, lgr = NULL)
+            expect_identical(c(calls$fit, calls$coefs), c(3L, 6L))
         })
     })
 
@@ -708,16 +711,16 @@ describe("as.function.pipeflow", {
 
         it("rejects an invalid cache", {
             inner <- demo_inner(new.env())
-            msg <- "cache must be a single whole number >= 0"
+            msg <- "cache must be a single logical value"
 
-            expect_error(as.function(inner, cache = -1), msg)
-            expect_error(as.function(inner, cache = "a"), msg)
-            expect_error(as.function(inner, cache = c(1, 2)), msg)
-            expect_error(as.function(inner, cache = NA_real_), msg)
-            expect_error(as.function(inner, cache = NaN), msg)
-            expect_error(as.function(inner, cache = -Inf), msg)
-            expect_error(as.function(inner, cache = 0.5), msg)
-            expect_error(as.function(inner, cache = 2.5), msg)
+            expect_error(as.function(inner, cache = 0), msg)
+            expect_error(as.function(inner, cache = 16L), msg)
+            expect_error(as.function(inner, cache = Inf), msg)
+            expect_error(as.function(inner, cache = "TRUE"), msg)
+            expect_error(as.function(inner, cache = c(TRUE, FALSE)), msg)
+            expect_error(as.function(inner, cache = logical()), msg)
+            expect_error(as.function(inner, cache = NA), msg)
+            expect_error(as.function(inner, cache = NULL), msg)
         })
 
         it("rejects an invalid on_error", {
@@ -739,14 +742,18 @@ describe("as.function.pipeflow", {
             )
         })
 
-        it("accepts whole numbers as cache, also Inf and large ones", {
+        it("accepts TRUE and FALSE as cache", {
             inner <- demo_inner(new.env())
             d <- demo_batches()[1:6, ]
 
-            for (cache in list(0, 1L, 16, Inf, .Machine$integer.max + 1)) {
+            for (cache in c(TRUE, FALSE)) {
                 f <- as.function(inner, out = "data", cache = cache)
                 expect_identical(f(data = d), d)
             }
+        })
+
+        it("keeps the pipelines by default", {
+            expect_true(formals(as.function.pipeflow)$cache)
         })
 
         it("does not capture the environment of the caller in bind", {
@@ -764,6 +771,29 @@ describe("as.function.pipeflow", {
     })
 
     describe("reuse of the inner pipelines", {
+        # Doubles each value of a split step with an inner pipeline per key.
+        # `calls$ran` collects the inputs of the inner runs; the inner step
+        # fails for the input `calls$fail`.
+        keyed_outer <- function(values = list(A = 1, B = 2, C = 3)) {
+            calls <- new.env(parent = emptyenv())
+            calls$ran <- numeric()
+            calls$fail <- NULL
+            inner <- pip_new("inner") |>
+                pip_add("double", \(x = NULL) {
+                    if (identical(x, calls$fail)) {
+                        stop("boom")
+                    }
+                    calls$ran <- c(calls$ran, x)
+                    x * 2
+                })
+            fun <- as.function(inner, out = "double", bind = list(x = ~parts))
+            outer <- pip_new("outer") |>
+                pip_add("parts", \(values = NULL) values, exec = "split") |>
+                pip_add("doubled", fun)
+            pip_set_params(outer, list(values = values))
+            list(outer = outer, fun = fun, calls = calls)
+        }
+
         it("runs no inner step again for an unchanged outer run", {
             demo <- run_outer(demo_nested())
             expect_identical(demo$calls$fit, 3L)
@@ -808,8 +838,8 @@ describe("as.function.pipeflow", {
             )
         })
 
-        it("keeps nothing with cache = 0", {
-            demo <- run_outer(demo_nested(cache = 0))
+        it("keeps nothing with cache = FALSE", {
+            demo <- run_outer(demo_nested(cache = FALSE))
 
             pip_set_params(demo$outer, list(digits = 3))
             run_outer(demo)
@@ -818,54 +848,422 @@ describe("as.function.pipeflow", {
             expect_length(.fun_pips(demo$fun), 0L)
         })
 
-        it("keeps at most `cache` pipelines, the least recently used goes", {
-            demo <- run_outer(demo_nested(cache = 2))
-            expect_length(.fun_pips(demo$fun), 2L)
-
-            # 3 partitions through 2 slots in the same order: no hit ever
-            pip_set_params(demo$outer, list(digits = 3))
-            run_outer(demo)
-
-            expect_identical(demo$calls$fit, 6L)
-        })
-
-        it("drops the least recently used, not the oldest pipeline", {
+        it("keeps one pipeline per partition, however many partitions", {
             calls <- new.env()
             calls$fit <- 0L
             calls$coefs <- 0L
-            f <- as.function(
+            fun <- as.function(
                 demo_inner(calls),
                 out = "coefs",
-                bind = list(data = ~split_data),
-                cache = 2
+                bind = list(data = ~split_data)
             )
+            d <- demo_batches()
+            many <- do.call(
+                rbind,
+                lapply(1:20, \(i) transform(d[1:6, ], batch = i, y = y + i))
+            )
+            outer <- demo_outer(fun, data = many)
+            pip_run(outer, lgr = NULL)
+            expect_identical(calls$fit, 20L)
+            expect_length(.fun_pips(fun), 20L)
+
+            pip_set_params(outer, list(digits = 3))
+            pip_run(outer, lgr = NULL)
+
+            expect_identical(c(calls$fit, calls$coefs), c(20L, 40L))
+        })
+
+        it("shares one pipeline between all direct calls", {
+            demo <- demo_nested()
             d <- demo_batches()
             a <- d[d$batch == "A", ]
             b <- d[d$batch == "B", ]
-            c <- d[d$batch == "C", ]
 
-            f(data = a)
-            f(data = b)
-            f(data = a) # A is now more recent than B
-            f(data = c) # B goes, not A
-            expect_identical(calls$fit, 3L)
+            first <- demo$fun(data = a)
+            demo$fun(data = b)
+            expect_identical(demo$calls$fit, 2L)
+            expect_named(.fun_pips(demo$fun), .fun_key_single)
 
-            f(data = a)
-            expect_identical(calls$fit, 3L) # A is still kept
+            # the pipeline has the input b now, so a runs again ...
+            again <- demo$fun(data = a)
+            expect_identical(demo$calls$fit, 3L)
+            expect_equal(again, first)
 
-            f(data = b)
-            expect_identical(calls$fit, 4L) # B was dropped
+            # ... but the same call twice in a row finds it up to date
+            demo$fun(data = a)
+            expect_identical(demo$calls$fit, 3L)
+            expect_named(.fun_pips(demo$fun), .fun_key_single)
         })
 
-        it("keeps all pipelines with cache = Inf", {
-            demo <- demo_nested(cache = Inf)
-            d <- demo_batches()[1:6, ]
+        it("keeps separate pipelines for direct calls and step calls", {
+            demo <- run_outer(demo_nested())
+            d <- demo_batches()
+            a <- d[d$batch == "A", ]
+            expect_identical(demo$calls$fit, 3L)
 
-            for (i in 1:20) {
-                demo$fun(data = transform(d, y = y + i))
+            # a direct call does not use the pipeline of partition A
+            direct <- demo$fun(data = a)
+            expect_identical(demo$calls$fit, 4L)
+            expect_named(
+                .fun_pips(demo$fun),
+                c("A", "B", "C", .fun_key_single)
+            )
+            expect_equal(direct, demo$outer[["by_batch", "out"]]$A)
+
+            # ... and the outer run does not use the one of the direct call
+            run_outer(demo)
+            expect_identical(demo$calls$fit, 4L)
+            pip_set_params(demo$outer, list(digits = 3))
+            run_outer(demo)
+            expect_identical(demo$calls$fit, 4L)
+            demo$fun(data = a)
+            expect_identical(demo$calls$fit, 4L)
+            expect_named(
+                .fun_pips(demo$fun),
+                c("A", "B", "C", .fun_key_single)
+            )
+        })
+
+        it("keeps separate pipelines for each step with the function", {
+            demo <- demo_nested()
+            pip_add(
+                demo$outer,
+                "by_batch_1",
+                demo$fun,
+                params = list(digits = 1)
+            )
+            run_outer(demo)
+            expect_identical(c(demo$calls$fit, demo$calls$coefs), c(6L, 6L))
+            expect_named(
+                .fun_pips(demo$fun),
+                rep(c("A", "B", "C"), times = 2L)
+            )
+
+            # each step finds its own pipelines up to date
+            pip_run(demo$outer, lgr = NULL, force = TRUE)
+
+            expect_identical(c(demo$calls$fit, demo$calls$coefs), c(6L, 6L))
+            expect_equal(
+                unname(demo$outer[["by_batch_1", "out"]]$A),
+                c(1.3, 1.9),
+                tolerance = 1e-8
+            )
+        })
+
+        it("drops the pipelines of partitions that are gone", {
+            demo <- run_outer(demo_nested())
+            d <- demo_batches()
+
+            pip_set_params(demo$outer, list(data = d[d$batch != "B", ]))
+            run_outer(demo)
+
+            expect_named(.fun_pips(demo$fun), c("A", "C"))
+            expect_identical(
+                demo$outer[["coef_table", "out"]]$batch,
+                c("A", "C")
+            )
+        })
+
+        it("drops all pipelines if no partition is left", {
+            demo <- keyed_outer()
+            pip_run(demo$outer, lgr = NULL)
+            expect_named(.fun_pips(demo$fun), c("A", "B", "C"))
+
+            none <- stats::setNames(list(), character())
+            pip_set_params(demo$outer, list(values = none))
+            pip_run(demo$outer, lgr = NULL)
+
+            out <- demo$outer[["doubled", "out"]]
+            expect_s3_class(out, "pipeflow_partitioned")
+            expect_length(out, 0L)
+            expect_length(.fun_pips(demo$fun), 0L)
+
+            # a partition that comes back starts with a new pipeline
+            pip_set_params(demo$outer, list(values = list(A = 1)))
+            pip_run(demo$outer, lgr = NULL)
+
+            expect_identical(demo$calls$ran, c(1, 2, 3, 1))
+            expect_named(.fun_pips(demo$fun), "A")
+        })
+
+        it("drops the pipelines of the step with no partition only", {
+            demo <- keyed_outer()
+            pip_add(
+                demo$outer,
+                "more",
+                \(more = list(A = 1, B = 2)) more,
+                exec = "split"
+            )
+            pip_add(demo$outer, "again", demo$fun, params = list(x = ~more))
+            pip_run(demo$outer, lgr = NULL)
+            expect_length(.fun_pips(demo$fun), 5L)
+
+            none <- stats::setNames(list(), character())
+            pip_set_params(demo$outer, list(more = none))
+            pip_run(demo$outer, lgr = NULL)
+
+            expect_named(.fun_pips(demo$fun), c("A", "B", "C"))
+        })
+
+        it("finds the pipeline of a partition by its key", {
+            demo <- keyed_outer()
+            pip_run(demo$outer, lgr = NULL)
+
+            # same inputs under the same keys, in another order
+            reordered <- list(C = 3, A = 1, B = 2)
+            pip_set_params(demo$outer, list(values = reordered))
+            pip_run(demo$outer, lgr = NULL)
+
+            expect_identical(demo$calls$ran, c(1, 2, 3))
+            expect_named(demo$outer[["doubled", "out"]], c("C", "A", "B"))
+            expect_named(.fun_pips(demo$fun), c("C", "A", "B"))
+
+            # the same input under another key is a new partition
+            renamed <- list(C = 3, A = 1, Z = 2)
+            pip_set_params(demo$outer, list(values = renamed))
+            pip_run(demo$outer, lgr = NULL)
+
+            expect_identical(demo$calls$ran, c(1, 2, 3, 2))
+            expect_named(.fun_pips(demo$fun), c("C", "A", "Z"))
+            expect_equal(
+                unlist(demo$outer[["doubled", "out"]]),
+                c(C = 6, A = 2, Z = 4)
+            )
+        })
+
+        it("reuses the finished partitions after a failed one", {
+            demo <- keyed_outer()
+            demo$calls$fail <- 2
+
+            expect_error(pip_run(demo$outer, lgr = NULL), "key 'B'")
+
+            # A is done, B failed, C was not reached: it has no pipeline yet
+            expect_identical(demo$calls$ran, 1)
+            expect_named(.fun_pips(demo$fun), c("A", "B"))
+            # the step call of the failed run is not left behind
+            expect_identical(
+                .pip_step_call(),
+                list(step = NULL, key = NULL, keys = NULL)
+            )
+
+            demo$calls$fail <- NULL
+            pip_run(demo$outer, lgr = NULL)
+
+            expect_identical(demo$calls$ran, c(1, 2, 3))
+            expect_named(.fun_pips(demo$fun), c("A", "B", "C"))
+            expect_equal(
+                unlist(demo$outer[["doubled", "out"]]),
+                c(A = 2, B = 4, C = 6)
+            )
+        })
+
+        it("is correct if two outer pipelines interleave calls", {
+            demo <- demo_nested()
+            d <- demo_batches()
+            other <- d[d$batch != "A", ]
+            other$y <- 2 * other$y
+            otherParams <- list(digits = 3, degree = 2)
+            second <- demo_outer(
+                demo$fun,
+                data = other,
+                params = otherParams
+            )
+            # the same pipelines with a function that keeps nothing
+            fresh <- as.function(
+                demo$inner,
+                out = "coefs",
+                bind = list(data = ~split_data),
+                cache = FALSE
+            )
+            expected <- list(
+                demo_outer(fresh),
+                demo_outer(fresh, data = other, params = otherParams)
+            )
+            lapply(expected, pip_run, lgr = NULL)
+
+            # forced runs call the function again, the other one in between
+            for (round in 1:2) {
+                pip_run(demo$outer, lgr = NULL, force = TRUE)
+                expect_equal(
+                    demo$outer[["coef_table", "out"]],
+                    expected[[1L]][["coef_table", "out"]]
+                )
+                pip_run(second, lgr = NULL, force = TRUE)
+                expect_equal(
+                    second[["coef_table", "out"]],
+                    expected[[2L]][["coef_table", "out"]]
+                )
             }
+        })
 
-            expect_length(.fun_pips(demo$fun), 20L)
+        it("drops the pipelines of a step that is no longer mapped", {
+            f <- as.function(
+                pip_new("i") |> pip_add("s", \(x = NULL) x * 2),
+                out = "s",
+                bind = list(x = ~parts)
+            )
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "parts",
+                    \(values = list(p = 1, q = 2)) values,
+                    exec = "split"
+                ) |>
+                pip_add("run", f)
+            pip_run(outer, lgr = NULL)
+            expect_named(.fun_pips(f), c("p", "q"))
+
+            pip_replace(outer, "parts", \(values = 3) values, exec = "auto")
+            pip_run(outer, lgr = NULL)
+
+            expect_identical(outer[["run", "out"]], 6)
+            expect_named(.fun_pips(f), .fun_key_single)
+        })
+
+        it("switches between a pipeline per partition and a single one", {
+            calls <- new.env()
+            calls$n <- 0L
+            f <- as.function(
+                pip_new("i") |>
+                    pip_add("s", \(x = NULL) {
+                        calls$n <- calls$n + 1L
+                        x * 2
+                    }),
+                out = "s",
+                bind = list(x = ~parts)
+            )
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "parts",
+                    \(values = list(p = 1, q = 2)) values,
+                    exec = "split"
+                ) |>
+                pip_add("run", f)
+            pip_run(outer, lgr = NULL)
+            expect_identical(calls$n, 2L)
+            expect_named(.fun_pips(f), c("p", "q"))
+
+            # not mapped: a single pipeline, the ones of p and q are gone
+            pip_replace(outer, "parts", \(values = 3) values, exec = "auto")
+            pip_run(outer, lgr = NULL)
+            expect_identical(calls$n, 3L)
+            expect_identical(outer[["run", "out"]], 6)
+            expect_named(.fun_pips(f), .fun_key_single)
+
+            # mapped again: the single pipeline is gone, p and q start anew
+            pip_replace(
+                outer,
+                "parts",
+                \(values = list(p = 1, q = 2)) values,
+                exec = "split"
+            )
+            pip_run(outer, lgr = NULL)
+            expect_identical(calls$n, 5L)
+            expect_equal(unlist(outer[["run", "out"]]), c(p = 2, q = 4))
+            expect_named(.fun_pips(f), c("p", "q"))
+        })
+
+        it("reruns a step without partitions if its input changes back", {
+            calls <- new.env()
+            calls$n <- 0L
+            f <- as.function(
+                pip_new("i") |>
+                    pip_add("s", \(x = NULL) {
+                        calls$n <- calls$n + 1L
+                        x * 2
+                    }),
+                out = "s",
+                bind = list(x = ~source)
+            )
+            outer <- pip_new("outer") |>
+                pip_add("source", \(value = 1) value) |>
+                pip_add("run", f)
+            pip_run(outer, lgr = NULL)
+            expect_identical(c(calls$n, outer[["run", "out"]]), c(1, 2))
+
+            pip_set_params(outer, list(value = 2))
+            pip_run(outer, lgr = NULL)
+            expect_identical(c(calls$n, outer[["run", "out"]]), c(2, 4))
+
+            # the pipeline only holds the last input
+            pip_set_params(outer, list(value = 1))
+            pip_run(outer, lgr = NULL)
+            expect_identical(c(calls$n, outer[["run", "out"]]), c(3, 2))
+            expect_named(.fun_pips(f), .fun_key_single)
+        })
+
+        it("is correct if a step or partition has a placeholder name", {
+            calls <- new.env()
+            calls$n <- 0L
+            f <- as.function(
+                pip_new("i") |>
+                    pip_add("s", \(x = NULL) {
+                        calls$n <- calls$n + 1L
+                        x * 2
+                    }),
+                out = "s",
+                bind = list(x = ~parts)
+            )
+            keys <- c(.fun_key_single, "q")
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "parts",
+                    \(values = list(1, 2)) stats::setNames(values, keys),
+                    exec = "split"
+                )
+            # a step that has the name of the step of direct calls
+            pip_add(outer, .fun_step_direct, f)
+            pip_run(outer, lgr = NULL)
+
+            expect_equal(
+                unlist(outer[[.fun_step_direct, "out"]]),
+                stats::setNames(c(2, 4), keys)
+            )
+            # shared with the direct call: slower, never wrong
+            expect_identical(f(x = 5), 10)
+            expect_identical(f(x = 1), 2)
+            expect_identical(calls$n, 4L)
+        })
+
+        it("is kept by the partitions of the outer step, not the inner ones", {
+            calls <- new.env()
+            calls$n <- 0L
+            inner <- pip_new("inner") |>
+                pip_add("data", \(data = NULL) data) |>
+                pip_add(
+                    "halves",
+                    \(data = ~data) split(data, data$x > 3),
+                    exec = "split"
+                ) |>
+                pip_add("sums", \(half = ~halves) {
+                    calls$n <- calls$n + 1L
+                    sum(half$y)
+                }) |>
+                pip_add(
+                    "total",
+                    \(sums = ~sums, digits = 1) {
+                        round(sum(unlist(sums)), digits)
+                    },
+                    exec = "reduce"
+                )
+            fun <- as.function(
+                inner,
+                out = "total",
+                bind = list(data = ~split_data)
+            )
+            outer <- demo_outer(fun)
+            pip_run(outer, lgr = NULL)
+            expect_identical(calls$n, 6L)
+            expect_named(.fun_pips(fun), c("A", "B", "C"))
+
+            pip_set_params(outer, list(digits = 0))
+            pip_run(outer, lgr = NULL)
+
+            expect_identical(calls$n, 6L)
+            expect_equal(
+                unlist(outer[["by_batch", "out"]]),
+                c(A = 48, B = 60, C = 72)
+            )
+            expect_named(.fun_pips(fun), c("A", "B", "C"))
         })
 
         it("keeps one pipeline without bound arguments", {
@@ -893,7 +1291,7 @@ describe("as.function.pipeflow", {
             expect_identical(pip_get_params(kept[[1L]])$digits, 3)
         })
 
-        it("is correct when a call matches the 'wrong' kept pipeline", {
+        it("is correct when a call gets a pipeline of other inputs", {
             demo <- demo_nested()
             d <- demo_batches()
             a <- d[d$batch == "A", ]
@@ -901,13 +1299,13 @@ describe("as.function.pipeflow", {
 
             first <- demo$fun(data = a)
             demo$fun(data = b)
-            # same inputs as before, other params: from the kept pipeline
+            # the kept pipeline has the input b, now a is set again
             again <- demo$fun(data = a, digits = 0)
 
             expect_equal(unname(first), c(1.28, 1.92), tolerance = 1e-8)
             expect_equal(unname(again), c(1, 2))
             # a fresh pipeline gives the same result as the reused one
-            fresh <- as.function(demo$inner, out = "coefs", cache = 0)
+            fresh <- as.function(demo$inner, out = "coefs", cache = FALSE)
             expect_equal(fresh(data = a, digits = 0), again)
         })
 
@@ -937,6 +1335,89 @@ describe("as.function.pipeflow", {
             expect_identical(f(x = 1), 4)
             expect_identical(state$up, 1L)
             expect_length(.fun_pips(f), 1L)
+        })
+    })
+
+    describe("calls made by the running inner pipeline", {
+        # The function calls itself with n - 1: the sum of 1, ..., n. The
+        # inner step `sum` fails for n = 0 as long as `state$fail` is set.
+        recursive <- function(state = new.env(parent = emptyenv())) {
+            state$fail <- FALSE
+            f <- NULL
+            p <- pip_new("recursive") |>
+                pip_add("sum", \(n = 0) {
+                    if (n == 0) {
+                        if (state$fail) {
+                            stop("boom")
+                        }
+                        return(0)
+                    }
+                    n + f(n = n - 1)
+                })
+            f <- as.function(p, out = "sum", bind = list(n = ~source))
+            list(f = f, state = state)
+        }
+
+        it("gives a recursive call a pipeline of its own", {
+            f <- recursive()$f
+
+            expect_identical(f(n = 2), 3)
+            # the pipeline of the step still has n = 1, with the output of
+            # the call that ran in it: this call must get the right result
+            expect_identical(f(n = 1), 1)
+            expect_identical(f(n = 3), 6)
+            expect_identical(f(n = 2), 3)
+            # the direct pipeline and the one of the step `sum`
+            expect_length(.fun_pips(f), 2L)
+        })
+
+        it("is not influenced by a recursive call of a mapped step", {
+            f <- recursive()$f
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "parts",
+                    \(values = list(a = 2, b = 1)) values,
+                    exec = "split"
+                ) |>
+                pip_add("total", f, params = list(n = ~parts))
+
+            pip_run(outer, lgr = NULL)
+
+            expect_equal(unlist(outer[["total", "out"]]), c(a = 3, b = 1))
+        })
+
+        it("is released when a call fails", {
+            demo <- recursive()
+            demo$state$fail <- TRUE
+
+            expect_error(demo$f(n = 2), "boom")
+            expect_length(.fun_cache(demo$f)$active, 0L)
+
+            demo$state$fail <- FALSE
+            expect_identical(demo$f(n = 2), 3)
+            expect_length(.fun_cache(demo$f)$active, 0L)
+        })
+    })
+
+    describe("finding the kept pipelines", {
+        it("finds the cache of a function made by as.function()", {
+            f <- as.function(pip_new("p") |> pip_add("s", \(x = 1) x))
+
+            expect_s3_class(.fun_cache(f), "pipeflow_fun_cache")
+            expect_identical(.fun_pips(f), list())
+        })
+
+        it("finds nothing for other functions and objects", {
+            expect_null(.fun_cache(sum))
+            expect_null(.fun_cache(\(x) x))
+            braced <- function(x) {
+                x
+            }
+            expect_null(.fun_cache(braced))
+            expect_null(.fun_cache(NULL))
+            expect_null(.fun_cache("f"))
+            expect_silent(.fun_release(sum, "s"))
+            expect_silent(.fun_release(NULL, "s"))
         })
     })
 
@@ -977,7 +1458,7 @@ describe("as.function.pipeflow", {
             expect_identical(outer[["run", "out"]], "failed upstream")
         })
 
-        it("matches on all bound arguments", {
+        it("reruns a partition if any of its bound inputs changed", {
             calls <- new.env()
             calls$n <- 0L
             inner <- pip_new("two") |>
@@ -1014,16 +1495,17 @@ describe("as.function.pipeflow", {
             expect_identical(calls$n, 4L)
             expect_equal(unlist(outer[["run", "out"]]), c(p = 21, q = 22))
 
-            # back to the old input: the kept pipelines are found
+            # back to the old input: the pipeline of a partition only has
+            # the last one, so all partitions run again
             pip_set_params(outer, list(offset = 10))
             run_outer(list(outer = outer))
-            expect_identical(calls$n, 4L)
-            expect_length(.fun_pips(fun), 4L)
+            expect_identical(calls$n, 6L)
+            expect_named(.fun_pips(fun), c("p", "q"))
 
             # only the partition with the changed input runs
             pip_set_params(outer, list(values = list(p = 5, q = 2)))
             run_outer(list(outer = outer))
-            expect_identical(calls$n, 5L)
+            expect_identical(calls$n, 7L)
             expect_equal(unlist(outer[["run", "out"]]), c(p = 15, q = 12))
         })
     })
@@ -1241,7 +1723,7 @@ describe("as.function.pipeflow", {
         })
 
         it("returns the requested outputs beside an unrequested failure", {
-            for (cache in c(0, 16)) {
+            for (cache in c(FALSE, TRUE)) {
                 f <- as.function(
                     failing_inner(),
                     out = c("report", "other"),
@@ -1437,7 +1919,7 @@ describe("as.function.pipeflow", {
 
             # as for the pipeline itself, which needs force = TRUE
             expect_identical(f(e = e), 1)
-            expect_identical(as.function(p, out = "s", cache = 0)(e = e), 2)
+            expect_identical(as.function(p, out = "s", cache = FALSE)(e = e), 2)
         })
 
         it("does not rerun the inner pipelines in a forced outer run", {
@@ -1468,7 +1950,7 @@ describe("as.function.pipeflow", {
         })
 
         it("is small if nothing is kept", {
-            demo <- demo_nested(cache = 0)
+            demo <- demo_nested(cache = FALSE)
             before <- length(serialize(demo$fun, NULL))
 
             demo$fun(data = big_batch())
@@ -1477,15 +1959,17 @@ describe("as.function.pipeflow", {
         })
 
         it("gives the copy its own copy of the kept pipelines", {
-            demo <- demo_nested()
-            demo$fun(data = demo_batches()[1:6, ])
+            demo <- run_outer(demo_nested())
 
             copy <- unserialize(serialize(demo$fun, NULL))
-            expect_length(.fun_pips(copy), 1L)
+            expect_named(.fun_pips(copy), c("A", "B", "C"))
 
-            demo$fun(data = demo_batches()[7:12, ])
-            expect_length(.fun_pips(demo$fun), 2L)
-            expect_length(.fun_pips(copy), 1L)
+            # the original drops the pipeline of B, the copy keeps it
+            d <- demo_batches()
+            pip_set_params(demo$outer, list(data = d[d$batch != "B", ]))
+            run_outer(demo)
+            expect_named(.fun_pips(demo$fun), c("A", "C"))
+            expect_named(.fun_pips(copy), c("A", "B", "C"))
         })
 
         it("works after a round trip of the outer pipeline", {
@@ -1528,7 +2012,7 @@ describe("as.function.pipeflow", {
         })
 
         it("works after a round trip if nothing is kept", {
-            demo <- run_outer(demo_nested(cache = 0))
+            demo <- run_outer(demo_nested(cache = FALSE))
 
             copy <- save_and_read(demo$outer)
             expect_length(.fun_pips(copy[["by_batch", "fun"]]), 0L)
@@ -1543,8 +2027,8 @@ describe("as.function.pipeflow", {
             )
         })
 
-        it("works after a round trip with an unlimited cache", {
-            demo <- run_outer(demo_nested(cache = Inf))
+        it("works after a round trip with a changed degree", {
+            demo <- run_outer(demo_nested())
 
             copy <- save_and_read(demo$outer)
             pip_set_params(copy, list(degree = 2))

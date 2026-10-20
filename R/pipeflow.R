@@ -581,7 +581,46 @@
     )
 }
 
-.pip_execute_step_call <- function(fun, args, exec) {
+#' The step call that runs
+#'
+#' @return A list of `step`, `key` and `keys`, see `.pip_call_step()`. All
+#' of them are `NULL` outside of a run.
+#' @noRd
+.pip_step_call <- function() {
+    mget(c("step", "key", "keys"), envir = .step_call)
+}
+
+#' Call a step function as the step call that runs
+#'
+#' Sets the step call (see `.pip_step_call()`) for the time of the call and
+#' restores the one of the caller on exit, also on error, so that a nested
+#' run (e.g. of an inner pipeline of a function made by
+#' `as.function.pipeflow()`) leaves it as it was.
+#'
+#' @param fun The step function.
+#' @param args Named list of the arguments.
+#' @param step The name of the step.
+#' @param key,keys For a call mapped over partitions, its partition key and
+#' all keys; `NULL` for a single call.
+#' @return The result of the call.
+#' @noRd
+.pip_call_step <- function(fun, args, step, key = NULL, keys = NULL) {
+    caller <- .pip_step_call()
+    on.exit(list2env(caller, envir = .step_call), add = TRUE)
+    list2env(list(step = step, key = key, keys = keys), envir = .step_call)
+    do.call(fun, args = args)
+}
+
+#' Call a step function according to its exec mode
+#'
+#' @param fun The step function.
+#' @param args Named list of the arguments, with the outputs of the steps it
+#' depends on.
+#' @param exec The exec mode of the step.
+#' @param step The name of the step.
+#' @return The output of the step.
+#' @noRd
+.pip_execute_step_call <- function(fun, args, exec, step) {
     # A partitioned argument is a list of per-key values produced by a
     # step with exec = "split" and tagged with class "pipeflow_partitioned".
     partIdx <- which(vapply(
@@ -593,7 +632,7 @@
     # Split mode: run the function once on the full (unpartitioned) inputs and
     # mark the result as partitioned so downstream steps can map over it.
     if (exec == "split") {
-        out <- do.call(fun, args = args)
+        out <- .pip_call_step(fun, args = args, step = step)
         return(.as_pipeflow_partitioned(out))
     }
 
@@ -625,7 +664,7 @@
     # 2) plain mode was explicitly requested (to ensure non-split mode)
     # 3) reduce mode was requested to re-combine partitioned inputs
     if (length(partIdx) == 0L || exec == "plain" || exec == "reduce") {
-        return(do.call(fun, args = args))
+        return(.pip_call_step(fun, args = args, step = step))
     }
 
     # Auto mode with partitioned inputs: map the function over the partition
@@ -636,6 +675,12 @@
         if (!identical(kk, keys)) {
             stop("partitioned arguments must share identical keys")
         }
+    }
+
+    # With no key there is no call, which could tell a pipeline function that
+    # the keys it keeps pipelines for are gone.
+    if (length(keys) == 0L) {
+        .fun_release(fun, step)
     }
 
     # ...and each key is computed separately by slicing all partitioned
@@ -650,7 +695,13 @@
         # Errors are re-raised with the key name so a failing partition can
         # be located without inspecting the whole output.
         out[[key]] <- tryCatch(
-            expr = do.call(fun, args = keyArgs),
+            expr = .pip_call_step(
+                fun,
+                args = keyArgs,
+                step = step,
+                key = key,
+                keys = keys
+            ),
             error = function(e) {
                 stop(.pip_key_error(key, parent = e))
             }
@@ -701,7 +752,12 @@
     out <- withCallingHandlers(
         {
             args <- .pip_unwrap_params(args, unbound)
-            res <- .pip_execute_step_call(fun = fun, args = args, exec = exec)
+            res <- .pip_execute_step_call(
+                fun = fun,
+                args = args,
+                exec = exec,
+                step = step
+            )
 
             # One time stamp for the whole step, also for all keys of a
             # partitioned output, and the one that is stored below.

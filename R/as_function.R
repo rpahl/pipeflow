@@ -5,9 +5,20 @@
 # the outer step and the exec modes map the function over partitions.
 #
 # The function keeps the inner pipelines it has run, so that a later call only
-# runs the steps that its changed params or inputs outdate. The kept
-# pipelines belong to the function (they live in the environment of its
-# runner): they are dropped with it, and serialising the function copies them.
+# runs the steps that its changed params or inputs outdate. Every call is
+# served by a slot: the pipeline of its step and partition key. A call that is
+# not mapped over partitions uses the single key, a direct call (outside of a
+# step) the step reserved for direct calls. The kept pipelines belong to the
+# function (they live in the environment of its runner): they are dropped with
+# it, and serialising the function copies them.
+
+# Placeholder names of the slots of calls without a partition key and without
+# a step. They must be non-empty, since `x[[""]]` never finds an element of a
+# list. A clash with a real step name or partition key only makes the calls
+# share a pipeline of the same template: that is slower, never wrong, since
+# every call sets all params and inputs.
+.fun_key_single <- "<single>"
+.fun_step_direct <- "<direct>"
 
 #' Turn a pipeline into a function
 #'
@@ -60,29 +71,29 @@
 #' `out` to profit from a continuing inner run.
 #'
 #' ## Pipeline functions with partitioned inputs
-#' If the step with the pipeline function happens to receive partitioned inputs
-#' (from an earlier step with `exec = "split"`), changing inner pipeline
-#' parameters often would require multiple reruns of the whole inner pipeline,
-#' because of the different partitioned inputs.
-#' For this reason, the function keeps up to `cache` inner pipelines of `x`,
-#' for different partitioned inputs so that each partition should get its
-#' own inner pipeline.
-#' Then a call is served by the inner pipeline that has already worked on the
-#' same partitioned input passed from the outer pipeline (i.e., passed
-#' to the arguments named in `bind`).
+#' If the step with the pipeline function receives partitioned inputs (from
+#' an earlier step with `exec = "split"`), the function is called once per
+#' partition caching one inner pipeline of `x` per step and partition key.
+#' A call updates its parameters and inputs in the respective pipeline, so that
+#' (as usual in pipelines) only outdated inner steps are run again.
+#' This works for inputs bound with `bind` as well as for those bound via
+#' `params` of [pip_add()].
 #'
-#' * `cache` must be at least the number of partitions, otherwise the least
-#'   recently used copies are dropped before they are used again and nothing
-#'   is reused. The kept copies hold their inputs and outputs, so the memory
-#'   grows with `cache`.
-#' * The copies belong to the function and are dropped with it. Serialising a
-#'   function that has been called copies them as well (e.g. when sending it
-#'   to another process): the copy starts with the same cache, but does not
-#'   share it. A function that has not been called yet, or one made with
-#'   `cache = 0`, is small.
+#' * A partition caches one pipeline for each key, which hold their inputs
+#'   and outputs, so they need memory.
+#' * A step without partitioned inputs keeps a single pipeline.
+#' * Pure calls of the pipeline function (outside of a step) always share
+#'   one pipeline, e.g. `lapply(subsets, f_pip)` don't cache anything.
+#' * Do *not* use the same pipeline function in two different pipelines -
+#'   this avoids name clash of keys, which would prevent proper caching
+#'   (not wrong but slower).
+#' * Cached pipelines are stored in the function. If you save the function
+#'   or send it to another process, they are copied, including their data
+#'   and output, so new runs work independently from the original.
+#'   A function that has not been called yet, or one made with
+#'   `cache = FALSE`, has no pipelines and therefore is small to copy.
 #' * In case of an error, the error message includes the key of the partition
 #'   and the name of the failed inner step.
-#' * If the bound steps are not partitioned, cache = 1L is always enough.
 #'
 #' ## Limits
 #' * Params that several steps of `x` share by name become one argument, with
@@ -94,7 +105,7 @@
 #'   [pip_set_params()] of a pipeline, which needs `force = TRUE`, the
 #'   steps stay up to date. A forced run of the outer pipeline
 #'   (`pip_run(force = TRUE)`) does not force the inner pipelines either,
-#'   but you can force them by setting `cache = 0`.
+#'   but you can force them by setting `cache = FALSE`.
 #'
 #' @param x A pipeflow pipeline (not a view; use `x[i, view = FALSE]` to turn
 #' a part of a pipeline into a function).
@@ -108,10 +119,10 @@
 #' `list(df = ~outer_step)`, that bind unbound params of `x` to steps
 #' of the outer pipeline (`~try(outer_step)` also works).
 #' Binding them via `pip_add("inner", f_inner, params = list(df = ~outer_step))`
-#' would also work, but only the arguments named in `bind` tell the partitions
-#' apart (see Details), that is, caching will not be available this way.
-#' @param cache The number of run copies of `x` to keep for reuse, a whole
-#' number: `0` keeps none, `Inf` keeps all.
+#' works as well.
+#' @param cache Whether to keep the run copies of `x` for reuse, `TRUE` (the
+#' default) or `FALSE`. The function keeps one copy per outer step and
+#' partition, see Details.
 #' @param on_error What to do when an inner step fails: `"stop"` (the
 #' default) ends the inner run at that step, `"continue"` runs the inner
 #' steps that do not depend on it, see Details and [pip_run()].
@@ -133,7 +144,20 @@
 #' f_inner <- as.function(inner, out = "coefs")
 #' f_inner(input_df = mtcars, digits = 1)
 #'
-#' # As a step: one inner pipeline per cylinder number
+#' # As a step: one inner pipeline
+#' single <- pip_new("single") |>
+#'   pip_add("df", \(df = mtcars) df) |>
+#'   pip_add("coefs", f_inner, params = list(input_df = ~df))
+#'
+#' pip_run(single, lgr = NULL)
+#' single[["coefs", "out"]]
+#'
+#' # Only the inner steps after the changed param run again
+#' pip_set_params(single, list(digits = 3))
+#' pip_run(single, lgr = NULL)
+#' single[["coefs", "out"]]
+#'
+#' # With partioned inputs: one inner pipeline per cylinder number
 #' outer <- pip_new("outer") |>
 #'   pip_add("df", \(df = mtcars) df) |>
 #'   pip_add("by_cyl", \(df = ~df) split(df, df$cyl), exec = "split") |>
@@ -152,6 +176,30 @@
 #' print(outer)
 #' pip_run(outer, lgr = NULL)
 #' outer[["table", "out"]]
+#'
+#' # Don't use the same function for the same step name in two pipelines:
+#' # this breaks the caching (results are still correct, but it is slower)
+#' a <- pip_new("a") |>
+#'   pip_add("df", \(df = mtcars) df) |>
+#'   pip_add("coefs", f_inner, params = list(input_df = ~df))
+#' b <- pip_new("b") |>
+#'   pip_add("df", \(df = mtcars[mtcars$am == 1, ]) df) |>
+#'   pip_add("coefs", f_inner, params = list(input_df = ~df))
+#'
+#' pip_run(a, lgr = NULL)
+#' pip_run(b, lgr = NULL)
+#'
+#' # The inner pipeline now holds the input of `b`, so all its steps run again
+#' # for `a`, not only the ones after `digits`
+#' pip_set_params(a, list(digits = 3))
+#' pip_run(a, lgr = NULL)
+#' a[["coefs", "out"]]
+#'
+#' # Better: make one function per pipeline
+#' pip_replace(
+#'   a, "coefs", as.function(inner, out = "coefs"),
+#'   params = list(input_df = ~df)
+#' )
 #'
 #' # A function as out: the outputs grouped by tags
 #' tagged <- pip_new("tagged") |>
@@ -187,7 +235,7 @@ as.function.pipeflow <- function(
     x,
     out = NULL,
     bind = list(),
-    cache = 16L,
+    cache = TRUE,
     on_error = c("stop", "continue"),
     lgr = NULL,
     ...
@@ -216,7 +264,7 @@ as.function.pipeflow <- function(
             \(f) paste(deparse(f), collapse = " "),
             character(1)
         ),
-        size = cache
+        keep = cache
     )
     body <- .fun_body(.fun_runner(ctx), names(args), names(bind))
     as.function(c(args, list(body)), envir = new.env(parent = baseenv()))
@@ -256,14 +304,8 @@ as.function.pipeflow <- function(
 
 
 .assert_fun_cache <- function(cache) {
-    isCount <- .is_single(cache, "numeric") &&
-        !is.na(cache) &&
-        cache >= 0 &&
-        (is.infinite(cache) || cache == floor(cache))
-    if (!isCount) {
-        stop_no_call(
-            "cache must be a single whole number >= 0 (Inf keeps all)"
-        )
+    if (!.is_single(cache, "logical") || is.na(cache)) {
+        stop_no_call("cache must be a single logical value (TRUE or FALSE)")
     }
     invisible(cache)
 }
@@ -333,18 +375,21 @@ as.function.pipeflow <- function(
 
 #' The function that runs the pipeline
 #'
-#' Its environment holds the kept pipelines (`entries`, a list of `pip`,
-#' `key` and `used`, and the counter `tick`). They belong to the function and
-#' not to a registry, so that they are dropped with it, also if a step
-#' closure refers to the function.
+#' Its environment holds the kept pipelines, `slots`: a list by step name of
+#' lists of pipelines by partition key. They belong to the function and not
+#' to a registry, so that they are dropped with it, also if a step closure
+#' refers to the function. `active` holds the pipelines that run, see
+#' `.fun_pip()`. The class marks the environment as the cache of a function
+#' made by `as.function.pipeflow()`, see `.fun_cache()`.
 #'
 #' @param ctx The context made by `as.function.pipeflow()`.
 #' @noRd
 .fun_runner <- function(ctx) {
     force(ctx)
     cache <- new.env(parent = emptyenv())
-    cache$entries <- list()
-    cache$tick <- 0L
+    class(cache) <- "pipeflow_fun_cache"
+    cache$slots <- list()
+    cache$active <- list()
     function(args, omitted) .fun_call(args, omitted, ctx, cache)
 }
 
@@ -358,24 +403,110 @@ as.function.pipeflow <- function(
 #' @noRd
 .fun_call <- function(args, omitted, ctx, cache) {
     .assert_fun_supplied(omitted, ctx$bindText)
-    cache$tick <- cache$tick + 1L
-    key <- args[names(omitted)]
+    # Read before the inner run, whose steps set their own
+    stepCall <- .pip_step_call()
 
-    i <- Position(\(e) identical(e$key, key), cache$entries)
-    pip <- if (is.na(i)) {
-        pip_clone(ctx$template)
-    } else {
-        cache$entries[[i]]$pip
-    }
+    # Kept before running: after a failure, the steps that did run are reused
+    pip <- .fun_pip(cache, stepCall, ctx)
+    cache$active <- c(cache$active, list(.pip_pipenv(pip)))
+    on.exit(cache$active <- cache$active[-length(cache$active)])
     # The arguments are values, also if they are formulas
     .pip_set_params(pip, args, unknown = "ignore", bind = FALSE)
 
-    # Keep before running: after a failure, the steps that did run are reused
-    entry <- list(pip = pip, key = key, used = cache$tick)
-    .fun_keep(cache, entry, i, ctx$size)
     pip_run(pip, lgr = ctx$lgr, on_error = ctx$onError)
     .fun_check_run(pip, ctx$out)
     .fun_out(pip, ctx$out)
+}
+
+
+#' The pipeline for a call: its slot, which is made if it is not there yet
+#'
+#' A slot is the pipeline of a step and a partition key, updated in place
+#' when the input of the key changes. A call that is not mapped over
+#' partitions uses the single key (`.fun_key_single`), a direct call, which
+#' is not made by a step, the step `.fun_step_direct`. The slots of the step
+#' whose key is not among the keys of the call are dropped, so that the step
+#' keeps one pipeline per partition, and a single one if it is no longer
+#' mapped (or the other way round). Nothing is kept with `cache = FALSE`.
+#'
+#' A slot whose pipeline is running (see `cache$active`) is not handed out a
+#' second time: a call that the run itself makes (a recursive function) gets
+#' a new pipeline, which is not kept. Setting the params of the running
+#' pipeline would change the steps of the call that is running it.
+#'
+#' @param cache The kept pipelines of the function.
+#' @param stepCall The step call that calls the function, see
+#' `.pip_step_call()`.
+#' @param ctx The context made by `as.function.pipeflow()`.
+#' @return A pipeline.
+#' @noRd
+.fun_pip <- function(cache, stepCall, ctx) {
+    if (!ctx$keep) {
+        return(pip_clone(ctx$template))
+    }
+    step <- stepCall$step
+    if (is.null(step)) {
+        step <- .fun_step_direct
+    }
+    key <- stepCall$key
+    keys <- stepCall$keys
+    if (is.null(key)) {
+        key <- keys <- .fun_key_single
+    }
+
+    slots <- cache$slots[[step]]
+    pip <- slots[[key]]
+    if (is.null(pip)) {
+        pip <- pip_clone(ctx$template)
+        slots <- c(slots, stats::setNames(list(pip), key))
+    }
+    cache$slots[[step]] <- slots[intersect(keys, names(slots))]
+    isActive <- vapply(
+        cache$active,
+        identical,
+        logical(1),
+        .pip_pipenv(pip)
+    )
+    if (any(isActive)) {
+        return(pip_clone(ctx$template))
+    }
+    pip
+}
+
+
+#' The cache of a function made by `as.function.pipeflow()`
+#'
+#' @param fun Any object.
+#' @return The environment with the kept pipelines, or `NULL` if `fun` is not
+#' made by `as.function.pipeflow()`. The body of such a function is a call of
+#' the runner, which is part of the call as an object, see `.fun_body()`.
+#' @noRd
+.fun_cache <- function(fun) {
+    if (!is.function(fun) || !is.call(body(fun))) {
+        return(NULL)
+    }
+    runner <- body(fun)[[1L]]
+    cache <- if (is.function(runner)) environment(runner)[["cache"]]
+    if (inherits(cache, "pipeflow_fun_cache")) cache
+}
+
+
+#' Drop the kept pipelines of a step that is mapped over no partition
+#'
+#' The step does not call the function then, so the call that drops the
+#' pipelines of the keys that are gone (see `.fun_pip()`) does not happen.
+#'
+#' @param fun The function of the step.
+#' @param step The name of the step.
+#' @return `NULL`, invisibly. Nothing happens if `fun` was not made by
+#' `as.function.pipeflow()`.
+#' @noRd
+.fun_release <- function(fun, step) {
+    cache <- .fun_cache(fun)
+    if (!is.null(cache)) {
+        cache$slots[[step]] <- NULL
+    }
+    invisible(NULL)
 }
 
 
@@ -398,29 +529,6 @@ as.function.pipeflow <- function(
         )
     }
     invisible(omitted)
-}
-
-
-#' Store the entry (new or updated), drop the least recently used
-#'
-#' @param cache The cache of the function.
-#' @param entry The entry to store.
-#' @param i Position of the entry in the cache, `NA` for a new one.
-#' @param size Maximum number of entries.
-#' @noRd
-.fun_keep <- function(cache, entry, i, size) {
-    if (size < 1L) {
-        return(invisible(NULL))
-    }
-    if (is.na(i)) {
-        i <- length(cache$entries) + 1L
-    }
-    cache$entries[[i]] <- entry
-    if (length(cache$entries) > size) {
-        used <- vapply(cache$entries, \(e) e$used, integer(1))
-        cache$entries <- cache$entries[-which.min(used)]
-    }
-    invisible(NULL)
 }
 
 
@@ -533,8 +641,10 @@ as.function.pipeflow <- function(
 
 
 #' The kept pipelines of a function made by `as.function.pipeflow()`
+#'
+#' @return A list of the pipelines of all slots, named by partition key.
 #' @noRd
 .fun_pips <- function(fun) {
-    cache <- environment(body(fun)[[1L]])[["cache"]]
-    lapply(cache$entries, `[[`, "pip")
+    cache <- .fun_cache(fun)
+    as.list(unlist(unname(cache$slots), recursive = FALSE))
 }

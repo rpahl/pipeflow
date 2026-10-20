@@ -390,6 +390,91 @@ describe(".extract_depends", {
     })
 })
 
+describe(".pip_call_step", {
+    no_call <- list(step = NULL, key = NULL, keys = NULL)
+
+    it("sets the step call for the time of the call", {
+        res <- .pip_call_step(
+            \(x) list(x = x, stepCall = .pip_step_call()),
+            args = list(x = 1),
+            step = "s",
+            key = "a",
+            keys = c("a", "b")
+        )
+
+        expect_identical(res$x, 1)
+        expect_identical(
+            res$stepCall,
+            list(step = "s", key = "a", keys = c("a", "b"))
+        )
+        expect_identical(.pip_step_call(), no_call)
+    })
+
+    it("restores the step call of the caller, also after an error", {
+        nested <- function() {
+            try(
+                .pip_call_step(\() stop("boom"), list(), step = "inner"),
+                silent = TRUE
+            )
+            .pip_step_call()
+        }
+
+        res <- .pip_call_step(nested, list(), step = "outer", key = "k")
+
+        expect_identical(res, list(step = "outer", key = "k", keys = NULL))
+        expect_identical(.pip_step_call(), no_call)
+    })
+
+    it("is the step and partition key of the step that runs", {
+        seen <- new.env()
+        record <- function(name) {
+            seen[[name]] <- .pip_step_call()
+            name
+        }
+        p <- pip_new("p") |>
+            pip_add(
+                "parts",
+                \(v = list(a = 1, b = 2)) {
+                    record("parts")
+                    v
+                },
+                exec = "split"
+            ) |>
+            pip_add("mapped", \(x = ~parts) record(paste0("mapped_", x))) |>
+            pip_add(
+                "reduced",
+                \(x = ~mapped) record("reduced"),
+                exec = "reduce"
+            )
+
+        pip_run(p, lgr = NULL)
+
+        expect_identical(
+            seen$parts,
+            list(step = "parts", key = NULL, keys = NULL)
+        )
+        expect_identical(
+            seen$mapped_2,
+            list(step = "mapped", key = "b", keys = c("a", "b"))
+        )
+        expect_identical(seen$reduced$step, "reduced")
+        expect_null(seen$reduced$key)
+        expect_identical(.pip_step_call(), no_call)
+    })
+
+    it("is reset after a failed run", {
+        p <- pip_new("p") |>
+            pip_add("parts", \(v = list(a = 1, b = 2)) v, exec = "split") |>
+            pip_add("bad", \(x = ~parts) stop("boom"))
+
+        expect_error(pip_run(p, lgr = NULL), "boom")
+        expect_identical(.pip_step_call(), no_call)
+
+        suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+        expect_identical(.pip_step_call(), no_call)
+    })
+})
+
 # -------------
 # State updates
 # -------------
