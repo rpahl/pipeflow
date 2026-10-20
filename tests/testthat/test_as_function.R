@@ -60,7 +60,11 @@ describe("as.function.pipeflow", {
                 \(data = ~data, byVar = "batch") split(data, data[[byVar]]),
                 exec = "split"
             ) |>
-            pip_add("by_batch", fun, params = params) |>
+            pip_add(
+                "by_batch",
+                fun,
+                params = c(list(data = ~split_data), params)
+            ) |>
             pip_add(
                 "coef_table",
                 \(coefs = ~by_batch) {
@@ -83,7 +87,6 @@ describe("as.function.pipeflow", {
         fun <- as.function(
             inner,
             out = "coefs",
-            bind = list(data = ~split_data),
             cache = cache
         )
         list(outer = demo_outer(fun), inner = inner, fun = fun, calls = calls)
@@ -106,6 +109,7 @@ describe("as.function.pipeflow", {
             tbl <- demo$outer[["coef_table", "out"]]
             expect_equal(tbl$batch, c("A", "B", "C"))
             expect_equal(tbl[[2L]], c(1.28, 3.28, 5.28), tolerance = 1e-8)
+            expect_named(.fun_pips(demo$fun), c("A", "B", "C"))
         })
 
         it("makes the inner params params of the outer pipeline", {
@@ -179,30 +183,6 @@ describe("as.function.pipeflow", {
                 tolerance = 1e-8
             )
         })
-
-        it("binds via params of pip_add(), with a pipeline per partition", {
-            calls <- new.env(parent = emptyenv())
-            calls$fit <- 0L
-            calls$coefs <- 0L
-            fun <- as.function(demo_inner(calls), out = "coefs")
-            outer <- demo_outer(fun, params = list(data = ~split_data))
-
-            expect_identical(
-                outer[["by_batch", "depends"]][["data"]],
-                "split_data"
-            )
-            pip_run(outer, lgr = NULL)
-            expect_equal(
-                outer[["coef_table", "out"]][[2L]],
-                c(1.28, 3.28, 5.28),
-                tolerance = 1e-8
-            )
-            expect_named(.fun_pips(fun), c("A", "B", "C"))
-
-            pip_set_params(outer, list(digits = 3))
-            pip_run(outer, lgr = NULL)
-            expect_identical(c(calls$fit, calls$coefs), c(3L, 6L))
-        })
     })
 
     describe("as a plain function", {
@@ -270,14 +250,6 @@ describe("as.function.pipeflow", {
             expect_named(two, c("data", "coefs"))
         })
 
-        it("needs the bound arguments in a direct call", {
-            inner <- demo_inner(new.env())
-            f <- as.function(inner, bind = list(data = ~split_data))
-
-            expect_error(f(), "'data' is bound to a step")
-            expect_no_error(f(data = demo_batches()[1:6, ]))
-        })
-
         it("takes all arguments, also those starting with a dot", {
             p <- pip_new("dot") |> pip_add("s", \(.x = 1, .y = 2) .x - .y)
 
@@ -287,15 +259,6 @@ describe("as.function.pipeflow", {
             expect_identical(f(), -1)
             expect_identical(f(.x = 9), 7)
             expect_identical(f(.y = 0), 1)
-        })
-
-        it("needs a bound argument that starts with a dot", {
-            p <- pip_new("dot") |> pip_add("s", \(.x = 1) .x)
-
-            f <- as.function(p, out = "s", bind = list(.x = ~input))
-
-            expect_error(f(), "'.x' is bound to a step \\(~input\\)")
-            expect_identical(f(.x = 9), 9)
         })
 
         it("is not confused by arguments named like the functions it uses", {
@@ -312,11 +275,11 @@ describe("as.function.pipeflow", {
                     }
                 )
 
-            f <- as.function(p, out = "s", bind = list(c = ~input))
+            f <- as.function(p, out = "s")
 
             expect_identical(f(c = \(x) x * 10), 21)
             expect_identical(f(c = \(x) x * 10, list = \(x) x), 20)
-            expect_identical(as.function(p, out = "s")(), 14)
+            expect_identical(f(), 14)
         })
 
         it("evaluates stored calls and symbols as a plain pipeline does", {
@@ -332,26 +295,26 @@ describe("as.function.pipeflow", {
             expect_identical(f(), expected)
         })
 
-        it("takes a formula as the value of a bound argument", {
+        it("takes a formula as the value of an argument", {
             p <- pip_new("formula") |> pip_add("s", \(model = NULL) model)
-            f <- as.function(p, out = "s", bind = list(model = ~source))
+            f <- as.function(p, out = "s")
             model <- y ~ x
 
             expect_identical(f(model = model), model)
 
             outer <- pip_new("outer") |>
                 pip_add("source", \(source = NULL) source) |>
-                pip_add("run", f)
+                pip_add("run", f, params = list(model = ~source))
             pip_set_params(outer, list(source = model))
             pip_run(outer, lgr = NULL)
 
             expect_identical(outer[["run", "out"]], model)
         })
 
-        it("takes NULL as the value of a bound argument", {
+        it("takes NULL as the value of an argument", {
             p <- pip_new("null") |>
                 pip_add("s", \(x = 1) if (is.null(x)) "none" else x)
-            f <- as.function(p, out = "s", bind = list(x = ~source))
+            f <- as.function(p, out = "s")
 
             expect_identical(f(x = NULL), "none")
             expect_identical(f(x = 2), 2)
@@ -404,7 +367,7 @@ describe("as.function.pipeflow", {
                     \(data = ~data) split(data, data$batch),
                     exec = "split"
                 ) |>
-                pip_add("by_batch", fun)
+                pip_add("by_batch", fun, params = list(data = ~split_data))
             pip_set_params(outer, list(data = demo_batches()))
             outer
         }
@@ -433,8 +396,7 @@ describe("as.function.pipeflow", {
         it("returns the result of out per partition in an outer step", {
             fun <- as.function(
                 tagged_inner(),
-                out = by_tags,
-                bind = list(data = ~split_data)
+                out = by_tags
             )
             outer <- split_outer(fun)
 
@@ -454,8 +416,7 @@ describe("as.function.pipeflow", {
             calls <- new_calls()
             fun <- as.function(
                 tagged_inner(calls),
-                out = by_tags,
-                bind = list(data = ~split_data)
+                out = by_tags
             )
             outer <- split_outer(fun)
             pip_run(outer, lgr = NULL)
@@ -560,8 +521,7 @@ describe("as.function.pipeflow", {
         it("returns pipelines that runs of a clone of the outer don't change", {
             fun <- as.function(
                 demo_inner(new_calls()),
-                out = \(p) p,
-                bind = list(data = ~split_data)
+                out = \(p) p
             )
             outer <- pip_run(split_outer(fun), lgr = NULL)
             resA <- outer[["by_batch", "out"]]$A
@@ -686,29 +646,6 @@ describe("as.function.pipeflow", {
             expect_no_error(as.function(inner, out = pip_collect))
         })
 
-        it("rejects an invalid bind", {
-            inner <- demo_inner(new.env())
-            msg <- "named list of one-sided formulas"
-
-            expect_error(as.function(inner, bind = list(~x)), msg)
-            expect_error(as.function(inner, bind = list(data = "x")), msg)
-            expect_error(as.function(inner, bind = list(data = y ~ x)), msg)
-            expect_error(as.function(inner, bind = ~x), msg)
-            expect_error(
-                as.function(inner, bind = list(data = ~x, data = ~y)),
-                msg
-            )
-        })
-
-        it("rejects bindings of unknown params", {
-            inner <- demo_inner(new.env())
-
-            expect_error(
-                as.function(inner, bind = list(nope = ~x)),
-                "no unbound params of the pipeline: nope"
-            )
-        })
-
         it("rejects an invalid cache", {
             inner <- demo_inner(new.env())
             msg <- "cache must be a single logical value"
@@ -756,12 +693,12 @@ describe("as.function.pipeflow", {
             expect_true(formals(as.function.pipeflow)$cache)
         })
 
-        it("does not capture the environment of the caller in bind", {
+        it("does not capture the environment of the caller", {
             inner <- demo_inner(new.env())
-            plain <- as.function(inner, bind = list(data = ~split_data))
+            plain <- as.function(inner)
             f <- local({
                 big <- numeric(1e6)
-                as.function(inner, bind = list(data = ~split_data))
+                as.function(inner)
             })
 
             diff <- length(serialize(f, NULL)) - length(serialize(plain, NULL))
@@ -786,10 +723,10 @@ describe("as.function.pipeflow", {
                     calls$ran <- c(calls$ran, x)
                     x * 2
                 })
-            fun <- as.function(inner, out = "double", bind = list(x = ~parts))
+            fun <- as.function(inner, out = "double")
             outer <- pip_new("outer") |>
                 pip_add("parts", \(values = NULL) values, exec = "split") |>
-                pip_add("doubled", fun)
+                pip_add("doubled", fun, params = list(x = ~parts))
             pip_set_params(outer, list(values = values))
             list(outer = outer, fun = fun, calls = calls)
         }
@@ -854,8 +791,7 @@ describe("as.function.pipeflow", {
             calls$coefs <- 0L
             fun <- as.function(
                 demo_inner(calls),
-                out = "coefs",
-                bind = list(data = ~split_data)
+                out = "coefs"
             )
             d <- demo_batches()
             many <- do.call(
@@ -930,7 +866,7 @@ describe("as.function.pipeflow", {
                 demo$outer,
                 "by_batch_1",
                 demo$fun,
-                params = list(digits = 1)
+                params = list(data = ~split_data, digits = 1)
             )
             run_outer(demo)
             expect_identical(c(demo$calls$fit, demo$calls$coefs), c(6L, 6L))
@@ -1072,7 +1008,6 @@ describe("as.function.pipeflow", {
             fresh <- as.function(
                 demo$inner,
                 out = "coefs",
-                bind = list(data = ~split_data),
                 cache = FALSE
             )
             expected <- list(
@@ -1099,8 +1034,7 @@ describe("as.function.pipeflow", {
         it("drops the pipelines of a step that is no longer mapped", {
             f <- as.function(
                 pip_new("i") |> pip_add("s", \(x = NULL) x * 2),
-                out = "s",
-                bind = list(x = ~parts)
+                out = "s"
             )
             outer <- pip_new("outer") |>
                 pip_add(
@@ -1108,7 +1042,7 @@ describe("as.function.pipeflow", {
                     \(values = list(p = 1, q = 2)) values,
                     exec = "split"
                 ) |>
-                pip_add("run", f)
+                pip_add("run", f, params = list(x = ~parts))
             pip_run(outer, lgr = NULL)
             expect_named(.fun_pips(f), c("p", "q"))
 
@@ -1128,8 +1062,7 @@ describe("as.function.pipeflow", {
                         calls$n <- calls$n + 1L
                         x * 2
                     }),
-                out = "s",
-                bind = list(x = ~parts)
+                out = "s"
             )
             outer <- pip_new("outer") |>
                 pip_add(
@@ -1137,7 +1070,7 @@ describe("as.function.pipeflow", {
                     \(values = list(p = 1, q = 2)) values,
                     exec = "split"
                 ) |>
-                pip_add("run", f)
+                pip_add("run", f, params = list(x = ~parts))
             pip_run(outer, lgr = NULL)
             expect_identical(calls$n, 2L)
             expect_named(.fun_pips(f), c("p", "q"))
@@ -1171,12 +1104,11 @@ describe("as.function.pipeflow", {
                         calls$n <- calls$n + 1L
                         x * 2
                     }),
-                out = "s",
-                bind = list(x = ~source)
+                out = "s"
             )
             outer <- pip_new("outer") |>
                 pip_add("source", \(value = 1) value) |>
-                pip_add("run", f)
+                pip_add("run", f, params = list(x = ~source))
             pip_run(outer, lgr = NULL)
             expect_identical(c(calls$n, outer[["run", "out"]]), c(1, 2))
 
@@ -1200,8 +1132,7 @@ describe("as.function.pipeflow", {
                         calls$n <- calls$n + 1L
                         x * 2
                     }),
-                out = "s",
-                bind = list(x = ~parts)
+                out = "s"
             )
             keys <- c(.fun_key_single, "q")
             outer <- pip_new("outer") |>
@@ -1211,7 +1142,7 @@ describe("as.function.pipeflow", {
                     exec = "split"
                 )
             # a step that has the name of the step of direct calls
-            pip_add(outer, .fun_step_direct, f)
+            pip_add(outer, .fun_step_direct, f, params = list(x = ~parts))
             pip_run(outer, lgr = NULL)
 
             expect_equal(
@@ -1247,8 +1178,7 @@ describe("as.function.pipeflow", {
                 )
             fun <- as.function(
                 inner,
-                out = "total",
-                bind = list(data = ~split_data)
+                out = "total"
             )
             outer <- demo_outer(fun)
             pip_run(outer, lgr = NULL)
@@ -1325,7 +1255,7 @@ describe("as.function.pipeflow", {
                     }
                     u * 2
                 })
-            f <- as.function(inner, out = "down", bind = list(x = ~source))
+            f <- as.function(inner, out = "down")
 
             expect_error(f(x = 1), "boom")
             expect_identical(state$up, 1L)
@@ -1354,7 +1284,7 @@ describe("as.function.pipeflow", {
                     }
                     n + f(n = n - 1)
                 })
-            f <- as.function(p, out = "sum", bind = list(n = ~source))
+            f <- as.function(p, out = "sum")
             list(f = f, state = state)
         }
 
@@ -1428,7 +1358,8 @@ describe("as.function.pipeflow", {
                 pip_add("a", \(v = 5) v) |>
                 pip_add(
                     "run",
-                    as.function(inner, out = "s", bind = list(x = ~ -1))
+                    as.function(inner, out = "s"),
+                    params = list(x = ~ -1)
                 )
 
             pip_run(outer, lgr = NULL)
@@ -1447,7 +1378,8 @@ describe("as.function.pipeflow", {
                 pip_add("bad", \() stop("nope")) |>
                 pip_add(
                     "run",
-                    as.function(inner, out = "s", bind = list(x = ~ try(bad)))
+                    as.function(inner, out = "s"),
+                    params = list(x = ~ try(bad))
                 )
 
             suppressWarnings(
@@ -1468,14 +1400,7 @@ describe("as.function.pipeflow", {
                     calls$n <- calls$n + 1L
                     a + b
                 })
-            fun <- as.function(
-                inner,
-                out = "total",
-                bind = list(
-                    a = ~parts,
-                    b = ~offset
-                )
-            )
+            fun <- as.function(inner, out = "total")
             outer <- pip_new("outer") |>
                 pip_add(
                     "parts",
@@ -1483,7 +1408,7 @@ describe("as.function.pipeflow", {
                     exec = "split"
                 ) |>
                 pip_add("offset", \(offset = 10) offset) |>
-                pip_add("run", fun)
+                pip_add("run", fun, params = list(a = ~parts, b = ~offset))
 
             run_outer(list(outer = outer))
             expect_identical(calls$n, 2L)
@@ -1683,7 +1608,6 @@ describe("as.function.pipeflow", {
             f <- as.function(
                 inner,
                 out = "use",
-                bind = list(x = ~source),
                 on_error = "continue"
             )
 
@@ -1711,7 +1635,6 @@ describe("as.function.pipeflow", {
             f <- as.function(
                 inner,
                 out = "report",
-                bind = list(x = ~source),
                 on_error = "continue"
             )
 
@@ -1743,7 +1666,6 @@ describe("as.function.pipeflow", {
             fun <- as.function(
                 failing_inner(),
                 out = "report",
-                bind = list(x = ~parts),
                 on_error = "continue"
             )
             outer <- pip_new("outer") |>
@@ -1752,7 +1674,7 @@ describe("as.function.pipeflow", {
                     \(values = list(a = "fine", b = "boom")) values,
                     exec = "split"
                 ) |>
-                pip_add("run", fun)
+                pip_add("run", fun, params = list(x = ~parts))
 
             # the outer run never sees an error, although `bad` failed for 'b'
             suppressWarnings(pip_run(outer, lgr = NULL))
@@ -1778,12 +1700,11 @@ describe("as.function.pipeflow", {
             fun <- as.function(
                 failing_inner(),
                 out = "use",
-                bind = list(x = ~source),
                 on_error = "continue"
             )
             outer <- pip_new("outer") |>
                 pip_add("source", \(x = "boom") x) |>
-                pip_add("run", fun) |>
+                pip_add("run", fun, params = list(x = ~source)) |>
                 pip_add("after", \(r = ~run) r) |>
                 pip_add("rescue", \(r = ~ try(run)) {
                     if (inherits(r, "pipeflow_failure")) "rescued" else r
@@ -1819,7 +1740,6 @@ describe("as.function.pipeflow", {
             f <- as.function(
                 inner,
                 out = "down",
-                bind = list(x = ~source),
                 on_error = "continue"
             )
 
@@ -1880,7 +1800,6 @@ describe("as.function.pipeflow", {
             fun <- as.function(
                 demo_inner(new.env()),
                 out = "coefs",
-                bind = list(data = ~split_data),
                 lgr = collect_logs(logs)
             )
 

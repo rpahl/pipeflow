@@ -296,7 +296,8 @@ nested <- pip_new("nested") |>
     pip_add("by_group", \(data = ~data) split(data, data$g), exec = "split") |>
     pip_add(
         "per_group",
-        as.function(inner, out = "report", bind = list(data = ~by_group))
+        as.function(inner, out = "report"),
+        params = list(data = ~by_group)
     )
 
 pip_set_params(nested, list(data = d))
@@ -321,12 +322,8 @@ run completes:
 pip_replace(
     nested,
     "per_group",
-    as.function(
-        inner,
-        out = "report",
-        bind = list(data = ~by_group),
-        on_error = "continue"
-    )
+    as.function(inner, out = "report", on_error = "continue"),
+    params = list(data = ~by_group)
 )
 
 pip_run(nested)
@@ -348,9 +345,9 @@ pip_replace(
     as.function(
         inner,
         out = "spread",
-        bind = list(data = ~by_group),
         on_error = "continue"           # <--- this time we continue
-    )
+    ),
+    params = list(data = ~by_group)
 )
 
 pip_run(nested, lgr = NULL)

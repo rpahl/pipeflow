@@ -744,11 +744,11 @@
       #fn[
         ```
         pip_add(outer, "fit",
-                as.function(inner, out = "coefs",
-                            bind = list(data = ~prep)))
+                as.function(inner, out = "coefs"),
+                params = list(data = ~prep))
         ```
       ][
-        as a step: `bind` connects the param `data` to step `prep`. The other
+        as a step: `params` connects the param `data` to step `prep`. The other
         unbound params of `inner` become params of `fit`.
       ]
     ]

@@ -102,7 +102,7 @@
 #' Check a list of bindings
 #'
 #' A binding turns an unbound param into a reference to a step, as in the
-#' `bind` argument of [as.function.pipeflow()] and [rbind.pipeflow()].
+#' `bind` argument of [rbind.pipeflow()].
 #'
 #' @param bind Named list of one-sided formulas, e.g. `list(data = ~step)`.
 #' @param unbound Character vector of the names of the unbound params that

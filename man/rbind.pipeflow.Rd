@@ -32,12 +32,12 @@ returned unchanged.
 }
 \details{
 To feed steps of the second pipeline with the output of steps of the
-first one, use the \code{bind} argument. As in \code{\link[=as.function.pipeflow]{as.function.pipeflow()}}, it
-binds unbound params of the second pipeline, which then become references
-to steps of the first one, as if they had been written as \code{param = ~step}
-in the step functions. The bound params are no longer params of the
-result (see \code{\link[=pip_get_params]{pip_get_params()}}), and bound steps that have been run
-before are marked \code{"outdated"}, together with their downstream steps.
+first one, use the \code{bind} argument. It binds unbound params of the second
+pipeline, which then become references to steps of the first one, as if
+they had been written as \code{param = ~step} in the step functions. The bound
+params are no longer params of the result (see \code{\link[=pip_get_params]{pip_get_params()}}), and
+bound steps that have been run before are marked \code{"outdated"}, together
+with their downstream steps.
 }
 \examples{
 a <- pip_new("a") |>

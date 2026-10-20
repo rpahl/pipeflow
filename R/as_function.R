@@ -29,7 +29,8 @@
 #' in which case the unbound parameters of `x` become parameters of that
 #' pipeline.
 #' To bind parameters of `x` to output of steps of the outer pipeline,
-#' use the `bind` argument.
+#' pass them as references in `params` of [pip_add()], e.g.
+#' `pip_add(outer, "inner", f_inner, params = list(df = ~outer_step))`.
 #'
 #' @note
 #' The conversion is done by taking a snapshot of `x`. Later changes of `x`
@@ -76,8 +77,8 @@
 #' partition caching one inner pipeline of `x` per step and partition key.
 #' A call updates its parameters and inputs in the respective pipeline, so that
 #' (as usual in pipelines) only outdated inner steps are run again.
-#' This works for inputs bound with `bind` as well as for those bound via
-#' `params` of [pip_add()].
+#' This works for inputs bound via `params` of [pip_add()] as well as for
+#' those bound in the step function.
 #'
 #' * A partition caches one pipeline for each key, which hold their inputs
 #'   and outputs, so they need memory.
@@ -115,11 +116,6 @@
 #' of their outputs. A function with at least one argument is called with
 #' (a light copy of) the run inner pipeline and returns the result, see
 #' Details.
-#' @param bind A named list of one-sided formulas, e.g.
-#' `list(df = ~outer_step)`, that bind unbound params of `x` to steps
-#' of the outer pipeline (`~try(outer_step)` also works).
-#' Binding them via `pip_add("inner", f_inner, params = list(df = ~outer_step))`
-#' works as well.
 #' @param cache Whether to keep the run copies of `x` for reuse, `TRUE` (the
 #' default) or `FALSE`. The function keeps one copy per outer step and
 #' partition, see Details.
@@ -163,7 +159,8 @@
 #'   pip_add("by_cyl", \(df = ~df) split(df, df$cyl), exec = "split") |>
 #'   pip_add(
 #'     "coefs",
-#'     as.function(inner, out = "coefs", bind = list(input_df = ~by_cyl))
+#'     as.function(inner, out = "coefs"),
+#'     params = list(input_df = ~by_cyl)
 #'   ) |>
 #'   pip_add("table", \(coefs = ~coefs) do.call(rbind, coefs), exec = "reduce")
 #'
@@ -234,7 +231,6 @@
 as.function.pipeflow <- function(
     x,
     out = NULL,
-    bind = list(),
     cache = TRUE,
     on_error = c("stop", "continue"),
     lgr = NULL,
@@ -250,23 +246,16 @@ as.function.pipeflow <- function(
 
     template <- pip_clone(x)
     suppressMessages(pip_reset(template))
-    params <- pip_get_params(template)
-    .assert_bind(bind, unbound = names(params))
-    args <- .fun_bind(params, bind)
+    args <- .fun_quote(pip_get_params(template))
 
     ctx <- list(
         template = template,
         out = out,
         onError = onError,
         lgr = lgr,
-        bindText = vapply(
-            bind,
-            \(f) paste(deparse(f), collapse = " "),
-            character(1)
-        ),
         keep = cache
     )
-    body <- .fun_body(.fun_runner(ctx), names(args), names(bind))
+    body <- .fun_body(.fun_runner(ctx), names(args))
     as.function(c(args, list(body)), envir = new.env(parent = baseenv()))
 }
 
@@ -311,25 +300,6 @@ as.function.pipeflow <- function(
 }
 
 
-#' Put the bindings into the formals
-#'
-#' The default is a call to `~`, so that the formula is made in the
-#' function's own environment when the step is added, and does not capture
-#' the environment of the caller.
-#'
-#' @param args The unbound params of the pipeline.
-#' @param bind Named list of one-sided formulas, checked by `.assert_bind()`.
-#' @return `args`, with the bound ones as `~step` calls.
-#' @noRd
-.fun_bind <- function(args, bind) {
-    args <- .fun_quote(args)
-    for (name in names(bind)) {
-        args[[name]] <- call("~", bind[[name]][[2L]])
-    }
-    args
-}
-
-
 #' Protect symbols and calls from being evaluated
 #'
 #' The stored params have been evaluated already (by `pip_add()`). A symbol
@@ -349,27 +319,17 @@ as.function.pipeflow <- function(
 
 #' The body of the function
 #'
-#' The body hands all formals and, for the bound ones, whether they were
-#' omitted to the runner: `runner(list(a = a, ...), c(b = missing(b)))`. The
-#' functions are put into the call as objects, not as names, so that a
-#' formal with the name of a function (`list`, `c`, ...) cannot shadow them.
+#' The body hands all formals to the runner: `runner(list(a = a, ...))`.
+#' The functions are put into the call as objects, not as names, so that a
+#' formal with the name of a function (`list`, ...) cannot shadow them.
 #'
 #' @param runner The function that runs the pipeline, see `.fun_runner()`.
 #' @param formalNames Names of all formals.
-#' @param bound Names of the bound formals.
 #' @return A call.
 #' @noRd
-.fun_body <- function(runner, formalNames, bound) {
+.fun_body <- function(runner, formalNames) {
     values <- lapply(stats::setNames(formalNames, formalNames), as.name)
-    omitted <- lapply(
-        stats::setNames(bound, bound),
-        \(name) as.call(list(base::missing, as.name(name)))
-    )
-    as.call(list(
-        runner,
-        as.call(c(list(base::list), values)),
-        as.call(c(list(base::c), omitted))
-    ))
+    as.call(list(runner, as.call(c(list(base::list), values))))
 }
 
 
@@ -390,19 +350,17 @@ as.function.pipeflow <- function(
     class(cache) <- "pipeflow_fun_cache"
     cache$slots <- list()
     cache$active <- list()
-    function(args, omitted) .fun_call(args, omitted, ctx, cache)
+    function(args) .fun_call(args, ctx, cache)
 }
 
 
 #' One call of the function: find or make the pipeline, set, run, extract
 #'
 #' @param args All arguments of the call, as a named list.
-#' @param omitted Named logical: was a bound argument omitted?
 #' @param ctx The context made by `as.function.pipeflow()`.
 #' @param cache The kept pipelines of the function.
 #' @noRd
-.fun_call <- function(args, omitted, ctx, cache) {
-    .assert_fun_supplied(omitted, ctx$bindText)
+.fun_call <- function(args, ctx, cache) {
     # Read before the inner run, whose steps set their own
     stepCall <- .pip_step_call()
 
@@ -507,28 +465,6 @@ as.function.pipeflow <- function(
         cache$slots[[step]] <- NULL
     }
     invisible(NULL)
-}
-
-
-#' A bound argument has the formula as default, which only works as part of
-#' an outer pipeline: if it is omitted in a direct call, there is no input
-#'
-#' @param omitted Named logical: was a bound argument omitted?
-#' @param bindText The bound formulas as text, for the message.
-#' @noRd
-.assert_fun_supplied <- function(omitted, bindText) {
-    notSupplied <- names(omitted)[omitted]
-    if (length(notSupplied) > 0L) {
-        name <- notSupplied[[1L]]
-        stop_no_call(
-            "argument '",
-            name,
-            "' is bound to a step (",
-            bindText[[name]],
-            ") and must be supplied when the function is called directly"
-        )
-    }
-    invisible(omitted)
 }
 
 

@@ -7,7 +7,6 @@
 \method{as.function}{pipeflow}(
   x,
   out = NULL,
-  bind = list(),
   cache = TRUE,
   on_error = c("stop", "continue"),
   lgr = NULL,
@@ -24,12 +23,6 @@ returns the output of that step; several step names return a named list
 of their outputs. A function with at least one argument is called with
 (a light copy of) the run inner pipeline and returns the result, see
 Details.}
-
-\item{bind}{A named list of one-sided formulas, e.g.
-\code{list(df = ~outer_step)}, that bind unbound params of \code{x} to steps
-of the outer pipeline (\code{~try(outer_step)} also works).
-Binding them via \code{pip_add("inner", f_inner, params = list(df = ~outer_step))}
-works as well.}
 
 \item{cache}{Whether to keep the run copies of \code{x} for reuse, \code{TRUE} (the
 default) or \code{FALSE}. The function keeps one copy per outer step and
@@ -56,7 +49,8 @@ function, it can be added to an "outer" pipeline with \code{\link[=pip_add]{pip_
 in which case the unbound parameters of \code{x} become parameters of that
 pipeline.
 To bind parameters of \code{x} to output of steps of the outer pipeline,
-use the \code{bind} argument.
+pass them as references in \code{params} of \code{\link[=pip_add]{pip_add()}}, e.g.
+\code{pip_add(outer, "inner", f_inner, params = list(df = ~outer_step))}.
 }
 \details{
 By default, the inner pipeline is run silently, but warnings and messages
@@ -101,8 +95,8 @@ an earlier step with \code{exec = "split"}), the function is called once per
 partition caching one inner pipeline of \code{x} per step and partition key.
 A call updates its parameters and inputs in the respective pipeline, so that
 (as usual in pipelines) only outdated inner steps are run again.
-This works for inputs bound with \code{bind} as well as for those bound via
-\code{params} of \code{\link[=pip_add]{pip_add()}}.
+This works for inputs bound via \code{params} of \code{\link[=pip_add]{pip_add()}} as well as for
+those bound in the step function.
 \itemize{
 \item A partition caches one pipeline for each key, which hold their inputs
 and outputs, so they need memory.
@@ -174,7 +168,8 @@ outer <- pip_new("outer") |>
   pip_add("by_cyl", \(df = ~df) split(df, df$cyl), exec = "split") |>
   pip_add(
     "coefs",
-    as.function(inner, out = "coefs", bind = list(input_df = ~by_cyl))
+    as.function(inner, out = "coefs"),
+    params = list(input_df = ~by_cyl)
   ) |>
   pip_add("table", \(coefs = ~coefs) do.call(rbind, coefs), exec = "reduce")
 

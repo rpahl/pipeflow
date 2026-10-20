@@ -100,22 +100,17 @@ outer_all <- pip_new("analysis") |>
     pip_add("df", \(df = NULL) df) |>
     pip_add(
         "inner_run",
-        as.function(
-            inner,
-            bind = list(input_df = ~df),   # df is passed to the inner pipeline
-            out = "coefs"                  # coefs is returned from inner run
-        )
+        as.function(inner, out = "coefs"),  # coefs is returned from inner run
+        params = list(input_df = ~df)       # df is passed to the inner pipeline
     )
 
 outer_all
 ```
 
-The argument `bind` wires the function into the outer pipeline.
-`list(input_df = ~df)` reads: the argument `input_df` of the function is
-*bound* to the output of the step `df` from the outer pipeline.
-This is has the same effect as if we had called
-`pip_set_params(outer_all, list(input_df = ~df))` afterwards,
-that is, the step `inner_run` now depends on `df`.
+As for any other step function, `params` of `pip_add()` wires the function
+into the outer pipeline. `list(input_df = ~df)` reads: the argument
+`input_df` of the function is *bound* to the output of the step `df` from the
+outer pipeline, that is, the step `inner_run` now depends on `df`.
 
 The remaining arguments of the function, `xVar`, `yVar` and `digits`, are not
 bound. They stay unbound parameters, and as such are parameters of the outer
@@ -183,11 +178,8 @@ outer <- pip_new("full analysis") |>
     ) |>
     pip_add(
         "inner_run",
-        as.function(
-            inner,
-            bind = list(input_df = ~split_df),    # bind to split data
-            out = "coefs"
-        )
+        as.function(inner, out = "coefs"),
+        params = list(input_df = ~split_df)    # bind to split data
     ) |>
     pip_add(
         "combine",
@@ -292,7 +284,8 @@ toy_outer <- pip_new("toy outer") |>
     ) |>
     pip_add(
         "inner_run",
-        as.function(toy_inner, bind = list(x = ~numbers), out = "scale")
+        as.function(toy_inner, out = "scale"),
+        params = list(x = ~numbers)
     )
 
 pip_run(toy_outer, lgr = NULL)
@@ -441,7 +434,7 @@ fits into the steps of a single pipeline, while nested pipelines are the more
 general tool. As a rule of thumb:
 
 * **Code**: the built-in modes are declarative and need no extra code.
-  `as.function()` needs one step and the `bind` list. Running the inner
+  `as.function()` needs one step that binds its inputs. Running the inner
   pipeline yourself requires cloning, mapping, and forwarding parameters.
 * **Map shape**: the built-in modes handle a single split point in the
   pipeline, while nested pipelines can be mapped over the partitions of a
