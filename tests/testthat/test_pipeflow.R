@@ -98,6 +98,25 @@ describe(".wrap_self", {
     })
 })
 
+describe(".release_self", {
+    it("removes .self from the environment made for one step call", {
+        env <- new.env()
+        f <- local(\(x = 1) .self, envir = env)
+
+        w <- .wrap_self(f, self = "p")
+        .release_self(environment(w))
+
+        expect_false(exists(".self", envir = environment(w), inherits = FALSE))
+        expect_identical(parent.env(environment(w)), env)
+    })
+
+    it("does nothing if .self is not there", {
+        env <- new.env()
+        expect_silent(.release_self(env))
+        expect_length(ls(env, all.names = TRUE), 0L)
+    })
+})
+
 # ------------------------------
 # Parameter & dependency parsing
 # ------------------------------
@@ -154,6 +173,38 @@ describe(".extract_fun_params", {
         expect_equal(
             .extract_fun_params(function(x = default_value) x),
             list(x = 1)
+        )
+    })
+
+    it("lets params override the defaults and appends the other params", {
+        expect_equal(
+            .extract_fun_params(
+                function(x = 1, y = 2, ...) x,
+                params = list(z = 3, x = 10)
+            ),
+            list(x = 10, y = 2, z = 3)
+        )
+    })
+
+    it("takes the value of params for arguments without default", {
+        expect_equal(
+            .extract_fun_params(function(x, y = 1) x, params = list(x = 5)),
+            list(x = 5, y = 1)
+        )
+        expect_error(
+            .extract_fun_params(function(x, y) x, params = list(x = 5)),
+            "'y' has no default value - set one in fun or give a value in",
+            fixed = TRUE
+        )
+    })
+
+    it("does not evaluate the defaults that params override", {
+        expect_equal(
+            .extract_fun_params(
+                function(x = stop("evaluated")) x,
+                params = list(x = NULL)
+            ),
+            list(x = NULL)
         )
     })
 })
@@ -1165,52 +1216,148 @@ describe("pipelines read with readRDS()", {
 })
 
 
-describe("pip_add params overlapping the formals of fun", {
-    it("warns if params overlap the defaults of fun", {
+describe("pip_add params overriding the defaults of fun", {
+    it("overrides the defaults of fun without a warning", {
         p <- pip_new()
-        expect_warning(
-            pip_add(p, "s", \(x = 1, y = 2) x + y, params = list(x = 5, y = 6)),
-            "step 's': the defaults of fun take precedence over params: x, y",
-            fixed = TRUE
+        expect_no_warning(
+            pip_add(p, "s", \(x = 1, y = 2) x + y, params = list(x = 5, y = 6))
         )
-        expect_equal(p[["params"]][["s"]][["x"]], 1)
-        expect_equal(p[["params"]][["s"]][["y"]], 2)
+        expect_equal(p[["params"]][["s"]], list(x = 5, y = 6))
+
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["s", "out"]], 11)
     })
 
-    it("names only the overlapping params", {
-        p <- pip_new()
-        expect_warning(
-            pip_add(p, "s", \(x = 1) x, params = list(x = 5, z = 6)),
-            "over params: x$"
-        )
-    })
-
-    it("warns if the step is inserted via after", {
+    it("overrides the defaults also if the step is inserted via after", {
         p <- pip_new() |> pip_add("a", \(x = 1) x)
+        pip_add(p, "b", \(x = 1) x, params = list(x = 5), after = 0)
+
+        expect_equal(unname(p[["step"]]), c("b", "a"))
+        expect_equal(p[["params"]][["b"]], list(x = 5))
+    })
+
+    it("turns a value default into a reference to a step", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x + 1) |>
+            pip_add("b", \(x = 10, y = 2) x * y, params = list(x = ~a))
+
+        expect_equal(p[["depends"]][["b"]], c(x = "a"))
+        expect_equal(p[["unbound"]][["b"]], "y")
+        expect_equal(names(pip_get_params(p)), c("x", "y"))
+
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["b", "out"]], 4)
+    })
+
+    it("turns a reference into a value", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x, params = list(x = 7))
+
+        expect_equal(p[["depends"]][["b"]], character(0))
+        expect_equal(p[["unbound"]][["b"]], "x")
+    })
+
+    it("rewires a reference, also a try() reference", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = 2) x) |>
+            pip_add("c", \(x = ~a) x, params = list(x = ~ try(b)))
+
+        expect_equal(p[["depends"]][["c"]], c(x = "b"))
+        expect_equal(formula_try_args(p[["c", "params"]]), "x")
+    })
+
+    it("passes a failure to a try() reference given via params", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) stop("boom")) |>
+            pip_add(
+                "b",
+                \(x = ~a) inherits(x, "pipeflow_failure"),
+                params = list(x = ~ try(a))
+            )
+
         expect_warning(
-            pip_add(p, "b", \(x = 1) x, params = list(x = 5), after = 0),
-            "step 'b': the defaults of fun take precedence over params: x",
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        expect_equal(unname(p[["state"]]), c("failed", "done"))
+        expect_true(p[["b", "out"]])
+    })
+
+    it("gives a value to parameters of fun without default", {
+        p <- pip_new() |>
+            pip_add("data", \(x = c(1, NA, 3)) x) |>
+            pip_add("avg", mean, params = list(x = ~data, na.rm = TRUE))
+
+        expect_equal(p[["depends"]][["avg"]], c(x = "data"))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["avg", "out"]], 2)
+    })
+
+    it("still signals parameters without default that params don't give", {
+        p <- pip_new()
+        expect_error(
+            pip_add(p, "s", \(x, y, z = 1) x + y, params = list(x = 1)),
+            "'y' has no default value - set one in fun or give a value in",
             fixed = TRUE
         )
+        expect_equal(length(p), 0L)
     })
 
-    it("does not warn for params that are not formals of fun", {
+    it("does not evaluate the defaults that params override", {
         p <- pip_new()
-        expect_no_warning(
-            pip_add(p, "s", \(x = 1) x, params = list(z = 5))
+        pip_add(p, "s", \(x = stop("not evaluated")) x, params = list(x = 1))
+
+        expect_equal(p[["params"]][["s"]], list(x = 1))
+    })
+
+    it("keeps the order of the parameters of fun, followed by the others", {
+        p <- pip_new()
+        pip_add(
+            p,
+            "s",
+            \(x = 1, y = 2, ...) x + y,
+            params = list(z = 3, y = 20)
         )
+
+        expect_equal(p[["params"]][["s"]], list(x = 1, y = 20, z = 3))
     })
 
-    it("does not warn for params that only match '...'", {
+    it("can set NULL values", {
         p <- pip_new()
-        expect_no_warning(
-            pip_add(p, "s", \(x = 1, ...) x, params = list(... = 5))
+        pip_add(p, "s", \(x = 1, y = 2) list(x, y), params = list(x = NULL))
+
+        expect_equal(p[["params"]][["s"]], list(x = NULL, y = 2))
+    })
+
+    it("can give NULL to parameters without default", {
+        p <- pip_new() |>
+            pip_add("a", \(x) is.null(x), params = list(x = NULL))
+        pip_add(p, "b", \(x) is.null(x), params = list(x = NULL), after = 0)
+
+        expect_equal(p[["params"]][["a"]], list(x = NULL))
+        expect_equal(p[["params"]][["b"]], list(x = NULL))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["out"]], list(b = TRUE, a = TRUE))
+    })
+
+    it("signals params that are not a list with unique names", {
+        p <- pip_new()
+        expected <- "params must be a list with unique names"
+        f <- \(x = 1, ...) x
+        expect_error(pip_add(p, "s", f, params = c(x = 1)), expected)
+        expect_error(pip_add(p, "s", f, params = list(1)), expected)
+        expect_error(pip_add(p, "s", f, params = list(x = 1, 2)), expected)
+        expect_error(
+            pip_add(p, "s", f, params = stats::setNames(list(1), NA)),
+            expected
         )
-    })
-
-    it("does not warn without params", {
-        p <- pip_new()
-        expect_no_warning(pip_add(p, "s", \(x = 1) x))
+        expect_error(
+            pip_add(p, "s", f, params = list(x = 1, x = 2)),
+            expected
+        )
+        expect_equal(length(p), 0L)
     })
 })
 
@@ -1228,6 +1375,17 @@ describe("pip_add", {
             pip_add(p, "s1", fun = "not a function"),
             "fun must be a function"
         )
+    })
+
+    it("points to as.function() if fun is a pipeline or a view", {
+        p <- pip_new()
+        inner <- pip_new("inner") |> pip_add("a", \(x = 1) x)
+        expected <- paste(
+            "fun must be a function, not a pipeline - to use a pipeline as",
+            "a step, turn it into a function with as.function()"
+        )
+        expect_error(pip_add(p, "s1", inner), expected, fixed = TRUE)
+        expect_error(pip_add(p, "s1", inner["a"]), expected, fixed = TRUE)
     })
 
     it("signals if fun is a primitive function", {
@@ -1267,6 +1425,17 @@ describe("pip_add", {
 
         expect_error(pip_add(p, "s2", \(x = ~ -2) 2 * x))
         expect_equal(length(p), 1L)
+    })
+
+    it("can refer to a step with a non-syntactic name", {
+        p <- pip_new() |>
+            pip_add("source data", \(a = 5) a) |>
+            pip_add("if", \(a = 1) a) |>
+            pip_add("s3", \(x = ~`source data`, y = ~ try(`if`)) x + y)
+
+        expect_equal(p[["s3", "depends"]], c(x = "source data", y = "if"))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["s3", "out"]], 6)
     })
 
     it("if add is aborted, pipeline remains unchanged", {
@@ -1404,7 +1573,7 @@ describe("pip_add", {
         expect_equal(p[["state"]][[i]], "done")
     })
 
-    it("signals invalid insertion position and unknown step reference", {
+    it("signals invalid insertion position", {
         p <- test_pip()
         expect_error(
             pip_add(p, "f3", \(x = 1) x, after = "unknown"),
@@ -1422,9 +1591,23 @@ describe("pip_add", {
             pip_add(p, "f3", \(x = 1) x, after = 3),
             "after index must be between 0 and 2"
         )
+    })
+
+    it("distinguishes unknown steps from steps that come later", {
+        p <- test_pip()
+
+        # 'f2' exists, but lies behind the insertion point
         expect_error(
             pip_add(p, "f3", \(x = ~f2) x, after = "f1"),
-            "cannot reference unknown steps: 'f2'"
+            paste0(
+                "cannot reference steps that come after the ",
+                "insertion point: 'f2'"
+            )
+        )
+
+        expect_error(
+            pip_add(p, "f3", \(x = ~nope) x, after = "f1"),
+            "cannot reference unknown steps: 'nope'"
         )
     })
 
@@ -1437,20 +1620,17 @@ describe("pip_add", {
         )
     })
 
-    it("merges params with function defaults, letting defaults win", {
+    it("merges params with function defaults, letting params win", {
         p <- pip_new()
-        expect_warning(
-            pip_add(
-                p,
-                "s1",
-                function(x = 1, y = 2) x + y,
-                params = list(x = 10, y = 20, z = 99)
-            ),
-            "defaults of fun take precedence over params: x, y"
+        pip_add(
+            p,
+            "s1",
+            function(x = 1, y = 2) x + y,
+            params = list(x = 10, z = 99)
         )
 
         pars <- p[["params"]][[1]]
-        expect_equal(pars[["x"]], 1) # fun default takes precedence
+        expect_equal(pars[["x"]], 10) # params take precedence
         expect_equal(pars[["y"]], 2)
         expect_equal(pars[["z"]], 99) # extra param carried through
     })
@@ -1984,20 +2164,83 @@ describe("pip_replace", {
             pip_add("f3", \(x = ~f2) x + 1)
     }
 
-    it("warns if params overlap the defaults of fun", {
-        p <- test_pip()
-        expect_warning(
-            pip_replace(p, "f2", \(x = 20) x, params = list(x = 5)),
-            "step 'f2': the defaults of fun take precedence over params: x",
-            fixed = TRUE
-        )
-        expect_equal(p[["params"]][["f2"]][["x"]], 20)
-    })
-
-    it("does not warn if params do not overlap the defaults of fun", {
+    it("lets params override the defaults of fun", {
         p <- test_pip()
         expect_no_warning(
-            pip_replace(p, "f2", \(x = 20) x, params = list(z = 5))
+            pip_replace(p, "f2", \(x = 20) x, params = list(x = 5))
+        )
+        expect_equal(p[["params"]][["f2"]], list(x = 5))
+    })
+
+    it("rewires the step via a reference in params", {
+        p <- test_pip()
+        pip_replace(p, "f3", \(x = ~f2) x + 1, params = list(x = ~f1))
+
+        expect_equal(p[["depends"]][["f3"]], c(x = "f1"))
+        reach <- .pip_get_reachable_nodes(p, "f2")
+        expect_equal(.pip_filter_nodes(p, reach)[["step"]], "f2")
+        reach <- .pip_get_reachable_nodes(p, "f1")
+        expect_equal(.pip_filter_nodes(p, reach)[["step"]], c("f1", "f3"))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["f3", "out"]], 2)
+    })
+
+    it("drops the edge if params turn a reference into a value", {
+        p <- test_pip()
+        pip_replace(p, "f3", \(x = ~f2) x + 1, params = list(x = 5))
+
+        expect_equal(p[["depends"]][["f3"]], character(0))
+        reach <- .pip_get_reachable_nodes(p, "f2")
+        expect_equal(.pip_filter_nodes(p, reach)[["step"]], "f2")
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["f3", "out"]], 6)
+    })
+
+    it("gives a value to parameters of fun without default", {
+        p <- test_pip()
+        pip_replace(p, "f3", \(x) x + 1, params = list(x = ~f1))
+
+        expect_equal(p[["depends"]][["f3"]], c(x = "f1"))
+        expect_error(
+            pip_replace(p, "f3", \(x) x + 1),
+            "'x' has no default value"
+        )
+    })
+
+    it("can give NULL to parameters without default", {
+        p <- test_pip()
+        pip_replace(p, "f2", \(x) is.null(x), params = list(x = NULL))
+
+        expect_equal(p[["params"]][["f2"]], list(x = NULL))
+        pip_run(p, lgr = NULL)
+        expect_true(p[["f2", "out"]])
+    })
+
+    it("signals invalid params and leaves the pipeline unchanged", {
+        p <- test_pip()
+        before <- pip_clone(p)
+        expect_error(
+            pip_replace(p, "f2", \(x = 20) x, params = list(5)),
+            "params must be a list with unique names"
+        )
+        expect_error(
+            pip_replace(p, "f2", \(x = 20) x, params = list(x = ~unknown)),
+            "cannot reference unknown steps: 'unknown'"
+        )
+        expect_error(
+            pip_replace(p, "f2", \(x = 20) x, params = list(x = ~f3)),
+            "cannot reference steps that come after the replaced step: 'f3'"
+        )
+        expect_equal(p[["params"]], before[["params"]])
+        expect_equal(p[["depends"]], before[["depends"]])
+        expect_equal(p[["fun"]][["f2"]], before[["fun"]][["f2"]])
+    })
+
+    it("points to as.function() if fun is a pipeline", {
+        p <- test_pip()
+        expect_error(
+            pip_replace(p, "f2", pip_clone(p)),
+            "fun must be a function, not a pipeline"
         )
     })
 
@@ -2066,11 +2309,21 @@ describe("pip_replace", {
 
         expect_error(
             pip_replace(p, "f2", \(x = ~f3) x),
-            "cannot reference unknown steps: 'f3'"
+            "cannot reference steps that come after the replaced step: 'f3'"
         )
         expect_error(
             pip_replace(p, "f2", \(x = ~foo) x),
             "cannot reference unknown steps: 'foo'"
+        )
+        # the step itself is unknown, as in pip_add()
+        expect_error(
+            pip_replace(p, "f2", \(x = ~f2) x),
+            "cannot reference unknown steps: 'f2'"
+        )
+        # later steps are reported before unknown ones, as in pip_add()
+        expect_error(
+            pip_replace(p, "f1", \(x = ~foo, y = ~f3) x),
+            "cannot reference steps that come after the replaced step: 'f3'$"
         )
     })
 
@@ -3798,6 +4051,18 @@ describe("pip_run", {
     })
 
     describe(".self in step functions", {
+        # Walks the environment chain of a step output up to the empty
+        # environment, which is where a leaked `.self` would show up.
+        has_self <- function(env) {
+            while (!identical(env, emptyenv())) {
+                if (exists(".self", envir = env, inherits = FALSE)) {
+                    return(TRUE)
+                }
+                env <- parent.env(env)
+            }
+            FALSE
+        }
+
         it("is provided only to step functions that refer to it", {
             p <- pip_new("p") |>
                 pip_add("with", \(x = 1) .self[["name"]]) |>
@@ -3834,6 +4099,88 @@ describe("pip_run", {
             pip_run(p, lgr = NULL)
 
             size <- length(serialize(p[["adder", "out"]], connection = NULL))
+            expect_lt(size, 1e4)
+        })
+
+        it("is released when the step returns", {
+            p <- pip_new("p") |>
+                pip_add("s", \(x = 1) {
+                    nm <- .self[["name"]]
+                    function() nm
+                })
+            pip_run(p, lgr = NULL)
+
+            out <- p[["s", "out"]]
+            expect_equal(out(), "p")
+            expect_false(has_self(environment(out)))
+            expect_error(get(".self", envir = environment(out)))
+        })
+
+        it("is released in split, map and reduce mode", {
+            p <- pip_new("p") |>
+                pip_add(
+                    "split",
+                    \(x = 1) {
+                        stopifnot(.self[["name"]] == "p")
+                        list(a = 1, b = 2)
+                    },
+                    exec = "split"
+                ) |>
+                pip_add("map", \(x = ~split) {
+                    stopifnot(.self[["name"]] == "p")
+                    environment()
+                }) |>
+                pip_add(
+                    "reduce",
+                    \(x = ~map) {
+                        stopifnot(.self[["name"]] == "p")
+                        environment()
+                    },
+                    exec = "reduce"
+                )
+            pip_run(p, lgr = NULL)
+
+            frames <- c(p[["map", "out"]], list(p[["reduce", "out"]]))
+            expect_length(frames, 3L)
+            for (frame in frames) {
+                expect_false(has_self(frame))
+            }
+        })
+
+        it("is released when the step fails", {
+            env <- new.env()
+            p <- pip_new("p") |>
+                pip_add("s", \(x = 1) {
+                    env[["frame"]] <- environment()
+                    stopifnot(.self[["name"]] == "p")
+                    stop("boom")
+                })
+
+            expect_warning(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                class = "pipeflow_run_failed"
+            )
+            expect_false(has_self(env[["frame"]]))
+        })
+
+        it("doesn't keep the pipeline alive via outputs that use it", {
+            # The step function is defined outside of this test (whose
+            # environment holds `p`), has no source references and forces
+            # `x`, so only `.self` could make the returned closure reach
+            # the pipeline.
+            maker <- utils::removeSource(\(x = 1) {
+                force(x)
+                nm <- .self[["name"]]
+                function() nm
+            })
+            environment(maker) <- globalenv()
+
+            p <- pip_new() |>
+                pip_add("big", \(n = 1e5) rnorm(n)) |>
+                pip_add("maker", maker)
+            pip_run(p, lgr = NULL)
+
+            size <- length(serialize(p[["maker", "out"]], connection = NULL))
             expect_lt(size, 1e4)
         })
     })
@@ -4697,6 +5044,228 @@ describe("pip_set_params", {
             "params must be a list"
         )
     })
+
+    bind_pip <- function() {
+        pip_new() |>
+            pip_add("data", \(n = 4) seq_len(n)) |>
+            pip_add("fit1", \(x = ~data) mean(x)) |>
+            pip_add("fit2", \(x = ~data) max(x)) |>
+            pip_add("rep1", \(model = 0, k = 1) model * k) |>
+            pip_add("rep2", \(model = 0) model + 100)
+    }
+
+    it("binds a param to a step in all steps that have it unbound", {
+        p <- bind_pip()
+
+        pip_set_params(p, list(model = ~fit2))
+
+        expect_equal(p[["rep1", "params"]], list(model = ~fit2, k = 1))
+        expect_equal(p[["depends"]][["rep1"]], c(model = "fit2"))
+        expect_equal(p[["depends"]][["rep2"]], c(model = "fit2"))
+        expect_equal(p[["unbound"]][["rep1"]], "k")
+        expect_equal(p[["unbound"]][["rep2"]], character(0))
+        expect_false("model" %in% names(pip_get_params(p)))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["rep1", "out"]], 4)
+        expect_equal(p[["rep2", "out"]], 104)
+    })
+
+    it("adds the edges of a binding to the graph", {
+        p <- bind_pip()
+
+        pip_set_params(p, list(model = ~fit2))
+
+        edges <- pip_graph(p)[["edges"]]
+        ids <- stats::setNames(p[["nodeId"]], p[["step"]])
+        bindEdges <- edges[edges[["from"]] == ids[["fit2"]], ]
+        expect_setequal(bindEdges[["to"]], ids[c("rep1", "rep2")])
+
+        pip_run(p, lgr = NULL)
+        pip_set_params(p, list(n = 6))
+        expect_equal(unname(p[["state"]]), rep("outdated", 5))
+    })
+
+    it("outdates the bound steps and their downstream steps", {
+        p <- bind_pip() |>
+            pip_add("final", \(x = ~rep1) x)
+        pip_run(p, lgr = NULL)
+
+        pip_set_params(p["rep1"], list(model = ~fit1))
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "done", "done", "outdated", "done", "outdated")
+        )
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["final", "out"]], 2.5)
+    })
+
+    it("sets values and bindings in one call", {
+        p <- bind_pip()
+
+        pip_set_params(p, list(model = ~fit1, k = 2, n = 6))
+
+        expect_equal(p[["rep1", "params"]], list(model = ~fit1, k = 2))
+        expect_equal(p[["data", "params"]], list(n = 6))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["rep1", "out"]], 7)
+    })
+
+    it("keeps the try() wrapper of a binding", {
+        p <- pip_new() |>
+            pip_add("fail", \() stop("boom")) |>
+            pip_add("s", \(x = 0) inherits(x, "pipeflow_failure"))
+
+        pip_set_params(p, list(x = ~ try(fail)))
+
+        expect_equal(p[["depends"]][["s"]], c(x = "fail"))
+        expect_equal(formula_try_args(p[["s", "params"]]), "x")
+        suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+        expect_true(p[["s", "out"]])
+    })
+
+    it("binds only within a view and skips locked steps", {
+        p <- bind_pip()
+        pip_lock(p["rep2"])
+
+        pip_set_params(p[c("rep1", "rep2")], list(model = ~fit1))
+
+        expect_equal(p[["depends"]][["rep1"]], c(model = "fit1"))
+        expect_equal(p[["depends"]][["rep2"]], character(0))
+        expect_equal(p[["rep2", "params"]], list(model = 0))
+    })
+
+    it("does nothing when the binding is set again", {
+        p <- bind_pip()
+        pip_set_params(p, list(model = ~fit2))
+        pip_run(p, lgr = NULL)
+
+        expect_no_warning(pip_set_params(p, list(model = ~fit2)))
+        expect_no_warning(
+            pip_set_params(p, list(model = ~fit2), unknown = "error")
+        )
+
+        expect_equal(unname(p[["state"]]), rep("done", 5))
+    })
+
+    it("does not rebind a bound param", {
+        p <- bind_pip()
+        pip_set_params(p, list(model = ~fit2))
+
+        expect_warning(
+            pip_set_params(p, list(model = ~fit1)),
+            "Trying to set parameters not defined in the target: model"
+        )
+        expect_warning(
+            pip_set_params(p, list(model = ~ try(fit2))),
+            "not defined in the target: model"
+        )
+        expect_equal(p[["depends"]][["rep1"]], c(model = "fit2"))
+        expect_equal(formula_try_args(p[["rep1", "params"]]), character(0))
+    })
+
+    it("signals bindings to steps that don't come before, changing nothing", {
+        p <- pip_new() |>
+            pip_add("a", \(model = 0, k = 1) model) |>
+            pip_add("fit", \() 1) |>
+            pip_add("b", \(model = 0) model)
+
+        expect_error(
+            pip_set_params(p, list(model = ~fit, k = 2)),
+            paste(
+                "cannot bind 'model' to step 'fit' in steps that don't come",
+                "after it: 'a' - use a view"
+            )
+        )
+        expect_equal(p[["depends"]][["b"]], character(0))
+        expect_equal(p[["a", "params"]], list(model = 0, k = 1))
+
+        pip_set_params(p["b"], list(model = ~fit))
+        expect_equal(p[["depends"]][["b"]], c(model = "fit"))
+    })
+
+    it("signals a binding of a step to itself", {
+        p <- pip_new() |>
+            pip_add("s", \(model = 0) model)
+
+        expect_error(
+            pip_set_params(p, list(model = ~s)),
+            "in steps that don't come after it: 's'"
+        )
+        expect_equal(p[["unbound"]][["s"]], "model")
+    })
+
+    it("signals relative references", {
+        p <- bind_pip()
+
+        expect_error(
+            pip_set_params(p, list(model = ~ -1)),
+            "must refer to steps by name, not by relative position: model = ~-1"
+        )
+        expect_error(
+            pip_set_params(p, list(model = ~ try(-1))),
+            "not by relative position: model = ~try\\(-1\\)"
+        )
+        expect_equal(p[["depends"]][["rep1"]], character(0))
+    })
+
+    it("signals references to steps that are not in the pipeline", {
+        p <- bind_pip()
+
+        expect_error(
+            pip_set_params(p, list(k = 2, model = ~ a + b)),
+            paste(
+                "params refer to steps that are not in the pipeline:",
+                "model = ~a \\+ b - to set a formula as value, give it as a",
+                "string"
+            )
+        )
+        expect_equal(p[["rep1", "params"]], list(model = 0, k = 1))
+    })
+
+    it("handles bindings of unknown params like other unknown params", {
+        p <- bind_pip()
+
+        pip_set_params(
+            p,
+            list(n = 6, unused = ~missing_step, other = ~ -1),
+            unknown = "ignore"
+        )
+        expect_equal(p[["data", "params"]], list(n = 6))
+
+        expect_warning(
+            pip_set_params(p, list(n = 7, unused = ~missing_step)),
+            "not defined in the target: unused"
+        )
+        expect_equal(p[["data", "params"]], list(n = 7))
+
+        expect_error(
+            pip_set_params(p, list(unused = ~missing_step), unknown = "error"),
+            "not defined in the target: unused"
+        )
+    })
+
+    it("does not check bindings of params that only locked steps have", {
+        p <- bind_pip()
+        pip_lock(p[c("rep1", "rep2")])
+
+        expect_message(
+            pip_set_params(p, list(n = 6, model = ~missing_step)),
+            NA
+        )
+
+        expect_equal(p[["data", "params"]], list(n = 6))
+        expect_equal(p[["rep1", "params"]], list(model = 0, k = 1))
+    })
+
+    it("binds via p[[step, 'params']] <- value", {
+        p <- bind_pip()
+
+        p[["rep2", "params"]] <- list(model = ~fit1)
+
+        expect_equal(p[["depends"]][["rep2"]], c(model = "fit1"))
+        expect_equal(p[["depends"]][["rep1"]], character(0))
+    })
 })
 
 
@@ -5254,6 +5823,477 @@ describe("pip_param_value", {
     })
 })
 
+describe("pip_output_value", {
+    # S3 methods are looked up from the package namespace, so test methods
+    # must be registered there.
+    register_output_value <- function(cls, fn) {
+        registerS3method(
+            "pip_output_value",
+            class = cls,
+            method = fn,
+            envir = asNamespace("pipeflow")
+        )
+    }
+
+    # Records the context of every value the hook was applied to.
+    stamp <- function(x) structure(x, class = "ov_stamp")
+    register_output_value("ov_stamp", function(x, ctx = list(), ...) {
+        attr(x, "ctx") <- ctx
+        x
+    })
+    ctx_of <- function(x) attr(x, "ctx")
+
+    it("returns x unchanged by default", {
+        expect_identical(pip_output_value(1:3), 1:3)
+        expect_identical(pip_output_value("a"), "a")
+        expect_null(pip_output_value(NULL))
+    })
+
+    it("leaves the outputs of a pipeline unchanged by default", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x + 1) |>
+            pip_add("s2", \(x = ~s1) list(a = x, b = NULL))
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["s1", "out"]], 2)
+        expect_equal(p[["s2", "out"]], list(a = 2, b = NULL))
+    })
+
+    it("provides the step name and the step's time stamp", {
+        p <- pip_new() |> pip_add("s", \(x = 1) stamp(x))
+        pip_run(p, lgr = NULL)
+
+        ctx <- ctx_of(p[["s", "out"]])
+        expect_equal(ctx[["step"]], "s")
+        expect_null(ctx[["key"]])
+        expect_equivalent(ctx[["time"]], p[["s", "time"]])
+    })
+
+    it("provides the partition key of a split step", {
+        p <- pip_new() |>
+            pip_add(
+                "split",
+                \(x = 1) list(a = stamp(1), b = stamp(2)),
+                exec = "split"
+            )
+        pip_run(p, lgr = NULL)
+
+        out <- p[["split", "out"]]
+        expect_equal(ctx_of(out[["a"]])[["key"]], "a")
+        expect_equal(ctx_of(out[["b"]])[["key"]], "b")
+    })
+
+    it("provides the key and one time stamp for a mapped step", {
+        p <- pip_new() |>
+            pip_add("split", \(x = 1) list(a = 1, b = 2), exec = "split") |>
+            pip_add("map", \(x = ~split) stamp(x * 10))
+        pip_run(p, lgr = NULL)
+
+        out <- p[["map", "out"]]
+        expect_equal(ctx_of(out[["a"]])[["key"]], "a")
+        expect_equal(ctx_of(out[["b"]])[["key"]], "b")
+        expect_equal(
+            ctx_of(out[["a"]])[["time"]],
+            ctx_of(out[["b"]])[["time"]]
+        )
+        expect_equivalent(ctx_of(out[["a"]])[["time"]], p[["map", "time"]])
+    })
+
+    it("provides no key for a reduce step", {
+        p <- pip_new() |>
+            pip_add("split", \(x = 1) list(a = 1, b = 2), exec = "split") |>
+            pip_add(
+                "reduce",
+                \(x = ~split) stamp(sum(unlist(x))),
+                exec = "reduce"
+            )
+        pip_run(p, lgr = NULL)
+
+        expect_null(ctx_of(p[["reduce", "out"]])[["key"]])
+        expect_equal(unclass(p[["reduce", "out"]])[[1L]], 3)
+    })
+
+    it("does not walk into the elements of a plain list", {
+        p <- pip_new() |>
+            pip_add("s", \(x = 1) list(a = stamp(1), b = NULL))
+        pip_run(p, lgr = NULL)
+
+        out <- p[["s", "out"]]
+        expect_null(ctx_of(out[["a"]]))
+        expect_equal(names(out), c("a", "b"))
+    })
+
+    it("passes classed lists and data frames to a method as a whole", {
+        register_output_value("ov_whole", function(x, ctx = list(), ...) {
+            attr(x, "n") <- length(x)
+            x
+        })
+        p <- pip_new() |>
+            pip_add("classed", \(x = 1) {
+                structure(list(a = 1, b = 2), class = "ov_whole")
+            }) |>
+            pip_add("frame", \(x = 1) {
+                structure(
+                    data.frame(a = 1:2, b = 3:4),
+                    class = c("ov_whole", "data.frame")
+                )
+            })
+        pip_run(p, lgr = NULL)
+
+        expect_equal(attr(p[["classed", "out"]], "n"), 2L)
+        expect_equal(attr(p[["frame", "out"]], "n"), 2L)
+    })
+
+    it("lets a method walk the elements of an output itself", {
+        register_output_value("ov_bundle", function(x, ctx = list(), ...) {
+            x[] <- lapply(x, FUN = pip_output_value, ctx = ctx)
+            x
+        })
+        p <- pip_new() |>
+            pip_add("s", \(x = 1) {
+                structure(
+                    list(a = stamp(1), b = NULL),
+                    class = "ov_bundle"
+                )
+            })
+        pip_run(p, lgr = NULL)
+
+        out <- p[["s", "out"]]
+        expect_equal(ctx_of(out[["a"]])[["step"]], "s")
+        expect_equal(names(out), c("a", "b"))
+        expect_null(out[["b"]])
+    })
+
+    it("makes the annotated value the output of the step", {
+        p <- pip_new() |>
+            pip_add("make", \(x = 1) stamp(x)) |>
+            pip_add("use", \(y = ~make) ctx_of(y)[["step"]])
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["use", "out"]], "make")
+        expect_equal(ctx_of(pip_collect(p)[["make"]])[["step"]], "make")
+    })
+
+    it("turns an error in a method into a step error", {
+        register_output_value("ov_broken", function(x, ctx = list(), ...) {
+            stop("cannot annotate")
+        })
+        p <- pip_new() |>
+            pip_add("s", \(x = 1) structure(x, class = "ov_broken"))
+
+        expect_error(
+            pip_run(p, lgr = NULL),
+            "step 's': cannot annotate",
+            class = "pipeflow_step_error"
+        )
+        expect_equal(unname(p[["s", "state"]]), "failed")
+    })
+
+    it("names the partition key an error in a method belongs to", {
+        register_output_value("ov_broken", function(x, ctx = list(), ...) {
+            stop("cannot annotate")
+        })
+        p <- pip_new() |>
+            pip_add("split", \(x = 1) list(a = 1, b = 2), exec = "split") |>
+            pip_add("map", \(x = ~split) {
+                if (x == 2) structure(x, class = "ov_broken") else x
+            })
+
+        err <- tryCatch(
+            pip_run(p, lgr = NULL),
+            pipeflow_step_error = function(e) e
+        )
+        expect_equal(err[["message"]], "step 'map': key 'b': cannot annotate")
+        expect_s3_class(err[["parent"]], "pipeflow_key_error")
+        expect_equal(err[["parent"]][["key"]], "b")
+    })
+
+    it("stores the key error of a method when the run continues", {
+        register_output_value("ov_broken", function(x, ctx = list(), ...) {
+            stop("cannot annotate")
+        })
+        p <- pip_new() |>
+            pip_add(
+                "split",
+                \(x = 1) list(a = 1, b = structure(2, class = "ov_broken")),
+                exec = "split"
+            )
+
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        out <- p[["split", "out"]]
+        expect_s3_class(out, "pipeflow_key_error")
+        expect_equal(out[["key"]], "b")
+    })
+
+    it("continues the run after an error in a method", {
+        register_output_value("ov_broken", function(x, ctx = list(), ...) {
+            stop("cannot annotate")
+        })
+        p <- pip_new() |>
+            pip_add("bad", \(x = 1) structure(x, class = "ov_broken")) |>
+            pip_add("good", \(x = 1) x + 1)
+
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        expect_equal(unname(p[["state"]]), c("failed", "done"))
+        expect_equal(p[["good", "out"]], 2)
+    })
+
+    it("is not applied to the output of a failed step", {
+        register_output_value("simpleError", function(x, ctx = list(), ...) {
+            attr(x, "ctx") <- ctx
+            x
+        })
+        p <- pip_new() |> pip_add("a", \(x = 1) stop("boom"))
+
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        out <- p[["a", "out"]]
+        expect_s3_class(out, "simpleError")
+        expect_null(ctx_of(out))
+    })
+})
+
+
+describe("pip_param_value<-", {
+    # S3 methods are looked up from the package namespace, so test methods
+    # must be registered there.
+    register_setter <- function(cls, fn) {
+        registerS3method(
+            "pip_param_value<-",
+            class = cls,
+            method = fn,
+            envir = asNamespace("pipeflow")
+        )
+    }
+    register_getter <- function(cls, fn) {
+        registerS3method(
+            "pip_param_value",
+            class = cls,
+            method = fn,
+            envir = asNamespace("pipeflow")
+        )
+    }
+
+    # An annotated value that keeps its unit when a plain value is set.
+    sv_quantity <- function(value, unit = "m") {
+        structure(list(value = value, unit = unit), class = "sv_quantity")
+    }
+    register_getter("sv_quantity", function(x, ...) x[["value"]])
+    register_setter("sv_quantity", function(x, ..., value) {
+        if (inherits(value, "sv_quantity")) {
+            return(value)
+        }
+        x[["value"]] <- value
+        x
+    })
+
+    it("returns value unchanged by default", {
+        expect_identical(`pip_param_value<-`(1, value = 2), 2)
+        expect_identical(`pip_param_value<-`("a", value = "b"), "b")
+        expect_null(`pip_param_value<-`(1, value = NULL))
+    })
+
+    it("round trips with pip_param_value()", {
+        x <- sv_quantity(1, "km")
+        expect_equal(pip_param_value(`pip_param_value<-`(x, value = 7)), 7)
+        expect_equal(pip_param_value(`pip_param_value<-`(1, value = 7)), 7)
+    })
+
+    it("keeps the annotations when a plain value is set", {
+        p <- pip_new() |> pip_add("s", \(x = 1) x * 2)
+        pip_set_params(p, list(x = sv_quantity(3, "km")))
+
+        pip_set_params(p, list(x = 5))
+
+        stored <- pip_get_params(p)[["x"]]
+        expect_s3_class(stored, "sv_quantity")
+        expect_equal(stored[["value"]], 5)
+        expect_equal(stored[["unit"]], "km")
+
+        # the step function still sees the plain value
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["s", "out"]], 10)
+    })
+
+    it("stores an object given as value as the method decides", {
+        p <- pip_new() |> pip_add("s", \(x = 1) x)
+        pip_set_params(p, list(x = sv_quantity(3, "km")))
+
+        pip_set_params(p, list(x = sv_quantity(9, "mi")))
+
+        stored <- pip_get_params(p)[["x"]]
+        expect_equal(stored[["value"]], 9)
+        expect_equal(stored[["unit"]], "mi")
+    })
+
+    it("merges into the stored value of each step separately", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = 1, y = 2) x + y)
+        pip_set_params(p, list(x = sv_quantity(1, "km")))
+        pip_set_params(pip_view(p, step = "s2"), list(x = sv_quantity(1, "mi")))
+
+        pip_set_params(p, list(x = 4))
+
+        after <- p[["params"]]
+        expect_equal(after[[1L]][["x"]][["unit"]], "km")
+        expect_equal(after[[2L]][["x"]][["unit"]], "mi")
+        expect_equal(after[[1L]][["x"]][["value"]], 4)
+        expect_equal(after[[2L]][["x"]][["value"]], 4)
+    })
+
+    it("compares the merged value when deciding to outdate", {
+        p <- pip_new() |> pip_add("s", \(x = 1) x)
+        pip_set_params(p, list(x = sv_quantity(3, "km")))
+        pip_run(p, lgr = NULL)
+
+        # the merged value equals the stored one, so nothing is outdated
+        pip_set_params(p, list(x = 3))
+        expect_equal(unname(p[["s", "state"]]), "done")
+
+        pip_set_params(p, list(x = 3), force = TRUE)
+        expect_equal(unname(p[["s", "state"]]), "outdated")
+    })
+
+    it("passes ... on to the method", {
+        register_setter("sv_dots", function(x, factor = 1, ..., value) {
+            x[["value"]] <- value * factor
+            x
+        })
+        p <- pip_new() |> pip_add("s", \(x = 1) x)
+        pip_set_params(
+            p,
+            list(x = structure(list(value = 1), class = "sv_dots"))
+        )
+
+        pip_set_params(p, list(x = 5), factor = 10)
+
+        expect_equal(pip_get_params(p)[["x"]][["value"]], 50)
+    })
+
+    it("passes options named like internal arguments on to the method", {
+        register_setter("sv_opts", function(x, bind = "none", ..., value) {
+            x[["value"]] <- value
+            x[["bind"]] <- bind
+            x
+        })
+        p <- pip_new() |>
+            pip_add("s0", \() 1) |>
+            pip_add("s", \(x = 1, y = 0) x + y)
+        pip_set_params(p, list(x = structure(list(), class = "sv_opts")))
+
+        pip_set_params(p, list(x = 5, y = ~s0), bind = FALSE)
+
+        expect_equal(pip_get_params(p)[["x"]][["bind"]], FALSE)
+        expect_equal(p[["depends"]][["s"]], c(y = "s0"))
+    })
+
+    it("reports all failing parameters at once and sets nothing", {
+        register_setter("sv_broken", function(x, ..., value) {
+            stop("cannot set ", x[["name"]])
+        })
+        broken <- function(name) {
+            structure(list(name = name), class = "sv_broken")
+        }
+        p <- pip_new() |>
+            pip_add("s1", \(a = 1) a) |>
+            pip_add("s2", \(b = 2) b)
+        pip_set_params(p, list(a = broken("a"), b = broken("b")))
+        pip_run(p, lgr = NULL)
+
+        err <- expect_error(
+            pip_set_params(p, list(a = 9, b = 9)),
+            class = "pipeflow_set_params_error"
+        )
+        expect_equal(err[["errors"]][["step"]], c("s1", "s2"))
+        expect_equal(err[["errors"]][["name"]], c("a", "b"))
+        expect_equal(
+            err[["errors"]][["message"]],
+            c("cannot set a", "cannot set b")
+        )
+        expect_length(err[["parents"]], 2L)
+
+        # nothing was set and no step was outdated
+        expect_s3_class(pip_get_params(p)[["a"]], "sv_broken")
+        expect_equal(unname(p[["state"]]), c("done", "done"))
+    })
+
+    it("leaves the stored value of a copying method untouched on failure", {
+        # The all-or-nothing guarantee holds for methods that return a new
+        # value. For a reference-backed value that means copying it first,
+        # as the method below does.
+        sv_env <- function(value) {
+            e <- new.env(parent = emptyenv())
+            e[["value"]] <- value
+            structure(e, class = "sv_env")
+        }
+        register_getter("sv_env", function(x, ...) x[["value"]])
+        register_setter("sv_env", function(x, ..., value) {
+            copy <- sv_env(value)
+            copy
+        })
+        register_setter("sv_fails", function(x, ..., value) {
+            stop("cannot set")
+        })
+
+        stored <- sv_env(1)
+        p <- pip_new() |>
+            pip_add("s1", \(a = 1) a) |>
+            pip_add("s2", \(b = 2) b)
+        pip_set_params(
+            p,
+            list(a = stored, b = structure(2, class = "sv_fails"))
+        )
+        pip_run(p, lgr = NULL)
+
+        expect_error(
+            pip_set_params(p, list(a = 9, b = 9)),
+            class = "pipeflow_set_params_error"
+        )
+        expect_identical(pip_get_params(p)[["a"]], stored)
+        expect_equal(stored[["value"]], 1)
+        expect_equal(unname(p[["state"]]), c("done", "done"))
+        expect_equal(p[["s1", "out"]], 1)
+    })
+
+    it("doesn't merge into the parameters of locked steps", {
+        register_setter("sv_locked", function(x, ..., value) {
+            stop("must not be called")
+        })
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(y = 2) y)
+        pip_set_params(p, list(x = structure(list(), class = "sv_locked")))
+        pip_lock(p["s1"])
+
+        # 'x' is held by the locked step only, so it is neither merged
+        # nor reported as unknown
+        expect_no_warning(pip_set_params(p, list(x = 5, y = 7)))
+        expect_s3_class(pip_get_params(p)[["x"]], "sv_locked")
+        expect_equal(pip_get_params(p)[["y"]], 7)
+    })
+
+    it("handles unknown parameters before anything is merged", {
+        register_setter("sv_never", function(x, ..., value) {
+            stop("must not be called")
+        })
+        p <- pip_new() |> pip_add("s", \(x = 1) x)
+        pip_set_params(p, list(x = structure(list(), class = "sv_never")))
+
+        expect_error(
+            pip_set_params(p, list(x = 1, nope = 2), unknown = "error"),
+            "Trying to set parameters not defined in the target: nope"
+        )
+    })
+})
 
 describe("benchmarking", {
     skip("benchmarking tests are skipped by default")

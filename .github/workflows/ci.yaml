@@ -19,7 +19,9 @@ env:
 jobs:
   lint:
     name: Lint (lintr)
-    runs-on: ubuntu-latest
+    # Not ubuntu-latest: renv.lock pins the P3M binaries for Ubuntu 24.04
+    # (noble), which don't load on newer Ubuntu releases
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       security-events: write   # if uploading SARIF
@@ -77,7 +79,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-24.04, windows-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
@@ -121,7 +123,7 @@ jobs:
 
   check-oldest-r:
     name: R CMD check (R 4.2, oldest supported)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: lint
     permissions:
       contents: read
@@ -150,7 +152,7 @@ jobs:
 
   coverage:
     name: Coverage (covr)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: check
     permissions:
       contents: read

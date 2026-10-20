@@ -130,7 +130,7 @@ describe("print.pipeflow", {
 
         expect_true(grepl("^\\s*\\d+:\\s+s1\\s+x\\s", get_step_line(p, "s1")))
         expect_true(grepl(
-            "^\\s*\\d+:\\s+s2\\s+y,x\\s",
+            "^\\s*\\d+:\\s+s2\\s+x,y\\s",
             get_step_line(p, "s2")
         ))
     })
