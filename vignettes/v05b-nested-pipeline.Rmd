@@ -313,6 +313,16 @@ n_runs()
 toy_outer[["inner_run", "out"]]
 ```
 
+To look at the kept inner pipelines, e.g. while debugging, use
+`pip_inner()`. For a mapped step, it returns one pipeline per partition key:
+
+```{r toy-inner-pips}
+inner_pips <- pip_inner(toy_outer, "inner_run")
+names(inner_pips)
+
+inner_pips[["a"]]
+```
+
 A few things to know:
 
 * Each call has an overhead of a few milliseconds for setting the parameters
@@ -359,8 +369,8 @@ manual <- pip_new("full analysis") |>
         \(dfList = ~split_df, ...) {
             p <- pip_clone(inner)
 
-            # Forward all parameters (from outer and inner)
-            pip_set_params(p, .self$get_params(), unknown = "ignore")
+            # Forward the parameters of the step to the inner pipeline
+            pip_set_params(p, list(...))
 
             Map(
                 f = run_inner_pip,
@@ -382,22 +392,18 @@ manual
 In this version, the `inner_run` step does not declare the parameters of the
 inner pipeline as arguments. Instead, its parameters are seeded with the inner
 pipeline's parameters via `params = pip_get_params(inner)`, and the step
-forwards the combined set of *all* existing parameters at run time:
+forwards them to the inner pipeline at run time:
 
-* **`.self`** refers to the pipeline that is currently being run and is
-  available inside every step function that refers to it, without having
-  to declare it. It exposes the usual pipeline interface, so
-  `.self$get_params()` returns the current unbound parameters of the outer
-  pipeline. For more examples on this mechanism see the
-  [self-modifying pipelines](v06-self-modify-pipeline.html) vignette.
 * **`params = pip_get_params(inner)`** registers the inner pipeline's unbound
   parameters (`input_df`, `xVar`, `yVar`, `digits`) as parameters of the
   `inner_run` step. They show up in the step's `params` column, become part
   of the outer pipeline's parameter set, and changing them outdates the step.
-* **`...`** *takes the forwarded parameters*: the parameters passed via
-  `params = pip_get_params(inner)` are forwarded to the step function when the
-  step runs. Since the `inner_run` step only declares `dfList` as an argument,
-  it needs `...` to capture the forwarded parameters.
+* **`...`** *takes the forwarded parameters*: since the `inner_run` step only
+  declares `dfList` as an argument, the registered parameters reach the step
+  function via `...`. It carries exactly the parameters of this step, with
+  their current values (unwrapped, see `?pip_param_value`), so
+  `pip_set_params(p, list(...))` sets them in the inner pipeline, without
+  any unknown parameters to ignore.
   Where the names overlap, the values in `params` would override the function
   defaults: had the inner pipeline an unbound parameter `dfList`, its value
   would replace the reference `~split_df` of the `inner_run` step,
