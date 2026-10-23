@@ -8,6 +8,9 @@ dependencies between steps live in a C++ DAG (Rcpp).
 
 More detailed agent instructions are in `.github/instructions/**` (also
 referenced by `kilo.json`). The important parts are summarized below.
+For call graphs, flow diagrams and invariants, see `dev/pipeflow.md`
+(core) and `dev/as_function.md` (pipelines as functions). Update them when
+you change a flow they describe.
 
 ## Environment
 
