@@ -101,8 +101,8 @@ that may receive a failed input in a continuing run (see Execution). The
 marker lives in the step's `params`, read via `formula_try_args()`; rename
 and `rbind()` rebuild reference formulas and must keep the `try()` wrapper.
 A one-sided formula in `params` is always a reference: `pip_set_params()`
-binds an unbound param to the step (`.pip_bind_row()`), like `bind` of
-`rbind()` and `as.function()`. Only the function made by `as.function()`
+binds an unbound param to the step (`.pip_bind_row()`), also to connect
+pipelines after `rbind()`. Only the function made by `as.function()`
 sets formula arguments as values (`.pip_set_params(bind = FALSE)`).
 
 **C++ DAG (`src/dag.cpp`).** Nodes are stored by a running id. A separate

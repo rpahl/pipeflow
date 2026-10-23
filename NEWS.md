@@ -7,6 +7,10 @@
   `pip_add(outer, "step", f, params = list(input_df = ~split))`.
 - The argument `cache` of `as.function()` is now `TRUE` (the default) or
   `FALSE` instead of the number of inner pipelines to keep.
+- `rbind()` of pipelines lost the argument `bind` (added in 0.5.0.9008).
+  Bind the params after binding the pipelines with `pip_set_params()`, using
+  a view to select the steps, e.g.
+  `pip_set_params(ab[-seq_along(a)], list(data = ~prep))`.
 
 ## New features
 

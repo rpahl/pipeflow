@@ -99,47 +99,6 @@
 # -------
 # Asserts
 # -------
-#' Check a list of bindings
-#'
-#' A binding turns an unbound param into a reference to a step, as in the
-#' `bind` argument of [rbind.pipeflow()].
-#'
-#' @param bind Named list of one-sided formulas, e.g. `list(data = ~step)`.
-#' @param unbound Character vector of the names of the unbound params that
-#' can be bound. If missing, only the form of `bind` is checked.
-#' @return `bind`, invisibly. Signals an error if `bind` is no named list of
-#' one-sided formulas or has names that are not in `unbound`.
-#' @noRd
-.assert_bind <- function(bind, unbound) {
-    bindNames <- names(bind)
-    hasNames <- !is.null(bindNames) &&
-        !anyNA(bindNames) &&
-        all(nzchar(bindNames)) &&
-        !anyDuplicated(bindNames)
-    hasValidNames <- length(bind) == 0L || hasNames
-    if (
-        !is.list(bind) ||
-            !hasValidNames ||
-            !all(vapply(bind, is_one_sided_formula, logical(1)))
-    ) {
-        stop_no_call(
-            "bind must be a named list of one-sided formulas, ",
-            "e.g. list(data = ~step)"
-        )
-    }
-    if (missing(unbound)) {
-        return(invisible(bind))
-    }
-    unknown <- setdiff(bindNames, unbound)
-    if (length(unknown) > 0L) {
-        stop_no_call(
-            "bind has names that are no unbound params of the pipeline: ",
-            toString(unknown)
-        )
-    }
-    invisible(bind)
-}
-
 .assert_exec_mode <- function(exec) {
     if (!.is_single(exec, "character") || is.na(exec)) {
         stop("exec must be a single string")
@@ -1296,32 +1255,8 @@
 }
 
 
-# Bind two pipelines together by concatenating their steps. `bind` turns
-# unbound params of steps of y into references to steps of x.
-.pip_bind <- function(x, y, bind = list()) {
-    .assert_bind(
-        bind,
-        unbound = unique(unlist(.pip_pipenv(y)[["data"]][["unbound"]]))
-    )
-    # The bound steps are resolved in x before the steps of y are appended,
-    # so that a binding can't point to a step of y.
-    targets <- formula_deps(bind)
-    isRelative <- startsWith(targets, "-")
-    if (any(isRelative)) {
-        relative <- paste0(names(targets), " = ~", targets)[isRelative]
-        stop_no_call(
-            "bind must refer to steps by name, not by relative position: ",
-            toString(relative)
-        )
-    }
-    missingSteps <- setdiff(targets, .pip_pipenv(x)[["data"]][["step"]])
-    if (length(missingSteps) > 0L) {
-        stop_no_call(
-            "bind refers to steps that are not in the first pipeline: ",
-            toString(missingSteps)
-        )
-    }
-
+# Bind two pipelines together by concatenating their steps.
+.pip_bind <- function(x, y) {
     out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
     yy <- pip_clone(y)
     yyDat <- .pip_pipenv(yy)[["data"]]
@@ -1353,7 +1288,6 @@
     d <- .pip_dag(outEnv)
     stepsToNodes <- outEnv[[".steps_to_nodes"]]
     rows <- vector("list", nrow(yyDat))
-    boundSteps <- character()
     for (k in seq_len(nrow(yyDat))) {
         step <- yyDat[["step"]][[k]]
         fun <- yyDat[["fun"]][[k]]
@@ -1361,16 +1295,6 @@
         exec <- yyDat[["exec"]][[k]]
         params <- yyDat[["params"]][[k]]
         depends <- yyDat[["depends"]][[k]]
-
-        # Bind the unbound params named in `bind`: they become references,
-        # which are then re-created like the existing ones.
-        bound <- intersect(names(targets), yyDat[["unbound"]][[k]])
-        if (length(bound) > 0L) {
-            params[bound] <- bind[bound]
-            depends[bound] <- targets[bound]
-            depends <- depends[order(match(names(depends), names(params)))]
-            boundSteps <- c(boundSteps, step)
-        }
 
         # Point the formula dependencies to the (renamed) steps of y, which
         # also turns relative references into step names. References wrapped
@@ -1420,8 +1344,6 @@
         list(outEnv[["data"]], appRows),
         use.names = TRUE
     )
-    # The bound steps get new inputs, so their outputs are no longer valid.
-    .pip_outdate_downstream(out, boundSteps)
     out
 }
 
@@ -3504,11 +3426,18 @@ pip_output_value.default <- function(x, ctx = list(), ...) {
 #'   pip_add("load", \(n = 5) seq_len(n)) |>
 #'   pip_add("fit_mean", \(x = ~load) mean(x)) |>
 #'   pip_add("fit_max", \(x = ~load) max(x)) |>
-#'   pip_add("report", \(model = NA) paste("result:", model))
+#'   pip_add("report", \(model = NA) paste("result:", model)) |>
+#'   pip_add("report_mean", \(model = NA) paste("mean:", model))
+#'
+#' # A view selects the steps to bind, here only "report_mean"
+#' pip_set_params(q["report_mean"], params = list(model = ~fit_mean))
+#'
+#' # Without a view, the param is bound in all steps that have it unbound
 #' pip_set_params(q, params = list(model = ~fit_max))
 #' q
 #' pip_run(q)
 #' q[["report", "out"]]
+#' q[["report_mean", "out"]]
 #' @export
 pip_set_params <- function(
     x,

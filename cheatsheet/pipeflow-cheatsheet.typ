@@ -304,21 +304,35 @@
   raw("q"), arrow-txt, minitab((cell-alt, cell-alt)),
 )
 
-// after rbind(p1, p2): connect the parts with pip_replace(p, "data2", ...)
-#let connect-pic = dag(
+// rbind(p1, p2) before connecting: two separate parts, aligned with
+// connect-pic below
+#let unconnected-pic = dag(
   178,
-  30,
+  26,
   (
     nd("data", 0, 6, "done"),
     nd("prep", 44, 6, "done"),
-    nd("data2", 100, 6, "new", w: 28),
-    nd("model", 148, 6, "outdated", w: 30),
+    nd("data2", 100, 6, "done", w: 28, label: "data"),
+    nd("model", 148, 6, "done", w: 30),
   ),
-  (("data", "prep"), ("prep", "data2", true), ("data2", "model")),
+  (("data", "prep"), ("data2", "model")),
   notes: (
     (29, 16, [p1]),
     (130, 16, [p2]),
   ),
+)
+
+// after rbind(p1, p2): connect the parts with pip_replace(p, "data2", ...)
+#let connect-pic = dag(
+  178,
+  12,
+  (
+    nd("data", 0, 2, "done"),
+    nd("prep", 44, 2, "done"),
+    nd("data2", 100, 2, "new", w: 28),
+    nd("model", 148, 2, "outdated", w: 30),
+  ),
+  (("data", "prep"), ("prep", "data2", true), ("data2", "model")),
 )
 
 // states after pip_replace(p, "squared", ...)
@@ -671,14 +685,13 @@
         a new pipeline with the steps of both. Clashing step names get a
         suffix: `data` becomes `data2`.
       ]
+      #align(center, unconnected-pic)
       #align(center, connect-pic)
       #fn[`pip_replace(p, "data2", \(x = ~prep) x)`][
         connects data2 with prep manually after the bind.
       ]
-      #v(2pt)
-      To connect the parts in one go, use:
-      #v(-4pt)
-      #fn[`p <- rbind(p1, p2, bind = list(data = ~prep))`][
+      #fn[`pip_set_params(p["data2"], list(x = ~prep))`][
+        or bind its param `x` to prep: the view selects the steps to bind.
       ]
     ]
 

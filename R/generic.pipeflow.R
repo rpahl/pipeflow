@@ -1036,23 +1036,13 @@ str.pipeflow <- function(object, ...) {
 #' returned unchanged.
 #'
 #' To feed steps of the second pipeline with the output of steps of the
-#' first one, use the `bind` argument. It binds unbound params of the second
-#' pipeline, which then become references to steps of the first one, as if
-#' they had been written as `param = ~step` in the step functions. The bound
-#' params are no longer params of the result (see [pip_get_params()]), and
-#' bound steps that have been run before are marked `"outdated"`, together
-#' with their downstream steps.
+#' first one, bind their params with [pip_set_params()] afterwards, e.g.
+#' `pip_set_params(ab, list(data = ~prep))`. This binds the param in all
+#' steps that have it unbound, so to bind only the steps of the second
+#' pipeline, select them with a view, e.g. `ab[-seq_along(a)]`.
 #' @param ... Two or more pipeflow pipeline objects.
 #' @param deparse.level Not used, for compatibility with the generic
 #' `rbind()`.
-#' @param bind A named list of one-sided formulas, e.g.
-#' `list(data = ~prep)`, that binds the unbound params of the second
-#' pipeline to steps of the first pipeline. If several steps of the second
-#' pipeline have a param of that name, all of them are bound. The steps are
-#' referred to by name (`~try(step)` is possible as well, see [pip_run()]),
-#' not by relative position. Only possible if exactly two pipelines are
-#' bound; to bind more, chain the calls, e.g.
-#' `rbind(rbind(a, b, bind = ...), c, bind = ...)`.
 #' @return A new pipeflow pipeline object representing the bound pipelines.
 #' @examples
 #' a <- pip_new("a") |>
@@ -1072,26 +1062,20 @@ str.pipeflow <- function(object, ...) {
 #'
 #' # Feed the param `data` of the second pipeline with the output of "prep"
 #' d <- pip_new("d") |> pip_add("scale", \(data = 1, k = 3) data * k)
-#' ad <- rbind(a, d, bind = list(data = ~prep))
+#' ad <- rbind(a, d)
+#' pip_set_params(ad[-seq_along(a)], list(data = ~prep))
 #' ad[["scale", "depends"]]
 #' pip_get_params(ad) # `data` is no longer a param
 #' pip_run(ad)
 #' ad[["scale", "out"]]
 #' @export
-rbind.pipeflow <- function(..., deparse.level = 1, bind = list()) {
+rbind.pipeflow <- function(..., deparse.level = 1) {
     pips <- list(...)
     if (length(pips) == 0L) {
         stop("at least one pipeflow pipeline must be provided")
     }
     for (pip in pips) {
         .assert_pip(pip)
-    }
-    .assert_bind(bind)
-    if (length(bind) > 0L && length(pips) != 2L) {
-        stop_no_call(
-            "bind can only be used to bind exactly two pipelines, ",
-            "e.g. rbind(a, b, bind = list(data = ~step))"
-        )
     }
 
     out <- pips[[1L]]
@@ -1100,7 +1084,7 @@ rbind.pipeflow <- function(..., deparse.level = 1, bind = list()) {
     }
 
     for (pip in pips[-1L]) {
-        out <- .pip_bind(out, pip, bind = bind)
+        out <- .pip_bind(out, pip)
     }
     out
 }

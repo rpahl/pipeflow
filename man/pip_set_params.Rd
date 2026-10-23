@@ -142,9 +142,16 @@ q <- pip_new() |>
   pip_add("load", \(n = 5) seq_len(n)) |>
   pip_add("fit_mean", \(x = ~load) mean(x)) |>
   pip_add("fit_max", \(x = ~load) max(x)) |>
-  pip_add("report", \(model = NA) paste("result:", model))
+  pip_add("report", \(model = NA) paste("result:", model)) |>
+  pip_add("report_mean", \(model = NA) paste("mean:", model))
+
+# A view selects the steps to bind, here only "report_mean"
+pip_set_params(q["report_mean"], params = list(model = ~fit_mean))
+
+# Without a view, the param is bound in all steps that have it unbound
 pip_set_params(q, params = list(model = ~fit_max))
 q
 pip_run(q)
 q[["report", "out"]]
+q[["report_mean", "out"]]
 }
