@@ -74,7 +74,8 @@ instead of weakening tests or masking errors.
 
 Because `pipenv` is a reference, functions mostly mutate it in place (often
 with `data.table::set` or `:=`) and return `x` invisibly. `pip_clone()` or
-`p[]` makes a real copy, and that copy includes the DAG via `dag_clone()`.
+`p[]` on a pipeline makes a real copy, and that copy includes the DAG via
+`dag_clone()` (on a view, `v[]` is a view of the same pipeline).
 
 **Views.** A view is a `pipeflow` whose `view` field holds the node ids of
 the steps it covers (`v[["view"]]` shows them as step names). Views come

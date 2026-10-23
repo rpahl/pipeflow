@@ -2262,6 +2262,28 @@ describe("rbind followed by pip_set_params", {
         )
     })
 
+    it("binds a locked step only after unlocking it", {
+        b <- right_pip()
+        pip_run(b, lgr = NULL)
+        pip_lock(b)
+
+        out <- rbind(left_pip(), b)
+        pip_set_params(out, list(data = ~prep))
+        expect_equal(out[["fit", "depends"]], character(0))
+        expect_equal(out[["fit", "unbound"]], c("data", "k"))
+
+        v <- out["fit"]
+        pip_unlock(v)
+        pip_set_params(v, list(data = ~prep))
+        pip_lock(v)
+        expect_equal(out[["fit", "depends"]], c(data = "prep"))
+        expect_true(out[["fit", "locked"]])
+
+        pip_unlock(out)
+        pip_run(out, lgr = NULL)
+        expect_equal(out[["fit", "out"]], 12)
+    })
+
     it("can be chained to bind more than two pipelines", {
         c3 <- pip_new("c") |>
             pip_add("fit", \(data = NULL) data * 100)

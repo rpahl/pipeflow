@@ -137,8 +137,9 @@ structure:
    a `try()` wrapper. Run-time lookup uses only `depends`.
 6. **Mutate in place, return `x` invisibly.** Edits use
    `data.table::set()` or `env[["data"]] <- ...` on the shared `pipenv`.
-   Real copies only come from `pip_clone()` / `.pip_clone()`, `p[]` and
-   `p[i, view = FALSE]`.
+   Real copies only come from `pip_clone()` / `.pip_clone()`, `p[]` on a
+   pipeline and `p[i, view = FALSE]`. On a view, `v[]` returns a view of the
+   same pipeline.
 7. **`.step_call` is restored on exit.** `.pip_call_step()` sets the
    running step (and its partition key) and restores the caller's values,
    so nested runs of inner pipelines see correct values.
@@ -211,7 +212,6 @@ flowchart LR
     sp --> out --> reach --> dag
     rbd --> bnd --> cln
     bnd --> ren
-    bnd --> out
     run --> rr --> ex --> cs
     rr --> hooks
     run --> reach
@@ -455,7 +455,7 @@ access must go through `.pip_dag()`, never `pipenv$.dag` directly.
 | New exec mode | `.assert_exec_mode()`, `.pip_execute_step_call()` | `.pip_annotate_output()`, docs of `pip_add()` |
 | New reference syntax | `utils.R` formula helpers | `.extract_depends()`, `formula_set_ref()` users (rename, rbind, copy) |
 | New step or run state | `.step_states` / `.run_states` in `pipeflow-package.R` | `pip_run()`, `.pip_outdate_downstream()`, print colours |
-| New structural edit | Follow `pip_replace()` / `pip_remove()` | Keep invariants 1–4. Gate with `.pip_step_in_view()`. Call `.fun_rename()` / `.fun_release()` if steps are renamed or dropped. |
+| New structural edit | Follow `pip_replace()` / `pip_remove()` | Keep invariants 1–4. Gate with `.pip_step_in_view()`. Call `.fun_rename()` if steps are renamed. Removed steps keep their cache slots until the function is garbage-collected (see [as_function.md](as_function.md)). |
 | New view filter | `pip_view()` (`validFilters`) | `[.pipeflow` |
 | New `pip_*` function | `R/pipeflow.R` with roxygen and `@export` | `.pip_method_table()` if it should work as `p$fn()`, `_pkgdown.yml` reference index, cheat sheet, `NEWS.md` |
 

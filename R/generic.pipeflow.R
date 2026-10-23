@@ -1039,7 +1039,9 @@ str.pipeflow <- function(object, ...) {
 #' first one, bind their params with [pip_set_params()] afterwards, e.g.
 #' `pip_set_params(ab, list(data = ~prep))`. This binds the param in all
 #' steps that have it unbound, so to bind only the steps of the second
-#' pipeline, select them with a view, e.g. `ab[-seq_along(a)]`.
+#' pipeline, select them with a view, e.g. `ab[-seq_along(a)]`. Locked
+#' steps are not bound: unlock them before and lock them again afterwards,
+#' e.g. with [pip_unlock()] and [pip_lock()] on the same view.
 #' @param ... Two or more pipeflow pipeline objects.
 #' @param deparse.level Not used, for compatibility with the generic
 #' `rbind()`.
