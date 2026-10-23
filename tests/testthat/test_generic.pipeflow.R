@@ -2174,7 +2174,7 @@ describe("rbind", {
 })
 
 
-describe("rbind with bind", {
+describe("rbind followed by pip_set_params", {
     left_pip <- function() {
         pip_new("a") |>
             pip_add("prep", \(x = 1) x * 2)
@@ -2185,20 +2185,11 @@ describe("rbind with bind", {
     }
 
     it("binds an unbound param of the second pipeline to a step", {
-        out <- rbind(left_pip(), right_pip(), bind = list(data = ~prep))
+        out <- rbind(left_pip(), right_pip())
+        pip_set_params(out, list(data = ~prep))
 
         expect_equal(out[["fit", "depends"]], c(data = "prep"))
         expect_equal(out[["fit", "unbound"]], "k")
-        expect_equal(
-            out[["fit", "params"]][["data"]],
-            ~prep,
-            ignore_attr = TRUE
-        )
-        expect_equal(
-            formals(out[["fit", "fun"]])[["data"]],
-            ~prep,
-            ignore_attr = TRUE
-        )
         expect_equal(pip_get_params(out), list(x = 1, k = 10))
         nodes <- .pip_get_reachable_nodes(out, "prep")
         steps <- .pip_filter_nodes(out, nodes)[["step"]]
@@ -2208,24 +2199,14 @@ describe("rbind with bind", {
         expect_equal(out[["fit", "out"]], 12)
     })
 
-    it("outdates the bound step when the bound step changes", {
-        out <- rbind(left_pip(), right_pip(), bind = list(data = ~prep))
-        pip_run(out, lgr = NULL)
-
-        pip_set_params(out, list(x = 5))
-        expect_equal(unname(out[["state"]]), c("outdated", "outdated"))
-
-        pip_run(out, lgr = NULL)
-        expect_equal(out[["fit", "out"]], 20)
-    })
-
     it("outdates bound steps that have been run, with their downstream", {
         b <- right_pip() |>
             pip_add("other", \(y = 1) y) |>
             pip_add("report", \(fit = ~fit) fit * 2)
         pip_run(b, lgr = NULL)
 
-        out <- rbind(left_pip(), b, bind = list(data = ~prep))
+        out <- rbind(left_pip(), b)
+        pip_set_params(out, list(data = ~prep))
         expect_equal(
             out[["state"]],
             c(
@@ -2243,7 +2224,8 @@ describe("rbind with bind", {
             pip_add("prep", \(x = 100) x) |>
             pip_add("fit", \(data = NULL, own = ~prep) data + own)
 
-        out <- rbind(left_pip(), b, bind = list(data = ~prep))
+        out <- rbind(left_pip(), b)
+        pip_set_params(out, list(data = ~prep))
         expect_equal(unname(out[["step"]]), c("prep", "prep2", "fit"))
         expect_equal(
             out[["fit", "depends"]],
@@ -2254,106 +2236,48 @@ describe("rbind with bind", {
         expect_equal(out[["fit", "out"]], 102)
     })
 
-    it("binds all steps that have the param and keeps references", {
+    it("binds only the steps of the second pipeline via a view", {
+        a <- pip_new("a") |>
+            pip_add("prep", \(data = 1) data * 2)
         b <- pip_new("b") |>
-            pip_add("s1", \(data = 0) data + 1) |>
-            pip_add("s2", \(data = 0) data + 2) |>
-            pip_add("s3", \(data = ~s1) data + 3)
+            pip_add("prep", \(data = 0) data + 1) |>
+            pip_add("fit", \(data = 0) data + 2)
 
-        out <- rbind(left_pip(), b, bind = list(data = ~prep))
-        expect_equal(out[["s1", "depends"]], c(data = "prep"))
-        expect_equal(out[["s2", "depends"]], c(data = "prep"))
-        expect_equal(out[["s3", "depends"]], c(data = "s1"))
-        expect_equal(pip_get_params(out), list(x = 1))
+        out <- rbind(a, b)
+        expect_error(
+            pip_set_params(out, list(data = ~prep)),
+            "cannot bind 'data' to step 'prep' in steps that don't come after"
+        )
+        expect_equal(pip_get_params(out), list(data = 1))
+
+        pip_set_params(out[-seq_along(a)], list(data = ~prep))
+        expect_equal(out[["prep", "unbound"]], "data")
+        expect_equal(out[["prep2", "depends"]], c(data = "prep"))
+        expect_equal(out[["fit", "depends"]], c(data = "prep"))
 
         pip_run(out, lgr = NULL)
         expect_equal(
             pip_collect(out),
-            list(prep = 2, s1 = 3, s2 = 4, s3 = 6)
+            list(prep = 2, prep2 = 3, fit = 4)
         )
     })
 
-    it("keeps the order of the params in depends", {
-        b <- pip_new("b") |>
-            pip_add("first", \(y = 1) y) |>
-            pip_add("fit", \(data = NULL, z = ~first) data + z)
-
-        out <- rbind(left_pip(), b, bind = list(data = ~prep))
-        expect_equal(
-            out[["fit", "depends"]],
-            c(data = "prep", z = "first")
-        )
-    })
-
-    it("binds several params, also to the same step", {
-        a <- left_pip() |>
-            pip_add("other", \(y = 5) y)
-        b <- pip_new("b") |>
-            pip_add("fit", \(u = 0, v = 0, w = 0, k = 1) u + v + w + k)
-
-        out <- rbind(a, b, bind = list(w = ~other, u = ~prep, v = ~prep))
-        expect_equal(
-            out[["fit", "depends"]],
-            c(u = "prep", v = "prep", w = "other")
-        )
-        expect_equal(pip_get_params(out), list(x = 1, y = 5, k = 1))
-
-        pip_run(out, lgr = NULL)
-        expect_equal(out[["fit", "out"]], 2 + 2 + 5 + 1)
-    })
-
-    it("binds a param that is passed on via ...", {
-        b <- pip_new("b") |>
-            pip_add("fit", \(...) sum(...), params = list(data = 0, k = 10))
-
-        out <- rbind(left_pip(), b, bind = list(data = ~prep))
-        expect_equal(out[["fit", "depends"]], c(data = "prep"))
-
-        pip_run(out, lgr = NULL)
-        expect_equal(out[["fit", "out"]], 12)
-    })
-
-    it("binds a param without default that was given via params", {
-        b <- pip_new("b") |>
-            pip_add("avg", mean, params = list(x = 0, na.rm = TRUE))
-
-        out <- rbind(left_pip(), b, bind = list(x = ~prep))
-        expect_equal(out[["avg", "depends"]], c(x = "prep"))
-        expect_equal(out[["avg", "unbound"]], "na.rm")
-
-        pip_run(out, lgr = NULL)
-        expect_equal(out[["avg", "out"]], 2)
-    })
-
-    it("binds to steps with non-syntactic names", {
-        for (target in c("source data", "source-data", "if")) {
-            a <- pip_new("a") |>
-                pip_add(target, \(v = 4) v)
-            ref <- as.name(target)
-            bind <- list(
-                data = eval(bquote(~ .(ref))),
-                k = eval(bquote(~ try(.(ref))))
-            )
-
-            out <- rbind(a, right_pip(), bind = bind)
-            expect_equal(
-                out[["fit", "depends"]],
-                c(data = target, k = target)
-            )
-            pip_run(out, lgr = NULL)
-            expect_equal(out[["fit", "out"]], 8)
-        }
-    })
-
-    it("keeps the lock and the output of a bound step", {
+    it("binds a locked step only after unlocking it", {
         b <- right_pip()
         pip_run(b, lgr = NULL)
         pip_lock(b)
 
-        out <- rbind(left_pip(), b, bind = list(data = ~prep))
-        pip_run(out, lgr = NULL)
+        out <- rbind(left_pip(), b)
+        pip_set_params(out, list(data = ~prep))
+        expect_equal(out[["fit", "depends"]], character(0))
+        expect_equal(out[["fit", "unbound"]], c("data", "k"))
+
+        v <- out["fit"]
+        pip_unlock(v)
+        pip_set_params(v, list(data = ~prep))
+        pip_lock(v)
+        expect_equal(out[["fit", "depends"]], c(data = "prep"))
         expect_true(out[["fit", "locked"]])
-        expect_equal(out[["fit", "out"]], numeric(0))
 
         pip_unlock(out)
         pip_run(out, lgr = NULL)
@@ -2364,142 +2288,14 @@ describe("rbind with bind", {
         c3 <- pip_new("c") |>
             pip_add("fit", \(data = NULL) data * 100)
 
-        ab <- rbind(left_pip(), right_pip(), bind = list(data = ~prep))
-        out <- rbind(ab, c3, bind = list(data = ~fit))
+        ab <- rbind(left_pip(), right_pip())
+        pip_set_params(ab, list(data = ~prep))
+        out <- rbind(ab, c3)
+        pip_set_params(out, list(data = ~fit))
         expect_equal(unname(out[["step"]]), c("prep", "fit", "fit2"))
         expect_equal(out[["fit2", "depends"]], c(data = "fit"))
 
         pip_run(out, lgr = NULL)
         expect_equal(out[["fit2", "out"]], 1200)
-    })
-
-    it("keeps a try() binding", {
-        a <- pip_new("a") |>
-            pip_add("prep", \(x = 1) stop("boom"))
-        b <- pip_new("b") |>
-            pip_add("fit", \(data = NULL) conditionMessage(data))
-
-        out <- rbind(a, b, bind = list(data = ~ try(prep)))
-        expect_equal(
-            out[["fit", "params"]][["data"]],
-            ~ try(prep),
-            ignore_attr = TRUE
-        )
-
-        suppressWarnings(pip_run(out, lgr = NULL, on_error = "continue"))
-        expect_equal(out[["fit", "out"]], "step 'prep' failed: boom")
-    })
-
-    it("gives the same result as without bind for an empty bind", {
-        a <- left_pip()
-        b <- pip_new("b") |>
-            pip_add("prep", \(x = 3) x) |>
-            pip_add("fit", \(data = ~prep) data)
-
-        expected <- rbind(a, b)
-        out <- rbind(a, b, bind = list())
-        cols <- c("step", "params", "depends", "unbound", "state", "nodeId")
-        expect_equal(out[, cols], expected[, cols], ignore_attr = TRUE)
-    })
-
-    it("does not change the input pipelines", {
-        a <- left_pip()
-        b <- right_pip()
-
-        out <- rbind(a, b, bind = list(data = ~prep))
-        expect_equal(unname(a[["step"]]), "prep")
-        expect_equal(b[["fit", "depends"]], character(0))
-        expect_equal(b[["fit", "unbound"]], c("data", "k"))
-        expect_equal(pip_get_params(b), list(data = NULL, k = 10))
-    })
-
-    it("signals an invalid bind", {
-        a <- left_pip()
-        b <- right_pip()
-        msg <- "named list of one-sided formulas"
-
-        expect_error(rbind(a, b, bind = list(~prep)), msg)
-        expect_error(rbind(a, b, bind = list(data = "prep")), msg)
-        expect_error(rbind(a, b, bind = list(data = y ~ prep)), msg)
-        expect_error(rbind(a, b, bind = ~prep), msg)
-        expect_error(
-            rbind(a, b, bind = list(data = ~prep, data = ~prep)),
-            msg
-        )
-    })
-
-    it("signals an invalid empty bind for any number of pipelines", {
-        a <- left_pip()
-        b <- right_pip()
-        msg <- "named list of one-sided formulas"
-
-        for (bind in list(NULL, character(0), numeric(0))) {
-            expect_error(rbind(a, bind = bind), msg)
-            expect_error(rbind(a, b, bind = bind), msg)
-            expect_error(rbind(a, b, b, bind = bind), msg)
-        }
-    })
-
-    it("signals names that are no unbound params of the second pipeline", {
-        a <- left_pip()
-        b <- right_pip()
-
-        expect_error(
-            rbind(a, b, bind = list(nope = ~prep)),
-            "no unbound params of the pipeline: nope"
-        )
-        expect_error(
-            rbind(a, b, bind = list(x = ~prep)),
-            "no unbound params of the pipeline: x"
-        )
-        b2 <- b |> pip_add("other", \(data = ~fit) data)
-        expect_no_error(rbind(a, b2, bind = list(data = ~prep)))
-        expect_error(
-            rbind(a, pip_new("empty"), bind = list(data = ~prep)),
-            "no unbound params of the pipeline: data"
-        )
-    })
-
-    it("signals targets that are not steps of the first pipeline", {
-        a <- left_pip()
-        b <- right_pip() |>
-            pip_add("more", \(other = 1) other)
-
-        expect_error(
-            rbind(a, b, bind = list(data = ~nope)),
-            "not in the first pipeline: nope"
-        )
-        expect_error(
-            rbind(a, b, bind = list(other = ~fit)),
-            "not in the first pipeline: fit"
-        )
-        expect_error(
-            rbind(pip_new("empty"), b, bind = list(data = ~prep)),
-            "not in the first pipeline: prep"
-        )
-    })
-
-    it("signals relative references", {
-        expect_error(
-            rbind(left_pip(), right_pip(), bind = list(data = ~ -1)),
-            "not by relative position: data = ~-1"
-        )
-        expect_error(
-            rbind(left_pip(), right_pip(), bind = list(data = ~ try(-1))),
-            "not by relative position: data = ~-1"
-        )
-    })
-
-    it("signals a bind with other than two pipelines", {
-        a <- left_pip()
-        b <- right_pip()
-        msg <- "bind can only be used to bind exactly two pipelines"
-
-        expect_error(rbind(a, bind = list(data = ~prep)), msg)
-        expect_error(rbind(a, b, b, bind = list(data = ~prep)), msg)
-        expect_equal(
-            unname(rbind(a, b, b, bind = list())[["step"]]),
-            c("prep", "fit", "fit2")
-        )
     })
 })

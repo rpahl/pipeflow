@@ -55,10 +55,13 @@ po/*~
 # rcmdcheck folder
 check*
 
-# scratch folder, except the dev tools list for renv and the release plans
+# scratch folder, except the dev tools list for renv, the release plans and
+# the architecture docs
 dev/*
 !dev/dependencies.R
 !dev/PLAN-*.md
+!dev/pipeflow.md
+!dev/as_function.md
 
 # renv
 renv/

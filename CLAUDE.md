@@ -8,6 +8,9 @@ dependencies between steps live in a C++ DAG (Rcpp).
 
 More detailed agent instructions are in `.github/instructions/**` (also
 referenced by `kilo.json`). The important parts are summarized below.
+For call graphs, flow diagrams and invariants, see `dev/pipeflow.md`
+(core) and `dev/as_function.md` (pipelines as functions). Update them when
+you change a flow they describe.
 
 ## Environment
 
@@ -71,7 +74,8 @@ instead of weakening tests or masking errors.
 
 Because `pipenv` is a reference, functions mostly mutate it in place (often
 with `data.table::set` or `:=`) and return `x` invisibly. `pip_clone()` or
-`p[]` makes a real copy, and that copy includes the DAG via `dag_clone()`.
+`p[]` on a pipeline makes a real copy, and that copy includes the DAG via
+`dag_clone()` (on a view, `v[]` is a view of the same pipeline).
 
 **Views.** A view is a `pipeflow` whose `view` field holds the node ids of
 the steps it covers (`v[["view"]]` shows them as step names). Views come
@@ -98,8 +102,8 @@ that may receive a failed input in a continuing run (see Execution). The
 marker lives in the step's `params`, read via `formula_try_args()`; rename
 and `rbind()` rebuild reference formulas and must keep the `try()` wrapper.
 A one-sided formula in `params` is always a reference: `pip_set_params()`
-binds an unbound param to the step (`.pip_bind_row()`), like `bind` of
-`rbind()` and `as.function()`. Only the function made by `as.function()`
+binds an unbound param to the step (`.pip_bind_row()`), also to connect
+pipelines after `rbind()`. Only the function made by `as.function()`
 sets formula arguments as values (`.pip_set_params(bind = FALSE)`).
 
 **C++ DAG (`src/dag.cpp`).** Nodes are stored by a running id. A separate

@@ -1,3 +1,12 @@
+# pipeflow 0.5.0.9013
+
+## Breaking changes
+
+- `rbind()` of pipelines lost the argument `bind` (added in 0.5.0.9008).
+  Bind the params after binding the pipelines with `pip_set_params()`, using
+  a view to select the steps, e.g.
+  `pip_set_params(ab[-seq_along(a)], list(data = ~prep))`.
+
 # pipeflow 0.5.0.9012
 
 ## Breaking changes
