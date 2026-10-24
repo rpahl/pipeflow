@@ -1204,13 +1204,20 @@ describe("pipelines read with readRDS()", {
     })
 
     it("get a time_start column if saved without one", {
-        # Pipelines saved with pipeflow 0.5.0 have no time_start column
+        # Pipelines saved with pipeflow 0.5.0 have no time_start column.
+        # Any access via .pip_pipenv() adds it back, so the view is made
+        # before the column is dropped, and the step table is read with
+        # .subset2() until the pipeline is used.
+        rawData <- \(x) .subset2(x, "pipenv")[["data"]]
         p <- pip_run(test_pip(), lgr = NULL)
-        p[["pipenv"]][["data"]][, time_start := NULL]
         v <- p[c("b", "c")]
+        rawData(p)[, time_start := NULL]
+        expect_null(rawData(p)[["time_start"]])
         res <- save_and_read(list(p, v))
         q <- res[[1]]
+        expect_null(rawData(q)[["time_start"]])
 
+        # Also p[["pipenv"]] adds the column
         expect_equal(
             colnames(q[["pipenv"]][["data"]]),
             colnames(.empty_pipeline())

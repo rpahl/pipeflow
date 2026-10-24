@@ -248,6 +248,11 @@
             }
             return(.pip_pipenv(x)[["data"]][["step"]][.pip_view_rows(x)])
         }
+        # Via .pip_pipenv(), so that the step table of a saved pipeline gets
+        # its missing columns also when it is read directly.
+        if (identical(i, "pipenv")) {
+            return(.pip_pipenv(x))
+        }
 
         # List fields of the wrapper have priority over column names.
         if (is.character(i) && length(i) == 1L && !is.na(i)) {
