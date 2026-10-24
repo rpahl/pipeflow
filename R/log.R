@@ -9,6 +9,29 @@
 }
 
 
+#' Format a duration for the log
+#'
+#' Durations below a minute are shown in seconds with milliseconds, longer
+#' ones in minutes and seconds, or in hours and minutes.
+#'
+#' @param duration A `difftime` or a number of seconds.
+#' @return A single string, e.g. `"0.251 s"`, `"2 min 5 s"` or
+#' `"1 h 3 min"`.
+#' @noRd
+.formatted_duration <- function(duration) {
+    secs <- as.numeric(duration, units = "secs")
+    if (secs < 60) {
+        return(sprintf("%.3f s", secs))
+    }
+    secs <- round(secs)
+    if (secs < 3600) {
+        return(sprintf("%d min %d s", secs %/% 60, secs %% 60))
+    }
+    mins <- round(secs / 60)
+    sprintf("%d h %d min", mins %/% 60, mins %% 60)
+}
+
+
 #' Default logger of pipeflow
 #'
 #' The logging function that [pip_run()] uses by default. It writes one line

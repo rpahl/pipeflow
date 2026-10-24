@@ -1021,6 +1021,28 @@ describe("assignment operator [[<-", {
         )
     })
 
+    it("can assign start time stamps, also NA", {
+        p <- test_pip()
+        when <- as.POSIXct("2020-01-01 12:00:00", tz = "UTC")
+        p[["s1", "time_start"]] <- when
+        expect_equal(
+            format(p[["time_start"]][[1]], tz = "UTC"),
+            "2020-01-01 12:00:00"
+        )
+        p[["s1", "time_start"]] <- as.POSIXct(NA)
+        expect_true(is.na(p[["s1", "time_start"]]))
+        p[["s1", "time_start"]] <- when
+        p[["s1", "time_start"]] <- NA
+        expect_true(is.na(p[["s1", "time_start"]]))
+        expect_s3_class(p[["time_start"]], "POSIXct")
+
+        msg <- "time_start must be a single POSIXct value or NA"
+        expect_error(p[["s2", "time_start"]] <- 1, msg)
+        expect_error(p[["s2", "time_start"]] <- NA_real_, msg)
+        expect_error(p[["s2", "time_start"]] <- as.Date("2020-01-01"), msg)
+        expect_error(p[["s2", "time_start"]] <- c(when, when), msg)
+    })
+
     it("can assign output values", {
         p <- test_pip()
         p[["s1", "out"]] <- 10
@@ -1528,6 +1550,18 @@ describe("cross-pipeline assignment", {
         expect_equal(unname(p[["exec"]]), c("plain", "plain"))
     })
 
+    it("copies time_start, also of steps that never ran", {
+        p <- pip_run(test_pip(), lgr = NULL)
+        q <- pip_clone(test_pip())
+        when <- as.POSIXct("2020-01-01 12:00:00", tz = "UTC")
+        q[["s1", "time_start"]] <- when
+
+        p[1:2, ] <- q[1:2, ]
+
+        expect_equal(as.numeric(p[["s1", "time_start"]]), as.numeric(when))
+        expect_true(is.na(p[["s2", "time_start"]]))
+    })
+
     it("copies the function and the unbound params, then runs", {
         p <- test_pip()
         q <- pip_clone(p)
@@ -1904,6 +1938,22 @@ describe("rbind", {
         p <- test_pip()
         expect_error(rbind(1, p), "x must be a pipeflow pip")
         expect_error(rbind(p, 1), "x must be a pipeflow pip")
+    })
+
+    it("keeps time and time_start of the bound steps", {
+        p1 <- pip_run(test_pip("left"), lgr = NULL)
+        p2 <- test_pip("right")
+        out <- rbind(p1, p2)
+        expect_equal(
+            unname(out[["time"]]),
+            unname(c(p1[["time"]], p2[["time"]]))
+        )
+        expect_equal(
+            unname(out[["time_start"]]),
+            unname(c(p1[["time_start"]], p2[["time_start"]]))
+        )
+        expect_false(anyNA(out[["time_start"]][1:2]))
+        expect_true(all(is.na(out[["time_start"]][3:4])))
     })
 
     it("binds pipelines without mutating inputs", {

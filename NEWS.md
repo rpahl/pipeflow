@@ -1,3 +1,18 @@
+# pipeflow 0.5.0.9014
+
+## New features
+
+- The step table has a new column `time_start`: the start of the step's last
+  run, set each time the step is run, also if the run fails. It is `NA` for
+  a step that has not run since it was added, replaced or reset. `time`
+  keeps its meaning (end of the last successful run), so
+  `time - time_start` is the duration of a successful run, and
+  `time_start >= t0` tells which steps a run started at `t0` attempted.
+  Set it with `p[[step, "time_start"]] <- value` (`NA` allowed). Pipelines
+  saved with an earlier version get the column (all `NA`) when read.
+- The log line at the end of `pip_run()` shows the total time of the run,
+  including restarts, e.g. `Finished run of pipeflow 'demo' in 0.251 s`.
+
 # pipeflow 0.5.0.9013
 
 ## Breaking changes

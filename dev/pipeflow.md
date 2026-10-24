@@ -90,7 +90,8 @@ classDiagram
         tags : list
         locked : lgl
         exec : chr, auto split reduce plain
-        time : POSIXct
+        time : POSIXct, added/replaced or end of last success
+        time_start : POSIXct, start of last run, NA if none
         depends : list, derived, arg to step
         unbound : list, derived, param names
         nodeId : int, derived
@@ -342,6 +343,7 @@ sequenceDiagram
         R->>RR: .pip_run_row(self = full pipeline, row, failed)
         RR->>E: args = params + outputs of depends (+ failures)
         RR->>RR: .wrap_self(fun) if body uses .self
+        RR->>E: set time_start of row (before the call shifts rows)
         RR->>RR: .pip_unwrap_params(unbound args)
         RR->>X: exec mode
         alt split
@@ -432,6 +434,12 @@ from `nodeId` (as the order) and `depends` (as the edges) via
 `dag_restore()`, and stores it back in `pipenv`. This is why every DAG
 access must go through `.pip_dag()`, never `pipenv$.dag` directly.
 
+Pipelines saved before a step column existed lack it. `.pip_pipenv()`
+adds a missing `time_start` column (all `NA`) on first access, via
+`.pip_add_time_start()`. A table read with `readRDS()` has no spare column
+slots, so the new table is stored back in `pipenv`. Every access to
+`pipenv` must therefore go through `.pip_pipenv()`.
+
 ## 10. C++ DAG (`src/dag.cpp`)
 
 - `Dag.nodes` is indexed by id. `Dag.nodes_order` holds the topological
@@ -451,7 +459,7 @@ access must go through `.pip_dag()`, never `pipenv$.dag` directly.
 
 | Task | Start here | Also touch |
 |---|---|---|
-| New step column | `.empty_pipeline()`, `.new_step()` | `.pip_bind()` (runtime columns), `.pip_copy_from()` props, `[[<-` dispatch, `print.pipeflow()`, `str.pipeflow()` |
+| New step column | `.empty_pipeline()`, `.new_step()` | `.pip_bind()` (runtime columns), `.pip_copy_from()` props, `[[<-` dispatch, `print.pipeflow()`, `str.pipeflow()`, `pip_collect()` (`allowedBy`), `pip_replace()`/`pip_reset()` (runtime columns), a default for saved pipelines in `.pip_pipenv()` |
 | New exec mode | `.assert_exec_mode()`, `.pip_execute_step_call()` | `.pip_annotate_output()`, docs of `pip_add()` |
 | New reference syntax | `utils.R` formula helpers | `.extract_depends()`, `formula_set_ref()` users (rename, rbind, copy) |
 | New step or run state | `.step_states` / `.run_states` in `pipeflow-package.R` | `pip_run()`, `.pip_outdate_downstream()`, print colours |

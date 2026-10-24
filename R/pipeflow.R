@@ -12,6 +12,7 @@
         locked = logical(0),
         exec = character(0), # execution mode
         time = as.POSIXct(character(0)),
+        time_start = as.POSIXct(character(0)), # start of the last run
         depends = list(), # names of parameters referencing other steps
         unbound = list(), # names of unbound parameters
         nodeId = integer() # the unique node ID in the internal DAG
@@ -37,6 +38,7 @@
         locked = FALSE,
         exec = exec,
         time = Sys.time(),
+        time_start = as.POSIXct(NA),
         depends = list(depends),
         unbound = list(setdiff(names(params), names(depends))),
         nodeId = nodeId
@@ -708,6 +710,10 @@
 
     unbound <- dat[["unbound"]][[i]]
 
+    # The start of every attempt, also of one that fails. Row `i` is still
+    # the step's row here, as only the step call can shift the rows.
+    data.table::set(dat, i = i, j = "time_start", value = Sys.time())
+
     out <- withCallingHandlers(
         {
             args <- .pip_unwrap_params(args, unbound)
@@ -831,7 +837,34 @@
 
 # Convenience helper function to retrieve the shared inner environment.
 .pip_pipenv <- function(x) {
-    .subset2(x, "pipenv")
+    pipenv <- .subset2(x, "pipenv")
+    dat <- pipenv[["data"]]
+    if (is.data.frame(dat) && is.null(dat[["time_start"]])) {
+        .pip_add_time_start(pipenv)
+    }
+    pipenv
+}
+
+#' Add the `time_start` column to the step table of a saved pipeline
+#'
+#' Pipelines saved with pipeflow 0.5.0 or earlier have no `time_start`
+#' column. It is added with `NA` values (no step has a recorded start)
+#' after the `time` column. A table read with `readRDS()` has no spare
+#' column slots, so adding a column returns a new table, which is stored
+#' in `pipenv`.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @return The updated step table, invisibly.
+#' @noRd
+.pip_add_time_start <- function(pipenv) {
+    dat <- data.table::set(
+        pipenv[["data"]],
+        j = "time_start",
+        value = rep(as.POSIXct(NA), nrow(pipenv[["data"]]))
+    )
+    data.table::setcolorder(dat, "time_start", after = "time")
+    pipenv[["data"]] <- dat
+    invisible(dat)
 }
 
 #' Get the DAG of a pipeline
@@ -1332,11 +1365,12 @@
     appRows <- data.table::rbindlist(rows, use.names = TRUE)
     data.table::set(
         appRows,
-        j = c("out", "state", "time", "locked"),
+        j = c("out", "state", "time", "time_start", "locked"),
         value = list(
             yyDat[["out"]],
             yyDat[["state"]],
             yyDat[["time"]],
+            yyDat[["time_start"]],
             yyDat[["locked"]]
         )
     )
@@ -1797,7 +1831,7 @@ pip_collect <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
     }
     # fmt: skip
     allowedBy <- c(
-        "step", "state", "tags", "time", "locked", "exec",
+        "step", "state", "tags", "time", "time_start", "locked", "exec",
         "depends", "unbound", "nodeId"
     )
     if (!by %in% allowedBy) {
@@ -2510,6 +2544,7 @@ pip_replace <- function(
         "locked" = FALSE,
         "exec" = exec,
         "time" = Sys.time(),
+        "time_start" = as.POSIXct(NA),
         "depends" = list(depends),
         "unbound" = list(setdiff(names(params), names(depends)))
     )
@@ -2566,6 +2601,24 @@ pip_replace <- function(
 #' `"new"` stays `"new"` until it is executed.
 #' A "done" step is skipped unless `force = TRUE` was set. For all other
 #' states, the step will be re-executed in the next [pip_run()].
+#'
+#' ## Time stamps
+#'
+#' The step table has two time stamps per step:
+#'
+#' * `time_start`: the start of the step's last run. It is set each time the
+#'   step is run, also if the run fails. It is `NA` for a step that has not
+#'   run since it was added, replaced (see [pip_replace()]) or reset (see
+#'   [pip_reset()]). A skipped step (because it is `"done"`, locked or has a
+#'   failed input) keeps its value.
+#' * `time`: the time the step was added or replaced, or the end of its last
+#'   successful run. A failed run does not change it. It is the time stamp
+#'   that [pip_output_value()] gets in `ctx`.
+#'
+#' With `t0 <- Sys.time()` taken before `pip_run()`, a step was run in that
+#' run if `time_start >= t0`. Its last run succeeded if its state is
+#' `"done"` and `time >= time_start`, and then `time - time_start` is the
+#' duration of that run.
 #'
 #' ## Running views
 #' When `x` is a view, the requested rows are run together with their
@@ -2791,6 +2844,15 @@ pip_run <- function(
 
     state <- pipenv[[".run_state"]]
     isRestart <- state == .run_states[["restart"]][["name"]]
+    # A restart hands over the start of the run, so that the total time
+    # logged at the end covers the whole run.
+    runStart <- pipenv[[".run_start"]]
+    if (!isRestart || is.null(runStart)) {
+        runStart <- Sys.time()
+    }
+    if (exists(".run_start", envir = pipenv, inherits = FALSE)) {
+        rm(".run_start", envir = pipenv)
+    }
     action <- if (isRestart) "Restarting" else "Starting"
     log_info(sprintf("%s run of %s '%s'", action, data.class(x), pipname))
     pipenv[[".run_state"]][] <- .run_states[["running"]][["name"]]
@@ -2904,6 +2966,7 @@ pip_run <- function(
                     # work to a nested run, which then re-runs the outdated
                     # steps and does its own marking at the end.
                     outdate_downstream_of_executed()
+                    pipenv[[".run_start"]] <- runStart
                     pip_run(
                         x,
                         lgr = lgr,
@@ -2921,9 +2984,12 @@ pip_run <- function(
                 }
             }
 
-            log_info(
-                sprintf("Finished run of %s '%s'", data.class(x), pipname)
-            )
+            log_info(sprintf(
+                "Finished run of %s '%s' in %s",
+                data.class(x),
+                pipname,
+                .formatted_duration(difftime(Sys.time(), runStart))
+            ))
             runState <- if (halted) {
                 "halted"
             } else if (length(failures) > 0L) {
@@ -3016,10 +3082,11 @@ pip_reset <- function(x) {
     data.table::set(
         dat,
         i = rowsConsidered,
-        j = c("out", "state"),
+        j = c("out", "state", "time_start"),
         value = list(
             rep(list(NULL), length(rowsConsidered)),
-            rep(.step_states[["new"]][["name"]], length(rowsConsidered))
+            rep(.step_states[["new"]][["name"]], length(rowsConsidered)),
+            rep(as.POSIXct(NA), length(rowsConsidered))
         )
     )
 
