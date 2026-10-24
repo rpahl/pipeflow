@@ -217,13 +217,17 @@ pip <- pip_new("groups") |>
         if (nrow(d) < 2) stop("need at least 2 rows")
         diff(range(d$y))
     }) |>
+    pip_add("label", \(s = ~spread) sprintf("spread: %g", s)) |>
     pip_add(
         "combine",
         \(s = ~try(spread)) {
-            if (inherits(s, "pipeflow_failure")) {
-                return(s$message)
-            }
-            unlist(s)
+            failed <- vapply(
+                s,
+                FUN = inherits,
+                what = "pipeflow_failure",
+                FUN.VALUE = logical(1)
+            )
+            unlist(s[!failed])
         },
         exec = "reduce"
     )
@@ -231,36 +235,49 @@ pip <- pip_new("groups") |>
 pip_set_params(pip, list(data = d))
 ```
 
-If one partition (group `c`) fails, the whole `spread` step fails. The
-condition tells the failed key and keeps the original one as `parent`:
+If one partition (group `c`) fails, `spread` fails for that key only. It
+gets state `failed`, but its output keeps the results of the groups `a` and
+`b`. For group `c` it holds a failure object, which tells the key and keeps
+the original condition as `parent` of a `pipeflow_key_error`:
 
 ```{r run-split-pipeline}
 suppressWarnings(pip_run(pip, on_error = "continue"))
 
 pip
 
-err <- pip[["spread", "out"]]
-class(err)
-err$key
-err$parent$message
+out <- pip[["spread", "out"]]
+out$a
+fc <- out$c
+class(fc)
+fc$key
+fc$message
 ```
 
-The `combine` step reduces the outputs of all groups. Since the input
-`spread` failed and is marked with `try()`, `combine` ran once and received
-the failure object, with the key in the message:
+The `label` step maps over `spread` like `spread` maps over the groups, so
+the failure is handled per key: `label` runs for groups `a` and `b`, and is
+not run for group `c`, whose output is again a failure object:
+
+```{r map-with-failure}
+pip[["label", "out"]]$a
+pip[["label", "out"]]$c$message
+```
+
+The `combine` step reduces the outputs of all groups in one call. Since it
+takes `spread` via `try()`, it ran and received all of them, with the
+failure in group `c`:
 
 ```{r reduce-with-failure}
 pip[["combine", "out"]]
 ```
 
-Likewise, if the pipeline is run with `on_error = "stop"`, the error is a
-`pipeflow_step_error` as before, with the `pipeflow_key_error` as its
-`parent`. Without `try()` in the `combine` step, it would just be skipped.
+Without `try()`, `combine` would not be run, as for any failed input. With
+`s = ~try(spread)` in `label`, `label` would be called for group `c` too and
+receive the failure object. If the pipeline is run with
+`on_error = "stop"`, the first failed group stops the run with a
+`pipeflow_step_error`, with the `pipeflow_key_error` as its `parent`.
 
-Failures are currently tracked per step, not per key, so the groups `a`
-and `b` that were fine are not available as results of a run that
-failed in group `c`. Once the cause is fixed, here by removing the group,
-the pipeline completes:
+The next run re-runs `spread` for all groups. Once the cause is fixed, here
+by removing the group, the pipeline completes:
 
 ```{r recover-split-pipeline}
 pip_set_params(pip, list(data = d[d$g != "c", ]))
@@ -370,9 +387,11 @@ you need in `out` to profit from a continuing inner run.
   condition.
 * The next run retries any failed and skipped steps (and those that received
   failure objects).
-* For steps that map over partitions, the condition of the failed
-  partition is a `pipeflow_key_error` with the field `key`. A `reduce` step
-  with a `try()` reference receives the failure.
+* A step that maps over partitions fails per key: its output keeps the
+  results of the other keys, and each failed key holds a failure object
+  with the field `key`. Steps mapped downstream are not run for that key
+  (unless they use `try()`), and a `reduce` step gets the output with the
+  failed keys if it uses `try()`, and is skipped otherwise.
 * A step made with `as.function()` runs a pipeline of its own.
   `as.function(on_error = "continue")` lets that inner pipeline continue
   after a failed inner step, which is also what makes `try()` references

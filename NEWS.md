@@ -1,3 +1,17 @@
+# pipeflow 0.5.0.9015
+
+## Breaking changes
+
+- In a run with `on_error = "continue"`, a step mapped over partitioned
+  inputs now fails per partition key: its output keeps the results of the
+  keys that succeeded, and each failed key holds a `pipeflow_failure` with
+  the field `key` (before, the whole step failed and its output was the
+  `pipeflow_key_error`). The step gets state `"failed"`. Mapped steps
+  downstream are not run for the failed keys, unless they take the input
+  via `~try()`; other steps get the output with the failed keys via
+  `~try()` and are skipped otherwise. The `pipeflow_run_failed` warning
+  has a new field `keys` with the failed keys per step.
+
 # pipeflow 0.5.0.9014
 
 ## New features

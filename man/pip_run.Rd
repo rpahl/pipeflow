@@ -121,11 +121,9 @@ partition key and its field \code{parent} holds the original error condition.
 \subsection{Continuing after errors}{
 
 With \code{on_error = "continue"}, a failing step gets state \code{"failed"}, its
-error condition is stored as its output, and the run goes on. For a step
-whose error belongs to a single partition key, the stored condition is
-the \code{pipeflow_key_error} described above. An input of a step is \emph{failed} if
-its step failed or was not run because a step upstream of it failed in
-this run.
+error condition is stored as its output, and the run goes on. An input of
+a step is \emph{failed} if its step failed or was not run because a step
+upstream of it failed in this run.
 \itemize{
 \item A step with a failed input is not run, and counts as failed for its own
 dependents, unless the argument receiving that input refers to its step
@@ -140,6 +138,32 @@ does not affect them. They keep their state and output, and their
 dependents receive that output as usual.
 }
 
+A step mapped over partitioned inputs (see \code{exec} in \code{\link[=pip_add]{pip_add()}}) fails
+per partition key instead:
+\itemize{
+\item If the step function fails for a key, the step goes on with the other
+keys. Its output is the partitioned output with the results of the keys
+that succeeded and, for each failed key, a \code{pipeflow_failure} with the
+additional field \code{key}, whose \code{parent} is the \code{pipeflow_key_error}
+described above. The step gets state \code{"failed"}; its \code{time} is not
+updated.
+\item A mapped step downstream of it handles the failed keys one by one: for a
+key whose input is a failure, the step function is only called if the
+argument refers to its step via \code{try()}, and receives the failure. For
+the other arguments, the function is not called for that key, and its
+output is a \code{pipeflow_failure} ("step '\if{html}{\out{<step>}}' was not run: ...") with
+the fields \code{key} and \code{failed_step}, so the step gets state \code{"failed"}
+too.
+\item A step that is not mapped (e.g. \code{exec = "reduce"}) is not run, as for
+any failed input, unless it takes the input via \code{try()}. Then it
+receives the whole partitioned output: the results of the keys that
+succeeded and the failure objects of the keys that failed.
+\item The next run re-runs the step for all keys.
+}
+
+Errors outside of the calls per key, e.g. of a step with \code{exec = "split"}
+or of \code{\link[=pip_output_value]{pip_output_value()}}, fail the whole step as described above.
+
 Steps that ran (including those that received failure objects) are
 \code{"done"}. Steps that were not run are treated like steps not reached by an
 aborted run: a \code{"done"} step becomes \code{"outdated"}, a \code{"new"} one stays
@@ -150,8 +174,19 @@ that received failure objects, are run again.
 If any step failed, the pipeline run state is set to \code{"continued"} and,
 once all states and outputs are stored, a warning of class
 \code{c("pipeflow_run_failed", "warning", "condition")} is signalled. Its
-field \code{failed} is a named list with the original conditions of the failed
-steps and its field \code{skipped} names the steps that were not run.
+fields are:
+\itemize{
+\item \code{failed}: a named list with one condition per failed step, the original
+error of the step. A step that failed for single keys is listed with
+one condition only, the \code{pipeflow_key_error} of its first failed key.
+Keys that were not run because an input failed only count if no key
+failed in the step itself; the condition is then the
+\code{pipeflow_key_error} of the input step that failed.
+\item \code{skipped}: the names of the steps that were not run because an input
+failed.
+\item \code{keys}: a named list with the failed keys of each step that failed for
+single keys.
+}
 }
 
 \subsection{Runtime control flow via restart and halt}{

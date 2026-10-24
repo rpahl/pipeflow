@@ -338,9 +338,10 @@ sequenceDiagram
     R->>E: .run_state = running
     loop each row (topological order)
         R->>R: input failed and not ~try()? record .pip_failure, skip
+        R->>R: (input failed for some keys counts only if not exec auto)
         R->>R: done, not force, no input re-run? skip
         R->>R: locked? skip
-        R->>RR: .pip_run_row(self = full pipeline, row, failed)
+        R->>RR: .pip_run_row(self = full pipeline, row, failed, onError)
         RR->>E: args = params + outputs of depends (+ failures)
         RR->>RR: .wrap_self(fun) if body uses .self
         RR->>E: set time_start of row (before the call shifts rows)
@@ -350,7 +351,9 @@ sequenceDiagram
             X->>C: one call, then mark output as pipeflow_partitioned
         else auto + partitioned input
             loop each key
+                X->>X: slice of non-try arg is a failure? key "not run"
                 X->>C: call with sliced args (key, keys)
+                X->>X: continue: key error -> .pip_failure(key) as value
             end
         else plain / reduce / no partition
             X->>C: one call
@@ -359,6 +362,8 @@ sequenceDiagram
         F-->>RR: value
         RR->>RR: .pip_annotate_output (pip_output_value)
         RR->>E: re-read data by step name, set out/time/state = done
+        RR->>E: (failed keys: set out, state = failed, keep time)
+        R->>R: failed keys: record the output in failures
         alt step error
             RR-->>R: pipeflow_step_error (state = failed)
             R->>R: stop: re-signal / continue: store condition as out
@@ -387,6 +392,15 @@ Things to keep in mind:
   wraps a partition key error, `.pip_failure()` is the value a `~try()`
   argument receives, and `.pip_run_failed_warning()` is the warning of a
   continued run.
+- **Per-key failures.** In a continued run, a mapped step keeps a
+  `.pip_failure()` (with `key`) as the output of each failed key, gets state
+  `failed` and keeps its time. `pip_run()` records its partitioned output
+  in `failures` (whole-step failures are failure objects there), so
+  `.is_pipeflow_partitioned()` tells the two apart. Mapped steps downstream
+  handle the failed keys in `.pip_execute_step_call()`; other steps treat
+  the input as failed. `.pip_failed_keys()` finds the keys, and
+  `.pip_first_failure()` picks the condition for the warning and for
+  `as.function()` (`.fun_check_run()`).
 
 ### States
 

@@ -468,17 +468,21 @@
 #'
 #' Failure object for the output of `step` in a run that continues after
 #' errors. It is passed to the step arguments whose reference is wrapped in
-#' `try()`, e.g. `x = ~try(step)`.
+#' `try()`, e.g. `x = ~try(step)`. A failure in one partition key of a
+#' mapped step (see `.pip_execute_step_call()`) is stored as the output of
+#' that key.
 #'
 #' @param step The step whose output the failure object replaces.
 #' @param parent The original condition of the step that actually failed.
 #' @param failedStep The step that actually failed. If it differs from
 #' `step`, `step` was not run because of it.
+#' @param key The partition key the failure belongs to, or `NULL` for the
+#' output of the whole step.
 #' @return A condition of class
 #' `c("pipeflow_failure", "error", "condition")` with the fields `step`,
-#' `failed_step` and `parent`.
+#' `failed_step` and `parent`, and `key` if given.
 #' @noRd
-.pip_failure <- function(step, parent, failedStep = step) {
+.pip_failure <- function(step, parent, failedStep = step, key = NULL) {
     msg <- sprintf(
         "step '%s' failed: %s",
         failedStep,
@@ -487,46 +491,118 @@
     if (step != failedStep) {
         msg <- sprintf("step '%s' was not run: %s", step, msg)
     }
-    structure(
-        class = c("pipeflow_failure", "error", "condition"),
-        list(
-            message = msg,
-            call = NULL,
-            step = step,
-            failed_step = failedStep,
-            parent = parent
-        )
+    fields <- list(
+        message = msg,
+        call = NULL,
+        step = step,
+        failed_step = failedStep,
+        parent = parent
     )
+    if (!is.null(key)) {
+        fields[["key"]] <- key
+    }
+    structure(class = c("pipeflow_failure", "error", "condition"), fields)
+}
+
+#' Get the partition keys of an output that hold a failure
+#'
+#' @param out A step output.
+#' @return Character vector of the keys of a partitioned `out` whose output
+#' is a failure object (see `.pip_failure()`), empty for any other `out`.
+#' @noRd
+.pip_failed_keys <- function(out) {
+    if (!.is_pipeflow_partitioned(out)) {
+        return(character())
+    }
+    isFailure <- vapply(
+        out,
+        FUN = inherits,
+        what = "pipeflow_failure",
+        FUN.VALUE = logical(1)
+    )
+    names(out)[isFailure]
+}
+
+#' Get the first failure of a partitioned output
+#'
+#' @param out A partitioned step output with at least one failed key.
+#' @return The failure object of the first key that failed in its own step,
+#' or, if all failed keys were not run because an input failed, of the first
+#' failed key.
+#' @noRd
+.pip_first_failure <- function(out) {
+    failures <- unname(out[.pip_failed_keys(out)])
+    isOwn <- vapply(
+        failures,
+        FUN = \(f) identical(f[["step"]], f[["failed_step"]]),
+        FUN.VALUE = logical(1)
+    )
+    failures[[if (any(isOwn)) which(isOwn)[[1L]] else 1L]]
 }
 
 #' Create the warning of a run that continued after errors
 #'
 #' @param pipname The name of the pipeline (used in the message).
-#' @param failures Named list of the failure objects of the run (see
-#' `.pip_failure()`), by step name.
+#' @param failures Named list, by step name, of the failure objects of the
+#' run (see `.pip_failure()`) and of the partitioned outputs of the steps
+#' that failed for some of their keys.
 #' @return A condition of class
 #' `c("pipeflow_run_failed", "warning", "condition")` with the fields
-#' `failed` (named list of the original conditions of the failed steps) and
-#' `skipped` (names of the steps not run because an input failed).
+#' `failed` (named list of the original conditions of the failed steps; for
+#' a step that failed for some keys, of its first failed key, see
+#' `.pip_first_failure()`), `skipped` (names of the steps not run because an
+#' input failed) and `keys` (named list of the failed keys of the steps
+#' that failed for some keys).
 #' @noRd
 .pip_run_failed_warning <- function(pipname, failures) {
-    failedSteps <- vapply(failures, \(f) f[["failed_step"]], FUN.VALUE = "")
-    isFailed <- names(failures) == failedSteps
-    failed <- lapply(failures[isFailed], \(f) f[["parent"]])
+    isPartial <- vapply(
+        failures,
+        FUN = .is_pipeflow_partitioned,
+        FUN.VALUE = logical(1)
+    )
+    keys <- lapply(failures[isPartial], FUN = .pip_failed_keys)
+    conds <- failures
+    conds[isPartial] <- lapply(failures[isPartial], FUN = .pip_first_failure)
+
+    failedSteps <- vapply(conds, \(f) f[["failed_step"]], FUN.VALUE = "")
+    isFailed <- isPartial | names(failures) == failedSteps
+    failed <- lapply(conds[isFailed], \(f) f[["parent"]])
     skipped <- names(failures)[!isFailed]
+
+    # A step that failed for some keys is listed with the message of its
+    # first failed key, or with the step that failed for it.
+    reasons <- vapply(
+        names(failed),
+        FUN = function(step) {
+            if (!isPartial[[step]]) {
+                return(conditionMessage(failed[[step]]))
+            }
+            f <- conds[[step]]
+            reason <- if (identical(f[["step"]], f[["failed_step"]])) {
+                conditionMessage(f[["parent"]])
+            } else {
+                sprintf(
+                    "key '%s': input step '%s' failed",
+                    f[["key"]],
+                    f[["failed_step"]]
+                )
+            }
+            sprintf(
+                "%s (%d of %d keys)",
+                reason,
+                length(keys[[step]]),
+                length(failures[[step]])
+            )
+        },
+        FUN.VALUE = ""
+    )
 
     msg <- sprintf(
         "Run of pipeline '%s' continued after %d failed step%s:\n%s",
         pipname,
         length(failed),
         if (length(failed) == 1L) "" else "s",
-        paste0(
-            "  '",
-            names(failed),
-            "': ",
-            vapply(failed, conditionMessage, FUN.VALUE = ""),
-            collapse = "\n"
-        )
+        paste0("  '", names(failed), "': ", reasons, collapse = "\n")
     )
     if (length(skipped) > 0L) {
         msg <- paste0(
@@ -538,7 +614,13 @@
 
     structure(
         class = c("pipeflow_run_failed", "warning", "condition"),
-        list(message = msg, call = NULL, failed = failed, skipped = skipped)
+        list(
+            message = msg,
+            call = NULL,
+            failed = failed,
+            skipped = skipped,
+            keys = keys
+        )
     )
 }
 
@@ -579,9 +661,23 @@
 #' depends on.
 #' @param exec The exec mode of the step.
 #' @param step The name of the step.
+#' @param onError The `on_error` of the run, see [pip_run()]. With
+#' `"continue"`, a step mapped over partitioned inputs that fails for a key
+#' stores a failure object (see `.pip_failure()`) as the output of that key
+#' and goes on with the other keys.
+#' @param tryArgs Names of the arguments whose step reference is wrapped in
+#' `try()`. Only these get the failure of a key of a partitioned input; for
+#' the other arguments the key is not run and its output is a failure too.
 #' @return The output of the step.
 #' @noRd
-.pip_execute_step_call <- function(fun, args, exec, step) {
+.pip_execute_step_call <- function(
+    fun,
+    args,
+    exec,
+    step,
+    onError = "stop",
+    tryArgs = character()
+) {
     # A partitioned argument is a list of per-key values produced by a
     # step with exec = "split" and tagged with class "pipeflow_partitioned".
     partIdx <- which(vapply(
@@ -653,8 +749,33 @@
             keyArgs[[idx]] <- args[[idx]][[key]]
         }
 
+        # A key whose input failed (in a continued run) is only allowed to run
+        # if all arguments that get a failure refer to their step via try().
+        isFailed <- vapply(
+            keyArgs[partIdx],
+            FUN = inherits,
+            what = "pipeflow_failure",
+            FUN.VALUE = logical(1)
+        )
+        notAllowed <- setdiff(names(keyArgs)[partIdx][isFailed], tryArgs)
+        if (length(notAllowed) > 0L) {
+            cause <- keyArgs[[notAllowed[[1L]]]]
+            failure <- .pip_failure(
+                step,
+                parent = cause[["parent"]],
+                failedStep = cause[["failed_step"]],
+                key = key
+            )
+            if (onError == "stop") {
+                stop(.pip_key_error(key, parent = failure))
+            }
+            out[[key]] <- failure
+            next
+        }
+
         # Errors are re-raised with the key name so a failing partition can
-        # be located without inspecting the whole output.
+        # be located without inspecting the whole output. In a continued
+        # run, the error is kept as the output of the key instead.
         out[[key]] <- tryCatch(
             expr = .pip_call_step(
                 fun,
@@ -664,7 +785,11 @@
                 keys = keys
             ),
             error = function(e) {
-                stop(.pip_key_error(key, parent = e))
+                keyError <- .pip_key_error(key, parent = e)
+                if (onError == "stop") {
+                    stop(keyError)
+                }
+                .pip_failure(step, parent = keyError, key = key)
             }
         )
     }
@@ -673,8 +798,11 @@
 }
 
 # `failed` is an optional named list of failure objects that replace the
-# outputs of the referenced steps for the respective arguments.
-.pip_run_row <- function(x, i, lgr, failed = list()) {
+# outputs of the referenced steps for the respective arguments. `onError` is
+# the `on_error` of the run: with "continue", a mapped step that fails for
+# some keys keeps the failures in its output, see .pip_execute_step_call().
+# Such a step gets state "failed" and keeps its time.
+.pip_run_row <- function(x, i, lgr, failed = list(), onError = "stop") {
     if (!.is_pipeflow(x)) {
         stop("x must be a pipeflow pip")
     }
@@ -721,7 +849,9 @@
                 fun = fun,
                 args = args,
                 exec = exec,
-                step = step
+                step = step,
+                onError = onError,
+                tryArgs = formula_try_args(dat[["params"]][[i]])
             )
 
             # One time stamp for the whole step, also for all keys of a
@@ -747,13 +877,30 @@
         }
     )
 
+    # Only the keys that failed in this step are logged, not those that were
+    # not run because an input failed.
+    failedKeys <- .pip_failed_keys(out)
+    for (key in failedKeys) {
+        f <- out[[key]]
+        if (identical(f[["failed_step"]], step)) {
+            lgr(level = "error", msg = conditionMessage(f[["parent"]]))
+        }
+    }
+
     # Re-read pipeline after execution to handle scenarios where the pipeline
     # modified itself at runtime. Since we update by step name, if the current
     # step does not exist anymore, we simply skip the update.
     dat <- .pip_pipenv(x)[["data"]]
     rowNow <- data.table::chmatch(step, dat[["step"]])
     stepStillExists <- !is.na(rowNow)
-    if (stepStillExists) {
+    if (stepStillExists && length(failedKeys) > 0L) {
+        data.table::set(
+            dat,
+            i = rowNow,
+            j = c("out", "state"),
+            value = list(list(out), .step_states[["failed"]][["name"]])
+        )
+    } else if (stepStillExists) {
         data.table::set(
             dat,
             i = rowNow,
@@ -1507,9 +1654,11 @@ pip_new <- function(name = "pipe") {
 #' partition-wise during step execution. The `reduce` mode expects
 #' partitioned input and passes it through without mapping, while `plain`
 #' mode only accepts non-partitioned input and always intends to execute
-#' a single call. If a split pipeline fails in a run with
-#' `on_error = "continue"`, a `reduce` step also accepts the resulting failure
-#' object when it takes it via `~try()`. In summary:
+#' a single call. In a run with `on_error = "continue"`, a mapped step that
+#' fails for some partition keys keeps the outputs of the other keys (see
+#' section 'Continuing after errors' in [pip_run()]). If a split step fails,
+#' a `reduce` step also accepts the resulting failure object when it takes
+#' it via `~try()`. In summary:
 #' * auto: map if partitioned input appears, otherwise single call
 #' * split: single call, then mark output as partitioned
 #' * reduce: single call, but only valid with partitioned input or, via
@@ -2651,11 +2800,9 @@ pip_replace <- function(
 #'
 #' ## Continuing after errors
 #' With `on_error = "continue"`, a failing step gets state `"failed"`, its
-#' error condition is stored as its output, and the run goes on. For a step
-#' whose error belongs to a single partition key, the stored condition is
-#' the `pipeflow_key_error` described above. An input of a step is *failed* if
-#' its step failed or was not run because a step upstream of it failed in
-#' this run.
+#' error condition is stored as its output, and the run goes on. An input of
+#' a step is *failed* if its step failed or was not run because a step
+#' upstream of it failed in this run.
 #'
 #' * A step with a failed input is not run, and counts as failed for its own
 #'   dependents, unless the argument receiving that input refers to its step
@@ -2669,6 +2816,31 @@ pip_replace <- function(
 #'   does not affect them. They keep their state and output, and their
 #'   dependents receive that output as usual.
 #'
+#' A step mapped over partitioned inputs (see `exec` in [pip_add()]) fails
+#' per partition key instead:
+#'
+#' * If the step function fails for a key, the step goes on with the other
+#'   keys. Its output is the partitioned output with the results of the keys
+#'   that succeeded and, for each failed key, a `pipeflow_failure` with the
+#'   additional field `key`, whose `parent` is the `pipeflow_key_error`
+#'   described above. The step gets state `"failed"`; its `time` is not
+#'   updated.
+#' * A mapped step downstream of it handles the failed keys one by one: for a
+#'   key whose input is a failure, the step function is only called if the
+#'   argument refers to its step via `try()`, and receives the failure. For
+#'   the other arguments, the function is not called for that key, and its
+#'   output is a `pipeflow_failure` ("step '<step>' was not run: ...") with
+#'   the fields `key` and `failed_step`, so the step gets state `"failed"`
+#'   too.
+#' * A step that is not mapped (e.g. `exec = "reduce"`) is not run, as for
+#'   any failed input, unless it takes the input via `try()`. Then it
+#'   receives the whole partitioned output: the results of the keys that
+#'   succeeded and the failure objects of the keys that failed.
+#' * The next run re-runs the step for all keys.
+#'
+#' Errors outside of the calls per key, e.g. of a step with `exec = "split"`
+#' or of [pip_output_value()], fail the whole step as described above.
+#'
 #' Steps that ran (including those that received failure objects) are
 #' `"done"`. Steps that were not run are treated like steps not reached by an
 #' aborted run: a `"done"` step becomes `"outdated"`, a `"new"` one stays
@@ -2679,8 +2851,18 @@ pip_replace <- function(
 #' If any step failed, the pipeline run state is set to `"continued"` and,
 #' once all states and outputs are stored, a warning of class
 #' `c("pipeflow_run_failed", "warning", "condition")` is signalled. Its
-#' field `failed` is a named list with the original conditions of the failed
-#' steps and its field `skipped` names the steps that were not run.
+#' fields are:
+#'
+#' * `failed`: a named list with one condition per failed step, the original
+#'   error of the step. A step that failed for single keys is listed with
+#'   one condition only, the `pipeflow_key_error` of its first failed key.
+#'   Keys that were not run because an input failed only count if no key
+#'   failed in the step itself; the condition is then the
+#'   `pipeflow_key_error` of the input step that failed.
+#' * `skipped`: the names of the steps that were not run because an input
+#'   failed.
+#' * `keys`: a named list with the failed keys of each step that failed for
+#'   single keys.
 #'
 #' ## Runtime control flow via restart and halt
 #'
@@ -2876,9 +3058,19 @@ pip_run <- function(
                 # Arguments whose input step failed or was not run in this
                 # run (only possible with on_error = "continue"). Unless all
                 # of them refer to their step via try(), the step is not run
-                # and counts as failed for its own dependents.
+                # and counts as failed for its own dependents. An input that
+                # failed for some keys only counts for a step that is not
+                # mapped over the keys; a mapped step handles it per key.
                 depends <- dat[["depends"]][[row]]
                 failedArgs <- names(depends)[depends %in% names(failures)]
+                isPartial <- vapply(
+                    failures[unname(depends[failedArgs])],
+                    FUN = .is_pipeflow_partitioned,
+                    FUN.VALUE = logical(1)
+                )
+                if (dat[["exec"]][[row]] == "auto") {
+                    failedArgs <- failedArgs[!isPartial]
+                }
                 hasFailedInput <- length(failedArgs) > 0L &&
                     !dat[["locked"]][[row]]
                 if (hasFailedInput) {
@@ -2886,6 +3078,9 @@ pip_run <- function(
                     notAllowed <- setdiff(failedArgs, tryArgs)
                     if (length(notAllowed) > 0L) {
                         cause <- failures[[depends[[notAllowed[[1L]]]]]]
+                        if (.is_pipeflow_partitioned(cause)) {
+                            cause <- .pip_first_failure(cause)
+                        }
                         failures[[step]] <- .pip_failure(
                             step,
                             parent = cause[["parent"]],
@@ -2924,15 +3119,23 @@ pip_run <- function(
                 execStep <- pipenv[["data"]][["step"]][[row]]
                 executedSteps <- c(executedSteps, execStep)
 
-                # Prepare the list of failed inputs for the current step.
+                # Prepare the list of failed inputs for the current step. An
+                # input that failed for some keys is passed as it is.
                 failed <- stats::setNames(
                     failures[unname(depends[failedArgs])],
                     failedArgs
                 )
+                failed <- Filter(Negate(.is_pipeflow_partitioned), failed)
+                out <- NULL
                 cond <- tryCatch(
                     {
-                        # fmt: skip
-                        .pip_run_row(x = self, i = row, lgr = lgr, failed = failed) # nolint
+                        out <- .pip_run_row(
+                            x = self,
+                            i = row,
+                            lgr = lgr,
+                            failed = failed,
+                            onError = onError
+                        )
                         NULL
                     },
                     pipeflow_step_error = function(e) {
@@ -2954,6 +3157,12 @@ pip_run <- function(
                         j = "out",
                         value = list(list(cond))
                     )
+                }
+
+                # A step that failed for some keys keeps its output, which
+                # its dependents get per key (see .pip_execute_step_call()).
+                if (length(.pip_failed_keys(out)) > 0L) {
+                    failures[[execStep]] <- out
                 }
                 stateAfterStep <- pipenv[[".run_state"]]
 
@@ -3345,7 +3554,8 @@ pip_output_value.default <- function(x, ctx = list(), ...) {
 #' Apply pip_output_value() to the output of a step
 #'
 #' A partitioned output is annotated per key, so that each partition gets
-#' its key in `ctx$key`, and every other output is annotated as a whole.
+#' its key in `ctx$key`, and every other output is annotated as a whole. The
+#' failure of a key in a continued run is not annotated.
 #' `[<-` is used to rebuild a partitioned output, because `[[<-` would
 #' drop a partition whose result is `NULL`. An error for one key is
 #' re-raised as a `pipeflow_key_error`, as in `.pip_execute_step_call()`.
@@ -3359,6 +3569,10 @@ pip_output_value.default <- function(x, ctx = list(), ...) {
     if (.is_pipeflow_partitioned(out)) {
         keys <- names(out)
         out[keys] <- lapply(keys, FUN = function(key) {
+            # The failure of a key in a continued run is kept as it is.
+            if (inherits(out[[key]], "pipeflow_failure")) {
+                return(out[[key]])
+            }
             # As in `.pip_execute_step_call()`, errors are re-raised with the
             # key name, so a failing partition can be located.
             tryCatch(

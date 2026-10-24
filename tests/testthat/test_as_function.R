@@ -1703,6 +1703,91 @@ describe("as.function.pipeflow", {
             expect_identical(err[["parent"]][["key"]], "b")
         })
 
+        it("names the failed inner step for a mapped step after it", {
+            inner <- pip_new("mapped") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("parts", \(x = ~input) x, exec = "split") |>
+                pip_add("double", \(p = ~parts) {
+                    if (is.character(p)) {
+                        stop("not a number")
+                    }
+                    p * 2
+                }) |>
+                pip_add("plus", \(d = ~double) d + 1)
+            f <- as.function(inner, out = "plus", on_error = "continue")
+
+            err <- tryCatch(
+                suppressWarnings(f(x = list(a = 1, b = "x"))),
+                error = \(e) e
+            )
+
+            expect_match(
+                conditionMessage(err),
+                "step 'double': key 'b': not a number"
+            )
+            expect_s3_class(err[["parent"]], "pipeflow_key_error")
+        })
+
+        it("returns the failed keys of a mapped inner step via ~try()", {
+            inner <- pip_new("mapped") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("parts", \(x = ~input) x, exec = "split") |>
+                pip_add("double", \(p = ~parts) {
+                    if (is.character(p)) {
+                        stop("not a number")
+                    }
+                    p * 2
+                }) |>
+                pip_add("report", \(d = ~ try(double)) {
+                    if (inherits(d, "pipeflow_failure")) "no result" else d
+                })
+            f <- as.function(inner, out = "report", on_error = "continue")
+
+            expect_warning(
+                out <- f(x = list(a = 1, b = "x")),
+                class = "pipeflow_run_failed"
+            )
+            expect_equal(unclass(out), list(a = 2, b = "no result"))
+        })
+
+        it("fails a mapped pipeline step only for the failing key", {
+            inner <- pip_new("inner") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("double", \(p = ~input) {
+                    if (is.character(p)) {
+                        stop("not a number")
+                    }
+                    p * 2
+                })
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "parts",
+                    \(x = list(a = 1, b = "x", c = 3)) x,
+                    exec = "split"
+                ) |>
+                pip_add(
+                    "nested",
+                    as.function(inner, out = "double"),
+                    params = list(x = ~parts)
+                )
+
+            expect_warning(
+                pip_run(outer, lgr = NULL, on_error = "continue"),
+                class = "pipeflow_run_failed"
+            )
+
+            out <- outer[["nested", "out"]]
+            expect_equal(out[c("a", "c")], list(a = 2, c = 6))
+            f <- out[["b"]]
+            expect_s3_class(f, "pipeflow_failure")
+            expect_equal(f[["key"]], "b")
+            expect_equal(
+                conditionMessage(f),
+                "step 'nested' failed: key 'b': step 'double': not a number"
+            )
+            expect_identical(outer[["nested", "state"]], "failed")
+        })
+
         it("does not return a kept output when an input fails later", {
             inner <- pip_new("stale") |>
                 pip_add("input", \(x = NULL) x) |>
