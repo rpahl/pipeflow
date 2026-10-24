@@ -18,6 +18,7 @@ describe(".empty_pipeline", {
                 "locked",
                 "exec",
                 "time",
+                "time_start",
                 "depends",
                 "unbound",
                 "nodeId"
@@ -1202,6 +1203,28 @@ describe("pipelines read with readRDS()", {
         expect_same_pip(q, p)
     })
 
+    it("get a time_start column if saved without one", {
+        # Pipelines saved with pipeflow 0.5.0 have no time_start column
+        p <- pip_run(test_pip(), lgr = NULL)
+        p[["pipenv"]][["data"]][, time_start := NULL]
+        v <- p[c("b", "c")]
+        res <- save_and_read(list(p, v))
+        q <- res[[1]]
+
+        expect_equal(
+            colnames(q[["pipenv"]][["data"]]),
+            colnames(.empty_pipeline())
+        )
+        expect_true(all(is.na(q[["time_start"]])))
+        expect_true(all(is.na(res[[2]][["time_start"]])))
+        expect_identical(res[[2]][["pipenv"]], q[["pipenv"]])
+
+        t0 <- Sys.time()
+        pip_run(q, force = TRUE, lgr = NULL)
+        expect_true(all(q[["time_start"]] >= t0))
+        expect_equal(q[["out"]], p[["out"]])
+    })
+
     it("can be run with pip_run()", {
         p <- test_pip()
         q <- save_and_read(p)
@@ -2347,6 +2370,15 @@ describe("pip_replace", {
         expect_equal(p[["params"]][["f2"]], list(x = 5))
     })
 
+    it("clears time_start of the replaced step", {
+        p <- test_pip()
+        pip_run(p, lgr = NULL)
+        expect_false(is.na(p[["f2", "time_start"]]))
+        pip_replace(p, "f2", \(x = 3) x)
+        expect_true(is.na(p[["f2", "time_start"]]))
+        expect_false(is.na(p[["f1", "time_start"]]))
+    })
+
     it("rewires the step via a reference in params", {
         p <- test_pip()
         pip_replace(p, "f3", \(x = ~f2) x + 1, params = list(x = ~f1))
@@ -2721,6 +2753,13 @@ describe("pip_clone", {
             pip_clone(pip_new(), name = c("a", "b")),
             "name must be a single non-NA string"
         )
+    })
+
+    it("copies time_start", {
+        p <- pip_run(test_pip(), lgr = NULL)
+        p2 <- pip_clone(p)
+        expect_equal(p2[["time_start"]], p[["time_start"]])
+        expect_false(anyNA(p2[["time_start"]]))
     })
 
     it("returns a pipeflow pipeline copy with same content", {
@@ -4713,6 +4752,126 @@ describe("pip_run", {
 })
 
 
+describe("pip_run time_start", {
+    test_pip <- function() {
+        pip_new("p") |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1)
+    }
+
+    it("is NA for a step that never ran", {
+        p <- test_pip()
+        expect_true(all(is.na(p[["time_start"]])))
+        expect_s3_class(p[["time_start"]], "POSIXct")
+        expect_false(anyNA(p[["time"]]))
+    })
+
+    it("is set at the start of a successful run, before time", {
+        p <- test_pip()
+        t0 <- Sys.time()
+        pip_run(p, lgr = NULL)
+        expect_true(all(p[["time_start"]] >= t0))
+        expect_true(all(p[["time_start"]] <= p[["time"]]))
+    })
+
+    it("is the start of the step call, also for a slow step", {
+        p <- pip_new("p") |>
+            pip_add("slow", \(x = 1) {
+                Sys.sleep(0.05)
+                x
+            })
+        pip_run(p, lgr = NULL)
+        duration <- p[["slow", "time"]] - p[["slow", "time_start"]]
+        expect_gte(as.numeric(duration, units = "secs"), 0.04)
+    })
+
+    it("is set for a failing step, which keeps its time", {
+        for (onError in c("stop", "continue")) {
+            p <- pip_new("p") |>
+                pip_add("a", \(x = 1) x) |>
+                pip_add("f", \(x = ~a) stop("boom"))
+            timeBefore <- p[["f", "time"]]
+            t0 <- Sys.time()
+            suppressWarnings(
+                try(
+                    pip_run(p, lgr = NULL, on_error = onError),
+                    silent = TRUE
+                )
+            )
+            expect_equal(p[["f", "state"]], "failed")
+            expect_gte(p[["f", "time_start"]], t0)
+            expect_equal(p[["f", "time"]], timeBefore)
+            expect_lt(p[["f", "time"]], p[["f", "time_start"]])
+        }
+    })
+
+    it("is renewed when a failed step is run again", {
+        p <- pip_new("p") |>
+            pip_add("f", \(x = 1) stop("boom"))
+        try(pip_run(p, lgr = NULL), silent = TRUE)
+        first <- p[["f", "time_start"]]
+        Sys.sleep(0.01)
+        try(pip_run(p, lgr = NULL), silent = TRUE)
+        expect_gt(p[["f", "time_start"]], first)
+    })
+
+    it("is not changed for skipped steps", {
+        p <- pip_new("p") |>
+            pip_add("done", \(x = 1) x) |>
+            pip_add("locked", \(x = 2) x) |>
+            pip_add("f", \(x = 1) stop("boom")) |>
+            pip_add("skipped", \(x = ~f) x)
+        pip_run(p["done"], lgr = NULL)
+        pip_lock(p["locked"])
+        doneStart <- p[["done", "time_start"]]
+        Sys.sleep(0.01)
+        suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+
+        expect_equal(p[["done", "time_start"]], doneStart)
+        expect_true(is.na(p[["locked", "time_start"]]))
+        expect_false(is.na(p[["f", "time_start"]]))
+        expect_true(is.na(p[["skipped", "time_start"]]))
+    })
+
+    it("is set for a step whose failed input is a try() reference", {
+        p <- pip_new("p") |>
+            pip_add("f", \(x = 1) stop("boom")) |>
+            pip_add("g", \(x = ~ try(f)) inherits(x, "pipeflow_failure"))
+        suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+        expect_false(is.na(p[["g", "time_start"]]))
+        expect_true(p[["g", "out"]])
+    })
+
+    it("is one time stamp for a partitioned step", {
+        p <- pip_new("p") |>
+            pip_add("parts", \(v = list(a = 1, b = 2)) v, exec = "split") |>
+            pip_add("map", \(x = ~parts) x * 2)
+        t0 <- Sys.time()
+        pip_run(p, lgr = NULL)
+        expect_length(p[["map", "time_start"]], 1L)
+        expect_gte(p[["map", "time_start"]], t0)
+        expect_lte(p[["map", "time_start"]], p[["map", "time"]])
+    })
+
+    it("lands on the row of a step that inserts steps before itself", {
+        p <- pip_new("p") |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) {
+                pip_add(.self, "pre", \(y = 3) y, after = "a")
+                x
+            })
+        t0 <- Sys.time()
+        pip_run(p, lgr = NULL)
+        expect_equal(unname(p[["step"]]), c("a", "pre", "b"))
+        expect_gte(p[["b", "time_start"]], t0)
+        expect_lte(p[["b", "time_start"]], p[["b", "time"]])
+        # The inserted step got its own start only if (and when) it ran
+        pre <- p[["pre", "time_start"]]
+        expect_true(is.na(pre) || pre >= p[["b", "time_start"]])
+    })
+})
+
+
 describe("pip_reset", {
     it("resets states and outputs of all steps", {
         p <- pip_new() |>
@@ -4731,6 +4890,20 @@ describe("pip_reset", {
             logical(1)
         )))
         expect_equal(get_run_state(p), "ready")
+    })
+
+    it("clears time_start but keeps time", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1)
+        pip_run(p, lgr = NULL)
+        timeBefore <- p[["time"]]
+
+        pip_reset(p["b"])
+
+        expect_false(is.na(p[["a", "time_start"]]))
+        expect_true(is.na(p[["b", "time_start"]]))
+        expect_equal(p[["time"]], timeBefore)
     })
 
     it("keeps params and tags but clears outputs", {

@@ -39,6 +39,7 @@
         "out",
         "state",
         "time",
+        "time_start",
         "tags",
         "locked",
         "exec"
@@ -97,7 +98,7 @@
         }
 
         # 3) Runtime state and annotation columns.
-        for (prop in c("out", "state", "time", "tags", "locked", "exec")) {
+        for (prop in setdiff(props, c("step", "fun", "params"))) {
             x[[iSelP[[k]], prop]] <- qVals[[prop]]
         }
     }
@@ -627,6 +628,9 @@ dim.pipeflow <- function(x) {
 #' * `p[[step, "state"]] <- state` -- set the step's state.
 #' * `p[[step, "time"]] <- time` -- set the step's time stamp (a single
 #'   `POSIXct` value).
+#' * `p[[step, "time_start"]] <- time` -- set the start time of the step's
+#'   last run (a single `POSIXct` value, which can be `NA` for a step that
+#'   never ran).
 #' * `p[[step, "out"]] <- value` -- set the step's stored output (mostly
 #'    useful for debugging)
 #'
@@ -776,6 +780,14 @@ dim.pipeflow <- function(x) {
             stop("time must be a single POSIXct value")
         }
         data.table::set(data, i = i, j = "time", value = value)
+    } else if (j == "time_start") {
+        if (identical(value, NA)) {
+            value <- as.POSIXct(NA)
+        }
+        if (!.is_single(value, "POSIXct")) {
+            stop("time_start must be a single POSIXct value or NA")
+        }
+        data.table::set(data, i = i, j = "time_start", value = value)
     } else {
         if (j %in% .derived_cols) {
             stop("direct assignment to column '", j, "' is not supported.")
@@ -814,10 +826,11 @@ dim.pipeflow <- function(x) {
 #' (the rows of both sides are aligned by position and must have the same
 #' length). In this form, `i` is required and `j` must be omitted. The
 #' properties are copied in the order `step`, `fun`, `params`, `out`,
-#' `state`, `time`, `tags`, `locked`, `exec`: the step is renamed to the
-#' source name (a no-op when it is unchanged), the function and the params
-#' are replaced with those of the source (same as [pip_replace()] with the
-#' params of the source), and the runtime state and annotation columns are
+#' `state`, `time`, `time_start`, `tags`, `locked`, `exec`: the step is
+#' renamed to the source name (a no-op when it is unchanged), the function
+#' and the params are replaced with those of the source (same as
+#' [pip_replace()] with the params of the source), and the runtime state
+#' and annotation columns are
 #' overwritten (locked steps included). A copied step refers to the steps
 #' that the source step depends on by name, also if it was defined with a
 #' relative reference such as `~-1`, and these steps are looked up in `p`.

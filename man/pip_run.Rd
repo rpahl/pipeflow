@@ -65,6 +65,26 @@ A "done" step is skipped unless \code{force = TRUE} was set. For all other
 states, the step will be re-executed in the next \code{\link[=pip_run]{pip_run()}}.
 }
 
+\subsection{Time stamps}{
+
+The step table has two time stamps per step:
+\itemize{
+\item \code{time_start}: the start of the step's last run. It is set each time the
+step is run, also if the run fails. It is \code{NA} for a step that has not
+run since it was added, replaced (see \code{\link[=pip_replace]{pip_replace()}}) or reset (see
+\code{\link[=pip_reset]{pip_reset()}}). A skipped step (because it is \code{"done"}, locked or has a
+failed input) keeps its value.
+\item \code{time}: the time the step was added or replaced, or the end of its last
+successful run. A failed run does not change it. It is the time stamp
+that \code{\link[=pip_output_value]{pip_output_value()}} gets in \code{ctx}.
+}
+
+With \code{t0 <- Sys.time()} taken before \code{pip_run()}, a step was run in that
+run if \code{time_start >= t0}. Its last run succeeded if its state is
+\code{"done"} and \code{time >= time_start}, and then \code{time - time_start} is the
+duration of that run.
+}
+
 \subsection{Running views}{
 
 When \code{x} is a view, the requested rows are run together with their

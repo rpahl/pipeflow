@@ -177,6 +177,9 @@ same as \code{\link[=pip_lock]{pip_lock()}} / \code{\link[=pip_unlock]{pip_unloc
 \item \code{p[[step, "state"]] <- state} -- set the step's state.
 \item \code{p[[step, "time"]] <- time} -- set the step's time stamp (a single
 \code{POSIXct} value).
+\item \code{p[[step, "time_start"]] <- time} -- set the start time of the step's
+last run (a single \code{POSIXct} value, which can be \code{NA} for a step that
+never ran).
 \item \code{p[[step, "out"]] <- value} -- set the step's stored output (mostly
 useful for debugging)
 }
@@ -218,10 +221,11 @@ the steps of \code{q} selected by \code{i} into the steps of \code{p} selected b
 (the rows of both sides are aligned by position and must have the same
 length). In this form, \code{i} is required and \code{j} must be omitted. The
 properties are copied in the order \code{step}, \code{fun}, \code{params}, \code{out},
-\code{state}, \code{time}, \code{tags}, \code{locked}, \code{exec}: the step is renamed to the
-source name (a no-op when it is unchanged), the function and the params
-are replaced with those of the source (same as \code{\link[=pip_replace]{pip_replace()}} with the
-params of the source), and the runtime state and annotation columns are
+\code{state}, \code{time}, \code{time_start}, \code{tags}, \code{locked}, \code{exec}: the step is
+renamed to the source name (a no-op when it is unchanged), the function
+and the params are replaced with those of the source (same as
+\code{\link[=pip_replace]{pip_replace()}} with the params of the source), and the runtime state
+and annotation columns are
 overwritten (locked steps included). A copied step refers to the steps
 that the source step depends on by name, also if it was defined with a
 relative reference such as \code{~-1}, and these steps are looked up in \code{p}.
