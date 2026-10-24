@@ -388,19 +388,8 @@ Things to keep in mind:
 - **Outdating.** Steps downstream of executed steps, if they did not run
   themselves, become `outdated`. This happens on exit, after a restart and
   after a continued run.
-- **Conditions.** `.pip_step_error()` wraps a step error, `.pip_key_error()`
-  wraps a partition key error, `.pip_failure()` is the value a `~try()`
-  argument receives, and `.pip_run_failed_warning()` is the warning of a
-  continued run.
-- **Per-key failures.** In a continued run, a mapped step keeps a
-  `.pip_failure()` (with `key`) as the output of each failed key, gets state
-  `failed` and keeps its time. `pip_run()` records its partitioned output
-  in `failures` (whole-step failures are failure objects there), so
-  `.is_pipeflow_partitioned()` tells the two apart. Mapped steps downstream
-  handle the failed keys in `.pip_execute_step_call()`; other steps treat
-  the input as failed. `.pip_failed_keys()` finds the keys, and
-  `.pip_first_failure()` picks the condition for the warning and for
-  `as.function()` (`.fun_check_run()`).
+- **Errors and failures.** See [Errors and failures](#errors-and-failures)
+  below.
 
 ### States
 
@@ -439,6 +428,59 @@ stateDiagram-v2
         halted --> running : pip_run
     }
 ```
+
+### Errors and failures
+
+`?pip_run` describes what users see. The conditions behind it
+(constructors at the top of `R/pipeflow.R`):
+
+| Condition | Made by | Fields | Where |
+|---|---|---|---|
+| `pipeflow_step_error` | `.pip_step_error()` | `step`, `parent` | signalled by `pip_run(on_error = "stop")`; message `"step '<step>': <parent msg>"` |
+| `pipeflow_key_error` | `.pip_key_error()` | `key`, `parent` | `parent` of the above (and of a failure) if the error belongs to one key; message `"key '<key>': <parent msg>"` |
+| `pipeflow_failure` | `.pip_failure()` | `step`, `failed_step`, `parent`, `key` (per key only) | value of a failed input in a continued run; stored per key in the output of a mapped step |
+| `pipeflow_run_failed` (warning) | `.pip_run_failed_warning()` | `failed`, `skipped`, `keys` | end of a continued run |
+
+- **Failure messages.** `"step '<failed_step>' failed: <parent msg>"`, with
+  `"step '<step>' was not run: "` in front if `step != failed_step`. `parent`
+  is the original condition of the step that failed, or its
+  `pipeflow_key_error` for a failed key.
+- **Whole-step failures.** In a continued run, the failed step's `out` is the
+  original condition (the key error for an error per key outside the key
+  loop, e.g. in `pip_output_value()`), and `pip_run()` records a
+  `.pip_failure()` for it in `failures`. A step with a failed non-`~try()`
+  input is not run and gets a failure with the upstream `failed_step`. A
+  `~try()` argument receives the failure via `.pip_run_row(failed = )`.
+  Errors outside of the per-key calls (split steps, `plain`/`reduce`
+  steps, `pip_output_value()`, a step function failing before mapping) are
+  always whole-step failures.
+- **Per-key failures.** In a continued run, `.pip_execute_step_call()`
+  stores a `.pip_failure(key = )` for each failed key instead of stopping.
+  Before calling a key, it checks the sliced partitioned arguments: if a
+  non-`~try()` argument holds a failure, the key is not run and gets a
+  "was not run" failure (with `onError = "stop"`, possible only via a
+  locked or manually set input, this is raised as a key error).
+  `.pip_annotate_output()` leaves failed keys alone. `.pip_run_row()` then
+  stores the output with state `failed` and keeps `time` (it marks the last
+  successful run).
+- **Bookkeeping in `pip_run()`.** `failures` holds, by step and in run order,
+  a failure object per whole-step failure and the partitioned output per
+  step with failed keys; `.is_pipeflow_partitioned()` tells them apart.
+  A step that is mapped (`exec = "auto"`) ignores an input with failed keys
+  in the failed-input check (it handles the keys itself); any other step
+  treats it as a failed input. Such an input is never passed via `failed =`,
+  the step reads the stored output. The next run re-runs a failed mapped
+  step for all keys.
+- **Warning fields.** `failed`: one condition per failed step, the `parent`
+  of its failure. For a step with failed keys, `.pip_first_failure()` picks
+  the first key that failed in the step itself, or, if all failed keys were
+  not run, the first of them (its `parent` is then the key error of the
+  upstream step). `skipped`: steps not run because an input failed. `keys`:
+  the failed keys per step with failed keys (`.pip_failed_keys()`).
+- **`as.function()`.** `.fun_check_run()` re-signals the failure of a
+  requested inner step as a `pipeflow_step_error`; for a step with failed
+  keys it uses `.pip_first_failure()` and, in `.fun_failure_causes()`, its
+  `failed_step` as the cause.
 
 ## 9. Serialization
 

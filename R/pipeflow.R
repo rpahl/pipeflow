@@ -2778,91 +2778,50 @@ pip_replace <- function(
 #' because they were already `"done"`) keep their state.
 #'
 #' ## Runtime errors
-#' If a step fails with an error, the failing step's state is set to
-#' `"failed"`, the run is aborted (no further steps are executed), and the
-#' pipeline run state is set to `"failed"`. Steps downstream of executed
-#' steps that were not reached are marked `"outdated"`, so a subsequent run
-#' retries them.
+#' By default, a failing step stops the run: the step gets state `"failed"`,
+#' the pipeline run state becomes `"failed"`, and steps after it that were
+#' not reached are marked `"outdated"`, so the next run retries them.
 #'
-#' The error is signalled as a condition of class
-#' `c("pipeflow_step_error", "error", "condition")`. Its message is the
-#' message of the original error, prefixed with `"step '<step>': "`. Its
-#' field `step` names the failed step and its field `parent` holds the
-#' original error condition with its class, which can be caught via
+#' The error message names the step, and for a step mapped over partitions
+#' (see `exec` in [pip_add()]) also the partition key, e.g.
+#' `"step 'fit': key 'b': negative"`. The error has class
+#' `pipeflow_step_error` and keeps the original error in its field
+#' `parent`:
 #' `tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)`.
-#' If the error belongs to a single partition key (see `exec` in
-#' [pip_add()]) — a step mapped over partitioned inputs, or
-#' [pip_output_value()] failing for one key of a partitioned output —
-#' `parent` is a condition of class
-#' `c("pipeflow_key_error", "error", "condition")` instead. Its message is
-#' prefixed with `"key '<key>': "`, its field `key` names the failed
-#' partition key and its field `parent` holds the original error condition.
 #'
 #' ## Continuing after errors
-#' With `on_error = "continue"`, a failing step gets state `"failed"`, its
-#' error condition is stored as its output, and the run goes on. An input of
-#' a step is *failed* if its step failed or was not run because a step
-#' upstream of it failed in this run.
+#' With `on_error = "continue"`, the run does not stop at a failed step:
 #'
-#' * A step with a failed input is not run, and counts as failed for its own
-#'   dependents, unless the argument receiving that input refers to its step
-#'   via `try()`, e.g. `x = ~try(other_step)` (see [pip_add()]).
-#' * A step whose failed inputs all use `try()` references is run, and
-#'   each of these arguments receives a condition of class
-#'   `c("pipeflow_failure", "error", "condition")` with the fields
-#'   `message`, `step` (the step of the input), `failed_step` (the step that
-#'   actually failed) and `parent` (the original error condition).
-#' * Locked steps are the exception: they are never run, so a failed input
-#'   does not affect them. They keep their state and output, and their
-#'   dependents receive that output as usual.
+#' * The failed step gets state `"failed"`, and its error is stored as its
+#'   output.
+#' * Steps that depend on a failed step are not run, and neither are their
+#'   own dependents. All other steps are run.
+#' * To run a step despite a failed input, refer to that input via `try()`,
+#'   e.g. `x = ~try(fit)` (see [pip_add()]). The argument then receives a
+#'   failure object (an error condition) whose message tells which step
+#'   failed, e.g. `"step 'fit' failed: negative"`.
+#' * Locked steps are never run, so a failed input does not affect them.
 #'
-#' A step mapped over partitioned inputs (see `exec` in [pip_add()]) fails
-#' per partition key instead:
+#' A step mapped over partitions fails only for the keys whose call failed:
 #'
-#' * If the step function fails for a key, the step goes on with the other
-#'   keys. Its output is the partitioned output with the results of the keys
-#'   that succeeded and, for each failed key, a `pipeflow_failure` with the
-#'   additional field `key`, whose `parent` is the `pipeflow_key_error`
-#'   described above. The step gets state `"failed"`; its `time` is not
-#'   updated.
-#' * A mapped step downstream of it handles the failed keys one by one: for a
-#'   key whose input is a failure, the step function is only called if the
-#'   argument refers to its step via `try()`, and receives the failure. For
-#'   the other arguments, the function is not called for that key, and its
-#'   output is a `pipeflow_failure` ("step '<step>' was not run: ...") with
-#'   the fields `key` and `failed_step`, so the step gets state `"failed"`
-#'   too.
-#' * A step that is not mapped (e.g. `exec = "reduce"`) is not run, as for
-#'   any failed input, unless it takes the input via `try()`. Then it
-#'   receives the whole partitioned output: the results of the keys that
-#'   succeeded and the failure objects of the keys that failed.
-#' * The next run re-runs the step for all keys.
+#' * Its output keeps the results of the other keys and holds a failure
+#'   object for each failed key, e.g. `"step 'fit' failed: key 'b':
+#'   negative"`. The step gets state `"failed"`, and printing the pipeline
+#'   shows its output as e.g. `<partitioned: 1/3 failed>`.
+#' * A mapped step after it is not run for the failed keys, whose output is
+#'   then a failure object too (`"step 'show' was not run: step 'fit'
+#'   failed: key 'b': negative"`), unless it takes the input via `try()`.
+#' * A step that is not mapped (e.g. `exec = "reduce"`) is not run, unless
+#'   it takes the input via `try()`. Then it receives the results of all
+#'   keys, including the failure objects.
 #'
-#' Errors outside of the calls per key, e.g. of a step with `exec = "split"`
-#' or of [pip_output_value()], fail the whole step as described above.
-#'
-#' Steps that ran (including those that received failure objects) are
-#' `"done"`. Steps that were not run are treated like steps not reached by an
-#' aborted run: a `"done"` step becomes `"outdated"`, a `"new"` one stays
-#' `"new"`, so the next run retries them together with the failed steps.
-#' Once a failed step succeeds, the steps downstream of it, including those
-#' that received failure objects, are run again.
-#'
-#' If any step failed, the pipeline run state is set to `"continued"` and,
-#' once all states and outputs are stored, a warning of class
-#' `c("pipeflow_run_failed", "warning", "condition")` is signalled. Its
-#' fields are:
-#'
-#' * `failed`: a named list with one condition per failed step, the original
-#'   error of the step. A step that failed for single keys is listed with
-#'   one condition only, the `pipeflow_key_error` of its first failed key.
-#'   Keys that were not run because an input failed only count if no key
-#'   failed in the step itself; the condition is then the
-#'   `pipeflow_key_error` of the input step that failed.
-#' * `skipped`: the names of the steps that were not run because an input
-#'   failed.
-#' * `keys`: a named list with the failed keys of each step that failed for
-#'   single keys.
+#' At the end of the run, the pipeline run state is `"continued"`, and a
+#' warning of class `pipeflow_run_failed` lists the failed steps (with the
+#' number of failed keys) and the steps that were not run. The next run
+#' retries the failed steps (a mapped step for all keys) and the steps that
+#' were not run; once a failed step succeeds, the steps after it, including
+#' those that received failure objects, are run again. See
+#' `vignette("v05c-error-handling", package = "pipeflow")` for examples.
 #'
 #' ## Runtime control flow via restart and halt
 #'
