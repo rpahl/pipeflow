@@ -4820,19 +4820,22 @@ describe("pip_run", {
                 )
             })
 
-            it("does not update the time of a step that failed for a key", {
+            it("sets only time_start of a step that failed for a key", {
                 p <- key_pip()
                 pip_set_params(p, list(min = -Inf))
                 pip_run(p, lgr = NULL)
                 timeBefore <- p[["fit", "time"]]
 
                 pip_set_params(p, list(min = 0))
+                t0 <- Sys.time()
                 suppressWarnings(
                     pip_run(p, lgr = NULL, on_error = "continue"),
                     classes = "pipeflow_run_failed"
                 )
                 expect_equal(unname(p[["fit", "state"]]), "failed")
                 expect_equal(p[["fit", "time"]], timeBefore)
+                expect_true(p[["fit", "time_start"]] >= t0)
+                expect_true(p[["fit", "time"]] < p[["fit", "time_start"]])
             })
 
             it("does not run a key whose input failed without try()", {
