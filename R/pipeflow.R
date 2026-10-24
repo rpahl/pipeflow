@@ -904,13 +904,10 @@
     # from their last attempt (an environment: step name -> TRUE/FALSE). Here,
     # at the start of an attempt, we unmark the current step and it will be
     # marked again only if this attempt successfully stores an output (see
-    # below). The environment only exists once a step stored an output with
-    # failed keys.
+    # below).
     pipenv <- .pip_pipenv(x)
     currentOut <- pipenv[[".steps_with_current_out"]]
-    if (!is.null(currentOut)) {
-        currentOut[[step]] <- FALSE
-    }
+    currentOut[[step]] <- FALSE
     # The step may change its own function or params while it runs (via
     # `.self`), which makes the outputs of this attempt stale right away.
     funAtStart <- dat[["fun"]][[i]]
@@ -985,11 +982,6 @@
         isUnchanged <- identical(dat[["fun"]][[rowNow]], funAtStart) &&
             identical(dat[["params"]][[rowNow]], paramsAtStart)
         if (isUnchanged) {
-            currentOut <- pipenv[[".steps_with_current_out"]]
-            if (is.null(currentOut)) {
-                currentOut <- new.env(hash = TRUE, parent = emptyenv())
-                pipenv[[".steps_with_current_out"]] <- currentOut
-            }
             currentOut[[step]] <- TRUE
         }
     } else if (stepStillExists) {
@@ -1080,6 +1072,13 @@
     dat <- pipenv[["data"]]
     if (is.data.frame(dat) && is.null(dat[["time_start"]])) {
         .pip_add_time_start(pipenv)
+    }
+    # Pipelines saved with older versions of pipeflow have no
+    # `.steps_with_current_out` (see pip_new())
+    if (
+        is.environment(pipenv) && is.null(pipenv[[".steps_with_current_out"]])
+    ) {
+        pipenv[[".steps_with_current_out"]] <- new.env(parent = emptyenv())
     }
     pipenv
 }
@@ -1690,6 +1689,10 @@ pip_new <- function(name = "pipe") {
     # Restart tracking
     env[[".restart_count"]] <- 0L
     env[[".restart_force"]] <- TRUE
+
+    # Steps whose stored output comes from their last attempt (see
+    # .pip_run_row()), not copied by pip_clone()
+    env[[".steps_with_current_out"]] <- hash_map()
 
     structure(
         list(name = name, view = NULL, pipenv = env),
@@ -2607,10 +2610,8 @@ pip_rename <- function(x, from, to) {
     # .pip_run_row()) does not change with its name. The new name may still
     # carry a mark of a removed step, which is overwritten (also with NULL).
     currentOut <- env[[".steps_with_current_out"]]
-    if (!is.null(currentOut)) {
-        currentOut[[to]] <- currentOut[[from]]
-        currentOut[[from]] <- NULL
-    }
+    currentOut[[to]] <- currentOut[[from]]
+    currentOut[[from]] <- NULL
 
     # The kept inner pipelines of a pipeline function are found by step name
     .fun_rename(dat[["fun"]][[match(to, newSteps)]], from = from, to = to)

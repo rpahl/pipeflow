@@ -1232,6 +1232,33 @@ describe("pipelines read with readRDS()", {
         expect_equal(q[["out"]], p[["out"]])
     })
 
+    it("re-run only failed keys if saved without step marks", {
+        # Pipelines saved with older versions of pipeflow have no
+        # .steps_with_current_out environment. The step function of the
+        # read pipeline has its own copy of this environment, so its factor
+        # is passed via a file.
+        multFile <- tempfile()
+        on.exit(unlink(multFile))
+        writeLines("1", multFile)
+        p <- pip_new() |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add("fit", \(x = ~parts, file = multFile) {
+                mult <- as.numeric(readLines(file))
+                if (x == 2 && mult == 1) stop("bad") else x * mult
+            })
+        rm(".steps_with_current_out", envir = .subset2(p, "pipenv"))
+        q <- save_and_read(p)
+        expect_null(.subset2(q, "pipenv")[[".steps_with_current_out"]])
+
+        suppressWarnings(
+            pip_run(q, lgr = NULL, on_error = "continue"),
+            classes = "pipeflow_run_failed"
+        )
+        writeLines("10", multFile)
+        pip_run(q, lgr = NULL)
+        expect_equal(unclass(q[["fit", "out"]]), list(a = 1, b = 20))
+    })
+
     it("can be run with pip_run()", {
         p <- test_pip()
         q <- save_and_read(p)

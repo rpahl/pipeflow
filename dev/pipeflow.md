@@ -79,6 +79,7 @@ classDiagram
         .last_run : POSIXct | NULL
         .restart_count : integer
         .restart_force : logical
+        .steps_with_current_out : env, step to TRUE/FALSE
     }
     class data {
         <<data.table>>
@@ -495,10 +496,10 @@ stateDiagram-v2
   changed its own function or params during the attempt (via `.self`; a
   change upstream makes the next run re-run the input step, and so all
   keys). Only outputs with failed keys are marked (the only ones that are
-  reused), and the environment is only created with the first of them. A
-  step that is not marked `TRUE` is re-run for all keys, which is always
-  safe: e.g. in a clone (`pip_clone()` does not copy it) or a pipeline saved
-  before it existed.
+  reused). `pip_new()` creates the environment, and `.pip_pipenv()` adds it
+  to a pipeline saved before it existed. A step that is not marked `TRUE`
+  is re-run for all keys, which is always safe: e.g. in a clone
+  (`pip_clone()` starts with an empty one).
 - **Warning fields.** `failed`: one condition per failed step, the `parent`
   of its failure. For a step with failed keys, `.pip_first_failure()` picks
   the first key that failed in the step itself (`failed_step == step`), or,
