@@ -5083,6 +5083,39 @@ describe("pip_run", {
                 )
             })
 
+            it("reports a step's own failed key before forwarded ones", {
+                p <- pip_new() |>
+                    pip_add(
+                        "parts",
+                        \(x = list(a = 1, b = 2)) x,
+                        exec = "split"
+                    ) |>
+                    pip_add("calc", \(p = ~parts) {
+                        if (p == 1) stop("calc failed") else p
+                    }) |>
+                    pip_add("report", \(r = ~ try(calc)) {
+                        if (is_failure(r)) r else stop("report failed")
+                    })
+                w <- expect_warning(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    class = "pipeflow_run_failed"
+                )
+
+                # 'report' forwards the failure of 'calc' for key 'a' as it is
+                f <- p[["report", "out"]][["a"]]
+                expect_equal(f[["failed_step"]], "calc")
+                expect_equal(w[["keys"]][["report"]], c("a", "b"))
+                expect_equal(
+                    conditionMessage(w[["failed"]][["report"]]),
+                    "key 'b': report failed"
+                )
+                expect_match(
+                    conditionMessage(w),
+                    "'report': key 'b': report failed (2 of 2 keys)",
+                    fixed = TRUE
+                )
+            })
+
             describe("retry of failed keys", {
                 # 'fit' fails for key 'b' as long as `env$flaky` is TRUE
                 flaky_pip <- function(env) {
@@ -5197,6 +5230,52 @@ describe("pip_run", {
                         unclass(p[["twice", "out"]]),
                         list(a = 20, b = -20, c = 80)
                     )
+                })
+
+                it("re-runs all keys after an attempt that stopped", {
+                    env <- new.env()
+                    env$failKeys <- "b"
+                    p <- pip_new() |>
+                        pip_add(
+                            "parts",
+                            \(x = list(a = 1, b = 2, c = 3)) x,
+                            exec = "split"
+                        ) |>
+                        pip_add("fit", \(x = ~parts, mult = 10) {
+                            key <- .pip_step_call()[["key"]]
+                            if (key %in% env$failKeys) {
+                                stop("boom")
+                            } else {
+                                x * mult
+                            }
+                        })
+                    run_flaky(p)
+
+                    # A full attempt with new params stops at key 'a' and
+                    # keeps the output of the first run, with 'b' failed
+                    pip_set_params(p, list(mult = 100))
+                    env$failKeys <- "a"
+                    expect_error(pip_run(p, lgr = NULL), "boom")
+                    expect_equal(unname(p[["fit", "state"]]), "failed")
+
+                    env$failKeys <- character()
+                    pip_run(p, lgr = NULL)
+                    expect_equal(
+                        unclass(p[["fit", "out"]]),
+                        list(a = 100, b = 200, c = 300)
+                    )
+                })
+
+                it("re-runs all keys after a retry that stopped", {
+                    env <- new.env()
+                    p <- flaky_pip(env)
+                    run_flaky(p)
+                    expect_error(pip_run(p, lgr = NULL), "negative")
+
+                    env$flaky <- FALSE
+                    env$calls <- character()
+                    pip_run(p, lgr = NULL)
+                    expect_equal(env$calls, c("a", "b", "c"))
                 })
             })
         })

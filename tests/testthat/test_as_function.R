@@ -1825,6 +1825,32 @@ describe("as.function.pipeflow", {
             expect_named(pip_inner(outer, "nested"), c("a", "b", "c"))
         })
 
+        it("names the failed key of the requested step, not of its input", {
+            inner <- pip_new("recover") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("parts", \(x = ~input) x, exec = "split") |>
+                pip_add("calc", \(p = ~parts) {
+                    if (p < 3) stop("calc failed") else p
+                }) |>
+                pip_add("report", \(r = ~ try(calc)) {
+                    key <- .pip_step_call()[["key"]]
+                    if (key == "a") "recovered" else r
+                })
+            f <- as.function(inner, out = "report", on_error = "continue")
+
+            err <- tryCatch(
+                suppressWarnings(f(x = list(a = 1, b = 2, c = 3))),
+                error = \(e) e
+            )
+
+            # 'report' recovered key 'a', but forwards the failure of 'b'
+            expect_match(
+                conditionMessage(err),
+                "step 'calc': key 'b': calc failed"
+            )
+            expect_identical(err[["parent"]][["key"]], "b")
+        })
+
         it("does not return a kept output when an input fails later", {
             inner <- pip_new("stale") |>
                 pip_add("input", \(x = NULL) x) |>

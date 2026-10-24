@@ -481,17 +481,31 @@ stateDiagram-v2
   annotated in their own run). All keys are still passed as `keys`, so a
   function made by `as.function()` keeps the inner pipelines of all keys.
   Dependents are not narrowed down: an input that ran makes them re-run all
-  keys.
+  keys. The stored output must also come from the step's last attempt: an
+  attempt that stops with an error keeps the previous output (and state
+  `failed`), which may be from before a change. `pipenv$.steps_with_current_out`
+  is an environment (step name -> `TRUE`/`FALSE`, like `.steps_to_nodes` a
+  hash) that marks the steps whose stored output comes from their last
+  attempt: `.pip_run_row()` sets the step to `FALSE` at the start of each
+  attempt and to `TRUE` when the attempt stores its output. Only outputs
+  with failed keys are marked (the only ones that are reused), and the
+  environment is only created with the first of them. A step that is not
+  marked `TRUE` is re-run for all keys, which is always safe: e.g. in a
+  clone (`pip_clone()` does not copy it) or a pipeline saved before it
+  existed.
 - **Warning fields.** `failed`: one condition per failed step, the `parent`
   of its failure. For a step with failed keys, `.pip_first_failure()` picks
-  the first key that failed in the step itself, or, if all failed keys were
-  not run, the first of them (its `parent` is then the key error of the
+  the first key that failed in the step itself (`failed_step == step`), or,
+  if there is none, the first failed key (not run, or a failure of an input
+  returned as it is via `~try()`; its `parent` is then the key error of the
   upstream step). `skipped`: steps not run because an input failed. `keys`:
   the failed keys per step with failed keys (`.pip_failed_keys()`).
 - **`as.function()`.** `.fun_check_run()` re-signals the failure of a
-  requested inner step as a `pipeflow_step_error`; for a step with failed
-  keys it uses `.pip_first_failure()` and, in `.fun_failure_causes()`, its
-  `failed_step` as the cause.
+  requested inner step as a `pipeflow_step_error`. For a requested step with
+  failed keys it uses the first failure of its own output (not the output
+  of the cause step, which may hold keys the requested step recovered from
+  via `~try()`); `.fun_failure_causes()` uses its `failed_step` as the
+  cause for the dependents.
 
 ## 9. Serialization
 

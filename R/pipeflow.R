@@ -525,16 +525,21 @@
 
 #' Get the first failure of a partitioned output
 #'
+#' A failure is the step's own if the step failed for that key. A key can
+#' also hold the failure of an input step: if the key was not run because
+#' the input failed, or if the step got the failure via `~try()` and
+#' returned it as-is.
+#'
 #' @param out A partitioned step output with at least one failed key.
-#' @return The failure object of the first key that failed in its own step,
-#' or, if all failed keys were not run because an input failed, of the first
-#' failed key.
+#' @param step The name of the step whose output `out` is.
+#' @return The failure object of the first key that failed in `step` itself,
+#' or, if `step` failed for none of its keys itself, of the first failed key.
 #' @noRd
-.pip_first_failure <- function(out) {
+.pip_first_failure <- function(out, step) {
     failures <- unname(out[.pip_failed_keys(out)])
     isOwn <- vapply(
         failures,
-        FUN = \(f) identical(f[["step"]], f[["failed_step"]]),
+        FUN = \(f) identical(f[["failed_step"]], step),
         FUN.VALUE = logical(1)
     )
     failures[[if (any(isOwn)) which(isOwn)[[1L]] else 1L]]
@@ -562,7 +567,12 @@
     )
     keys <- lapply(failures[isPartial], FUN = .pip_failed_keys)
     conds <- failures
-    conds[isPartial] <- lapply(failures[isPartial], FUN = .pip_first_failure)
+    conds[isPartial] <- mapply(
+        FUN = .pip_first_failure,
+        out = failures[isPartial],
+        step = names(failures)[isPartial],
+        SIMPLIFY = FALSE
+    )
 
     failedSteps <- vapply(conds, \(f) f[["failed_step"]], FUN.VALUE = "")
     isFailed <- isPartial | names(failures) == failedSteps
@@ -578,7 +588,7 @@
                 return(conditionMessage(failed[[step]]))
             }
             f <- conds[[step]]
-            reason <- if (identical(f[["step"]], f[["failed_step"]])) {
+            reason <- if (identical(f[["failed_step"]], step)) {
                 conditionMessage(f[["parent"]])
             } else {
                 sprintf(
@@ -865,6 +875,18 @@
     # the step's row here, as only the step call can shift the rows.
     data.table::set(dat, i = i, j = "time_start", value = Sys.time())
 
+    # `.steps_with_current_out` remembers the steps whose stored output comes
+    # from their last attempt (an environment: step name -> TRUE/FALSE). Here,
+    # at the start of an attempt, we unmark the current step and it will be
+    # marked again only if this attempt successfully stores an output (see
+    # below). The environment only exists once a step stored an output with
+    # failed keys.
+    pipenv <- .pip_pipenv(x)
+    currentOut <- pipenv[[".steps_with_current_out"]]
+    if (!is.null(currentOut)) {
+        currentOut[[step]] <- FALSE
+    }
+
     out <- withCallingHandlers(
         {
             args <- .pip_unwrap_params(args, unbound)
@@ -929,6 +951,12 @@
             j = c("out", "state"),
             value = list(list(out), .step_states[["failed"]][["name"]])
         )
+        # Remember that the step's output now comes from this (current) attempt.
+        if (is.null(currentOut)) {
+            currentOut <- new.env(hash = TRUE, parent = emptyenv())
+            pipenv[[".steps_with_current_out"]] <- currentOut
+        }
+        currentOut[[step]] <- TRUE
     } else if (stepStillExists) {
         data.table::set(
             dat,
@@ -3079,7 +3107,10 @@ pip_run <- function(
                     if (length(notAllowed) > 0L) {
                         cause <- failures[[depends[[notAllowed[[1L]]]]]]
                         if (.is_pipeflow_partitioned(cause)) {
-                            cause <- .pip_first_failure(cause)
+                            cause <- .pip_first_failure(
+                                cause,
+                                step = depends[[notAllowed[[1L]]]]
+                            )
                         }
                         failures[[step]] <- .pip_failure(
                             step,
@@ -3115,7 +3146,13 @@ pip_run <- function(
                 # input was run again in this run or the run is forced.
                 retryKeys <- character()
                 isFailed <- dat[["state"]][[row]] == "failed"
-                if (isFailed && !force && !inputsChanged) {
+                # To ensure that we don't use outdated outputs for the other
+                # keys (the ones that did not fail), their output is only
+                # re-used if they come from the most recent step's attempt.
+                isOutCurrent <- isTRUE(
+                    pipenv[[".steps_with_current_out"]][[step]]
+                )
+                if (isFailed && isOutCurrent && !force && !inputsChanged) {
                     retryKeys <- .pip_failed_keys(dat[["out"]][[row]])
                 }
                 if (length(retryKeys) > 0L) {
