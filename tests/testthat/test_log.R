@@ -70,9 +70,9 @@ describe("pip_run total time", {
         msgs
     }
     finished_secs <- function(msgs) {
-        last <- msgs[grepl("^Finished run", msgs)]
+        last <- msgs[grepl("^Finished in", msgs)]
         expect_length(last, 1L)
-        as.numeric(sub(".* in ([0-9.]+) s$", "\\1", last))
+        as.numeric(sub(".* in ([0-9.]+) s .*$", "\\1", last))
     }
 
     it("is logged at the end of a run", {
@@ -84,7 +84,10 @@ describe("pip_run total time", {
         msgs <- capture_logs(\(lgr) pip_run(p, lgr = lgr))
         expect_match(
             msgs[[length(msgs)]],
-            "^Finished run of pipeflow 'demo' in [0-9]+\\.[0-9]{3} s$"
+            paste0(
+                "^Finished in [0-9]+\\.[0-9]{3} s ",
+                "\\(1 done, 0 skipped, 0 failed\\)$"
+            )
         )
         expect_gte(finished_secs(msgs), 0.09)
     })
@@ -114,7 +117,89 @@ describe("pip_run total time", {
         p <- pip_new("demo") |>
             pip_add("halt", \(x = 1) .self$halt())
         msgs <- capture_logs(\(lgr) pip_run(p, lgr = lgr))
-        expect_match(msgs[[length(msgs)]], "^Finished run .* in .* s$")
+        expect_match(msgs[[length(msgs)]], "^Finished in .* s .*$")
+    })
+})
+
+
+describe("pip_run step counts", {
+    finished_counts <- function(p, ...) {
+        msgs <- character(0)
+        lgr <- function(level, msg) msgs <<- c(msgs, msg)
+        suppressWarnings(
+            pip_run(p, lgr = lgr, ...),
+            classes = "pipeflow_run_failed"
+        )
+        last <- msgs[grepl("^Finished in", msgs)]
+        sub("^.*\\((.*)\\)$", "\\1", last)
+    }
+
+    it("counts done, skipped and failed steps", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("bad", \(x = ~a) stop("boom")) |>
+            pip_add("after", \(x = ~bad) x) |>
+            pip_add("other", \(x = ~a) x)
+
+        expect_equal(
+            finished_counts(p, on_error = "continue"),
+            "2 done, 1 skipped, 1 failed"
+        )
+        # a and other are done now, bad fails again
+        expect_equal(
+            finished_counts(p, on_error = "continue"),
+            "0 done, 3 skipped, 1 failed"
+        )
+    })
+
+    it("counts a step that failed for some keys as failed", {
+        p <- pip_new() |>
+            pip_add("parts", \(x = list(a = 1, b = -1)) x, exec = "split") |>
+            pip_add("fit", \(x = ~parts) if (x < 0) stop("negative") else x)
+
+        expect_equal(
+            finished_counts(p, on_error = "continue"),
+            "1 done, 0 skipped, 1 failed"
+        )
+    })
+
+    it("counts locked steps as skipped", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x)
+        pip_run(p, lgr = NULL)
+        pip_lock(p["b"])
+
+        expect_equal(
+            finished_counts(p, force = TRUE),
+            "1 done, 1 skipped, 0 failed"
+        )
+    })
+
+    it("counts each step once over a restart", {
+        restart_pip <- function(force) {
+            pip_new() |>
+                pip_add("a", \(x = 1) x) |>
+                pip_add("b", \(x = 1) x) |>
+                pip_add("restart", \(x = ~a, n = 0) {
+                    if (n == 0) {
+                        .self$set_params(list(n = 1))
+                        .self$restart(force = force)
+                    }
+                    x
+                }) |>
+                pip_add("c", \(x = 1) x)
+        }
+        # The restarted run skips the steps done before the restart
+        p <- restart_pip(force = FALSE)
+        pip_run(p["b"], lgr = NULL)
+        expect_equal(finished_counts(p), "3 done, 1 skipped, 0 failed")
+
+        # or runs them again
+        p <- restart_pip(force = TRUE)
+        pip_run(p["b"], lgr = NULL)
+        expect_equal(finished_counts(p), "4 done, 0 skipped, 0 failed")
+        expect_false(exists(".run_executed", envir = p[["pipenv"]]))
     })
 })
 
