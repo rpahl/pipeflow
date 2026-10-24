@@ -10,6 +10,8 @@
   `time_start >= t0` tells which steps a run started at `t0` attempted.
   Set it with `p[[step, "time_start"]] <- value` (`NA` allowed). Pipelines
   saved with an earlier version get the column (all `NA`) when read.
+- The log line at the end of `pip_run()` shows the total time of the run,
+  including restarts, e.g. `Finished run of pipeflow 'demo' in 0.251 s`.
 
 # pipeflow 0.5.0.9013
 

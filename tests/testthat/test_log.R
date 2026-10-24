@@ -31,6 +31,94 @@ describe(".formatted_time", {
 })
 
 
+describe(".formatted_duration", {
+    it("shows seconds with milliseconds below a minute", {
+        expect_equal(.formatted_duration(0), "0.000 s")
+        expect_equal(.formatted_duration(0.2514), "0.251 s")
+        expect_equal(.formatted_duration(59.5), "59.500 s")
+    })
+
+    it("shows minutes and seconds below an hour", {
+        expect_equal(.formatted_duration(60), "1 min 0 s")
+        expect_equal(.formatted_duration(125.4), "2 min 5 s")
+        expect_equal(.formatted_duration(3599.4), "59 min 59 s")
+    })
+
+    it("shows hours and minutes from an hour on", {
+        expect_equal(.formatted_duration(3600), "1 h 0 min")
+        expect_equal(.formatted_duration(3 * 3600 + 5 * 60 + 20), "3 h 5 min")
+    })
+
+    it("takes a difftime in any unit", {
+        expect_equal(
+            .formatted_duration(as.difftime(2, units = "mins")),
+            "2 min 0 s"
+        )
+        expect_equal(
+            .formatted_duration(as.difftime(250, units = "secs") / 1000),
+            "0.250 s"
+        )
+    })
+})
+
+
+describe("pip_run total time", {
+    capture_logs <- function(expr_fun) {
+        msgs <- character(0)
+        lgr <- function(level, msg) msgs <<- c(msgs, msg)
+        expr_fun(lgr)
+        msgs
+    }
+    finished_secs <- function(msgs) {
+        last <- msgs[grepl("^Finished run", msgs)]
+        expect_length(last, 1L)
+        as.numeric(sub(".* in ([0-9.]+) s$", "\\1", last))
+    }
+
+    it("is logged at the end of a run", {
+        p <- pip_new("demo") |>
+            pip_add("slow", \(x = 1) {
+                Sys.sleep(0.1)
+                x
+            })
+        msgs <- capture_logs(\(lgr) pip_run(p, lgr = lgr))
+        expect_match(
+            msgs[[length(msgs)]],
+            "^Finished run of pipeflow 'demo' in [0-9]+\\.[0-9]{3} s$"
+        )
+        expect_gte(finished_secs(msgs), 0.09)
+    })
+
+    it("covers the whole run after a restart", {
+        p <- pip_new("demo") |>
+            pip_add("slow", \(x = 1) {
+                Sys.sleep(0.1)
+                x
+            }) |>
+            pip_add("restart", \(x = ~slow, n = 0) {
+                if (n == 0) {
+                    .self$set_params(list(n = 1))
+                    .self$restart(force = FALSE)
+                }
+                x
+            })
+        msgs <- capture_logs(\(lgr) pip_run(p, lgr = lgr))
+        expect_true(any(grepl("Restarting run", msgs, fixed = TRUE)))
+        # The restarted run skips the done step "slow", so only the time
+        # of the first run makes the total exceed its sleep.
+        expect_gte(finished_secs(msgs), 0.09)
+        expect_false(exists(".run_start", envir = p[["pipenv"]]))
+    })
+
+    it("is logged after a halt", {
+        p <- pip_new("demo") |>
+            pip_add("halt", \(x = 1) .self$halt())
+        msgs <- capture_logs(\(lgr) pip_run(p, lgr = lgr))
+        expect_match(msgs[[length(msgs)]], "^Finished run .* in .* s$")
+    })
+})
+
+
 describe("pipeflow_lgr", {
     timePattern <- paste0(
         "[0-9]{4}-[0-9]{2}-[0-9]{2} ",

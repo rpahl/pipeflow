@@ -2844,6 +2844,15 @@ pip_run <- function(
 
     state <- pipenv[[".run_state"]]
     isRestart <- state == .run_states[["restart"]][["name"]]
+    # A restart hands over the start of the run, so that the total time
+    # logged at the end covers the whole run.
+    runStart <- pipenv[[".run_start"]]
+    if (!isRestart || is.null(runStart)) {
+        runStart <- Sys.time()
+    }
+    if (exists(".run_start", envir = pipenv, inherits = FALSE)) {
+        rm(".run_start", envir = pipenv)
+    }
     action <- if (isRestart) "Restarting" else "Starting"
     log_info(sprintf("%s run of %s '%s'", action, data.class(x), pipname))
     pipenv[[".run_state"]][] <- .run_states[["running"]][["name"]]
@@ -2957,6 +2966,7 @@ pip_run <- function(
                     # work to a nested run, which then re-runs the outdated
                     # steps and does its own marking at the end.
                     outdate_downstream_of_executed()
+                    pipenv[[".run_start"]] <- runStart
                     pip_run(
                         x,
                         lgr = lgr,
@@ -2974,9 +2984,12 @@ pip_run <- function(
                 }
             }
 
-            log_info(
-                sprintf("Finished run of %s '%s'", data.class(x), pipname)
-            )
+            log_info(sprintf(
+                "Finished run of %s '%s' in %s",
+                data.class(x),
+                pipname,
+                .formatted_duration(difftime(Sys.time(), runStart))
+            ))
             runState <- if (halted) {
                 "halted"
             } else if (length(failures) > 0L) {
