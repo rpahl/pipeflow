@@ -385,10 +385,7 @@ Things to keep in mind:
   call, `.pip_run_row()` and `pip_run()` re-read `pipenv$data` *by step
   name*, because the rows may have moved.
 - **Restart.** `pip_run()` calls itself recursively and returns. The outer
-  loop does not continue. It hands over the start of the run
-  (`.run_start`) and the outcome of each step processed so far
-  (`.run_outcomes`: done, failed or skipped), so that the last log line
-  covers the whole run.
+  loop does not continue.
 - **Outdating.** Steps downstream of executed steps, if they did not run
   themselves, become `outdated`. This happens on exit, after a restart and
   after a continued run.

@@ -17,11 +17,6 @@
 - When a mapped step failed for some keys, the next run only calls it for
   the failed keys and keeps the results of the other keys, unless its
   parameters or inputs changed or the run is forced.
-- The log line at the end of `pip_run()` is shorter and counts the steps
-  that were done, skipped (already done, locked or with a failed input) and
-  failed in the whole run, including restarts, e.g.
-  `Finished in 0.251 s (3 done, 1 skipped, 0 failed)`. The pipeline is
-  named in the log line at the start of the run.
 
 # pipeflow 0.5.0.9014
 

@@ -3101,33 +3101,14 @@ pip_run <- function(
 
     state <- pipenv[[".run_state"]]
     isRestart <- state == .run_states[["restart"]][["name"]]
-    # A restart hands over the start of the run and the outcomes of the
-    # steps processed before (see run_outcomes() below), so that the total
-    # time and the step counts logged at the end cover the whole run.
+    # A restart hands over the start of the run, so that the total time
+    # logged at the end covers the whole run.
     runStart <- pipenv[[".run_start"]]
-    outcomesBefore <- pipenv[[".run_outcomes"]]
     if (!isRestart || is.null(runStart)) {
         runStart <- Sys.time()
-        outcomesBefore <- character()
     }
-    for (var in c(".run_start", ".run_outcomes")) {
-        if (exists(var, envir = pipenv, inherits = FALSE)) {
-            rm(list = var, envir = pipenv)
-        }
-    }
-
-    # The outcome of each step processed in the whole run, by step name:
-    # "done" or "failed" (also for some keys only) as of its last execution,
-    # or "skipped" if it was not executed (done, locked or with a failed
-    # input). A skip does not hide an execution before a restart.
-    processedSteps <- character()
-    run_outcomes <- function() {
-        outcomes <- outcomesBefore
-        isFailed <- executedSteps %in% names(failures)
-        outcomes[executedSteps] <- ifelse(isFailed, "failed", "done")
-        skipped <- setdiff(processedSteps, names(outcomes))
-        outcomes[skipped] <- rep("skipped", length(skipped))
-        outcomes
+    if (exists(".run_start", envir = pipenv, inherits = FALSE)) {
+        rm(".run_start", envir = pipenv)
     }
     action <- if (isRestart) "Restarting" else "Starting"
     log_info(sprintf("%s run of %s '%s'", action, data.class(x), pipname))
@@ -3138,7 +3119,6 @@ pip_run <- function(
             for (i in seq_along(rowsToRun)) {
                 row <- rowsToRun[[i]]
                 step <- dat[["step"]][[row]]
-                processedSteps <- c(processedSteps, step)
                 if (!is.null(progress)) {
                     progress(value = i, detail = step)
                 }
@@ -3296,7 +3276,6 @@ pip_run <- function(
                     # Mark what has run so far before handing the remaining
                     # work to a nested run, which then re-runs the outdated
                     # steps and does its own marking at the end.
-                    pipenv[[".run_outcomes"]] <- run_outcomes()
                     outdate_downstream_of_executed()
                     pipenv[[".run_start"]] <- runStart
                     pip_run(
@@ -3316,18 +3295,11 @@ pip_run <- function(
                 }
             }
 
-            # Steps that were removed (or renamed) during the run are not
-            # counted.
-            outcomes <- run_outcomes()
-            outcomes <- outcomes[
-                names(outcomes) %in% pipenv[["data"]][["step"]]
-            ]
             log_info(sprintf(
-                "Finished in %s (%d done, %d skipped, %d failed)",
-                .formatted_duration(difftime(Sys.time(), runStart)),
-                sum(outcomes == "done"),
-                sum(outcomes == "skipped"),
-                sum(outcomes == "failed")
+                "Finished run of %s '%s' in %s",
+                data.class(x),
+                pipname,
+                .formatted_duration(difftime(Sys.time(), runStart))
             ))
             runState <- if (halted) {
                 "halted"
