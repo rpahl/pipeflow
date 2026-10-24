@@ -276,8 +276,12 @@ receive the failure object. If the pipeline is run with
 `on_error = "stop"`, the first failed group stops the run with a
 `pipeflow_step_error`, with the `pipeflow_key_error` as its `parent`.
 
-The next run re-runs `spread` for all groups. Once the cause is fixed, here
-by removing the group, the pipeline completes:
+If nothing changed in the pipeline since, the next run calls `spread` only
+for the failed group `c` and keeps the results of the other groups, which
+helps if the cause was outside of the pipeline, e.g. a lost connection. Here
+the cause is in the data, so we fix it by removing the group. That changes
+the input of all groups, so `spread` is run for all of them, and the
+pipeline completes:
 
 ```{r recover-split-pipeline}
 pip_set_params(pip, list(data = d[d$g != "c", ]))

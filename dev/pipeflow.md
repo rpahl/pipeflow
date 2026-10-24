@@ -346,11 +346,12 @@ sequenceDiagram
         RR->>RR: .wrap_self(fun) if body uses .self
         RR->>E: set time_start of row (before the call shifts rows)
         RR->>RR: .pip_unwrap_params(unbound args)
-        RR->>X: exec mode
+        RR->>X: exec mode (retry: keep = outputs of the keys that did not fail)
         alt split
             X->>C: one call, then mark output as pipeflow_partitioned
         else auto + partitioned input
             loop each key
+                X->>X: key in keep? copy its output
                 X->>X: slice of non-try arg is a failure? key "not run"
                 X->>C: call with sliced args (key, keys)
                 X->>X: continue: key error -> .pip_failure(key) as value
@@ -469,8 +470,18 @@ stateDiagram-v2
   A step that is mapped (`exec = "auto"`) ignores an input with failed keys
   in the failed-input check (it handles the keys itself); any other step
   treats it as a failed input. Such an input is never passed via `failed =`,
-  the step reads the stored output. The next run re-runs a failed mapped
-  step for all keys.
+  the step reads the stored output.
+- **Retry of failed keys.** A step that is still `failed` at its turn has
+  not been outdated (params, function and upstream steps unchanged). If its
+  output has failed keys, no input ran in this run (`inputsChanged`) and the
+  run is not forced, `pip_run()` passes `retry = TRUE` to `.pip_run_row()`,
+  which hands the outputs of the other keys as `keep` to
+  `.pip_execute_step_call()`: the key loop copies them instead of calling
+  the function, and `.pip_annotate_output()` skips them (they were
+  annotated in their own run). All keys are still passed as `keys`, so a
+  function made by `as.function()` keeps the inner pipelines of all keys.
+  Dependents are not narrowed down: an input that ran makes them re-run all
+  keys.
 - **Warning fields.** `failed`: one condition per failed step, the `parent`
   of its failure. For a step with failed keys, `.pip_first_failure()` picks
   the first key that failed in the step itself, or, if all failed keys were

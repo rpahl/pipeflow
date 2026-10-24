@@ -1788,6 +1788,43 @@ describe("as.function.pipeflow", {
             expect_identical(outer[["nested", "state"]], "failed")
         })
 
+        it("keeps the inner pipelines of all keys on a retry", {
+            env <- new.env()
+            env$flaky <- TRUE
+            inner <- pip_new("inner") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("double", \(p = ~input) {
+                    if (env$flaky && p < 0) {
+                        stop("negative")
+                    }
+                    p * 2
+                })
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "parts",
+                    \(x = list(a = 1, b = -1, c = 3)) x,
+                    exec = "split"
+                ) |>
+                pip_add(
+                    "nested",
+                    as.function(inner, out = "double"),
+                    params = list(x = ~parts)
+                )
+            suppressWarnings(
+                pip_run(outer, lgr = NULL, on_error = "continue"),
+                classes = "pipeflow_run_failed"
+            )
+
+            env$flaky <- FALSE
+            pip_run(outer, lgr = NULL)
+
+            expect_equal(
+                unclass(outer[["nested", "out"]]),
+                list(a = 2, b = -2, c = 6)
+            )
+            expect_named(pip_inner(outer, "nested"), c("a", "b", "c"))
+        })
+
         it("does not return a kept output when an input fails later", {
             inner <- pip_new("stale") |>
                 pip_add("input", \(x = NULL) x) |>

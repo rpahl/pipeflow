@@ -12,6 +12,12 @@
   `~try()` and are skipped otherwise. The `pipeflow_run_failed` warning
   has a new field `keys` with the failed keys per step.
 
+## New features
+
+- When a mapped step failed for some keys, the next run only calls it for
+  the failed keys and keeps the results of the other keys, unless its
+  parameters or inputs changed or the run is forced.
+
 # pipeflow 0.5.0.9014
 
 ## New features

@@ -668,6 +668,9 @@
 #' @param tryArgs Names of the arguments whose step reference is wrapped in
 #' `try()`. Only these get the failure of a key of a partitioned input; for
 #' the other arguments the key is not run and its output is a failure too.
+#' @param keep Named list of outputs by partition key, for a step mapped over
+#' partitioned inputs: the function is not called for these keys, and their
+#' outputs are kept as they are (see `pip_run()`, retry of failed keys).
 #' @return The output of the step.
 #' @noRd
 .pip_execute_step_call <- function(
@@ -676,7 +679,8 @@
     exec,
     step,
     onError = "stop",
-    tryArgs = character()
+    tryArgs = character(),
+    keep = list()
 ) {
     # A partitioned argument is a list of per-key values produced by a
     # step with exec = "split" and tagged with class "pipeflow_partitioned".
@@ -744,6 +748,10 @@
     # arguments down to that key before calling the function.
     out <- stats::setNames(vector(mode = "list", length = length(keys)), keys)
     for (key in keys) {
+        if (key %in% names(keep)) {
+            out[key] <- keep[key]
+            next
+        }
         keyArgs <- args
         for (idx in partIdx) {
             keyArgs[[idx]] <- args[[idx]][[key]]
@@ -801,8 +809,17 @@
 # outputs of the referenced steps for the respective arguments. `onError` is
 # the `on_error` of the run: with "continue", a mapped step that fails for
 # some keys keeps the failures in its output, see .pip_execute_step_call().
-# Such a step gets state "failed" and keeps its time.
-.pip_run_row <- function(x, i, lgr, failed = list(), onError = "stop") {
+# Such a step gets state "failed" and keeps its time. With `retry = TRUE`,
+# such a step only calls its function for the keys that failed and keeps the
+# outputs of the other keys (see pip_run()).
+.pip_run_row <- function(
+    x,
+    i,
+    lgr,
+    failed = list(),
+    onError = "stop",
+    retry = FALSE
+) {
     if (!.is_pipeflow(x)) {
         stop("x must be a pipeflow pip")
     }
@@ -838,6 +855,12 @@
 
     unbound <- dat[["unbound"]][[i]]
 
+    keep <- list()
+    if (retry) {
+        prev <- dat[["out"]][[i]]
+        keep <- prev[setdiff(names(prev), .pip_failed_keys(prev))]
+    }
+
     # The start of every attempt, also of one that fails. Row `i` is still
     # the step's row here, as only the step call can shift the rows.
     data.table::set(dat, i = i, j = "time_start", value = Sys.time())
@@ -851,13 +874,19 @@
                 exec = exec,
                 step = step,
                 onError = onError,
-                tryArgs = formula_try_args(dat[["params"]][[i]])
+                tryArgs = formula_try_args(dat[["params"]][[i]]),
+                keep = keep
             )
 
             # One time stamp for the whole step, also for all keys of a
             # partitioned output, and the one that is stored below.
             runTime <- Sys.time()
-            .pip_annotate_output(res, step = step, time = runTime)
+            .pip_annotate_output(
+                res,
+                step = step,
+                time = runTime,
+                skip = names(keep)
+            )
         },
         error = function(e) {
             data.table::set(
@@ -2817,10 +2846,15 @@ pip_replace <- function(
 #'
 #' At the end of the run, the pipeline run state is `"continued"`, and a
 #' warning of class `pipeflow_run_failed` lists the failed steps (with the
-#' number of failed keys) and the steps that were not run. The next run
-#' retries the failed steps (a mapped step for all keys) and the steps that
-#' were not run; once a failed step succeeds, the steps after it, including
-#' those that received failure objects, are run again. See
+#' number of failed keys) and the steps that were not run.
+#'
+#' The next run retries the failed steps and the steps that were not run;
+#' once a failed step succeeds, the steps after it, including those that
+#' received failure objects, are run again. A mapped step is only run again
+#' for its failed keys, keeping the results of the other keys, unless
+#' something changed that affects all keys: its parameters or an input step
+#' (which marks it `"outdated"`), an input step that is run again in the
+#' same run, or `force = TRUE`. See
 #' `vignette("v05c-error-handling", package = "pipeflow")` for examples.
 #'
 #' ## Runtime control flow via restart and halt
@@ -3068,6 +3102,23 @@ pip_run <- function(
                     next()
                 }
 
+                # A step that failed for some keys and is still "failed"
+                # (its params and upstream steps did not change since, which
+                # would have outdated it) only re-runs these keys, unless an
+                # input was run again in this run or the run is forced.
+                retryKeys <- character()
+                isFailed <- dat[["state"]][[row]] == "failed"
+                if (isFailed && !force && !inputsChanged) {
+                    retryKeys <- .pip_failed_keys(dat[["out"]][[row]])
+                }
+                if (length(retryKeys) > 0L) {
+                    msg <- sprintf(
+                        "%s - re-running failed keys %s",
+                        msg,
+                        paste0("'", retryKeys, "'", collapse = ", ")
+                    )
+                }
+
                 # Always pass the full pipeline object (not a view) to the
                 # step function, so that it can modify itself if needed.
                 self <- .wrap_pipenv(pipenv, pipname, view = NULL)
@@ -3093,7 +3144,8 @@ pip_run <- function(
                             i = row,
                             lgr = lgr,
                             failed = failed,
-                            onError = onError
+                            onError = onError,
+                            retry = length(retryKeys) > 0L
                         )
                         NULL
                     },
@@ -3522,11 +3574,13 @@ pip_output_value.default <- function(x, ctx = list(), ...) {
 #' @param out The output of the step call.
 #' @param step The name of the step.
 #' @param time The time stamp of the step's run.
+#' @param skip Keys of a partitioned output that are not annotated, because
+#' their outputs were kept from an earlier run (and annotated then).
 #' @return `out`, passed through [pip_output_value()].
 #' @noRd
-.pip_annotate_output <- function(out, step, time) {
+.pip_annotate_output <- function(out, step, time, skip = character()) {
     if (.is_pipeflow_partitioned(out)) {
-        keys <- names(out)
+        keys <- setdiff(names(out), skip)
         out[keys] <- lapply(keys, FUN = function(key) {
             # The failure of a key in a continued run is kept as it is.
             if (inherits(out[[key]], "pipeflow_failure")) {

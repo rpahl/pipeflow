@@ -138,10 +138,15 @@ keys, including the failure objects.
 
 At the end of the run, the pipeline run state is \code{"continued"}, and a
 warning of class \code{pipeflow_run_failed} lists the failed steps (with the
-number of failed keys) and the steps that were not run. The next run
-retries the failed steps (a mapped step for all keys) and the steps that
-were not run; once a failed step succeeds, the steps after it, including
-those that received failure objects, are run again. See
+number of failed keys) and the steps that were not run.
+
+The next run retries the failed steps and the steps that were not run;
+once a failed step succeeds, the steps after it, including those that
+received failure objects, are run again. A mapped step is only run again
+for its failed keys, keeping the results of the other keys, unless
+something changed that affects all keys: its parameters or an input step
+(which marks it \code{"outdated"}), an input step that is run again in the
+same run, or \code{force = TRUE}. See
 \code{vignette("v05c-error-handling", package = "pipeflow")} for examples.
 }
 
