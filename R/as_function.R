@@ -570,8 +570,23 @@ as.function.pipeflow <- function(
     if (length(affected) == 0L) {
         return(invisible(NULL))
     }
-    cause <- causes[[affected[[1L]]]]
-    stop(.pip_step_error(cause, parent = pip[[cause, "out"]]))
+    step <- affected[[1L]]
+
+    # A requested step that failed for some keys holds the failure of each
+    # of them, which names the step and key that failed. The output of that
+    # step may hold failures of keys the requested step recovered from.
+    stepOut <- pip[[step, "out"]]
+    if (length(.pip_failed_keys(stepOut)) > 0L) {
+        f <- .pip_first_failure(stepOut, step = step)
+        stop(.pip_step_error(f[["failed_step"]], parent = f[["parent"]]))
+    }
+
+    cause <- causes[[step]]
+    parent <- pip[[cause, "out"]]
+    if (.is_pipeflow_partitioned(parent)) {
+        parent <- .pip_first_failure(parent, step = cause)[["parent"]]
+    }
+    stop(.pip_step_error(cause, parent = parent))
 }
 
 
@@ -594,7 +609,14 @@ as.function.pipeflow <- function(
             next
         }
         if (dat[["state"]][[i]] == .step_states[["failed"]][["name"]]) {
-            causes[[step]] <- step
+            # A mapped step whose failed keys were all not run because an
+            # input failed has the step of that input as its cause.
+            out <- dat[["out"]][[i]]
+            causes[[step]] <- if (length(.pip_failed_keys(out)) > 0L) {
+                .pip_first_failure(out, step = step)[["failed_step"]]
+            } else {
+                step
+            }
             next
         }
         depends <- dat[["depends"]][[i]]

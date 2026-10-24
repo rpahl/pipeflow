@@ -25,6 +25,8 @@
 #' Formats the outputs that data.table doesn't print well in a list column
 #' in short form:
 #' * a condition as `<kind/class>` (see `.format_condition()`),
+#' * a partitioned output with failed keys (see `.pip_failed_keys()`) as
+#'   `<partitioned: failed/all failed>`, e.g. `<partitioned: 1/3 failed>`,
 #' * an atomic object with dimensions (matrix, array, table) as
 #'   `<class[dims]>`, e.g. `<matrix[4x2]>`, similar to how data.table
 #'   prints data frames
@@ -44,6 +46,14 @@
 .format_out <- function(x, maxChars = 40L) {
     if (inherits(x, "condition")) {
         return(.format_condition(x))
+    }
+    failedKeys <- .pip_failed_keys(x)
+    if (length(failedKeys) > 0L) {
+        return(sprintf(
+            "<partitioned: %d/%d failed>",
+            length(failedKeys),
+            length(x)
+        ))
     }
     if (is.atomic(x) && !is.null(dim(x))) {
         dims <- paste(dim(x), collapse = "x")

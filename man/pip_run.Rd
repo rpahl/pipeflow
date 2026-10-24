@@ -97,61 +97,57 @@ because they were already \code{"done"}) keep their state.
 
 \subsection{Runtime errors}{
 
-If a step fails with an error, the failing step's state is set to
-\code{"failed"}, the run is aborted (no further steps are executed), and the
-pipeline run state is set to \code{"failed"}. Steps downstream of executed
-steps that were not reached are marked \code{"outdated"}, so a subsequent run
-retries them.
+By default, a failing step stops the run: the step gets state \code{"failed"},
+the pipeline run state becomes \code{"failed"}, and steps after it that were
+not reached are marked \code{"outdated"}, so the next run retries them.
 
-The error is signalled as a condition of class
-\code{c("pipeflow_step_error", "error", "condition")}. Its message is the
-message of the original error, prefixed with \code{"step '<step>': "}. Its
-field \code{step} names the failed step and its field \code{parent} holds the
-original error condition with its class, which can be caught via
+The error message names the step, and for a step mapped over partitions
+(see \code{exec} in \code{\link[=pip_add]{pip_add()}}) also the partition key, e.g.
+\code{"step 'fit': key 'b': negative"}. The error has class
+\code{pipeflow_step_error} and keeps the original error in its field
+\code{parent}:
 \code{tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)}.
-If the error belongs to a single partition key (see \code{exec} in
-\code{\link[=pip_add]{pip_add()}}) — a step mapped over partitioned inputs, or
-\code{\link[=pip_output_value]{pip_output_value()}} failing for one key of a partitioned output —
-\code{parent} is a condition of class
-\code{c("pipeflow_key_error", "error", "condition")} instead. Its message is
-prefixed with \code{"key '<key>': "}, its field \code{key} names the failed
-partition key and its field \code{parent} holds the original error condition.
 }
 
 \subsection{Continuing after errors}{
 
-With \code{on_error = "continue"}, a failing step gets state \code{"failed"}, its
-error condition is stored as its output, and the run goes on. For a step
-whose error belongs to a single partition key, the stored condition is
-the \code{pipeflow_key_error} described above. An input of a step is \emph{failed} if
-its step failed or was not run because a step upstream of it failed in
-this run.
+With \code{on_error = "continue"}, the run does not stop at a failed step:
 \itemize{
-\item A step with a failed input is not run, and counts as failed for its own
-dependents, unless the argument receiving that input refers to its step
-via \code{try()}, e.g. \code{x = ~try(other_step)} (see \code{\link[=pip_add]{pip_add()}}).
-\item A step whose failed inputs all use \code{try()} references is run, and
-each of these arguments receives a condition of class
-\code{c("pipeflow_failure", "error", "condition")} with the fields
-\code{message}, \code{step} (the step of the input), \code{failed_step} (the step that
-actually failed) and \code{parent} (the original error condition).
-\item Locked steps are the exception: they are never run, so a failed input
-does not affect them. They keep their state and output, and their
-dependents receive that output as usual.
+\item The failed step gets state \code{"failed"}, and its error is stored as its
+output.
+\item Steps that depend on a failed step are not run, and neither are their
+own dependents. All other steps are run.
+\item To run a step despite a failed input, refer to that input via \code{try()},
+e.g. \code{x = ~try(fit)} (see \code{\link[=pip_add]{pip_add()}}). The argument then receives a
+failure object (an error condition) whose message tells which step
+failed, e.g. \code{"step 'fit' failed: negative"}.
+\item Locked steps are never run, so a failed input does not affect them.
 }
 
-Steps that ran (including those that received failure objects) are
-\code{"done"}. Steps that were not run are treated like steps not reached by an
-aborted run: a \code{"done"} step becomes \code{"outdated"}, a \code{"new"} one stays
-\code{"new"}, so the next run retries them together with the failed steps.
-Once a failed step succeeds, the steps downstream of it, including those
-that received failure objects, are run again.
+A step mapped over partitions fails only for the keys whose call failed:
+\itemize{
+\item Its output keeps the results of the other keys and holds a failure
+object for each failed key, e.g. \code{"step 'fit' failed: key 'b': negative"}. The step gets state \code{"failed"}, and printing the pipeline
+shows its output as e.g. \verb{<partitioned: 1/3 failed>}.
+\item A mapped step after it is not run for the failed keys, whose output is
+then a failure object too (\code{"step 'show' was not run: step 'fit' failed: key 'b': negative"}), unless it takes the input via \code{try()}.
+\item A step that is not mapped (e.g. \code{exec = "reduce"}) is not run, unless
+it takes the input via \code{try()}. Then it receives the results of all
+keys, including the failure objects.
+}
 
-If any step failed, the pipeline run state is set to \code{"continued"} and,
-once all states and outputs are stored, a warning of class
-\code{c("pipeflow_run_failed", "warning", "condition")} is signalled. Its
-field \code{failed} is a named list with the original conditions of the failed
-steps and its field \code{skipped} names the steps that were not run.
+At the end of the run, the pipeline run state is \code{"continued"}, and a
+warning of class \code{pipeflow_run_failed} lists the failed steps (with the
+number of failed keys) and the steps that were not run.
+
+The next run retries the failed steps and the steps that were not run;
+once a failed step succeeds, the steps after it, including those that
+received failure objects, are run again. A mapped step is only run again
+for its failed keys, keeping the results of the other keys, unless
+something changed that affects all keys: its parameters or an input step
+(which marks it \code{"outdated"}), an input step that is run again in the
+same run, or \code{force = TRUE}. See
+\code{vignette("v05c-error-handling", package = "pipeflow")} for examples.
 }
 
 \subsection{Runtime control flow via restart and halt}{
