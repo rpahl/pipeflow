@@ -286,7 +286,7 @@ unwraps them (`.pip_unwrap_params()`).
 |---|---|---|
 | Replace a step | `pip_replace()`, `p[[s, "fun"]] <-` | Recomputes `params`, `depends` and `unbound`. Swaps the incoming DAG edges (`dag_remove_edge()`, `dag_add_edges_to()`). Keeps the node id. Outdates the step and its downstream steps. |
 | Remove a step | `pip_remove()`, `p[[s, "step"]] <- NULL` | Without `force`, fails if other steps depend on the step. With `force`, removes all downstream steps too. Tombstones DAG nodes, then `dag_tidy_up()`. Updates `data` and `.steps_to_nodes`. |
-| Rename a step | `pip_rename()`, `p[[s, "step"]] <-` | Updates `step`, all `depends`, the reference formulas (`formula_set_ref()`) and `.steps_to_nodes`. Calls `.fun_rename()`. The DAG is unchanged, because it works on ids. |
+| Rename a step | `pip_rename()`, `p[[s, "step"]] <-` | Updates `step`, all `depends`, the reference formulas (`formula_set_ref()`), the failures of failed keys in the outputs (`.pip_rename_failures()`), `.steps_to_nodes` and `.steps_with_current_out`. Calls `.fun_rename()`. The DAG is unchanged, because it works on ids. |
 | Set params | `pip_set_params()`, `p[[s, "params"]] <-` | `.pip_set_params()` computes all new values first (two phases, `pip_param_value<-`). A formula binds the param (`.pip_bind_row()` adds DAG edges). Outdates the changed steps and their downstream steps. |
 | Bind pipelines | `rbind.pipeflow()` → `.pip_bind()` | Clones both pipelines and renames clashing steps of `y` with a number suffix. Folds params into the function defaults. Adds new nodes and edges. |
 | Copy steps | `p[i, ] <- q[i, ]` → `.pip_copy_from()` | Per row: rename, then `pip_replace()`, then overwrite the runtime columns. |
@@ -385,7 +385,10 @@ Things to keep in mind:
   call, `.pip_run_row()` and `pip_run()` re-read `pipenv$data` *by step
   name*, because the rows may have moved.
 - **Restart.** `pip_run()` calls itself recursively and returns. The outer
-  loop does not continue.
+  loop does not continue. It hands over the start of the run
+  (`.run_start`) and the outcome of each step processed so far
+  (`.run_outcomes`: done, failed or skipped), so that the last log line
+  covers the whole run.
 - **Outdating.** Steps downstream of executed steps, if they did not run
   themselves, become `outdated`. This happens on exit, after a restart and
   after a continued run.
@@ -487,12 +490,14 @@ stateDiagram-v2
   is an environment (step name -> `TRUE`/`FALSE`, like `.steps_to_nodes` a
   hash) that marks the steps whose stored output comes from their last
   attempt: `.pip_run_row()` sets the step to `FALSE` at the start of each
-  attempt and to `TRUE` when the attempt stores its output. Only outputs
-  with failed keys are marked (the only ones that are reused), and the
-  environment is only created with the first of them. A step that is not
-  marked `TRUE` is re-run for all keys, which is always safe: e.g. in a
-  clone (`pip_clone()` does not copy it) or a pipeline saved before it
-  existed.
+  attempt and to `TRUE` when the attempt stores its output, unless the step
+  changed its own function or params during the attempt (via `.self`; a
+  change upstream makes the next run re-run the input step, and so all
+  keys). Only outputs with failed keys are marked (the only ones that are
+  reused), and the environment is only created with the first of them. A
+  step that is not marked `TRUE` is re-run for all keys, which is always
+  safe: e.g. in a clone (`pip_clone()` does not copy it) or a pipeline saved
+  before it existed.
 - **Warning fields.** `failed`: one condition per failed step, the `parent`
   of its failure. For a step with failed keys, `.pip_first_failure()` picks
   the first key that failed in the step itself (`failed_step == step`), or,

@@ -545,6 +545,31 @@
     failures[[if (any(isOwn)) which(isOwn)[[1L]] else 1L]]
 }
 
+#' Rename a step in the failures of a partitioned output
+#'
+#' @param out A partitioned step output.
+#' @param from,to The old and the new name of the step.
+#' @return `out`, with each failure of a key that names step `from` (as its
+#' step or as the step that failed) rebuilt with `to` instead, including its
+#' message.
+#' @noRd
+.pip_rename_failures <- function(out, from, to) {
+    for (key in .pip_failed_keys(out)) {
+        f <- out[[key]]
+        if (!from %in% c(f[["step"]], f[["failed_step"]])) {
+            next
+        }
+        swap <- \(name) if (identical(name, from)) to else name
+        out[[key]] <- .pip_failure(
+            swap(f[["step"]]),
+            parent = f[["parent"]],
+            failedStep = swap(f[["failed_step"]]),
+            key = f[["key"]]
+        )
+    }
+    out
+}
+
 #' Create the warning of a run that continued after errors
 #'
 #' @param pipname The name of the pipeline (used in the message).
@@ -886,6 +911,10 @@
     if (!is.null(currentOut)) {
         currentOut[[step]] <- FALSE
     }
+    # The step may change its own function or params while it runs (via
+    # `.self`), which makes the outputs of this attempt stale right away.
+    funAtStart <- dat[["fun"]][[i]]
+    paramsAtStart <- dat[["params"]][[i]]
 
     out <- withCallingHandlers(
         {
@@ -951,12 +980,18 @@
             j = c("out", "state"),
             value = list(list(out), .step_states[["failed"]][["name"]])
         )
-        # Remember that the step's output now comes from this (current) attempt.
-        if (is.null(currentOut)) {
-            currentOut <- new.env(hash = TRUE, parent = emptyenv())
-            pipenv[[".steps_with_current_out"]] <- currentOut
+        # Remember that the step's output now comes from this (current)
+        # attempt, unless the step changed itself during the attempt.
+        isUnchanged <- identical(dat[["fun"]][[rowNow]], funAtStart) &&
+            identical(dat[["params"]][[rowNow]], paramsAtStart)
+        if (isUnchanged) {
+            currentOut <- pipenv[[".steps_with_current_out"]]
+            if (is.null(currentOut)) {
+                currentOut <- new.env(hash = TRUE, parent = emptyenv())
+                pipenv[[".steps_with_current_out"]] <- currentOut
+            }
+            currentOut[[step]] <- TRUE
         }
-        currentOut[[step]] <- TRUE
     } else if (stepStillExists) {
         data.table::set(
             dat,
@@ -2553,10 +2588,29 @@ pip_rename <- function(x, from, to) {
     data.table::set(dat, j = "depends", value = newDepends)
     data.table::set(dat, j = "params", value = list(newParams))
 
+    # The failures stored for the failed keys of mapped steps name the steps
+    # they come from.
+    for (i in seq_len(nrow(dat))) {
+        out <- dat[["out"]][[i]]
+        if (length(.pip_failed_keys(out)) > 0L) {
+            out <- .pip_rename_failures(out, from = from, to = to)
+            data.table::set(dat, i = i, j = "out", value = list(list(out)))
+        }
+    }
+
     stepsToNodes <- env[[".steps_to_nodes"]]
     nodeId <- stepsToNodes[[from]]
     stepsToNodes[[to]] <- nodeId
     rm(list = from, envir = stepsToNodes, inherits = FALSE)
+
+    # Whether the stored output comes from the step's last attempt (see
+    # .pip_run_row()) does not change with its name. The new name may still
+    # carry a mark of a removed step, which is overwritten (also with NULL).
+    currentOut <- env[[".steps_with_current_out"]]
+    if (!is.null(currentOut)) {
+        currentOut[[to]] <- currentOut[[from]]
+        currentOut[[from]] <- NULL
+    }
 
     # The kept inner pipelines of a pipeline function are found by step name
     .fun_rename(dat[["fun"]][[match(to, newSteps)]], from = from, to = to)
@@ -3047,31 +3101,44 @@ pip_run <- function(
 
     state <- pipenv[[".run_state"]]
     isRestart <- state == .run_states[["restart"]][["name"]]
-    # A restart hands over the start of the run and the steps executed
-    # before, so that the total time and the step counts logged at the end
-    # cover the whole run.
+    # A restart hands over the start of the run and the outcomes of the
+    # steps processed before (see run_outcomes() below), so that the total
+    # time and the step counts logged at the end cover the whole run.
     runStart <- pipenv[[".run_start"]]
-    executedBefore <- pipenv[[".run_executed"]]
+    outcomesBefore <- pipenv[[".run_outcomes"]]
     if (!isRestart || is.null(runStart)) {
         runStart <- Sys.time()
-        executedBefore <- character()
+        outcomesBefore <- character()
     }
-    for (var in c(".run_start", ".run_executed")) {
+    for (var in c(".run_start", ".run_outcomes")) {
         if (exists(var, envir = pipenv, inherits = FALSE)) {
             rm(list = var, envir = pipenv)
         }
+    }
+
+    # The outcome of each step processed in the whole run, by step name:
+    # "done" or "failed" (also for some keys only) as of its last execution,
+    # or "skipped" if it was not executed (done, locked or with a failed
+    # input). A skip does not hide an execution before a restart.
+    processedSteps <- character()
+    run_outcomes <- function() {
+        outcomes <- outcomesBefore
+        isFailed <- executedSteps %in% names(failures)
+        outcomes[executedSteps] <- ifelse(isFailed, "failed", "done")
+        skipped <- setdiff(processedSteps, names(outcomes))
+        outcomes[skipped] <- rep("skipped", length(skipped))
+        outcomes
     }
     action <- if (isRestart) "Restarting" else "Starting"
     log_info(sprintf("%s run of %s '%s'", action, data.class(x), pipname))
     pipenv[[".run_state"]][] <- .run_states[["running"]][["name"]]
     halted <- FALSE
-    nProcessed <- 0L
     tryCatch(
         {
             for (i in seq_along(rowsToRun)) {
                 row <- rowsToRun[[i]]
                 step <- dat[["step"]][[row]]
-                nProcessed <- i
+                processedSteps <- c(processedSteps, step)
                 if (!is.null(progress)) {
                     progress(value = i, detail = step)
                 }
@@ -3229,10 +3296,7 @@ pip_run <- function(
                     # Mark what has run so far before handing the remaining
                     # work to a nested run, which then re-runs the outdated
                     # steps and does its own marking at the end.
-                    pipenv[[".run_executed"]] <- union(
-                        executedBefore,
-                        executedSteps
-                    )
+                    pipenv[[".run_outcomes"]] <- run_outcomes()
                     outdate_downstream_of_executed()
                     pipenv[[".run_start"]] <- runStart
                     pip_run(
@@ -3252,19 +3316,18 @@ pip_run <- function(
                 }
             }
 
-            # Steps that were not executed in the whole run (done, locked
-            # or with a failed input) count as skipped, and executed steps
-            # that failed in their last execution (also for some keys only)
-            # as failed. Steps executed before a restart are only skipped
-            # after it if they were done.
-            executed <- union(executedBefore, executedSteps)
-            nFailed <- sum(executedSteps %in% names(failures))
+            # Steps that were removed (or renamed) during the run are not
+            # counted.
+            outcomes <- run_outcomes()
+            outcomes <- outcomes[
+                names(outcomes) %in% pipenv[["data"]][["step"]]
+            ]
             log_info(sprintf(
                 "Finished in %s (%d done, %d skipped, %d failed)",
                 .formatted_duration(difftime(Sys.time(), runStart)),
-                length(executed) - nFailed,
-                nProcessed - length(executed),
-                nFailed
+                sum(outcomes == "done"),
+                sum(outcomes == "skipped"),
+                sum(outcomes == "failed")
             ))
             runState <- if (halted) {
                 "halted"

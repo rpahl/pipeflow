@@ -1825,6 +1825,35 @@ describe("as.function.pipeflow", {
             expect_named(pip_inner(outer, "nested"), c("a", "b", "c"))
         })
 
+        it("names a failed inner step that was renamed in the run", {
+            inner <- pip_new("rename") |>
+                pip_add("parts", \(x = list(a = 1, b = -1)) x, exec = "split")
+            pip_run(inner, lgr = NULL)
+            pip_lock(inner["parts"])
+            inner |>
+                pip_add("fit", \(x = ~parts) {
+                    if (x < 0) stop("negative") else x
+                }) |>
+                pip_add("show", \(x = ~fit) x) |>
+                pip_add("all", \(x = ~fit) unlist(x), exec = "reduce") |>
+                pip_add("rename", \(x = 1) {
+                    if ("fit" %in% .self[["step"]]) {
+                        .self$rename("fit", "model")
+                    }
+                    x
+                })
+
+            for (out in c("show", "all")) {
+                f <- as.function(inner, out = out, on_error = "continue")
+                err <- tryCatch(suppressWarnings(f()), error = \(e) e)
+                expect_s3_class(err, "pipeflow_step_error")
+                expect_equal(
+                    conditionMessage(err),
+                    "step 'model': key 'b': negative"
+                )
+            }
+        })
+
         it("names the failed key of the requested step, not of its input", {
             inner <- pip_new("recover") |>
                 pip_add("input", \(x = NULL) x) |>

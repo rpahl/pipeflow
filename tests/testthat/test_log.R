@@ -199,7 +199,56 @@ describe("pip_run step counts", {
         p <- restart_pip(force = TRUE)
         pip_run(p["b"], lgr = NULL)
         expect_equal(finished_counts(p), "4 done, 0 skipped, 0 failed")
-        expect_false(exists(".run_executed", envir = p[["pipenv"]]))
+        expect_false(exists(".run_outcomes", envir = p[["pipenv"]]))
+    })
+
+    it("does not count a step twice over a halted restart", {
+        n <- 0L
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) {
+                n <<- n + 1L
+                if (n == 2L) {
+                    .self$halt()
+                }
+                x
+            }) |>
+            pip_add("restart", \(x = 1) {
+                .self$restart(force = TRUE)
+                x
+            })
+
+        expect_equal(finished_counts(p), "2 done, 0 skipped, 0 failed")
+    })
+
+    it("does not count steps removed in the run", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("modify", \(x = 1) {
+                if ("a" %in% .self[["step"]]) {
+                    .self$remove("a")
+                    .self$restart(force = FALSE)
+                }
+                x
+            })
+
+        expect_equal(finished_counts(p), "1 done, 0 skipped, 0 failed")
+    })
+
+    it("counts a step that failed before a restart as failed", {
+        p <- pip_new() |>
+            pip_add("bad", \(x = 1) stop("boom")) |>
+            pip_add("modify", \(x = 1) {
+                if (!.self[["bad", "locked"]]) {
+                    pip_lock(.self["bad"])
+                    .self$restart(force = FALSE)
+                }
+                x
+            })
+
+        expect_equal(
+            finished_counts(p, on_error = "continue"),
+            "1 done, 0 skipped, 1 failed"
+        )
     })
 })
 

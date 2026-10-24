@@ -5022,6 +5022,38 @@ describe("pip_run", {
                 expect_s3_class(err[["parent"]][["parent"]], "pipeflow_failure")
             })
 
+            it("renames the step in the failures of failed keys", {
+                p <- key_pip() |>
+                    pip_add("twice", \(x = ~fit) x * 2)
+                suppressWarnings(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    classes = "pipeflow_run_failed"
+                )
+                pip_rename(p, "fit", "model")
+
+                f <- p[["model", "out"]][["b"]]
+                expect_equal(f[["step"]], "model")
+                expect_equal(f[["failed_step"]], "model")
+                expect_equal(f[["key"]], "b")
+                expect_equal(
+                    conditionMessage(f),
+                    "step 'model' failed: key 'b': negative"
+                )
+                expect_s3_class(f[["parent"]], "pipeflow_key_error")
+
+                f <- p[["twice", "out"]][["b"]]
+                expect_equal(f[["step"]], "twice")
+                expect_equal(f[["failed_step"]], "model")
+                expect_equal(
+                    conditionMessage(f),
+                    paste(
+                        "step 'twice' was not run:",
+                        "step 'model' failed: key 'b': negative"
+                    )
+                )
+                expect_equal(p[["model", "out"]][["a"]], 10)
+            })
+
             it("re-runs the whole step and its dependents on retry", {
                 calls <- 0L
                 p <- key_pip() |>
@@ -5276,6 +5308,79 @@ describe("pip_run", {
                     env$calls <- character()
                     pip_run(p, lgr = NULL)
                     expect_equal(env$calls, c("a", "b", "c"))
+                })
+
+                it("re-runs all keys if the step changed itself", {
+                    env <- new.env()
+                    env$flaky <- TRUE
+                    p <- pip_new() |>
+                        pip_add(
+                            "parts",
+                            \(x = list(a = 1, b = 2, c = 3)) x,
+                            exec = "split"
+                        ) |>
+                        pip_add("fit", \(x = ~parts, mult = 1) {
+                            if (env$flaky && x == 2) {
+                                .self$set_params(list(mult = 10))
+                                stop("transient")
+                            }
+                            x * mult
+                        })
+                    run_flaky(p)
+                    expect_equal(unname(p[["fit", "state"]]), "failed")
+
+                    env$flaky <- FALSE
+                    pip_run(p, lgr = NULL)
+                    expect_equal(
+                        unclass(p[["fit", "out"]]),
+                        list(a = 10, b = 20, c = 30)
+                    )
+                })
+
+                it("re-runs only the failed keys of a renamed step", {
+                    env <- new.env()
+                    p <- flaky_pip(env)
+                    run_flaky(p)
+                    pip_rename(p, "fit", "model")
+
+                    env$flaky <- FALSE
+                    env$calls <- character()
+                    pip_run(p, lgr = NULL)
+                    expect_equal(env$calls, "b")
+                    expect_equal(unname(p[["model", "state"]]), "done")
+                })
+
+                it("re-runs all keys of a step renamed to a removed step", {
+                    env <- new.env()
+                    env$flaky <- TRUE
+                    p <- pip_new() |>
+                        pip_add(
+                            "parts",
+                            \(x = list(a = 1, b = 2, c = 3)) x,
+                            exec = "split"
+                        ) |>
+                        pip_add("fit", \(x = ~parts, mult = 1) {
+                            if (env$flaky && x == 2) {
+                                .self$set_params(list(mult = 10))
+                                stop("transient")
+                            }
+                            x * mult
+                        }) |>
+                        pip_add("other", \(x = ~parts) {
+                            if (x == 2) stop("bad") else x
+                        })
+                    run_flaky(p)
+
+                    # 'other' could be retried, 'fit' (changed) could not
+                    pip_remove(p, "other")
+                    pip_rename(p, "fit", "other")
+
+                    env$flaky <- FALSE
+                    pip_run(p, lgr = NULL)
+                    expect_equal(
+                        unclass(p[["other", "out"]]),
+                        list(a = 10, b = 20, c = 30)
+                    )
                 })
             })
         })
