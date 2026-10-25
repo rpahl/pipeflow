@@ -138,6 +138,7 @@
         "state",
         "time",
         "time_start",
+        "duration",
         "tags",
         "locked"
     )
@@ -153,7 +154,7 @@
         for (k in seq_len(n)) {
             pRow <- rowsP[[k]]
 
-            qVals <- lapply(props, function(prop) qSnapshot[[prop]][[k]])
+            qVals <- lapply(props, function(prop) .cell(qSnapshot[[prop]], k))
             names(qVals) <- props
 
             # 1) Step name (a no-op when both pipelines use the same names).
@@ -406,7 +407,22 @@
         }
     }
 
-    data[[j]][[row]]
+    .cell(data[[j]], row)
+}
+
+
+#' Get one element of a step table column
+#'
+#' Unlike `[[`, which drops the class of an atomic vector unless it has its
+#' own `[[` method (as `POSIXct` has, but `difftime` hasn't), the element of
+#' an atomic column keeps its class, e.g. a `duration` stays a `difftime`.
+#'
+#' @param col A column of the step table.
+#' @param row A single row index.
+#' @return The element of `col` at `row`.
+#' @noRd
+.cell <- function(col, row) {
+    if (is.list(col)) col[[row]] else col[row]
 }
 
 
@@ -744,6 +760,9 @@ dim.pipeflow <- function(x) {
 #' * `p[[step, "time_start"]] <- time` -- set the start time of the step's
 #'   last run (a single `POSIXct` value, which can be `NA` for a step that
 #'   never ran).
+#' * `p[[step, "duration"]] <- duration` -- set the duration of the step's
+#'   last run (a single `difftime` value, which can be `NA` for a step that
+#'   never ran).
 #' * `p[[step, "out"]] <- value` -- set the step's stored output (mostly
 #'    useful for debugging). The downstream steps are marked as
 #'    `"outdated"`, so that the next run computes them from the new output.
@@ -765,8 +784,8 @@ dim.pipeflow <- function(x) {
 #' * `params` and `exec`: the step and its downstream steps, if a value
 #'   changes.
 #' * `out`: the downstream steps, while the step keeps its state.
-#' * `step` (a new name), `state`, `time`, `time_start`, `tags` and
-#'   `locked` don't change any result and outdate no step.
+#' * `step` (a new name), `state`, `time`, `time_start`, `duration`, `tags`
+#'   and `locked` don't change any result and outdate no step.
 #'
 #' This holds for all forms of assignment: `[[<-`, `[<-` (which assigns row
 #' by row) and assignments through a view, which also outdate the downstream
@@ -928,6 +947,19 @@ dim.pipeflow <- function(x) {
             stop("time_start must be a single POSIXct value or NA")
         }
         data.table::set(data, i = i, j = "time_start", value = value)
+    } else if (j == "duration") {
+        if (identical(value, NA)) {
+            value <- .as_duration(NA)
+        }
+        if (!.is_single(value, "difftime")) {
+            stop("duration must be a single difftime value or NA")
+        }
+        data.table::set(
+            data,
+            i = i,
+            j = "duration",
+            value = .as_duration(value)
+        )
     } else {
         if (j %in% .derived_cols) {
             stop("direct assignment to column '", j, "' is not supported.")
@@ -970,12 +1002,12 @@ dim.pipeflow <- function(x) {
 #' (the rows of both sides are aligned by position and must have the same
 #' length). In this form, `i` is required and `j` must be omitted. The
 #' properties are copied in the order `step`, `fun`, `params`, `exec`,
-#' `out`, `state`, `time`, `time_start`, `tags`, `locked`: the step is
-#' renamed to the source name (a no-op when it is unchanged), the function,
-#' the params and the execution mode are replaced with those of the source
-#' (same as [pip_replace()] with the params and `exec` of the source), and
-#' the runtime state and annotation columns are
-#' overwritten (locked steps included). A copied step refers to the steps
+#' `out`, `state`, `time`, `time_start`, `duration`, `tags`, `locked`: the
+#' step is renamed to the source name (a no-op when it is unchanged), the
+#' function, the params and the execution mode are replaced with those of
+#' the source (same as [pip_replace()] with the params and `exec` of the
+#' source), and the runtime state and annotation columns are overwritten
+#' (locked steps included). A copied step refers to the steps
 #' that the source step depends on by name, also if it was defined with a
 #' relative reference such as `~-1`, and these steps are looked up in `p`.
 #' The structural columns `nodeId`, `depends` and `unbound` are not copied

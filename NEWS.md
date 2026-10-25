@@ -1,3 +1,15 @@
+# pipeflow 0.5.0.9023
+
+## New features
+
+- The step table has a new column `duration`: how long the step's last run
+  took, as a `difftime` in seconds. Unlike `time - time_start`, it is also
+  set if the run failed (`time` keeps the end of the last successful run).
+  It is `NA` for a step that has not run since it was added, replaced or
+  reset. Set it with `p[[step, "duration"]] <- value` (`NA` allowed).
+  Pipelines saved with an earlier version get the column (all `NA`) when
+  read.
+
 # pipeflow 0.5.0.9022
 
 ## Bug fixes

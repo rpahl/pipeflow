@@ -93,6 +93,7 @@ classDiagram
         exec : chr, auto split reduce plain
         time : POSIXct, added/replaced or end of last success
         time_start : POSIXct, start of last run, NA if none
+        duration : difftime secs, of last run, NA if none
         depends : list, derived, arg to step
         unbound : list, derived, param names
         nodeId : int, derived
@@ -306,9 +307,9 @@ unwraps them (`.pip_unwrap_params()`).
 | Bind pipelines | `rbind.pipeflow()` → `.pip_bind()` | Clones both pipelines and renames clashing steps of `y` with a number suffix. Folds params into the function defaults. Adds new nodes and edges. |
 | Assign to several steps | `p[i, j] <- value` → `[<-.pipeflow` | Calls `[[<-` per row. If a row fails, the rows before it are undone (invariant 8). |
 | Copy steps | `p[i, ] <- q[i, ]` → `.pip_copy_from()` | Per row: rename, then `pip_replace()` (with the exec mode of the source, so that the copied state is not outdated again), then overwrite the runtime columns. If a row fails, the rows before it are undone (invariant 8). |
-| Reset steps | `pip_reset()` | Clears `out` and `time_start` of the covered unlocked steps and makes them `new`. Outdates their downstream steps, except locked ones. |
+| Reset steps | `pip_reset()` | Clears `out`, `time_start` and `duration` of the covered unlocked steps and makes them `new`. Outdates their downstream steps, except locked ones. |
 | Tag, lock | `pip_tag()`, `pip_lock()`, … | Plain column writes on the covered rows. |
-| Annotate | `p[[s, j]] <-` for `state`, `time`, `time_start`, `tags`, `locked` | Plain column writes. Outdate nothing. |
+| Annotate | `p[[s, j]] <-` for `state`, `time`, `time_start`, `duration`, `tags`, `locked` | Plain column writes. Outdate nothing. |
 
 `.pip_outdate_downstream(x, steps, keep)` is the one place that marks steps
 `outdated`. Steps in state `new` stay `new`.
@@ -391,11 +392,12 @@ sequenceDiagram
         C->>F: do.call, sets .step_call and restores it on exit
         F-->>RR: value
         RR->>RR: .pip_annotate_output (pip_output_value)
-        RR->>E: re-read data by step name, set out/time/state = done
-        RR->>E: (failed keys: set out, state = failed, keep time)
+        RR->>E: re-read data by step name, set out/time/state = done/duration
+        RR->>E: (failed keys: set out, state = failed, duration, keep time)
         R->>R: failed keys: record the output in failures
         alt step error
-            RR-->>R: pipeflow_step_error (state = failed)
+            RR->>E: by step name: state = failed, duration
+            RR-->>R: pipeflow_step_error
             R->>R: stop: re-signal / continue: store condition as out
         end
         R->>E: check .run_state for restart (re-run pip_run) / halted (break)
@@ -563,8 +565,8 @@ from `nodeId` (as the order) and `depends` (as the edges) via
 access must go through `.pip_dag()`, never `pipenv$.dag` directly.
 
 Pipelines saved before a step column existed lack it. `.pip_pipenv()`
-adds a missing `time_start` column (all `NA`) on first access, via
-`.pip_add_time_start()`. A table read with `readRDS()` has no spare column
+adds a missing `time_start` or `duration` column (all `NA`) on first
+access, via `.pip_add_time_cols()`. A table read with `readRDS()` has no spare column
 slots, so the new table is stored back in `pipenv`. Every access to
 `pipenv` must therefore go through `.pip_pipenv()`.
 

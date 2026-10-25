@@ -19,6 +19,7 @@ describe(".empty_pipeline", {
                 "exec",
                 "time",
                 "time_start",
+                "duration",
                 "depends",
                 "unbound",
                 "nodeId"
@@ -1290,33 +1291,54 @@ describe("pipelines read with readRDS()", {
         expect_same_pip(q, p)
     })
 
-    it("get a time_start column if saved without one", {
-        # Pipelines saved with pipeflow 0.5.0 have no time_start column.
-        # Any access via .pip_pipenv() adds it back, so the view is made
-        # before the column is dropped, and the step table is read with
-        # .subset2() until the pipeline is used.
+    it("get the time_start and duration columns if saved without", {
+        # Pipelines saved with pipeflow 0.5.0 have no time_start and no
+        # duration column. Any access via .pip_pipenv() adds them back, so
+        # the view is made before the columns are dropped, and the step
+        # table is read with .subset2() until the pipeline is used.
         rawData <- \(x) .subset2(x, "pipenv")[["data"]]
         p <- pip_run(test_pip(), lgr = NULL)
         v <- p[c("b", "c")]
-        rawData(p)[, time_start := NULL]
+        rawData(p)[, c("time_start", "duration") := NULL]
         expect_null(rawData(p)[["time_start"]])
         res <- save_and_read(list(p, v))
         q <- res[[1]]
         expect_null(rawData(q)[["time_start"]])
+        expect_null(rawData(q)[["duration"]])
 
-        # Also p[["pipenv"]] adds the column
+        # Also p[["pipenv"]] adds the columns
         expect_equal(
             colnames(q[["pipenv"]][["data"]]),
             colnames(.empty_pipeline())
         )
         expect_true(all(is.na(q[["time_start"]])))
+        expect_true(all(is.na(q[["duration"]])))
+        expect_s3_class(q[["duration"]], "difftime")
         expect_true(all(is.na(res[[2]][["time_start"]])))
         expect_identical(res[[2]][["pipenv"]], q[["pipenv"]])
 
         t0 <- Sys.time()
         pip_run(q, force = TRUE, lgr = NULL)
         expect_true(all(q[["time_start"]] >= t0))
+        expect_false(anyNA(q[["duration"]]))
         expect_equal(q[["out"]], p[["out"]])
+    })
+
+    it("get a duration column if saved with time_start but without it", {
+        # Pipelines saved with a development version between 0.5.0 and the
+        # duration column have time_start, which is kept.
+        rawData <- \(x) .subset2(x, "pipenv")[["data"]]
+        p <- pip_run(test_pip(), lgr = NULL)
+        rawData(p)[, duration := NULL]
+        q <- save_and_read(p)
+        expect_null(rawData(q)[["duration"]])
+
+        expect_equal(
+            colnames(q[["pipenv"]][["data"]]),
+            colnames(.empty_pipeline())
+        )
+        expect_equal(q[["time_start"]], p[["time_start"]])
+        expect_true(all(is.na(q[["duration"]])))
     })
 
     it("re-run only failed keys if saved without step marks", {
@@ -2506,13 +2528,16 @@ describe("pip_replace", {
         expect_equal(p[["params"]][["f2"]], list(x = 5))
     })
 
-    it("clears time_start of the replaced step", {
+    it("clears time_start and duration of the replaced step", {
         p <- test_pip()
         pip_run(p, lgr = NULL)
         expect_false(is.na(p[["f2", "time_start"]]))
+        expect_false(is.na(p[["f2", "duration"]]))
         pip_replace(p, "f2", \(x = 3) x)
         expect_true(is.na(p[["f2", "time_start"]]))
+        expect_true(is.na(p[["f2", "duration"]]))
         expect_false(is.na(p[["f1", "time_start"]]))
+        expect_false(is.na(p[["f1", "duration"]]))
     })
 
     it("rewires the step via a reference in params", {
@@ -2891,11 +2916,13 @@ describe("pip_clone", {
         )
     })
 
-    it("copies time_start", {
+    it("copies time_start and duration", {
         p <- pip_run(test_pip(), lgr = NULL)
         p2 <- pip_clone(p)
         expect_equal(p2[["time_start"]], p[["time_start"]])
         expect_false(anyNA(p2[["time_start"]]))
+        expect_equal(p2[["duration"]], p[["duration"]])
+        expect_false(anyNA(p2[["duration"]]))
     })
 
     it("returns a pipeflow pipeline copy with same content", {
@@ -5141,7 +5168,7 @@ describe("pip_run", {
                 )
             })
 
-            it("sets only time_start of a step that failed for a key", {
+            it("sets only time_start and duration if failed for a key", {
                 p <- key_pip()
                 pip_set_params(p, list(min = -Inf))
                 pip_run(p, lgr = NULL)
@@ -5157,6 +5184,7 @@ describe("pip_run", {
                 expect_equal(p[["fit", "time"]], timeBefore)
                 expect_true(p[["fit", "time_start"]] >= t0)
                 expect_true(p[["fit", "time"]] < p[["fit", "time_start"]])
+                expect_false(is.na(p[["fit", "duration"]]))
             })
 
             it("does not run a key whose input failed without try()", {
@@ -5927,6 +5955,91 @@ describe("pip_run time_start", {
 })
 
 
+describe("pip_run duration", {
+    test_pip <- function() {
+        pip_new("p") |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1)
+    }
+
+    it("is NA in seconds for a step that never ran", {
+        p <- test_pip()
+        expect_true(all(is.na(p[["duration"]])))
+        expect_s3_class(p[["duration"]], "difftime")
+        expect_equal(units(p[["duration"]]), "secs")
+        expect_s3_class(p[["a", "duration"]], "difftime")
+    })
+
+    it("is time - time_start after a successful run", {
+        p <- pip_new("p") |>
+            pip_add("slow", \(x = 1) {
+                Sys.sleep(0.05)
+                x
+            })
+        pip_run(p, lgr = NULL)
+        d <- p[["slow", "duration"]]
+        expect_equal(units(d), "secs")
+        expect_gte(as.numeric(d), 0.04)
+        expect_equal(
+            as.numeric(d),
+            as.numeric(
+                p[["slow", "time"]] - p[["slow", "time_start"]],
+                units = "secs"
+            )
+        )
+    })
+
+    it("is set for a failing step, also if it fails late", {
+        for (onError in c("stop", "continue")) {
+            p <- pip_new("p") |>
+                pip_add("f", \(x = 1) {
+                    Sys.sleep(0.05)
+                    stop("boom")
+                })
+            suppressWarnings(
+                try(
+                    pip_run(p, lgr = NULL, on_error = onError),
+                    silent = TRUE
+                )
+            )
+            expect_equal(p[["f", "state"]], "failed")
+            expect_gte(as.numeric(p[["f", "duration"]]), 0.04)
+        }
+    })
+
+    it("is not changed for skipped steps", {
+        p <- pip_new("p") |>
+            pip_add("done", \(x = 1) x) |>
+            pip_add("locked", \(x = 2) x) |>
+            pip_add("f", \(x = 1) stop("boom")) |>
+            pip_add("skipped", \(x = ~f) x)
+        pip_run(p["done"], lgr = NULL)
+        pip_lock(p["locked"])
+        doneDuration <- p[["done", "duration"]]
+        suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+
+        expect_equal(p[["done", "duration"]], doneDuration)
+        expect_true(is.na(p[["locked", "duration"]]))
+        expect_false(is.na(p[["f", "duration"]]))
+        expect_true(is.na(p[["skipped", "duration"]]))
+    })
+
+    it("lands on the row of a failing step that inserts steps before it", {
+        p <- pip_new("p") |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) {
+                pip_add(.self, "pre", \(y = 3) y, after = "a")
+                stop("boom")
+            })
+        try(pip_run(p, lgr = NULL), silent = TRUE)
+        expect_equal(unname(p[["step"]]), c("a", "pre", "b"))
+        expect_equal(p[["b", "state"]], "failed")
+        expect_false(is.na(p[["b", "duration"]]))
+        expect_equal(p[["pre", "state"]], "new")
+        expect_true(is.na(p[["pre", "duration"]]))
+    })
+})
+
 describe("pip_reset", {
     it("resets states and outputs of all steps", {
         p <- pip_new() |>
@@ -5947,7 +6060,7 @@ describe("pip_reset", {
         expect_equal(get_run_state(p), "ready")
     })
 
-    it("clears time_start but keeps time", {
+    it("clears time_start and duration but keeps time", {
         p <- pip_new() |>
             pip_add("a", \(x = 1) x) |>
             pip_add("b", \(x = ~a) x + 1)
@@ -5958,6 +6071,8 @@ describe("pip_reset", {
 
         expect_false(is.na(p[["a", "time_start"]]))
         expect_true(is.na(p[["b", "time_start"]]))
+        expect_false(is.na(p[["a", "duration"]]))
+        expect_true(is.na(p[["b", "duration"]]))
         expect_equal(p[["time"]], timeBefore)
     })
 
