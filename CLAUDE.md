@@ -140,12 +140,13 @@ itself recursively and hands off the remaining work. After each step,
 have changed the pipeline.
 
 **Code layout.**
-- `R/pipeflow.R` holds the exported `pip_*` API, with internal `.pip_*`
-  helpers at the top.
+- `R/pipeflow.R` holds the exported `pip_*` API (except `pip_graph()`, see
+  `R/graph.R` below), with internal `.pip_*` helpers at the top.
 - `R/generic.pipeflow.R` holds the S3 methods: `[`, `[[`, `$`, their
   assignment forms, `rbind` (pipeline binding), `length`, `dim` and `str`.
 - `R/print.pipeflow.R` holds the print method.
 - `R/log.R` holds the default logger, `pipeflow_lgr(level, msg)`.
+- `R/graph.R` holds `pip_graph()` and its helpers (`.pip_graph_*`).
 - The package imports all of `data.table`. Its filter operators (`%like%`,
   `%between%`, …) are not exported, but `[` filters find them via
   `.filter_ops` (`.pip_select_rows()`).

@@ -14,9 +14,10 @@ a flow that is described here, update this file in the same PR.
 
 | File | Role |
 |---|---|
-| `R/pipeflow.R` | Exported `pip_*` API. Internal `.pip_*` helpers sit at the top, grouped by section (construction, asserts, wrappers, param parsing, step execution, state updates, data access, DAG traversal, addition/binding). |
+| `R/pipeflow.R` | Exported `pip_*` API, except `pip_graph()`. Internal `.pip_*` helpers sit at the top, grouped by section (construction, asserts, wrappers, param parsing, step execution, state updates, data access, DAG traversal, addition/binding). |
 | `R/generic.pipeflow.R` | S3 methods: `[`, `[[`, `$` and their assignment forms, `length`, `dim`, `str`, `rbind`. Helpers `.pip_all_or_nothing()`, `.pip_snapshot()`, `.pip_restore()`, `.pip_copy_from()`, `.pip_compact()` and `.pip_subset2()`. Re-exports the data.table operators. |
 | `R/as_function.R` | `as.function.pipeflow()`, `pip_inner()` and the `.fun_*` cache helpers. See [as_function.md](as_function.md). |
+| `R/graph.R` | `pip_graph()` (visNetwork nodes and edges, or a mermaid flowchart) and its helpers: `.pip_graph_refs()` (the referenced steps, and whether only via `~try()`), `.pip_graph_title()` (hover text), `.pip_graph_mermaid()`, `.pip_graph_format_value()`, `.pip_graph_format_list()`, `.html_escape()` and `.mermaid_escape()`. |
 | `R/print.pipeflow.R` | `print.pipeflow()`, `.format_out()`, `.format_condition()` and `.format_state_counts()`. |
 | `R/utils.R` | Formula helpers (`formula_deps()`, `formula_try_args()`, `formula_set_ref()`, `is_try_ref()`, `is_one_sided_formula()`) and small utilities (`.is_single()`, `stop_no_call()`, `unlist1()`). |
 | `R/log.R` | Default logger `pipeflow_lgr(level, msg)`. |

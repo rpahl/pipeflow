@@ -173,6 +173,16 @@ do.call(
 
 Here, the pipeline is visualized as a directed acyclic graph (DAG) where
 the nodes represent the steps and the edges represent the dependencies.
+Hovering over a step shows its state, parameters and dependencies.
+
+With `format = "mermaid"`, `pip_graph()` instead returns the graph as the
+text of a [mermaid](https://mermaid.js.org) flowchart, which can be pasted
+into a `mermaid` code block, for example in a GitHub README or a Quarto
+document.
+
+```{r print-mermaid-graph}
+cat(pip_graph(pip, format = "mermaid"))
+```
 
 ### Pipeline integrity
 

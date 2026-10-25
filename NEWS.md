@@ -1,3 +1,19 @@
+# pipeflow 0.5.0.9024
+
+## New features
+
+- The nodes of `pip_graph()` have a `title` column, which visNetwork shows
+  when hovering over a step: its state, exec mode, tags, lock, the start
+  and duration of its last run, the failed keys of a mapped step, its
+  parameters and the steps it depends on.
+- The edges of `pip_graph()` have a `dashes` column, so that visNetwork
+  draws a `~try()` reference as a dashed edge.
+- `pip_graph(format = "mermaid")` returns the graph as the text of a
+  mermaid flowchart, which renders e.g. on GitHub and in Quarto. It has the
+  colors and dashed edges of the visNetwork graph, a hexagon for `auto` and
+  `plain` steps and a trapezoid for `split` (widening) and `reduce`
+  (narrowing) steps.
+
 # pipeflow 0.5.0.9023
 
 ## New features
