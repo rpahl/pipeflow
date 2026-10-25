@@ -3257,9 +3257,7 @@ pip_run <- function(
         )
         upRows <- as.integer(dat[list(upNodes), which = TRUE, on = "nodeId"])
         rowsToRun <- as.integer(sort(unique(c(requested, upRows))))
-        upstreamRows <- setdiff(rowsToRun, requested)
-        names(rowsToRun)[match(requested, rowsToRun)] <- "view"
-        names(rowsToRun)[match(upstreamRows, rowsToRun)] <- "upstream"
+        names(rowsToRun) <- ifelse(rowsToRun %in% requested, "view", "upstream")
     }
     # Mark the steps downstream of the executed steps as outdated if they were
     # not executed themselves, which can happen in two different ways:
