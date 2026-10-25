@@ -4345,6 +4345,92 @@ describe("pip_run", {
             expect_equal(p[["fit", "out"]], 3)
         })
 
+        it("outdates a step that changed its own params and its dependents", {
+            p <- pip_new("p") |>
+                pip_add("a", \(k = 1) {
+                    .self[["a", "params"]] <- list(k = 2)
+                    k
+                }) |>
+                pip_add("b", \(x = ~a) x * 10)
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), c("outdated", "outdated"))
+            expect_equal(unname(p[["out"]]), list(1, 10))
+
+            # Setting the same params again doesn't change the step
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), c("done", "done"))
+            expect_equal(unname(p[["out"]]), list(2, 20))
+        })
+
+        it("re-runs a step that changed its params before a restart", {
+            p <- pip_new("p") |>
+                pip_add("a", \(k = 1) {
+                    if (k == 1) {
+                        .self$set_params(list(k = 2))
+                        .self$restart(force = FALSE)
+                    }
+                    k
+                })
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["a", "state"]]), "done")
+            expect_equal(p[["a", "out"]], 2)
+        })
+
+        it("outdates a step that replaced its own function", {
+            p <- pip_new("p") |>
+                pip_add("a", \(k = 1) {
+                    .self$replace("a", \(k = 1) k * 100)
+                    k
+                })
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["a", "state"]]), "outdated")
+            expect_equal(p[["a", "out"]], 1)
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["a", "state"]]), "done")
+            expect_equal(p[["a", "out"]], 100)
+        })
+
+        it("outdates the steps that ran with a step changed later", {
+            p <- pip_new("p") |>
+                pip_add("a", \(k = 1) k) |>
+                pip_add("b", \(x = ~a) x * 10) |>
+                pip_add("c", \(x = ~b) {
+                    if (x == 10) {
+                        .self[["a", "params"]] <- list(k = 2)
+                    }
+                    x
+                })
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), rep("outdated", 3))
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), rep("done", 3))
+            expect_equal(p[["c", "out"]], 20)
+        })
+
+        it("outdates the steps that ran with a step replaced later", {
+            p <- pip_new("p") |>
+                pip_add("a", \(x = 1) x) |>
+                pip_add("b", \(x = ~a) {
+                    if (x == 1) {
+                        .self$replace("a", \(x = 2) x)
+                    }
+                    x * 10
+                })
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), c("new", "outdated"))
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), c("done", "done"))
+            expect_equal(p[["b", "out"]], 20)
+        })
+
         it("is not written into the environment of the step function", {
             env <- new.env()
             f <- local(\(x = 1) .self[["name"]], envir = env)

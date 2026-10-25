@@ -1,5 +1,17 @@
 # pipeflow 0.5.0.9016
 
+## Breaking changes
+
+- A step that changes its own function, params or exec mode while it runs
+  (via `.self`) now ends the run as `"outdated"` instead of `"done"`, as
+  its output comes from the old definition, and runs again in the next run.
+  The same holds for a step that a later step changes during the run. The
+  steps that ran with the output of such a step are marked `"outdated"`
+  too. Before, all of them stayed `"done"` with stale results, also after
+  `.self$restart(force = FALSE)`. A step that sets its own params to fixed
+  values settles after one more run, while a step that sets new values in
+  every run now runs again in every run.
+
 ## Bug fixes
 
 - Changing the execution mode of a step with `p[[step, "exec"]] <- mode`
@@ -7,9 +19,7 @@
   downstream steps as `"outdated"`, so that the next run uses the new mode.
   Before, a step that had run kept its state and its output from the old
   mode. A step that failed for some keys and got a new mode is run again
-  for all keys. A step that changes its own mode while it runs (via
-  `.self`) ends the run as `"outdated"`, as its output comes from the old
-  mode.
+  for all keys.
 - Setting the output of a step with `p[[step, "out"]] <- value` (also via
   `p[i, "out"] <-`, views and `p[i, ] <- q[j, ]`) now marks its downstream
   steps as `"outdated"`, so that the next run computes them from the new

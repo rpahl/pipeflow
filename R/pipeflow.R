@@ -971,6 +971,14 @@
     dat <- .pip_pipenv(x)[["data"]]
     rowNow <- data.table::chmatch(step, dat[["step"]])
     stepStillExists <- !is.na(rowNow)
+    # Whether the step changed its own function, params or exec mode during
+    # the attempt (via `.self`), so that its output is stale already.
+    stepHasChangedItself <- stepStillExists &&
+        any(
+            !identical(dat[["fun"]][[rowNow]], funAtStart),
+            !identical(dat[["params"]][[rowNow]], paramsAtStart),
+            !identical(dat[["exec"]][[rowNow]], exec)
+        )
     if (stepStillExists && length(failedKeys) > 0L) {
         data.table::set(
             dat,
@@ -980,17 +988,13 @@
         )
         # Remember that the step's output now comes from this (current)
         # attempt, unless the step changed itself during the attempt.
-        isUnchanged <- identical(dat[["fun"]][[rowNow]], funAtStart) &&
-            identical(dat[["params"]][[rowNow]], paramsAtStart) &&
-            identical(dat[["exec"]][[rowNow]], exec)
-        if (isUnchanged) {
+        if (!stepHasChangedItself) {
             currentOut[[step]] <- TRUE
         }
     } else if (stepStillExists) {
-        # A step that changed its own exec mode during the call computed its
-        # output with the old mode, so it is outdated rather than done.
-        hasExecChanged <- !identical(dat[["exec"]][[rowNow]], exec)
-        state <- if (hasExecChanged) "outdated" else "done"
+        # A step that changed itself computed its output with the old
+        # definition, so it is outdated rather than done.
+        state <- if (stepHasChangedItself) "outdated" else "done"
         data.table::set(
             dat,
             i = rowNow,
@@ -1781,13 +1785,13 @@ pip_new <- function(name = "pipe") {
 #' run. pipeflow provides it each time the step runs, but only if the body of
 #' the step function contains the name `.self` (also within functions defined
 #' in the body). Indirect access, such as `get(".self")`, is not detected.
-#' `.self` is a reserved name: it can't be an argument of `fun` or a name in
-#' `params`.
 #'
-#' `.self` is valid while the step runs only. It is released once the step
-#' returned, so that outputs of the step don't keep the pipeline alive. A
-#' step that returns a function which refers to `.self` therefore fails
-#' with `object '.self' not found` when that function is called later.
+#' A step that changes its own function, params or exec mode via `.self`,
+#' ends the run as `"outdated"`. The same is true for other steps changed
+#' via `.self`. Lastly, `.self` is only valid while the step runs and
+#' released once the step was returned. For this reason, a step that returns
+#' a function referring to `.self` fails with `object '.self'
+#' not found` when called later.
 #'
 #' @return The updated pipeline, invisibly.
 #' @examples
@@ -3103,6 +3107,22 @@ pip_run <- function(
             x,
             steps = executedSteps,
             keep = c(executedSteps, locked)
+        )
+        # An executed step that ended outdated (or new, if it was replaced)
+        # was changed during the run, by itself or by a later step, so the
+        # steps after it that ran with its output are outdated too. Failed
+        # steps are left out, as their dependents only run again once they
+        # succeed.
+        staleStates <- c(
+            .step_states[["outdated"]][["name"]],
+            .step_states[["new"]][["name"]]
+        )
+        isExecuted <- dat[["step"]] %in% executedSteps
+        isStale <- isExecuted & dat[["state"]] %in% staleStates
+        .pip_outdate_downstream(
+            x,
+            steps = dat[["step"]][isStale],
+            keep = locked
         )
         executedSteps <<- character()
     }
