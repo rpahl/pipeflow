@@ -261,19 +261,21 @@
     }
 
     # Rebuild the step->node lookup table
-    stepsToNodes <- new.env(parent = emptyenv())
-    for (k in seq_len(nrow(subDat))) {
-        stepsToNodes[[subDat[["step"]][[k]]]] <- subDat[["nodeId"]][[k]]
-    }
+    nodeIds <- subDat[["nodeId"]]
+    stepsToNodes <- list2env(
+        as.list(stats::setNames(nodeIds, subDat[["step"]])),
+        envir = new.env(parent = emptyenv())
+    )
 
     if (!useRebuild) {
         # Build a new DAG from scratch that matches the kept rows
         d <- dag_new()
-        for (k in seq_len(nrow(subDat))) {
+        depends <- subDat[["depends"]]
+        for (k in seq_along(nodeIds)) {
             dag_add_node(d)
             # A step can refer to the same step with several arguments, but
             # there is only one edge
-            deps <- unique(subDat[["depends"]][[k]])
+            deps <- unique(depends[[k]])
             if (length(deps) == 0L) {
                 next
             }
@@ -282,7 +284,7 @@
                 envir = stepsToNodes,
                 inherits = FALSE
             ))))
-            to <- as.integer(subDat[["nodeId"]][[k]])
+            to <- as.integer(nodeIds[[k]])
             dag_add_edges_to(d, from = from, to = to)
         }
     }
@@ -377,13 +379,14 @@
             }
         }
 
-        # case x[[col]]
-        data <- .pip_view_data(x)
+        # case x[[col]]; only the column is read, not the whole step table
+        data <- .pip_pipenv(x)[["data"]]
         col <- data[[i]]
         if (is.null(col)) {
             return(NULL)
         }
-        return(stats::setNames(col, data[["step"]]))
+        rows <- .pip_view_rows(x)
+        return(stats::setNames(col[rows], data[["step"]][rows]))
     }
 
     # Two-index form extracts a single cell from a single row.
@@ -391,10 +394,11 @@
         stop("j must be a single column name")
     }
 
-    data <- .pip_view_data(x)
+    data <- .pip_pipenv(x)[["data"]]
+    rows <- .pip_view_rows(x)
     if (is.character(i)) {
-        # case x[[stepName, col]]; the row is relative to the view's data
-        row <- data.table::chmatch(i, data[["step"]])
+        # case x[[stepName, col]]; the row is relative to the view's rows
+        row <- data.table::chmatch(i, data[["step"]][rows])
         if (is.na(row)) {
             .pip_steps_to_rows(x, steps = i) # signals unknown steps
             stop("selected step not part of view: ", i)
@@ -402,12 +406,12 @@
     } else {
         # case x[[i, col]]
         row <- as.integer(i)
-        if (row < 1L || row > nrow(data)) {
+        if (row < 1L || row > length(rows)) {
             stop("row index out of bounds")
         }
     }
 
-    .cell(data[[j]], row)
+    .cell(data[[j]], rows[[row]])
 }
 
 
