@@ -289,8 +289,9 @@ unwraps them (`.pip_unwrap_params()`).
 | Remove a step | `pip_remove()`, `p[[s, "step"]] <- NULL` | Without `force`, fails if other steps depend on the step. With `force`, removes all downstream steps too. Tombstones DAG nodes, then `dag_tidy_up()`. Updates `data` and `.steps_to_nodes`. |
 | Rename a step | `pip_rename()`, `p[[s, "step"]] <-` | Updates `step`, all `depends`, the reference formulas (`formula_set_ref()`), the failures of failed keys in the outputs (`.pip_rename_failures()`), `.steps_to_nodes` and `.steps_with_current_out`. Calls `.fun_rename()`. The DAG is unchanged, because it works on ids. |
 | Set params | `pip_set_params()`, `p[[s, "params"]] <-` | `.pip_set_params()` computes all new values first (two phases, `pip_param_value<-`). A formula binds the param (`.pip_bind_row()` adds DAG edges). Outdates the changed steps and their downstream steps. |
+| Set the exec mode | `p[[s, "exec"]] <-` | Writes `exec` if the mode is new. Then outdates the step and its downstream steps. |
 | Bind pipelines | `rbind.pipeflow()` → `.pip_bind()` | Clones both pipelines and renames clashing steps of `y` with a number suffix. Folds params into the function defaults. Adds new nodes and edges. |
-| Copy steps | `p[i, ] <- q[i, ]` → `.pip_copy_from()` | Per row: rename, then `pip_replace()`, then overwrite the runtime columns. |
+| Copy steps | `p[i, ] <- q[i, ]` → `.pip_copy_from()` | Per row: rename, then `pip_replace()` (with the exec mode of the source, so that the copied state is not outdated again), then overwrite the runtime columns. |
 | Tag, lock | `pip_tag()`, `pip_lock()`, … | Plain column writes on the covered rows. |
 
 `.pip_outdate_downstream(x, steps, keep)` is the one place that marks steps
@@ -408,14 +409,14 @@ stateDiagram-v2
         [*] --> new : pip_add
         new --> done : run ok
         outdated --> done : run ok
-        done --> outdated : params / fun / upstream changed
+        done --> outdated : params / exec / upstream changed
         new --> failed : run error
         done --> failed : run error
         outdated --> failed : run error
         failed --> done : run ok
-        done --> new : pip_reset
-        outdated --> new : pip_reset
-        failed --> new : pip_reset
+        done --> new : pip_reset / pip_replace
+        outdated --> new : pip_reset / pip_replace
+        failed --> new : pip_reset / pip_replace
     }
 ```
 
@@ -479,9 +480,10 @@ stateDiagram-v2
   treats it as a failed input. Such an input is never passed via `failed =`,
   the step reads the stored output.
 - **Retry of failed keys.** A step that is still `failed` at its turn has
-  not been outdated (params, function and upstream steps unchanged). If its
-  output has failed keys, no input ran in this run (`inputsChanged`) and the
-  run is not forced, `pip_run()` passes `retry = TRUE` to `.pip_run_row()`,
+  not been outdated (function, params, exec mode and upstream steps
+  unchanged). If its output has failed keys, no input ran in this run
+  (`inputsChanged`) and the run is not forced, `pip_run()` passes
+  `retry = TRUE` to `.pip_run_row()`,
   which hands the outputs of the other keys as `keep` to
   `.pip_execute_step_call()`: the key loop copies them instead of calling
   the function, and `.pip_annotate_output()` skips them (they were
@@ -495,9 +497,9 @@ stateDiagram-v2
   hash) that marks the steps whose stored output comes from their last
   attempt: `.pip_run_row()` sets the step to `FALSE` at the start of each
   attempt and to `TRUE` when the attempt stores its output, unless the step
-  changed its own function or params during the attempt (via `.self`; a
-  change upstream makes the next run re-run the input step, and so all
-  keys). Only outputs with failed keys are marked (the only ones that are
+  changed its own function, params or exec mode during the attempt (via
+  `.self`; a change upstream makes the next run re-run the input step, and
+  so all keys). Only outputs with failed keys are marked (the only ones that are
   reused). Assigning an output (`p[[s, "out"]] <-`, also via
   `p[i] <- q[j]`) unmarks the step. `pip_new()` creates the environment, and `.pip_pipenv()` adds it
   to a pipeline saved before it existed. A step that is not marked `TRUE`

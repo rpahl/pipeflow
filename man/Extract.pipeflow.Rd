@@ -173,7 +173,8 @@ same as \code{pip_set_params(p, list(...))}
 }
 \item \code{p[[step, "locked"]] <- TRUE|FALSE} -- lock or unlock the step;
 same as \code{\link[=pip_lock]{pip_lock()}} / \code{\link[=pip_unlock]{pip_unlock()}}
-\item \code{p[[step, "exec"]] <- mode} -- set the step's execution mode.
+\item \code{p[[step, "exec"]] <- mode} -- set the step's execution mode. A new
+mode marks the step and its downstream steps as \code{"outdated"}.
 \item \code{p[[step, "state"]] <- state} -- set the step's state.
 \item \code{p[[step, "time"]] <- time} -- set the step's time stamp (a single
 \code{POSIXct} value).
@@ -220,12 +221,12 @@ of its steps are copied to the selected rows: \code{p[i, ] <- q[i, ]} copies
 the steps of \code{q} selected by \code{i} into the steps of \code{p} selected by \code{i}
 (the rows of both sides are aligned by position and must have the same
 length). In this form, \code{i} is required and \code{j} must be omitted. The
-properties are copied in the order \code{step}, \code{fun}, \code{params}, \code{out},
-\code{state}, \code{time}, \code{time_start}, \code{tags}, \code{locked}, \code{exec}: the step is
-renamed to the source name (a no-op when it is unchanged), the function
-and the params are replaced with those of the source (same as
-\code{\link[=pip_replace]{pip_replace()}} with the params of the source), and the runtime state
-and annotation columns are
+properties are copied in the order \code{step}, \code{fun}, \code{params}, \code{exec},
+\code{out}, \code{state}, \code{time}, \code{time_start}, \code{tags}, \code{locked}: the step is
+renamed to the source name (a no-op when it is unchanged), the function,
+the params and the execution mode are replaced with those of the source
+(same as \code{\link[=pip_replace]{pip_replace()}} with the params and \code{exec} of the source), and
+the runtime state and annotation columns are
 overwritten (locked steps included). A copied step refers to the steps
 that the source step depends on by name, also if it was defined with a
 relative reference such as \code{~-1}, and these steps are looked up in \code{p}.

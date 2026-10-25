@@ -1,3 +1,14 @@
+# pipeflow 0.5.0.9016
+
+## Bug fixes
+
+- Changing the execution mode of a step with `p[[step, "exec"]] <- mode`
+  (also via `p[i, "exec"] <-` and views) now marks the step and its
+  downstream steps as `"outdated"`, so that the next run uses the new mode.
+  Before, a step that had run kept its state and its output from the old
+  mode. A step that failed for some keys and got a new mode is run again
+  for all keys.
+
 # pipeflow 0.5.0.9015
 
 ## Breaking changes

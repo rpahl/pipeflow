@@ -989,6 +989,57 @@ describe("assignment operator [[<-", {
         expect_error(p[["s2", "exec"]] <- NULL, "must be a single string")
     })
 
+    split_pip <- function() {
+        pip_new("pipe") |>
+            pip_add("parts", \() list(a = 1, b = 2), exec = "split") |>
+            pip_add("total", \(x = ~parts) sum(unlist(x)), exec = "reduce") |>
+            pip_add("report", \(x = ~total) x)
+    }
+
+    it("outdates the step and its downstream steps on a new exec mode", {
+        p <- split_pip()
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["total", "out"]], 3)
+
+        p[["total", "exec"]] <- "auto"
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "outdated", "outdated")
+        )
+        pip_run(p, lgr = NULL)
+        expect_equal(unclass(p[["total", "out"]]), list(a = 1, b = 2))
+        expect_equal(unclass(p[["report", "out"]]), list(a = 1, b = 2))
+    })
+
+    it("keeps the states if the exec mode does not change", {
+        p <- split_pip()
+        pip_run(p, lgr = NULL)
+
+        p[["total", "exec"]] <- "reduce"
+
+        expect_equal(unname(p[["state"]]), rep("done", 3))
+    })
+
+    it("keeps steps that never ran new on a new exec mode", {
+        p <- split_pip()
+        p[["total", "exec"]] <- "auto"
+        expect_equal(unname(p[["state"]]), rep("new", 3))
+    })
+
+    it("outdates downstream steps outside of a view on a new exec mode", {
+        p <- split_pip()
+        pip_run(p, lgr = NULL)
+        v <- pip_view(p, step = "total")
+
+        v[["total", "exec"]] <- "auto"
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "outdated", "outdated")
+        )
+    })
+
     it("can assign states", {
         p <- test_pip()
         p[["s1", "state"]] <- "outdated"
@@ -1445,6 +1496,22 @@ describe("[<-.pipeflow", {
         expect_equal(p[["params"]][[2]][["k"]], 6)
     })
 
+    it("outdates only the steps that get a new exec mode", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1) |>
+            pip_add("s3", \(x = ~s2) x + 1) |>
+            pip_add("s4", \(x = 4) x)
+        pip_run(p, lgr = NULL)
+
+        p[c("s2", "s4"), "exec"] <- c("plain", "auto")
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "outdated", "outdated", "done")
+        )
+    })
+
     it("replicates a single function to all selected rows", {
         p <- test_pip()
         p[1:2, "fun"] <- \(x = 5) x
@@ -1535,11 +1602,12 @@ describe("cross-pipeline assignment", {
     it("copies the runtime state and annotation columns", {
         p <- test_pip()
         q <- pip_clone(p)
+        # A new exec mode outdates the steps, so it is set first
+        q[1:2, "exec"] <- "plain"
         q[1:2, "out"] <- list(10, 20)
         q[1:2, "tags"] <- c("a", "b")
         q[1:2, "state"] <- "done"
         q[1:2, "locked"] <- TRUE
-        q[1:2, "exec"] <- "plain"
 
         p[1:2, ] <- q[1:2, ]
 

@@ -50,7 +50,9 @@ A step can take the following states:
 \item outdated: a step can get outdated in the following scenarios:
 \itemize{
 \item one of the step's parameters were changed (e.g. via \code{\link[=pip_set_params]{pip_set_params()}})
-\item a step it depends on was re-executed or replaced
+\item the step's execution mode was changed (\code{p[[step, "exec"]] <- mode})
+\item a step it depends on was re-executed, replaced or got a new
+execution mode
 \item a step it depends on was executed, but the run did not reach the step
 itself, either on purpose (see section 'Running views' below) or
 because the run was aborted early due to a failed step
@@ -144,9 +146,9 @@ The next run retries the failed steps and the steps that were not run;
 once a failed step succeeds, the steps after it, including those that
 received failure objects, are run again. A mapped step is only run again
 for its failed keys, keeping the results of the other keys, unless
-something changed that affects all keys: its parameters or an input step
-(which marks it \code{"outdated"}), an input step that is run again in the
-same run, or \code{force = TRUE}. See
+something changed that affects all keys: its parameters, its execution
+mode or an input step (which marks it \code{"outdated"}), an input step that is
+run again in the same run, or \code{force = TRUE}. See
 \code{vignette("v05c-error-handling", package = "pipeflow")} for examples.
 }
 

@@ -5402,6 +5402,48 @@ describe("pip_run", {
                     )
                 })
 
+                it("re-runs all keys after its exec mode was changed", {
+                    env <- new.env()
+                    p <- flaky_pip(env)
+                    run_flaky(p)
+
+                    p[["fit", "exec"]] <- "plain"
+                    p[["fit", "exec"]] <- "auto"
+                    expect_equal(unname(p[["fit", "state"]]), "outdated")
+
+                    env$flaky <- FALSE
+                    env$calls <- character()
+                    pip_run(p, lgr = NULL)
+                    expect_equal(env$calls, c("a", "b", "c"))
+                })
+
+                it("does not retry keys if the step changed its exec mode", {
+                    env <- new.env()
+                    env$flaky <- TRUE
+                    p <- pip_new() |>
+                        pip_add(
+                            "parts",
+                            \(x = list(a = 1, b = 2, c = 3)) x,
+                            exec = "split"
+                        ) |>
+                        pip_add("fit", \(x = ~parts) {
+                            if (env$flaky && identical(x, 2)) {
+                                .self[["fit", "exec"]] <- "reduce"
+                                stop("transient")
+                            }
+                            if (is.list(x)) sum(unlist(x)) else x
+                        })
+                    run_flaky(p)
+                    expect_equal(unname(p[["fit", "state"]]), "failed")
+
+                    logs <- character()
+                    lgr <- function(level, msg) logs <<- c(logs, msg)
+                    env$flaky <- FALSE
+                    pip_run(p, lgr = lgr)
+                    expect_false(any(grepl("re-running failed keys", logs)))
+                    expect_equal(p[["fit", "out"]], 6)
+                })
+
                 it("re-runs only the failed keys of a renamed step", {
                     env <- new.env()
                     p <- flaky_pip(env)
