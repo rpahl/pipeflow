@@ -302,6 +302,7 @@ unwraps them (`.pip_unwrap_params()`).
 | Bind pipelines | `rbind.pipeflow()` → `.pip_bind()` | Clones both pipelines and renames clashing steps of `y` with a number suffix. Folds params into the function defaults. Adds new nodes and edges. |
 | Assign to several steps | `p[i, j] <- value` → `[<-.pipeflow` | Calls `[[<-` per row. If a row fails, the rows before it are undone (invariant 8). |
 | Copy steps | `p[i, ] <- q[i, ]` → `.pip_copy_from()` | Per row: rename, then `pip_replace()` (with the exec mode of the source, so that the copied state is not outdated again), then overwrite the runtime columns. If a row fails, the rows before it are undone (invariant 8). |
+| Reset steps | `pip_reset()` | Clears `out` and `time_start` of the covered unlocked steps and makes them `new`. Outdates their downstream steps, except locked ones. |
 | Tag, lock | `pip_tag()`, `pip_lock()`, … | Plain column writes on the covered rows. |
 | Annotate | `p[[s, j]] <-` for `state`, `time`, `time_start`, `tags`, `locked` | Plain column writes. Outdate nothing. |
 
@@ -311,11 +312,12 @@ unwraps them (`.pip_unwrap_params()`).
 **Which edits outdate.** An edit that can change a result outdates the
 results that depend on it: a new `fun` (the step becomes `new`), new
 `params` or a new `exec` mode (the step and its downstream steps), a new
-`out` (only the downstream steps). A rename and the annotation columns
-outdate nothing. `[<-` assigns row by row via `[[<-`, so it follows the same
-rules. Through a view, the downstream steps outside the view are outdated
-too, because `.pip_get_reachable_nodes()` walks the whole DAG. A new edit
-path must follow these rules.
+`out` (only the downstream steps), a reset (the steps become `new`, their
+downstream steps except locked ones are outdated). A rename and the
+annotation columns outdate nothing. `[<-` assigns row by row via `[[<-`, so
+it follows the same rules. Through a view, the downstream steps outside the
+view are outdated too, because `.pip_get_reachable_nodes()` walks the whole
+DAG. A new edit path must follow these rules.
 
 ## 7. Views and subsetting
 

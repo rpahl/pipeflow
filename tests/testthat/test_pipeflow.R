@@ -1442,9 +1442,12 @@ describe("pipelines read with readRDS()", {
             pip_rename(q, from = "a2", to = "ten")
             pip_tag(q["b"], "tag")
             pip_lock(q["b"])
-            pip_reset(q)
         })
         expect_true(dag_is_null(q[["pipenv"]][[".dag"]]))
+
+        # pip_reset() outdates the downstream steps, which needs the DAG
+        pip_reset(q)
+        expect_false(dag_is_null(q[["pipenv"]][[".dag"]]))
 
         pip_run(q, lgr = NULL)
         expect_equal(q[["out"]], list(a = 1, ten = 10, b = 2, c = 4, d = 5))
@@ -5887,6 +5890,36 @@ describe("pip_reset", {
         pip_reset(v)
 
         expect_equal(unname(p[["state"]]), c("done", "new"))
+    })
+
+    it("outdates the downstream steps, except locked ones", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1) |>
+            pip_add("c", \(x = ~b) x + 1) |>
+            pip_add("d", \(x = ~a) x + 1)
+        pip_run(p, lgr = NULL)
+        pip_lock(pip_view(p, step = "d"))
+
+        pip_reset(pip_view(p, step = "a"))
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("new", "outdated", "outdated", "done")
+        )
+    })
+
+    it("re-runs the dependents of a reset step that is then locked", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) if (is.null(x)) "no input" else x + 1)
+        pip_run(p, lgr = NULL)
+
+        pip_reset(pip_view(p, step = "a"))
+        pip_lock(pip_view(p, step = "a"))
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["b", "out"]], "no input")
     })
 
     it("allows re-running the pipeline from scratch after reset", {

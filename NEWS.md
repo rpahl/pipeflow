@@ -7,6 +7,10 @@
   `p[["step"]]`. Before, the failures in the outputs of the step and its
   dependents kept the old name, and renaming a step to its own name this
   way failed with "already exists".
+- `pip_reset()` now marks the downstream steps of the reset steps as
+  `"outdated"`, as they ran with the cleared outputs. Locked steps keep
+  their state. Before, the downstream steps stayed `"done"`, and if a reset
+  step was then locked, the next run kept their results.
 
 # pipeflow 0.5.0.9019
 
