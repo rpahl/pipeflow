@@ -2,12 +2,9 @@
 % Please edit documentation in R/pipeflow.R
 \name{pip_collect}
 \alias{pip_collect}
-\alias{pip_collect_out}
 \title{Collect step outputs}
 \usage{
 pip_collect(x, by = "step", as.table = FALSE, simplify = TRUE)
-
-pip_collect_out(x, by = "step", as.table = FALSE, simplify = TRUE)
 }
 \arguments{
 \item{x}{A pipeflow pip or view.}
@@ -49,13 +46,6 @@ corresponding group, and steps without an entry (e.g. untagged steps)
 are omitted.
 You can use \code{\link[=pip_view]{pip_view()}} to further narrow the selection before collecting.
 }
-\section{Lifecycle}{
- Deprecated
-
-\code{pip_collect_out()} is a legacy alias for \code{\link[=pip_collect]{pip_collect()}}. It raises a
-deprecation warning and will be removed in a future release.
-}
-
 \examples{
 p <- pip_new() |>
   pip_add("load", \(x = 1) x, tags = "io") |>

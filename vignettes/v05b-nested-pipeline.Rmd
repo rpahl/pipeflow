@@ -79,7 +79,7 @@ see this now:
 
 ```{r}
 params <- list(input_df = iris, xVar = "Sepal.Length", yVar = "Sepal.Width")
-inner$set_params(params)$run()
+pip_set_params(inner, params) |> pip_run()
 
 inner[["coefs", "out"]]
 

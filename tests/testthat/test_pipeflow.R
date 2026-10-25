@@ -3198,25 +3198,6 @@ describe("pip_collect", {
             "as.table must be a single logical value"
         )
     })
-
-    it("keeps pip_collect_out as a deprecated alias", {
-        p <- pip_new() |>
-            pip_add("s1", \(x = 1) x, tags = "io") |>
-            pip_add("s2", \(x = ~s1) x + 1, tags = "model")
-        pip_run(p, lgr = NULL)
-
-        expect_warning(
-            out <- pip_collect_out(p),
-            "pip_collect_out"
-        )
-        expect_equal(out, pip_collect(p))
-        expect_equal(
-            suppressWarnings(
-                pip_collect_out(p, by = "tags", as.table = TRUE)
-            ),
-            pip_collect(p, by = "tags", as.table = TRUE)
-        )
-    })
 })
 
 
@@ -3349,21 +3330,6 @@ describe("pip_graph", {
         expect_equal(nrow(g[["nodes"]]), 0L)
         expect_equal(nrow(g[["edges"]]), 0L)
         expect_named(g, c("nodes", "edges"))
-    })
-
-    it("keeps pip_get_graph as a deprecated alias", {
-        p <- test_pip()
-
-        expect_warning(
-            g <- pip_get_graph(p),
-            "pip_get_graph"
-        )
-        expect_equal(pip_graph(p), g)
-
-        expect_error(
-            suppressWarnings(pip_get_graph(1)),
-            "x must be a pipeflow pip or view"
-        )
     })
 })
 

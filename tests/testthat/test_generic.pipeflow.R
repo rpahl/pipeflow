@@ -465,6 +465,22 @@ describe("extract operator [", {
             expect_equal(unname(v[["step"]]), raw[["step"]])
         })
 
+        it("finds the data.table operators without data.table attached", {
+            p <- filter_pip()
+            # A caller frame that sees neither data.table nor pipeflow
+            enclos <- list2env(
+                list(`&` = base::`&`, pattern = "model"),
+                parent = emptyenv()
+            )
+            rows <- .pip_select_rows(
+                p,
+                quote(tags %like% pattern & step %notin% "eval"),
+                enclos
+            )
+
+            expect_equal(p[["pipenv"]][["data"]][["step"]][rows], "fit")
+        })
+
         it("recycles scalar logical filters", {
             p <- filter_pip()
 

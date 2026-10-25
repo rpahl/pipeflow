@@ -1283,6 +1283,19 @@
     .pip_pipenv(x)[["data"]][rows, ]
 }
 
+# The data.table operators that are available in the boolean filters of
+# `[.pipeflow`, also when data.table is not attached.
+.filter_ops <- list(
+    `%like%` = data.table::`%like%`,
+    `%ilike%` = data.table::`%ilike%`,
+    `%flike%` = data.table::`%flike%`,
+    `%plike%` = data.table::`%plike%`,
+    `%chin%` = data.table::`%chin%`,
+    `%between%` = data.table::`%between%`,
+    `%inrange%` = data.table::`%inrange%`,
+    `%notin%` = data.table::`%notin%`
+)
+
 # TRUE if `step` is covered by the rows of `x`. Always TRUE for a full
 # pipeline (where all rows are covered) and FALSE for a view that does not
 # cover the step.
@@ -1297,14 +1310,19 @@
 # Resolve the `i` selector of `[.pipeflow` to absolute row indices. `i_expr`
 # is the unevaluated `i` expression; it is evaluated in the context of the
 # covered rows, i.e. the data of a view or the full step table of a pipeline.
-# `enclos` is used as the enclosing environment for boolean filter expressions.
+# `enclos` is used as the enclosing environment for boolean filter expressions,
+# with the data.table filter operators (`.filter_ops`) in between.
 .pip_select_rows <- function(x, i_expr, enclos, keep_order = FALSE) {
     dat <- .pip_pipenv(x)[["data"]]
     view <- .is_pipeflow_view(x)
     rows <- .pip_view_rows(x)
     sub <- if (view) dat[rows] else dat
 
-    value <- eval(i_expr, envir = sub, enclos = enclos)
+    value <- eval(
+        i_expr,
+        envir = sub,
+        enclos = list2env(.filter_ops, parent = enclos)
+    )
 
     if (is.logical(value)) {
         if (length(value) == 1L) {
@@ -2234,27 +2252,6 @@ pip_collect <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
 }
 
 
-#' @rdname pip_collect
-#' @section Lifecycle: Deprecated
-#'
-#' `pip_collect_out()` is a legacy alias for [pip_collect()]. It raises a
-#' deprecation warning and will be removed in a future release.
-#' @export
-pip_collect_out <- function(
-    x,
-    by = "step",
-    as.table = FALSE,
-    simplify = TRUE
-) {
-    .Deprecated(
-        new = "pip_collect",
-        old = "pip_collect_out",
-        package = "pipeflow"
-    )
-    pip_collect(x, by = by, as.table = as.table, simplify = simplify)
-}
-
-
 #' Access the underlying step table
 #'
 #' This is a convenience wrapper for accessing the internal `data.table`,
@@ -2417,18 +2414,6 @@ pip_graph <- function(x, include_upstream = FALSE) {
     }
 
     list(nodes = nodes, edges = edges)
-}
-
-
-#' @rdname pip_graph
-#' @section Lifecycle: Deprecated
-#'
-#' `pip_get_graph()` is a legacy alias for [pip_graph()]. It raises a
-#' deprecation warning and will be removed in a future release.
-#' @export
-pip_get_graph <- function(x, include_upstream = FALSE) {
-    .Deprecated(new = "pip_graph", old = "pip_get_graph", package = "pipeflow")
-    pip_graph(x, include_upstream = include_upstream)
 }
 
 

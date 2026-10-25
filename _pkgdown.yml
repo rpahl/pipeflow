@@ -85,11 +85,6 @@ reference:
   - dim.pipeflow
   - print.pipeflow
 
-- title: "Filtering helpers"
-  desc: Filter operators from data.table re-exported for use in view and subset expressions.
-  contents:
-  - pipeflow-operators
-
 
 
 news:

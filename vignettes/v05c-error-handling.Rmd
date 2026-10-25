@@ -96,7 +96,7 @@ With `on_error = "continue"` in `pip_run()`, a failing step is still marked
 as failed but the run can continue for all other steps that do not depend on it:
 
 ```{r run-and-continue, warning = TRUE}
-pip$reset()
+pip_reset(pip)
 
 suppressWarnings(pip_run(pip, on_error = "continue"))
 
