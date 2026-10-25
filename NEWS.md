@@ -1,5 +1,11 @@
 # pipeflow 0.5.0.9022
 
+## Bug fixes
+
+- `pip_reset()` on a view that covers only some steps now keeps the time of
+  the last run and the run state of the pipeline. Before, resetting a
+  single step showed `last run: never`.
+
 ## Documentation
 
 - New article "Emulating targets features" with recipes for file tracking,

@@ -6054,6 +6054,57 @@ describe("pip_reset", {
         expect_equal(unname(p[["state"]]), "done")
         expect_equal(p[["out"]][[1]], 1)
     })
+
+    it("outdates failed downstream steps and leaves new ones new", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) if (x > 1) stop("boom") else x) |>
+            pip_add("c", \(x = ~a) x)
+        pip_run(p, lgr = NULL)
+        pip_set_params(p, list(x = 2))
+        expect_warning(
+            pip_run(pip_view(p, step = "b"), lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        pip_reset(pip_view(p, step = "c"))
+        expect_equal(unname(p[["state"]]), c("done", "failed", "new"))
+
+        pip_reset(pip_view(p, step = "a"))
+
+        expect_equal(unname(p[["state"]]), c("new", "outdated", "new"))
+    })
+
+    it("keeps the last run and run state if only some steps are reset", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = 1) stop("boom"))
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        lastRun <- .pip_pipenv(p)[[".last_run"]]
+        expect_false(is.null(lastRun))
+
+        pip_reset(pip_view(p, step = "a"))
+
+        expect_equal(.pip_pipenv(p)[[".last_run"]], lastRun)
+        expect_equal(pip_run_state(p), "continued")
+    })
+
+    it("clears the last run and run state if all steps are reset", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = 1) stop("boom"))
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+
+        pip_reset(pip_view(p, step = c("a", "b")))
+
+        expect_null(.pip_pipenv(p)[[".last_run"]])
+        expect_equal(pip_run_state(p), "ready")
+    })
 })
 
 describe("pip_run_state", {

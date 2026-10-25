@@ -2923,7 +2923,7 @@ pip_replace <- function(
 #' * outdated: a step can get outdated in the following scenarios:
 #'   - one of the step's parameters were changed (e.g. via [pip_set_params()])
 #'   - the step's execution mode was changed (`p[[step, "exec"]] <- mode`)
-#'   - a step it depends on was re-executed or replaced, got a new
+#'   - a step it depends on was re-executed, replaced or reset, got a new
 #'     execution mode, or its output was set (`p[[step, "out"]] <- value`)
 #'   - a step it depends on was executed, but the run did not reach the step
 #'     itself, either on purpose (see section 'Running views' below) or
@@ -3455,7 +3455,10 @@ pip_run <- function(
 #' steps that have run are marked `"outdated"`, as they ran with the cleared
 #' outputs.
 #' Any pending restart counters are cleared, but parameters, tags, and
-#' locked flags are left unchanged.
+#' locked flags are left unchanged. If all steps of the pipeline are
+#' selected, the run state is set to `"ready"` and the time of the last run
+#' is cleared. A view that covers only some steps leaves both alone, as they
+#' describe the whole pipeline.
 #'
 #' @details Locked steps are skipped: their state and output are preserved,
 #' also if they are downstream of a reset step.
@@ -3486,6 +3489,11 @@ pip_run <- function(
 #' p
 #' p[["state"]] # "new", "new"
 #' p[["out"]]   # NULL, NULL
+#'
+#' # Resetting a step outdates its downstream steps
+#' pip_run(p)
+#' pip_reset(pip_view(p, step = "load"))
+#' p[["state"]] # "new", "outdated"
 #' @export
 pip_reset <- function(x) {
     .assert_pip_or_view(x)
@@ -3521,9 +3529,11 @@ pip_reset <- function(x) {
         keep = dat[["step"]][dat[["locked"]]]
     )
 
-    env[[".run_state"]][] <- .run_states[["ready"]][["name"]]
     env[[".restart_count"]] <- 0L
-    env[[".last_run"]] <- NULL
+    if (length(rows) == nrow(dat)) {
+        env[[".run_state"]][] <- .run_states[["ready"]][["name"]]
+        env[[".last_run"]] <- NULL
+    }
 
     invisible(x)
 }

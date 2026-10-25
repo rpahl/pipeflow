@@ -475,11 +475,13 @@ pip_view(p, state = c("new", "outdated", "failed"))
 ```
 
 The view misses a `done` step that reruns because a step upstream of it
-runs. This happens, for example, after resetting a single step: `b` and
+runs. {pipeflow} functions such as `pip_set_params()` or `pip_reset()`
+outdate the downstream steps, so this only happens if you set a state by
+hand, which outdates no other step (see `?Extract.pipeflow`). Here, `b` and
 `c` stay `done`, but they run again with the new output of `a`.
 
 ```{r outdated-missed}
-pip_reset(pip_view(p, step = "a"))
+p[["a", "state"]] <- "outdated"
 pip_view(p, state = c("new", "outdated", "failed"))
 pip_run(p)
 ```
