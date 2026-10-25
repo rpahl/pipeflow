@@ -2,6 +2,56 @@
 # Helper
 # ------
 
+#' Take a snapshot of a pipeline to undo a failed assignment
+#'
+#' An assignment to several steps, like `p[i, j] <- value`, changes the
+#' pipeline one step at a time. If a step fails, `.pip_restore()` puts the
+#' snapshot back, so that the failed assignment changes nothing. Like
+#' `.pip_clone(deep = FALSE)`, the snapshot is a light copy of the step
+#' table: its columns are new vectors, but the functions, params and outputs
+#' are shared.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @return A list with the step table, copies of the DAG and of the two step
+#' maps, and the kept inner pipelines of the step functions made by
+#' [as.function.pipeflow()], which a rename moves (see `.fun_rename()`).
+#' @noRd
+.pip_snapshot <- function(pipenv) {
+    dat <- pipenv[["data"]]
+    copyMap <- \(name) as.list(pipenv[[name]], all.names = TRUE)
+    caches <- Filter(Negate(is.null), lapply(dat[["fun"]], .fun_cache))
+    list(
+        data = dat[seq_len(nrow(dat))],
+        dag = dag_clone(.pip_dag(pipenv)),
+        stepsToNodes = copyMap(".steps_to_nodes"),
+        currentOut = copyMap(".steps_with_current_out"),
+        caches = caches,
+        slots = lapply(caches, \(cache) cache[["slots"]])
+    )
+}
+
+
+#' Restore a pipeline from a snapshot
+#'
+#' @param pipenv The inner pipeline environment.
+#' @param snapshot The result of `.pip_snapshot(pipenv)`.
+#' @return `pipenv`, invisibly. The snapshot is written into `pipenv`, so
+#' the views of the pipeline see the restored pipeline as well.
+#' @noRd
+.pip_restore <- function(pipenv, snapshot) {
+    asMap <- \(x) list2env(x, envir = new.env(parent = emptyenv()))
+    pipenv[["data"]] <- snapshot[["data"]]
+    pipenv[[".dag"]] <- snapshot[["dag"]]
+    pipenv[[".steps_to_nodes"]] <- asMap(snapshot[["stepsToNodes"]])
+    pipenv[[".steps_with_current_out"]] <- asMap(snapshot[["currentOut"]])
+    caches <- snapshot[["caches"]]
+    for (k in seq_along(caches)) {
+        assign("slots", snapshot[["slots"]][[k]], envir = caches[[k]])
+    }
+    invisible(pipenv)
+}
+
+
 # Copy step properties of the selected rows of one pipeline/view to
 # the selected rows of another. The rows of `x` and `q` are aligned by
 # position and must have equal length. The structural columns
@@ -49,6 +99,13 @@
     # prevent that any writes below would alter rows that are still to be
     # copied (e.g. pip_replace() marking downstream steps as outdated).
     qSnapshot <- dataQ[rowsQ, c(props, "depends"), with = FALSE]
+
+    # If a row fails, the rows copied before are undone, so that `x` is left
+    # as it was.
+    pipenv <- .pip_pipenv(x)
+    snapshot <- .pip_snapshot(pipenv)
+    isDone <- FALSE
+    on.exit(if (!isDone) .pip_restore(pipenv, snapshot), add = TRUE)
 
     for (k in seq_len(n)) {
         pRow <- rowsP[[k]]
@@ -105,6 +162,7 @@
             x[[iSelP[[k]], prop]] <- qVals[[prop]]
         }
     }
+    isDone <- TRUE
 
     x
 }
@@ -856,6 +914,10 @@ dim.pipeflow <- function(x) {
 #' must itself be a list (e.g. `p[1:2, "params"] <- list(list(a = 1),
 #' list(b = 2))`).
 #'
+#' The selected steps are assigned one after another, but the assignment
+#' changes all of them or none, that is, if it fails for one step,
+#' the pipeline is restored as it was.
+#'
 #' If `value` is a `pipeflow` pipeline or view, the writable step properties
 #' of its steps are copied to the selected rows: `p[i, ] <- q[i, ]` copies
 #' the steps of `q` selected by `i` into the steps of `p` selected by `i`
@@ -871,7 +933,8 @@ dim.pipeflow <- function(x) {
 #' that the source step depends on by name, also if it was defined with a
 #' relative reference such as `~-1`, and these steps are looked up in `p`.
 #' The structural columns `nodeId`, `depends` and `unbound` are not copied
-#' but recomputed against the steps of `p`.
+#' but recomputed against the steps of `p`. If a step can't be copied (e.g.
+#' because it refers to a step that is not in `p`), `p` is left as it was.
 #' Instead of `p[i, j] <- q`, use `p[i, j] <- q[i, j]` to copy the values of
 #' a single property; the one-column table returned by the extraction form
 #' is unwrapped and assigned element-wise.
@@ -988,6 +1051,13 @@ dim.pipeflow <- function(x) {
         character(0)
     }
 
+    # If a row fails, the rows assigned before are undone, so that `x` is
+    # left as it was.
+    pipenv <- .pip_pipenv(x)
+    snapshot <- .pip_snapshot(pipenv)
+    isDone <- FALSE
+    on.exit(if (!isDone) .pip_restore(pipenv, snapshot), add = TRUE)
+
     for (k in seq_len(n)) {
         if (j == "step") {
             if (.pip_step_exists(x, stepNames[[k]])) {
@@ -997,6 +1067,7 @@ dim.pipeflow <- function(x) {
             x[[iSel[[k]], j]] <- values[[k]]
         }
     }
+    isDone <- TRUE
     x
 }
 

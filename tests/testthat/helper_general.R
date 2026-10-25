@@ -18,6 +18,23 @@ get_run_state <- function(x) {
     as.character(.pip_pipenv(x)[[".run_state"]])
 }
 
+# The parts of a pipeline that editing its steps changes: the step table,
+# the DAG and the two step maps. The step table is copied, because edits
+# change it in place.
+pip_internals <- function(x) {
+    env <- .pip_pipenv(x)
+    d <- .pip_dag(env)
+    nodes <- dag_get_nodes_order(d)
+    sortedList <- \(e) mget(ls(e, all.names = TRUE, sorted = TRUE), envir = e)
+    list(
+        data = as.list(data.table::copy(env[["data"]])),
+        nodes = nodes,
+        incoming = lapply(nodes, \(id) dag_get_incoming(d, id)),
+        stepsToNodes = sortedList(env[[".steps_to_nodes"]]),
+        currentOut = sortedList(env[[".steps_with_current_out"]])
+    )
+}
+
 # Write `x` with saveRDS() and read it back with readRDS(). Objects that are
 # saved together share their environments after reading, like a pipeline and
 # its views.
