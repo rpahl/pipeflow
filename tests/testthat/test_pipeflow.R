@@ -476,6 +476,93 @@ describe(".pip_call_step", {
     })
 })
 
+describe(".pip_keys_mismatch", {
+    prefix <- "partitioned arguments must share identical keys: "
+
+    it("is NULL if all arguments have the keys of the first one", {
+        expect_null(.pip_keys_mismatch(list(a = c("x", "y"))))
+        expect_null(
+            .pip_keys_mismatch(list(a = c("x", "y"), b = c("x", "y")))
+        )
+        expect_null(
+            .pip_keys_mismatch(list(a = character(), b = character()))
+        )
+    })
+
+    it("lists the missing and the extra keys of an argument", {
+        msg <- .pip_keys_mismatch(
+            list(a = c("x", "y", "z"), b = c("x", "z", "w"))
+        )
+        expect_equal(
+            msg,
+            paste0(
+                prefix,
+                "argument 'b' differs from 'a' (missing 'y'; extra 'w')"
+            )
+        )
+    })
+
+    it("lists the keys that are in a different order", {
+        msg <- .pip_keys_mismatch(
+            list(a = c("x", "y", "z"), b = c("x", "z", "y"))
+        )
+        expect_equal(
+            msg,
+            paste0(
+                prefix,
+                "argument 'b' differs from 'a' (different order of 'y', 'z')"
+            )
+        )
+    })
+
+    it("lists the common keys in a different order besides other changes", {
+        msg <- .pip_keys_mismatch(
+            list(a = c("x", "y", "z"), b = c("z", "w", "x"))
+        )
+        expect_equal(
+            msg,
+            paste0(
+                prefix,
+                "argument 'b' differs from 'a' ",
+                "(missing 'y'; extra 'w'; different order of 'x', 'z')"
+            )
+        )
+    })
+
+    it("names each argument that differs from the first one", {
+        msg <- .pip_keys_mismatch(
+            list(
+                a = c("x", "y"),
+                b = c("x", "y"),
+                c = "x",
+                d = c("x", "y", "z")
+            )
+        )
+        expect_equal(
+            msg,
+            paste0(
+                prefix,
+                "argument 'c' differs from 'a' (missing 'y'), ",
+                "argument 'd' differs from 'a' (extra 'z')"
+            )
+        )
+    })
+
+    it("lists at most max keys of each kind", {
+        msg <- .pip_keys_mismatch(
+            list(a = paste0("k", 1:3), b = paste0("k", 1:10)),
+            max = 2L
+        )
+        expect_equal(
+            msg,
+            paste0(
+                prefix,
+                "argument 'b' differs from 'a' (extra 'k4', 'k5' and 5 more)"
+            )
+        )
+    })
+})
+
 # -------------
 # State updates
 # -------------
@@ -3848,6 +3935,31 @@ describe("pip_run", {
             expect_true(inherits(out, "pipeflow_partitioned"))
             expect_equal(out[["a"]], 105)
             expect_equal(out[["b"]], 122)
+        })
+
+        it("names the arguments and keys of partitioned inputs that differ", {
+            p <- pip_new() |>
+                pip_add(
+                    "left",
+                    \(x = list(a = 1, b = 2, c = 3)) x,
+                    exec = "split"
+                ) |>
+                pip_add(
+                    "right",
+                    \(x = list(a = 1, c = 3, d = 4)) x,
+                    exec = "split"
+                ) |>
+                pip_add("combine", \(l = ~left, r = ~right) l + r)
+
+            e <- tryCatch(pip_run(p, lgr = NULL), pipeflow_step_error = \(e) e)
+            expect_equal(
+                conditionMessage(e),
+                paste(
+                    "step 'combine': partitioned arguments must share",
+                    "identical keys: argument 'r' differs from 'l'",
+                    "(missing 'b'; extra 'd')"
+                )
+            )
         })
 
         it("includes failing partition key in mapped errors", {

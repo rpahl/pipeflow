@@ -70,7 +70,8 @@ section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). If a sp
 a \code{reduce} step also accepts the resulting failure object when it takes
 it via \code{~try()}. In summary:
 \itemize{
-\item auto: map if partitioned input appears, otherwise single call
+\item auto: map if partitioned input appears, otherwise single call. Several
+partitioned inputs must have the same keys in the same order.
 \item split: single call, then mark output as partitioned
 \item reduce: single call, but only valid with partitioned input or, via
 \code{~try()}, a failure object

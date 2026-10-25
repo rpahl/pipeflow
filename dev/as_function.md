@@ -198,6 +198,15 @@ flowchart TD
 - With `on_error = "stop"`, the inner `pip_run()` raises a
   `pipeflow_step_error`. In the outer run it becomes the step's error, and
   for a mapped step it is wrapped once more in a `pipeflow_key_error`.
+  Each level keeps the one below in `parent`, so the chain names the steps
+  from the outer to the inner one, with the key in between:
+  `e$step` (outer step), `e$parent$key`, `e$parent$parent$step` (inner
+  step), `e$parent$parent$parent` (original error). Nested functions add
+  one `pipeflow_step_error` per level. In a continued outer run, the stored
+  output of a failed step that is not mapped is the inner step error
+  itself; the failure of a key, the failure a `~try()` dependent gets, and
+  `failed` of the `pipeflow_run_failed` warning keep the same chain.
+  `error_path()` in `test_as_function.R` pins it.
 - `.fun_failure_causes()` must follow failures the same way as the
   `failures` bookkeeping in `pip_run()`. If you change which steps
   `pip_run()` skips or runs with a failure, change both.
