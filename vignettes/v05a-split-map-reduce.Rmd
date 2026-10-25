@@ -305,9 +305,9 @@ few things to keep in mind:
   changes in a worker process is lost. The keys of a step that refers to
   `.self` (see the vignette on
   [self-modifying pipelines](v06-self-modify-pipeline.html)) or whose
-  function was made by `as.function()` (see the
-  [next vignette](v05b-nested-pipeline.html)) are therefore always run one
-  after another.
+  function was made by `as.function()` and keeps its inner pipelines (see
+  the [next vignette](v05b-nested-pipeline.html)) are therefore always run
+  one after another.
 * Warnings and messages of the workers reach the log only if the backend
   passes them on, which `future_lapply()` does and `mclapply()` doesn't.
 * For random numbers, set up the backend accordingly, e.g. with

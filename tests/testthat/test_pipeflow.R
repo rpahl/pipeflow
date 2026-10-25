@@ -5905,7 +5905,7 @@ describe("pip_run map", {
         expect_equal(unclass(p[["fit", "out"]]), list(a = 10, b = 20))
     })
 
-    it("is not called for a function made by as.function()", {
+    it("is not called for a function made by as.function() that caches", {
         env <- new.env()
         inner <- pip_new("inner") |> pip_add("times", \(x = NULL) x * 10)
         p <- pip_new("p") |>
@@ -5919,6 +5919,48 @@ describe("pip_run map", {
 
         expect_equal(env$mapped, list())
         expect_equal(unclass(p[["fit", "out"]]), list(a = 10, b = 20))
+    })
+
+    it("is called for a function made by as.function(cache = FALSE)", {
+        env <- new.env()
+        inner <- pip_new("inner") |> pip_add("times", \(x = NULL) x * 10)
+        p <- pip_new("p") |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add(
+                "fit",
+                as.function(inner, out = "times", cache = FALSE),
+                params = list(x = ~parts)
+            )
+        pip_run(p, lgr = NULL, map = recording_map(env))
+
+        expect_equal(env$mapped, list(c("a", "b")))
+        expect_equal(unclass(p[["fit", "out"]]), list(a = 10, b = 20))
+    })
+
+    it("runs a function made by as.function(cache = FALSE) in parallel", {
+        skip_on_os("windows")
+        skip_on_cran()
+        inner <- pip_new("inner") |>
+            pip_add("pid", \(x = NULL) Sys.getpid()) |>
+            pip_add("times", \(x = ~pid, y = NULL) y * 10)
+        p <- pip_new("p") |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add(
+                "fit",
+                as.function(inner, out = c("pid", "times"), cache = FALSE),
+                params = list(y = ~parts)
+            )
+        pip_run(
+            p,
+            lgr = NULL,
+            map = \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
+        )
+
+        out <- p[["fit", "out"]]
+        expect_equal(out[["a"]][["times"]], 10)
+        expect_equal(out[["b"]][["times"]], 20)
+        expect_false(out[["a"]][["pid"]] == Sys.getpid())
+        expect_true(is.null(.fun_cache(p[["fit", "fun"]])$slots[["fit"]]))
     })
 
     it("is kept when the pipeline restarts", {

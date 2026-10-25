@@ -1077,10 +1077,11 @@
     }
 
     # A step that refers to `.self`, or whose function was made by
-    # as.function.pipeflow(), changes state outside of its output (the
-    # pipeline, or the kept pipelines of the function). Its keys always run
-    # here, as the changes made on another process would be lost.
-    if (!identical(funSelf, fun) || !is.null(.fun_cache(fun))) {
+    # as.function.pipeflow() with `cache = TRUE`, changes state outside of
+    # its output (the pipeline, or the kept pipelines of the function). Its
+    # keys always run here, as the changes made on another process would be
+    # lost.
+    if (!identical(funSelf, fun) || .fun_keeps(fun)) {
         map <- NULL
     }
     fun <- funSelf
@@ -3077,6 +3078,12 @@ pip_replace <- function(
 #' function made by [as.function.pipeflow()]. For backends that need more
 #' arguments, pass a wrapper, e.g. `\(X, FUN) parallel::parLapply(cl, X, FUN)`
 #' or `\(X, FUN) parallel::mclapply(X, FUN, mc.cores = 4)`.
+#'
+#' The keys of a step whose function was made by [as.function.pipeflow()]
+#' run in parallel only if the function was made with `cache = FALSE`. With
+#' `cache = TRUE` (the default), they run one after another, because the
+#' inner pipelines that the function keeps for them would be lost in
+#' another process.
 #'
 #' Errors are handled as without `map` (see 'Runtime errors' and 'Continuing
 #' after errors' above), but all keys of a step run before the error of the

@@ -451,8 +451,9 @@ Things to keep in mind:
   as without `map`, so with `on_error = "stop"` all keys run before the
   first error is raised. A single key to run is not sent to `map`.
   `.pip_run_row()` drops `map` for a step whose function refers to `.self`
-  or was made by `as.function()` (`.fun_cache()`), as their changes in
-  another process would be lost. The worker is made in its own environment
+  or was made by `as.function()` with `cache = TRUE` (`.fun_keeps()`), as
+  their changes in another process would be lost. A function made with
+  `cache = FALSE` clones its template for each call and keeps nothing. The worker is made in its own environment
   so that a backend that serializes it only sends one key's arguments.
 
 ### States

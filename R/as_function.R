@@ -126,7 +126,8 @@
 #' Details.
 #' @param cache Whether to keep the run copies of `x` for reuse, `TRUE` (the
 #' default) or `FALSE`. The function keeps one copy per outer step and
-#' partition, see Details.
+#' partition, see Details. With `FALSE`, a step mapped over partitions can
+#' run the function in parallel, see the `map` argument of [pip_run()].
 #' @param on_error What to do when an inner step fails: `"stop"` (the
 #' default) ends the inner run at that step, `"continue"` runs the inner
 #' steps that do not depend on it, see Details and [pip_run()].
@@ -511,6 +512,21 @@ as.function.pipeflow <- function(
     runner <- body(fun)[[1L]]
     cache <- if (is.function(runner)) environment(runner)[["cache"]]
     if (inherits(cache, "pipeflow_fun_cache")) cache
+}
+
+
+#' Whether a function made by `as.function.pipeflow()` keeps its pipelines
+#'
+#' @param fun Any object.
+#' @return `TRUE` if `fun` was made by `as.function.pipeflow()` with
+#' `cache = TRUE`, else `FALSE`. A function made with `cache = FALSE` runs a
+#' new copy of the pipeline for each call and keeps nothing.
+#' @noRd
+.fun_keeps <- function(fun) {
+    if (is.null(.fun_cache(fun))) {
+        return(FALSE)
+    }
+    isTRUE(environment(body(fun)[[1L]])[["ctx"]][["keep"]])
 }
 
 

@@ -174,6 +174,12 @@ function made by \code{\link[=as.function.pipeflow]{as.function.pipeflow()}}. Fo
 arguments, pass a wrapper, e.g. \verb{\\(X, FUN) parallel::parLapply(cl, X, FUN)}
 or \verb{\\(X, FUN) parallel::mclapply(X, FUN, mc.cores = 4)}.
 
+The keys of a step whose function was made by \code{\link[=as.function.pipeflow]{as.function.pipeflow()}}
+run in parallel only if the function was made with \code{cache = FALSE}. With
+\code{cache = TRUE} (the default), they run one after another, because the
+inner pipelines that the function keeps for them would be lost in
+another process.
+
 Errors are handled as without \code{map} (see 'Runtime errors' and 'Continuing
 after errors' above), but all keys of a step run before the error of the
 first failed key is raised. Warnings and messages of the step reach \code{lgr}
