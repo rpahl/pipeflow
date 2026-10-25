@@ -7,6 +7,15 @@
   extra or in a different order, e.g. `partitioned arguments must share
   identical keys: argument 'r' differs from 'l' (missing 'b'; extra 'd')`.
 
+## Documentation
+
+- `?as.function.pipeflow` has a new section 'Errors of inner steps' with
+  examples of the error messages: they name the outer step, the partition
+  key and the failed inner step, e.g.
+  `step 'by_batch': key 'D': step 'fit': negative`. The vignette on error
+  handling shows how to get the outer step, the key and the inner step from
+  the error.
+
 # pipeflow 0.5.0.9017
 
 ## Bug fixes

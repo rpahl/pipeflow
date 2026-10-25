@@ -333,6 +333,20 @@ matters in a *continuing* run:
 pip_run(nested)
 ```
 
+The message names the outer step, the group and the inner step. Each of the
+conditions keeps the one of the level below as its `parent`, so these can
+also be read from the error:
+
+```{r nested-error-chain}
+e <- tryCatch(pip_run(nested, lgr = NULL), error = identity)
+e$step               # the outer step
+e$parent$key         # the group
+e$parent$parent$step # the inner step
+
+original <- e$parent$parent$parent
+conditionMessage(original)
+```
+
 With `as.function(on_error = "continue")`, the inner pipeline is run as
 `pip_run(on_error = "continue")` runs it: inner steps that do not depend on
 the failed step still run, and `~try(spread)` gives the `report` step the

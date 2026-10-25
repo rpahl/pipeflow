@@ -74,6 +74,16 @@ Since the values are shared, don't modify them in place (e.g. with \verb{:=} on
 a \code{data.table} output).
 }
 
+\subsection{Errors of inner steps}{
+
+If an inner step fails, the error names it, e.g.
+\verb{step 'fit': negative}. As a step of an outer pipeline, the error also
+names the outer step and, if that step is mapped over partitions, the
+key: \verb{step 'by_batch': key 'D': step 'fit': negative}. Nested pipeline
+functions add one step per level:
+\verb{step 'outer': step 'middle': step 'fit': negative}.
+}
+
 \subsection{Continuing after errors of inner steps}{
 
 With \code{on_error = "continue"} the inner pipeline is run like
@@ -112,7 +122,7 @@ and output, so new runs work independently from the original.
 A function that has not been called yet, or one made with
 \code{cache = FALSE}, has no pipelines and therefore is small to copy.
 \item In case of an error, the error message includes the key of the partition
-and the name of the failed inner step.
+and the name of the failed inner step, see 'Errors of inner steps'.
 }
 }
 

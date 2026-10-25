@@ -2328,6 +2328,30 @@ describe("as.function.pipeflow", {
     })
 
     describe("failures and messages", {
+        # The steps and partition keys named by a condition and its parents,
+        # from the outer to the inner level
+        error_path <- function(e) {
+            path <- character()
+            while (!is.null(e)) {
+                if (inherits(e, "pipeflow_step_error")) {
+                    path <- c(path, step = e[["step"]])
+                } else if (inherits(e, "pipeflow_key_error")) {
+                    path <- c(path, key = e[["key"]])
+                }
+                e <- e[["parent"]]
+            }
+            path
+        }
+
+        # An inner pipeline whose step `check` fails for x > 1
+        checked <- function() {
+            pip_new("checked") |>
+                pip_add("input", \(x = 1) x) |>
+                pip_add("check", \(x = ~input) {
+                    if (x > 1) stop("too big") else x
+                })
+        }
+
         it("is a step error of the outer step that names the inner step", {
             demo <- demo_nested()
             bad <- data.frame(batch = "D", x = 1:3, y = NA_real_)
@@ -2339,10 +2363,101 @@ describe("as.function.pipeflow", {
                 class = "pipeflow_step_error"
             )
 
-            expect_match(conditionMessage(err), "by_batch")
-            expect_match(conditionMessage(err), "key 'D'")
-            expect_match(conditionMessage(err), "fit")
+            expect_true(startsWith(
+                conditionMessage(err),
+                "step 'by_batch': key 'D': step 'fit': "
+            ))
+            expect_identical(
+                error_path(err),
+                c(step = "by_batch", key = "D", step = "fit")
+            )
             expect_identical(demo$outer[["by_batch", "state"]], "failed")
+        })
+
+        it("names the inner step after an outer step that is not mapped", {
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "run",
+                    as.function(checked(), out = "check"),
+                    params = list(x = 2)
+                )
+
+            err <- tryCatch(pip_run(outer, lgr = NULL), error = identity)
+
+            expect_equal(
+                conditionMessage(err),
+                "step 'run': step 'check': too big"
+            )
+            expect_identical(error_path(err), c(step = "run", step = "check"))
+            original <- err[["parent"]][["parent"]]
+            expect_s3_class(original, "simpleError")
+            expect_equal(conditionMessage(original), "too big")
+        })
+
+        it("names one step per level of nested pipeline functions", {
+            middle <- pip_new("middle") |>
+                pip_add("check_all", as.function(checked(), out = "check"))
+            f <- as.function(middle, out = "check_all")
+
+            err <- tryCatch(f(x = 2), error = identity)
+            expect_equal(
+                conditionMessage(err),
+                "step 'check_all': step 'check': too big"
+            )
+            expect_identical(
+                error_path(err),
+                c(step = "check_all", step = "check")
+            )
+
+            outer <- pip_new("outer") |> pip_add("run", f, params = list(x = 2))
+            err <- tryCatch(pip_run(outer, lgr = NULL), error = identity)
+            expect_equal(
+                conditionMessage(err),
+                "step 'run': step 'check_all': step 'check': too big"
+            )
+            expect_identical(
+                error_path(err),
+                c(step = "run", step = "check_all", step = "check")
+            )
+        })
+
+        it("keeps the inner step error in the failures of a continued run", {
+            f <- as.function(checked(), out = "check")
+            outer <- pip_new("outer") |>
+                pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+                pip_add("mapped", f, params = list(x = ~parts)) |>
+                pip_add("single", f, params = list(x = 2)) |>
+                pip_add("after", \(x = ~ try(single)) x)
+
+            w <- expect_warning(
+                pip_run(outer, lgr = NULL, on_error = "continue"),
+                class = "pipeflow_run_failed"
+            )
+
+            # a failed key holds a failure, with the key error as its parent
+            failure <- outer[["mapped", "out"]][["b"]]
+            expect_identical(
+                error_path(failure[["parent"]]),
+                c(key = "b", step = "check")
+            )
+            # a failed step that is not mapped keeps the inner step error as
+            # its output, and passes it on in the failure of a ~try() input
+            expect_identical(
+                error_path(outer[["single", "out"]]),
+                c(step = "check")
+            )
+            expect_identical(
+                error_path(outer[["after", "out"]][["parent"]]),
+                c(step = "check")
+            )
+            expect_identical(
+                error_path(w[["failed"]][["mapped"]]),
+                c(key = "b", step = "check")
+            )
+            expect_identical(
+                error_path(w[["failed"]][["single"]]),
+                c(step = "check")
+            )
         })
 
         it("passes on warnings of inner steps to the outer run", {

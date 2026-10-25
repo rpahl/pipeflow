@@ -59,6 +59,14 @@
 #' Since the values are shared, don't modify them in place (e.g. with `:=` on
 #' a `data.table` output).
 #'
+#' ## Errors of inner steps
+#' If an inner step fails, the error names it, e.g.
+#' `step 'fit': negative`. As a step of an outer pipeline, the error also
+#' names the outer step and, if that step is mapped over partitions, the
+#' key: `step 'by_batch': key 'D': step 'fit': negative`. Nested pipeline
+#' functions add one step per level:
+#' `step 'outer': step 'middle': step 'fit': negative`.
+#'
 #' ## Continuing after errors of inner steps
 #' With `on_error = "continue"` the inner pipeline is run like
 #' `pip_run(on_error = "continue")`, that is, a failing inner step gets state
@@ -94,7 +102,7 @@
 #'   A function that has not been called yet, or one made with
 #'   `cache = FALSE`, has no pipelines and therefore is small to copy.
 #' * In case of an error, the error message includes the key of the partition
-#'   and the name of the failed inner step.
+#'   and the name of the failed inner step, see 'Errors of inner steps'.
 #'
 #' ## Limits
 #' * Params that several steps of `x` share by name become one argument, with
