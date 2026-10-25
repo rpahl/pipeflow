@@ -182,7 +182,8 @@ mode marks the step and its downstream steps as \code{"outdated"}.
 last run (a single \code{POSIXct} value, which can be \code{NA} for a step that
 never ran).
 \item \code{p[[step, "out"]] <- value} -- set the step's stored output (mostly
-useful for debugging)
+useful for debugging). The downstream steps are marked as
+\code{"outdated"}, so that the next run computes them from the new output.
 }
 
 Assigning to any other step-table column, or to a meta field other than
@@ -193,6 +194,25 @@ steps covered by the view: an integer refers to the n-th visible step, and a
 step name must be part of the view. Because views share the pipeline
 environment, step properties are written through to the originating
 pipeline, while \code{name} only renames the view itself.
+}
+
+\subsection{Which assignments outdate steps}{
+
+Results that may no longer match the steps are marked as \code{"outdated"},
+so that the next \code{\link[=pip_run]{pip_run()}} computes them again. As always, steps that
+never ran stay \code{"new"}.
+\itemize{
+\item \code{fun}: the step becomes \code{"new"} and its downstream steps \code{"outdated"}.
+\item \code{params} and \code{exec}: the step and its downstream steps, if a value
+changes.
+\item \code{out}: the downstream steps, while the step keeps its state.
+\item \code{step} (a new name), \code{state}, \code{time}, \code{time_start}, \code{tags} and
+\code{locked} don't change any result and outdate no step.
+}
+
+This holds for all forms of assignment: \verb{[[<-}, \verb{[<-} (which assigns row
+by row) and assignments through a view, which also outdate the downstream
+steps that are not part of the view.
 }
 
 }

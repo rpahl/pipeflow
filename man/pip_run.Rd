@@ -51,8 +51,8 @@ A step can take the following states:
 \itemize{
 \item one of the step's parameters were changed (e.g. via \code{\link[=pip_set_params]{pip_set_params()}})
 \item the step's execution mode was changed (\code{p[[step, "exec"]] <- mode})
-\item a step it depends on was re-executed, replaced or got a new
-execution mode
+\item a step it depends on was re-executed or replaced, got a new
+execution mode, or its output was set (\code{p[[step, "out"]] <- value})
 \item a step it depends on was executed, but the run did not reach the step
 itself, either on purpose (see section 'Running views' below) or
 because the run was aborted early due to a failed step

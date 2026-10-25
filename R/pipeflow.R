@@ -2854,8 +2854,8 @@ pip_replace <- function(
 #' * outdated: a step can get outdated in the following scenarios:
 #'   - one of the step's parameters were changed (e.g. via [pip_set_params()])
 #'   - the step's execution mode was changed (`p[[step, "exec"]] <- mode`)
-#'   - a step it depends on was re-executed, replaced or got a new
-#'     execution mode
+#'   - a step it depends on was re-executed or replaced, got a new
+#'     execution mode, or its output was set (`p[[step, "out"]] <- value`)
 #'   - a step it depends on was executed, but the run did not reach the step
 #'     itself, either on purpose (see section 'Running views' below) or
 #'     because the run was aborted early due to a failed step

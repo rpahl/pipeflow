@@ -8,6 +8,12 @@
   Before, a step that had run kept its state and its output from the old
   mode. A step that failed for some keys and got a new mode is run again
   for all keys.
+- Setting the output of a step with `p[[step, "out"]] <- value` (also via
+  `p[i, "out"] <-`, views and `p[i, ] <- q[j, ]`) now marks its downstream
+  steps as `"outdated"`, so that the next run computes them from the new
+  output. Before, they stayed `"done"` with the results of the old output.
+  The step itself keeps its state. `?Extract.pipeflow` lists which
+  assignments outdate steps.
 
 # pipeflow 0.5.0.9015
 

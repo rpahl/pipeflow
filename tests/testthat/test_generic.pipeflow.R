@@ -1592,6 +1592,109 @@ describe("[<-.pipeflow", {
 })
 
 
+describe("assignments that outdate steps", {
+    # 's2' and 's3' depend on 's1', 's4' does not
+    run_pip <- function() {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1, k = 2) x * k) |>
+            pip_add("s3", \(x = ~s2) x + 1) |>
+            pip_add("s4", \(x = 4) x)
+        pip_run(p, lgr = NULL)
+    }
+
+    # The value assigned to a property of 's2' and the expected states
+    edits <- list(
+        fun = list(
+            value = \(x = ~s1, k = 2) x * k * 10,
+            states = c("done", "new", "outdated", "done")
+        ),
+        params = list(
+            value = list(k = 3),
+            states = c("done", "outdated", "outdated", "done")
+        ),
+        exec = list(
+            value = "plain",
+            states = c("done", "outdated", "outdated", "done")
+        ),
+        out = list(
+            value = 99,
+            states = c("done", "done", "outdated", "done")
+        ),
+        state = list(
+            value = "outdated",
+            states = c("done", "outdated", "done", "done")
+        ),
+        step = list(value = "renamed", states = rep("done", 4)),
+        time = list(value = Sys.time(), states = rep("done", 4)),
+        time_start = list(value = as.POSIXct(NA), states = rep("done", 4)),
+        tags = list(value = "x", states = rep("done", 4)),
+        locked = list(value = TRUE, states = rep("done", 4))
+    )
+
+    assigners <- list(
+        "[[<-" = function(p, j, value) {
+            p[["s2", j]] <- value
+            p
+        },
+        "[<-" = function(p, j, value) {
+            p["s2", j] <- value
+            p
+        },
+        "[[<- on a view" = function(p, j, value) {
+            v <- pip_view(p, step = "s2")
+            v[[1, j]] <- value
+            p
+        }
+    )
+
+    for (how in names(assigners)) {
+        for (j in names(edits)) {
+            it(sprintf("sets the states for '%s' via %s", j, how), {
+                p <- assigners[[how]](run_pip(), j, edits[[j]][["value"]])
+                expect_equal(unname(p[["state"]]), edits[[j]][["states"]])
+            })
+        }
+    }
+
+    it("computes the downstream steps from an assigned output", {
+        p <- run_pip()
+
+        p[["s1", "out"]] <- 10
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["s1", "out"]], 10)
+        expect_equal(p[["s2", "out"]], 20)
+        expect_equal(p[["s3", "out"]], 21)
+    })
+
+    it("outdates the downstream steps of all assigned outputs", {
+        p <- run_pip()
+
+        p[c("s2", "s4"), "out"] <- list(10, 40)
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "done", "outdated", "done")
+        )
+    })
+
+    it("keeps the copied states of downstream steps", {
+        p <- run_pip()
+        q <- pip_clone(p)
+        q[1:3, "out"] <- list(5, 10, 11)
+        q[1:3, "state"] <- "done"
+
+        # Each copied output outdates the steps after it, which then get
+        # their copied states
+        p[1:3, ] <- q[1:3, ]
+
+        expect_equal(unname(p[["state"]]), rep("done", 4))
+        expect_equal(unname(p[["out"]][1:3]), list(5, 10, 11))
+    })
+})
+
+
 describe("cross-pipeline assignment", {
     test_pip <- function(name = "p") {
         pip_new(name) |>
