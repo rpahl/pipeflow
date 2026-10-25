@@ -11,6 +11,8 @@
   `"outdated"`, as they ran with the cleared outputs. Locked steps keep
   their state. Before, the downstream steps stayed `"done"`, and if a reset
   step was then locked, the next run kept their results.
+- `p[i, view = FALSE]` no longer warns that an edge already exists if a
+  step refers to the same step with several arguments.
 
 # pipeflow 0.5.0.9019
 

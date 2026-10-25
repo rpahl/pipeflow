@@ -55,6 +55,21 @@ describe(".pip_compact", {
         expect_equal(unname(c[["depends"]][[2]]), "hub")
     })
 
+    it("adds one edge for a step that refers to a step twice", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a, y = ~a) x + y) |>
+            pip_add("c", \(x = 1) x)
+
+        # node-by-node path
+        expect_no_warning(
+            c <- .pip_compact(p, keepNodes = 0:1, rebuildThresh = 1)
+        )
+
+        d <- .pip_dag(.pip_pipenv(c))
+        expect_equal(dag_get_incoming(d, 1L), 0L)
+    })
+
     it("compacts node ids also when the source has gaps", {
         p <- pip_new() |>
             pip_add("a1", \(x = 1) x) |>
