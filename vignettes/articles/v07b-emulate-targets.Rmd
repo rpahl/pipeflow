@@ -1,0 +1,517 @@
+---
+title: "Emulating targets features"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+description: >
+  Recipes that emulate features of {targets} with existing {pipeflow}
+  functions and a few lines of R code, and where the emulation stops.
+vignette: >
+  %\VignetteIndexEntry{Emulating targets features}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r knitr-setup, include = FALSE}
+knitr::opts_chunk$set(
+    comment = "#",
+    prompt = FALSE,
+    tidy = FALSE,
+    cache = FALSE,
+    collapse = TRUE
+)
+
+old <- options(width = 100L)
+```
+
+The [comparison with targets](v07-vs-targets.html) lists several features
+that {targets} has and {pipeflow} does not: file tracking, metadata,
+runs in a fresh R process, and more. Many of them can be emulated with
+existing {pipeflow} functions and a few lines of your own code. This
+article shows one recipe per feature. Each section names the {targets}
+feature, shows the recipe as running code, and says where the emulation
+stops.
+
+```{r load-package}
+library(pipeflow)
+```
+
+## File targets {#file-targets}
+
+In {targets}, a target with `format = "file"` tracks a file: when the file
+changes, the target and everything downstream of it run again.
+
+{pipeflow} doesn't look at files. But it does notice when a parameter
+changes. So give the step that reads the file an extra parameter, here
+`rev`, that it ignores, and set it to a fingerprint of the file before
+each run.
+
+```{r file-pipeline}
+path <- tempfile(fileext = ".csv")
+write.csv(data.frame(x = 1:3), path, row.names = FALSE)
+
+p <- pip_new("files") |>
+    pip_add("read", \(path, rev = NULL) read.csv(path),
+        params = list(path = path)
+    ) |>
+    pip_add("total", \(data = ~read) sum(data$x))
+
+refresh <- function(p) {
+    pip_set_params(p, list(rev = unname(tools::md5sum(path))))
+}
+```
+
+The first run computes everything.
+
+```{r file-first-run}
+refresh(p)
+p
+pip_run(p)
+```
+
+Setting a parameter to the value it already has is not a change (see
+[Setting Identical Values](v01-get-started.html#setting-identical-values)).
+So if the file is unchanged, `refresh()` leaves the states alone and
+nothing runs.
+
+```{r file-unchanged}
+refresh(p)
+p
+pip_run(p)
+```
+
+Once the file is edited, its fingerprint changes. `refresh()` outdates the
+step that reads it and all steps downstream of it.
+
+```{r file-edited}
+write.csv(data.frame(x = 1:4), path, row.names = FALSE)
+
+refresh(p)
+p
+pip_run(p)
+p[["total", "out"]]
+```
+
+To refresh and run in one go, use `refresh(p) |> pip_run()`.
+
+**Variants.** `file.mtime()` and `file.size()` are cheaper than
+`tools::md5sum()`, because they don't read the file. They are also less
+reliable: a copy or a `git checkout` changes the modification time without
+changing the content, and an edit can keep the size. For several files,
+`tools::md5sum(c(path1, path2))` returns one hash per file, and any change
+in the vector outdates the step. If different steps read different files,
+give each its own parameter (`raw_rev`, `lookup_rev`, ...).
+
+**Limits.**
+
+* The fingerprint is only as fresh as the last `refresh()`. Forget to call
+  it, and an edited file goes unnoticed.
+* Only files that steps read are covered. {targets} also notices when a
+  file that a target wrote was changed or deleted. Here you have to rerun
+  that step yourself.
+
+## Rebuild when code changes {#code-changes}
+
+{targets} reruns a target when its command or a function it calls changes,
+including your own helper functions.
+
+In {pipeflow}, replacing a step function with `pip_replace()` already
+outdates the step and its downstream steps. What {pipeflow} can't see is a
+helper function that the step calls. Use the same trick as for files, with
+a hash of the helper as fingerprint.
+
+```{r code-pipeline}
+clean <- function(x) round(x, 1)
+
+p <- pip_new("code") |>
+    pip_add("data", \(n = 4) seq_len(n) / 3) |>
+    pip_add("cleaned", \(x = ~data, code = NULL) clean(x))
+
+refresh_code <- function(p) {
+    pip_set_params(p, list(code = rlang::hash(utils::removeSource(clean))))
+}
+
+refresh_code(p) |> pip_run(lgr = NULL)
+p
+```
+
+`removeSource()` matters: in an interactive session, R keeps the source
+code of every function you define, and the hash would cover it. Then
+running the same definition again would change the hash. Without the
+source, defining the same helper again changes nothing:
+
+```{r code-unchanged}
+clean <- function(x) round(x, 1)
+
+refresh_code(p)
+p
+```
+
+A new version of the helper outdates the step that calls it.
+
+```{r code-changed}
+clean <- function(x) round(x, 2)
+
+refresh_code(p)
+p
+pip_run(p)
+p[["cleaned", "out"]]
+```
+
+**Limits.**
+
+* You list the helpers yourself. {targets} finds the functions a target
+  calls, and the functions those call, by static code analysis. Here, a
+  helper of a helper is only covered if you add it to the hash, e.g.
+  `rlang::hash(lapply(list(clean, other), utils::removeSource))`.
+* Like {targets}, this does not track functions from packages. A package
+  update does not outdate anything.
+
+## A metadata table like `tar_meta()` {#metadata}
+
+`tar_meta()` returns a table with one row per target: when it ran, how long
+it took, the size of its output and the error if it failed.
+
+The step table of a pipeline (`pip_data()`) has most of this. `time_start`
+is the start of the step's last run. `time` is the end of its last
+*successful* run, so a failed step keeps the `time` of an earlier
+success (or `NA`). The duration is `time - time_start`, but only for
+steps that did not fail. The output of a failed step is the condition that
+it signalled.
+
+```{r meta-function}
+meta <- function(p) {
+    d <- as.data.frame(pip_data(p))
+    ok <- d$state != "failed"
+    seconds <- as.numeric(difftime(d$time, d$time_start, units = "secs"))
+    bytes <- vapply(d$out, \(x) as.numeric(object.size(x)), numeric(1))
+    error <- vapply(
+        d$out,
+        \(x) if (inherits(x, "error")) conditionMessage(x) else NA_character_,
+        character(1)
+    )
+    data.frame(
+        step = d$step,
+        state = d$state,
+        start = d$time_start,
+        seconds = ifelse(ok, round(seconds, 2), NA),
+        bytes = ifelse(ok, bytes, NA),
+        error = error
+    )
+}
+```
+
+Let's use it on a pipeline with a slow first step and a step that fails
+for large inputs.
+
+```{r meta-pipeline}
+p <- pip_new("meta") |>
+    pip_add("load", \(n = 3) {
+        Sys.sleep(0.2)
+        seq_len(n)
+    }) |>
+    pip_add("fit", \(x = ~load) {
+        if (length(x) > 3) stop("too many values")
+        sum(x)
+    }) |>
+    pip_add("report", \(x = ~fit) paste("total:", x))
+
+pip_run(p, lgr = NULL)
+meta(p)
+```
+
+Now the input grows and `fit` fails. With `on_error = "continue"`, the run
+goes on, and `report` is skipped because its input failed.
+
+```{r meta-failed}
+pip_set_params(p, list(n = 5))
+pip_run(p, lgr = NULL, on_error = "continue")
+meta(p)
+```
+
+The table shows the error of `fit`. `report` is `outdated` and still has
+the start time and output of the first run.
+
+**Limits.**
+
+* Only the last run of each step is recorded. Keep a history by appending
+  `meta(p)` to a table after each run.
+* Warnings are not recorded, and there is no hash of the output.
+
+## Metadata stored with each output {#output-metadata}
+
+{targets} stores metadata such as size and format along with each target.
+
+In {pipeflow}, the generic `pip_output_value()` is called on every output
+right after its step returns. A method for your own class can attach the
+metadata to the output itself. See
+[Annotated step outputs](v05e-output-value.html) for the details.
+
+```{r output-metadata}
+tracked <- function(x) structure(x, class = c("tracked", class(x)))
+
+pip_output_value.tracked <- function(x, ctx = list(), ...) {
+    attr(x, "meta") <- list(
+        step = ctx[["step"]],
+        time = ctx[["time"]],
+        class = setdiff(class(x), "tracked"),
+        bytes = as.numeric(object.size(x))
+    )
+    x
+}
+registerS3method("pip_output_value", "tracked", pip_output_value.tracked)
+
+p <- pip_new("tracked") |>
+    pip_add("cars", \(n = 5) tracked(head(mtcars, n)))
+
+pip_run(p, lgr = NULL)
+str(attr(p[["cars", "out"]], "meta"))
+```
+
+**Limits.** Each step has to mark its output with the class. Methods are
+meant for your own classes, not for base classes such as `data.frame`.
+
+## Reproducible random numbers {#seeds}
+
+{targets} gives each target its own seed (see `tar_seed()`), so a target
+draws the same random numbers no matter which other targets run.
+
+In {pipeflow}, steps draw from the global random number stream. Steps that
+are skipped don't draw, so the numbers a step gets depend on which steps
+ran before it. Here, `b` gets different numbers when it reruns alone than
+in a full run, although the seed is the same.
+
+```{r seed-problem}
+p <- pip_new("rng") |>
+    pip_add("a", \(n = 3) rnorm(n)) |>
+    pip_add("b", \(n = 3, scale = 1) scale * rnorm(n))
+
+set.seed(1)
+pip_run(p, lgr = NULL)
+b_full <- p[["b", "out"]]
+
+pip_set_params(p, list(scale = 2))
+set.seed(1)
+pip_run(p, lgr = NULL)
+p[["b", "out"]]
+2 * b_full
+```
+
+The recipe: give each step a `seed` parameter and set it inside the step.
+A small helper also restores the global random number state afterwards, so
+running the pipeline doesn't change the numbers that the rest of your
+session draws. `withr::with_seed()` does the same, if you have {withr}
+installed.
+
+```{r seed-helper}
+with_seed <- function(seed, code) {
+    old <- get0(".Random.seed", envir = globalenv(), inherits = FALSE)
+    on.exit(
+        if (is.null(old)) {
+            rm(".Random.seed", envir = globalenv())
+        } else {
+            assign(".Random.seed", old, envir = globalenv())
+        }
+    )
+    set.seed(seed)
+    code
+}
+```
+
+Now `b` gets the same numbers, whether it runs alone or with `a`.
+
+```{r seed-recipe}
+p <- pip_new("rng") |>
+    pip_add("a", \(n = 3, seed = 1) with_seed(seed, rnorm(n))) |>
+    pip_add("b", \(n = 3, scale = 1, seed = 2) {
+        with_seed(seed, scale * rnorm(n))
+    })
+
+pip_run(p, lgr = NULL)
+b_full <- p[["b", "out"]]
+
+pip_set_params(p, list(scale = 2))
+pip_run(p, lgr = NULL)
+p[["b", "out"]]
+2 * b_full
+```
+
+**Limits.**
+
+* You choose the seeds. {targets} derives them from the target names.
+* `pip_set_params(p, list(seed = 42))` sets the seed of *all* steps with a
+  `seed` parameter, so they would all draw the same numbers.
+* Steps that run code in parallel need a parallel-safe generator, as with
+  any R code.
+
+## Results that survive an R restart {#persistence}
+
+{targets} stores every target on disk, so the results survive when R is
+restarted.
+
+A {pipeflow} pipeline is an R object. Save it with `saveRDS()` after
+running it, and read it back with `readRDS()` in a new session. The
+functions, parameters, outputs and states are all kept. The dependency
+graph lives in C++ and can't be saved directly. It is rebuilt
+automatically the first time the pipeline is used. Let's save the file
+pipeline from [above](#file-targets).
+
+```{r persist-save}
+p <- pip_new("files") |>
+    pip_add("read", \(path, rev = NULL) read.csv(path),
+        params = list(path = path)
+    ) |>
+    pip_add("total", \(data = ~read) sum(data$x))
+
+refresh(p) |> pip_run(lgr = NULL)
+
+file <- tempfile(fileext = ".rds")
+saveRDS(p, file)
+rm(p)
+```
+
+Here, `rm()` stands in for the restart. After `readRDS()`, the steps are
+still `done`. The fingerprint of the file was saved too, so `refresh()` only
+reruns steps if the file changed in the meantime.
+
+```{r persist-restore}
+p <- readRDS(file)
+p
+
+refresh(p) |> pip_run()
+```
+
+Step functions keep their enclosing environment. If a step function was
+created inside another function, that environment is saved with it,
+including every object in it, which can make the file large. The global
+environment is never saved: helpers such as `refresh()` or `with_seed()`
+have to be defined again in the new session.
+
+**Limits.**
+
+* Nothing is saved automatically. If R crashes during a run, the results of
+  that run are lost. {targets} saves each target as soon as it is built.
+* The whole pipeline is one file, written and read as a whole, and it must
+  fit in memory.
+
+## Running in a fresh R process {#fresh-process}
+
+`tar_make()` runs the pipeline in a new R process by default. The results
+then can't depend on objects that happen to be lying around in your
+session.
+
+With [{callr}](https://callr.r-lib.org), you can run a {pipeflow} pipeline
+in a new R process as well. The pipeline is copied to the new process,
+run there and copied back.
+
+```{r fresh-function}
+run_fresh <- function(p, ...) {
+    callr::r(
+        function(p, ...) {
+            library(pipeflow)
+            pip_run(p, ...)
+            p
+        },
+        args = list(p, ...)
+    )
+}
+
+p <- pip_new("fresh") |>
+    pip_add("data", \(n = 5) seq_len(n)) |>
+    pip_add("total", \(x = ~data) sum(x))
+
+p <- run_fresh(p, lgr = NULL)
+p
+```
+
+What you get back is a new pipeline object, so assign it (`p <-`). Views
+and other references to the old object don't see the results.
+
+This is also where you find out what a step needs from your session. A
+step that calls a function from a package you attached with `library()`
+fails in the new process, where the package is not attached.
+
+```{r fresh-package}
+library(tools)
+
+p <- pip_new("fresh") |>
+    pip_add("ext", \(path = "data.csv") file_ext(path))
+
+res <- tryCatch(run_fresh(p, lgr = NULL), error = identity)
+conditionMessage(res$parent)
+```
+
+The same holds for objects and helper functions that a step finds in the
+global environment of your session. Use `tools::file_ext()`, or put the
+`library()` and `source()` calls that the steps need into the function
+that `run_fresh()` runs in the new process.
+
+**Limits.**
+
+* {callr} is not a dependency of {pipeflow}, so you need to install it.
+* The whole pipeline, with all outputs, is copied to the new process and
+  back on every run. For large outputs, this takes time.
+* Starting a new R process takes a moment too, which you pay on every run.
+
+## Which steps are outdated? {#outdated}
+
+`tar_outdated()` lists the targets that the next `tar_make()` would run.
+
+In {pipeflow}, the state of a step tells whether it will run: `new`,
+`outdated` and `failed` steps run, `done` steps are skipped. So a view
+of these states lists what the next run does.
+
+```{r outdated-view}
+p <- pip_new("outdated") |>
+    pip_add("a", \(x = 1) x) |>
+    pip_add("b", \(a = ~a) a + 1) |>
+    pip_add("c", \(b = ~b) b + 1) |>
+    pip_add("d", \(y = 1) y)
+
+pip_run(p, lgr = NULL)
+pip_set_params(p, list(y = 2))
+pip_view(p, state = c("new", "outdated", "failed"))
+```
+
+The view misses a `done` step that reruns because a step upstream of it
+runs. This happens, for example, after resetting a single step: `b` and
+`c` stay `done`, but they run again with the new output of `a`.
+
+```{r outdated-missed}
+pip_reset(pip_view(p, step = "a"))
+pip_view(p, state = c("new", "outdated", "failed"))
+pip_run(p)
+```
+
+**Limits.**
+
+* Locked steps are listed but skipped. Leave them out with
+  `p[state %in% c("new", "outdated", "failed") & !locked]`.
+* The states only know about changes made through {pipeflow}. Call
+  `refresh()` from the recipes [above](#file-targets) first, so that
+  changed files and helpers count.
+
+## What can't be emulated {#cannot-emulate}
+
+Some features of {targets} need infrastructure that {pipeflow} doesn't
+have, and a few lines of code won't change that.
+
+* **Distributed workers.** {targets} sends targets to parallel workers,
+  also on clusters and in the cloud, via {crew}. {pipeflow} runs the steps
+  one after another in one R session. A step can parallelize its own work,
+  but the pipeline does not schedule steps on workers.
+* **Cloud storage.** {targets} can store targets in AWS S3 or Google Cloud
+  Storage. You can upload the file from `saveRDS()` yourself, but there is
+  no storage per step.
+* **Data larger than RAM.** {targets} keeps each target on disk and loads
+  only what a target needs. A {pipeflow} pipeline keeps all outputs in
+  memory. A step can return a file path instead of the data, but then you
+  manage the files yourself.
+
+If you need these, use {targets}. If you mainly work in an interactive
+session or a Shiny app, the recipes above cover a good part of the rest.
+
+```{r restore, include = FALSE}
+options(old)
+```

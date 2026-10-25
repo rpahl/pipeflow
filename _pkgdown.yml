@@ -139,9 +139,11 @@ navbar:
       - text: "Self-modifying pipelines"
         href: articles/v06-self-modify-pipeline.html
       - text: ----
-      - text: "Benchmarks"
       - text: "pipeflow vs targets"
+      - text: "Comparison and benchmarks"
         href: articles/v07-vs-targets.html
+      - text: "Emulating targets features"
+        href: articles/v07b-emulate-targets.html
 
 
     github:

@@ -1,5 +1,5 @@
 ---
-title: "pipeflow vs targets"
+title: "Comparison and benchmarks"
 output:
   rmarkdown::html_vignette:
     toc: true
@@ -8,7 +8,7 @@ description: >
   Comparing general properties and performance
   of {pipeflow} vs {targets} in a scoped latency comparison.
 vignette: >
-  %\VignetteIndexEntry{pipeflow vs targets}
+  %\VignetteIndexEntry{Comparison and benchmarks}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 params:
@@ -89,10 +89,10 @@ you decide which one fits your project.
 | Feature | **targets** | **pipeflow** |
 |---|---|---|
 | Paradigm | Declarative — define the full DAG upfront in a `_targets.R` script, then execute | Interactive — incrementally build the pipeline with `pip_add()` as you code |
-| Execution | `tar_make()` runs in a **fresh R process** by default | `pip_run()` runs in the **current R session** |
-| Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ✅ On demand — `saveRDS()` / `readRDS()` save and restore the whole pipeline (steps, params, outputs, states); no automatic storage, data must fit in RAM |
-| Skip up-to-date steps | ✅ Hash-based invalidation of code and data | ✅ State-based (`done` / `outdated`) |
-| Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | ❌ No per-step provenance metadata (only the time of last execution) |
+| Execution | `tar_make()` runs in a **fresh R process** by default | `pip_run()` runs in the **current R session** ([fresh process](v07b-emulate-targets.html#fresh-process)) |
+| Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ✅ On demand — `saveRDS()` / `readRDS()` save and restore the whole pipeline (steps, params, outputs, states); no automatic storage, data must fit in RAM ([recipe](v07b-emulate-targets.html#persistence)) |
+| Skip up-to-date steps | ✅ Hash-based invalidation of code and data | ✅ State-based (`done` / `outdated`); changed [files](v07b-emulate-targets.html#file-targets) and [helper functions](v07b-emulate-targets.html#code-changes) via fingerprint params |
+| Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | ❌ No per-step provenance metadata (only the start and end time of the last run); [recipe](v07b-emulate-targets.html#metadata) |
 | Dependency validation | ✅ `tar_validate()` for pre-flight checks (opt-in) | ✅ On `pip_add()`, `pip_replace()`, `pip_remove()` — fails fast on broken references |
 | Modify pipeline at runtime | ❌ Must edit `_targets.R` and re-run | ✅ `pip_add()` insert with `after =`, `pip_replace()`, `pip_remove()`  |
 | Parameter management | ❌ No unified parameter view across targets | ✅ `pip_get_params()` / `pip_set_params()` — one call updates all steps |
@@ -104,9 +104,13 @@ you decide which one fits your project.
 | Self-modifying pipelines | ❌ | ✅ Steps can modify the pipeline at runtime via `.self` (add/remove/replace steps, set params) and restart the run with `.self$restart()` |
 | Distributed computing | ✅ `crew` for HPC and cloud workers | ❌ |
 | Cloud storage | ✅ AWS, GCS | ❌ |
-| File tracking | ✅ File targets with `format = "file"` | ❌ |
+| File tracking | ✅ File targets with `format = "file"` | ❌ Not built in; [recipe](v07b-emulate-targets.html#file-targets) |
 | Step locking | ❌ | ✅ `pip_lock()` / `pip_unlock()` — protect steps from accidental modification |
 | Visualization / monitoring | ✅ `tar_visnetwork()`, `tar_glimpse()`, `tar_watch()` (live Shiny app) | ✅ `pip_graph()` → visNetwork |
+
+Several of the ❌ and partial entries above can be emulated with a few
+lines of code: see [Emulating targets features](v07b-emulate-targets.html)
+for recipes and their limits.
 
 In short, **{targets}** is the tool of choice for large-scale reproducible
 projects: it persists results to disk, captures provenance with
