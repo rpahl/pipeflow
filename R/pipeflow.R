@@ -1070,7 +1070,7 @@
     # If calculation depends on results of earlier steps, get them from
     # respective referenced output slots of the pipeline.
     if (length(depends) > 0) {
-        refsOut <- .pip_filter(x, on = "step", values = depends)[["out"]]
+        refsOut <- dat[["out"]][data.table::chmatch(depends, dat[["step"]])]
         args[names(depends)] <- refsOut
     }
     args[names(failed)] <- failed
@@ -1280,7 +1280,7 @@
     }
 
     dat <- .pip_pipenv(x)[["data"]]
-    rows <- dat[list(nodes), which = TRUE, on = "nodeId", nomatch = NULL]
+    rows <- which(dat[["nodeId"]] %in% nodes)
     isNew <- dat[["state"]][rows] == .step_states[["new"]][["name"]]
     rows <- rows[!isNew & !(dat[["step"]][rows] %in% keep)]
     if (length(rows) > 0L) {
@@ -1571,10 +1571,6 @@
     ))
 }
 
-.pip_filter <- function(x, on, values) {
-    .pip_pipenv(x)[["data"]][list(values), on = on]
-}
-
 .pip_filter_nodes <- function(x, nodes) {
     .pip_pipenv(x)[["data"]][list(nodes), on = "nodeId"]
 }
@@ -1632,13 +1628,16 @@
 
 .pip_get_reachable_nodes <- function(x, steps, downstream = TRUE) {
     env <- .pip_pipenv(x)
-    known <- intersect(steps, names(env[[".steps_to_nodes"]]))
-    if (length(known) == 0L) {
+    # mget() fails on empty names and would look up NA as "NA"; unknown
+    # steps are dropped below.
+    steps <- unique(as.character(steps))
+    steps <- steps[!is.na(steps) & nzchar(steps)]
+    if (length(steps) == 0L) {
         return(integer(0))
     }
 
     start_ids <- as.integer(mget(
-        known,
+        steps,
         envir = env[[".steps_to_nodes"]],
         ifnotfound = NA_integer_,
         inherits = FALSE
@@ -2469,7 +2468,7 @@ pip_get_params <- function(x) {
     ) |>
         Filter(f = \(x) length(x) > 0)
 
-    parNames <- unlist(sapply(params, FUN = names))
+    parNames <- unlist(lapply(params, FUN = names))
     parValues <- stats::setNames(unlist1(params), parNames)
     as.list(parValues[!duplicated(names(parValues))])
 }
@@ -3255,7 +3254,7 @@ pip_run <- function(
             reqSteps,
             downstream = FALSE
         )
-        upRows <- as.integer(dat[list(upNodes), which = TRUE, on = "nodeId"])
+        upRows <- which(dat[["nodeId"]] %in% upNodes)
         rowsToRun <- as.integer(sort(unique(c(requested, upRows))))
         names(rowsToRun) <- ifelse(rowsToRun %in% requested, "view", "upstream")
     }
