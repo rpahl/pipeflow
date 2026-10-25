@@ -389,8 +389,10 @@ Things to keep in mind:
   loop does not continue. It hands over the start of the run
   (`.run_start`), so that the last log line covers the whole run. Its step
   counts are derived from the step table at the end: a step ran in the run
-  if its `time_start` is not before the start of the run (failed if its
-  state is `failed`), and the other steps of the run were skipped.
+  if its `time_start` is not before the start of the run, and it succeeded
+  if its `time` is not before its `time_start` (a failed run keeps `time`;
+  the state is not used, as a later step may change it). The other steps
+  of the run were skipped.
 - **Outdating.** Steps downstream of executed steps, if they did not run
   themselves, become `outdated`. This happens on exit, after a restart and
   after a continued run.

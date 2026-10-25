@@ -3300,17 +3300,17 @@ pip_run <- function(
             # Determine the total number of done, skipped, and failed steps.
             datNow <- pipenv[["data"]]
             timeStart <- datNow[["time_start"]]
+            timeEnd <- datNow[["time"]]
             ran <- !is.na(timeStart) & timeStart >= runStart
-            failed <- ran &
-                datNow[["state"]] == .step_states[["failed"]][["name"]]
+            done <- ran & !is.na(timeEnd) & timeEnd >= timeStart
             skipped <- !ran & datNow[["step"]] %in% stepsToRun
 
             log_info(sprintf(
                 "Finished in %s (%d done, %d skipped, %d failed)",
                 .formatted_duration(difftime(Sys.time(), runStart)),
-                sum(ran & !failed),
+                sum(done),
                 sum(skipped),
-                sum(failed)
+                sum(ran & !done)
             ))
             runState <- if (halted) {
                 "halted"

@@ -228,6 +228,21 @@ describe("pip_run step counts", {
         expect_equal(finished_counts(p), "2 done, 1 skipped, 0 failed")
     })
 
+    it("counts a failed step that a later step outdated as failed", {
+        p <- pip_new() |>
+            pip_add("bad", \(x = 1) stop("boom")) |>
+            pip_add("fix", \(x = 1) {
+                .self$set_params(list(x = 2), step = "bad")
+                x
+            })
+
+        expect_equal(
+            finished_counts(p, on_error = "continue"),
+            "1 done, 0 skipped, 1 failed"
+        )
+        expect_equal(unname(p[["bad", "state"]]), "outdated")
+    })
+
     it("does not count steps removed in the run", {
         p <- pip_new() |>
             pip_add("a", \(x = 1) x) |>
