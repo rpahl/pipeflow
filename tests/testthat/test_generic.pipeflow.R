@@ -1639,6 +1639,69 @@ describe("[<-.pipeflow", {
         expect_s3_class(pip_inner(p, "s1"), "pipeflow")
     })
 
+    it("undoes a failed assignment via .self that the step catches", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) {
+                try(.self[2:3, "locked"] <- c(TRUE, NA), silent = TRUE)
+                x
+            }) |>
+            pip_add("s2", \(x = ~s1) x + 1) |>
+            pip_add("s3", \(x = ~s2) x + 1)
+
+        pip_run(p, lgr = NULL)
+
+        # The run sees the restored step table, so s2 is not skipped as
+        # locked
+        expect_false(any(p[["locked"]]))
+        expect_equal(unname(p[["state"]]), rep("done", 3))
+        expect_equal(p[["s3", "out"]], 3)
+    })
+
+    it("marks a step failed whose assignment via .self fails", {
+        doFail <- FALSE
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) {
+                if (doFail) {
+                    .self[1:2, "state"] <- c("done", "nope")
+                }
+                x
+            }) |>
+            pip_add("s2", \(x = ~s1) x + 1)
+        pip_run(p, lgr = NULL)
+
+        doFail <- TRUE
+        expect_error(pip_run(p, force = TRUE, lgr = NULL), "state must be")
+
+        # The failed state is set after the pipeline was restored
+        expect_equal(p[["s1", "state"]], "failed")
+    })
+
+    it("keeps the bookkeeping of a mapped step whose assignment fails", {
+        calls <- character()
+        doFail <- TRUE
+        p <- pip_new() |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add("f", \(x = ~parts) {
+                calls <<- c(calls, as.character(x))
+                if (x == 2 && doFail) {
+                    .self[1:2, "tags"] <- list("a", 1)
+                }
+                x
+            })
+        expect_warning(
+            pip_run(p, on_error = "continue", lgr = NULL),
+            class = "pipeflow_run_failed"
+        )
+        expect_equal(p[["f", "state"]], "failed")
+
+        # The next run only re-runs the failed key
+        calls <- character()
+        doFail <- FALSE
+        pip_run(p, lgr = NULL)
+        expect_equal(calls, "2")
+        expect_equal(p[["f", "state"]], "done")
+    })
+
     it("removes multiple steps via NULL on the step property", {
         p <- pip_new() |>
             pip_add("s1", \(x = 1) x) |>

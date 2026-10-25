@@ -15,7 +15,7 @@ a flow that is described here, update this file in the same PR.
 | File | Role |
 |---|---|
 | `R/pipeflow.R` | Exported `pip_*` API. Internal `.pip_*` helpers sit at the top, grouped by section (construction, asserts, wrappers, param parsing, step execution, state updates, data access, DAG traversal, addition/binding). |
-| `R/generic.pipeflow.R` | S3 methods: `[`, `[[`, `$` and their assignment forms, `length`, `dim`, `str`, `rbind`. Helpers `.pip_snapshot()`, `.pip_restore()`, `.pip_copy_from()`, `.pip_compact()` and `.pip_subset2()`. Re-exports the data.table operators. |
+| `R/generic.pipeflow.R` | S3 methods: `[`, `[[`, `$` and their assignment forms, `length`, `dim`, `str`, `rbind`. Helpers `.pip_all_or_nothing()`, `.pip_snapshot()`, `.pip_restore()`, `.pip_copy_from()`, `.pip_compact()` and `.pip_subset2()`. Re-exports the data.table operators. |
 | `R/as_function.R` | `as.function.pipeflow()`, `pip_inner()` and the `.fun_*` cache helpers. See [as_function.md](as_function.md). |
 | `R/print.pipeflow.R` | `print.pipeflow()`, `.format_out()` and `.format_condition()`. |
 | `R/utils.R` | Formula helpers (`formula_deps()`, `formula_try_args()`, `formula_set_ref()`, `is_try_ref()`, `is_one_sided_formula()`) and small utilities (`.is_single()`, `stop_no_call()`, `unlist1()`). |
@@ -146,9 +146,13 @@ structure:
    running step (and its partition key) and restores the caller's values,
    so nested runs of inner pipelines see correct values.
 8. **A failed `[<-` changes nothing.** `p[i, j] <- value` with several
-   rows and `p[i, ] <- q[i, ]` edit one row at a time. They take a
-   `.pip_snapshot()` first and put it back with `.pip_restore()` if a row
-   fails. A new `pipenv` field that edits change must be added to both.
+   rows and `p[i, ] <- q[i, ]` edit one row at a time inside
+   `.pip_all_or_nothing()`. It takes a `.pip_snapshot()` first and puts it
+   back with `.pip_restore()` as soon as a row fails, before the handlers
+   outside see the error (e.g. the one of `.pip_run_row()` that marks a
+   step `failed`). The step table and the two step maps are restored in
+   place, because a running pipeline keeps references to them. A new
+   `pipenv` field that edits change must be added to both functions.
 
 ## 4. Layered call graph
 
