@@ -5337,6 +5337,44 @@ describe("pip_run", {
                     expect_equal(env$calls, c("a", "b", "c"))
                 })
 
+                it("re-runs all keys after its output was assigned", {
+                    env <- new.env()
+                    env$failKeys <- "b"
+                    mk <- function() {
+                        pip_new() |>
+                            pip_add(
+                                "parts",
+                                \(x = list(a = 1, b = 2, c = 3)) x,
+                                exec = "split"
+                            ) |>
+                            pip_add("fit", \(x = ~parts, mult = 1) {
+                                key <- c("a", "b", "c")[[x]]
+                                if (key %in% env$failKeys) {
+                                    stop("boom")
+                                }
+                                x * mult
+                            })
+                    }
+                    p <- mk()
+                    q <- mk()
+                    run_flaky(p)
+                    run_flaky(q)
+
+                    # q keeps its output of the first run after an attempt
+                    # with new params stopped, and p gets its step
+                    pip_set_params(q, list(mult = 100))
+                    env$failKeys <- "a"
+                    expect_error(pip_run(q, lgr = NULL), "boom")
+                    p["fit"] <- q["fit"]
+
+                    env$failKeys <- character()
+                    pip_run(p, lgr = NULL)
+                    expect_equal(
+                        unclass(p[["fit", "out"]]),
+                        list(a = 100, b = 200, c = 300)
+                    )
+                })
+
                 it("re-runs all keys if the step changed itself", {
                     env <- new.env()
                     env$flaky <- TRUE

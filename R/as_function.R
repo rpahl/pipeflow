@@ -571,12 +571,15 @@ as.function.pipeflow <- function(
         return(invisible(NULL))
     }
     step <- affected[[1L]]
+    stepOut <- pip[[step, "out"]]
 
     # A requested step that failed for some keys holds the failure of each
     # of them, which names the step and key that failed. The output of that
     # step may hold failures of keys the requested step recovered from.
-    stepOut <- pip[[step, "out"]]
-    if (length(.pip_failed_keys(stepOut)) > 0L) {
+    # A step that was skipped in this run keeps its output of an earlier
+    # run, so its failed keys only count if it failed in this run.
+    isFailed <- pip[[step, "state"]] == .step_states[["failed"]][["name"]]
+    if (isFailed && length(.pip_failed_keys(stepOut)) > 0L) {
         f <- .pip_first_failure(stepOut, step = step)
         stop(.pip_step_error(f[["failed_step"]], parent = f[["parent"]]))
     }

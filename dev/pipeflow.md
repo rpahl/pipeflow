@@ -496,7 +496,8 @@ stateDiagram-v2
   changed its own function or params during the attempt (via `.self`; a
   change upstream makes the next run re-run the input step, and so all
   keys). Only outputs with failed keys are marked (the only ones that are
-  reused). `pip_new()` creates the environment, and `.pip_pipenv()` adds it
+  reused). Assigning an output (`p[[s, "out"]] <-`, also via
+  `p[i] <- q[j]`) unmarks the step. `pip_new()` creates the environment, and `.pip_pipenv()` adds it
   to a pipeline saved before it existed. A step that is not marked `TRUE`
   is re-run for all keys, which is always safe: e.g. in a clone
   (`pip_clone()` starts with an empty one).

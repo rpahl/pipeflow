@@ -1854,6 +1854,30 @@ describe("as.function.pipeflow", {
             }
         })
 
+        it("names the current failure, not failed keys of a former call", {
+            inner <- pip_new("former") |>
+                pip_add(
+                    "parts",
+                    \(x = list(a = 1)) {
+                        if (!is.list(x)) stop("not a list") else x
+                    },
+                    exec = "split"
+                ) |>
+                pip_add("fit", \(x = ~parts) {
+                    if (x < 0) stop("negative") else x
+                })
+            f <- as.function(inner, out = "fit", on_error = "continue")
+            msg <- \(expr) {
+                tryCatch(suppressWarnings(expr), error = conditionMessage)
+            }
+
+            expect_equal(
+                msg(f(x = list(a = 1, b = -1))),
+                "step 'fit': key 'b': negative"
+            )
+            expect_equal(msg(f(x = "oops")), "step 'parts': not a list")
+        })
+
         it("names the failed key of the requested step, not of its input", {
             inner <- pip_new("recover") |>
                 pip_add("input", \(x = NULL) x) |>
