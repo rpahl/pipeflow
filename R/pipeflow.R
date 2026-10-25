@@ -3183,6 +3183,20 @@ pip_replace <- function(
 #' )
 #' p
 #' p[["report", "out"]]
+#'
+#' # Run the keys of a mapped step with a map function, e.g. in parallel
+#' p <- pip_new("map") |>
+#'   pip_add("parts", \(x = list(a = 1, b = 2, c = 3)) x, exec = "split") |>
+#'   pip_add("square", \(x = ~parts) x^2) |>
+#'   pip_add("total", \(x = ~square) sum(unlist(x)), exec = "reduce")
+#'
+#' pip_run(p, map = lapply)
+#' p[["total", "out"]]
+#'
+#' if (.Platform$OS.type == "unix") {
+#'   mc2 <- \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
+#'   pip_run(p, force = TRUE, map = mc2)
+#' }
 #' @export
 pip_run <- function(
     x,

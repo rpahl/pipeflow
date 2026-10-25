@@ -268,6 +268,55 @@ If the step function fails for some keys in a run with
 keys, and the steps after it go on with them. See the vignette on
 [error handling](v05c-error-handling.html) for the details.
 
+### Run partitions in parallel
+
+By default, the keys of a mapped step (here `fit` and `coefs`) are run one
+after another. `pip_run()` takes a `map` function like `lapply()` that runs
+them instead, for example in parallel processes. On Linux and macOS,
+`parallel::mclapply()` does this without any setup:
+
+```{r parallel-mclapply, eval = .Platform$OS.type == "unix"}
+mc2 <- \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
+
+pip_run(pip, force = TRUE, map = mc2)
+
+pip[["combine_coefs", "out"]]
+```
+
+`map` is called as `map(X, FUN)`, so a backend that needs more arguments is
+passed as a wrapper like `mc2` above. Functions that already have this form,
+such as `future.apply::future_lapply()`, are passed as they are and also work
+on Windows:
+
+```{r parallel-future, eval = FALSE}
+library(future.apply)
+plan(multisession, workers = 3)
+
+pip_run(pip, force = TRUE, map = future_lapply)
+```
+
+The `split`, `reduce` and other steps that are not mapped run as before. A
+few things to keep in mind:
+
+* Starting the workers and sending the data to them takes time, so this
+  pays off only if the work per key takes much longer than that. For the
+  three small models above it's slower than a plain run.
+* A step function should only compute its output, as anything else it
+  changes in a worker process is lost. The keys of a step that refers to
+  `.self` (see the vignette on
+  [self-modifying pipelines](v06-self-modify-pipeline.html)) or whose
+  function was made by `as.function()` (see the
+  [next vignette](v05b-nested-pipeline.html)) are therefore always run one
+  after another.
+* Warnings and messages of the workers reach the log only if the backend
+  passes them on, which `future_lapply()` does and `mclapply()` doesn't.
+* For random numbers, set up the backend accordingly, e.g. with
+  `future_lapply(..., future.seed = TRUE)`.
+
+See section 'Mapping in parallel' of `?pip_run` for the details.
+
+### Beyond split and reduce
+
 The `split` and `reduce` execution modes cover the common case where the
 pipeline itself performs the split. Whenever they fit, they are the simplest
 way to express such a workflow. If you instead need to map over inputs that

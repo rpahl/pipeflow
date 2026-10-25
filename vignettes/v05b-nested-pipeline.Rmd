@@ -450,8 +450,14 @@ general tool. As a rule of thumb:
 * **Run log and state**: the built-in modes produce one unified run over all
   partitions, while a nested pipeline is run as one step of the outer
   pipeline, with its own log silenced by default.
-* **Parallelism**: the built-in modes are handled by {pipeflow}, whereas with
-  a manual loop you control it and can parallelize it yourself.
+* **Parallelism**: with the built-in modes, `pip_run(map = )` runs the
+  partitions in parallel (see the
+  [previous vignette](v05a-split-map-reduce.html#run-partitions-in-parallel)).
+  A step whose function was made by `as.function()` always runs its
+  partitions one after another, because the pipelines that it keeps for
+  them would be lost in another process. If you run the inner pipeline
+  yourself, you control the loop and can parallelize it, e.g. with
+  `parallel::mcMap()` instead of `Map()`.
 
 ```{r, include = FALSE}
 options(old)

@@ -174,12 +174,6 @@ function made by \code{\link[=as.function.pipeflow]{as.function.pipeflow()}}. Fo
 arguments, pass a wrapper, e.g. \verb{\\(X, FUN) parallel::parLapply(cl, X, FUN)}
 or \verb{\\(X, FUN) parallel::mclapply(X, FUN, mc.cores = 4)}.
 
-The keys of a step that refers to \code{.self}, or whose function was made by
-\code{\link[=as.function.pipeflow]{as.function.pipeflow()}}, always run one after another, because their
-changes of the pipeline (or of the kept pipelines of the function) would
-be lost in another process. Likewise, a step function should only return
-its output and not change any state outside of it.
-
 Errors are handled as without \code{map} (see 'Runtime errors' and 'Continuing
 after errors' above), but all keys of a step run before the error of the
 first failed key is raised. Warnings and messages of the step reach \code{lgr}
@@ -286,6 +280,20 @@ withCallingHandlers(
 )
 p
 p[["report", "out"]]
+
+# Run the keys of a mapped step with a map function, e.g. in parallel
+p <- pip_new("map") |>
+  pip_add("parts", \(x = list(a = 1, b = 2, c = 3)) x, exec = "split") |>
+  pip_add("square", \(x = ~parts) x^2) |>
+  pip_add("total", \(x = ~square) sum(unlist(x)), exec = "reduce")
+
+pip_run(p, map = lapply)
+p[["total", "out"]]
+
+if (.Platform$OS.type == "unix") {
+  mc2 <- \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
+  pip_run(p, force = TRUE, map = mc2)
+}
 }
 \seealso{
 \code{vignette("v06-self-modify-pipeline", package = "pipeflow")}
