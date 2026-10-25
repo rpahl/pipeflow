@@ -987,6 +987,10 @@
             currentOut[[step]] <- TRUE
         }
     } else if (stepStillExists) {
+        # A step that changed its own exec mode during the call computed its
+        # output with the old mode, so it is outdated rather than done.
+        hasExecChanged <- !identical(dat[["exec"]][[rowNow]], exec)
+        state <- if (hasExecChanged) "outdated" else "done"
         data.table::set(
             dat,
             i = rowNow,
@@ -994,7 +998,7 @@
             value = list(
                 list(out),
                 runTime,
-                .step_states[["done"]][["name"]]
+                .step_states[[state]][["name"]]
             )
         )
     }

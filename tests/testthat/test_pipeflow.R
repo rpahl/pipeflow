@@ -4323,6 +4323,28 @@ describe("pip_run", {
             expect_false(p[["without", "out"]])
         })
 
+        it("outdates a step that changed its own exec mode", {
+            p <- pip_new("p") |>
+                pip_add(
+                    "parts",
+                    \(x = list(a = 1, b = 2)) x,
+                    exec = "split"
+                ) |>
+                pip_add("fit", \(x = ~parts) {
+                    .self[["fit", "exec"]] <- "reduce"
+                    if (is.list(x)) sum(unlist(x)) else x
+                })
+
+            # The run maps 'fit' over the keys, so its output is stale
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["fit", "state"]]), "outdated")
+            expect_equal(unclass(p[["fit", "out"]]), list(a = 1, b = 2))
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["fit", "state"]]), "done")
+            expect_equal(p[["fit", "out"]], 3)
+        })
+
         it("is not written into the environment of the step function", {
             env <- new.env()
             f <- local(\(x = 1) .self[["name"]], envir = env)

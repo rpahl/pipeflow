@@ -396,7 +396,10 @@ Things to keep in mind:
   call `.self$restart()` or `.self$halt()`, which set `.run_state`
   (`.pip_restart()`, `.pip_halt()`). After the
   call, `.pip_run_row()` and `pip_run()` re-read `pipenv$data` *by step
-  name*, because the rows may have moved.
+  name*, because the rows may have moved. A step that changed its own exec
+  mode during the call gets state `outdated` instead of `done`, because its
+  output comes from the old mode. (A step that changes its own function or
+  params still ends `done`.)
 - **Restart.** `pip_run()` calls itself recursively and returns. The outer
   loop does not continue. It hands over the start of the run
   (`.run_start`), so that the last log line covers the whole run. Its step

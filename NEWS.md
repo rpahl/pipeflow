@@ -7,7 +7,9 @@
   downstream steps as `"outdated"`, so that the next run uses the new mode.
   Before, a step that had run kept its state and its output from the old
   mode. A step that failed for some keys and got a new mode is run again
-  for all keys.
+  for all keys. A step that changes its own mode while it runs (via
+  `.self`) ends the run as `"outdated"`, as its output comes from the old
+  mode.
 - Setting the output of a step with `p[[step, "out"]] <- value` (also via
   `p[i, "out"] <-`, views and `p[i, ] <- q[j, ]`) now marks its downstream
   steps as `"outdated"`, so that the next run computes them from the new
