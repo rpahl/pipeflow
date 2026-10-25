@@ -1,3 +1,12 @@
+# pipeflow 0.5.0.9017
+
+## Bug fixes
+
+- An assignment to several steps, `p[i, j] <- value`, and a copy of steps,
+  `p[i, ] <- q[i, ]`, now change all selected steps or none: if a step
+  fails (e.g. because a new step name already exists), the steps assigned
+  before are restored. Before, they kept their changes.
+
 # pipeflow 0.5.0.9016
 
 ## Breaking changes

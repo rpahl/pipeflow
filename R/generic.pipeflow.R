@@ -2,6 +2,103 @@
 # Helper
 # ------
 
+#' Edit a pipeline completely or not at all
+#'
+#' Evaluates `edit`, which changes the pipeline one step at a time, e.g. in
+#' `p[i, j] <- value`. If it fails, the pipeline is restored from a
+#' snapshot (`.pip_snapshot()`), so that the failed edit changes nothing.
+#' The pipeline is restored as soon as the error is signalled, before the
+#' handlers outside see it. So a step that edits its own pipeline via
+#' `.self` and fails with the edit is still marked `"failed"` by
+#' `.pip_run_row()`. An interrupt restores the pipeline on exit.
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param edit The code that edits `x`. It is evaluated in the calling
+#' frame, so it can assign to the variables there.
+#' @return `NULL`, invisibly.
+#' @noRd
+.pip_all_or_nothing <- function(x, edit) {
+    pipenv <- .pip_pipenv(x)
+    snapshot <- .pip_snapshot(pipenv)
+    isPending <- TRUE
+    restore <- function(...) {
+        if (isPending) {
+            isPending <<- FALSE
+            .pip_restore(pipenv, snapshot)
+        }
+    }
+    on.exit(restore(), add = TRUE)
+    withCallingHandlers(edit, error = restore)
+    isPending <- FALSE
+    invisible(NULL)
+}
+
+
+#' Take a snapshot of a pipeline to undo a failed edit
+#'
+#' Like `.pip_clone(deep = FALSE)`, the snapshot is a light copy of the step
+#' table: its columns are new vectors, but the functions, params and outputs
+#' are shared. The step table and the two step maps are restored in place
+#' (see `.pip_restore()`), because a running pipeline keeps references to
+#' them (`pip_run()`, `.pip_run_row()`).
+#'
+#' @param pipenv The inner pipeline environment.
+#' @return A list with the step table and copies of its columns, a copy of
+#' the DAG, the two step maps and copies of their entries, and the kept inner
+#' pipelines of the step functions made by [as.function.pipeflow()], which a
+#' rename moves (see `.fun_rename()`).
+#' @noRd
+.pip_snapshot <- function(pipenv) {
+    dat <- pipenv[["data"]]
+    mapNames <- c(".steps_to_nodes", ".steps_with_current_out")
+    maps <- mget(mapNames, envir = pipenv)
+    caches <- Filter(Negate(is.null), lapply(dat[["fun"]], .fun_cache))
+    list(
+        data = dat,
+        columns = as.list(dat[seq_len(nrow(dat))]),
+        dag = dag_clone(.pip_dag(pipenv)),
+        maps = maps,
+        entries = lapply(maps, as.list, all.names = TRUE),
+        caches = caches,
+        slots = lapply(caches, \(cache) cache[["slots"]])
+    )
+}
+
+
+#' Restore a pipeline from a snapshot
+#'
+#' @param pipenv The inner pipeline environment.
+#' @param snapshot The result of `.pip_snapshot(pipenv)`.
+#' @return `pipenv`, invisibly. The snapshot is written into `pipenv`, so
+#' the views of the pipeline see the restored pipeline as well.
+#' @noRd
+.pip_restore <- function(pipenv, snapshot) {
+    # The step table that was edited in place, or replaced by a new one if
+    # steps were removed
+    dat <- snapshot[["data"]]
+    columns <- snapshot[["columns"]]
+    data.table::set(dat, j = names(columns), value = columns)
+    pipenv[["data"]] <- dat
+
+    # Nothing keeps the DAG across a step call (see .pip_dag()), so it can
+    # be replaced
+    pipenv[[".dag"]] <- snapshot[["dag"]]
+
+    for (name in names(snapshot[["maps"]])) {
+        map <- snapshot[["maps"]][[name]]
+        rm(list = ls(map, all.names = TRUE), envir = map)
+        list2env(snapshot[["entries"]][[name]], envir = map)
+        pipenv[[name]] <- map
+    }
+
+    caches <- snapshot[["caches"]]
+    for (k in seq_along(caches)) {
+        assign("slots", snapshot[["slots"]][[k]], envir = caches[[k]])
+    }
+    invisible(pipenv)
+}
+
+
 # Copy step properties of the selected rows of one pipeline/view to
 # the selected rows of another. The rows of `x` and `q` are aligned by
 # position and must have equal length. The structural columns
@@ -50,61 +147,65 @@
     # copied (e.g. pip_replace() marking downstream steps as outdated).
     qSnapshot <- dataQ[rowsQ, c(props, "depends"), with = FALSE]
 
-    for (k in seq_len(n)) {
-        pRow <- rowsP[[k]]
+    # If a row fails, the rows copied before are undone, so that `x` is left
+    # as it was.
+    .pip_all_or_nothing(x, {
+        for (k in seq_len(n)) {
+            pRow <- rowsP[[k]]
 
-        qVals <- lapply(props, function(prop) qSnapshot[[prop]][[k]])
-        names(qVals) <- props
+            qVals <- lapply(props, function(prop) qSnapshot[[prop]][[k]])
+            names(qVals) <- props
 
-        # 1) Step name (a no-op when both pipelines use the same names).
-        x[[dataP[["step"]][[pRow]], "step"]] <- qVals[["step"]]
+            # 1) Step name (a no-op when both pipelines use the same names).
+            x[[dataP[["step"]][[pRow]], "step"]] <- qVals[["step"]]
 
-        # 2) Function, params and exec mode. The exec mode is set here,
-        #    because setting a new one in 3) would outdate the copied state.
-        #    The params of q override the defaults of the function. Their
-        #    references are pointed to the steps that the step of q depends
-        #    on, by name, because a relative reference (~-1) is stale once
-        #    steps were inserted or removed before it. pip_replace() then
-        #    resolves them against the steps of `x`.
-        params <- qVals[["params"]]
-        depends <- qSnapshot[["depends"]][[k]]
-        for (arg in intersect(names(depends), names(params))) {
-            params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
-        }
-        # An unbound param can still have a formula as value: the function
-        # made by as.function() sets its arguments as values, also formulas,
-        # and a step can expose that pipeline, e.g. via pip_clone(.self).
-        # pip_replace() would take it as a reference, so it is replaced with
-        # a placeholder and its value is put back below.
-        isValue <- !(names(params) %in% names(depends)) &
-            vapply(params, is_one_sided_formula, logical(1))
-        values <- params[isValue]
-        params[isValue] <- list(NULL)
-        pip_replace(
-            x,
-            step = qVals[["step"]],
-            fun = qVals[["fun"]],
-            params = params,
-            exec = qVals[["exec"]]
-        )
-        if (length(values) > 0L) {
-            dataX <- .pip_pipenv(x)[["data"]]
-            iRow <- data.table::chmatch(qVals[["step"]], dataX[["step"]])
-            stored <- dataX[["params"]][[iRow]]
-            stored[names(values)] <- values
-            data.table::set(
-                dataX,
-                i = iRow,
-                j = "params",
-                value = list(list(stored))
+            # 2) Function, params and exec mode. The exec mode is set here,
+            #    because setting a new one in 3) would outdate the copied state.
+            #    The params of q override the defaults of the function. Their
+            #    references are pointed to the steps that the step of q depends
+            #    on, by name, because a relative reference (~-1) is stale once
+            #    steps were inserted or removed before it. pip_replace() then
+            #    resolves them against the steps of `x`.
+            params <- qVals[["params"]]
+            depends <- qSnapshot[["depends"]][[k]]
+            for (arg in intersect(names(depends), names(params))) {
+                params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
+            }
+            # An unbound param can still have a formula as value: the function
+            # made by as.function() sets its arguments as values, also formulas,
+            # and a step can expose that pipeline, e.g. via pip_clone(.self).
+            # pip_replace() would take it as a reference, so it is replaced with
+            # a placeholder and its value is put back below.
+            isValue <- !(names(params) %in% names(depends)) &
+                vapply(params, is_one_sided_formula, logical(1))
+            values <- params[isValue]
+            params[isValue] <- list(NULL)
+            pip_replace(
+                x,
+                step = qVals[["step"]],
+                fun = qVals[["fun"]],
+                params = params,
+                exec = qVals[["exec"]]
             )
-        }
+            if (length(values) > 0L) {
+                dataX <- .pip_pipenv(x)[["data"]]
+                iRow <- data.table::chmatch(qVals[["step"]], dataX[["step"]])
+                stored <- dataX[["params"]][[iRow]]
+                stored[names(values)] <- values
+                data.table::set(
+                    dataX,
+                    i = iRow,
+                    j = "params",
+                    value = list(list(stored))
+                )
+            }
 
-        # 3) Runtime state and annotation columns.
-        for (prop in setdiff(props, c("step", "fun", "params", "exec"))) {
-            x[[iSelP[[k]], prop]] <- qVals[[prop]]
+            # 3) Runtime state and annotation columns.
+            for (prop in setdiff(props, c("step", "fun", "params", "exec"))) {
+                x[[iSelP[[k]], prop]] <- qVals[[prop]]
+            }
         }
-    }
+    })
 
     x
 }
@@ -856,6 +957,10 @@ dim.pipeflow <- function(x) {
 #' must itself be a list (e.g. `p[1:2, "params"] <- list(list(a = 1),
 #' list(b = 2))`).
 #'
+#' The selected steps are assigned one after another, but the assignment
+#' changes all of them or none, that is, if it fails for one step,
+#' the pipeline is restored as it was.
+#'
 #' If `value` is a `pipeflow` pipeline or view, the writable step properties
 #' of its steps are copied to the selected rows: `p[i, ] <- q[i, ]` copies
 #' the steps of `q` selected by `i` into the steps of `p` selected by `i`
@@ -871,7 +976,8 @@ dim.pipeflow <- function(x) {
 #' that the source step depends on by name, also if it was defined with a
 #' relative reference such as `~-1`, and these steps are looked up in `p`.
 #' The structural columns `nodeId`, `depends` and `unbound` are not copied
-#' but recomputed against the steps of `p`.
+#' but recomputed against the steps of `p`. If a step can't be copied (e.g.
+#' because it refers to a step that is not in `p`), `p` is left as it was.
 #' Instead of `p[i, j] <- q`, use `p[i, j] <- q[i, j]` to copy the values of
 #' a single property; the one-column table returned by the extraction form
 #' is unwrapped and assigned element-wise.
@@ -988,15 +1094,19 @@ dim.pipeflow <- function(x) {
         character(0)
     }
 
-    for (k in seq_len(n)) {
-        if (j == "step") {
-            if (.pip_step_exists(x, stepNames[[k]])) {
-                x[[stepNames[[k]], j]] <- values[[k]]
+    # If a row fails, the rows assigned before are undone, so that `x` is
+    # left as it was.
+    .pip_all_or_nothing(x, {
+        for (k in seq_len(n)) {
+            if (j == "step") {
+                if (.pip_step_exists(x, stepNames[[k]])) {
+                    x[[stepNames[[k]], j]] <- values[[k]]
+                }
+            } else {
+                x[[iSel[[k]], j]] <- values[[k]]
             }
-        } else {
-            x[[iSel[[k]], j]] <- values[[k]]
         }
-    }
+    })
     x
 }
 

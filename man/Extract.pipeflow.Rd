@@ -236,6 +236,10 @@ assign the same list value (e.g. a set of tags) to all rows, wrap it in
 \code{p[[i, j]] <- value}). For the \code{params} property, the value of each row
 must itself be a list (e.g. \code{p[1:2, "params"] <- list(list(a = 1), list(b = 2))}).
 
+The selected steps are assigned one after another, but the assignment
+changes all of them or none, that is, if it fails for one step,
+the pipeline is restored as it was.
+
 If \code{value} is a \code{pipeflow} pipeline or view, the writable step properties
 of its steps are copied to the selected rows: \code{p[i, ] <- q[i, ]} copies
 the steps of \code{q} selected by \code{i} into the steps of \code{p} selected by \code{i}
@@ -251,7 +255,8 @@ overwritten (locked steps included). A copied step refers to the steps
 that the source step depends on by name, also if it was defined with a
 relative reference such as \code{~-1}, and these steps are looked up in \code{p}.
 The structural columns \code{nodeId}, \code{depends} and \code{unbound} are not copied
-but recomputed against the steps of \code{p}.
+but recomputed against the steps of \code{p}. If a step can't be copied (e.g.
+because it refers to a step that is not in \code{p}), \code{p} is left as it was.
 Instead of \code{p[i, j] <- q}, use \code{p[i, j] <- q[i, j]} to copy the values of
 a single property; the one-column table returned by the extraction form
 is unwrapped and assigned element-wise.

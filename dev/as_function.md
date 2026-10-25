@@ -172,6 +172,7 @@ How slots change with the outer pipeline:
 | Step switches between mapped and single | All pipelines of the other mode are dropped | `.fun_keep_keys()` (`mapped` changed) |
 | Mapped over zero keys | No call happens, so the slots are dropped explicitly | `.pip_execute_step_call()` → `.fun_release()` |
 | Outer step renamed | `slots[[from]]` moves to `slots[[to]]` | `pip_rename()` → `.fun_rename()` |
+| A `[<-` that renamed the step fails | The slots move back | `.pip_restore()` |
 | Outer step removed or replaced | The slots stay until the function is garbage-collected | — |
 | `pip_run(force = TRUE)` on outer | Inner pipelines are **not** forced | — (use `cache = FALSE`) |
 

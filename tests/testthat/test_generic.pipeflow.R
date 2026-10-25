@@ -1534,6 +1534,174 @@ describe("[<-.pipeflow", {
         )
     })
 
+    it("leaves the pipeline as it was if the value of a row is invalid", {
+        when <- as.POSIXct("2020-01-01 12:00:00", tz = "UTC")
+        invalid <- list(
+            state = c("new", "nope"),
+            exec = c("plain", "nope"),
+            locked = c(TRUE, NA),
+            tags = list("a", 1),
+            time = list(when, "now"),
+            time_start = list(when, "now")
+        )
+        for (prop in names(invalid)) {
+            p <- pip_run(test_pip(), lgr = NULL)
+            before <- pip_internals(p)
+
+            expect_error(p[1:2, prop] <- invalid[[prop]], prop)
+
+            expect_equal(pip_internals(p), before, info = prop)
+        }
+    })
+
+    it("undoes the renames before a failing rename", {
+        p <- test_pip()
+        before <- pip_internals(p)
+
+        expect_error(
+            p[1:3, "step"] <- c("a", "b", "a"),
+            "step 'a' already exists"
+        )
+
+        expect_equal(pip_internals(p), before)
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["s3", "out"]], 3)
+    })
+
+    it("undoes the removals before a failing rename", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = 2) x) |>
+            pip_add("s3", \(x = ~s1) x)
+        v <- pip_view(p, step = "s2")
+        before <- pip_internals(p)
+
+        expect_error(
+            p[2:3, "step"] <- list(NULL, "s1"),
+            "step 's1' already exists"
+        )
+
+        expect_equal(pip_internals(p), before)
+        expect_equal(v[["step"]], c(s2 = "s2"))
+    })
+
+    it("undoes the functions replaced before a failing one", {
+        p <- pip_run(test_pip(), lgr = NULL)
+        before <- pip_internals(p)
+
+        expect_error(
+            p[2:3, "fun"] <- list(\(x = ~s1) x * 10, \(x = ~nope) x),
+            "cannot reference unknown steps: 'nope'"
+        )
+
+        expect_equal(pip_internals(p), before)
+    })
+
+    it("undoes the params set before a failing row", {
+        p <- pip_run(test_pip(), lgr = NULL)
+        before <- pip_internals(p)
+
+        expect_error(
+            p[1:2, "params"] <- list(list(x = 5), "bad"),
+            "params must be a list"
+        )
+
+        expect_equal(pip_internals(p), before)
+    })
+
+    it("undoes the rows assigned through a view before a failing row", {
+        p <- test_pip()
+        v <- pip_view(p, step = c("s2", "s3"))
+        before <- pip_internals(p)
+
+        expect_error(
+            v[1:2, "step"] <- c("a", "s1"),
+            "step 's1' already exists"
+        )
+
+        expect_equal(pip_internals(p), before)
+        expect_equal(v[["step"]], c(s2 = "s2", s3 = "s3"))
+    })
+
+    it("keeps the inner pipelines of a step whose rename is undone", {
+        inner <- pip_new("inner") |>
+            pip_add("double", \(x = 1) x * 2)
+        p <- pip_new() |>
+            pip_add("s1", as.function(inner, out = "double")) |>
+            pip_add("s2", \(x = 2) x)
+        pip_run(p, lgr = NULL)
+
+        expect_error(
+            p[1:2, "step"] <- c("a", "a"),
+            "step 'a' already exists"
+        )
+
+        expect_s3_class(pip_inner(p, "s1"), "pipeflow")
+    })
+
+    it("undoes a failed assignment via .self that the step catches", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) {
+                try(.self[2:3, "locked"] <- c(TRUE, NA), silent = TRUE)
+                x
+            }) |>
+            pip_add("s2", \(x = ~s1) x + 1) |>
+            pip_add("s3", \(x = ~s2) x + 1)
+
+        pip_run(p, lgr = NULL)
+
+        # The run sees the restored step table, so s2 is not skipped as
+        # locked
+        expect_false(any(p[["locked"]]))
+        expect_equal(unname(p[["state"]]), rep("done", 3))
+        expect_equal(p[["s3", "out"]], 3)
+    })
+
+    it("marks a step failed whose assignment via .self fails", {
+        doFail <- FALSE
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) {
+                if (doFail) {
+                    .self[1:2, "state"] <- c("done", "nope")
+                }
+                x
+            }) |>
+            pip_add("s2", \(x = ~s1) x + 1)
+        pip_run(p, lgr = NULL)
+
+        doFail <- TRUE
+        expect_error(pip_run(p, force = TRUE, lgr = NULL), "state must be")
+
+        # The failed state is set after the pipeline was restored
+        expect_equal(p[["s1", "state"]], "failed")
+    })
+
+    it("keeps the bookkeeping of a mapped step whose assignment fails", {
+        calls <- character()
+        doFail <- TRUE
+        p <- pip_new() |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add("f", \(x = ~parts) {
+                calls <<- c(calls, as.character(x))
+                if (x == 2 && doFail) {
+                    .self[1:2, "tags"] <- list("a", 1)
+                }
+                x
+            })
+        expect_warning(
+            pip_run(p, on_error = "continue", lgr = NULL),
+            class = "pipeflow_run_failed"
+        )
+        expect_equal(p[["f", "state"]], "failed")
+
+        # The next run only re-runs the failed key
+        calls <- character()
+        doFail <- FALSE
+        pip_run(p, lgr = NULL)
+        expect_equal(calls, "2")
+        expect_equal(p[["f", "state"]], "done")
+    })
+
     it("removes multiple steps via NULL on the step property", {
         p <- pip_new() |>
             pip_add("s1", \(x = 1) x) |>
@@ -1819,6 +1987,26 @@ describe("cross-pipeline assignment", {
             p[1:2, ] <- q,
             "cannot assign from a pipeline with 3 steps to 2 selected rows"
         )
+    })
+
+    it("leaves the target as it was if a step can't be copied", {
+        p <- pip_run(test_pip(), lgr = NULL)
+        q <- pip_new("q") |>
+            pip_add("x", \(x = 1) x) |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~x) x)
+        before <- pip_internals(p)
+
+        # The rename and the replaced function of the first row are undone
+        expect_error(
+            p[1:2, ] <- q[2:3, ],
+            "cannot reference unknown steps: 'x'"
+        )
+        expect_equal(pip_internals(p), before)
+
+        # Also with a single row, which is renamed before its function fails
+        expect_error(p[2, ] <- q[3, ], "cannot reference unknown steps: 'x'")
+        expect_equal(pip_internals(p), before)
     })
 
     it("requires i and forbids j when assigning from a pipeline", {
