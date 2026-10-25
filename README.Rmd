@@ -102,11 +102,13 @@ It is recommended to read the vignettes in the order they are listed below:
 * [Nested pipelines](https://rpahl.github.io/pipeflow/articles/v05b-nested-pipeline.html)
 * [Handling failures](https://rpahl.github.io/pipeflow/articles/v05c-error-handling.html)
 * [Annotated parameter values](https://rpahl.github.io/pipeflow/articles/v05d-param-value.html)
+* [Annotated step outputs](https://rpahl.github.io/pipeflow/articles/v05e-output-value.html)
 * [Self-modifying pipelines](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
 
-### Benchmarks
+### pipeflow vs targets
 
-* [pipeflow vs targets](https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html)
+* [Comparison and benchmarks](https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html)
+* [Emulating targets features](https://rpahl.github.io/pipeflow/articles/v07b-emulate-targets.html)
 
 ```{r, include = FALSE}
 options(old)
