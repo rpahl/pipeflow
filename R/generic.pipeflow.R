@@ -1099,22 +1099,28 @@ dim.pipeflow <- function(x) {
         value <- value[[1L]]
     }
 
-    # Determine the value for each selected row.
+    # Determine the value for each selected row. An element of an atomic
+    # vector is taken with `[`, which keeps its class (e.g. `difftime`),
+    # unlike `[[` and as.list().
+    element <- function(v, m) {
+        if (is.atomic(v)) unname(v[m]) else v[[m]]
+    }
     if (is.null(value)) {
         values <- rep(list(NULL), n)
     } else {
         k <- length(value)
         if (k == 1L) {
             val <- if (is.atomic(value) || is.list(value)) {
-                value[[1L]]
+                element(value, 1L)
             } else {
                 value
             }
             values <- rep(list(val), n)
         } else if (k == n) {
-            values <- as.list(value)
+            values <- lapply(seq_len(n), \(m) element(value, m))
         } else if (k > 1L && n %% k == 0L) {
-            values <- as.list(rep(value, length.out = n))
+            value <- rep(value, length.out = n)
+            values <- lapply(seq_len(n), \(m) element(value, m))
         } else {
             stop(sprintf("replacement has length %d, data has %d", k, n))
         }

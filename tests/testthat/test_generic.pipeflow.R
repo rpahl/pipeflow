@@ -1582,6 +1582,33 @@ describe("[<-.pipeflow", {
         )
     })
 
+    it("assigns durations to several rows, one or one per row", {
+        p <- test_pip()
+        p[1:2, "duration"] <- as.difftime(1, units = "mins")
+        expect_equal(
+            unname(p[["duration"]]),
+            as.difftime(c(60, 60, NA), units = "secs")
+        )
+
+        p[2:3, "duration"] <- as.difftime(c(2, 3), units = "secs")
+        expect_equal(
+            unname(p[["duration"]]),
+            as.difftime(c(60, 2, 3), units = "secs")
+        )
+
+        p[, "duration"] <- NA
+        expect_true(all(is.na(p[["duration"]])))
+        expect_s3_class(p[["duration"]], "difftime")
+    })
+
+    it("copies durations of several rows from a pipeline", {
+        p <- test_pip()
+        q <- test_pip()
+        q[1:3, "duration"] <- as.difftime(c(1, 2, 3), units = "secs")
+        p[1:3, "duration"] <- q[1:3, "duration"]
+        expect_equal(p[["duration"]], q[["duration"]])
+    })
+
     it("leaves the pipeline as it was if the value of a row is invalid", {
         when <- as.POSIXct("2020-01-01 12:00:00", tz = "UTC")
         invalid <- list(
