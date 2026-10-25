@@ -263,6 +263,11 @@ pip_run(pip)
 pip[["combine_coefs", "out"]]
 ```
 
+If the step function fails for some keys in a run with
+`pip_run(on_error = "continue")`, the step keeps the results of the other
+keys, and the steps after it go on with them. See the vignette on
+[error handling](v05c-error-handling.html) for the details.
+
 The `split` and `reduce` execution modes cover the common case where the
 pipeline itself performs the split. Whenever they fit, they are the simplest
 way to express such a workflow. If you instead need to map over inputs that

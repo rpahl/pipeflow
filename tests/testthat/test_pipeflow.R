@@ -1232,6 +1232,33 @@ describe("pipelines read with readRDS()", {
         expect_equal(q[["out"]], p[["out"]])
     })
 
+    it("re-run only failed keys if saved without step marks", {
+        # Pipelines saved with older versions of pipeflow have no
+        # .steps_with_current_out environment. The step function of the
+        # read pipeline has its own copy of this environment, so its factor
+        # is passed via a file.
+        multFile <- tempfile()
+        on.exit(unlink(multFile))
+        writeLines("1", multFile)
+        p <- pip_new() |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add("fit", \(x = ~parts, file = multFile) {
+                mult <- as.numeric(readLines(file))
+                if (x == 2 && mult == 1) stop("bad") else x * mult
+            })
+        rm(".steps_with_current_out", envir = .subset2(p, "pipenv"))
+        q <- save_and_read(p)
+        expect_null(.subset2(q, "pipenv")[[".steps_with_current_out"]])
+
+        suppressWarnings(
+            pip_run(q, lgr = NULL, on_error = "continue"),
+            classes = "pipeflow_run_failed"
+        )
+        writeLines("10", multFile)
+        pip_run(q, lgr = NULL)
+        expect_equal(unclass(q[["fit", "out"]]), list(a = 1, b = 20))
+    })
+
     it("can be run with pip_run()", {
         p <- test_pip()
         q <- save_and_read(p)
@@ -3686,7 +3713,7 @@ describe("pip_run", {
             )
         })
 
-        it("lets a reduce step receive a failure through ~try()", {
+        it("lets a reduce step receive a failed key through ~try()", {
             p <- pip_new() |>
                 pip_add(
                     "load",
@@ -3700,11 +3727,13 @@ describe("pip_run", {
                 pip_add(
                     "total",
                     \(x = ~ try(per_key)) {
-                        if (inherits(x, "pipeflow_failure")) {
-                            "failed"
-                        } else {
-                            sum(unlist(x))
-                        }
+                        isFailure <- vapply(
+                            x,
+                            inherits,
+                            what = "pipeflow_failure",
+                            FUN.VALUE = logical(1)
+                        )
+                        sum(unlist(x[!isFailure]))
                     },
                     exec = "reduce"
                 )
@@ -3713,7 +3742,7 @@ describe("pip_run", {
                 pip_run(p, on_error = "continue", lgr = NULL),
                 class = "pipeflow_run_failed"
             )
-            expect_equal(p[["pipenv"]][["data"]]$out[[3]], "failed")
+            expect_equal(p[["pipenv"]][["data"]]$out[[3]], 1)
             expect_equal(p[["pipenv"]][["data"]]$state[[3]], "done")
         })
 
@@ -4668,19 +4697,20 @@ describe("pip_run", {
                 pip_add("doc", \(x = ~ try(calc)) x)
             run_continue(p)
 
-            f <- p[["doc", "out"]]
+            f <- p[["doc", "out"]][["b"]]
             expect_s3_class(f, "pipeflow_failure")
             expect_equal(
                 conditionMessage(f),
                 "step 'calc' failed: key 'b': too big"
             )
-            expect_equal(conditionMessage(f[["parent"]]), "key 'b': too big")
+            expect_equal(f[["key"]], "b")
 
-            out <- p[["calc", "out"]]
-            expect_s3_class(out, "pipeflow_key_error")
-            expect_equal(out[["key"]], "b")
-            expect_equal(conditionMessage(out[["parent"]]), "too big")
-            expect_identical(f[["parent"]], out)
+            parent <- f[["parent"]]
+            expect_s3_class(parent, "pipeflow_key_error")
+            expect_equal(conditionMessage(parent), "key 'b': too big")
+            expect_equal(parent[["key"]], "b")
+            expect_equal(conditionMessage(parent[["parent"]]), "too big")
+            expect_identical(f, p[["calc", "out"]][["b"]])
         })
 
         it("does not treat locked steps with failed inputs as failed", {
@@ -4754,6 +4784,670 @@ describe("pip_run", {
                 logs,
                 fixed = TRUE
             )))
+        })
+
+        describe("per-key failures of mapped steps", {
+            # 'fit' fails for key 'b' only
+            key_pip <- function() {
+                pip_new("p") |>
+                    pip_add(
+                        "parts",
+                        \(x = list(a = 1, b = -1, c = 4)) x,
+                        exec = "split"
+                    ) |>
+                    pip_add("fit", \(x = ~parts, min = 0) {
+                        if (x < min) stop("negative") else x * 10
+                    })
+            }
+            is_failure <- function(x) inherits(x, "pipeflow_failure")
+
+            it("keeps the outputs of the keys that succeeded", {
+                p <- key_pip() |>
+                    pip_add("show", \(f = ~ try(fit)) {
+                        if (inherits(f, "error")) "ERR" else f
+                    }) |>
+                    pip_add("all", \(s = ~show) unlist(s), exec = "reduce")
+                w <- expect_warning(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    class = "pipeflow_run_failed"
+                )
+
+                out <- p[["fit", "out"]]
+                expect_s3_class(out, "pipeflow_partitioned")
+                expect_equal(out[c("a", "c")], list(a = 10, c = 40))
+                f <- out[["b"]]
+                expect_s3_class(f, "pipeflow_failure")
+                expect_equal(
+                    conditionMessage(f),
+                    "step 'fit' failed: key 'b': negative"
+                )
+                expect_equal(f[["step"]], "fit")
+                expect_equal(f[["failed_step"]], "fit")
+                expect_equal(f[["key"]], "b")
+                expect_s3_class(f[["parent"]], "pipeflow_key_error")
+
+                expect_equal(
+                    p[["all", "out"]],
+                    c(a = "10", b = "ERR", c = "40")
+                )
+                expect_equal(
+                    unname(p[["state"]]),
+                    c("done", "failed", "done", "done")
+                )
+                expect_equal(get_run_state(p), "continued")
+
+                expect_equal(names(w[["failed"]]), "fit")
+                expect_identical(w[["failed"]][["fit"]], f[["parent"]])
+                expect_equal(w[["keys"]], list(fit = "b"))
+                expect_equal(w[["skipped"]], character())
+                expect_match(
+                    conditionMessage(w),
+                    "'fit': key 'b': negative (1 of 3 keys)",
+                    fixed = TRUE
+                )
+            })
+
+            it("sets only time_start of a step that failed for a key", {
+                p <- key_pip()
+                pip_set_params(p, list(min = -Inf))
+                pip_run(p, lgr = NULL)
+                timeBefore <- p[["fit", "time"]]
+
+                pip_set_params(p, list(min = 0))
+                t0 <- Sys.time()
+                suppressWarnings(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    classes = "pipeflow_run_failed"
+                )
+                expect_equal(unname(p[["fit", "state"]]), "failed")
+                expect_equal(p[["fit", "time"]], timeBefore)
+                expect_true(p[["fit", "time_start"]] >= t0)
+                expect_true(p[["fit", "time"]] < p[["fit", "time_start"]])
+            })
+
+            it("does not run a key whose input failed without try()", {
+                calls <- character()
+                p <- key_pip() |>
+                    pip_add("twice", \(x = ~fit) {
+                        calls <<- c(calls, .pip_step_call()[["key"]])
+                        x * 2
+                    })
+                w <- expect_warning(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    class = "pipeflow_run_failed"
+                )
+
+                expect_equal(calls, c("a", "c"))
+                out <- p[["twice", "out"]]
+                expect_equal(out[c("a", "c")], list(a = 20, c = 80))
+                f <- out[["b"]]
+                expect_s3_class(f, "pipeflow_failure")
+                expect_equal(
+                    conditionMessage(f),
+                    paste(
+                        "step 'twice' was not run:",
+                        "step 'fit' failed: key 'b': negative"
+                    )
+                )
+                expect_equal(f[["step"]], "twice")
+                expect_equal(f[["failed_step"]], "fit")
+                expect_equal(f[["key"]], "b")
+                expect_identical(f[["parent"]], p[["fit", "out"]]$b$parent)
+                expect_equal(unname(p[["twice", "state"]]), "failed")
+
+                # Listed as failed, with the cause in the step upstream
+                expect_equal(names(w[["failed"]]), c("fit", "twice"))
+                expect_identical(w[["failed"]][["twice"]], f[["parent"]])
+                expect_equal(w[["keys"]], list(fit = "b", twice = "b"))
+                expect_match(
+                    conditionMessage(w),
+                    "'twice': key 'b': input step 'fit' failed (1 of 3 keys)",
+                    fixed = TRUE
+                )
+            })
+
+            it("skips a reduce step without try() after a failed key", {
+                p <- key_pip() |>
+                    pip_add("all", \(x = ~fit) unlist(x), exec = "reduce") |>
+                    pip_add("after", \(x = ~all) x)
+                w <- expect_warning(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    class = "pipeflow_run_failed"
+                )
+
+                expect_equal(
+                    unname(p[["state"]]),
+                    c("done", "failed", "new", "new")
+                )
+                expect_null(p[["all", "out"]])
+                expect_equal(w[["skipped"]], c("all", "after"))
+            })
+
+            it("outdates a done reduce step skipped after a failed key", {
+                p <- key_pip() |>
+                    pip_add("all", \(x = ~fit) unlist(x), exec = "reduce")
+                pip_set_params(p, list(min = -Inf))
+                pip_run(p, lgr = NULL)
+                expect_equal(unname(p[["all", "state"]]), "done")
+
+                pip_set_params(p, list(min = 0))
+                suppressWarnings(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    classes = "pipeflow_run_failed"
+                )
+                expect_equal(unname(p[["all", "state"]]), "outdated")
+            })
+
+            it("passes the failed keys to a reduce step with try()", {
+                p <- key_pip() |>
+                    pip_add(
+                        "all",
+                        \(x = ~ try(fit)) vapply(x, is_failure, logical(1)),
+                        exec = "reduce"
+                    )
+                suppressWarnings(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    classes = "pipeflow_run_failed"
+                )
+
+                expect_equal(
+                    p[["all", "out"]],
+                    c(a = FALSE, b = TRUE, c = FALSE)
+                )
+                expect_equal(unname(p[["all", "state"]]), "done")
+            })
+
+            it("handles inputs that failed in different keys", {
+                p <- pip_new() |>
+                    pip_add(
+                        "parts",
+                        \(x = list(a = 1, b = 2, c = 3)) x,
+                        exec = "split"
+                    ) |>
+                    pip_add("f1", \(x = ~parts) if (x == 1) stop("1") else x) |>
+                    pip_add("f2", \(x = ~parts) if (x == 2) stop("2") else x) |>
+                    pip_add("both", \(u = ~f1, v = ~f2) u + v) |>
+                    pip_add("mixed", \(u = ~ try(f1), v = ~f2) {
+                        if (is_failure(u)) "u failed" else u + v
+                    })
+                suppressWarnings(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    classes = "pipeflow_run_failed"
+                )
+
+                both <- p[["both", "out"]]
+                expect_true(is_failure(both[["a"]]))
+                expect_equal(both[["a"]][["failed_step"]], "f1")
+                expect_true(is_failure(both[["b"]]))
+                expect_equal(both[["b"]][["failed_step"]], "f2")
+                expect_equal(both[["c"]], 6)
+
+                mixed <- p[["mixed", "out"]]
+                expect_equal(mixed[["a"]], "u failed")
+                expect_true(is_failure(mixed[["b"]]))
+                expect_equal(mixed[["b"]][["failed_step"]], "f2")
+                expect_equal(mixed[["c"]], 6)
+            })
+
+            it("fails a step whose keys all fail", {
+                p <- pip_new() |>
+                    pip_add(
+                        "parts",
+                        \(x = list(a = 1, b = 2)) x,
+                        exec = "split"
+                    ) |>
+                    pip_add("bad", \(x = ~parts) stop("boom"))
+                w <- expect_warning(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    class = "pipeflow_run_failed"
+                )
+
+                out <- p[["bad", "out"]]
+                expect_s3_class(out, "pipeflow_partitioned")
+                expect_true(all(vapply(out, is_failure, logical(1))))
+                expect_equal(unname(p[["bad", "state"]]), "failed")
+                expect_equal(w[["keys"]], list(bad = c("a", "b")))
+            })
+
+            it("stops at the first failed key with on_error = 'stop'", {
+                p <- key_pip()
+                err <- expect_error(
+                    pip_run(p, lgr = NULL),
+                    class = "pipeflow_step_error"
+                )
+
+                expect_equal(
+                    conditionMessage(err),
+                    "step 'fit': key 'b': negative"
+                )
+                expect_s3_class(err[["parent"]], "pipeflow_key_error")
+                expect_equal(unname(p[["fit", "state"]]), "failed")
+                expect_null(p[["fit", "out"]])
+            })
+
+            it("stops at a failed key of a locked input with 'stop'", {
+                p <- key_pip() |>
+                    pip_add("twice", \(x = ~fit) x * 2)
+                suppressWarnings(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    classes = "pipeflow_run_failed"
+                )
+                pip_lock(p["fit"])
+
+                err <- expect_error(
+                    pip_run(p, lgr = NULL),
+                    class = "pipeflow_step_error"
+                )
+                expect_equal(
+                    conditionMessage(err),
+                    paste(
+                        "step 'twice': key 'b': step 'twice' was not run:",
+                        "step 'fit' failed: key 'b': negative"
+                    )
+                )
+                expect_s3_class(err[["parent"]], "pipeflow_key_error")
+                expect_s3_class(err[["parent"]][["parent"]], "pipeflow_failure")
+            })
+
+            it("renames the step in the failures of failed keys", {
+                p <- key_pip() |>
+                    pip_add("twice", \(x = ~fit) x * 2)
+                suppressWarnings(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    classes = "pipeflow_run_failed"
+                )
+                pip_rename(p, "fit", "model")
+
+                f <- p[["model", "out"]][["b"]]
+                expect_equal(f[["step"]], "model")
+                expect_equal(f[["failed_step"]], "model")
+                expect_equal(f[["key"]], "b")
+                expect_equal(
+                    conditionMessage(f),
+                    "step 'model' failed: key 'b': negative"
+                )
+                expect_s3_class(f[["parent"]], "pipeflow_key_error")
+
+                f <- p[["twice", "out"]][["b"]]
+                expect_equal(f[["step"]], "twice")
+                expect_equal(f[["failed_step"]], "model")
+                expect_equal(
+                    conditionMessage(f),
+                    paste(
+                        "step 'twice' was not run:",
+                        "step 'model' failed: key 'b': negative"
+                    )
+                )
+                expect_equal(p[["model", "out"]][["a"]], 10)
+            })
+
+            it("re-runs the whole step and its dependents on retry", {
+                calls <- 0L
+                p <- key_pip() |>
+                    pip_add("show", \(f = ~ try(fit)) {
+                        calls <<- calls + 1L
+                        if (inherits(f, "error")) "ERR" else f
+                    })
+                suppressWarnings(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    classes = "pipeflow_run_failed"
+                )
+                expect_equal(calls, 3L)
+
+                pip_set_params(p, list(min = -Inf))
+                expect_no_warning(
+                    pip_run(p, lgr = NULL, on_error = "continue")
+                )
+
+                expect_equal(unname(p[["state"]]), rep("done", 3))
+                expect_equal(get_run_state(p), "ready")
+                expect_equal(calls, 6L)
+                expect_equal(p[["show", "out"]][["b"]], -10)
+            })
+
+            it("keeps a failing split step a whole-step failure", {
+                p <- pip_new() |>
+                    pip_add("parts", \(x = 1) stop("boom"), exec = "split") |>
+                    pip_add("map", \(x = ~ try(parts)) is_failure(x))
+                suppressWarnings(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    classes = "pipeflow_run_failed"
+                )
+
+                expect_s3_class(p[["parts", "out"]], "simpleError")
+                expect_true(p[["map", "out"]])
+            })
+
+            it("logs the failed keys of a step", {
+                logs <- character()
+                lgr <- function(level, msg) logs <<- c(logs, paste(level, msg))
+                p <- key_pip() |>
+                    pip_add("twice", \(x = ~fit) x * 2)
+                suppressWarnings(pip_run(p, lgr = lgr, on_error = "continue"))
+
+                errors <- logs[startsWith(logs, "error")]
+                expect_equal(errors, "error key 'b': negative")
+            })
+
+            it("prints an output with failed keys in short form", {
+                p <- key_pip()
+                suppressWarnings(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    classes = "pipeflow_run_failed"
+                )
+                expect_output(
+                    print(p),
+                    "<partitioned: 1/3 failed>",
+                    fixed = TRUE
+                )
+            })
+
+            it("reports a step's own failed key before forwarded ones", {
+                p <- pip_new() |>
+                    pip_add(
+                        "parts",
+                        \(x = list(a = 1, b = 2)) x,
+                        exec = "split"
+                    ) |>
+                    pip_add("calc", \(p = ~parts) {
+                        if (p == 1) stop("calc failed") else p
+                    }) |>
+                    pip_add("report", \(r = ~ try(calc)) {
+                        if (is_failure(r)) r else stop("report failed")
+                    })
+                w <- expect_warning(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    class = "pipeflow_run_failed"
+                )
+
+                # 'report' forwards the failure of 'calc' for key 'a' as it is
+                f <- p[["report", "out"]][["a"]]
+                expect_equal(f[["failed_step"]], "calc")
+                expect_equal(w[["keys"]][["report"]], c("a", "b"))
+                expect_equal(
+                    conditionMessage(w[["failed"]][["report"]]),
+                    "key 'b': report failed"
+                )
+                expect_match(
+                    conditionMessage(w),
+                    "'report': key 'b': report failed (2 of 2 keys)",
+                    fixed = TRUE
+                )
+            })
+
+            describe("retry of failed keys", {
+                # 'fit' fails for key 'b' as long as `env$flaky` is TRUE
+                flaky_pip <- function(env) {
+                    env$flaky <- TRUE
+                    env$calls <- character()
+                    pip_new("p") |>
+                        pip_add(
+                            "parts",
+                            \(x = list(a = 1, b = -1, c = 4)) x,
+                            exec = "split"
+                        ) |>
+                        pip_add("fit", \(x = ~parts) {
+                            key <- .pip_step_call()[["key"]]
+                            env$calls <- c(env$calls, key)
+                            if (env$flaky && x < 0) stop("negative") else x * 10
+                        })
+                }
+                run_flaky <- function(p, ...) {
+                    suppressWarnings(
+                        pip_run(p, lgr = NULL, on_error = "continue", ...),
+                        classes = "pipeflow_run_failed"
+                    )
+                }
+
+                it("re-runs only the failed keys of an unchanged step", {
+                    env <- new.env()
+                    p <- flaky_pip(env)
+                    run_flaky(p)
+                    expect_equal(env$calls, c("a", "b", "c"))
+
+                    env$flaky <- FALSE
+                    env$calls <- character()
+                    pip_run(p, lgr = NULL)
+
+                    expect_equal(env$calls, "b")
+                    expect_equal(
+                        unclass(p[["fit", "out"]]),
+                        list(a = 10, b = -10, c = 40)
+                    )
+                    expect_s3_class(p[["fit", "out"]], "pipeflow_partitioned")
+                    expect_equal(unname(p[["fit", "state"]]), "done")
+                    expect_equal(get_run_state(p), "ready")
+                })
+
+                it("re-runs a failed key until it succeeds", {
+                    env <- new.env()
+                    p <- flaky_pip(env)
+                    run_flaky(p)
+
+                    env$calls <- character()
+                    run_flaky(p)
+                    expect_equal(env$calls, "b")
+                    expect_equal(unname(p[["fit", "state"]]), "failed")
+                    expect_equal(p[["fit", "out"]][["a"]], 10)
+                })
+
+                it("logs the keys it re-runs", {
+                    env <- new.env()
+                    p <- flaky_pip(env)
+                    run_flaky(p)
+
+                    logs <- character()
+                    lgr <- function(level, msg) logs <<- c(logs, msg)
+                    env$flaky <- FALSE
+                    pip_run(p, lgr = lgr)
+                    expect_true(any(grepl(
+                        "Step 2/2 fit - re-running failed keys 'b'",
+                        logs,
+                        fixed = TRUE
+                    )))
+                })
+
+                it("re-runs all keys of a forced run", {
+                    env <- new.env()
+                    p <- flaky_pip(env)
+                    run_flaky(p)
+
+                    env$flaky <- FALSE
+                    env$calls <- character()
+                    pip_run(p, lgr = NULL, force = TRUE)
+                    expect_equal(env$calls, c("a", "b", "c"))
+                })
+
+                it("re-runs all keys if the step was outdated", {
+                    env <- new.env()
+                    p <- flaky_pip(env)
+                    run_flaky(p)
+
+                    pip_set_params(p, list(x = list(a = 2, b = -1, c = 4)))
+                    env$flaky <- FALSE
+                    env$calls <- character()
+                    pip_run(p, lgr = NULL)
+                    expect_equal(env$calls, c("a", "b", "c"))
+                    expect_equal(p[["fit", "out"]][["a"]], 20)
+                })
+
+                it("re-runs all keys of a step whose input was run again", {
+                    env <- new.env()
+                    p <- flaky_pip(env) |>
+                        pip_add("twice", \(x = ~fit) {
+                            env$twice <- c(env$twice, .pip_step_call()$key)
+                            x * 2
+                        })
+                    run_flaky(p)
+                    expect_equal(unname(p[["twice", "state"]]), "failed")
+
+                    env$flaky <- FALSE
+                    env$twice <- character()
+                    pip_run(p, lgr = NULL)
+                    expect_equal(env$twice, c("a", "b", "c"))
+                    expect_equal(
+                        unclass(p[["twice", "out"]]),
+                        list(a = 20, b = -20, c = 80)
+                    )
+                })
+
+                it("re-runs all keys after an attempt that stopped", {
+                    env <- new.env()
+                    env$failKeys <- "b"
+                    p <- pip_new() |>
+                        pip_add(
+                            "parts",
+                            \(x = list(a = 1, b = 2, c = 3)) x,
+                            exec = "split"
+                        ) |>
+                        pip_add("fit", \(x = ~parts, mult = 10) {
+                            key <- .pip_step_call()[["key"]]
+                            if (key %in% env$failKeys) {
+                                stop("boom")
+                            } else {
+                                x * mult
+                            }
+                        })
+                    run_flaky(p)
+
+                    # A full attempt with new params stops at key 'a' and
+                    # keeps the output of the first run, with 'b' failed
+                    pip_set_params(p, list(mult = 100))
+                    env$failKeys <- "a"
+                    expect_error(pip_run(p, lgr = NULL), "boom")
+                    expect_equal(unname(p[["fit", "state"]]), "failed")
+
+                    env$failKeys <- character()
+                    pip_run(p, lgr = NULL)
+                    expect_equal(
+                        unclass(p[["fit", "out"]]),
+                        list(a = 100, b = 200, c = 300)
+                    )
+                })
+
+                it("re-runs all keys after a retry that stopped", {
+                    env <- new.env()
+                    p <- flaky_pip(env)
+                    run_flaky(p)
+                    expect_error(pip_run(p, lgr = NULL), "negative")
+
+                    env$flaky <- FALSE
+                    env$calls <- character()
+                    pip_run(p, lgr = NULL)
+                    expect_equal(env$calls, c("a", "b", "c"))
+                })
+
+                it("re-runs all keys after its output was assigned", {
+                    env <- new.env()
+                    env$failKeys <- "b"
+                    mk <- function() {
+                        pip_new() |>
+                            pip_add(
+                                "parts",
+                                \(x = list(a = 1, b = 2, c = 3)) x,
+                                exec = "split"
+                            ) |>
+                            pip_add("fit", \(x = ~parts, mult = 1) {
+                                key <- c("a", "b", "c")[[x]]
+                                if (key %in% env$failKeys) {
+                                    stop("boom")
+                                }
+                                x * mult
+                            })
+                    }
+                    p <- mk()
+                    q <- mk()
+                    run_flaky(p)
+                    run_flaky(q)
+
+                    # q keeps its output of the first run after an attempt
+                    # with new params stopped, and p gets its step
+                    pip_set_params(q, list(mult = 100))
+                    env$failKeys <- "a"
+                    expect_error(pip_run(q, lgr = NULL), "boom")
+                    p["fit"] <- q["fit"]
+
+                    env$failKeys <- character()
+                    pip_run(p, lgr = NULL)
+                    expect_equal(
+                        unclass(p[["fit", "out"]]),
+                        list(a = 100, b = 200, c = 300)
+                    )
+                })
+
+                it("re-runs all keys if the step changed itself", {
+                    env <- new.env()
+                    env$flaky <- TRUE
+                    p <- pip_new() |>
+                        pip_add(
+                            "parts",
+                            \(x = list(a = 1, b = 2, c = 3)) x,
+                            exec = "split"
+                        ) |>
+                        pip_add("fit", \(x = ~parts, mult = 1) {
+                            if (env$flaky && x == 2) {
+                                .self$set_params(list(mult = 10))
+                                stop("transient")
+                            }
+                            x * mult
+                        })
+                    run_flaky(p)
+                    expect_equal(unname(p[["fit", "state"]]), "failed")
+
+                    env$flaky <- FALSE
+                    pip_run(p, lgr = NULL)
+                    expect_equal(
+                        unclass(p[["fit", "out"]]),
+                        list(a = 10, b = 20, c = 30)
+                    )
+                })
+
+                it("re-runs only the failed keys of a renamed step", {
+                    env <- new.env()
+                    p <- flaky_pip(env)
+                    run_flaky(p)
+                    pip_rename(p, "fit", "model")
+
+                    env$flaky <- FALSE
+                    env$calls <- character()
+                    pip_run(p, lgr = NULL)
+                    expect_equal(env$calls, "b")
+                    expect_equal(unname(p[["model", "state"]]), "done")
+                })
+
+                it("re-runs all keys of a step renamed to a removed step", {
+                    env <- new.env()
+                    env$flaky <- TRUE
+                    p <- pip_new() |>
+                        pip_add(
+                            "parts",
+                            \(x = list(a = 1, b = 2, c = 3)) x,
+                            exec = "split"
+                        ) |>
+                        pip_add("fit", \(x = ~parts, mult = 1) {
+                            if (env$flaky && x == 2) {
+                                .self$set_params(list(mult = 10))
+                                stop("transient")
+                            }
+                            x * mult
+                        }) |>
+                        pip_add("other", \(x = ~parts) {
+                            if (x == 2) stop("bad") else x
+                        })
+                    run_flaky(p)
+
+                    # 'other' could be retried, 'fit' (changed) could not
+                    pip_remove(p, "other")
+                    pip_rename(p, "fit", "other")
+
+                    env$flaky <- FALSE
+                    pip_run(p, lgr = NULL)
+                    expect_equal(
+                        unclass(p[["other", "out"]]),
+                        list(a = 10, b = 20, c = 30)
+                    )
+                })
+            })
         })
     })
 })
@@ -6413,6 +7107,77 @@ describe("pip_output_value", {
         out <- p[["a", "out"]]
         expect_s3_class(out, "simpleError")
         expect_null(ctx_of(out))
+    })
+
+    it("is not applied to the failed keys of a mapped step", {
+        register_output_value(
+            "pipeflow_failure",
+            function(x, ctx = list(), ...) {
+                stop("must not be called")
+            }
+        )
+        p <- pip_new() |>
+            pip_add("split", \(x = 1) list(a = 1, b = 2), exec = "split") |>
+            pip_add("map", \(x = ~split) if (x == 2) stop("boom") else x)
+
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        out <- p[["map", "out"]]
+        expect_s3_class(out, "pipeflow_partitioned")
+        expect_equal(out[["a"]], 1)
+        expect_equal(
+            conditionMessage(out[["b"]]),
+            "step 'map' failed: key 'b': boom"
+        )
+    })
+
+    it("is not applied again to the kept keys of a retry", {
+        annotated <- character()
+        register_output_value("ov_count", function(x, ctx = list(), ...) {
+            annotated <<- c(annotated, ctx$key)
+            x
+        })
+        flaky <- TRUE
+        p <- pip_new() |>
+            pip_add("split", \(x = 1) list(a = 1, b = 2), exec = "split") |>
+            pip_add("map", \(x = ~split) {
+                if (flaky && x == 2) {
+                    stop("boom")
+                }
+                structure(x, class = "ov_count")
+            })
+
+        suppressWarnings(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            classes = "pipeflow_run_failed"
+        )
+        expect_equal(annotated, "a")
+
+        flaky <- FALSE
+        annotated <- character()
+        pip_run(p, lgr = NULL)
+        expect_equal(annotated, "b")
+    })
+
+    it("fails the whole mapped step if it fails for one key", {
+        register_output_value("ov_broken", function(x, ctx = list(), ...) {
+            stop("cannot annotate")
+        })
+        p <- pip_new() |>
+            pip_add("split", \(x = 1) list(a = 1, b = 2), exec = "split") |>
+            pip_add("map", \(x = ~split) {
+                if (x == 2) structure(x, class = "ov_broken") else x
+            })
+
+        expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        out <- p[["map", "out"]]
+        expect_s3_class(out, "pipeflow_key_error")
+        expect_equal(out[["key"]], "b")
     })
 })
 

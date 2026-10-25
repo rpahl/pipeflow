@@ -79,6 +79,7 @@ classDiagram
         .last_run : POSIXct | NULL
         .restart_count : integer
         .restart_force : logical
+        .steps_with_current_out : env, step to TRUE/FALSE
     }
     class data {
         <<data.table>>
@@ -286,7 +287,7 @@ unwraps them (`.pip_unwrap_params()`).
 |---|---|---|
 | Replace a step | `pip_replace()`, `p[[s, "fun"]] <-` | Recomputes `params`, `depends` and `unbound`. Swaps the incoming DAG edges (`dag_remove_edge()`, `dag_add_edges_to()`). Keeps the node id. Outdates the step and its downstream steps. |
 | Remove a step | `pip_remove()`, `p[[s, "step"]] <- NULL` | Without `force`, fails if other steps depend on the step. With `force`, removes all downstream steps too. Tombstones DAG nodes, then `dag_tidy_up()`. Updates `data` and `.steps_to_nodes`. |
-| Rename a step | `pip_rename()`, `p[[s, "step"]] <-` | Updates `step`, all `depends`, the reference formulas (`formula_set_ref()`) and `.steps_to_nodes`. Calls `.fun_rename()`. The DAG is unchanged, because it works on ids. |
+| Rename a step | `pip_rename()`, `p[[s, "step"]] <-` | Updates `step`, all `depends`, the reference formulas (`formula_set_ref()`), the failures of failed keys in the outputs (`.pip_rename_failures()`), `.steps_to_nodes` and `.steps_with_current_out`. Calls `.fun_rename()`. The DAG is unchanged, because it works on ids. |
 | Set params | `pip_set_params()`, `p[[s, "params"]] <-` | `.pip_set_params()` computes all new values first (two phases, `pip_param_value<-`). A formula binds the param (`.pip_bind_row()` adds DAG edges). Outdates the changed steps and their downstream steps. |
 | Bind pipelines | `rbind.pipeflow()` → `.pip_bind()` | Clones both pipelines and renames clashing steps of `y` with a number suffix. Folds params into the function defaults. Adds new nodes and edges. |
 | Copy steps | `p[i, ] <- q[i, ]` → `.pip_copy_from()` | Per row: rename, then `pip_replace()`, then overwrite the runtime columns. |
@@ -338,19 +339,23 @@ sequenceDiagram
     R->>E: .run_state = running
     loop each row (topological order)
         R->>R: input failed and not ~try()? record .pip_failure, skip
+        R->>R: (input failed for some keys counts only if not exec auto)
         R->>R: done, not force, no input re-run? skip
         R->>R: locked? skip
-        R->>RR: .pip_run_row(self = full pipeline, row, failed)
+        R->>RR: .pip_run_row(self = full pipeline, row, failed, onError)
         RR->>E: args = params + outputs of depends (+ failures)
         RR->>RR: .wrap_self(fun) if body uses .self
         RR->>E: set time_start of row (before the call shifts rows)
         RR->>RR: .pip_unwrap_params(unbound args)
-        RR->>X: exec mode
+        RR->>X: exec mode (retry: keep = outputs of the keys that did not fail)
         alt split
             X->>C: one call, then mark output as pipeflow_partitioned
         else auto + partitioned input
             loop each key
+                X->>X: key in keep? copy its output
+                X->>X: slice of non-try arg is a failure? key "not run"
                 X->>C: call with sliced args (key, keys)
+                X->>X: continue: key error -> .pip_failure(key) as value
             end
         else plain / reduce / no partition
             X->>C: one call
@@ -359,6 +364,8 @@ sequenceDiagram
         F-->>RR: value
         RR->>RR: .pip_annotate_output (pip_output_value)
         RR->>E: re-read data by step name, set out/time/state = done
+        RR->>E: (failed keys: set out, state = failed, keep time)
+        R->>R: failed keys: record the output in failures
         alt step error
             RR-->>R: pipeflow_step_error (state = failed)
             R->>R: stop: re-signal / continue: store condition as out
@@ -379,14 +386,18 @@ Things to keep in mind:
   call, `.pip_run_row()` and `pip_run()` re-read `pipenv$data` *by step
   name*, because the rows may have moved.
 - **Restart.** `pip_run()` calls itself recursively and returns. The outer
-  loop does not continue.
+  loop does not continue. It hands over the start of the run
+  (`.run_start`), so that the last log line covers the whole run. Its step
+  counts are derived from the step table at the end: a step ran in the run
+  if its `time_start` is not before the start of the run, and it succeeded
+  if its `time` is not before its `time_start` (a failed run keeps `time`;
+  the state is not used, as a later step may change it). The other steps
+  of the run were skipped.
 - **Outdating.** Steps downstream of executed steps, if they did not run
   themselves, become `outdated`. This happens on exit, after a restart and
   after a continued run.
-- **Conditions.** `.pip_step_error()` wraps a step error, `.pip_key_error()`
-  wraps a partition key error, `.pip_failure()` is the value a `~try()`
-  argument receives, and `.pip_run_failed_warning()` is the warning of a
-  continued run.
+- **Errors and failures.** See [Errors and failures](#errors-and-failures)
+  below.
 
 ### States
 
@@ -425,6 +436,86 @@ stateDiagram-v2
         halted --> running : pip_run
     }
 ```
+
+### Errors and failures
+
+`?pip_run` describes what users see. The conditions behind it
+(constructors at the top of `R/pipeflow.R`):
+
+| Condition | Made by | Fields | Where |
+|---|---|---|---|
+| `pipeflow_step_error` | `.pip_step_error()` | `step`, `parent` | signalled by `pip_run(on_error = "stop")`; message `"step '<step>': <parent msg>"` |
+| `pipeflow_key_error` | `.pip_key_error()` | `key`, `parent` | `parent` of the above (and of a failure) if the error belongs to one key; message `"key '<key>': <parent msg>"` |
+| `pipeflow_failure` | `.pip_failure()` | `step`, `failed_step`, `parent`, `key` (per key only) | value of a failed input in a continued run; stored per key in the output of a mapped step |
+| `pipeflow_run_failed` (warning) | `.pip_run_failed_warning()` | `failed`, `skipped`, `keys` | end of a continued run |
+
+- **Failure messages.** `"step '<failed_step>' failed: <parent msg>"`, with
+  `"step '<step>' was not run: "` in front if `step != failed_step`. `parent`
+  is the original condition of the step that failed, or its
+  `pipeflow_key_error` for a failed key.
+- **Whole-step failures.** In a continued run, the failed step's `out` is the
+  original condition (the key error for an error per key outside the key
+  loop, e.g. in `pip_output_value()`), and `pip_run()` records a
+  `.pip_failure()` for it in `failures`. A step with a failed non-`~try()`
+  input is not run and gets a failure with the upstream `failed_step`. A
+  `~try()` argument receives the failure via `.pip_run_row(failed = )`.
+  Errors outside of the per-key calls (split steps, `plain`/`reduce`
+  steps, `pip_output_value()`, a step function failing before mapping) are
+  always whole-step failures.
+- **Per-key failures.** In a continued run, `.pip_execute_step_call()`
+  stores a `.pip_failure(key = )` for each failed key instead of stopping.
+  Before calling a key, it checks the sliced partitioned arguments: if a
+  non-`~try()` argument holds a failure, the key is not run and gets a
+  "was not run" failure (with `onError = "stop"`, possible only via a
+  locked or manually set input, this is raised as a key error).
+  `.pip_annotate_output()` leaves failed keys alone. `.pip_run_row()` then
+  stores the output with state `failed` and keeps `time` (it marks the last
+  successful run).
+- **Bookkeeping in `pip_run()`.** `failures` holds, by step and in run order,
+  a failure object per whole-step failure and the partitioned output per
+  step with failed keys; `.is_pipeflow_partitioned()` tells them apart.
+  A step that is mapped (`exec = "auto"`) ignores an input with failed keys
+  in the failed-input check (it handles the keys itself); any other step
+  treats it as a failed input. Such an input is never passed via `failed =`,
+  the step reads the stored output.
+- **Retry of failed keys.** A step that is still `failed` at its turn has
+  not been outdated (params, function and upstream steps unchanged). If its
+  output has failed keys, no input ran in this run (`inputsChanged`) and the
+  run is not forced, `pip_run()` passes `retry = TRUE` to `.pip_run_row()`,
+  which hands the outputs of the other keys as `keep` to
+  `.pip_execute_step_call()`: the key loop copies them instead of calling
+  the function, and `.pip_annotate_output()` skips them (they were
+  annotated in their own run). All keys are still passed as `keys`, so a
+  function made by `as.function()` keeps the inner pipelines of all keys.
+  Dependents are not narrowed down: an input that ran makes them re-run all
+  keys. The stored output must also come from the step's last attempt: an
+  attempt that stops with an error keeps the previous output (and state
+  `failed`), which may be from before a change. `pipenv$.steps_with_current_out`
+  is an environment (step name -> `TRUE`/`FALSE`, like `.steps_to_nodes` a
+  hash) that marks the steps whose stored output comes from their last
+  attempt: `.pip_run_row()` sets the step to `FALSE` at the start of each
+  attempt and to `TRUE` when the attempt stores its output, unless the step
+  changed its own function or params during the attempt (via `.self`; a
+  change upstream makes the next run re-run the input step, and so all
+  keys). Only outputs with failed keys are marked (the only ones that are
+  reused). Assigning an output (`p[[s, "out"]] <-`, also via
+  `p[i] <- q[j]`) unmarks the step. `pip_new()` creates the environment, and `.pip_pipenv()` adds it
+  to a pipeline saved before it existed. A step that is not marked `TRUE`
+  is re-run for all keys, which is always safe: e.g. in a clone
+  (`pip_clone()` starts with an empty one).
+- **Warning fields.** `failed`: one condition per failed step, the `parent`
+  of its failure. For a step with failed keys, `.pip_first_failure()` picks
+  the first key that failed in the step itself (`failed_step == step`), or,
+  if there is none, the first failed key (not run, or a failure of an input
+  returned as it is via `~try()`; its `parent` is then the key error of the
+  upstream step). `skipped`: steps not run because an input failed. `keys`:
+  the failed keys per step with failed keys (`.pip_failed_keys()`).
+- **`as.function()`.** `.fun_check_run()` re-signals the failure of a
+  requested inner step as a `pipeflow_step_error`. For a requested step with
+  failed keys it uses the first failure of its own output (not the output
+  of the cause step, which may hold keys the requested step recovered from
+  via `~try()`); `.fun_failure_causes()` uses its `failed_step` as the
+  cause for the dependents.
 
 ## 9. Serialization
 

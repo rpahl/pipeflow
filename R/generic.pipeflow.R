@@ -763,6 +763,9 @@ dim.pipeflow <- function(x) {
         # wrap value in list of list to enable arbitrary objects
         # (e.g. a data.frame) to be stored as-is.
         data.table::set(data, i = i, j = "out", value = list(list(value)))
+        # An output set from outside does not come from the step's last
+        # attempt, so a retry runs all keys (see .pip_run_row()).
+        env[[".steps_with_current_out"]][[step]] <- FALSE
     } else if (j == "state") {
         .assert_state(value)
         data.table::set(data, i = i, j = "state", value = value)

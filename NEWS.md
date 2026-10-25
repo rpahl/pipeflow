@@ -1,3 +1,28 @@
+# pipeflow 0.5.0.9015
+
+## Breaking changes
+
+- In a run with `on_error = "continue"`, a step mapped over partitioned
+  inputs now fails per partition key: its output keeps the results of the
+  keys that succeeded, and each failed key holds a `pipeflow_failure` with
+  the field `key` (before, the whole step failed and its output was the
+  `pipeflow_key_error`). The step gets state `"failed"`. Mapped steps
+  downstream are not run for the failed keys, unless they take the input
+  via `~try()`; other steps get the output with the failed keys via
+  `~try()` and are skipped otherwise. The `pipeflow_run_failed` warning
+  has a new field `keys` with the failed keys per step.
+
+## New features
+
+- When a mapped step failed for some keys, the next run only calls it for
+  the failed keys and keeps the results of the other keys, unless its
+  parameters or inputs changed or the run is forced.
+- The log line at the end of `pip_run()` is shorter and counts the steps
+  that were done, skipped (already done, locked or with a failed input) and
+  failed in the whole run, including restarts, e.g.
+  `Finished in 0.251 s (3 done, 1 skipped, 0 failed)`. The pipeline is
+  named in the log line at the start of the run.
+
 # pipeflow 0.5.0.9014
 
 ## New features

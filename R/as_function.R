@@ -570,8 +570,26 @@ as.function.pipeflow <- function(
     if (length(affected) == 0L) {
         return(invisible(NULL))
     }
-    cause <- causes[[affected[[1L]]]]
-    stop(.pip_step_error(cause, parent = pip[[cause, "out"]]))
+    step <- affected[[1L]]
+    stepOut <- pip[[step, "out"]]
+
+    # If the requested step failed for some keys in this run, its output holds
+    # a failure for each of them, naming the step and key that failed. That is
+    # more precise than the output of its cause, which may also hold failed
+    # keys the requested step recovered from via ~try(). A step that was skipped
+    # in this run still has its output of an earlier run, which does not count.
+    wasSkipped <- pip[[step, "state"]] != .step_states[["failed"]][["name"]]
+    if (!wasSkipped && length(.pip_failed_keys(stepOut)) > 0L) {
+        f <- .pip_first_failure(stepOut, step = step)
+        stop(.pip_step_error(f[["failed_step"]], parent = f[["parent"]]))
+    }
+
+    cause <- causes[[step]]
+    parent <- pip[[cause, "out"]]
+    if (.is_pipeflow_partitioned(parent)) {
+        parent <- .pip_first_failure(parent, step = cause)[["parent"]]
+    }
+    stop(.pip_step_error(cause, parent = parent))
 }
 
 
@@ -594,7 +612,14 @@ as.function.pipeflow <- function(
             next
         }
         if (dat[["state"]][[i]] == .step_states[["failed"]][["name"]]) {
-            causes[[step]] <- step
+            # A mapped step whose failed keys were all not run because an
+            # input failed has the step of that input as its cause.
+            out <- dat[["out"]][[i]]
+            causes[[step]] <- if (length(.pip_failed_keys(out)) > 0L) {
+                .pip_first_failure(out, step = step)[["failed_step"]]
+            } else {
+                step
+            }
             next
         }
         depends <- dat[["depends"]][[i]]
