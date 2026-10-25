@@ -1,3 +1,20 @@
+# pipeflow 0.5.0.9022
+
+## Bug fixes
+
+- `pip_reset()` on a view that covers only some steps now keeps the time of
+  the last run and the run state of the pipeline. Before, resetting a
+  single step showed `last run: never`.
+
+## Documentation
+
+- New article "Emulating targets features" with recipes for file tracking,
+  rebuilds after helper changes, a `tar_meta()`-like table, reproducible
+  random numbers, saved results, runs in a fresh R process and a list of
+  outdated steps, and the limits of each. The article "pipeflow vs
+  targets" is now called "Comparison and benchmarks" and links to the
+  recipes.
+
 # pipeflow 0.5.0.9021
 
 ## New features

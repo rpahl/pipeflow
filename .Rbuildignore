@@ -28,6 +28,7 @@
 ^README\.Rmd$
 ^_pkgdown\.yml$
 ^pkgdown$
+^vignettes/articles$
 ^docs$
 ^doc$
 
