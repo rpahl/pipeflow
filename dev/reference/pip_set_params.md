@@ -130,17 +130,17 @@ pip_get_params(p) # list(n = 10, factor = 0.5)
 #> [1] 0.5
 #> 
 (pip_run(p))
-#> info [2026-10-20 18:51:07.964 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-20 18:51:07.964 UTC]: Step 1/2 load
-#> info [2026-10-20 18:51:07.965 UTC]: Step 2/2 scale
-#> info [2026-10-20 18:51:07.966 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:14.141 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:14.141 UTC]: Step 1/2 load
+#> info [2026-10-25 08:12:14.142 UTC]: Step 2/2 scale
+#> info [2026-10-25 08:12:14.143 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
 #> <pipeflow> pipe (2 steps)
 #> -------------------------
 #>     step   params depends state                             out
 #> 1:  load        n          done             1,2,3,4,5,6,...[10]
 #> 2: scale x,factor    load  done 0.5,1.0,1.5,2.0,2.5,3.0,...[10]
 #> -------------------------
-#> <ready> last run: 2026-10-20 18:51:07
+#> <ready> last run: 2026-10-25 08:12:14
 
 # Updating params marks affected steps (and their dependents) outdated
 pip_set_params(p, params = list(n = 5, factor = 2.0))
@@ -151,19 +151,19 @@ p
 #> 1:  load        n         outdated             1,2,3,4,5,6,...[10]
 #> 2: scale x,factor    load outdated 0.5,1.0,1.5,2.0,2.5,3.0,...[10]
 #> -------------------------
-#> <ready> last run: 2026-10-20 18:51:07
+#> <ready> last run: 2026-10-25 08:12:14
 (pip_run(p))
-#> info [2026-10-20 18:51:07.971 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-20 18:51:07.972 UTC]: Step 1/2 load
-#> info [2026-10-20 18:51:07.972 UTC]: Step 2/2 scale
-#> info [2026-10-20 18:51:07.973 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:14.149 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:14.149 UTC]: Step 1/2 load
+#> info [2026-10-25 08:12:14.149 UTC]: Step 2/2 scale
+#> info [2026-10-25 08:12:14.150 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
 #> <pipeflow> pipe (2 steps)
 #> -------------------------
 #>     step   params depends state            out
 #> 1:  load        n          done      1,2,3,4,5
 #> 2: scale x,factor    load  done  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-10-20 18:51:07
+#> <ready> last run: 2026-10-25 08:12:14
 
 # Setting the same values again doesn't outdate any step
 pip_set_params(p, params = list(n = 5, factor = 2.0))
@@ -174,7 +174,7 @@ p
 #> 1:  load        n          done      1,2,3,4,5
 #> 2: scale x,factor    load  done  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-10-20 18:51:07
+#> <ready> last run: 2026-10-25 08:12:14
 
 # Use force = TRUE to outdate the steps anyway
 pip_set_params(p, params = list(n = 5, factor = 2.0), force = TRUE)
@@ -185,7 +185,7 @@ p
 #> 1:  load        n         outdated      1,2,3,4,5
 #> 2: scale x,factor    load outdated  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-10-20 18:51:07
+#> <ready> last run: 2026-10-25 08:12:14
 
 # Setting a parameter that is not defined in the pipeline yields a warning
 # \donttest{
@@ -217,25 +217,35 @@ q <- pip_new() |>
   pip_add("load", \(n = 5) seq_len(n)) |>
   pip_add("fit_mean", \(x = ~load) mean(x)) |>
   pip_add("fit_max", \(x = ~load) max(x)) |>
-  pip_add("report", \(model = NA) paste("result:", model))
+  pip_add("report", \(model = NA) paste("result:", model)) |>
+  pip_add("report_mean", \(model = NA) paste("mean:", model))
+
+# A view selects the steps to bind, here only "report_mean"
+pip_set_params(q["report_mean"], params = list(model = ~fit_mean))
+
+# Without a view, the param is bound in all steps that have it unbound
 pip_set_params(q, params = list(model = ~fit_max))
 q
-#> <pipeflow> pipe (4 steps)
+#> <pipeflow> pipe (5 steps)
 #> -------------------------
-#>        step params depends state
-#> 1:     load      n           new
-#> 2: fit_mean      x    load   new
-#> 3:  fit_max      x    load   new
-#> 4:   report  model fit_max   new
+#>           step params  depends state
+#> 1:        load      n            new
+#> 2:    fit_mean      x     load   new
+#> 3:     fit_max      x     load   new
+#> 4:      report  model  fit_max   new
+#> 5: report_mean  model fit_mean   new
 #> -------------------------
 #> <ready> last run: never
 pip_run(q)
-#> info [2026-10-20 18:51:07.991 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-20 18:51:07.991 UTC]: Step 1/4 load
-#> info [2026-10-20 18:51:07.991 UTC]: Step 2/4 fit_mean
-#> info [2026-10-20 18:51:07.993 UTC]: Step 3/4 fit_max
-#> info [2026-10-20 18:51:07.994 UTC]: Step 4/4 report
-#> info [2026-10-20 18:51:07.995 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:14.171 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:14.171 UTC]: Step 1/5 load
+#> info [2026-10-25 08:12:14.172 UTC]: Step 2/5 fit_mean
+#> info [2026-10-25 08:12:14.173 UTC]: Step 3/5 fit_max
+#> info [2026-10-25 08:12:14.175 UTC]: Step 4/5 report
+#> info [2026-10-25 08:12:14.176 UTC]: Step 5/5 report_mean
+#> info [2026-10-25 08:12:14.177 UTC]: Finished in 0.006 s (5 done, 0 skipped, 0 failed)
 q[["report", "out"]]
 #> [1] "result: 5"
+q[["report_mean", "out"]]
+#> [1] "mean: 3"
 ```

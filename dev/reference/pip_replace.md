@@ -93,10 +93,10 @@ p <- pip_new() |>
     pip_add("load", \(n = 5) seq_len(n)) |>
     pip_add("double", \(x = ~load) x * 2)
 pip_run(p)
-#> info [2026-10-20 18:51:06.889 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-20 18:51:06.889 UTC]: Step 1/2 load
-#> info [2026-10-20 18:51:06.890 UTC]: Step 2/2 double
-#> info [2026-10-20 18:51:06.891 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:12.926 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:12.926 UTC]: Step 1/2 load
+#> info [2026-10-25 08:12:12.927 UTC]: Step 2/2 double
+#> info [2026-10-25 08:12:12.928 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> pipe (2 steps)
 #> -------------------------
@@ -104,7 +104,7 @@ p
 #> 1:   load      n          done      1,2,3,4,5
 #> 2: double      x    load  done  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-10-20 18:51:06
+#> <ready> last run: 2026-10-25 08:12:12
 
 # Replace "load" — downstream steps are automatically marked "outdated"
 pip_replace(p, "load", \(n = 3) seq_len(n))
@@ -115,14 +115,14 @@ p
 #> 1:   load      n              new         [NULL]
 #> 2: double      x    load outdated  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-10-20 18:51:06
+#> <ready> last run: 2026-10-25 08:12:12
 
 # Re-run to bring everything up to date
 pip_run(p)
-#> info [2026-10-20 18:51:06.897 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-20 18:51:06.898 UTC]: Step 1/2 load
-#> info [2026-10-20 18:51:06.898 UTC]: Step 2/2 double
-#> info [2026-10-20 18:51:06.899 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:12.934 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:12.935 UTC]: Step 1/2 load
+#> info [2026-10-25 08:12:12.935 UTC]: Step 2/2 double
+#> info [2026-10-25 08:12:12.936 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> pipe (2 steps)
 #> -------------------------
@@ -130,7 +130,7 @@ p
 #> 1:   load      n          done 1,2,3
 #> 2: double      x    load  done 2,4,6
 #> -------------------------
-#> <ready> last run: 2026-10-20 18:51:06
+#> <ready> last run: 2026-10-25 08:12:12
 
 # If a view is passed, the step must be part of the view
 v <- pip_view(p, step = "double")

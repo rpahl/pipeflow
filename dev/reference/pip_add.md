@@ -88,9 +88,13 @@ pip_add(
   automatically mapped partition-wise during step execution. The
   `reduce` mode expects partitioned input and passes it through without
   mapping, while `plain` mode only accepts non-partitioned input and
-  always intends to execute a single call. If a split pipeline fails in
-  a run with `on_error = "continue"`, a `reduce` step also accepts the
-  resulting failure object when it takes it via `~try()`. In summary:
+  always intends to execute a single call. In a run with
+  `on_error = "continue"`, a mapped step that fails for some partition
+  keys keeps the outputs of the other keys (see section 'Continuing
+  after errors' in
+  [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)).
+  If a split step fails, a `reduce` step also accepts the resulting
+  failure object when it takes it via `~try()`. In summary:
 
   - auto: map if partitioned input appears, otherwise single call
 
@@ -143,12 +147,12 @@ p <- pip_new("analysis") |>
   pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
 
 pip_run(p)
-#> info [2026-10-20 18:51:03.490 UTC]: Starting run of pipeflow 'analysis'
-#> info [2026-10-20 18:51:03.490 UTC]: Step 1/4 load
-#> info [2026-10-20 18:51:03.491 UTC]: Step 2/4 clean
-#> info [2026-10-20 18:51:03.492 UTC]: Step 3/4 fit
-#> info [2026-10-20 18:51:03.497 UTC]: Step 4/4 report
-#> info [2026-10-20 18:51:03.498 UTC]: Finished run of pipeflow 'analysis'
+#> info [2026-10-25 08:12:09.604 UTC]: Starting run of pipeflow 'analysis'
+#> info [2026-10-25 08:12:09.604 UTC]: Step 1/4 load
+#> info [2026-10-25 08:12:09.605 UTC]: Step 2/4 clean
+#> info [2026-10-25 08:12:09.606 UTC]: Step 3/4 fit
+#> info [2026-10-25 08:12:09.608 UTC]: Step 4/4 report
+#> info [2026-10-25 08:12:09.609 UTC]: Finished in 0.005 s (4 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> analysis (4 steps)
 #> -----------------------------
@@ -158,7 +162,7 @@ p
 #> 3:    fit      x   clean  done             30 model,core,daily
 #> 4: report      x     fit  done     result: 30           report
 #> -----------------------------
-#> <ready> last run: 2026-10-20 18:51:03
+#> <ready> last run: 2026-10-25 08:12:09
 
 # Filter by tag using pip_view — keeps steps with any matching tag
 pip_view(p, tags = "daily")
@@ -167,14 +171,14 @@ pip_view(p, tags = "daily")
 #>    step params depends state out             tags
 #> 1:  fit      x   clean  done  30 model,core,daily
 #> ---------------------------------------
-#> <ready> last run: 2026-10-20 18:51:03
+#> <ready> last run: 2026-10-25 08:12:09
 pip_view(p, tags = "core")
 #> <pipeflow_view> analysis (1 of 4 steps)
 #> ---------------------------------------
 #>    step params depends state out             tags
 #> 1:  fit      x   clean  done  30 model,core,daily
 #> ---------------------------------------
-#> <ready> last run: 2026-10-20 18:51:03
+#> <ready> last run: 2026-10-25 08:12:09
 pip_view(p, tags = c("raw", "report"))
 #> <pipeflow_view> analysis (2 of 4 steps)
 #> ---------------------------------------
@@ -182,7 +186,7 @@ pip_view(p, tags = c("raw", "report"))
 #> 1:   load      n          done  1,2,3,4,5 io,raw
 #> 2: report      x     fit  done result: 30 report
 #> ---------------------------------------
-#> <ready> last run: 2026-10-20 18:51:03
+#> <ready> last run: 2026-10-25 08:12:09
 
 # --- Split / reduce execution modes ---
 q <- pip_new("split-demo") |>
@@ -196,12 +200,12 @@ q <- pip_new("split-demo") |>
   )
 
 pip_run(q)
-#> info [2026-10-20 18:51:03.509 UTC]: Starting run of pipeflow 'split-demo'
-#> info [2026-10-20 18:51:03.510 UTC]: Step 1/4 data
-#> info [2026-10-20 18:51:03.510 UTC]: Step 2/4 split
-#> info [2026-10-20 18:51:03.512 UTC]: Step 3/4 stats
-#> info [2026-10-20 18:51:03.516 UTC]: Step 4/4 combine
-#> info [2026-10-20 18:51:03.518 UTC]: Finished run of pipeflow 'split-demo'
+#> info [2026-10-25 08:12:09.620 UTC]: Starting run of pipeflow 'split-demo'
+#> info [2026-10-25 08:12:09.620 UTC]: Step 1/4 data
+#> info [2026-10-25 08:12:09.625 UTC]: Step 2/4 split
+#> info [2026-10-25 08:12:09.627 UTC]: Step 3/4 stats
+#> info [2026-10-25 08:12:09.632 UTC]: Step 4/4 combine
+#> info [2026-10-25 08:12:09.634 UTC]: Finished in 0.014 s (4 done, 0 skipped, 0 failed)
 q[["stats", "out"]]   # partitioned list — one summary per species
 #> $setosa
 #>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   
@@ -332,11 +336,11 @@ p3 <- pip_new("params-demo") |>
   # ... and give values to parameters without default, e.g. of mean()
   pip_add("avg", mean, params = list(x = ~scale, na.rm = TRUE))
 pip_run(p3)
-#> info [2026-10-20 18:51:03.531 UTC]: Starting run of pipeflow 'params-demo'
-#> info [2026-10-20 18:51:03.531 UTC]: Step 1/3 data
-#> info [2026-10-20 18:51:03.532 UTC]: Step 2/3 scale
-#> info [2026-10-20 18:51:03.533 UTC]: Step 3/3 avg
-#> info [2026-10-20 18:51:03.534 UTC]: Finished run of pipeflow 'params-demo'
+#> info [2026-10-25 08:12:09.648 UTC]: Starting run of pipeflow 'params-demo'
+#> info [2026-10-25 08:12:09.648 UTC]: Step 1/3 data
+#> info [2026-10-25 08:12:09.649 UTC]: Step 2/3 scale
+#> info [2026-10-25 08:12:09.650 UTC]: Step 3/3 avg
+#> info [2026-10-25 08:12:09.651 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)
 p3
 #> <pipeflow> params-demo (3 steps)
 #> --------------------------------
@@ -345,7 +349,7 @@ p3
 #> 2: scale x,factor    data  done 10,NA,30
 #> 3:   avg  x,na.rm   scale  done       20
 #> --------------------------------
-#> <ready> last run: 2026-10-20 18:51:03
+#> <ready> last run: 2026-10-25 08:12:09
 p3[["avg", "out"]] # 20
 #> [1] 20
 
@@ -353,9 +357,9 @@ p3[["avg", "out"]] # 20
 p4 <- pip_new("dots-demo") |>
   pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
 pip_run(p4)
-#> info [2026-10-20 18:51:03.539 UTC]: Starting run of pipeflow 'dots-demo'
-#> info [2026-10-20 18:51:03.539 UTC]: Step 1/1 load
-#> info [2026-10-20 18:51:03.539 UTC]: Finished run of pipeflow 'dots-demo'
+#> info [2026-10-25 08:12:09.656 UTC]: Starting run of pipeflow 'dots-demo'
+#> info [2026-10-25 08:12:09.656 UTC]: Step 1/1 load
+#> info [2026-10-25 08:12:09.657 UTC]: Finished in 0.001 s (1 done, 0 skipped, 0 failed)
 p4[["load", "out"]] # c(1, size = 42)
 #>      size 
 #>    1   42 

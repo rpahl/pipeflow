@@ -81,6 +81,30 @@ Only steps that have run before can become outdated: a step in state
 unless `force = TRUE` was set. For all other states, the step will be
 re-executed in the next `pip_run()`.
 
+### Time stamps
+
+The step table has two time stamps per step:
+
+- `time_start`: the start of the step's last run. It is set each time
+  the step is run, also if the run fails. It is `NA` for a step that has
+  not run since it was added, replaced (see
+  [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md))
+  or reset (see
+  [`pip_reset()`](https://rpahl.github.io/pipeflow/dev/reference/pip_reset.md)).
+  A skipped step (because it is `"done"`, locked or has a failed input)
+  keeps its value.
+
+- `time`: the time the step was added or replaced, or the end of its
+  last successful run. A failed run does not change it. It is the time
+  stamp that
+  [`pip_output_value()`](https://rpahl.github.io/pipeflow/dev/reference/pip_output_value.md)
+  gets in `ctx`.
+
+With `t0 <- Sys.time()` taken before `pip_run()`, a step was run in that
+run if `time_start >= t0`. Its last run succeeded if its state is
+`"done"` and `time >= time_start`, and then `time - time_start` is the
+duration of that run.
+
 ### Running views
 
 When `x` is a view, the requested rows are run together with their
@@ -92,66 +116,69 @@ example, because they were already `"done"`) keep their state.
 
 ### Runtime errors
 
-If a step fails with an error, the failing step's state is set to
-`"failed"`, the run is aborted (no further steps are executed), and the
-pipeline run state is set to `"failed"`. Steps downstream of executed
-steps that were not reached are marked `"outdated"`, so a subsequent run
+By default, a failing step stops the run: the step gets state
+`"failed"`, the pipeline run state becomes `"failed"`, and steps after
+it that were not reached are marked `"outdated"`, so the next run
 retries them.
 
-The error is signalled as a condition of class
-`c("pipeflow_step_error", "error", "condition")`. Its message is the
-message of the original error, prefixed with `"step '<step>': "`. Its
-field `step` names the failed step and its field `parent` holds the
-original error condition with its class, which can be caught via
-`tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)`. If
-the error belongs to a single partition key (see `exec` in
+The error message names the step, and for a step mapped over partitions
+(see `exec` in
 [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md))
-— a step mapped over partitioned inputs, or
-[`pip_output_value()`](https://rpahl.github.io/pipeflow/dev/reference/pip_output_value.md)
-failing for one key of a partitioned output — `parent` is a condition of
-class `c("pipeflow_key_error", "error", "condition")` instead. Its
-message is prefixed with `"key '<key>': "`, its field `key` names the
-failed partition key and its field `parent` holds the original error
-condition.
+also the partition key, e.g. `"step 'fit': key 'b': negative"`. The
+error has class `pipeflow_step_error` and keeps the original error in
+its field `parent`:
+`tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)`.
 
 ### Continuing after errors
 
-With `on_error = "continue"`, a failing step gets state `"failed"`, its
-error condition is stored as its output, and the run goes on. For a step
-whose error belongs to a single partition key, the stored condition is
-the `pipeflow_key_error` described above. An input of a step is *failed*
-if its step failed or was not run because a step upstream of it failed
-in this run.
+With `on_error = "continue"`, the run does not stop at a failed step:
 
-- A step with a failed input is not run, and counts as failed for its
-  own dependents, unless the argument receiving that input refers to its
-  step via [`try()`](https://rdrr.io/r/base/try.html), e.g.
-  `x = ~try(other_step)` (see
+- The failed step gets state `"failed"`, and its error is stored as its
+  output.
+
+- Steps that depend on a failed step are not run, and neither are their
+  own dependents. All other steps are run.
+
+- To run a step despite a failed input, refer to that input via
+  [`try()`](https://rdrr.io/r/base/try.html), e.g. `x = ~try(fit)` (see
   [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)).
+  The argument then receives a failure object (an error condition) whose
+  message tells which step failed, e.g. `"step 'fit' failed: negative"`.
 
-- A step whose failed inputs all use
-  [`try()`](https://rdrr.io/r/base/try.html) references is run, and each
-  of these arguments receives a condition of class
-  `c("pipeflow_failure", "error", "condition")` with the fields
-  `message`, `step` (the step of the input), `failed_step` (the step
-  that actually failed) and `parent` (the original error condition).
+- Locked steps are never run, so a failed input does not affect them.
 
-- Locked steps are the exception: they are never run, so a failed input
-  does not affect them. They keep their state and output, and their
-  dependents receive that output as usual.
+A step mapped over partitions fails only for the keys whose call failed:
 
-Steps that ran (including those that received failure objects) are
-`"done"`. Steps that were not run are treated like steps not reached by
-an aborted run: a `"done"` step becomes `"outdated"`, a `"new"` one
-stays `"new"`, so the next run retries them together with the failed
-steps. Once a failed step succeeds, the steps downstream of it,
-including those that received failure objects, are run again.
+- Its output keeps the results of the other keys and holds a failure
+  object for each failed key, e.g.
+  `"step 'fit' failed: key 'b': negative"`. The step gets state
+  `"failed"`, and printing the pipeline shows its output as e.g.
+  `<partitioned: 1/3 failed>`.
 
-If any step failed, the pipeline run state is set to `"continued"` and,
-once all states and outputs are stored, a warning of class
-`c("pipeflow_run_failed", "warning", "condition")` is signalled. Its
-field `failed` is a named list with the original conditions of the
-failed steps and its field `skipped` names the steps that were not run.
+- A mapped step after it is not run for the failed keys, whose output is
+  then a failure object too
+  (`"step 'show' was not run: step 'fit' failed: key 'b': negative"`),
+  unless it takes the input via
+  [`try()`](https://rdrr.io/r/base/try.html).
+
+- A step that is not mapped (e.g. `exec = "reduce"`) is not run, unless
+  it takes the input via [`try()`](https://rdrr.io/r/base/try.html).
+  Then it receives the results of all keys, including the failure
+  objects.
+
+At the end of the run, the pipeline run state is `"continued"`, and a
+warning of class `pipeflow_run_failed` lists the failed steps (with the
+number of failed keys) and the steps that were not run.
+
+The next run retries the failed steps and the steps that were not run;
+once a failed step succeeds, the steps after it, including those that
+received failure objects, are run again. A mapped step is only run again
+for its failed keys, keeping the results of the other keys, unless
+something changed that affects all keys: its parameters or an input step
+(which marks it `"outdated"`), an input step that is run again in the
+same run, or `force = TRUE`. See
+[`vignette("v05c-error-handling", package = "pipeflow")`](https://rpahl.github.io/pipeflow/dev/articles/v05c-error-handling.md)
+for examples.
 
 ### Runtime control flow via restart and halt
 
@@ -196,12 +223,12 @@ pip_add("load", \(n = 3) seq_len(n)) |>
   pip_add("total", \(x = ~square) sum(x))
 
 pip_run(p)
-#> info [2026-10-20 18:51:07.345 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-20 18:51:07.345 UTC]: Step 1/4 load
-#> info [2026-10-20 18:51:07.346 UTC]: Step 2/4 prep
-#> info [2026-10-20 18:51:07.347 UTC]: Step 3/4 square
-#> info [2026-10-20 18:51:07.349 UTC]: Step 4/4 total
-#> info [2026-10-20 18:51:07.350 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:13.387 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:13.387 UTC]: Step 1/4 load
+#> info [2026-10-25 08:12:13.388 UTC]: Step 2/4 prep
+#> info [2026-10-25 08:12:13.390 UTC]: Step 3/4 square
+#> info [2026-10-25 08:12:13.391 UTC]: Step 4/4 total
+#> info [2026-10-25 08:12:13.392 UTC]: Finished in 0.005 s (4 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> pipe (4 steps)
 #> -------------------------
@@ -211,7 +238,7 @@ p
 #> 3: square        x    prep  done 1,4,9
 #> 4:  total        x  square  done    14
 #> -------------------------
-#> <ready> last run: 2026-10-20 18:51:07
+#> <ready> last run: 2026-10-25 08:12:13
 
 pip_set_params(p, list(weight = 2))
 p
@@ -223,28 +250,28 @@ p
 #> 3: square        x    prep outdated 1,4,9
 #> 4:  total        x  square outdated    14
 #> -------------------------
-#> <ready> last run: 2026-10-20 18:51:07
+#> <ready> last run: 2026-10-25 08:12:13
 
 # Already-done steps are skipped on a second run
 pip_run(p) # first step skipped
-#> info [2026-10-20 18:51:07.361 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-20 18:51:07.362 UTC]: Step 1/4 load - skipping done step
-#> info [2026-10-20 18:51:07.362 UTC]: Step 2/4 prep
-#> info [2026-10-20 18:51:07.363 UTC]: Step 3/4 square
-#> info [2026-10-20 18:51:07.364 UTC]: Step 4/4 total
-#> info [2026-10-20 18:51:07.365 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:13.399 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:13.399 UTC]: Step 1/4 load - skipping done step
+#> info [2026-10-25 08:12:13.399 UTC]: Step 2/4 prep
+#> info [2026-10-25 08:12:13.400 UTC]: Step 3/4 square
+#> info [2026-10-25 08:12:13.401 UTC]: Step 4/4 total
+#> info [2026-10-25 08:12:13.403 UTC]: Finished in 0.004 s (3 done, 1 skipped, 0 failed)
 
 # lgr = NULL suppresses log output
 pip_run(p, lgr = NULL)
 
 # force = TRUE re-executes every step regardless of state
 pip_run(p, force = TRUE)
-#> info [2026-10-20 18:51:07.367 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-20 18:51:07.367 UTC]: Step 1/4 load
-#> info [2026-10-20 18:51:07.368 UTC]: Step 2/4 prep
-#> info [2026-10-20 18:51:07.369 UTC]: Step 3/4 square
-#> info [2026-10-20 18:51:07.370 UTC]: Step 4/4 total
-#> info [2026-10-20 18:51:07.371 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:13.405 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:13.405 UTC]: Step 1/4 load
+#> info [2026-10-25 08:12:13.406 UTC]: Step 2/4 prep
+#> info [2026-10-25 08:12:13.407 UTC]: Step 3/4 square
+#> info [2026-10-25 08:12:13.408 UTC]: Step 4/4 total
+#> info [2026-10-25 08:12:13.409 UTC]: Finished in 0.004 s (4 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> pipe (4 steps)
 #> -------------------------
@@ -254,18 +281,18 @@ p
 #> 3: square        x    prep  done  4,16,36
 #> 4:  total        x  square  done       56
 #> -------------------------
-#> <ready> last run: 2026-10-20 18:51:07
+#> <ready> last run: 2026-10-25 08:12:13
 
 # Run only a subset of steps via a view;
 # upstream dependencies are automatically included
 v <- pip_view(p, step = "total")
 pip_run(v)
-#> info [2026-10-20 18:51:07.375 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-20 18:51:07.375 UTC]: Step 1/4 [upstream] load - skipping done step
-#> info [2026-10-20 18:51:07.375 UTC]: Step 2/4 [upstream] prep - skipping done step
-#> info [2026-10-20 18:51:07.376 UTC]: Step 3/4 [upstream] square - skipping done step
-#> info [2026-10-20 18:51:07.376 UTC]: Step 4/4 [view] total - skipping done step
-#> info [2026-10-20 18:51:07.376 UTC]: Finished run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:13.414 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-25 08:12:13.415 UTC]: Step 1/4 [upstream] load - skipping done step
+#> info [2026-10-25 08:12:13.415 UTC]: Step 2/4 [upstream] prep - skipping done step
+#> info [2026-10-25 08:12:13.415 UTC]: Step 3/4 [upstream] square - skipping done step
+#> info [2026-10-25 08:12:13.415 UTC]: Step 4/4 [view] total - skipping done step
+#> info [2026-10-25 08:12:13.415 UTC]: Finished in 0.001 s (0 done, 4 skipped, 0 failed)
 
 # Halt or restart pipeline at runtime (for advanced usage)
 p <- pip_new("restart") |>
@@ -282,16 +309,16 @@ p <- pip_new("restart") |>
   })
 
 pip_run(p)
-#> info [2026-10-20 18:51:07.378 UTC]: Starting run of pipeflow 'restart'
-#> info [2026-10-20 18:51:07.378 UTC]: Step 1/3 load
-#> info [2026-10-20 18:51:07.379 UTC]: Step 2/3 check
-#> info [2026-10-20 18:51:07.380 UTC]: Step 3/3 model
-#> info [2026-10-20 18:51:07.382 UTC]: Restarting pipeline execution.
-#> info [2026-10-20 18:51:07.383 UTC]: Restarting run of pipeflow 'restart'
-#> info [2026-10-20 18:51:07.383 UTC]: Step 1/3 load
-#> info [2026-10-20 18:51:07.384 UTC]: Step 2/3 check
-#> info [2026-10-20 18:51:07.385 UTC]: Step 3/3 model
-#> info [2026-10-20 18:51:07.386 UTC]: Finished run of pipeflow 'restart'
+#> info [2026-10-25 08:12:13.418 UTC]: Starting run of pipeflow 'restart'
+#> info [2026-10-25 08:12:13.418 UTC]: Step 1/3 load
+#> info [2026-10-25 08:12:13.419 UTC]: Step 2/3 check
+#> info [2026-10-25 08:12:13.420 UTC]: Step 3/3 model
+#> info [2026-10-25 08:12:13.427 UTC]: Restarting pipeline execution.
+#> info [2026-10-25 08:12:13.428 UTC]: Restarting run of pipeflow 'restart'
+#> info [2026-10-25 08:12:13.428 UTC]: Step 1/3 load
+#> info [2026-10-25 08:12:13.429 UTC]: Step 2/3 check
+#> info [2026-10-25 08:12:13.430 UTC]: Step 3/3 model
+#> info [2026-10-25 08:12:13.431 UTC]: Finished in 0.013 s (3 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> restart (3 steps)
 #> ----------------------------
@@ -300,15 +327,15 @@ p
 #> 2: check      x    load  done         [NULL]
 #> 3: model      x    load  done  2, 4, 6, 8,10
 #> ----------------------------
-#> <ready> last run: 2026-10-20 18:51:07
+#> <ready> last run: 2026-10-25 08:12:13
 
 pip_set_params(p, list(n = 15)) # now halt() in 'check' step is triggered
 pip_run(p)
-#> info [2026-10-20 18:51:07.390 UTC]: Starting run of pipeflow 'restart'
-#> info [2026-10-20 18:51:07.390 UTC]: Step 1/3 load
-#> info [2026-10-20 18:51:07.391 UTC]: Step 2/3 check
-#> info [2026-10-20 18:51:07.392 UTC]: Aborting pipeline execution on manual halt.
-#> info [2026-10-20 18:51:07.392 UTC]: Finished run of pipeflow 'restart'
+#> info [2026-10-25 08:12:13.436 UTC]: Starting run of pipeflow 'restart'
+#> info [2026-10-25 08:12:13.436 UTC]: Step 1/3 load
+#> info [2026-10-25 08:12:13.436 UTC]: Step 2/3 check
+#> info [2026-10-25 08:12:13.437 UTC]: Aborting pipeline execution on manual halt.
+#> info [2026-10-25 08:12:13.438 UTC]: Finished in 0.002 s (2 done, 1 skipped, 0 failed)
 
 # Continue after errors and pass failures to the steps that allow them
 p <- pip_new("continue") |>
@@ -344,7 +371,7 @@ p
 #> 4:                                          15
 #> 5: step 'count' was not run: step 'check' f...
 #> -----------------------------
-#> <continued> last run: 2026-10-20 18:51:07
+#> <continued> last run: 2026-10-25 08:12:13
 p[["report", "out"]]
 #> [1] "step 'count' was not run: step 'check' failed: check failed"
 ```

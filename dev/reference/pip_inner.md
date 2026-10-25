@@ -62,5 +62,5 @@ fits[["6"]]
 #> 1: data input_df          done <data.frame[7x11]>
 #> 2:  fit     data    data  done           <lm[12]>
 #> --------------------------
-#> <ready> last run: 2026-10-20 18:51:04
+#> <ready> last run: 2026-10-25 08:12:10
 ```

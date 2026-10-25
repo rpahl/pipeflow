@@ -55,11 +55,11 @@ p
 # <ready> last run: never
 
 pip_run(p)
-# info [2026-10-15 10:21:00.423 UTC]: Starting run of pipeflow 'demo'
-# info [2026-10-15 10:21:00.424 UTC]: Step 1/3 numbers
-# info [2026-10-15 10:21:00.426 UTC]: Step 2/3 squared
-# info [2026-10-15 10:21:00.428 UTC]: Step 3/3 total
-# info [2026-10-15 10:21:00.429 UTC]: Finished run of pipeflow 'demo'
+# info [2026-10-24 10:04:43.951 UTC]: Starting run of pipeflow 'demo'
+# info [2026-10-24 10:04:43.952 UTC]: Step 1/3 numbers
+# info [2026-10-24 10:04:43.954 UTC]: Step 2/3 squared
+# info [2026-10-24 10:04:43.956 UTC]: Step 3/3 total
+# info [2026-10-24 10:04:43.957 UTC]: Finished in 0.006 s (3 done, 0 skipped, 0 failed)
 
 pip_collect(p)
 # $numbers

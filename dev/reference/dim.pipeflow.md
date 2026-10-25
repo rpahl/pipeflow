@@ -50,11 +50,11 @@ p <- pip_new() |>
   pip_add("s3", \(x = ~s2) x * 2)
 
 dim(p)
-#> [1]  3 12
+#> [1]  3 13
 nrow(p)
 #> [1] 3
 ncol(p)
-#> [1] 12
+#> [1] 13
 length(p)
 #> [1] 3
 length(p) == nrow(p) # TRUE

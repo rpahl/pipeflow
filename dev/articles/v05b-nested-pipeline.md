@@ -69,11 +69,11 @@ see this now:
 
 params <- list(input_df = iris, xVar = "Sepal.Length", yVar = "Sepal.Width")
 inner$set_params(params)$run()
-# info [2026-10-20 18:52:03.122 UTC]: Starting run of pipeflow 'coefficients'
-# info [2026-10-20 18:52:03.122 UTC]: Step 1/3 input
-# info [2026-10-20 18:52:03.124 UTC]: Step 2/3 fit
-# info [2026-10-20 18:52:03.127 UTC]: Step 3/3 coefs
-# info [2026-10-20 18:52:03.128 UTC]: Finished run of pipeflow 'coefficients'
+# info [2026-10-25 08:13:06.060 UTC]: Starting run of pipeflow 'coefficients'
+# info [2026-10-25 08:13:06.061 UTC]: Step 1/3 input
+# info [2026-10-25 08:13:06.063 UTC]: Step 2/3 fit
+# info [2026-10-25 08:13:06.067 UTC]: Step 3/3 coefs
+# info [2026-10-25 08:13:06.069 UTC]: Finished in 0.008 s (3 done, 0 skipped, 0 failed)
 
 inner[["coefs", "out"]]
 #  (Intercept) Sepal.Length 
@@ -145,10 +145,10 @@ outer_all |>
         list(df = iris, xVar = "Sepal.Length", yVar = "Sepal.Width")
     ) |>
     pip_run()
-# info [2026-10-20 18:52:03.334 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-10-20 18:52:03.334 UTC]: Step 1/2 df
-# info [2026-10-20 18:52:03.335 UTC]: Step 2/2 inner_run
-# info [2026-10-20 18:52:03.358 UTC]: Finished run of pipeflow 'analysis'
+# info [2026-10-25 08:13:06.277 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-10-25 08:13:06.277 UTC]: Step 1/2 df
+# info [2026-10-25 08:13:06.278 UTC]: Step 2/2 inner_run
+# info [2026-10-25 08:13:06.302 UTC]: Finished in 0.024 s (2 done, 0 skipped, 0 failed)
 
 outer_all[["inner_run", "out"]]
 #  (Intercept) Sepal.Length 
@@ -262,12 +262,12 @@ outer |>
         )
     ) |>
     pip_run()
-# info [2026-10-20 18:52:03.637 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-20 18:52:03.637 UTC]: Step 1/4 df
-# info [2026-10-20 18:52:03.638 UTC]: Step 2/4 split_df
-# info [2026-10-20 18:52:03.639 UTC]: Step 3/4 inner_run
-# info [2026-10-20 18:52:03.657 UTC]: Step 4/4 combine
-# info [2026-10-20 18:52:03.658 UTC]: Finished run of pipeflow 'full analysis'
+# info [2026-10-25 08:13:06.578 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-10-25 08:13:06.578 UTC]: Step 1/4 df
+# info [2026-10-25 08:13:06.579 UTC]: Step 2/4 split_df
+# info [2026-10-25 08:13:06.580 UTC]: Step 3/4 inner_run
+# info [2026-10-25 08:13:06.601 UTC]: Step 4/4 combine
+# info [2026-10-25 08:13:06.602 UTC]: Finished in 0.025 s (4 done, 0 skipped, 0 failed)
 ```
 
 The output of the `inner_run` step is a partitioned list of coefficient
@@ -319,7 +319,7 @@ outer
 # 3: inner_run input_df,xVar,yVar,digits  split_df outdated           <list[3]>   auto
 # 4:   combine                     coefs inner_run outdated   <data.frame[3x2]> reduce
 # ----------------------------------
-# <ready> last run: 2026-10-20 18:52:03
+# <ready> last run: 2026-10-25 08:13:06
 ```
 
 Since `xVar` is a parameter of the `inner_run` step, this step and its
@@ -434,7 +434,7 @@ inner_pips[["a"]]
 # 2: square         x   input  done      1, 4, 9,16
 # 3:  scale sq,factor  square  done  10, 40, 90,160
 # ------------------------------
-# <ready> last run: 2026-10-20 18:52:04
+# <ready> last run: 2026-10-25 08:13:07
 ```
 
 A few things to know:
@@ -553,12 +553,12 @@ manual |>
         )
     ) |>
     pip_run()
-# info [2026-10-20 18:52:04.354 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-20 18:52:04.354 UTC]: Step 1/4 df
-# info [2026-10-20 18:52:04.355 UTC]: Step 2/4 split_df
-# info [2026-10-20 18:52:04.356 UTC]: Step 3/4 inner_run
-# info [2026-10-20 18:52:04.376 UTC]: Step 4/4 combine
-# info [2026-10-20 18:52:04.377 UTC]: Finished run of pipeflow 'full analysis'
+# info [2026-10-25 08:13:07.304 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-10-25 08:13:07.304 UTC]: Step 1/4 df
+# info [2026-10-25 08:13:07.305 UTC]: Step 2/4 split_df
+# info [2026-10-25 08:13:07.306 UTC]: Step 3/4 inner_run
+# info [2026-10-25 08:13:07.328 UTC]: Step 4/4 combine
+# info [2026-10-25 08:13:07.329 UTC]: Finished in 0.025 s (4 done, 0 skipped, 0 failed)
 
 manual[["combine", "out"]]
 #            (Intercept) Sepal.Length

@@ -77,11 +77,11 @@ pip |> pip_set_params(list(
 ))
 
 pip_run(pip)
-# info [2026-10-20 18:51:56.286 UTC]: Starting run of pipeflow 'linear-model-coeffs'
-# info [2026-10-20 18:51:56.287 UTC]: Step 1/3 data
-# info [2026-10-20 18:51:56.288 UTC]: Step 2/3 fit
-# info [2026-10-20 18:51:56.292 UTC]: Step 3/3 coefs
-# info [2026-10-20 18:51:56.294 UTC]: Finished run of pipeflow 'linear-model-coeffs'
+# info [2026-10-25 08:12:59.265 UTC]: Starting run of pipeflow 'linear-model-coeffs'
+# info [2026-10-25 08:12:59.266 UTC]: Step 1/3 data
+# info [2026-10-25 08:12:59.267 UTC]: Step 2/3 fit
+# info [2026-10-25 08:12:59.271 UTC]: Step 3/3 coefs
+# info [2026-10-25 08:12:59.272 UTC]: Finished in 0.007 s (3 done, 0 skipped, 0 failed)
 ```
 
 ``` r
@@ -106,21 +106,21 @@ run_pipeline_helper <- function(data) {
 }
 
 results <- lapply(split(iris, iris$Species), FUN = run_pipeline_helper)
-# info [2026-10-20 18:51:56.430 UTC]: Starting run of pipeflow 'linear-model-coeffs'
-# info [2026-10-20 18:51:56.430 UTC]: Step 1/3 data
-# info [2026-10-20 18:51:56.431 UTC]: Step 2/3 fit
-# info [2026-10-20 18:51:56.434 UTC]: Step 3/3 coefs
-# info [2026-10-20 18:51:56.436 UTC]: Finished run of pipeflow 'linear-model-coeffs'
-# info [2026-10-20 18:51:56.440 UTC]: Starting run of pipeflow 'linear-model-coeffs'
-# info [2026-10-20 18:51:56.440 UTC]: Step 1/3 data
-# info [2026-10-20 18:51:56.441 UTC]: Step 2/3 fit
-# info [2026-10-20 18:51:56.442 UTC]: Step 3/3 coefs
-# info [2026-10-20 18:51:56.443 UTC]: Finished run of pipeflow 'linear-model-coeffs'
-# info [2026-10-20 18:51:56.445 UTC]: Starting run of pipeflow 'linear-model-coeffs'
-# info [2026-10-20 18:51:56.445 UTC]: Step 1/3 data
-# info [2026-10-20 18:51:56.446 UTC]: Step 2/3 fit
-# info [2026-10-20 18:51:56.447 UTC]: Step 3/3 coefs
-# info [2026-10-20 18:51:56.449 UTC]: Finished run of pipeflow 'linear-model-coeffs'
+# info [2026-10-25 08:12:59.401 UTC]: Starting run of pipeflow 'linear-model-coeffs'
+# info [2026-10-25 08:12:59.401 UTC]: Step 1/3 data
+# info [2026-10-25 08:12:59.402 UTC]: Step 2/3 fit
+# info [2026-10-25 08:12:59.406 UTC]: Step 3/3 coefs
+# info [2026-10-25 08:12:59.408 UTC]: Finished in 0.007 s (3 done, 0 skipped, 0 failed)
+# info [2026-10-25 08:12:59.412 UTC]: Starting run of pipeflow 'linear-model-coeffs'
+# info [2026-10-25 08:12:59.412 UTC]: Step 1/3 data
+# info [2026-10-25 08:12:59.413 UTC]: Step 2/3 fit
+# info [2026-10-25 08:12:59.415 UTC]: Step 3/3 coefs
+# info [2026-10-25 08:12:59.416 UTC]: Finished in 0.004 s (3 done, 0 skipped, 0 failed)
+# info [2026-10-25 08:12:59.418 UTC]: Starting run of pipeflow 'linear-model-coeffs'
+# info [2026-10-25 08:12:59.419 UTC]: Step 1/3 data
+# info [2026-10-25 08:12:59.419 UTC]: Step 2/3 fit
+# info [2026-10-25 08:12:59.421 UTC]: Step 3/3 coefs
+# info [2026-10-25 08:12:59.422 UTC]: Finished in 0.004 s (3 done, 0 skipped, 0 failed)
 ```
 
 ``` r
@@ -216,12 +216,12 @@ pip |> pip_set_params(list(
 ))
 
 pip_run(pip)
-# info [2026-10-20 18:51:56.831 UTC]: Starting run of pipeflow 'my-split-pip'
-# info [2026-10-20 18:51:56.832 UTC]: Step 1/4 data
-# info [2026-10-20 18:51:56.832 UTC]: Step 2/4 split_data
-# info [2026-10-20 18:51:56.834 UTC]: Step 3/4 fit
-# info [2026-10-20 18:51:56.836 UTC]: Step 4/4 coefs
-# info [2026-10-20 18:51:56.838 UTC]: Finished run of pipeflow 'my-split-pip'
+# info [2026-10-25 08:12:59.805 UTC]: Starting run of pipeflow 'my-split-pip'
+# info [2026-10-25 08:12:59.805 UTC]: Step 1/4 data
+# info [2026-10-25 08:12:59.806 UTC]: Step 2/4 split_data
+# info [2026-10-25 08:12:59.808 UTC]: Step 3/4 fit
+# info [2026-10-25 08:12:59.811 UTC]: Step 4/4 coefs
+# info [2026-10-25 08:12:59.812 UTC]: Finished in 0.008 s (4 done, 0 skipped, 0 failed)
 ```
 
 Looking at the pipeline overview, we see that the `out`puts following
@@ -238,7 +238,7 @@ pip
 # 3:        fit data,xVar,yVar split_data  done           <list[3]>  auto
 # 4:      coefs            fit        fit  done           <list[3]>  auto
 # ---------------------------------
-# <ready> last run: 2026-10-20 18:51:56
+# <ready> last run: 2026-10-25 08:12:59
 ```
 
 Inspecting in particular the output of the `coefs` step, we see that it
@@ -298,7 +298,7 @@ pip
 # 4:         coefs            fit        fit  done           <list[3]>   auto
 # 5: combine_coefs          coefs      coefs   new              [NULL] reduce
 # ---------------------------------
-# <ready> last run: 2026-10-20 18:51:56
+# <ready> last run: 2026-10-25 08:12:59
 ```
 
 Again, we see that the new step is marked with the execution mode
@@ -316,13 +316,13 @@ If we now run the pipeline, we see that the output of the
 ``` r
 
 pip_run(pip)
-# info [2026-10-20 18:51:57.287 UTC]: Starting run of pipeflow 'my-split-pip'
-# info [2026-10-20 18:51:57.287 UTC]: Step 1/5 data - skipping done step
-# info [2026-10-20 18:51:57.287 UTC]: Step 2/5 split_data - skipping done step
-# info [2026-10-20 18:51:57.287 UTC]: Step 3/5 fit - skipping done step
-# info [2026-10-20 18:51:57.287 UTC]: Step 4/5 coefs - skipping done step
-# info [2026-10-20 18:51:57.288 UTC]: Step 5/5 combine_coefs
-# info [2026-10-20 18:51:57.289 UTC]: Finished run of pipeflow 'my-split-pip'
+# info [2026-10-25 08:13:00.263 UTC]: Starting run of pipeflow 'my-split-pip'
+# info [2026-10-25 08:13:00.263 UTC]: Step 1/5 data - skipping done step
+# info [2026-10-25 08:13:00.263 UTC]: Step 2/5 split_data - skipping done step
+# info [2026-10-25 08:13:00.264 UTC]: Step 3/5 fit - skipping done step
+# info [2026-10-25 08:13:00.264 UTC]: Step 4/5 coefs - skipping done step
+# info [2026-10-25 08:13:00.264 UTC]: Step 5/5 combine_coefs
+# info [2026-10-25 08:13:00.266 UTC]: Finished in 0.003 s (1 done, 4 skipped, 0 failed)
 
 pip[["combine_coefs", "out"]]
 #            (Intercept) Sepal.Length
@@ -330,6 +330,13 @@ pip[["combine_coefs", "out"]]
 # versicolor   0.8721460    0.3197193
 # virginica    1.4463054    0.2318905
 ```
+
+If the step function fails for some keys in a run with
+`pip_run(on_error = "continue")`, the step keeps the results of the
+other keys, and the steps after it go on with them. See the vignette on
+[error
+handling](https://rpahl.github.io/pipeflow/dev/articles/v05c-error-handling.md)
+for the details.
 
 The `split` and `reduce` execution modes cover the common case where the
 pipeline itself performs the split. Whenever they fit, they are the

@@ -275,7 +275,7 @@ print(outer)
 #> 3:  coefs input_df,degree,digits  by_cyl outdated           <list[3]>   auto
 #> 4:  table                  coefs   coefs outdated       <matrix[3x2]> reduce
 #> --------------------------
-#> <ready> last run: 2026-10-20 18:51:02
+#> <ready> last run: 2026-10-25 08:12:08
 pip_run(outer, lgr = NULL)
 outer[["table", "out"]]
 #>   (Intercept) poly(wt, degree, raw = TRUE)

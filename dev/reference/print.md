@@ -106,10 +106,10 @@ print(p, cols = "all") # all step-table columns
 #> 1:   load <function[1]>      n [NULL]   new  io,raw  FALSE auto
 #> 2: square <function[1]>      x [NULL]   new compute  FALSE auto
 #> 3:  total <function[1]>      x [NULL]   new compute  FALSE auto
-#>                   time depends unbound nodeId
-#> 1: 2026-10-20 18:51:09               n      0
-#> 2: 2026-10-20 18:51:09    load              1
-#> 3: 2026-10-20 18:51:09  square              2
+#>                   time time_start depends unbound nodeId
+#> 1: 2026-10-25 08:12:15       <NA>               n      0
+#> 2: 2026-10-25 08:12:15       <NA>    load              1
+#> 3: 2026-10-25 08:12:15       <NA>  square              2
 #> -------------------------
 #> <ready> last run: never
 print(p, rows = 2:3) # print only steps 2 and 3

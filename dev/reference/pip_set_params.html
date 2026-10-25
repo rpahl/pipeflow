@@ -25,7 +25,7 @@ outdate any step, unless force = TRUE."><meta property="og:image" content="https
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9012</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9015</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -213,17 +213,17 @@ instead and turn it into a formula in the step, e.g. with
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.964 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.964 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.965 UTC]: Step 2/2 scale</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.966 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.141 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.141 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.142 UTC]: Step 2/2 scale</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.143 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     step   params depends state                             out</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n          done             1,2,3,4,5,6,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load  done 0.5,1.0,1.5,2.0,2.5,3.0,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-20 18:51:07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 08:12:14</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Updating params marks affected steps (and their dependents) outdated</span></span></span>
 <span class="r-in"><span><span class="fu">pip_set_params</span><span class="op">(</span><span class="va">p</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span>, factor <span class="op">=</span> <span class="fl">2.0</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -234,19 +234,19 @@ instead and turn it into a formula in the step, e.g. with
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n         outdated             1,2,3,4,5,6,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load outdated 0.5,1.0,1.5,2.0,2.5,3.0,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-20 18:51:07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 08:12:14</span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.971 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.972 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.972 UTC]: Step 2/2 scale</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.973 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.149 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.149 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.149 UTC]: Step 2/2 scale</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.150 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     step   params depends state            out</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n          done      1,2,3,4,5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load  done  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-20 18:51:07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 08:12:14</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Setting the same values again doesn't outdate any step</span></span></span>
 <span class="r-in"><span><span class="fu">pip_set_params</span><span class="op">(</span><span class="va">p</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span>, factor <span class="op">=</span> <span class="fl">2.0</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -257,7 +257,7 @@ instead and turn it into a formula in the step, e.g. with
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n          done      1,2,3,4,5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load  done  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-20 18:51:07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 08:12:14</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use force = TRUE to outdate the steps anyway</span></span></span>
 <span class="r-in"><span><span class="fu">pip_set_params</span><span class="op">(</span><span class="va">p</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">5</span>, factor <span class="op">=</span> <span class="fl">2.0</span><span class="op">)</span>, force <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
@@ -268,7 +268,7 @@ instead and turn it into a formula in the step, e.g. with
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n         outdated      1,2,3,4,5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load outdated  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-20 18:51:07</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 08:12:14</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Setting a parameter that is not defined in the pipeline yields a warning</span></span></span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>
@@ -300,27 +300,37 @@ instead and turn it into a formula in the step, e.g. with
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"load"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"fit_mean"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">load</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"fit_max"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">load</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"report"</span>, \<span class="op">(</span><span class="va">model</span> <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"result:"</span>, <span class="va">model</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"report"</span>, \<span class="op">(</span><span class="va">model</span> <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"result:"</span>, <span class="va">model</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"report_mean"</span>, \<span class="op">(</span><span class="va">model</span> <span class="op">=</span> <span class="cn">NA</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"mean:"</span>, <span class="va">model</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A view selects the steps to bind, here only "report_mean"</span></span></span>
+<span class="r-in"><span><span class="fu">pip_set_params</span><span class="op">(</span><span class="va">q</span><span class="op">[</span><span class="st">"report_mean"</span><span class="op">]</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>model <span class="op">=</span> <span class="op">~</span><span class="va">fit_mean</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Without a view, the param is bound in all steps that have it unbound</span></span></span>
 <span class="r-in"><span><span class="fu">pip_set_params</span><span class="op">(</span><span class="va">q</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>model <span class="op">=</span> <span class="op">~</span><span class="va">fit_max</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">q</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (4 steps)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (5 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>        step params depends state</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:     load      n           new</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: fit_mean      x    load   new</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3:  fit_max      x    load   new</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4:   report  model fit_max   new</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           step params  depends state</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:        load      n            new</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    fit_mean      x     load   new</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3:     fit_max      x     load   new</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4:      report  model  fit_max   new</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5: report_mean  model fit_mean   new</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: never</span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">q</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.991 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.991 UTC]: Step 1/4 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.991 UTC]: Step 2/4 fit_mean</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.993 UTC]: Step 3/4 fit_max</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.994 UTC]: Step 4/4 report</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-20 18:51:07.995 UTC]: Finished run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.171 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.171 UTC]: Step 1/5 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.172 UTC]: Step 2/5 fit_mean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.173 UTC]: Step 3/5 fit_max</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.175 UTC]: Step 4/5 report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.176 UTC]: Step 5/5 report_mean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:14.177 UTC]: Finished in 0.006 s (5 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">q</span><span class="op">[[</span><span class="st">"report"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "result: 5"</span>
+<span class="r-in"><span><span class="va">q</span><span class="op">[[</span><span class="st">"report_mean"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "mean: 3"</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
