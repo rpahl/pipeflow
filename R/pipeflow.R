@@ -794,6 +794,9 @@
 #' @param keep Named list of outputs by partition key, for a step mapped over
 #' partitioned inputs: the function is not called for these keys, and their
 #' outputs are kept as they are (see `pip_run()`, retry of failed keys).
+#' @param map `NULL` to call the function for the keys one after another, or
+#' a function like `lapply()` that runs the calls of the keys, see the `map`
+#' argument of [pip_run()].
 #' @return The output of the step.
 #' @noRd
 .pip_execute_step_call <- function(
@@ -803,7 +806,8 @@
     step,
     onError = "stop",
     tryArgs = character(),
-    keep = list()
+    keep = list(),
+    map = NULL
 ) {
     # A partitioned argument is a list of per-key values produced by a
     # step with exec = "split" and tagged with class "pipeflow_partitioned".
@@ -866,9 +870,23 @@
         .fun_release(fun, step)
     }
 
+    # Errors are re-raised with the key name so a failing partition can
+    # be located without inspecting the whole output. In a continued
+    # run, the error is kept as the output of the key instead.
+    keyFailed <- function(e, key) {
+        keyError <- .pip_key_error(key, parent = e)
+        if (onError == "stop") {
+            stop(keyError)
+        }
+        .pip_failure(step, parent = keyError, key = key)
+    }
+
     # ...and each key is computed separately by slicing all partitioned
-    # arguments down to that key before calling the function.
+    # arguments down to that key before calling the function. With `map`,
+    # the keys to run are collected first and then run by `map`.
     out <- stats::setNames(vector(mode = "list", length = length(keys)), keys)
+    todo <- list()
+    blocked <- character()
     for (key in keys) {
         if (key %in% names(keep)) {
             out[key] <- keep[key]
@@ -896,16 +914,21 @@
                 failedStep = cause[["failed_step"]],
                 key = key
             )
-            if (onError == "stop") {
+            # With `map`, it is raised in the order of the keys, after the
+            # keys that are run by `map` (see below).
+            if (onError == "stop" && is.null(map)) {
                 stop(.pip_key_error(key, parent = failure))
             }
             out[[key]] <- failure
+            blocked <- c(blocked, key)
             next
         }
 
-        # Errors are re-raised with the key name so a failing partition can
-        # be located without inspecting the whole output. In a continued
-        # run, the error is kept as the output of the key instead.
+        if (!is.null(map)) {
+            todo[[key]] <- list(key = key, args = keyArgs)
+            next
+        }
+
         out[[key]] <- tryCatch(
             expr = .pip_call_step(
                 fun,
@@ -914,17 +937,104 @@
                 key = key,
                 keys = keys
             ),
-            error = function(e) {
-                keyError <- .pip_key_error(key, parent = e)
-                if (onError == "stop") {
-                    stop(keyError)
-                }
-                .pip_failure(step, parent = keyError, key = key)
-            }
+            error = function(e) keyFailed(e, key)
         )
     }
 
+    # The errors of the keys are only raised (or kept) after all keys ran,
+    # in the order of the keys.
+    res <- .pip_map_keys(todo, map = map, fun = fun, step = step, keys = keys)
+    for (key in intersect(keys, c(names(res), blocked))) {
+        if (key %in% blocked) {
+            if (onError == "stop") {
+                stop(.pip_key_error(key, parent = out[[key]]))
+            }
+            next
+        }
+        r <- res[[key]]
+        out[key] <- if (r[["ok"]]) {
+            list(r[["value"]])
+        } else {
+            list(keyFailed(r[["value"]], key))
+        }
+    }
+
     .as_pipeflow_partitioned(out)
+}
+
+#' Run the calls of a mapped step for some keys with a map function
+#'
+#' @param todo Named list by partition key of `list(key, args)`.
+#' @param map A function like `lapply()`, called as `map(todo, FUN)`.
+#' @param fun,step,keys See `.pip_call_step()`.
+#' @return Named list by key of `list(ok, value)`: the output of the call,
+#' or, if `ok` is `FALSE`, its error.
+#' @noRd
+.pip_map_keys <- function(todo, map, fun, step, keys) {
+    if (length(todo) == 0L) {
+        return(list())
+    }
+    # A single key is not worth sending to a worker.
+    if (length(todo) == 1L) {
+        map <- lapply
+    }
+    res <- map(unname(todo), .pip_key_worker(fun, step = step, keys = keys))
+    if (!is.list(res) || length(res) != length(todo)) {
+        stop(
+            sprintf(
+                "map must return a list of length %d (one per key), not %s",
+                length(todo),
+                if (is.list(res)) {
+                    sprintf("of length %d", length(res))
+                } else {
+                    paste("an object of class", class(res)[[1L]])
+                }
+            )
+        )
+    }
+    # A worker that died (e.g. a 'try-error' of parallel::mclapply()) gives
+    # no result of the worker function.
+    res <- lapply(res, FUN = \(r) {
+        if (is.list(r) && identical(names(r), c("ok", "value"))) {
+            return(r)
+        }
+        msg <- if (inherits(r, "try-error")) {
+            trimws(as.character(r))
+        } else {
+            "map did not return the result of the worker"
+        }
+        list(ok = FALSE, value = simpleError(msg))
+    })
+    stats::setNames(res, names(todo))
+}
+
+#' The function that `map` calls for each key, see `.pip_map_keys()`
+#'
+#' Made in an environment of its own, so that a backend that sends the
+#' function to other processes only sends what one key needs.
+#'
+#' @param fun,step,keys See `.pip_call_step()`.
+#' @return A function of `list(key, args)` that returns `list(ok, value)`.
+#' @noRd
+.pip_key_worker <- function(fun, step, keys) {
+    force(fun)
+    force(step)
+    force(keys)
+    function(task) {
+        tryCatch(
+            expr = list(
+                ok = TRUE,
+                value = .pip_call_step(
+                    fun,
+                    args = task[["args"]],
+                    step = step,
+                    key = task[["key"]],
+                    keys = keys
+                )
+            ),
+            error = function(e) list(ok = FALSE, value = e)
+        )
+    }
 }
 
 # `failed` is an optional named list of failure objects that replace the
@@ -933,14 +1043,16 @@
 # some keys keeps the failures in its output, see .pip_execute_step_call().
 # Such a step gets state "failed" and keeps its time. With `retry = TRUE`,
 # such a step only calls its function for the keys that failed and keeps the
-# outputs of the other keys (see pip_run()).
+# outputs of the other keys (see pip_run()). `map` is the `map` of the run,
+# see pip_run().
 .pip_run_row <- function(
     x,
     i,
     lgr,
     failed = list(),
     onError = "stop",
-    retry = FALSE
+    retry = FALSE,
+    map = NULL
 ) {
     if (!.is_pipeflow(x)) {
         stop("x must be a pipeflow pip")
@@ -972,6 +1084,15 @@
     funSelf <- .wrap_self(fun, self = x)
     if (!identical(environment(funSelf), environment(fun))) {
         on.exit(.release_self(environment(funSelf)), add = TRUE)
+    }
+
+    # A step that refers to `.self`, or whose function was made by
+    # as.function.pipeflow() with `cache = TRUE`, changes state outside of
+    # its output (the pipeline, or the kept pipelines of the function). Its
+    # keys always run here, as the changes made on another process would be
+    # lost.
+    if (!identical(funSelf, fun) || .fun_keeps(fun)) {
+        map <- NULL
     }
     fun <- funSelf
 
@@ -1012,7 +1133,8 @@
                 step = step,
                 onError = onError,
                 tryArgs = formula_try_args(dat[["params"]][[i]]),
-                keep = keep
+                keep = keep,
+                map = map
             )
 
             # One time stamp for the whole step, also for all keys of a
@@ -2847,6 +2969,12 @@ pip_replace <- function(
 #' @param on_error What to do when a step fails: `"stop"` (the default)
 #' aborts the run, `"continue"` goes on with all steps that do not depend on
 #' a failed step (see section 'Continuing after errors' below).
+#' @param map Optional function like [lapply()] that runs the calls of a
+#' step mapped over partitions (`exec = "auto"`, see [pip_add()]), for
+#' example `parallel::mclapply` or `future.apply::future_lapply`. It is
+#' called as `map(X, FUN)` and must return a list of the results of `FUN`
+#' for the elements of `X`. The default `NULL` calls them one after another
+#' (see section 'Mapping in parallel' below).
 #' @return The updated pipeline or view, invisibly.
 #'
 #' @details
@@ -2952,6 +3080,28 @@ pip_replace <- function(
 #' run again in the same run, or `force = TRUE`. See
 #' `vignette("v05c-error-handling", package = "pipeflow")` for examples.
 #'
+#' ## Mapping in parallel
+#'
+#' With `map`, the keys of a step that is mapped over partitions are run by
+#' `map`, for example in parallel processes. This applies to all mapped
+#' steps of the run, but not to the runs of inner pipelines, such as of a
+#' function made by [as.function.pipeflow()]. For backends that need more
+#' arguments, pass a wrapper, e.g. `\(X, FUN) parallel::parLapply(cl, X, FUN)`
+#' or `\(X, FUN) parallel::mclapply(X, FUN, mc.cores = 4)`.
+#'
+#' The keys of a step whose function was made by [as.function.pipeflow()]
+#' run in parallel only if the function was made with `cache = FALSE`. With
+#' `cache = TRUE` (the default), they run one after another, because the
+#' inner pipelines that the function keeps for them would be lost in
+#' another process.
+#'
+#' Errors are handled as without `map` (see 'Runtime errors' and 'Continuing
+#' after errors' above), but all keys of a step run before the error of the
+#' first failed key is raised. Warnings and messages of the step reach `lgr`
+#' only if the backend relays them, as `future.apply::future_lapply` does and
+#' `parallel::mclapply` does not. Random numbers are up to the backend as
+#' well, e.g. `future.seed = TRUE` for `future.apply::future_lapply`.
+#'
 #' ## Runtime control flow via restart and halt
 #'
 #' A running pipeline can be interrupted via the `restart()` and `halt()`
@@ -3050,13 +3200,28 @@ pip_replace <- function(
 #' )
 #' p
 #' p[["report", "out"]]
+#'
+#' # Run the keys of a mapped step with a map function, e.g. in parallel
+#' p <- pip_new("map") |>
+#'   pip_add("parts", \(x = list(a = 1, b = 2, c = 3)) x, exec = "split") |>
+#'   pip_add("square", \(x = ~parts) x^2) |>
+#'   pip_add("total", \(x = ~square) sum(unlist(x)), exec = "reduce")
+#'
+#' pip_run(p, map = lapply)
+#' p[["total", "out"]]
+#'
+#' if (.Platform$OS.type == "unix") {
+#'   mc2 <- \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
+#'   pip_run(p, force = TRUE, map = mc2)
+#' }
 #' @export
 pip_run <- function(
     x,
     lgr = pipeflow_lgr,
     force = FALSE,
     progress = NULL,
-    on_error = c("stop", "continue")
+    on_error = c("stop", "continue"),
+    map = NULL
 ) {
     .assert_pip_or_view(x)
     if (!.is_single(force, "logical")) {
@@ -3065,6 +3230,9 @@ pip_run <- function(
     onError <- match.arg(on_error)
     if (!is.null(progress) && !is.function(progress)) {
         stop("progress must be a function")
+    }
+    if (!is.null(map) && !is.function(map)) {
+        stop("map must be a function")
     }
     if (is.null(lgr)) {
         lgr <- function(level, msg, ...) {}
@@ -3276,7 +3444,8 @@ pip_run <- function(
                             lgr = lgr,
                             failed = failed,
                             onError = onError,
-                            retry = length(retryKeys) > 0L
+                            retry = length(retryKeys) > 0L,
+                            map = map
                         )
                         NULL
                     },
@@ -3323,7 +3492,8 @@ pip_run <- function(
                         lgr = lgr,
                         force = doForce,
                         progress = progress,
-                        on_error = onError
+                        on_error = onError,
+                        map = map
                     )
                     return(invisible(x))
                 }

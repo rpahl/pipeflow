@@ -1,3 +1,14 @@
+# pipeflow 0.5.0.9025
+
+## New features
+
+- `pip_run()` has a new argument `map`, a function like `lapply()` that runs
+  the keys of a step mapped over partitions (`exec = "auto"`), for example
+  in parallel with `parallel::mclapply` or `future.apply::future_lapply`.
+  Steps that refer to `.self` or whose function was made by
+  `as.function()` (with `cache = TRUE`, the default) still run their keys
+  one after another.
+
 # pipeflow 0.5.0.9024
 
 ## New features

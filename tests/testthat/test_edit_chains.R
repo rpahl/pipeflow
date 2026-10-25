@@ -549,8 +549,14 @@ describe("random chains of edits", {
             },
             run = function(steps) {
                 force <- stats::runif(1) < 0.1
-                run_log(p, force = force)
-                paste("run", if (force) "with force")
+                # The keys of mapped steps are run by `map` instead
+                map <- if (stats::runif(1) < 0.5) lapply
+                run_log(p, force = force, map = map)
+                paste(
+                    "run",
+                    if (force) "with force",
+                    if (!is.null(map)) "with map"
+                )
             },
             run_view = function(steps) {
                 sel <- sample(steps, min(length(steps), sample(2, 1)))

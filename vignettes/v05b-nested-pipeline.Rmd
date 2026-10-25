@@ -339,6 +339,41 @@ A few things to know:
 See the "Pipeline functions with partitioned inputs" section of
 `?as.function.pipeflow` for how the inner pipelines are kept and reused.
 
+#### Running subsets in parallel
+
+The `map` argument of `pip_run()` runs the subsets of a mapped step in
+parallel (see the
+[previous vignette](v05a-split-map-reduce.html#run-partitions-in-parallel)).
+A pipeline function that keeps its inner pipelines can't do this, as the
+pipelines it updates in another process would be lost, so its subsets are
+still run one after another. A function made with `cache = FALSE` keeps
+nothing and runs a new copy of the inner pipeline for each call, so its
+subsets can run in parallel. Here we replace the function of the
+`inner_run` step in a copy of `outer`. As `pip_replace()` takes the params
+of the new function, we give the binding and the model settings again:
+
+```{r parallel-inner, eval = .Platform$OS.type == "unix"}
+par_outer <- pip_clone(outer) |>
+    pip_replace(
+        "inner_run",
+        as.function(inner, out = "coefs", cache = FALSE),
+        params = list(
+            input_df = ~split_df,
+            xVar = "Petal.Length",
+            yVar = "Sepal.Width"
+        )
+    )
+
+mc2 <- \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
+pip_run(par_outer, map = mc2)
+
+par_outer[["combine", "out"]]
+```
+
+The price is that every run of the step runs all inner steps again, so this
+pays off when each subset takes long to compute and is mostly computed anew
+anyway.
+
 
 ### Full control: running the inner pipeline yourself
 
@@ -450,8 +485,16 @@ general tool. As a rule of thumb:
 * **Run log and state**: the built-in modes produce one unified run over all
   partitions, while a nested pipeline is run as one step of the outer
   pipeline, with its own log silenced by default.
-* **Parallelism**: the built-in modes are handled by {pipeflow}, whereas with
-  a manual loop you control it and can parallelize it yourself.
+* **Parallelism**: with the built-in modes, `pip_run(map = )` runs the
+  partitions in parallel (see the
+  [previous vignette](v05a-split-map-reduce.html#run-partitions-in-parallel)).
+  A step whose function was made by `as.function()` runs its partitions one
+  after another, because the pipelines that it keeps for them would be lost
+  in another process, unless it keeps none (`cache = FALSE`, see
+  [Running subsets in parallel](#running-subsets-in-parallel)). If you run
+  the inner pipeline
+  yourself, you control the loop and can parallelize it, e.g. with
+  `parallel::mcMap()` instead of `Map()`.
 
 ```{r, include = FALSE}
 options(old)

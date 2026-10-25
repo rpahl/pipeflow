@@ -151,7 +151,9 @@ checks them after each edit of long chains of edits, some of them random:
    same pipeline.
 7. **`.step_call` is restored on exit.** `.pip_call_step()` sets the
    running step (and its partition key) and restores the caller's values,
-   so nested runs of inner pipelines see correct values.
+   so nested runs of inner pipelines see correct values. With the `map` of
+   `pip_run()`, the keys may run in other processes, each of which sets its
+   own `.step_call`.
 8. **A failed `[<-` changes nothing.** `p[i, j] <- value` with several
    rows and `p[i, ] <- q[i, ]` edit one row at a time inside
    `.pip_all_or_nothing()`. It takes a `.pip_snapshot()` first and puts it
@@ -439,6 +441,22 @@ Things to keep in mind:
   after a continued run.
 - **Errors and failures.** See [Errors and failures](#errors-and-failures)
   below.
+- **Mapping with `map`.** `pip_run(map = )` is passed via `.pip_run_row()`
+  (also to the nested run of a restart, but not to inner runs of
+  `as.function()`) to `.pip_execute_step_call()`. Its key loop then only
+  prepares the keys (`keep`, failed inputs) and collects the ones to run;
+  `.pip_map_keys()` calls `map(todo, FUN)` with the worker of
+  `.pip_key_worker()`, which catches errors and returns `list(ok, value)`.
+  The results are collected in key order, through the same error handling
+  as without `map`, so with `on_error = "stop"` all keys run before the
+  first error is raised. A key whose input failed is not stopped at while
+  the keys are prepared, but kept in `blocked` and raised in key order
+  with the results, so that the keys before it still run. A single key to run is not sent to `map`.
+  `.pip_run_row()` drops `map` for a step whose function refers to `.self`
+  or was made by `as.function()` with `cache = TRUE` (`.fun_keeps()`), as
+  their changes in another process would be lost. A function made with
+  `cache = FALSE` clones its template for each call and keeps nothing. The worker is made in its own environment
+  so that a backend that serializes it only sends one key's arguments.
 
 ### States
 

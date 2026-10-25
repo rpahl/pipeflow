@@ -9,7 +9,8 @@ pip_run(
   lgr = pipeflow_lgr,
   force = FALSE,
   progress = NULL,
-  on_error = c("stop", "continue")
+  on_error = c("stop", "continue"),
+  map = NULL
 )
 }
 \arguments{
@@ -33,6 +34,13 @@ control flow via restart and halt' below).}
 \item{on_error}{What to do when a step fails: \code{"stop"} (the default)
 aborts the run, \code{"continue"} goes on with all steps that do not depend on
 a failed step (see section 'Continuing after errors' below).}
+
+\item{map}{Optional function like \code{\link[=lapply]{lapply()}} that runs the calls of a
+step mapped over partitions (\code{exec = "auto"}, see \code{\link[=pip_add]{pip_add()}}), for
+example \code{parallel::mclapply} or \code{future.apply::future_lapply}. It is
+called as \code{map(X, FUN)} and must return a list of the results of \code{FUN}
+for the elements of \code{X}. The default \code{NULL} calls them one after another
+(see section 'Mapping in parallel' below).}
 }
 \value{
 The updated pipeline or view, invisibly.
@@ -157,6 +165,29 @@ run again in the same run, or \code{force = TRUE}. See
 \code{vignette("v05c-error-handling", package = "pipeflow")} for examples.
 }
 
+\subsection{Mapping in parallel}{
+
+With \code{map}, the keys of a step that is mapped over partitions are run by
+\code{map}, for example in parallel processes. This applies to all mapped
+steps of the run, but not to the runs of inner pipelines, such as of a
+function made by \code{\link[=as.function.pipeflow]{as.function.pipeflow()}}. For backends that need more
+arguments, pass a wrapper, e.g. \verb{\\(X, FUN) parallel::parLapply(cl, X, FUN)}
+or \verb{\\(X, FUN) parallel::mclapply(X, FUN, mc.cores = 4)}.
+
+The keys of a step whose function was made by \code{\link[=as.function.pipeflow]{as.function.pipeflow()}}
+run in parallel only if the function was made with \code{cache = FALSE}. With
+\code{cache = TRUE} (the default), they run one after another, because the
+inner pipelines that the function keeps for them would be lost in
+another process.
+
+Errors are handled as without \code{map} (see 'Runtime errors' and 'Continuing
+after errors' above), but all keys of a step run before the error of the
+first failed key is raised. Warnings and messages of the step reach \code{lgr}
+only if the backend relays them, as \code{future.apply::future_lapply} does and
+\code{parallel::mclapply} does not. Random numbers are up to the backend as
+well, e.g. \code{future.seed = TRUE} for \code{future.apply::future_lapply}.
+}
+
 \subsection{Runtime control flow via restart and halt}{
 
 A running pipeline can be interrupted via the \code{restart()} and \code{halt()}
@@ -255,6 +286,20 @@ withCallingHandlers(
 )
 p
 p[["report", "out"]]
+
+# Run the keys of a mapped step with a map function, e.g. in parallel
+p <- pip_new("map") |>
+  pip_add("parts", \(x = list(a = 1, b = 2, c = 3)) x, exec = "split") |>
+  pip_add("square", \(x = ~parts) x^2) |>
+  pip_add("total", \(x = ~square) sum(unlist(x)), exec = "reduce")
+
+pip_run(p, map = lapply)
+p[["total", "out"]]
+
+if (.Platform$OS.type == "unix") {
+  mc2 <- \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
+  pip_run(p, force = TRUE, map = mc2)
+}
 }
 \seealso{
 \code{vignette("v06-self-modify-pipeline", package = "pipeflow")}

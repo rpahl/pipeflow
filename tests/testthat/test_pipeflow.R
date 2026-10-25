@@ -5754,6 +5754,413 @@ describe("pip_run", {
 })
 
 
+describe("pip_run map", {
+    # 'fit' fails for the keys whose input is negative
+    map_pip <- function(env = new.env()) {
+        env$keys <- character()
+        pip_new("p") |>
+            pip_add(
+                "parts",
+                \(x = list(a = 1, b = -1, c = 4, d = -2)) x,
+                exec = "split"
+            ) |>
+            pip_add("fit", \(x = ~parts, min = 0) {
+                env$keys <- c(env$keys, .pip_step_call()[["key"]])
+                if (x < min) stop("negative") else x * 10
+            }) |>
+            pip_add("show", \(f = ~ try(fit)) {
+                if (inherits(f, "error")) "ERR" else f
+            }) |>
+            pip_add("all", \(s = ~show) unlist(s), exec = "reduce")
+    }
+    # A map function that records the keys of each call
+    recording_map <- function(env) {
+        env$mapped <- list()
+        function(X, FUN) {
+            keys <- vapply(X, FUN = `[[`, "key", FUN.VALUE = character(1))
+            env$mapped <- c(env$mapped, list(keys))
+            lapply(X, FUN)
+        }
+    }
+    run_continue <- function(p, ...) {
+        suppressWarnings(
+            pip_run(p, lgr = NULL, on_error = "continue", ...),
+            classes = "pipeflow_run_failed"
+        )
+    }
+
+    it("gives the same outputs and states as without map", {
+        p <- map_pip()
+        pip_set_params(p, list(min = -Inf))
+        q <- pip_clone(p)
+        pip_run(p, lgr = NULL)
+        pip_run(q, lgr = NULL, map = lapply)
+
+        expect_identical(p[["out"]], q[["out"]])
+        expect_identical(p[["state"]], q[["state"]])
+        expect_equal(q[["all", "out"]], c(a = 10, b = -10, c = 40, d = -20))
+    })
+
+    it("gives the same failures as without map in a continued run", {
+        p <- map_pip()
+        q <- pip_clone(p)
+        w1 <- expect_warning(
+            pip_run(p, lgr = NULL, on_error = "continue"),
+            class = "pipeflow_run_failed"
+        )
+        w2 <- expect_warning(
+            pip_run(q, lgr = NULL, on_error = "continue", map = lapply),
+            class = "pipeflow_run_failed"
+        )
+
+        expect_equal(conditionMessage(w2), conditionMessage(w1))
+        expect_equal(w2[["keys"]], list(fit = c("b", "d")))
+        expect_identical(p[["state"]], q[["state"]])
+        expect_equal(
+            q[["all", "out"]],
+            c(a = "10", b = "ERR", c = "40", d = "ERR")
+        )
+        f <- q[["fit", "out"]][["b"]]
+        expect_s3_class(f, "pipeflow_failure")
+        expect_equal(f[["key"]], "b")
+        expect_equal(
+            conditionMessage(f),
+            "step 'fit' failed: key 'b': negative"
+        )
+    })
+
+    it("is only called for the mapped steps", {
+        env <- new.env()
+        p <- map_pip(env)
+        run_continue(p, map = recording_map(env))
+
+        # 'fit' and 'show' are mapped, 'parts' (split) and 'all' (reduce) not
+        expect_equal(
+            env$mapped,
+            list(c("a", "b", "c", "d"), c("a", "b", "c", "d"))
+        )
+        expect_equal(env$keys, c("a", "b", "c", "d"))
+    })
+
+    it("runs all keys before it raises the error of the first failed key", {
+        env <- new.env()
+        p <- map_pip(env)
+
+        expect_error(
+            pip_run(p, lgr = NULL, map = lapply),
+            "step 'fit': key 'b': negative",
+            fixed = TRUE
+        )
+        expect_equal(env$keys, c("a", "b", "c", "d"))
+        expect_equal(unname(p[["fit", "state"]]), "failed")
+    })
+
+    it("runs the other keys before a key whose input failed stops", {
+        env <- new.env()
+        env$keys <- character()
+        p <- pip_new("p") |>
+            pip_add(
+                "parts",
+                \(x = list(a = 1, b = -1, c = 4)) x,
+                exec = "split"
+            ) |>
+            pip_add("fit", \(x = ~parts) {
+                if (x < 0) stop("negative") else x * 10
+            }) |>
+            pip_add("twice", \(x = ~fit) {
+                env$keys <- c(env$keys, .pip_step_call()[["key"]])
+                if (x == 10) stop("ten") else x * 2
+            })
+        run_continue(p)
+        pip_lock(p["fit"])
+        env$keys <- character()
+
+        # Key 'a' fails before key 'b', whose input failed, as without map
+        expect_error(
+            pip_run(p, lgr = NULL, force = TRUE, map = lapply),
+            "step 'twice': key 'a': ten",
+            fixed = TRUE
+        )
+        expect_equal(env$keys, c("a", "c"))
+
+        pip_replace(p, "twice", \(x = ~fit) x * 2)
+        err <- expect_error(
+            pip_run(p, lgr = NULL, map = lapply),
+            class = "pipeflow_step_error"
+        )
+        expect_equal(
+            conditionMessage(err),
+            paste(
+                "step 'twice': key 'b': step 'twice' was not run:",
+                "step 'fit' failed: key 'b': negative"
+            )
+        )
+    })
+
+    it("only gets the failed keys when they are retried", {
+        env <- new.env()
+        env$flaky <- TRUE
+        p <- pip_new("p") |>
+            pip_add(
+                "parts",
+                \(x = list(a = 1, b = -1, c = 4, d = -2)) x,
+                exec = "split"
+            ) |>
+            pip_add("fit", \(x = ~parts) {
+                if (env$flaky && x < 0) stop("negative") else x * 10
+            })
+        run_continue(p, map = lapply)
+
+        env$flaky <- FALSE
+        pip_run(p, lgr = NULL, map = recording_map(env))
+
+        expect_equal(env$mapped, list(c("b", "d")))
+        expect_equal(
+            unclass(p[["fit", "out"]]),
+            list(a = 10, b = -10, c = 40, d = -20)
+        )
+        expect_equal(unname(p[["fit", "state"]]), "done")
+    })
+
+    it("is not called for a single key to run", {
+        env <- new.env()
+        p <- pip_new("p") |>
+            pip_add("parts", \(x = list(a = 1)) x, exec = "split") |>
+            pip_add("fit", \(x = ~parts) x * 10)
+        pip_run(p, lgr = NULL, map = recording_map(env))
+
+        expect_equal(env$mapped, list())
+        expect_equal(unclass(p[["fit", "out"]]), list(a = 10))
+    })
+
+    it("is not called for a step that refers to .self", {
+        env <- new.env()
+        p <- pip_new("p") |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add("fit", \(x = ~parts) {
+                .self
+                x * 10
+            })
+        pip_run(p, lgr = NULL, map = recording_map(env))
+
+        expect_equal(env$mapped, list())
+        expect_equal(unclass(p[["fit", "out"]]), list(a = 10, b = 20))
+    })
+
+    it("is not called for a function made by as.function() that caches", {
+        env <- new.env()
+        inner <- pip_new("inner") |> pip_add("times", \(x = NULL) x * 10)
+        p <- pip_new("p") |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add(
+                "fit",
+                as.function(inner, out = "times"),
+                params = list(x = ~parts)
+            )
+        pip_run(p, lgr = NULL, map = recording_map(env))
+
+        expect_equal(env$mapped, list())
+        expect_equal(unclass(p[["fit", "out"]]), list(a = 10, b = 20))
+    })
+
+    it("is called for a function made by as.function(cache = FALSE)", {
+        env <- new.env()
+        inner <- pip_new("inner") |> pip_add("times", \(x = NULL) x * 10)
+        p <- pip_new("p") |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add(
+                "fit",
+                as.function(inner, out = "times", cache = FALSE),
+                params = list(x = ~parts)
+            )
+        pip_run(p, lgr = NULL, map = recording_map(env))
+
+        expect_equal(env$mapped, list(c("a", "b")))
+        expect_equal(unclass(p[["fit", "out"]]), list(a = 10, b = 20))
+    })
+
+    it("runs a function made by as.function(cache = FALSE) in parallel", {
+        skip_on_os("windows")
+        skip_on_cran()
+        inner <- pip_new("inner") |>
+            pip_add("pid", \(x = NULL) Sys.getpid()) |>
+            pip_add("times", \(x = ~pid, y = NULL) y * 10)
+        p <- pip_new("p") |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add(
+                "fit",
+                as.function(inner, out = c("pid", "times"), cache = FALSE),
+                params = list(y = ~parts)
+            )
+        pip_run(
+            p,
+            lgr = NULL,
+            map = \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
+        )
+
+        out <- p[["fit", "out"]]
+        expect_equal(out[["a"]][["times"]], 10)
+        expect_equal(out[["b"]][["times"]], 20)
+        expect_false(out[["a"]][["pid"]] == Sys.getpid())
+        expect_true(is.null(.fun_cache(p[["fit", "fun"]])$slots[["fit"]]))
+    })
+
+    it("is kept when the pipeline restarts", {
+        env <- new.env()
+        env$restarted <- FALSE
+        p <- pip_new("p") |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add("fit", \(x = ~parts) x * 10) |>
+            pip_add(
+                "ctl",
+                \(x = ~fit) {
+                    if (!env$restarted) {
+                        env$restarted <- TRUE
+                        .self$restart()
+                    }
+                    x
+                },
+                exec = "reduce"
+            )
+        pip_run(p, lgr = NULL, map = recording_map(env))
+
+        expect_length(env$mapped, 2L)
+    })
+
+    it("sets the step call for each key and restores it", {
+        env <- new.env()
+        env$calls <- list()
+        p <- pip_new("p") |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add("fit", \(x = ~parts) {
+                env$calls <- c(env$calls, list(.pip_step_call()))
+                x
+            })
+        pip_run(p, lgr = NULL, map = lapply)
+
+        expect_equal(
+            env$calls,
+            list(
+                list(step = "fit", key = "a", keys = c("a", "b")),
+                list(step = "fit", key = "b", keys = c("a", "b"))
+            )
+        )
+        expect_equal(
+            .pip_step_call(),
+            list(step = NULL, key = NULL, keys = NULL)
+        )
+    })
+
+    it("must be a function", {
+        expect_error(
+            pip_run(map_pip(), lgr = NULL, map = "lapply"),
+            "map must be a function"
+        )
+    })
+
+    it("must return one result per key", {
+        p <- map_pip()
+        expect_error(
+            pip_run(p, lgr = NULL, map = \(X, FUN) lapply(X[-1], FUN)),
+            "map must return a list of length 4 (one per key), not of length 3",
+            fixed = TRUE
+        )
+        expect_error(
+            pip_run(p, lgr = NULL, map = \(X, FUN) "x"),
+            "not an object of class character",
+            fixed = TRUE
+        )
+    })
+
+    it("turns a result that is not of a key call into a failure", {
+        p <- map_pip()
+        pip_set_params(p, list(min = -Inf))
+        died <- \(X, FUN) {
+            res <- lapply(X, FUN)
+            res[[2]] <- structure("Error : worker died\n", class = "try-error")
+            res
+        }
+        run_continue(p, map = died)
+
+        f <- p[["fit", "out"]][["b"]]
+        expect_s3_class(f, "pipeflow_failure")
+        expect_equal(
+            conditionMessage(f),
+            "step 'fit' failed: key 'b': Error : worker died"
+        )
+        expect_equal(p[["fit", "out"]][["a"]], 10)
+    })
+
+    it("works with socket workers", {
+        skip_on_cran()
+        cl <- parallel::makePSOCKcluster(2)
+        on.exit(parallel::stopCluster(cl), add = TRUE)
+        # The workers load the installed pipeflow, which must be this one
+        version <- parallel::clusterEvalQ(cl, {
+            tryCatch(
+                as.character(utils::packageVersion("pipeflow")),
+                error = \(e) NA_character_
+            )
+        })[[1]]
+        skip_if_not(
+            identical(version, as.character(utils::packageVersion("pipeflow"))),
+            "the workers can't load this version of pipeflow"
+        )
+        map <- \(X, FUN) parallel::parLapply(cl, X, FUN)
+
+        inner <- pip_new("inner") |>
+            pip_add("pid", \(x = NULL) Sys.getpid()) |>
+            pip_add("times", \(x = ~pid, y = NULL) y * 10)
+        p <- pip_new("p") |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add("call", \(x = ~parts) {
+                # The workers don't see the test environment
+                list(pid = Sys.getpid(), call = pipeflow:::.pip_step_call())
+            }) |>
+            pip_add(
+                "fit",
+                as.function(inner, out = c("pid", "times"), cache = FALSE),
+                params = list(y = ~parts)
+            )
+        pip_run(p, lgr = NULL, map = map)
+
+        calls <- p[["call", "out"]]
+        expect_equal(
+            lapply(calls, `[[`, "call"),
+            list(
+                a = list(step = "call", key = "a", keys = c("a", "b")),
+                b = list(step = "call", key = "b", keys = c("a", "b"))
+            )
+        )
+        expect_false(Sys.getpid() %in% sapply(calls, `[[`, "pid"))
+
+        # The inner pipeline (and its DAG) is restored in the workers
+        fit <- p[["fit", "out"]]
+        expect_equal(sapply(fit, `[[`, "times"), c(a = 10, b = 20))
+        expect_false(Sys.getpid() %in% sapply(fit, `[[`, "pid"))
+    })
+
+    it("works with parallel::mclapply", {
+        skip_on_os("windows")
+        skip_on_cran()
+        skip_if_not_installed("parallel")
+        p <- map_pip()
+        pip_set_params(p, list(min = -Inf))
+        pip_run(
+            p,
+            lgr = NULL,
+            map = \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
+        )
+
+        expect_equal(p[["all", "out"]], c(a = 10, b = -10, c = 40, d = -20))
+        expect_equal(
+            .pip_step_call(),
+            list(step = NULL, key = NULL, keys = NULL)
+        )
+    })
+})
+
+
 describe("pip_run time_start", {
     test_pip <- function() {
         pip_new("p") |>

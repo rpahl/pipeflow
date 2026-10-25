@@ -26,7 +26,8 @@ Details.}
 
 \item{cache}{Whether to keep the run copies of \code{x} for reuse, \code{TRUE} (the
 default) or \code{FALSE}. The function keeps one copy per outer step and
-partition, see Details.}
+partition, see Details. With \code{FALSE}, a step mapped over partitions can
+run the function in parallel, see the \code{map} argument of \code{\link[=pip_run]{pip_run()}}.}
 
 \item{on_error}{What to do when an inner step fails: \code{"stop"} (the
 default) ends the inner run at that step, \code{"continue"} runs the inner
