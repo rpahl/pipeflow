@@ -140,8 +140,8 @@ itself recursively and hands off the remaining work. After each step,
 have changed the pipeline.
 
 **Code layout.**
-- `R/pipeflow.R` holds the exported `pip_*` API, with internal `.pip_*`
-  helpers at the top.
+- `R/pipeflow.R` holds the exported `pip_*` API (except `pip_graph()`, see
+  `R/graph.R` below), with internal `.pip_*` helpers at the top.
 - `R/generic.pipeflow.R` holds the S3 methods: `[`, `[[`, `$`, their
   assignment forms, `rbind` (pipeline binding), `length`, `dim` and `str`.
 - `R/print.pipeflow.R` holds the print method.
