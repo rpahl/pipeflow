@@ -4323,6 +4323,114 @@ describe("pip_run", {
             expect_false(p[["without", "out"]])
         })
 
+        it("outdates a step that changed its own exec mode", {
+            p <- pip_new("p") |>
+                pip_add(
+                    "parts",
+                    \(x = list(a = 1, b = 2)) x,
+                    exec = "split"
+                ) |>
+                pip_add("fit", \(x = ~parts) {
+                    .self[["fit", "exec"]] <- "reduce"
+                    if (is.list(x)) sum(unlist(x)) else x
+                })
+
+            # The run maps 'fit' over the keys, so its output is stale
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["fit", "state"]]), "outdated")
+            expect_equal(unclass(p[["fit", "out"]]), list(a = 1, b = 2))
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["fit", "state"]]), "done")
+            expect_equal(p[["fit", "out"]], 3)
+        })
+
+        it("outdates a step that changed its own params and its dependents", {
+            p <- pip_new("p") |>
+                pip_add("a", \(k = 1) {
+                    .self[["a", "params"]] <- list(k = 2)
+                    k
+                }) |>
+                pip_add("b", \(x = ~a) x * 10)
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), c("outdated", "outdated"))
+            expect_equal(unname(p[["out"]]), list(1, 10))
+
+            # Setting the same params again doesn't change the step
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), c("done", "done"))
+            expect_equal(unname(p[["out"]]), list(2, 20))
+        })
+
+        it("re-runs a step that changed its params before a restart", {
+            p <- pip_new("p") |>
+                pip_add("a", \(k = 1) {
+                    if (k == 1) {
+                        .self$set_params(list(k = 2))
+                        .self$restart(force = FALSE)
+                    }
+                    k
+                })
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["a", "state"]]), "done")
+            expect_equal(p[["a", "out"]], 2)
+        })
+
+        it("outdates a step that replaced its own function", {
+            p <- pip_new("p") |>
+                pip_add("a", \(k = 1) {
+                    .self$replace("a", \(k = 1) k * 100)
+                    k
+                })
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["a", "state"]]), "outdated")
+            expect_equal(p[["a", "out"]], 1)
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["a", "state"]]), "done")
+            expect_equal(p[["a", "out"]], 100)
+        })
+
+        it("outdates the steps that ran with a step changed later", {
+            p <- pip_new("p") |>
+                pip_add("a", \(k = 1) k) |>
+                pip_add("b", \(x = ~a) x * 10) |>
+                pip_add("c", \(x = ~b) {
+                    if (x == 10) {
+                        .self[["a", "params"]] <- list(k = 2)
+                    }
+                    x
+                })
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), rep("outdated", 3))
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), rep("done", 3))
+            expect_equal(p[["c", "out"]], 20)
+        })
+
+        it("outdates the steps that ran with a step replaced later", {
+            p <- pip_new("p") |>
+                pip_add("a", \(x = 1) x) |>
+                pip_add("b", \(x = ~a) {
+                    if (x == 1) {
+                        .self$replace("a", \(x = 2) x)
+                    }
+                    x * 10
+                })
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), c("new", "outdated"))
+
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), c("done", "done"))
+            expect_equal(p[["b", "out"]], 20)
+        })
+
         it("is not written into the environment of the step function", {
             env <- new.env()
             f <- local(\(x = 1) .self[["name"]], envir = env)
@@ -5400,6 +5508,48 @@ describe("pip_run", {
                         unclass(p[["fit", "out"]]),
                         list(a = 10, b = 20, c = 30)
                     )
+                })
+
+                it("re-runs all keys after its exec mode was changed", {
+                    env <- new.env()
+                    p <- flaky_pip(env)
+                    run_flaky(p)
+
+                    p[["fit", "exec"]] <- "plain"
+                    p[["fit", "exec"]] <- "auto"
+                    expect_equal(unname(p[["fit", "state"]]), "outdated")
+
+                    env$flaky <- FALSE
+                    env$calls <- character()
+                    pip_run(p, lgr = NULL)
+                    expect_equal(env$calls, c("a", "b", "c"))
+                })
+
+                it("does not retry keys if the step changed its exec mode", {
+                    env <- new.env()
+                    env$flaky <- TRUE
+                    p <- pip_new() |>
+                        pip_add(
+                            "parts",
+                            \(x = list(a = 1, b = 2, c = 3)) x,
+                            exec = "split"
+                        ) |>
+                        pip_add("fit", \(x = ~parts) {
+                            if (env$flaky && identical(x, 2)) {
+                                .self[["fit", "exec"]] <- "reduce"
+                                stop("transient")
+                            }
+                            if (is.list(x)) sum(unlist(x)) else x
+                        })
+                    run_flaky(p)
+                    expect_equal(unname(p[["fit", "state"]]), "failed")
+
+                    logs <- character()
+                    lgr <- function(level, msg) logs <<- c(logs, msg)
+                    env$flaky <- FALSE
+                    pip_run(p, lgr = lgr)
+                    expect_false(any(grepl("re-running failed keys", logs)))
+                    expect_equal(p[["fit", "out"]], 6)
                 })
 
                 it("re-runs only the failed keys of a renamed step", {

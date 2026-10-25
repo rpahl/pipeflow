@@ -104,6 +104,15 @@ in the body). Indirect access, such as \code{get(".self")}, is not detected.
 \code{.self} is a reserved name: it can't be an argument of \code{fun} or a name in
 \code{params}.
 
+A step that changes its own function, params or exec mode via \code{.self}
+computed its output with the old ones, so it ends the run as
+\code{"outdated"} and runs again in the next run. A step that ran earlier in
+the run and is changed by a later step runs again as well. The steps
+that ran with the output of such a step are marked \code{"outdated"}.
+A change that sets the values the step already has doesn't count, so a
+step that sets its own params to fixed values settles after one more
+run.
+
 \code{.self} is valid while the step runs only. It is released once the step
 returned, so that outputs of the step don't keep the pipeline alive. A
 step that returns a function which refers to \code{.self} therefore fails

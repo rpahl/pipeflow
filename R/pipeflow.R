@@ -908,8 +908,9 @@
     pipenv <- .pip_pipenv(x)
     currentOut <- pipenv[[".steps_with_current_out"]]
     currentOut[[step]] <- FALSE
-    # The step may change its own function or params while it runs (via
-    # `.self`), which makes the outputs of this attempt stale right away.
+    # The step may change its own function, params or exec mode while it
+    # runs (via `.self`), which makes the outputs of this attempt stale right
+    # away.
     funAtStart <- dat[["fun"]][[i]]
     paramsAtStart <- dat[["params"]][[i]]
 
@@ -970,6 +971,14 @@
     dat <- .pip_pipenv(x)[["data"]]
     rowNow <- data.table::chmatch(step, dat[["step"]])
     stepStillExists <- !is.na(rowNow)
+    # Whether the step changed its own function, params or exec mode during
+    # the attempt (via `.self`), so that its output is stale already.
+    stepHasChangedItself <- stepStillExists &&
+        any(
+            !identical(dat[["fun"]][[rowNow]], funAtStart),
+            !identical(dat[["params"]][[rowNow]], paramsAtStart),
+            !identical(dat[["exec"]][[rowNow]], exec)
+        )
     if (stepStillExists && length(failedKeys) > 0L) {
         data.table::set(
             dat,
@@ -979,12 +988,13 @@
         )
         # Remember that the step's output now comes from this (current)
         # attempt, unless the step changed itself during the attempt.
-        isUnchanged <- identical(dat[["fun"]][[rowNow]], funAtStart) &&
-            identical(dat[["params"]][[rowNow]], paramsAtStart)
-        if (isUnchanged) {
+        if (!stepHasChangedItself) {
             currentOut[[step]] <- TRUE
         }
     } else if (stepStillExists) {
+        # A step that changed itself computed its output with the old
+        # definition, so it is outdated rather than done.
+        state <- if (stepHasChangedItself) "outdated" else "done"
         data.table::set(
             dat,
             i = rowNow,
@@ -992,7 +1002,7 @@
             value = list(
                 list(out),
                 runTime,
-                .step_states[["done"]][["name"]]
+                .step_states[[state]][["name"]]
             )
         )
     }
@@ -1775,13 +1785,13 @@ pip_new <- function(name = "pipe") {
 #' run. pipeflow provides it each time the step runs, but only if the body of
 #' the step function contains the name `.self` (also within functions defined
 #' in the body). Indirect access, such as `get(".self")`, is not detected.
-#' `.self` is a reserved name: it can't be an argument of `fun` or a name in
-#' `params`.
 #'
-#' `.self` is valid while the step runs only. It is released once the step
-#' returned, so that outputs of the step don't keep the pipeline alive. A
-#' step that returns a function which refers to `.self` therefore fails
-#' with `object '.self' not found` when that function is called later.
+#' A step that changes its own function, params or exec mode via `.self`,
+#' ends the run as `"outdated"`. The same is true for other steps changed
+#' via `.self`. Lastly, `.self` is only valid while the step runs and
+#' released once the step was returned. For this reason, a step that returns
+#' a function referring to `.self` fails with `object '.self'
+#' not found` when called later.
 #'
 #' @return The updated pipeline, invisibly.
 #' @examples
@@ -2851,7 +2861,9 @@ pip_replace <- function(
 #'   [pip_reset()].
 #' * outdated: a step can get outdated in the following scenarios:
 #'   - one of the step's parameters were changed (e.g. via [pip_set_params()])
-#'   - a step it depends on was re-executed or replaced
+#'   - the step's execution mode was changed (`p[[step, "exec"]] <- mode`)
+#'   - a step it depends on was re-executed or replaced, got a new
+#'     execution mode, or its output was set (`p[[step, "out"]] <- value`)
 #'   - a step it depends on was executed, but the run did not reach the step
 #'     itself, either on purpose (see section 'Running views' below) or
 #'     because the run was aborted early due to a failed step
@@ -2935,9 +2947,9 @@ pip_replace <- function(
 #' once a failed step succeeds, the steps after it, including those that
 #' received failure objects, are run again. A mapped step is only run again
 #' for its failed keys, keeping the results of the other keys, unless
-#' something changed that affects all keys: its parameters or an input step
-#' (which marks it `"outdated"`), an input step that is run again in the
-#' same run, or `force = TRUE`. See
+#' something changed that affects all keys: its parameters, its execution
+#' mode or an input step (which marks it `"outdated"`), an input step that is
+#' run again in the same run, or `force = TRUE`. See
 #' `vignette("v05c-error-handling", package = "pipeflow")` for examples.
 #'
 #' ## Runtime control flow via restart and halt
@@ -3095,6 +3107,22 @@ pip_run <- function(
             x,
             steps = executedSteps,
             keep = c(executedSteps, locked)
+        )
+        # An executed step that ended outdated (or new, if it was replaced)
+        # was changed during the run, by itself or by a later step, so the
+        # steps after it that ran with its output are outdated too. Failed
+        # steps are left out, as their dependents only run again once they
+        # succeed.
+        staleStates <- c(
+            .step_states[["outdated"]][["name"]],
+            .step_states[["new"]][["name"]]
+        )
+        isExecuted <- dat[["step"]] %in% executedSteps
+        isStale <- isExecuted & dat[["state"]] %in% staleStates
+        .pip_outdate_downstream(
+            x,
+            steps = dat[["step"]][isStale],
+            keep = locked
         )
         executedSteps <<- character()
     }

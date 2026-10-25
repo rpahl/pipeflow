@@ -36,13 +36,13 @@
         "step",
         "fun",
         "params",
+        "exec",
         "out",
         "state",
         "time",
         "time_start",
         "tags",
-        "locked",
-        "exec"
+        "locked"
     )
 
     # Since the source can be `x` itself, we will work on a snapshot to
@@ -59,11 +59,13 @@
         # 1) Step name (a no-op when both pipelines use the same names).
         x[[dataP[["step"]][[pRow]], "step"]] <- qVals[["step"]]
 
-        # 2) Function and params. The params of q override the defaults of
-        #    the function. Their references are pointed to the steps that
-        #    the step of q depends on, by name, because a relative reference
-        #    (~-1) is stale once steps were inserted or removed before it.
-        #    pip_replace() then resolves them against the steps of `x`.
+        # 2) Function, params and exec mode. The exec mode is set here,
+        #    because setting a new one in 3) would outdate the copied state.
+        #    The params of q override the defaults of the function. Their
+        #    references are pointed to the steps that the step of q depends
+        #    on, by name, because a relative reference (~-1) is stale once
+        #    steps were inserted or removed before it. pip_replace() then
+        #    resolves them against the steps of `x`.
         params <- qVals[["params"]]
         depends <- qSnapshot[["depends"]][[k]]
         for (arg in intersect(names(depends), names(params))) {
@@ -82,7 +84,8 @@
             x,
             step = qVals[["step"]],
             fun = qVals[["fun"]],
-            params = params
+            params = params,
+            exec = qVals[["exec"]]
         )
         if (length(values) > 0L) {
             dataX <- .pip_pipenv(x)[["data"]]
@@ -98,7 +101,7 @@
         }
 
         # 3) Runtime state and annotation columns.
-        for (prop in setdiff(props, c("step", "fun", "params"))) {
+        for (prop in setdiff(props, c("step", "fun", "params", "exec"))) {
             x[[iSelP[[k]], prop]] <- qVals[[prop]]
         }
     }
@@ -629,7 +632,8 @@ dim.pipeflow <- function(x) {
 #'    * `p[[step, "tags"]] <- NULL` clears all tags
 #' * `p[[step, "locked"]] <- TRUE|FALSE` -- lock or unlock the step;
 #'   same as [pip_lock()] / [pip_unlock()]
-#' * `p[[step, "exec"]] <- mode` -- set the step's execution mode.
+#' * `p[[step, "exec"]] <- mode` -- set the step's execution mode. A new
+#'   mode marks the step and its downstream steps as `"outdated"`.
 #' * `p[[step, "state"]] <- state` -- set the step's state.
 #' * `p[[step, "time"]] <- time` -- set the step's time stamp (a single
 #'   `POSIXct` value).
@@ -637,7 +641,8 @@ dim.pipeflow <- function(x) {
 #'   last run (a single `POSIXct` value, which can be `NA` for a step that
 #'   never ran).
 #' * `p[[step, "out"]] <- value` -- set the step's stored output (mostly
-#'    useful for debugging)
+#'    useful for debugging). The downstream steps are marked as
+#'    `"outdated"`, so that the next run computes them from the new output.
 #'
 #' Assigning to any other step-table column, or to a meta field other than
 #' `name` and `view`, is not supported.
@@ -647,6 +652,21 @@ dim.pipeflow <- function(x) {
 #' step name must be part of the view. Because views share the pipeline
 #' environment, step properties are written through to the originating
 #' pipeline, while `name` only renames the view itself.
+#'
+#' ### Which assignments outdate steps
+#' Results that may no longer match the steps are marked as `"outdated"`,
+#' so that the next [pip_run()] computes them again. As always, steps that
+#' never ran stay `"new"`.
+#' * `fun`: the step becomes `"new"` and its downstream steps `"outdated"`.
+#' * `params` and `exec`: the step and its downstream steps, if a value
+#'   changes.
+#' * `out`: the downstream steps, while the step keeps its state.
+#' * `step` (a new name), `state`, `time`, `time_start`, `tags` and
+#'   `locked` don't change any result and outdate no step.
+#'
+#' This holds for all forms of assignment: `[[<-`, `[<-` (which assigns row
+#' by row) and assignments through a view, which also outdate the downstream
+#' steps that are not part of the view.
 #' @examples
 #' p <- pip_new("pipe") |>
 #'   pip_add("load", \(x = 1) x) |>
@@ -766,6 +786,9 @@ dim.pipeflow <- function(x) {
         # An output set from outside does not come from the step's last
         # attempt, so a retry runs all keys (see .pip_run_row()).
         env[[".steps_with_current_out"]][[step]] <- FALSE
+        # The downstream steps ran with the old output. The step itself
+        # keeps its state.
+        .pip_outdate_downstream(x, steps = step, keep = step)
     } else if (j == "state") {
         .assert_state(value)
         data.table::set(data, i = i, j = "state", value = value)
@@ -782,7 +805,12 @@ dim.pipeflow <- function(x) {
         data.table::set(data, i = i, j = "locked", value = value)
     } else if (j == "exec") {
         .assert_exec_mode(value)
-        data.table::set(data, i = i, j = "exec", value = value)
+        # The exec mode decides how the step is called, so a new mode
+        # outdates its output and the outputs of its downstream steps.
+        if (!identical(value, data[["exec"]][[i]])) {
+            data.table::set(data, i = i, j = "exec", value = value)
+            .pip_outdate_downstream(x, steps = step)
+        }
     } else if (j == "time") {
         if (!.is_single(value, "POSIXct") || is.na(value)) {
             stop("time must be a single POSIXct value")
@@ -833,12 +861,12 @@ dim.pipeflow <- function(x) {
 #' the steps of `q` selected by `i` into the steps of `p` selected by `i`
 #' (the rows of both sides are aligned by position and must have the same
 #' length). In this form, `i` is required and `j` must be omitted. The
-#' properties are copied in the order `step`, `fun`, `params`, `out`,
-#' `state`, `time`, `time_start`, `tags`, `locked`, `exec`: the step is
-#' renamed to the source name (a no-op when it is unchanged), the function
-#' and the params are replaced with those of the source (same as
-#' [pip_replace()] with the params of the source), and the runtime state
-#' and annotation columns are
+#' properties are copied in the order `step`, `fun`, `params`, `exec`,
+#' `out`, `state`, `time`, `time_start`, `tags`, `locked`: the step is
+#' renamed to the source name (a no-op when it is unchanged), the function,
+#' the params and the execution mode are replaced with those of the source
+#' (same as [pip_replace()] with the params and `exec` of the source), and
+#' the runtime state and annotation columns are
 #' overwritten (locked steps included). A copied step refers to the steps
 #' that the source step depends on by name, also if it was defined with a
 #' relative reference such as `~-1`, and these steps are looked up in `p`.

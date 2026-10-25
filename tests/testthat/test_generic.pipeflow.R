@@ -989,6 +989,57 @@ describe("assignment operator [[<-", {
         expect_error(p[["s2", "exec"]] <- NULL, "must be a single string")
     })
 
+    split_pip <- function() {
+        pip_new("pipe") |>
+            pip_add("parts", \() list(a = 1, b = 2), exec = "split") |>
+            pip_add("total", \(x = ~parts) sum(unlist(x)), exec = "reduce") |>
+            pip_add("report", \(x = ~total) x)
+    }
+
+    it("outdates the step and its downstream steps on a new exec mode", {
+        p <- split_pip()
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["total", "out"]], 3)
+
+        p[["total", "exec"]] <- "auto"
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "outdated", "outdated")
+        )
+        pip_run(p, lgr = NULL)
+        expect_equal(unclass(p[["total", "out"]]), list(a = 1, b = 2))
+        expect_equal(unclass(p[["report", "out"]]), list(a = 1, b = 2))
+    })
+
+    it("keeps the states if the exec mode does not change", {
+        p <- split_pip()
+        pip_run(p, lgr = NULL)
+
+        p[["total", "exec"]] <- "reduce"
+
+        expect_equal(unname(p[["state"]]), rep("done", 3))
+    })
+
+    it("keeps steps that never ran new on a new exec mode", {
+        p <- split_pip()
+        p[["total", "exec"]] <- "auto"
+        expect_equal(unname(p[["state"]]), rep("new", 3))
+    })
+
+    it("outdates downstream steps outside of a view on a new exec mode", {
+        p <- split_pip()
+        pip_run(p, lgr = NULL)
+        v <- pip_view(p, step = "total")
+
+        v[["total", "exec"]] <- "auto"
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "outdated", "outdated")
+        )
+    })
+
     it("can assign states", {
         p <- test_pip()
         p[["s1", "state"]] <- "outdated"
@@ -1445,6 +1496,22 @@ describe("[<-.pipeflow", {
         expect_equal(p[["params"]][[2]][["k"]], 6)
     })
 
+    it("outdates only the steps that get a new exec mode", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x + 1) |>
+            pip_add("s3", \(x = ~s2) x + 1) |>
+            pip_add("s4", \(x = 4) x)
+        pip_run(p, lgr = NULL)
+
+        p[c("s2", "s4"), "exec"] <- c("plain", "auto")
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "outdated", "outdated", "done")
+        )
+    })
+
     it("replicates a single function to all selected rows", {
         p <- test_pip()
         p[1:2, "fun"] <- \(x = 5) x
@@ -1525,6 +1592,109 @@ describe("[<-.pipeflow", {
 })
 
 
+describe("assignments that outdate steps", {
+    # 's2' and 's3' depend on 's1', 's4' does not
+    run_pip <- function() {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1, k = 2) x * k) |>
+            pip_add("s3", \(x = ~s2) x + 1) |>
+            pip_add("s4", \(x = 4) x)
+        pip_run(p, lgr = NULL)
+    }
+
+    # The value assigned to a property of 's2' and the expected states
+    edits <- list(
+        fun = list(
+            value = \(x = ~s1, k = 2) x * k * 10,
+            states = c("done", "new", "outdated", "done")
+        ),
+        params = list(
+            value = list(k = 3),
+            states = c("done", "outdated", "outdated", "done")
+        ),
+        exec = list(
+            value = "plain",
+            states = c("done", "outdated", "outdated", "done")
+        ),
+        out = list(
+            value = 99,
+            states = c("done", "done", "outdated", "done")
+        ),
+        state = list(
+            value = "outdated",
+            states = c("done", "outdated", "done", "done")
+        ),
+        step = list(value = "renamed", states = rep("done", 4)),
+        time = list(value = Sys.time(), states = rep("done", 4)),
+        time_start = list(value = as.POSIXct(NA), states = rep("done", 4)),
+        tags = list(value = "x", states = rep("done", 4)),
+        locked = list(value = TRUE, states = rep("done", 4))
+    )
+
+    assigners <- list(
+        "[[<-" = function(p, j, value) {
+            p[["s2", j]] <- value
+            p
+        },
+        "[<-" = function(p, j, value) {
+            p["s2", j] <- value
+            p
+        },
+        "[[<- on a view" = function(p, j, value) {
+            v <- pip_view(p, step = "s2")
+            v[[1, j]] <- value
+            p
+        }
+    )
+
+    for (how in names(assigners)) {
+        for (j in names(edits)) {
+            it(sprintf("sets the states for '%s' via %s", j, how), {
+                p <- assigners[[how]](run_pip(), j, edits[[j]][["value"]])
+                expect_equal(unname(p[["state"]]), edits[[j]][["states"]])
+            })
+        }
+    }
+
+    it("computes the downstream steps from an assigned output", {
+        p <- run_pip()
+
+        p[["s1", "out"]] <- 10
+        pip_run(p, lgr = NULL)
+
+        expect_equal(p[["s1", "out"]], 10)
+        expect_equal(p[["s2", "out"]], 20)
+        expect_equal(p[["s3", "out"]], 21)
+    })
+
+    it("outdates the downstream steps of all assigned outputs", {
+        p <- run_pip()
+
+        p[c("s2", "s4"), "out"] <- list(10, 40)
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("done", "done", "outdated", "done")
+        )
+    })
+
+    it("keeps the copied states of downstream steps", {
+        p <- run_pip()
+        q <- pip_clone(p)
+        q[1:3, "out"] <- list(5, 10, 11)
+        q[1:3, "state"] <- "done"
+
+        # Each copied output outdates the steps after it, which then get
+        # their copied states
+        p[1:3, ] <- q[1:3, ]
+
+        expect_equal(unname(p[["state"]]), rep("done", 4))
+        expect_equal(unname(p[["out"]][1:3]), list(5, 10, 11))
+    })
+})
+
+
 describe("cross-pipeline assignment", {
     test_pip <- function(name = "p") {
         pip_new(name) |>
@@ -1535,11 +1705,12 @@ describe("cross-pipeline assignment", {
     it("copies the runtime state and annotation columns", {
         p <- test_pip()
         q <- pip_clone(p)
+        # A new exec mode outdates the steps, so it is set first
+        q[1:2, "exec"] <- "plain"
         q[1:2, "out"] <- list(10, 20)
         q[1:2, "tags"] <- c("a", "b")
         q[1:2, "state"] <- "done"
         q[1:2, "locked"] <- TRUE
-        q[1:2, "exec"] <- "plain"
 
         p[1:2, ] <- q[1:2, ]
 

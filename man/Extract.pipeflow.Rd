@@ -173,7 +173,8 @@ same as \code{pip_set_params(p, list(...))}
 }
 \item \code{p[[step, "locked"]] <- TRUE|FALSE} -- lock or unlock the step;
 same as \code{\link[=pip_lock]{pip_lock()}} / \code{\link[=pip_unlock]{pip_unlock()}}
-\item \code{p[[step, "exec"]] <- mode} -- set the step's execution mode.
+\item \code{p[[step, "exec"]] <- mode} -- set the step's execution mode. A new
+mode marks the step and its downstream steps as \code{"outdated"}.
 \item \code{p[[step, "state"]] <- state} -- set the step's state.
 \item \code{p[[step, "time"]] <- time} -- set the step's time stamp (a single
 \code{POSIXct} value).
@@ -181,7 +182,8 @@ same as \code{\link[=pip_lock]{pip_lock()}} / \code{\link[=pip_unlock]{pip_unloc
 last run (a single \code{POSIXct} value, which can be \code{NA} for a step that
 never ran).
 \item \code{p[[step, "out"]] <- value} -- set the step's stored output (mostly
-useful for debugging)
+useful for debugging). The downstream steps are marked as
+\code{"outdated"}, so that the next run computes them from the new output.
 }
 
 Assigning to any other step-table column, or to a meta field other than
@@ -192,6 +194,25 @@ steps covered by the view: an integer refers to the n-th visible step, and a
 step name must be part of the view. Because views share the pipeline
 environment, step properties are written through to the originating
 pipeline, while \code{name} only renames the view itself.
+}
+
+\subsection{Which assignments outdate steps}{
+
+Results that may no longer match the steps are marked as \code{"outdated"},
+so that the next \code{\link[=pip_run]{pip_run()}} computes them again. As always, steps that
+never ran stay \code{"new"}.
+\itemize{
+\item \code{fun}: the step becomes \code{"new"} and its downstream steps \code{"outdated"}.
+\item \code{params} and \code{exec}: the step and its downstream steps, if a value
+changes.
+\item \code{out}: the downstream steps, while the step keeps its state.
+\item \code{step} (a new name), \code{state}, \code{time}, \code{time_start}, \code{tags} and
+\code{locked} don't change any result and outdate no step.
+}
+
+This holds for all forms of assignment: \verb{[[<-}, \verb{[<-} (which assigns row
+by row) and assignments through a view, which also outdate the downstream
+steps that are not part of the view.
 }
 
 }
@@ -220,12 +241,12 @@ of its steps are copied to the selected rows: \code{p[i, ] <- q[i, ]} copies
 the steps of \code{q} selected by \code{i} into the steps of \code{p} selected by \code{i}
 (the rows of both sides are aligned by position and must have the same
 length). In this form, \code{i} is required and \code{j} must be omitted. The
-properties are copied in the order \code{step}, \code{fun}, \code{params}, \code{out},
-\code{state}, \code{time}, \code{time_start}, \code{tags}, \code{locked}, \code{exec}: the step is
-renamed to the source name (a no-op when it is unchanged), the function
-and the params are replaced with those of the source (same as
-\code{\link[=pip_replace]{pip_replace()}} with the params of the source), and the runtime state
-and annotation columns are
+properties are copied in the order \code{step}, \code{fun}, \code{params}, \code{exec},
+\code{out}, \code{state}, \code{time}, \code{time_start}, \code{tags}, \code{locked}: the step is
+renamed to the source name (a no-op when it is unchanged), the function,
+the params and the execution mode are replaced with those of the source
+(same as \code{\link[=pip_replace]{pip_replace()}} with the params and \code{exec} of the source), and
+the runtime state and annotation columns are
 overwritten (locked steps included). A copied step refers to the steps
 that the source step depends on by name, also if it was defined with a
 relative reference such as \code{~-1}, and these steps are looked up in \code{p}.
