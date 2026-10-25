@@ -4338,6 +4338,99 @@ describe("pip_run", {
         expect_equal(calls, c("load_raw", "fit_model", "eval_model", "bla_bla"))
     })
 
+    describe("cancel from the progress callback", {
+        it("halts the run before the step if the callback returns FALSE", {
+            p <- test_pip()
+            progress <- function(value, detail) detail != "eval_model"
+
+            pip_run(p, lgr = NULL, progress = progress)
+
+            expect_equal(unname(p[["out"]]), list(1, 2, NULL, NULL))
+            expect_equal(
+                unname(p[["state"]]),
+                c("done", "done", "new", "new")
+            )
+            expect_equal(get_run_state(p), "halted")
+        })
+
+        it("marks steps after executed steps that were not run outdated", {
+            p <- test_pip()
+            pip_run(p, lgr = NULL)
+            progress <- function(value, detail) value < 2L
+
+            pip_run(p, lgr = NULL, force = TRUE, progress = progress)
+
+            expect_equal(
+                unname(p[["state"]]),
+                c("done", "outdated", "outdated", "done")
+            )
+            expect_equal(get_run_state(p), "halted")
+        })
+
+        it("continues where the cancelled run left off in the next run", {
+            p <- test_pip()
+            pip_run(p, lgr = NULL, progress = \(value, detail) value < 3L)
+
+            logs <- character(0)
+            lgr <- function(level, msg) logs <<- c(logs, msg)
+            pip_run(p, lgr = lgr)
+
+            expect_equal(unname(p[["out"]]), list(1, 2, 2, "blabla"))
+            expect_equal(unname(p[["state"]]), rep("done", 4))
+            expect_equal(get_run_state(p), "ready")
+            expect_true(any(grepl("Step 1/4 load_raw - skipping done", logs)))
+            expect_true(any(grepl("Step 2/4 fit_model - skipping done", logs)))
+        })
+
+        it("does not halt for return values other than FALSE", {
+            returns <- list(NULL, TRUE, NA, c(FALSE, FALSE), "FALSE", 0)
+            for (ret in returns) {
+                p <- test_pip()
+                pip_run(p, lgr = NULL, progress = \(value, detail) ret)
+
+                expect_equal(unname(p[["state"]]), rep("done", 4))
+                expect_equal(get_run_state(p), "ready")
+            }
+        })
+
+        it("logs the cancel", {
+            p <- test_pip()
+            logs <- character(0)
+            lgr <- function(level, msg) logs <<- c(logs, msg)
+
+            pip_run(p, lgr = lgr, progress = \(value, detail) value < 2L)
+
+            expect_true(any(grepl("Step 1/4 load_raw", logs)))
+            expect_true(any(grepl("Aborting .* on cancel", logs)))
+            expect_false(any(grepl("Step 2/4", logs)))
+        })
+
+        it("cancels a run after a restart", {
+            count <- 0L
+            p <- pip_new() |>
+                pip_add("s1", \(x = 1) x) |>
+                pip_add("s2", \(x = ~s1) {
+                    count <<- count + 1L
+                    if (count == 1L) {
+                        .self$restart()
+                    }
+                    x + 1
+                }) |>
+                pip_add("s3", \(x = ~s2) x + 1)
+            calls <- character(0)
+            progress <- function(value, detail) {
+                calls <<- c(calls, detail)
+                length(calls) < 4L
+            }
+
+            pip_run(p, lgr = NULL, progress = progress)
+
+            expect_equal(calls, c("s1", "s2", "s1", "s2"))
+            expect_equal(count, 1L)
+            expect_equal(get_run_state(p), "halted")
+        })
+    })
+
     it("skips locked steps during run", {
         p <- test_pip()
         data.table::set(

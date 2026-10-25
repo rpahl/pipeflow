@@ -24,8 +24,8 @@ without failures.
 \item \code{"running"}: a run is in progress (seen from within a step).
 \item \code{"restart"}: a step requested a restart, which \code{\link[=pip_run]{pip_run()}} carries out
 right after the step.
-\item \code{"halted"}: a step halted the run (see section 'Runtime control flow
-via restart and halt' in \code{\link[=pip_run]{pip_run()}}).
+\item \code{"halted"}: a step or the \code{progress} callback halted the run (see
+section 'Runtime control flow via restart and halt' in \code{\link[=pip_run]{pip_run()}}).
 \item \code{"failed"}: the last run stopped on an error (\code{on_error = "stop"}).
 \item \code{"continued"}: the last run had failed steps but went on
 (\code{on_error = "continue"}).

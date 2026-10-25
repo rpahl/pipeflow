@@ -25,7 +25,10 @@ can also be used to build custom loggers. To suppress logging, you can set
 regardless of whether they are outdated or not.}
 
 \item{progress}{Optional callback of the form
-\verb{function(value, detail)} called before each step.}
+\verb{function(value, detail)} called before each step, with the position of
+the step in the run and its name. If it returns \code{FALSE}, the run is
+halted before the step, as by \code{.self$halt()} (see section 'Runtime
+control flow via restart and halt' below).}
 
 \item{on_error}{What to do when a step fails: \code{"stop"} (the default)
 aborts the run, \code{"continue"} goes on with all steps that do not depend on
@@ -175,7 +178,11 @@ simply ends with run state \code{"halted"} (see \code{\link[=pip_run_state]{pip_
 subsequent \code{\link[=pip_run]{pip_run()}} will continue where the run left off.
 }
 
-In both cases steps downstream of executed steps that have not been
+A run can also be halted from outside: if the \code{progress} callback returns
+\code{FALSE}, the run ends before the next step, e.g. when a user cancels the
+run in a Shiny app.
+
+In all cases, steps downstream of executed steps that have not been
 executed until the restart or halt happens are marked as \code{"outdated"}.
 }
 }
