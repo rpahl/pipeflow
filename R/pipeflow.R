@@ -659,6 +659,74 @@
     )
 }
 
+#' Describe how the keys of partitioned arguments differ
+#'
+#' A step mapped over partitioned arguments needs the same keys, in the same
+#' order, in all of them. The keys of the first argument are the reference.
+#' For each other argument whose keys differ, the message lists the keys it
+#' is missing, its extra keys, and the common keys that are in a different
+#' order, at most `max` of each.
+#'
+#' @param argKeys Named list of the keys of the partitioned arguments, by
+#' argument name, in the order of the arguments. The keys of an argument are
+#' unique (see `.as_pipeflow_partitioned()`).
+#' @param max The maximum number of keys listed per kind of difference.
+#' @return The error message, or `NULL` if all arguments have the keys of the
+#' first one.
+#' @noRd
+.pip_keys_mismatch <- function(argKeys, max = 5L) {
+    ref <- argKeys[[1L]]
+    differs <- !vapply(
+        argKeys,
+        FUN = identical,
+        y = ref,
+        FUN.VALUE = logical(1)
+    )
+    if (!any(differs)) {
+        return(NULL)
+    }
+
+    quoteKeys <- function(keys) {
+        shown <- keys[seq_len(min(length(keys), max))]
+        quoted <- paste0("'", shown, "'", collapse = ", ")
+        if (length(keys) > max) {
+            quoted <- sprintf("%s and %d more", quoted, length(keys) - max)
+        }
+        quoted
+    }
+
+    details <- vapply(
+        argKeys[differs],
+        FUN = function(keys) {
+            # The common keys in the order of the reference and of the
+            # argument, and those whose position differs between the two
+            common <- intersect(ref, keys)
+            moved <- common[common != intersect(keys, ref)]
+            diffs <- list(
+                missing = setdiff(ref, keys),
+                extra = setdiff(keys, ref),
+                "different order of" = moved
+            )
+            diffs <- Filter(length, diffs)
+            paste(names(diffs), vapply(diffs, quoteKeys, ""), collapse = "; ")
+        },
+        FUN.VALUE = character(1)
+    )
+
+    sprintf(
+        "partitioned arguments must share identical keys: %s",
+        paste0(
+            sprintf(
+                "argument '%s' differs from '%s' (%s)",
+                names(details),
+                names(argKeys)[[1L]],
+                details
+            ),
+            collapse = ", "
+        )
+    )
+}
+
 #' The step call that runs
 #'
 #' @return A list of `step`, `key` and `keys`, see `.pip_call_step()`. All
@@ -765,12 +833,11 @@
 
     # Auto mode with partitioned inputs: map the function over the partition
     # keys. Keys are taken from the first partitioned argument...
-    keys <- names(args[[partIdx[[1]]]])
-    for (k in partIdx[-1]) {
-        kk <- names(args[[k]])
-        if (!identical(kk, keys)) {
-            stop("partitioned arguments must share identical keys")
-        }
+    argKeys <- lapply(args[partIdx], FUN = names)
+    keys <- argKeys[[1L]]
+    mismatch <- .pip_keys_mismatch(argKeys)
+    if (!is.null(mismatch)) {
+        stop(mismatch)
     }
 
     # With no key there is no call, which could tell a pipeline function that
@@ -1764,7 +1831,8 @@ pip_new <- function(name = "pipe") {
 #' section 'Continuing after errors' in [pip_run()]). If a split step fails,
 #' a `reduce` step also accepts the resulting failure object when it takes
 #' it via `~try()`. In summary:
-#' * auto: map if partitioned input appears, otherwise single call
+#' * auto: map if partitioned input appears, otherwise single call. Several
+#'   partitioned inputs must have the same keys in the same order.
 #' * split: single call, then mark output as partitioned
 #' * reduce: single call, but only valid with partitioned input or, via
 #'   `~try()`, a failure object

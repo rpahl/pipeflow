@@ -1,3 +1,12 @@
+# pipeflow 0.5.0.9018
+
+## Changes
+
+- The error of a mapped step whose partitioned inputs don't have the same
+  keys names the arguments that differ and lists the keys that are missing,
+  extra or in a different order, e.g. `partitioned arguments must share
+  identical keys: argument 'r' differs from 'l' (missing 'b'; extra 'd')`.
+
 # pipeflow 0.5.0.9017
 
 ## Bug fixes
