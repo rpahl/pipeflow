@@ -886,6 +886,7 @@
     # the keys to run are collected first and then run by `map`.
     out <- stats::setNames(vector(mode = "list", length = length(keys)), keys)
     todo <- list()
+    blocked <- character()
     for (key in keys) {
         if (key %in% names(keep)) {
             out[key] <- keep[key]
@@ -913,10 +914,13 @@
                 failedStep = cause[["failed_step"]],
                 key = key
             )
-            if (onError == "stop") {
+            # With `map`, it is raised in the order of the keys, after the
+            # keys that are run by `map` (see below).
+            if (onError == "stop" && is.null(map)) {
                 stop(.pip_key_error(key, parent = failure))
             }
             out[[key]] <- failure
+            blocked <- c(blocked, key)
             next
         }
 
@@ -940,7 +944,13 @@
     # The errors of the keys are only raised (or kept) after all keys ran,
     # in the order of the keys.
     res <- .pip_map_keys(todo, map = map, fun = fun, step = step, keys = keys)
-    for (key in names(res)) {
+    for (key in intersect(keys, c(names(res), blocked))) {
+        if (key %in% blocked) {
+            if (onError == "stop") {
+                stop(.pip_key_error(key, parent = out[[key]]))
+            }
+            next
+        }
         r <- res[[key]]
         out[key] <- if (r[["ok"]]) {
             list(r[["value"]])

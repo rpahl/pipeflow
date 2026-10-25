@@ -449,7 +449,9 @@ Things to keep in mind:
   `.pip_key_worker()`, which catches errors and returns `list(ok, value)`.
   The results are collected in key order, through the same error handling
   as without `map`, so with `on_error = "stop"` all keys run before the
-  first error is raised. A single key to run is not sent to `map`.
+  first error is raised. A key whose input failed is not stopped at while
+  the keys are prepared, but kept in `blocked` and raised in key order
+  with the results, so that the keys before it still run. A single key to run is not sent to `map`.
   `.pip_run_row()` drops `map` for a step whose function refers to `.self`
   or was made by `as.function()` with `cache = TRUE` (`.fun_keeps()`), as
   their changes in another process would be lost. A function made with

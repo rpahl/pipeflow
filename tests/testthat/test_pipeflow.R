@@ -5855,6 +5855,48 @@ describe("pip_run map", {
         expect_equal(unname(p[["fit", "state"]]), "failed")
     })
 
+    it("runs the other keys before a key whose input failed stops", {
+        env <- new.env()
+        env$keys <- character()
+        p <- pip_new("p") |>
+            pip_add(
+                "parts",
+                \(x = list(a = 1, b = -1, c = 4)) x,
+                exec = "split"
+            ) |>
+            pip_add("fit", \(x = ~parts) {
+                if (x < 0) stop("negative") else x * 10
+            }) |>
+            pip_add("twice", \(x = ~fit) {
+                env$keys <- c(env$keys, .pip_step_call()[["key"]])
+                if (x == 10) stop("ten") else x * 2
+            })
+        run_continue(p)
+        pip_lock(p["fit"])
+        env$keys <- character()
+
+        # Key 'a' fails before key 'b', whose input failed, as without map
+        expect_error(
+            pip_run(p, lgr = NULL, force = TRUE, map = lapply),
+            "step 'twice': key 'a': ten",
+            fixed = TRUE
+        )
+        expect_equal(env$keys, c("a", "c"))
+
+        pip_replace(p, "twice", \(x = ~fit) x * 2)
+        err <- expect_error(
+            pip_run(p, lgr = NULL, map = lapply),
+            class = "pipeflow_step_error"
+        )
+        expect_equal(
+            conditionMessage(err),
+            paste(
+                "step 'twice': key 'b': step 'twice' was not run:",
+                "step 'fit' failed: key 'b': negative"
+            )
+        )
+    })
+
     it("only gets the failed keys when they are retried", {
         env <- new.env()
         env$flaky <- TRUE
@@ -6047,6 +6089,55 @@ describe("pip_run map", {
             "step 'fit' failed: key 'b': Error : worker died"
         )
         expect_equal(p[["fit", "out"]][["a"]], 10)
+    })
+
+    it("works with socket workers", {
+        skip_on_cran()
+        cl <- parallel::makePSOCKcluster(2)
+        on.exit(parallel::stopCluster(cl), add = TRUE)
+        # The workers load the installed pipeflow, which must be this one
+        version <- parallel::clusterEvalQ(cl, {
+            tryCatch(
+                as.character(utils::packageVersion("pipeflow")),
+                error = \(e) NA_character_
+            )
+        })[[1]]
+        skip_if_not(
+            identical(version, as.character(utils::packageVersion("pipeflow"))),
+            "the workers can't load this version of pipeflow"
+        )
+        map <- \(X, FUN) parallel::parLapply(cl, X, FUN)
+
+        inner <- pip_new("inner") |>
+            pip_add("pid", \(x = NULL) Sys.getpid()) |>
+            pip_add("times", \(x = ~pid, y = NULL) y * 10)
+        p <- pip_new("p") |>
+            pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+            pip_add("call", \(x = ~parts) {
+                # The workers don't see the test environment
+                list(pid = Sys.getpid(), call = pipeflow:::.pip_step_call())
+            }) |>
+            pip_add(
+                "fit",
+                as.function(inner, out = c("pid", "times"), cache = FALSE),
+                params = list(y = ~parts)
+            )
+        pip_run(p, lgr = NULL, map = map)
+
+        calls <- p[["call", "out"]]
+        expect_equal(
+            lapply(calls, `[[`, "call"),
+            list(
+                a = list(step = "call", key = "a", keys = c("a", "b")),
+                b = list(step = "call", key = "b", keys = c("a", "b"))
+            )
+        )
+        expect_false(Sys.getpid() %in% sapply(calls, `[[`, "pid"))
+
+        # The inner pipeline (and its DAG) is restored in the workers
+        fit <- p[["fit", "out"]]
+        expect_equal(sapply(fit, `[[`, "times"), c(a = 10, b = 20))
+        expect_false(Sys.getpid() %in% sapply(fit, `[[`, "pid"))
     })
 
     it("works with parallel::mclapply", {
