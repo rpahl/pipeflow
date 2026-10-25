@@ -388,29 +388,52 @@ describe("random chains of edits", {
             dat[["step"]][rows[isPinned]]
         }
 
+        # Do `edit`, or if it `is_rejected`, expect it to fail with `error`
+        # and to change nothing
+        edit_or_reject <- function(edit, is_rejected, error) {
+            if (!is_rejected) {
+                return(force(edit))
+            }
+            before <- pip_internals(p)
+            expect_error(edit, error)
+            expect_equal(pip_internals(p), before)
+        }
+
         # Each edit gets the step names and returns a description of what it
-        # did.
+        # did. In `p[i, ...]`, `i` is evaluated in the step table, whose
+        # column `step` would select all steps, so `sel` names the selected
+        # steps there.
         edits <- list(
             add = function(steps) {
                 pos <- sample.int(length(steps) + 1L, 1) - 1L
                 s <- new_step(steps[seq_len(pos)])
                 name <- new_name()
                 after <- if (pos == 0L) 0L else steps[[pos]]
-                pip_add(
-                    p,
-                    name,
-                    s$fun,
-                    after = after,
-                    params = s$params,
-                    exec = s$exec
+                edit_or_reject(
+                    pip_add(
+                        p,
+                        name,
+                        s$fun,
+                        after = after,
+                        params = s$params,
+                        exec = s$exec
+                    ),
+                    is_rejected = name %in% steps,
+                    error = "already exists"
                 )
                 paste("add", name, "after", after)
             },
             remove = function(steps) {
                 step <- sample(steps, 1)
                 force <- stats::runif(1) < 0.5
-                x <- if (stats::runif(1) < 0.3) p[step] else p
-                pip_remove(x, step, force = force)
+                x <- if (stats::runif(1) < 0.3) pip_view(p, step = step) else p
+                depends <- .pip_pipenv(p)[["data"]][["depends"]]
+                edit_or_reject(
+                    pip_remove(x, step, force = force),
+                    is_rejected = !force &&
+                        any(vapply(depends, \(dep) step %in% dep, NA)),
+                    error = "depend on it"
+                )
                 removed <<- c(removed, setdiff(steps, p[["step"]]))
                 paste("remove", step, if (force) "with force")
             },
@@ -418,12 +441,16 @@ describe("random chains of edits", {
                 step <- sample(steps, 1)
                 to <- new_name()
                 w <- pip_view(p, step = step)
-                switch(
-                    sample(4, 1),
-                    pip_rename(p, step, to),
-                    pip_rename(w, step, to),
-                    p[[step, "step"]] <- to,
-                    w[[step, "step"]] <- to
+                edit_or_reject(
+                    switch(
+                        sample(4, 1),
+                        pip_rename(p, step, to),
+                        pip_rename(w, step, to),
+                        p[[step, "step"]] <- to,
+                        w[[step, "step"]] <- to
+                    ),
+                    is_rejected = to %in% setdiff(steps, step),
+                    error = "already exists"
                 )
                 removed <<- setdiff(c(removed, step), to)
                 paste("rename", step, "to", to)
@@ -431,7 +458,11 @@ describe("random chains of edits", {
             replace = function(steps) {
                 k <- sample(seq_along(steps), 1)
                 s <- new_step(steps[seq_len(k - 1L)])
-                x <- if (stats::runif(1) < 0.5) p else p[steps[[k]]]
+                x <- if (stats::runif(1) < 0.5) {
+                    p
+                } else {
+                    pip_view(p, step = steps[[k]])
+                }
                 pip_replace(
                     x,
                     steps[[k]],
@@ -449,12 +480,13 @@ describe("random chains of edits", {
                 }
                 params <- stats::setNames(list(sample(0:4, 1)), name)
                 w <- pip_view(p, step = unique(c(step, sample(steps, 1))))
+                sel <- step
                 switch(
                     sample(4, 1),
                     pip_set_params(pip_view(p, step = step), params),
                     pip_set_params(w, params),
                     p[[step, "params"]] <- params,
-                    p[step, "params"] <- params
+                    p[sel, "params"] <- params
                 )
                 paste("set", name, "of", step, "to", params[[1]])
             },
@@ -509,7 +541,7 @@ describe("random chains of edits", {
                     modes <- c(rep("reduce", length(sel) - 1L), "bogus")
                     expect_error(p[sel, "exec"] <- modes)
                 } else {
-                    to <- c(paste0(sel[-length(sel)], "_x"), others[[1]])
+                    to <- c(sprintf("%s_x", sel[-length(sel)]), others[[1]])
                     expect_error(p[sel, "step"] <- to, "already exists")
                 }
                 expect_equal(pip_internals(p), before)
@@ -594,17 +626,42 @@ describe("random chains of edits", {
                 paste("set output of", step)
             },
             copy = function(steps) {
-                step <- sample(steps, 1)
+                # A copy is computed from the same inputs only if they are
+                # done, so that the clone does not run them again
+                env <- .pip_pipenv(p)
+                ids <- env[["data"]][["nodeId"]]
+                isReady <- vapply(
+                    seq_along(steps),
+                    FUN = \(k) {
+                        up <- dag_get_reachable_nodes_up(
+                            .pip_dag(env),
+                            ids[[k]]
+                        )
+                        isUp <- ids %in% setdiff(up, ids[[k]])
+                        all(env[["data"]][["state"]][isUp] == "done")
+                    },
+                    FUN.VALUE = NA
+                )
+                if (!any(isReady)) {
+                    return("no step to copy")
+                }
+                sel <- sample(steps[isReady], 1)
                 q <- pip_clone(p)
-                if (!is.null(unbound_param(q, step, "k"))) {
-                    pip_set_params(pip_view(q, step = step), list(k = 9))
+                if (!is.null(unbound_param(q, sel, "k"))) {
+                    pip_set_params(pip_view(q, step = sel), list(k = 9))
                 }
                 run_log(q)
-                p[step, ] <- q[step, ]
-                paste("copy", step, "from a clone")
+                p[sel, ] <- q[sel, ]
+                paste("copy", sel, "from a clone")
             },
             lock = function(steps) {
-                step <- sample(steps, 1)
+                # A step that is not done may have passed a failure to its
+                # dependents, which they would not get from a locked step
+                isDone <- p[["state"]] == "done"
+                if (!any(isDone)) {
+                    return("no step to lock")
+                }
+                step <- sample(steps[isDone], 1)
                 pip_lock(pip_view(p, step = step))
                 paste("lock", step)
             },
@@ -656,11 +713,21 @@ describe("random chains of edits", {
             } else {
                 sample(names(weights), 1, prob = weights)
             }
-            # Some edits fail, e.g. a removal without force of a step that
-            # other steps depend on, after which the checks must pass too.
-            what <- tryCatch(
+            # An edit that fails other than expected fails the test, with
+            # the edits so far (failed expectations are reported as they are)
+            what <- withCallingHandlers(
                 suppressMessages(edits[[edit]](steps)),
-                error = \(e) paste(edit, "failed:", conditionMessage(e))
+                error = function(e) {
+                    if (!inherits(e, "expectation")) {
+                        stop(
+                            sprintf("edit %d (%s) failed: ", i, edit),
+                            conditionMessage(e),
+                            "\n",
+                            paste0(seq_along(history), ": ", history, "\n"),
+                            call. = FALSE
+                        )
+                    }
+                }
             )
             history <- c(history, what)
             check(
@@ -673,11 +740,11 @@ describe("random chains of edits", {
 
     # Set the environment variable PIPEFLOW_RANDOM_CHAINS to run more chains,
     # e.g. after changing how edits or runs work.
-    it("keep the invariants after each edit", {
-        skip_on_cran()
-        nChains <- as.integer(Sys.getenv("PIPEFLOW_RANDOM_CHAINS", "5"))
-        for (seed in seq_len(nChains)) {
+    nChains <- as.integer(Sys.getenv("PIPEFLOW_RANDOM_CHAINS", "5"))
+    for (seed in seq_len(nChains)) {
+        it(sprintf("keep the invariants after each edit (seed %d)", seed), {
+            skip_on_cran()
             run_random_chain(seed, n = 100)
-        }
-    })
+        })
+    }
 })
