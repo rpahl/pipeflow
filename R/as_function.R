@@ -667,8 +667,9 @@ as.function.pipeflow <- function(
 
 #' A light copy of the run inner pipeline, for a function `out`
 #'
-#' Unlike a new pipeline, the copy has the run state and the time of the last
-#' run of `pip`, since it shows `pip` as that run left it.
+#' Unlike a new pipeline, the copy has the run state and the time and
+#' duration of the last run of `pip`, since it shows `pip` as that run left
+#' it.
 #'
 #' @param pip The inner pipeline, after the run.
 #' @return A light copy of `pip`, see `.pip_clone()`.
@@ -679,6 +680,7 @@ as.function.pipeflow <- function(
     to <- .pip_pipenv(snapshot)
     to[[".run_state"]] <- from[[".run_state"]]
     to[[".last_run"]] <- from[[".last_run"]]
+    to[[".last_run_duration"]] <- from[[".last_run_duration"]]
     snapshot
 }
 

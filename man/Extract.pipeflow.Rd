@@ -182,6 +182,9 @@ mode marks the step and its downstream steps as \code{"outdated"}.
 \item \code{p[[step, "time_start"]] <- time} -- set the start time of the step's
 last run (a single \code{POSIXct} value, which can be \code{NA} for a step that
 never ran).
+\item \code{p[[step, "duration"]] <- duration} -- set the duration of the step's
+last run (a single \code{difftime} value, which can be \code{NA} for a step that
+never ran).
 \item \code{p[[step, "out"]] <- value} -- set the step's stored output (mostly
 useful for debugging). The downstream steps are marked as
 \code{"outdated"}, so that the next run computes them from the new output.
@@ -207,8 +210,8 @@ never ran stay \code{"new"}.
 \item \code{params} and \code{exec}: the step and its downstream steps, if a value
 changes.
 \item \code{out}: the downstream steps, while the step keeps its state.
-\item \code{step} (a new name), \code{state}, \code{time}, \code{time_start}, \code{tags} and
-\code{locked} don't change any result and outdate no step.
+\item \code{step} (a new name), \code{state}, \code{time}, \code{time_start}, \code{duration}, \code{tags}
+and \code{locked} don't change any result and outdate no step.
 }
 
 This holds for all forms of assignment: \verb{[[<-}, \verb{[<-} (which assigns row
@@ -247,12 +250,12 @@ the steps of \code{q} selected by \code{i} into the steps of \code{p} selected b
 (the rows of both sides are aligned by position and must have the same
 length). In this form, \code{i} is required and \code{j} must be omitted. The
 properties are copied in the order \code{step}, \code{fun}, \code{params}, \code{exec},
-\code{out}, \code{state}, \code{time}, \code{time_start}, \code{tags}, \code{locked}: the step is
-renamed to the source name (a no-op when it is unchanged), the function,
-the params and the execution mode are replaced with those of the source
-(same as \code{\link[=pip_replace]{pip_replace()}} with the params and \code{exec} of the source), and
-the runtime state and annotation columns are
-overwritten (locked steps included). A copied step refers to the steps
+\code{out}, \code{state}, \code{time}, \code{time_start}, \code{duration}, \code{tags}, \code{locked}: the
+step is renamed to the source name (a no-op when it is unchanged), the
+function, the params and the execution mode are replaced with those of
+the source (same as \code{\link[=pip_replace]{pip_replace()}} with the params and \code{exec} of the
+source), and the runtime state and annotation columns are overwritten
+(locked steps included). A copied step refers to the steps
 that the source step depends on by name, also if it was defined with a
 relative reference such as \code{~-1}, and these steps are looked up in \code{p}.
 The structural columns \code{nodeId}, \code{depends} and \code{unbound} are not copied

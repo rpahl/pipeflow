@@ -1125,6 +1125,23 @@ describe("assignment operator [[<-", {
         expect_error(p[["s2", "time_start"]] <- c(when, when), msg)
     })
 
+    it("can assign durations, also NA, which are stored in seconds", {
+        p <- test_pip()
+        p[["s1", "duration"]] <- as.difftime(2, units = "mins")
+        expect_equal(p[["s1", "duration"]], as.difftime(120, units = "secs"))
+        expect_equal(units(p[["duration"]]), "secs")
+        p[["s1", "duration"]] <- NA
+        expect_true(is.na(p[["s1", "duration"]]))
+        expect_s3_class(p[["duration"]], "difftime")
+
+        msg <- "duration must be a single difftime value or NA"
+        expect_error(p[["s2", "duration"]] <- 1, msg)
+        expect_error(p[["s2", "duration"]] <- NA_real_, msg)
+        expect_error(p[["s2", "duration"]] <- Sys.time(), msg)
+        d <- as.difftime(1, units = "secs")
+        expect_error(p[["s2", "duration"]] <- c(d, d), msg)
+    })
+
     it("can assign output values", {
         p <- test_pip()
         p[["s1", "out"]] <- 10
@@ -1565,6 +1582,33 @@ describe("[<-.pipeflow", {
         )
     })
 
+    it("assigns durations to several rows, one or one per row", {
+        p <- test_pip()
+        p[1:2, "duration"] <- as.difftime(1, units = "mins")
+        expect_equal(
+            unname(p[["duration"]]),
+            as.difftime(c(60, 60, NA), units = "secs")
+        )
+
+        p[2:3, "duration"] <- as.difftime(c(2, 3), units = "secs")
+        expect_equal(
+            unname(p[["duration"]]),
+            as.difftime(c(60, 2, 3), units = "secs")
+        )
+
+        p[, "duration"] <- NA
+        expect_true(all(is.na(p[["duration"]])))
+        expect_s3_class(p[["duration"]], "difftime")
+    })
+
+    it("copies durations of several rows from a pipeline", {
+        p <- test_pip()
+        q <- test_pip()
+        q[1:3, "duration"] <- as.difftime(c(1, 2, 3), units = "secs")
+        p[1:3, "duration"] <- q[1:3, "duration"]
+        expect_equal(p[["duration"]], q[["duration"]])
+    })
+
     it("leaves the pipeline as it was if the value of a row is invalid", {
         when <- as.POSIXct("2020-01-01 12:00:00", tz = "UTC")
         invalid <- list(
@@ -1573,7 +1617,8 @@ describe("[<-.pipeflow", {
             locked = c(TRUE, NA),
             tags = list("a", 1),
             time = list(when, "now"),
-            time_start = list(when, "now")
+            time_start = list(when, "now"),
+            duration = list(as.difftime(1, units = "secs"), "1 s")
         )
         for (prop in names(invalid)) {
             p <- pip_run(test_pip(), lgr = NULL)
@@ -1827,6 +1872,7 @@ describe("assignments that outdate steps", {
         step = list(value = "renamed", states = rep("done", 4)),
         time = list(value = Sys.time(), states = rep("done", 4)),
         time_start = list(value = as.POSIXct(NA), states = rep("done", 4)),
+        duration = list(value = NA, states = rep("done", 4)),
         tags = list(value = "x", states = rep("done", 4)),
         locked = list(value = TRUE, states = rep("done", 4))
     )
@@ -1920,16 +1966,19 @@ describe("cross-pipeline assignment", {
         expect_equal(unname(p[["exec"]]), c("plain", "plain"))
     })
 
-    it("copies time_start, also of steps that never ran", {
+    it("copies time_start and duration, also of steps that never ran", {
         p <- pip_run(test_pip(), lgr = NULL)
         q <- pip_clone(test_pip())
         when <- as.POSIXct("2020-01-01 12:00:00", tz = "UTC")
         q[["s1", "time_start"]] <- when
+        q[["s1", "duration"]] <- as.difftime(3, units = "secs")
 
         p[1:2, ] <- q[1:2, ]
 
         expect_equal(as.numeric(p[["s1", "time_start"]]), as.numeric(when))
         expect_true(is.na(p[["s2", "time_start"]]))
+        expect_equal(p[["s1", "duration"]], as.difftime(3, units = "secs"))
+        expect_true(is.na(p[["s2", "duration"]]))
     })
 
     it("copies the function and the unbound params, then runs", {
@@ -2330,7 +2379,7 @@ describe("rbind", {
         expect_error(rbind(p, 1), "x must be a pipeflow pip")
     })
 
-    it("keeps time and time_start of the bound steps", {
+    it("keeps time, time_start and duration of the bound steps", {
         p1 <- pip_run(test_pip("left"), lgr = NULL)
         p2 <- test_pip("right")
         out <- rbind(p1, p2)
@@ -2344,6 +2393,11 @@ describe("rbind", {
         )
         expect_false(anyNA(out[["time_start"]][1:2]))
         expect_true(all(is.na(out[["time_start"]][3:4])))
+        expect_equal(
+            unname(out[["duration"]]),
+            unname(c(p1[["duration"]], p2[["duration"]]))
+        )
+        expect_s3_class(out[["duration"]], "difftime")
     })
 
     it("binds pipelines without mutating inputs", {

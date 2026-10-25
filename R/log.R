@@ -9,7 +9,7 @@
 }
 
 
-#' Format a duration for the log
+#' Format a duration for the log and for print()
 #'
 #' Durations below a minute are shown in seconds with milliseconds, longer
 #' ones in minutes and seconds, or in hours and minutes.
