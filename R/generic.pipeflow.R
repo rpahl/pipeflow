@@ -270,7 +270,9 @@
         d <- dag_new()
         for (k in seq_len(nrow(subDat))) {
             dag_add_node(d)
-            deps <- subDat[["depends"]][[k]]
+            # A step can refer to the same step with several arguments, but
+            # there is only one edge
+            deps <- unique(subDat[["depends"]][[k]])
             if (length(deps) == 0L) {
                 next
             }

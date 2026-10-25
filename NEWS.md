@@ -1,3 +1,19 @@
+# pipeflow 0.5.0.9020
+
+## Bug fixes
+
+- `pip_rename()` now also renames the step in the failures of failed keys
+  if the step name has a name attribute, e.g. if it is taken from
+  `p[["step"]]`. Before, the failures in the outputs of the step and its
+  dependents kept the old name, and renaming a step to its own name this
+  way failed with "already exists".
+- `pip_reset()` now marks the downstream steps of the reset steps as
+  `"outdated"`, as they ran with the cleared outputs. Locked steps keep
+  their state. Before, the downstream steps stayed `"done"`, and if a reset
+  step was then locked, the next run kept their results.
+- `p[i, view = FALSE]` no longer warns that an edge already exists if a
+  step refers to the same step with several arguments.
+
 # pipeflow 0.5.0.9019
 
 ## Breaking changes

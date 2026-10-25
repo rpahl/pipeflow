@@ -16,13 +16,16 @@ The updated pipeline or view, invisibly.
 \description{
 Resets all unlocked steps of a pipeline (or a subset of steps defined by a
 view) to state \code{"new"} and clears their outputs, so a subsequent
-\code{\link[=pip_run]{pip_run()}} re-executes the cleaned steps from scratch.
+\code{\link[=pip_run]{pip_run()}} re-executes the cleaned steps from scratch. Their downstream
+steps that have run are marked \code{"outdated"}, as they ran with the cleared
+outputs.
 Any pending restart counters are cleared, but parameters, tags, and
 locked flags are left unchanged.
 }
 \details{
-Locked steps are skipped: their state and output are preserved.
-If all selected steps are locked, a warning is issued and nothing is
+Locked steps are skipped: their state and output are preserved,
+also if they are downstream of a reset step.
+If all selected steps are locked, a message is shown and nothing is
 changed.
 }
 \examples{

@@ -162,6 +162,9 @@ have changed the pipeline.
   (the DAG is tested in `test_RcppExports.R`; testthat edition 3, run in
   parallel). Use `mockery` for external
   dependencies. Helpers live in `tests/testthat/helper_*.R`.
+  `test_edit_chains.R` runs long chains of edits and checks the invariants
+  after each edit (`helper_invariants.R`). After changing how edits or runs
+  work, run it with more random chains, e.g. `PIPEFLOW_RANDOM_CHAINS=100`.
 - Vignettes (`vignettes/v0*.Rmd`, plus `vignettes/articles/` for
   pkgdown-only articles) use descriptive chunk labels and a `knitr-setup`
   chunk with `comment = "#"`. Their YAML follows the template in

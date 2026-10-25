@@ -117,7 +117,11 @@ view is a second handle on the same `pipenv` whose `view` field is set
 ### Invariants
 
 Most bugs break one of these. Check them after every change that touches
-structure:
+structure. `tests/testthat/helper_invariants.R` checks them in code (also
+the bookkeeping of failed keys, see
+[Errors and failures](#errors-and-failures), and whether the steps that are
+done hold the outputs of a run from scratch), and `test_edit_chains.R`
+checks them after each edit of long chains of edits, some of them random:
 
 1. **Row order is a topological order.** A step may only refer to steps in
    earlier rows. `.pip_insert()`, `pip_replace()`,
@@ -302,6 +306,7 @@ unwraps them (`.pip_unwrap_params()`).
 | Bind pipelines | `rbind.pipeflow()` → `.pip_bind()` | Clones both pipelines and renames clashing steps of `y` with a number suffix. Folds params into the function defaults. Adds new nodes and edges. |
 | Assign to several steps | `p[i, j] <- value` → `[<-.pipeflow` | Calls `[[<-` per row. If a row fails, the rows before it are undone (invariant 8). |
 | Copy steps | `p[i, ] <- q[i, ]` → `.pip_copy_from()` | Per row: rename, then `pip_replace()` (with the exec mode of the source, so that the copied state is not outdated again), then overwrite the runtime columns. If a row fails, the rows before it are undone (invariant 8). |
+| Reset steps | `pip_reset()` | Clears `out` and `time_start` of the covered unlocked steps and makes them `new`. Outdates their downstream steps, except locked ones. |
 | Tag, lock | `pip_tag()`, `pip_lock()`, … | Plain column writes on the covered rows. |
 | Annotate | `p[[s, j]] <-` for `state`, `time`, `time_start`, `tags`, `locked` | Plain column writes. Outdate nothing. |
 
@@ -311,11 +316,12 @@ unwraps them (`.pip_unwrap_params()`).
 **Which edits outdate.** An edit that can change a result outdates the
 results that depend on it: a new `fun` (the step becomes `new`), new
 `params` or a new `exec` mode (the step and its downstream steps), a new
-`out` (only the downstream steps). A rename and the annotation columns
-outdate nothing. `[<-` assigns row by row via `[[<-`, so it follows the same
-rules. Through a view, the downstream steps outside the view are outdated
-too, because `.pip_get_reachable_nodes()` walks the whole DAG. A new edit
-path must follow these rules.
+`out` (only the downstream steps), a reset (the steps become `new`, their
+downstream steps except locked ones are outdated). A rename and the
+annotation columns outdate nothing. `[<-` assigns row by row via `[[<-`, so
+it follows the same rules. Through a view, the downstream steps outside the
+view are outdated too, because `.pip_get_reachable_nodes()` walks the whole
+DAG. A new edit path must follow these rules.
 
 ## 7. Views and subsetting
 
@@ -588,5 +594,8 @@ slots, so the new table is stored back in `pipenv`. Every access to
 | New view filter | `pip_view()` (`validFilters`) | `[.pipeflow` |
 | New `pip_*` function | `R/pipeflow.R` with roxygen and `@export` | `.pip_method_table()` if it should work as `p$fn()`, `_pkgdown.yml` reference index, cheat sheet, `NEWS.md` |
 
-Tests: `tests/testthat/test_<file>.R` for each `R/<file>.R`. Helpers are in
-`helper_general.R` and `helper_dag.R`.
+Tests: `tests/testthat/test_<file>.R` for each `R/<file>.R`, and
+`test_edit_chains.R` for long chains of edits. Helpers are in
+`helper_general.R`, `helper_dag.R` and `helper_invariants.R`. A change to
+how edits or runs work should also pass many random chains:
+`PIPEFLOW_RANDOM_CHAINS=100 Rscript -e "devtools::test(filter = 'edit_chains')"`.

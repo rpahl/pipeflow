@@ -2602,6 +2602,11 @@ pip_rename <- function(x, from, to) {
     if (!nzchar(to)) {
         stop("to must be a non-empty string")
     }
+    # A name, e.g. of a step taken from `p[["step"]]` (a named vector), would
+    # fail the identical() checks below and in .pip_rename_failures(), and
+    # `to` would carry it into the renamed failures.
+    from <- unname(from)
+    to <- unname(to)
 
     if (!.pip_step_exists(x, from)) {
         stop("step '", from, "' does not exist")
@@ -3433,12 +3438,15 @@ pip_run <- function(
 #'
 #' Resets all unlocked steps of a pipeline (or a subset of steps defined by a
 #' view) to state `"new"` and clears their outputs, so a subsequent
-#' [pip_run()] re-executes the cleaned steps from scratch.
+#' [pip_run()] re-executes the cleaned steps from scratch. Their downstream
+#' steps that have run are marked `"outdated"`, as they ran with the cleared
+#' outputs.
 #' Any pending restart counters are cleared, but parameters, tags, and
 #' locked flags are left unchanged.
 #'
-#' @details Locked steps are skipped: their state and output are preserved.
-#' If all selected steps are locked, a warning is issued and nothing is
+#' @details Locked steps are skipped: their state and output are preserved,
+#' also if they are downstream of a reset step.
+#' If all selected steps are locked, a message is shown and nothing is
 #' changed.
 #'
 #' @param x A pipeflow pip or view. If a view is given, only the steps covered
@@ -3491,6 +3499,13 @@ pip_reset <- function(x) {
             rep(.step_states[["new"]][["name"]], length(rowsConsidered)),
             rep(as.POSIXct(NA), length(rowsConsidered))
         )
+    )
+    # The downstream steps ran with the cleared outputs. The reset steps are
+    # new and stay new.
+    .pip_outdate_downstream(
+        x,
+        steps = dat[["step"]][rowsConsidered],
+        keep = dat[["step"]][dat[["locked"]]]
     )
 
     env[[".run_state"]][] <- .run_states[["ready"]][["name"]]
