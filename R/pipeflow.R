@@ -2234,27 +2234,6 @@ pip_collect <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
 }
 
 
-#' @rdname pip_collect
-#' @section Lifecycle: Deprecated
-#'
-#' `pip_collect_out()` is a legacy alias for [pip_collect()]. It raises a
-#' deprecation warning and will be removed in a future release.
-#' @export
-pip_collect_out <- function(
-    x,
-    by = "step",
-    as.table = FALSE,
-    simplify = TRUE
-) {
-    .Deprecated(
-        new = "pip_collect",
-        old = "pip_collect_out",
-        package = "pipeflow"
-    )
-    pip_collect(x, by = by, as.table = as.table, simplify = simplify)
-}
-
-
 #' Access the underlying step table
 #'
 #' This is a convenience wrapper for accessing the internal `data.table`,
@@ -2417,18 +2396,6 @@ pip_graph <- function(x, include_upstream = FALSE) {
     }
 
     list(nodes = nodes, edges = edges)
-}
-
-
-#' @rdname pip_graph
-#' @section Lifecycle: Deprecated
-#'
-#' `pip_get_graph()` is a legacy alias for [pip_graph()]. It raises a
-#' deprecation warning and will be removed in a future release.
-#' @export
-pip_get_graph <- function(x, include_upstream = FALSE) {
-    .Deprecated(new = "pip_graph", old = "pip_get_graph", package = "pipeflow")
-    pip_graph(x, include_upstream = include_upstream)
 }
 
 

@@ -2,12 +2,9 @@
 % Please edit documentation in R/pipeflow.R
 \name{pip_graph}
 \alias{pip_graph}
-\alias{pip_get_graph}
 \title{Build pipeline graph data}
 \usage{
 pip_graph(x, include_upstream = FALSE)
-
-pip_get_graph(x, include_upstream = FALSE)
 }
 \arguments{
 \item{x}{A pipeflow pip or view.}
@@ -30,13 +27,6 @@ Node shapes reflect execution mode:
 \item \code{split}: \code{star}
 }
 }
-\section{Lifecycle}{
- Deprecated
-
-\code{pip_get_graph()} is a legacy alias for \code{\link[=pip_graph]{pip_graph()}}. It raises a
-deprecation warning and will be removed in a future release.
-}
-
 \examples{
 p <- pip_new()
 pip_add(p, "load", \(x = 1) x, tags = "io")

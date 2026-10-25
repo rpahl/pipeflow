@@ -1,3 +1,10 @@
+# pipeflow 0.5.0.9019
+
+## Breaking changes
+
+- The deprecated aliases `pip_collect_out()` and `pip_get_graph()` were
+  removed. Use `pip_collect()` and `pip_graph()`.
+
 # pipeflow 0.5.0.9018
 
 ## Changes
