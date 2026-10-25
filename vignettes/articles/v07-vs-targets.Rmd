@@ -92,7 +92,7 @@ you decide which one fits your project.
 | Execution | `tar_make()` runs in a **fresh R process** by default | `pip_run()` runs in the **current R session** ([fresh process](v07b-emulate-targets.html#fresh-process)) |
 | Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ✅ On demand — `saveRDS()` / `readRDS()` save and restore the whole pipeline (steps, params, outputs, states); no automatic storage, data must fit in RAM ([recipe](v07b-emulate-targets.html#persistence)) |
 | Skip up-to-date steps | ✅ Hash-based invalidation of code and data | ✅ State-based (`done` / `outdated`); changed [files](v07b-emulate-targets.html#file-targets) and [helper functions](v07b-emulate-targets.html#code-changes) via fingerprint params |
-| Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | ❌ No per-step provenance metadata (only the start and end time of the last run); [recipe](v07b-emulate-targets.html#metadata) |
+| Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | 🟡 Not built in: the step table has the start and end time of the last run, the rest via a [recipe](v07b-emulate-targets.html#metadata) |
 | Dependency validation | ✅ `tar_validate()` for pre-flight checks (opt-in) | ✅ On `pip_add()`, `pip_replace()`, `pip_remove()` — fails fast on broken references |
 | Modify pipeline at runtime | ❌ Must edit `_targets.R` and re-run | ✅ `pip_add()` insert with `after =`, `pip_replace()`, `pip_remove()`  |
 | Parameter management | ❌ No unified parameter view across targets | ✅ `pip_get_params()` / `pip_set_params()` — one call updates all steps |
@@ -104,13 +104,13 @@ you decide which one fits your project.
 | Self-modifying pipelines | ❌ | ✅ Steps can modify the pipeline at runtime via `.self` (add/remove/replace steps, set params) and restart the run with `.self$restart()` |
 | Distributed computing | ✅ `crew` for HPC and cloud workers | ❌ |
 | Cloud storage | ✅ AWS, GCS | ❌ |
-| File tracking | ✅ File targets with `format = "file"` | ❌ Not built in; [recipe](v07b-emulate-targets.html#file-targets) |
+| File tracking | ✅ File targets with `format = "file"` | 🟡 Not built in, via a [recipe](v07b-emulate-targets.html#file-targets) |
 | Step locking | ❌ | ✅ `pip_lock()` / `pip_unlock()` — protect steps from accidental modification |
 | Visualization / monitoring | ✅ `tar_visnetwork()`, `tar_glimpse()`, `tar_watch()` (live Shiny app) | ✅ `pip_graph()` → visNetwork |
 
-Several of the ❌ and partial entries above can be emulated with a few
-lines of code: see [Emulating targets features](v07b-emulate-targets.html)
-for recipes and their limits.
+✅ built in, 🟡 not built in but can be emulated with a few lines of code,
+❌ not available. The recipes and their limits are in
+[Emulating targets features](v07b-emulate-targets.html).
 
 In short, **{targets}** is the tool of choice for large-scale reproducible
 projects: it persists results to disk, captures provenance with
