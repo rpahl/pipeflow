@@ -2903,7 +2903,10 @@ pip_replace <- function(
 #' @param force Logical indicating if all steps should be forced to run,
 #' regardless of whether they are outdated or not.
 #' @param progress Optional callback of the form
-#' `function(value, detail)` called before each step.
+#' `function(value, detail)` called before each step, with the position of
+#' the step in the run and its name. If it returns `FALSE`, the run is
+#' halted before the step, as by `.self$halt()` (see section 'Runtime
+#' control flow via restart and halt' below).
 #' @param on_error What to do when a step fails: `"stop"` (the default)
 #' aborts the run, `"continue"` goes on with all steps that do not depend on
 #' a failed step (see section 'Continuing after errors' below).
@@ -3032,7 +3035,11 @@ pip_replace <- function(
 #'   simply ends with run state `"halted"` (see [pip_run_state()]) and a
 #'   subsequent [pip_run()] will continue where the run left off.
 #'
-#' In both cases steps downstream of executed steps that have not been
+#' A run can also be halted from outside: if the `progress` callback returns
+#' `FALSE`, the run ends before the next step, e.g. when a user cancels the
+#' run in a Shiny app.
+#'
+#' In all cases, steps downstream of executed steps that have not been
 #' executed until the restart or halt happens are marked as `"outdated"`.
 #'
 #' @seealso `vignette("v06-self-modify-pipeline", package = "pipeflow")`
@@ -3207,8 +3214,14 @@ pip_run <- function(
             for (i in seq_along(rowsToRun)) {
                 row <- rowsToRun[[i]]
                 step <- dat[["step"]][[row]]
+                # A progress callback that returns FALSE cancels the run
+                # before the step, like a halt.
                 if (!is.null(progress)) {
-                    progress(value = i, detail = step)
+                    if (isFALSE(progress(value = i, detail = step))) {
+                        log_info("Aborting pipeline execution on cancel.")
+                        halted <- TRUE
+                        break
+                    }
                 }
                 msg <- if (isView) {
                     marker <- names(rowsToRun)[[i]]
@@ -3527,8 +3540,8 @@ pip_reset <- function(x) {
 #' * `"running"`: a run is in progress (seen from within a step).
 #' * `"restart"`: a step requested a restart, which [pip_run()] carries out
 #'   right after the step.
-#' * `"halted"`: a step halted the run (see section 'Runtime control flow
-#'   via restart and halt' in [pip_run()]).
+#' * `"halted"`: a step or the `progress` callback halted the run (see
+#'   section 'Runtime control flow via restart and halt' in [pip_run()]).
 #' * `"failed"`: the last run stopped on an error (`on_error = "stop"`).
 #' * `"continued"`: the last run had failed steps but went on
 #'   (`on_error = "continue"`).

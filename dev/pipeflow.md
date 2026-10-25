@@ -365,6 +365,7 @@ sequenceDiagram
     R->>R: rows = all, or view rows + upstream rows
     R->>E: .run_state = running
     loop each row (topological order)
+        R->>R: progress(i, step) returns FALSE? halted (break)
         R->>R: input failed and not ~try()? record .pip_failure, skip
         R->>R: (input failed for some keys counts only if not exec auto)
         R->>R: done, not force, no input re-run? skip
@@ -463,7 +464,7 @@ stateDiagram-v2
         running --> ready : finished
         running --> continued : finished with failures
         running --> failed : error (on_error = stop)
-        running --> halted : .pip_halt()
+        running --> halted : .pip_halt() / progress FALSE
         running --> restart : .pip_restart()
         restart --> running : nested pip_run
         continued --> running : pip_run

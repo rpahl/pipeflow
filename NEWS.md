@@ -1,3 +1,11 @@
+# pipeflow 0.5.0.9021
+
+## New features
+
+- A run can be cancelled from the `progress` callback of `pip_run()`: if it
+  returns `FALSE`, the run is halted before the next step, as by
+  `.self$halt()`. This lets a Shiny app stop a run between steps.
+
 # pipeflow 0.5.0.9020
 
 ## Bug fixes
