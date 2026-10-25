@@ -73,6 +73,23 @@
 }
 
 
+#' Format the number of steps per state
+#'
+#' Counts the steps per state, in the order `done`, `outdated`, `failed`,
+#' `new`, and leaves out the states without steps, e.g.
+#' `"steps: 3 done, 1 failed, 2 new"`.
+#'
+#' @param states A character vector with the state of each step.
+#' @return A single character string.
+#' @noRd
+.format_state_counts <- function(states) {
+    order <- c("done", "outdated", "failed", "new")
+    counts <- table(factor(states, levels = order))
+    counts <- counts[counts > 0L]
+    paste("steps:", toString(paste(counts, names(counts))))
+}
+
+
 #' @rdname print
 #' @export
 print.pipeflow <- function(
@@ -146,6 +163,16 @@ print.pipeflow <- function(
             params_names <- lapply(dat[["params"]], \(p) as.character(names(p)))
             data.table::set(dat, j = "params", value = params_names)
         }
+        if ("duration" %in% names(dat)) {
+            # A difftime is printed with many digits, each with its unit
+            secs <- as.numeric(dat[["duration"]], units = "secs")
+            duration <- vapply(
+                secs,
+                \(d) if (is.na(d)) NA_character_ else .formatted_duration(d),
+                character(1)
+            )
+            data.table::set(dat, j = "duration", value = duration)
+        }
         if ("out" %in% names(dat)) {
             # Fix outputs that data.table prints poorly (e.g. matrices, or
             # the condition of a failed step) in short form.
@@ -164,18 +191,31 @@ print.pipeflow <- function(
 
     if (header) {
         # Add footer with run state infos
-        runState <- as.character(.pip_pipenv(x)[[".run_state"]])
-        lastRun <- x[["pipenv"]][[".last_run"]]
+        pipenv <- .pip_pipenv(x)
+        runState <- as.character(pipenv[[".run_state"]])
+        lastRun <- pipenv[[".last_run"]]
         lastRunStr <- if (is.null(lastRun)) {
             "never"
         } else {
             format(lastRun, format = "%Y-%m-%d %H:%M:%S")
+        }
+        # Pipelines saved with an older version have no run duration
+        lastRunDuration <- pipenv[[".last_run_duration"]]
+        if (!is.null(lastRun) && !is.null(lastRunDuration)) {
+            lastRunStr <- sprintf(
+                "%s (%s)",
+                lastRunStr,
+                .formatted_duration(lastRunDuration)
+            )
         }
         cat(
             line,
             sprintf("<%s> last run: %s", runState, lastRunStr),
             sep = "\n"
         )
+        if (length(rows) > 0L) {
+            cat(.format_state_counts(data[["state"]][rows]), sep = "\n")
+        }
     }
 
     invisible(x)

@@ -1833,6 +1833,7 @@ pip_new <- function(name = "pipe") {
         levels = names(.run_states)
     )
     env[[".last_run"]] <- NULL
+    env[[".last_run_duration"]] <- NULL # including restarts
 
     # Restart tracking
     env[[".restart_count"]] <- 0L
@@ -3460,9 +3461,10 @@ pip_run <- function(
             done <- ran & !is.na(timeEnd) & timeEnd >= timeStart
             skipped <- !ran & datNow[["step"]] %in% stepsToRun
 
+            lastRun <- Sys.time()
             log_info(sprintf(
                 "Finished in %s (%d done, %d skipped, %d failed)",
-                .formatted_duration(difftime(Sys.time(), runStart)),
+                .formatted_duration(difftime(lastRun, runStart)),
                 sum(done),
                 sum(skipped),
                 sum(ran & !done)
@@ -3475,11 +3477,14 @@ pip_run <- function(
                 "ready"
             }
             pipenv[[".run_state"]][] <- .run_states[[runState]][["name"]]
-            pipenv[[".last_run"]] <- Sys.time()
+            pipenv[[".last_run"]] <- lastRun
+            pipenv[[".last_run_duration"]] <- .as_duration(lastRun - runStart)
         },
         error = function(e) {
             pipenv[[".run_state"]][] <- .run_states[["failed"]][["name"]]
-            pipenv[[".last_run"]] <- Sys.time()
+            lastRun <- Sys.time()
+            pipenv[[".last_run"]] <- lastRun
+            pipenv[[".last_run_duration"]] <- .as_duration(lastRun - runStart)
 
             # Re-signal step errors as they are, so that callers can get the
             # failed step and its original condition.
@@ -3590,6 +3595,7 @@ pip_reset <- function(x) {
     if (length(rows) == nrow(dat)) {
         env[[".run_state"]][] <- .run_states[["ready"]][["name"]]
         env[[".last_run"]] <- NULL
+        env[[".last_run_duration"]] <- NULL
     }
 
     invisible(x)

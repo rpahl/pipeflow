@@ -17,7 +17,7 @@ a flow that is described here, update this file in the same PR.
 | `R/pipeflow.R` | Exported `pip_*` API. Internal `.pip_*` helpers sit at the top, grouped by section (construction, asserts, wrappers, param parsing, step execution, state updates, data access, DAG traversal, addition/binding). |
 | `R/generic.pipeflow.R` | S3 methods: `[`, `[[`, `$` and their assignment forms, `length`, `dim`, `str`, `rbind`. Helpers `.pip_all_or_nothing()`, `.pip_snapshot()`, `.pip_restore()`, `.pip_copy_from()`, `.pip_compact()` and `.pip_subset2()`. Re-exports the data.table operators. |
 | `R/as_function.R` | `as.function.pipeflow()`, `pip_inner()` and the `.fun_*` cache helpers. See [as_function.md](as_function.md). |
-| `R/print.pipeflow.R` | `print.pipeflow()`, `.format_out()` and `.format_condition()`. |
+| `R/print.pipeflow.R` | `print.pipeflow()`, `.format_out()`, `.format_condition()` and `.format_state_counts()`. |
 | `R/utils.R` | Formula helpers (`formula_deps()`, `formula_try_args()`, `formula_set_ref()`, `is_try_ref()`, `is_one_sided_formula()`) and small utilities (`.is_single()`, `stop_no_call()`, `unlist1()`). |
 | `R/log.R` | Default logger `pipeflow_lgr(level, msg)`. |
 | `R/pipeflow-package.R` | Package-level constants: `.step_states`, `.run_states`, `.step_call` and `.derived_cols`. |
@@ -77,6 +77,7 @@ classDiagram
         .steps_to_nodes : env, step to nodeId
         .run_state : factor of .run_states
         .last_run : POSIXct | NULL
+        .last_run_duration : difftime secs | NULL
         .restart_count : integer
         .restart_force : logical
         .steps_with_current_out : env, step to TRUE/FALSE
@@ -425,7 +426,8 @@ Things to keep in mind:
   again once they succeed anyway.
 - **Restart.** `pip_run()` calls itself recursively and returns. The outer
   loop does not continue. It hands over the start of the run
-  (`.run_start`), so that the last log line covers the whole run. Its step
+  (`.run_start`), so that the last log line and `.last_run_duration` cover
+  the whole run. Its step
   counts are derived from the step table at the end: a step ran in the run
   if its `time_start` is not before the start of the run, and it succeeded
   if its `time` is not before its `time_start` (a failed run keeps `time`;
@@ -592,7 +594,7 @@ slots, so the new table is stored back in `pipenv`. Every access to
 | New step column | `.empty_pipeline()`, `.new_step()` | `.pip_bind()` (runtime columns), `.pip_copy_from()` props, `[[<-` dispatch, `print.pipeflow()`, `str.pipeflow()`, `pip_collect()` (`allowedBy`), `pip_replace()`/`pip_reset()` (runtime columns), a default for saved pipelines in `.pip_pipenv()` |
 | New exec mode | `.assert_exec_mode()`, `.pip_execute_step_call()` | `.pip_annotate_output()`, docs of `pip_add()` |
 | New reference syntax | `utils.R` formula helpers | `.extract_depends()`, `formula_set_ref()` users (rename, rbind, copy) |
-| New step or run state | `.step_states` / `.run_states` in `pipeflow-package.R` | `pip_run()`, `.pip_outdate_downstream()`, print colours |
+| New step or run state | `.step_states` / `.run_states` in `pipeflow-package.R` | `pip_run()`, `.pip_outdate_downstream()`, print colours, `.format_state_counts()` |
 | New structural edit | Follow `pip_replace()` / `pip_remove()` | Keep invariants 1–4. Gate with `.pip_step_in_view()`. Call `.fun_rename()` if steps are renamed. Removed steps keep their cache slots until the function is garbage-collected (see [as_function.md](as_function.md)). |
 | New view filter | `pip_view()` (`validFilters`) | `[.pipeflow` |
 | New `pip_*` function | `R/pipeflow.R` with roxygen and `@export` | `.pip_method_table()` if it should work as `p$fn()`, `_pkgdown.yml` reference index, cheat sheet, `NEWS.md` |

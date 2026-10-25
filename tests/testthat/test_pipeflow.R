@@ -6198,11 +6198,14 @@ describe("pip_reset", {
             class = "pipeflow_run_failed"
         )
         lastRun <- .pip_pipenv(p)[[".last_run"]]
+        lastRunDuration <- .pip_pipenv(p)[[".last_run_duration"]]
         expect_false(is.null(lastRun))
+        expect_false(is.null(lastRunDuration))
 
         pip_reset(pip_view(p, step = "a"))
 
         expect_equal(.pip_pipenv(p)[[".last_run"]], lastRun)
+        expect_equal(.pip_pipenv(p)[[".last_run_duration"]], lastRunDuration)
         expect_equal(pip_run_state(p), "continued")
     })
 
@@ -6218,6 +6221,7 @@ describe("pip_reset", {
         pip_reset(pip_view(p, step = c("a", "b")))
 
         expect_null(.pip_pipenv(p)[[".last_run"]])
+        expect_null(.pip_pipenv(p)[[".last_run_duration"]])
         expect_equal(pip_run_state(p), "ready")
     })
 })

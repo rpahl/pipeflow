@@ -489,6 +489,10 @@ describe("as.function.pipeflow", {
                 res[["pipenv"]][[".last_run"]],
                 kept[["pipenv"]][[".last_run"]]
             )
+            expect_identical(
+                res[["pipenv"]][[".last_run_duration"]],
+                kept[["pipenv"]][[".last_run_duration"]]
+            )
 
             # the copy has its own run state
             pip_run(res, lgr = NULL)

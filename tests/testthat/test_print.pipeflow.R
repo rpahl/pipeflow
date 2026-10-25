@@ -46,7 +46,7 @@ describe("print.pipeflow", {
         suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
 
         out <- capture.output(print(p))
-        expect_match(out[[length(out)]], "^<continued> last run: ")
+        expect_match(out[[length(out) - 1L]], "^<continued> last run: ")
     })
 
     it("shows the 'out' column only when a step has a result", {
@@ -219,6 +219,107 @@ describe("print.pipeflow", {
         expect_true(any(grepl("<failed> last run:", out)))
     })
 
+    it("prints the duration of the last run in the footer", {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x)
+        out <- capture.output(print(p))
+        expect_false(any(grepl("last run: never \\(", out)))
+
+        pip_run(p, lgr = NULL)
+        d <- p[["pipenv"]][[".last_run_duration"]]
+        expect_s3_class(d, "difftime")
+        expect_equal(units(d), "secs")
+        out <- capture.output(print(p))
+        pattern <- sprintf(
+            "<ready> last run: [-0-9 :]+ \\(%s\\)$",
+            .formatted_duration(d)
+        )
+        expect_true(any(grepl(pattern, out)))
+    })
+
+    it("sets the duration of the last run also if it failed", {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) stop("boom"))
+        try(pip_run(p, lgr = NULL), silent = TRUE)
+        expect_s3_class(p[["pipenv"]][[".last_run_duration"]], "difftime")
+        out <- capture.output(print(p))
+        expect_true(any(grepl("<failed> last run: .* s\\)$", out)))
+    })
+
+    it("takes the duration of a restarted run from its first start", {
+        restarted <- new.env()
+        p <- pip_new("pipe") |>
+            pip_add("s1", function(x = 1) {
+                if (is.null(restarted[["yes"]])) {
+                    restarted[["yes"]] <- TRUE
+                    Sys.sleep(0.05)
+                    .self$restart()
+                }
+                x
+            })
+        pip_run(p, lgr = NULL)
+        d <- p[["pipenv"]][[".last_run_duration"]]
+        expect_gte(as.numeric(d, units = "secs"), 0.04)
+    })
+
+    it("does not print a run duration if it was not stored", {
+        # Pipelines saved with an older version have no run duration
+        p <- pip_run(pip_new("pipe") |> pip_add("s1", \(x = 1) x), lgr = NULL)
+        rm(".last_run_duration", envir = p[["pipenv"]])
+        out <- capture.output(print(p))
+        expect_true(any(grepl("<ready> last run: [-0-9 :]+$", out)))
+    })
+
+    it("prints the number of steps per state in the footer", {
+        p <- pip_new("pipe") |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("f", \(x = ~a) stop("boom")) |>
+            pip_add("b", \(x = ~a) x) |>
+            pip_add("c", \(x = ~f) x)
+        out <- capture.output(print(p))
+        expect_equal(out[[length(out)]], "steps: 4 new")
+
+        suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+        out <- capture.output(print(p))
+        expect_equal(out[[length(out)]], "steps: 2 done, 1 failed, 1 new")
+
+        p[["b", "state"]] <- "outdated"
+        out <- capture.output(print(p))
+        expect_equal(
+            out[[length(out)]],
+            "steps: 1 done, 1 outdated, 1 failed, 1 new"
+        )
+
+        # Only the printed rows are counted
+        out <- capture.output(print(p, rows = 2:3))
+        expect_equal(out[[length(out)]], "steps: 1 outdated, 1 failed")
+        out <- capture.output(print(p["c"]))
+        expect_equal(out[[length(out)]], "steps: 1 new")
+    })
+
+    it("prints no step counts for an empty pipeline or without header", {
+        out <- capture.output(print(pip_new("empty")))
+        expect_false(any(grepl("^steps:", out)))
+
+        p <- pip_new("pipe") |> pip_add("s1", \(x = 1) x)
+        out <- capture.output(print(p, header = FALSE))
+        expect_false(any(grepl("^steps:", out)))
+    })
+
+    it("prints the duration column in short form", {
+        p <- pip_new("pipe") |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x)
+        pip_run(p["s1"], lgr = NULL)
+        p[["s1", "duration"]] <- as.difftime(125, units = "secs")
+
+        out <- capture.output(print(p, cols = c("step", "duration")))
+        expect_true(any(grepl("s1 +2 min 5 s$", out)))
+        expect_true(any(grepl("s2 +<NA>$", out)))
+        # The step table keeps the difftime
+        expect_s3_class(p[["duration"]], "difftime")
+    })
+
     it("resets the last run time", {
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x)
@@ -228,6 +329,7 @@ describe("print.pipeflow", {
         pip_reset(p)
 
         expect_null(p[["pipenv"]][[".last_run"]])
+        expect_null(p[["pipenv"]][[".last_run_duration"]])
         out <- capture.output(print(p))
         expect_true(any(grepl("last run: never", out)))
     })
