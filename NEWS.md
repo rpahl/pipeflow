@@ -42,6 +42,15 @@
 
 # pipeflow 0.5.0.9020
 
+## New features
+
+- The nodes of `pip_graph()` have a `title` column, which visNetwork shows
+  when hovering over a step: its state, exec mode, tags, lock, the start
+  and duration of its last run, the failed keys of a mapped step, its
+  parameters and the steps it depends on.
+- The edges of `pip_graph()` have a `dashes` column, so that visNetwork
+  draws a `~try()` reference as a dashed edge.
+
 ## Bug fixes
 
 - `pip_rename()` now also renames the step in the failures of failed keys

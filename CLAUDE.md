@@ -146,6 +146,7 @@ have changed the pipeline.
   assignment forms, `rbind` (pipeline binding), `length`, `dim` and `str`.
 - `R/print.pipeflow.R` holds the print method.
 - `R/log.R` holds the default logger, `pipeflow_lgr(level, msg)`.
+- `R/graph.R` holds `pip_graph()` and its helpers (`.pip_graph_*`).
 - The package imports all of `data.table`. Its filter operators (`%like%`,
   `%between%`, …) are not exported, but `[` filters find them via
   `.filter_ops` (`.pip_select_rows()`).
