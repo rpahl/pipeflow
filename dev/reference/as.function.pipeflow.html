@@ -23,7 +23,7 @@ pip_add(outer, "inner", f_inner, params = list(df = ~outer_step)).'><meta proper
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9015</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9024</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,8 +61,9 @@ pip_add(outer, "inner", f_inner, params = list(df = ~outer_step)).'><meta proper
     <li><a class="dropdown-item" href="../articles/v05e-output-value.html">Annotated step outputs</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>pipeflow vs targets</h6></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">Comparison and benchmarks</a></li>
+    <li><a class="dropdown-item" href="../articles/v07b-emulate-targets.html">Emulating targets features</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="external-link nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -174,6 +175,18 @@ a <code>data.table</code> output).</p>
 </div>
 
 <div class="section">
+<h3 id="errors-of-inner-steps">Errors of inner steps<a class="anchor" aria-label="anchor" href="#errors-of-inner-steps"></a></h3>
+
+
+<p>If an inner step fails, the error names it, e.g.
+<code>step 'fit': negative</code>. As a step of an outer pipeline, the error also
+names the outer step and, if that step is mapped over partitions, the
+key: <code>step 'by_batch': key 'D': step 'fit': negative</code>. Nested pipeline
+functions add one step per level:
+<code>step 'outer': step 'middle': step 'fit': negative</code>.</p>
+</div>
+
+<div class="section">
 <h3 id="continuing-after-errors-of-inner-steps">Continuing after errors of inner steps<a class="anchor" aria-label="anchor" href="#continuing-after-errors-of-inner-steps"></a></h3>
 
 
@@ -212,7 +225,7 @@ and output, so new runs work independently from the original.
 A function that has not been called yet, or one made with
 <code>cache = FALSE</code>, has no pipelines and therefore is small to copy.</p></li>
 <li><p>In case of an error, the error message includes the key of the partition
-and the name of the failed inner step.</p></li>
+and the name of the failed inner step, see 'Errors of inner steps'.</p></li>
 </ul></div>
 
 <div class="section">
@@ -346,7 +359,8 @@ before, except for locked steps, which keep their outputs.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  coefs input_df,degree,digits  by_cyl outdated           &lt;list[3]&gt;   auto</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4:  table                  coefs   coefs outdated       &lt;matrix[3x2]&gt; reduce</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 08:12:08</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 19:30:01 (0.016 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> steps: 2 done, 2 outdated</span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">outer</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">outer</span><span class="op">[[</span><span class="st">"table"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   (Intercept) poly(wt, degree, raw = TRUE)</span>

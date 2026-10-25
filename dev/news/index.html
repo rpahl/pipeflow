@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9015</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9024</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -45,8 +45,9 @@
     <li><a class="dropdown-item" href="../articles/v05e-output-value.html">Annotated step outputs</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>pipeflow vs targets</h6></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">Comparison and benchmarks</a></li>
+    <li><a class="dropdown-item" href="../articles/v07b-emulate-targets.html">Emulating targets features</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="external-link nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -63,6 +64,94 @@
       <small>Source: <a href="https://github.com/rpahl/pipeflow/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0.9024" id="pipeflow-0509024">pipeflow 0.5.0.9024<a class="anchor" aria-label="anchor" href="#pipeflow-0509024"></a></h2>
+<div class="section level3">
+<h3 id="new-features-0-5-0-9024">New features<a class="anchor" aria-label="anchor" href="#new-features-0-5-0-9024"></a></h3>
+<ul><li>The nodes of <code><a href="../reference/pip_graph.html">pip_graph()</a></code> have a <code>title</code> column, which visNetwork shows when hovering over a step: its state, exec mode, tags, lock, the start and duration of its last run, the failed keys of a mapped step, its parameters and the steps it depends on.</li>
+<li>The edges of <code><a href="../reference/pip_graph.html">pip_graph()</a></code> have a <code>dashes</code> column, so that visNetwork draws a <code>~try()</code> reference as a dashed edge.</li>
+<li>
+<code>pip_graph(format = "mermaid")</code> returns the graph as the text of a mermaid flowchart, which renders e.g. on GitHub and in Quarto. It has the colors and dashed edges of the visNetwork graph, a hexagon for <code>auto</code> and <code>plain</code> steps and a trapezoid for <code>split</code> (widening) and <code>reduce</code> (narrowing) steps.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0.9023" id="pipeflow-0509023">pipeflow 0.5.0.9023<a class="anchor" aria-label="anchor" href="#pipeflow-0509023"></a></h2>
+<div class="section level3">
+<h3 id="new-features-0-5-0-9023">New features<a class="anchor" aria-label="anchor" href="#new-features-0-5-0-9023"></a></h3>
+<ul><li>The step table has a new column <code>duration</code>: how long the step’s last run took, as a <code>difftime</code> in seconds. Unlike <code>time - time_start</code>, it is also set if the run failed (<code>time</code> keeps the end of the last successful run). It is <code>NA</code> for a step that has not run since it was added, replaced or reset. Set it with <code>p[[step, "duration"]] &lt;- value</code> (<code>NA</code> allowed). Pipelines saved with an earlier version get the column (all <code>NA</code>) when read.</li>
+<li>The footer of <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> shows the duration of the last run, and how many of the printed steps are in each state, e.g. <code>&lt;ready&gt; last run: 2026-10-25 14:03:12 (0.251 s)</code> and <code>steps: 3 done, 1 failed, 2 new</code>. The <code>duration</code> column (e.g. with <code>cols = "all"</code>) is printed in short form, e.g. <code>0.251 s</code>.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0.9022" id="pipeflow-0509022">pipeflow 0.5.0.9022<a class="anchor" aria-label="anchor" href="#pipeflow-0509022"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-5-0-9022">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-5-0-9022"></a></h3>
+<ul><li>
+<code><a href="../reference/pip_reset.html">pip_reset()</a></code> on a view that covers only some steps now keeps the time of the last run and the run state of the pipeline. Before, resetting a single step showed <code>last run: never</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-0-5-0-9022">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-5-0-9022"></a></h3>
+<ul><li>New article “Emulating targets features” with recipes for file tracking, rebuilds after helper changes, a <code>tar_meta()</code>-like table, reproducible random numbers, saved results, runs in a fresh R process and a list of outdated steps, and the limits of each. The article “pipeflow vs targets” is now called “Comparison and benchmarks” and links to the recipes.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0.9021" id="pipeflow-0509021">pipeflow 0.5.0.9021<a class="anchor" aria-label="anchor" href="#pipeflow-0509021"></a></h2>
+<div class="section level3">
+<h3 id="new-features-0-5-0-9021">New features<a class="anchor" aria-label="anchor" href="#new-features-0-5-0-9021"></a></h3>
+<ul><li>A run can be cancelled from the <code>progress</code> callback of <code><a href="../reference/pip_run.html">pip_run()</a></code>: if it returns <code>FALSE</code>, the run is halted before the next step, as by <code>.self$halt()</code>. This lets a Shiny app stop a run between steps.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0.9020" id="pipeflow-0509020">pipeflow 0.5.0.9020<a class="anchor" aria-label="anchor" href="#pipeflow-0509020"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-5-0-9020">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-5-0-9020"></a></h3>
+<ul><li>
+<code><a href="../reference/pip_rename.html">pip_rename()</a></code> now also renames the step in the failures of failed keys if the step name has a name attribute, e.g. if it is taken from <code>p[["step"]]</code>. Before, the failures in the outputs of the step and its dependents kept the old name, and renaming a step to its own name this way failed with “already exists”.</li>
+<li>
+<code><a href="../reference/pip_reset.html">pip_reset()</a></code> now marks the downstream steps of the reset steps as <code>"outdated"</code>, as they ran with the cleared outputs. Locked steps keep their state. Before, the downstream steps stayed <code>"done"</code>, and if a reset step was then locked, the next run kept their results.</li>
+<li>
+<code>p[i, view = FALSE]</code> no longer warns that an edge already exists if a step refers to the same step with several arguments.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0.9019" id="pipeflow-0509019">pipeflow 0.5.0.9019<a class="anchor" aria-label="anchor" href="#pipeflow-0509019"></a></h2>
+<div class="section level3">
+<h3 id="breaking-changes-0-5-0-9019">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-5-0-9019"></a></h3>
+<ul><li>The deprecated aliases <code>pip_collect_out()</code> and <code>pip_get_graph()</code> were removed. Use <code><a href="../reference/pip_collect.html">pip_collect()</a></code> and <code><a href="../reference/pip_graph.html">pip_graph()</a></code>.</li>
+<li>pipeflow no longer re-exports the data.table operators <code>%like%</code>, <code>%ilike%</code>, <code>%flike%</code>, <code>%plike%</code>, <code>%chin%</code>, <code>%between%</code>, <code>%inrange%</code> and <code>%notin%</code>. They still work in the filters of <code>[</code>, e.g. <code>p[tags %like% "model"]</code>, without attaching data.table. To use them elsewhere, call <code><a href="https://r-datatable.com" class="external-link">library(data.table)</a></code>.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0.9018" id="pipeflow-0509018">pipeflow 0.5.0.9018<a class="anchor" aria-label="anchor" href="#pipeflow-0509018"></a></h2>
+<div class="section level3">
+<h3 id="changes-0-5-0-9018">Changes<a class="anchor" aria-label="anchor" href="#changes-0-5-0-9018"></a></h3>
+<ul><li>The error of a mapped step whose partitioned inputs don’t have the same keys names the arguments that differ and lists the keys that are missing, extra or in a different order, e.g. <code>partitioned arguments must share identical keys: argument 'r' differs from 'l' (missing 'b'; extra 'd')</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-0-5-0-9018">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-5-0-9018"></a></h3>
+<ul><li>
+<code><a href="../reference/as.function.pipeflow.html">?as.function.pipeflow</a></code> has a new section ‘Errors of inner steps’ with examples of the error messages: they name the outer step, the partition key and the failed inner step, e.g. <code>step 'by_batch': key 'D': step 'fit': negative</code>. The vignette on error handling shows how to get the outer step, the key and the inner step from the error.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0.9017" id="pipeflow-0509017">pipeflow 0.5.0.9017<a class="anchor" aria-label="anchor" href="#pipeflow-0509017"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-5-0-9017">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-5-0-9017"></a></h3>
+<ul><li>An assignment to several steps, <code>p[i, j] &lt;- value</code>, and a copy of steps, <code>p[i, ] &lt;- q[i, ]</code>, now change all selected steps or none: if a step fails (e.g. because a new step name already exists), the steps assigned before are restored. Before, they kept their changes.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0.9016" id="pipeflow-0509016">pipeflow 0.5.0.9016<a class="anchor" aria-label="anchor" href="#pipeflow-0509016"></a></h2>
+<div class="section level3">
+<h3 id="breaking-changes-0-5-0-9016">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-5-0-9016"></a></h3>
+<ul><li>A step that changes its own function, params or exec mode while it runs (via <code>.self</code>) now ends the run as <code>"outdated"</code> instead of <code>"done"</code>, as its output comes from the old definition, and runs again in the next run. The same holds for a step that a later step changes during the run. The steps that ran with the output of such a step are marked <code>"outdated"</code> too. Before, all of them stayed <code>"done"</code> with stale results, also after <code>.self$restart(force = FALSE)</code>. A step that sets its own params to fixed values settles after one more run, while a step that sets new values in every run now runs again in every run.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-5-0-9016">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-5-0-9016"></a></h3>
+<ul><li>Changing the execution mode of a step with <code>p[[step, "exec"]] &lt;- mode</code> (also via <code>p[i, "exec"] &lt;-</code> and views) now marks the step and its downstream steps as <code>"outdated"</code>, so that the next run uses the new mode. Before, a step that had run kept its state and its output from the old mode. A step that failed for some keys and got a new mode is run again for all keys.</li>
+<li>Setting the output of a step with <code>p[[step, "out"]] &lt;- value</code> (also via <code>p[i, "out"] &lt;-</code>, views and <code>p[i, ] &lt;- q[j, ]</code>) now marks its downstream steps as <code>"outdated"</code>, so that the next run computes them from the new output. Before, they stayed <code>"done"</code> with the results of the old output. The step itself keeps its state. <code><a href="../reference/Extract.pipeflow.html">?Extract.pipeflow</a></code> lists which assignments outdate steps.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.5.0.9015" id="pipeflow-0509015">pipeflow 0.5.0.9015<a class="anchor" aria-label="anchor" href="#pipeflow-0509015"></a></h2>
 <div class="section level3">
@@ -328,11 +417,11 @@
 <li>setting or replacing views via <code>p[["view"]] &lt;- ...</code>.</li>
 </ul></li>
 <li>
-<code><a href="../reference/pip_collect.html">pip_collect()</a></code> (formerly <code><a href="../reference/pip_collect.html">pip_collect_out()</a></code>) supports grouping via a <code>by</code> argument, <code>as.table = TRUE</code> to return a compact table, and a <code>simplify</code> argument to control flattening of single-step groups.</li>
+<code><a href="../reference/pip_collect.html">pip_collect()</a></code> (formerly <code>pip_collect_out()</code>) supports grouping via a <code>by</code> argument, <code>as.table = TRUE</code> to return a compact table, and a <code>simplify</code> argument to control flattening of single-step groups.</li>
 <li>
 <code><a href="../reference/pip_data.html">pip_data()</a></code> provides direct access to the underlying step table.</li>
 <li>
-<code><a href="../reference/pip_graph.html">pip_graph()</a></code> (formerly <code><a href="../reference/pip_graph.html">pip_get_graph()</a></code>) returns visNetwork-compatible graph data. The old function names remain available as deprecated aliases.</li>
+<code><a href="../reference/pip_graph.html">pip_graph()</a></code> (formerly <code>pip_get_graph()</code>) returns visNetwork-compatible graph data. The old function names remain available as deprecated aliases.</li>
 <li>The derived columns <code>depends</code>, <code>unbound</code> and <code>nodeId</code> are read-only and can’t be assigned directly.</li>
 <li>
 <code><a href="../reference/pip_view.html">pip_view()</a></code> gains a <code>join = "union"</code> argument to combine filters as a logical OR.</li>
@@ -376,7 +465,7 @@
 <h3 id="breaking-changes-0-3-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-3-0"></a></h3>
 <ul><li>Legacy <code>pipe_*</code> functions and <code>Pipeline</code> R6 class are deprecated (preserved as aliases in <code>R/aliases.R</code>, <code>R/pipelineR6.R</code>).</li>
 <li>
-<code><a href="../reference/pip_collect.html">pip_collect_out()</a></code> no longer accepts <code>grouped</code> or <code>by</code> parameters. It returns a flat named list of step outputs. Use <code><a href="../reference/pip_view.html">pip_view()</a></code> with tags and manual list composition for grouped output.</li>
+<code>pip_collect_out()</code> no longer accepts <code>grouped</code> or <code>by</code> parameters. It returns a flat named list of step outputs. Use <code><a href="../reference/pip_view.html">pip_view()</a></code> with tags and manual list composition for grouped output.</li>
 <li>The <code>group</code> column has been removed from the pipeline data.table. Steps previously using <code>group = "..."</code> in <code><a href="../reference/pip_add.html">pip_add()</a></code> should use <code>tags = "..."</code>.</li>
 </ul></div>
 <div class="section level3">

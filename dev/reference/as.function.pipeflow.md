@@ -97,6 +97,15 @@ data, and later calls of the function don't change it. Since the values
 are shared, don't modify them in place (e.g. with `:=` on a `data.table`
 output).
 
+### Errors of inner steps
+
+If an inner step fails, the error names it, e.g. `step 'fit': negative`.
+As a step of an outer pipeline, the error also names the outer step and,
+if that step is mapped over partitions, the key:
+`step 'by_batch': key 'D': step 'fit': negative`. Nested pipeline
+functions add one step per level:
+`step 'outer': step 'middle': step 'fit': negative`.
+
 ### Continuing after errors of inner steps
 
 With `on_error = "continue"` the inner pipeline is run like
@@ -140,7 +149,8 @@ as well as for those bound in the step function.
   `cache = FALSE`, has no pipelines and therefore is small to copy.
 
 - In case of an error, the error message includes the key of the
-  partition and the name of the failed inner step.
+  partition and the name of the failed inner step, see 'Errors of inner
+  steps'.
 
 ### Limits
 
@@ -275,7 +285,8 @@ print(outer)
 #> 3:  coefs input_df,degree,digits  by_cyl outdated           <list[3]>   auto
 #> 4:  table                  coefs   coefs outdated       <matrix[3x2]> reduce
 #> --------------------------
-#> <ready> last run: 2026-10-25 08:12:08
+#> <ready> last run: 2026-10-25 19:30:01 (0.016 s)
+#> steps: 2 done, 2 outdated
 pip_run(outer, lgr = NULL)
 outer[["table", "out"]]
 #>   (Intercept) poly(wt, degree, raw = TRUE)

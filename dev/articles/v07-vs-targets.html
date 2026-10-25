@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>pipeflow vs targets • pipeflow</title>
+<title>Comparison and benchmarks • pipeflow</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -16,7 +16,7 @@
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
-<meta property="og:title" content="pipeflow vs targets">
+<meta property="og:title" content="Comparison and benchmarks">
 <meta name="description" content="Comparing general properties and performance of {pipeflow} vs {targets} in a scoped latency comparison.
 ">
 <meta property="og:description" content="Comparing general properties and performance of {pipeflow} vs {targets} in a scoped latency comparison.
@@ -32,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9015</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9024</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -74,8 +74,9 @@
     <li><a class="dropdown-item" href="../articles/v05e-output-value.html">Annotated step outputs</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>pipeflow vs targets</h6></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">Comparison and benchmarks</a></li>
+    <li><a class="dropdown-item" href="../articles/v07b-emulate-targets.html">Emulating targets features</a></li>
   </ul>
 </li>
       </ul>
@@ -96,7 +97,7 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>pipeflow vs targets</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Comparison and benchmarks</h1>
             
       
       <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/main/vignettes/articles/v07-vs-targets.Rmd" class="external-link"><code>vignettes/articles/v07-vs-targets.Rmd</code></a></small>
@@ -145,8 +146,7 @@ project.</p>
 by default</td>
 <td>
 <code><a href="../reference/pip_run.html">pip_run()</a></code> runs in the <strong>current R
-session</strong>
-</td>
+session</strong> (<a href="v07b-emulate-targets.html#fresh-process">fresh process</a>)</td>
 </tr>
 <tr class="odd">
 <td>Persistent storage</td>
@@ -154,19 +154,22 @@ session</strong>
 R restarts, handles data larger than RAM</td>
 <td>✅ On demand — <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS()</a></code> / <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS()</a></code> save
 and restore the whole pipeline (steps, params, outputs, states); no
-automatic storage, data must fit in RAM</td>
+automatic storage, data must fit in RAM (<a href="v07b-emulate-targets.html#persistence">recipe</a>)</td>
 </tr>
 <tr class="even">
 <td>Skip up-to-date steps</td>
 <td>✅ Hash-based invalidation of code and data</td>
-<td>✅ State-based (<code>done</code> / <code>outdated</code>)</td>
+<td>✅ State-based (<code>done</code> / <code>outdated</code>); changed
+<a href="v07b-emulate-targets.html#file-targets">files</a> and <a href="v07b-emulate-targets.html#code-changes">helper functions</a> via
+fingerprint params</td>
 </tr>
 <tr class="odd">
 <td>Metadata &amp; provenance</td>
 <td>✅ <code>tar_meta()</code> records runtime, size, errors per
 target</td>
-<td>❌ No per-step provenance metadata (only the time of last
-execution)</td>
+<td>🟡 Not built in: the step table has the start and end time of the
+last run, the rest via a <a href="v07b-emulate-targets.html#metadata">recipe</a>
+</td>
 </tr>
 <tr class="even">
 <td>Dependency validation</td>
@@ -241,7 +244,8 @@ pipelines as building blocks</td>
 <td>File tracking</td>
 <td>✅ File targets with <code>format = "file"</code>
 </td>
-<td>❌</td>
+<td>🟡 Not built in, via a <a href="v07b-emulate-targets.html#file-targets">recipe</a>
+</td>
 </tr>
 <tr class="even">
 <td>Step locking</td>
@@ -257,6 +261,8 @@ steps from accidental modification</td>
 </tr>
 </tbody>
 </table>
+<p>✅ built in, 🟡 not built in but can be emulated with a few lines of
+code, ❌ not available. The recipes and their limits are in <a href="v07b-emulate-targets.html">Emulating targets features</a>.</p>
 <p>In short, <strong>{targets}</strong> is the tool of choice for
 large-scale reproducible projects: it persists results to disk, captures
 provenance with <code>tar_meta()</code>, and scales to distributed
@@ -521,7 +527,8 @@ change at the head of the chain:</p>
 <span><span class="co"># 3:   s2      x      s1 outdated   2</span></span>
 <span><span class="co"># 4:   s3      x      s2 outdated   3</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-25 08:13:43</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-25 19:31:09 (0.010 s)</span></span>
+<span><span class="co"># steps: 4 outdated</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># pipeflow: everything up to date -&gt; skip-all</span></span>
@@ -547,7 +554,7 @@ performs<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-co
 &lt;em&gt;every&lt;/em&gt; &lt;code&gt;tar_make()&lt;/code&gt; call, not just at definition
 time.&lt;/p&gt;"><sup>1</sup></a>.</p>
 <p><img src="v07-vs-targets_files/figure-html/define-plot-1.png" class="r-plt" alt="" width="672"></p>
-<p>Declaring the pipeline is roughly 15 to 85 times faster in pipeflow
+<p>Declaring the pipeline is roughly 18 to 119 times faster in pipeflow
 across the four sizes, and the gap widens with <code>n</code>. Again,
 the targets bar covers writing <code>_targets.R</code> and the parse and
 graph build that <code>tar_manifest()</code> performs once here and then
@@ -559,7 +566,7 @@ on every run.</p>
 <p>The closest thing to an apples-to-apples comparison: everything is
 already up to date, and we time a no-op run.</p>
 <p><img src="v07-vs-targets_files/figure-html/skip-plot-1.png" class="r-plt" alt="" width="672"></p>
-<p>pipeflow’s skip check stays at or below 4.98 ms even at 128 steps.
+<p>pipeflow’s skip check stays at or below 3.26 ms even at 128 steps.
 targets pays its per-run script re-source and graph rebuild even when no
 target runs. That fixed cost is what a targets user pays on
 <em>every</em> <code>tar_make()</code> in an interactive session — it
@@ -820,7 +827,7 @@ cheap.</p>
 <span><span class="co"># [1] stats     graphics  grDevices datasets  utils     methods   base     </span></span>
 <span><span class="co"># </span></span>
 <span><span class="co"># other attached packages:</span></span>
-<span><span class="co"># [1] ggplot2_4.0.3       bench_1.1.4         targets_1.12.0      pipeflow_0.5.0.9015</span></span>
+<span><span class="co"># [1] ggplot2_4.0.3       bench_1.1.4         targets_1.12.0      pipeflow_0.5.0.9024</span></span>
 <span><span class="co"># </span></span>
 <span><span class="co"># loaded via a namespace (and not attached):</span></span>
 <span><span class="co">#  [1] sass_0.4.10         renv_1.3.1          digest_0.6.39       magrittr_2.0.5     </span></span>

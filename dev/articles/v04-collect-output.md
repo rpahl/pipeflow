@@ -53,7 +53,8 @@ Let’s briefly run the pipeline and see what’s in the `out` column.
 # 4:     model_fit    x,k      prep  done  4, 8,12,16,20     model,fit
 # 5: model_summary      x model_fit  done             60 model,summary
 # ---------------------------
-# <ready> last run: 2026-10-25 08:12:52
+# <ready> last run: 2026-10-25 19:30:32 (0.007 s)
+# steps: 5 done
 ```
 
 ### Flat output collection
@@ -131,7 +132,8 @@ pip
 # 4:     model_fit    x,k      prep  done  4, 8,12,16,20       model,fit,Model
 # 5: model_summary      x model_fit  done             60 model,summary,Summary
 # ---------------------------
-# <ready> last run: 2026-10-25 08:12:52
+# <ready> last run: 2026-10-25 19:30:32 (0.007 s)
+# steps: 5 done
 ```
 
 Naturally, we then would group the output as follows:

@@ -14,7 +14,8 @@ articles:
   v05e-output-value: v05e-output-value.html
   v06-self-modify-pipeline: v06-self-modify-pipeline.html
   articles/v07-vs-targets: v07-vs-targets.html
-last_built: 2026-10-25T08:12Z
+  articles/v07b-emulate-targets: v07b-emulate-targets.html
+last_built: 2026-10-25T19:29Z
 urls:
   reference: https://rpahl.github.io/pipeflow/reference
   article: https://rpahl.github.io/pipeflow/articles

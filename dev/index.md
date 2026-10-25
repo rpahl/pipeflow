@@ -55,11 +55,11 @@ p
 # <ready> last run: never
 
 pip_run(p)
-# info [2026-10-24 10:04:43.951 UTC]: Starting run of pipeflow 'demo'
-# info [2026-10-24 10:04:43.952 UTC]: Step 1/3 numbers
-# info [2026-10-24 10:04:43.954 UTC]: Step 2/3 squared
-# info [2026-10-24 10:04:43.956 UTC]: Step 3/3 total
-# info [2026-10-24 10:04:43.957 UTC]: Finished in 0.006 s (3 done, 0 skipped, 0 failed)
+# info [2026-10-25 16:44:38.543 UTC]: Starting run of pipeflow 'demo'
+# info [2026-10-25 16:44:38.543 UTC]: Step 1/3 numbers
+# info [2026-10-25 16:44:38.549 UTC]: Step 2/3 squared
+# info [2026-10-25 16:44:38.553 UTC]: Step 3/3 total
+# info [2026-10-25 16:44:38.554 UTC]: Finished in 0.012 s (3 done, 0 skipped, 0 failed)
 
 pip_collect(p)
 # $numbers
@@ -98,10 +98,14 @@ below:
   failures](https://rpahl.github.io/pipeflow/articles/v05c-error-handling.html)
 - [Annotated parameter
   values](https://rpahl.github.io/pipeflow/articles/v05d-param-value.html)
+- [Annotated step
+  outputs](https://rpahl.github.io/pipeflow/articles/v05e-output-value.html)
 - [Self-modifying
   pipelines](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html)
 
-### Benchmarks
+### pipeflow vs targets
 
-- [pipeflow vs
-  targets](https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html)
+- [Comparison and
+  benchmarks](https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html)
+- [Emulating targets
+  features](https://rpahl.github.io/pipeflow/articles/v07b-emulate-targets.html)

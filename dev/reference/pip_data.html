@@ -9,7 +9,7 @@ which normally is reachable via p[["pipenv"]][["data"]].'><meta property="og:ima
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9015</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9024</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -47,8 +47,9 @@ which normally is reachable via p[["pipenv"]][["data"]].'><meta property="og:ima
     <li><a class="dropdown-item" href="../articles/v05e-output-value.html">Annotated step outputs</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>pipeflow vs targets</h6></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">Comparison and benchmarks</a></li>
+    <li><a class="dropdown-item" href="../articles/v07b-emulate-targets.html">Emulating targets features</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="external-link nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -108,10 +109,10 @@ pipeline first with <code><a href="pip_clone.html">pip_clone()</a></code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;        &lt;list&gt;    &lt;list&gt; &lt;list&gt; &lt;char&gt; &lt;list&gt; &lt;lgcl&gt; &lt;char&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:   load &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:  model &lt;function[1]&gt; &lt;list[1]&gt; [NULL]    new         FALSE   auto</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                   time time_start depends unbound nodeId</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                 &lt;POSc&gt;     &lt;POSc&gt;  &lt;list&gt;  &lt;list&gt;  &lt;int&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 2026-10-25 08:12:10       &lt;NA&gt;               n      0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 2026-10-25 08:12:10       &lt;NA&gt;    load              1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                   time time_start   duration depends unbound nodeId</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                 &lt;POSc&gt;     &lt;POSc&gt; &lt;difftime&gt;  &lt;list&gt;  &lt;list&gt;  &lt;int&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 2026-10-25 19:30:02       &lt;NA&gt;    NA secs               n      0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 2026-10-25 19:30:02       &lt;NA&gt;    NA secs    load              1</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

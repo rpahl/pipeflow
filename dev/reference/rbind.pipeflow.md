@@ -65,6 +65,7 @@ ab
 #> 3: prep2      x           new
 #> ------------------------
 #> <ready> last run: never
+#> steps: 3 new
 
 # Any number of pipelines can be combined
 abc <- rbind(a, b, b)
@@ -78,6 +79,7 @@ abc
 #> 4: prep3      x           new
 #> --------------------------
 #> <ready> last run: never
+#> steps: 4 new
 
 # Feed the param `data` of the second pipeline with the output of "prep"
 d <- pip_new("d") |> pip_add("scale", \(data = 1, k = 3) data * k)
@@ -94,11 +96,11 @@ pip_get_params(ad) # `data` is no longer a param
 #> [1] 3
 #> 
 pip_run(ad)
-#> info [2026-10-25 08:12:15.617 UTC]: Starting run of pipeflow 'a-d'
-#> info [2026-10-25 08:12:15.617 UTC]: Step 1/3 prep
-#> info [2026-10-25 08:12:15.618 UTC]: Step 2/3 fit
-#> info [2026-10-25 08:12:15.619 UTC]: Step 3/3 scale
-#> info [2026-10-25 08:12:15.620 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)
+#> info [2026-10-25 19:30:05.625 UTC]: Starting run of pipeflow 'a-d'
+#> info [2026-10-25 19:30:05.625 UTC]: Step 1/3 prep
+#> info [2026-10-25 19:30:05.626 UTC]: Step 2/3 fit
+#> info [2026-10-25 19:30:05.626 UTC]: Step 3/3 scale
+#> info [2026-10-25 19:30:05.627 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)
 ad[["scale", "out"]]
 #> [1] 6
 ```

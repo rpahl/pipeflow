@@ -1,5 +1,159 @@
 # Changelog
 
+## pipeflow 0.5.0.9024
+
+### New features
+
+- The nodes of
+  [`pip_graph()`](https://rpahl.github.io/pipeflow/dev/reference/pip_graph.md)
+  have a `title` column, which visNetwork shows when hovering over a
+  step: its state, exec mode, tags, lock, the start and duration of its
+  last run, the failed keys of a mapped step, its parameters and the
+  steps it depends on.
+- The edges of
+  [`pip_graph()`](https://rpahl.github.io/pipeflow/dev/reference/pip_graph.md)
+  have a `dashes` column, so that visNetwork draws a `~try()` reference
+  as a dashed edge.
+- `pip_graph(format = "mermaid")` returns the graph as the text of a
+  mermaid flowchart, which renders e.g. on GitHub and in Quarto. It has
+  the colors and dashed edges of the visNetwork graph, a hexagon for
+  `auto` and `plain` steps and a trapezoid for `split` (widening) and
+  `reduce` (narrowing) steps.
+
+## pipeflow 0.5.0.9023
+
+### New features
+
+- The step table has a new column `duration`: how long the step’s last
+  run took, as a `difftime` in seconds. Unlike `time - time_start`, it
+  is also set if the run failed (`time` keeps the end of the last
+  successful run). It is `NA` for a step that has not run since it was
+  added, replaced or reset. Set it with `p[[step, "duration"]] <- value`
+  (`NA` allowed). Pipelines saved with an earlier version get the column
+  (all `NA`) when read.
+- The footer of [`print()`](https://rdrr.io/r/base/print.html) shows the
+  duration of the last run, and how many of the printed steps are in
+  each state, e.g. `<ready> last run: 2026-10-25 14:03:12 (0.251 s)` and
+  `steps: 3 done, 1 failed, 2 new`. The `duration` column (e.g. with
+  `cols = "all"`) is printed in short form, e.g. `0.251 s`.
+
+## pipeflow 0.5.0.9022
+
+### Bug fixes
+
+- [`pip_reset()`](https://rpahl.github.io/pipeflow/dev/reference/pip_reset.md)
+  on a view that covers only some steps now keeps the time of the last
+  run and the run state of the pipeline. Before, resetting a single step
+  showed `last run: never`.
+
+### Documentation
+
+- New article “Emulating targets features” with recipes for file
+  tracking, rebuilds after helper changes, a `tar_meta()`-like table,
+  reproducible random numbers, saved results, runs in a fresh R process
+  and a list of outdated steps, and the limits of each. The article
+  “pipeflow vs targets” is now called “Comparison and benchmarks” and
+  links to the recipes.
+
+## pipeflow 0.5.0.9021
+
+### New features
+
+- A run can be cancelled from the `progress` callback of
+  [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md):
+  if it returns `FALSE`, the run is halted before the next step, as by
+  `.self$halt()`. This lets a Shiny app stop a run between steps.
+
+## pipeflow 0.5.0.9020
+
+### Bug fixes
+
+- [`pip_rename()`](https://rpahl.github.io/pipeflow/dev/reference/pip_rename.md)
+  now also renames the step in the failures of failed keys if the step
+  name has a name attribute, e.g. if it is taken from `p[["step"]]`.
+  Before, the failures in the outputs of the step and its dependents
+  kept the old name, and renaming a step to its own name this way failed
+  with “already exists”.
+- [`pip_reset()`](https://rpahl.github.io/pipeflow/dev/reference/pip_reset.md)
+  now marks the downstream steps of the reset steps as `"outdated"`, as
+  they ran with the cleared outputs. Locked steps keep their state.
+  Before, the downstream steps stayed `"done"`, and if a reset step was
+  then locked, the next run kept their results.
+- `p[i, view = FALSE]` no longer warns that an edge already exists if a
+  step refers to the same step with several arguments.
+
+## pipeflow 0.5.0.9019
+
+### Breaking changes
+
+- The deprecated aliases `pip_collect_out()` and `pip_get_graph()` were
+  removed. Use
+  [`pip_collect()`](https://rpahl.github.io/pipeflow/dev/reference/pip_collect.md)
+  and
+  [`pip_graph()`](https://rpahl.github.io/pipeflow/dev/reference/pip_graph.md).
+- pipeflow no longer re-exports the data.table operators `%like%`,
+  `%ilike%`, `%flike%`, `%plike%`, `%chin%`, `%between%`, `%inrange%`
+  and `%notin%`. They still work in the filters of `[`, e.g.
+  `p[tags %like% "model"]`, without attaching data.table. To use them
+  elsewhere, call [`library(data.table)`](https://r-datatable.com).
+
+## pipeflow 0.5.0.9018
+
+### Changes
+
+- The error of a mapped step whose partitioned inputs don’t have the
+  same keys names the arguments that differ and lists the keys that are
+  missing, extra or in a different order,
+  e.g. `partitioned arguments must share identical keys: argument 'r' differs from 'l' (missing 'b'; extra 'd')`.
+
+### Documentation
+
+- [`?as.function.pipeflow`](https://rpahl.github.io/pipeflow/dev/reference/as.function.pipeflow.md)
+  has a new section ‘Errors of inner steps’ with examples of the error
+  messages: they name the outer step, the partition key and the failed
+  inner step, e.g. `step 'by_batch': key 'D': step 'fit': negative`. The
+  vignette on error handling shows how to get the outer step, the key
+  and the inner step from the error.
+
+## pipeflow 0.5.0.9017
+
+### Bug fixes
+
+- An assignment to several steps, `p[i, j] <- value`, and a copy of
+  steps, `p[i, ] <- q[i, ]`, now change all selected steps or none: if a
+  step fails (e.g. because a new step name already exists), the steps
+  assigned before are restored. Before, they kept their changes.
+
+## pipeflow 0.5.0.9016
+
+### Breaking changes
+
+- A step that changes its own function, params or exec mode while it
+  runs (via `.self`) now ends the run as `"outdated"` instead of
+  `"done"`, as its output comes from the old definition, and runs again
+  in the next run. The same holds for a step that a later step changes
+  during the run. The steps that ran with the output of such a step are
+  marked `"outdated"` too. Before, all of them stayed `"done"` with
+  stale results, also after `.self$restart(force = FALSE)`. A step that
+  sets its own params to fixed values settles after one more run, while
+  a step that sets new values in every run now runs again in every run.
+
+### Bug fixes
+
+- Changing the execution mode of a step with `p[[step, "exec"]] <- mode`
+  (also via `p[i, "exec"] <-` and views) now marks the step and its
+  downstream steps as `"outdated"`, so that the next run uses the new
+  mode. Before, a step that had run kept its state and its output from
+  the old mode. A step that failed for some keys and got a new mode is
+  run again for all keys.
+- Setting the output of a step with `p[[step, "out"]] <- value` (also
+  via `p[i, "out"] <-`, views and `p[i, ] <- q[j, ]`) now marks its
+  downstream steps as `"outdated"`, so that the next run computes them
+  from the new output. Before, they stayed `"done"` with the results of
+  the old output. The step itself keeps its state.
+  [`?Extract.pipeflow`](https://rpahl.github.io/pipeflow/dev/reference/Extract.pipeflow.md)
+  lists which assignments outdate steps.
+
 ## pipeflow 0.5.0.9015
 
 ### Breaking changes
@@ -427,18 +581,14 @@ CRAN release: 2026-09-27
   - time stamps via `p[[step, "time"]] <- value`,
   - setting or replacing views via `p[["view"]] <- ...`.
 - [`pip_collect()`](https://rpahl.github.io/pipeflow/dev/reference/pip_collect.md)
-  (formerly
-  [`pip_collect_out()`](https://rpahl.github.io/pipeflow/dev/reference/pip_collect.md))
-  supports grouping via a `by` argument, `as.table = TRUE` to return a
-  compact table, and a `simplify` argument to control flattening of
-  single-step groups.
+  (formerly `pip_collect_out()`) supports grouping via a `by` argument,
+  `as.table = TRUE` to return a compact table, and a `simplify` argument
+  to control flattening of single-step groups.
 - [`pip_data()`](https://rpahl.github.io/pipeflow/dev/reference/pip_data.md)
   provides direct access to the underlying step table.
 - [`pip_graph()`](https://rpahl.github.io/pipeflow/dev/reference/pip_graph.md)
-  (formerly
-  [`pip_get_graph()`](https://rpahl.github.io/pipeflow/dev/reference/pip_graph.md))
-  returns visNetwork-compatible graph data. The old function names
-  remain available as deprecated aliases.
+  (formerly `pip_get_graph()`) returns visNetwork-compatible graph data.
+  The old function names remain available as deprecated aliases.
 - The derived columns `depends`, `unbound` and `nodeId` are read-only
   and can’t be assigned directly.
 - [`pip_view()`](https://rpahl.github.io/pipeflow/dev/reference/pip_view.md)
@@ -508,9 +658,8 @@ CRAN release: 2026-06-15
 
 - Legacy `pipe_*` functions and `Pipeline` R6 class are deprecated
   (preserved as aliases in `R/aliases.R`, `R/pipelineR6.R`).
-- [`pip_collect_out()`](https://rpahl.github.io/pipeflow/dev/reference/pip_collect.md)
-  no longer accepts `grouped` or `by` parameters. It returns a flat
-  named list of step outputs. Use
+- `pip_collect_out()` no longer accepts `grouped` or `by` parameters. It
+  returns a flat named list of step outputs. Use
   [`pip_view()`](https://rpahl.github.io/pipeflow/dev/reference/pip_view.md)
   with tags and manual list composition for grouped output.
 - The `group` column has been removed from the pipeline data.table.

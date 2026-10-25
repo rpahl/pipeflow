@@ -71,8 +71,14 @@
   intermediate results or even dynamically modify the pipeline’s own
   structure during a pipeline run.
 
-- [pipeflow vs
-  targets](https://rpahl.github.io/pipeflow/dev/articles/v07-vs-targets.md):
+- [Comparison and
+  benchmarks](https://rpahl.github.io/pipeflow/dev/articles/v07-vs-targets.md):
 
   Comparing general properties and performance of {pipeflow} vs
   {targets} in a scoped latency comparison.
+
+- [Emulating targets
+  features](https://rpahl.github.io/pipeflow/dev/articles/v07b-emulate-targets.md):
+
+  Recipes that emulate features of {targets} with existing {pipeflow}
+  functions and a few lines of R code, and where the emulation stops.

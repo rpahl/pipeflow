@@ -52,7 +52,8 @@ print(
   `<error/simpleError>`; a matrix, array or table as `<class[dims]>`,
   e.g. `<matrix[4x2]>`; and a function or environment (e.g. an R6
   object) as `<class>`. Strings longer than 40 characters are cut off
-  and marked with `"..."`.
+  and marked with `"..."`. The `duration` column is shown in short form,
+  e.g. `0.251 s` or `2 min 5 s`.
 
 - topn:
 
@@ -75,8 +76,12 @@ print(
 - header:
 
   If TRUE, a header with the pipeline name and number of steps, and a
-  footer with the run state and the time of the last run, will be
-  printed.
+  footer will be printed. The footer shows the run state, the time and
+  the duration of the last run, and how many of the printed steps are in
+  each state, e.g.
+
+      <ready> last run: 2026-10-25 14:03:12 (0.251 s)
+      steps: 3 done, 1 failed, 2 new
 
 ## Value
 
@@ -99,6 +104,7 @@ print(p) # core columns: step, params, depends, state, tags
 #> 3:  total      x  square   new compute
 #> -------------------------
 #> <ready> last run: never
+#> steps: 3 new
 print(p, cols = "all") # all step-table columns
 #> <pipeflow> demo (3 steps)
 #> -------------------------
@@ -106,12 +112,13 @@ print(p, cols = "all") # all step-table columns
 #> 1:   load <function[1]>      n [NULL]   new  io,raw  FALSE auto
 #> 2: square <function[1]>      x [NULL]   new compute  FALSE auto
 #> 3:  total <function[1]>      x [NULL]   new compute  FALSE auto
-#>                   time time_start depends unbound nodeId
-#> 1: 2026-10-25 08:12:15       <NA>               n      0
-#> 2: 2026-10-25 08:12:15       <NA>    load              1
-#> 3: 2026-10-25 08:12:15       <NA>  square              2
+#>                   time time_start duration depends unbound nodeId
+#> 1: 2026-10-25 19:30:05       <NA>     <NA>               n      0
+#> 2: 2026-10-25 19:30:05       <NA>     <NA>    load              1
+#> 3: 2026-10-25 19:30:05       <NA>     <NA>  square              2
 #> -------------------------
 #> <ready> last run: never
+#> steps: 3 new
 print(p, rows = 2:3) # print only steps 2 and 3
 #> <pipeflow> demo (3 steps)
 #> -------------------------
@@ -120,6 +127,7 @@ print(p, rows = 2:3) # print only steps 2 and 3
 #> 2:  total      x  square   new compute
 #> -------------------------
 #> <ready> last run: never
+#> steps: 2 new
 
 v <- pip_view(p, tags = "compute")
 print(v)
@@ -130,4 +138,5 @@ print(v)
 #> 2:  total      x  square   new compute
 #> -----------------------------------
 #> <ready> last run: never
+#> steps: 2 new
 ```

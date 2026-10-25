@@ -12,7 +12,6 @@ Create a pipeline, add steps, and collect results.
 - [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
   : Add a step
 - [`pip_collect()`](https://rpahl.github.io/pipeflow/dev/reference/pip_collect.md)
-  [`pip_collect_out()`](https://rpahl.github.io/pipeflow/dev/reference/pip_collect.md)
   : Collect step outputs
 
 ## Modify steps
@@ -81,7 +80,6 @@ filtered views.
 - [`pip_data()`](https://rpahl.github.io/pipeflow/dev/reference/pip_data.md)
   : Access the underlying step table
 - [`pip_graph()`](https://rpahl.github.io/pipeflow/dev/reference/pip_graph.md)
-  [`pip_get_graph()`](https://rpahl.github.io/pipeflow/dev/reference/pip_graph.md)
   : Build pipeline graph data
 
 ## Extract and replace operators
@@ -106,19 +104,3 @@ Generic methods for pipeflow objects.
 - [`str(`*`<pipeflow>`*`)`](https://rpahl.github.io/pipeflow/dev/reference/print.md)
   [`print(`*`<pipeflow>`*`)`](https://rpahl.github.io/pipeflow/dev/reference/print.md)
   : Print pipeflow objects
-
-## Filtering helpers
-
-Filter operators from data.table re-exported for use in view and subset
-expressions.
-
-- [`pipeflow-operators`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow-operators.md)
-  [`%like%`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow-operators.md)
-  [`%ilike%`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow-operators.md)
-  [`%flike%`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow-operators.md)
-  [`%plike%`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow-operators.md)
-  [`%chin%`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow-operators.md)
-  [`%between%`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow-operators.md)
-  [`%inrange%`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow-operators.md)
-  [`%notin%`](https://rpahl.github.io/pipeflow/dev/reference/pipeflow-operators.md)
-  : Row-filter operators re-exported from data.table

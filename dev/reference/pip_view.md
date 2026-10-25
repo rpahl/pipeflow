@@ -73,6 +73,7 @@ p
 #> 3: eval_fit    fit     fit   new model,daily,report
 #> -------------------------
 #> <ready> last run: never
+#> steps: 3 new
 
 # Filter by one or more column values
 pip_view(p, state = "new")
@@ -84,6 +85,7 @@ pip_view(p, state = "new")
 #> 3: eval_fit    fit     fit   new model,daily,report
 #> -----------------------------------
 #> <ready> last run: never
+#> steps: 3 new
 pip_view(p, step = c("load", "fit"))
 #> <pipeflow_view> pipe (2 of 3 steps)
 #> -----------------------------------
@@ -92,6 +94,7 @@ pip_view(p, step = c("load", "fit"))
 #> 2:  fit      b           new         model
 #> -----------------------------------
 #> <ready> last run: never
+#> steps: 2 new
 
 # Filter by tag — keeps steps that have *any* of the given tags
 pip_view(p, tags = "daily")
@@ -102,6 +105,7 @@ pip_view(p, tags = "daily")
 #> 2: eval_fit    fit     fit   new model,daily,report
 #> -----------------------------------
 #> <ready> last run: never
+#> steps: 2 new
 
 # Combine filters: step pattern AND state (logical AND)
 pip_view(p, step = "fit", state = "new")
@@ -111,6 +115,7 @@ pip_view(p, step = "fit", state = "new")
 #> 1:  fit      b           new model
 #> -----------------------------------
 #> <ready> last run: never
+#> steps: 1 new
 
 # Combine filters as a union (step OR state)
 pip_view(p, step = "load", tags = "report", join = "union")
@@ -121,6 +126,7 @@ pip_view(p, step = "load", tags = "report", join = "union")
 #> 2: eval_fit    fit     fit   new model,daily,report
 #> -----------------------------------
 #> <ready> last run: never
+#> steps: 2 new
 
 # Use a regex pattern
 pip_view(p, step = "fit$", fixed = FALSE)
@@ -131,6 +137,7 @@ pip_view(p, step = "fit$", fixed = FALSE)
 #> 2: eval_fit    fit     fit   new model,daily,report
 #> -----------------------------------
 #> <ready> last run: never
+#> steps: 2 new
 
 # Filter by parameter names — steps with any of the given parameters
 pip_view(p, params = c("a", "fit"))
@@ -141,6 +148,7 @@ pip_view(p, params = c("a", "fit"))
 #> 2: eval_fit    fit     fit   new model,daily,report
 #> -----------------------------------
 #> <ready> last run: never
+#> steps: 2 new
 
 # Views are composable: create a view-of-view for progressive narrowing
 v1 <- pip_view(p, tags = "daily")
@@ -152,6 +160,7 @@ print(v1) # load, eval_fit
 #> 2: eval_fit    fit     fit   new model,daily,report
 #> -----------------------------------
 #> <ready> last run: never
+#> steps: 2 new
 v2 <- pip_view(v1, tags = "report")
 print(v2) # eval_fit only
 #> <pipeflow_view> pipe (1 of 3 steps)
@@ -160,4 +169,5 @@ print(v2) # eval_fit only
 #> 1: eval_fit    fit     fit   new model,daily,report
 #> -----------------------------------
 #> <ready> last run: never
+#> steps: 1 new
 ```

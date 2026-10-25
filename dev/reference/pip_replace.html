@@ -11,7 +11,7 @@ outdated and will re-run on the next pip_run()."><meta property="og:image" conte
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9015</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9024</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -49,8 +49,9 @@ outdated and will re-run on the next pip_run()."><meta property="og:image" conte
     <li><a class="dropdown-item" href="../articles/v05e-output-value.html">Annotated step outputs</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>pipeflow vs targets</h6></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">Comparison and benchmarks</a></li>
+    <li><a class="dropdown-item" href="../articles/v07b-emulate-targets.html">Emulating targets features</a></li>
   </ul></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><a class="external-link nav-link" href="https://github.com/rpahl/pipeflow/" aria-label="github"><span class="fa fab fa-github"></span></a></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://stackoverflow.com/users/8120617/rpahl" aria-label="stackoverflow"><span class="fa fab fa-stack-overflow"></span></a></li>
@@ -153,10 +154,10 @@ lock status are always reset, like for a freshly added step.</p>
 <span class="r-in"><span>    <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"load"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>    <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"double"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">load</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:12.926 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:12.926 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:12.927 UTC]: Step 2/2 double</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:12.928 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 19:30:03.925 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 19:30:03.925 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 19:30:03.926 UTC]: Step 2/2 double</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 19:30:03.927 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
@@ -164,7 +165,8 @@ lock status are always reset, like for a freshly added step.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:   load      n          done      1,2,3,4,5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: double      x    load  done  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 08:12:12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 19:30:03 (0.002 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> steps: 2 done</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Replace "load" — downstream steps are automatically marked "outdated"</span></span></span>
 <span class="r-in"><span><span class="fu">pip_replace</span><span class="op">(</span><span class="va">p</span>, <span class="st">"load"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">3</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -175,14 +177,15 @@ lock status are always reset, like for a freshly added step.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:   load      n              new         [NULL]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: double      x    load outdated  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 08:12:12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 19:30:03 (0.002 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> steps: 1 outdated, 1 new</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Re-run to bring everything up to date</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:12.934 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:12.935 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:12.935 UTC]: Step 2/2 double</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 08:12:12.936 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 19:30:03.930 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 19:30:03.930 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 19:30:03.931 UTC]: Step 2/2 double</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-25 19:30:03.932 UTC]: Finished in 0.001 s (2 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
@@ -190,7 +193,8 @@ lock status are always reset, like for a freshly added step.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:   load      n          done 1,2,3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: double      x    load  done 2,4,6</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 08:12:12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-25 19:30:03 (0.001 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> steps: 2 done</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># If a view is passed, the step must be part of the view</span></span></span>
 <span class="r-in"><span><span class="va">v</span> <span class="op">&lt;-</span> <span class="fu"><a href="pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">p</span>, step <span class="op">=</span> <span class="st">"double"</span><span class="op">)</span></span></span>

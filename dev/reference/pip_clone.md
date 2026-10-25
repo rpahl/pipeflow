@@ -45,6 +45,7 @@ cp
 #> 3:   s3      x      s2   new
 #> -------------------------
 #> <ready> last run: never
+#> steps: 3 new
 
 # ... while the original is left unchanged
 p
@@ -55,4 +56,5 @@ p
 #> 2:   s2      x      s1   new
 #> -----------------------------
 #> <ready> last run: never
+#> steps: 2 new
 ```

@@ -43,6 +43,7 @@ p
 #> 2:  fit      x    load   new daily,core
 #> -------------------------
 #> <ready> last run: never
+#> steps: 2 new
 p[, "tags"] # both steps have c("daily", "core")
 #>          tags
 #>        <list>
@@ -59,6 +60,7 @@ p
 #> 2:  fit      x    load   new daily,core,model
 #> -------------------------
 #> <ready> last run: never
+#> steps: 2 new
 p[, "tags"] # "fit" also has "model"
 #>                tags
 #>              <list>

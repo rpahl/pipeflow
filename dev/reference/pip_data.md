@@ -40,8 +40,8 @@ pip_data(p)
 #>    <char>        <list>    <list> <list> <char> <list> <lgcl> <char>
 #> 1:   load <function[1]> <list[1]> [NULL]    new         FALSE   auto
 #> 2:  model <function[1]> <list[1]> [NULL]    new         FALSE   auto
-#>                   time time_start depends unbound nodeId
-#>                 <POSc>     <POSc>  <list>  <list>  <int>
-#> 1: 2026-10-25 08:12:10       <NA>               n      0
-#> 2: 2026-10-25 08:12:10       <NA>    load              1
+#>                   time time_start   duration depends unbound nodeId
+#>                 <POSc>     <POSc> <difftime>  <list>  <list>  <int>
+#> 1: 2026-10-25 19:30:02       <NA>    NA secs               n      0
+#> 2: 2026-10-25 19:30:02       <NA>    NA secs    load              1
 ```

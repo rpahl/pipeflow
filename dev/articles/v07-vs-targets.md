@@ -1,4 +1,4 @@
-# pipeflow vs targets
+# Comparison and benchmarks
 
 This vignette has two parts. It opens with a [general, qualitative
 comparison](#overview) of {pipeflow} and {targets} — what each package
@@ -17,10 +17,10 @@ packages to help you decide which one fits your project.
 | Feature | **targets** | **pipeflow** |
 |----|----|----|
 | Paradigm | Declarative — define the full DAG upfront in a `_targets.R` script, then execute | Interactive — incrementally build the pipeline with [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md) as you code |
-| Execution | `tar_make()` runs in a **fresh R process** by default | [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md) runs in the **current R session** |
-| Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ✅ On demand — [`saveRDS()`](https://rdrr.io/r/base/readRDS.html) / [`readRDS()`](https://rdrr.io/r/base/readRDS.html) save and restore the whole pipeline (steps, params, outputs, states); no automatic storage, data must fit in RAM |
-| Skip up-to-date steps | ✅ Hash-based invalidation of code and data | ✅ State-based (`done` / `outdated`) |
-| Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | ❌ No per-step provenance metadata (only the time of last execution) |
+| Execution | `tar_make()` runs in a **fresh R process** by default | [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md) runs in the **current R session** ([fresh process](https://rpahl.github.io/pipeflow/dev/articles/v07b-emulate-targets.html#fresh-process)) |
+| Persistent storage | ✅ Output stored to disk (`_targets/objects/`), survives R restarts, handles data larger than RAM | ✅ On demand — [`saveRDS()`](https://rdrr.io/r/base/readRDS.html) / [`readRDS()`](https://rdrr.io/r/base/readRDS.html) save and restore the whole pipeline (steps, params, outputs, states); no automatic storage, data must fit in RAM ([recipe](https://rpahl.github.io/pipeflow/dev/articles/v07b-emulate-targets.html#persistence)) |
+| Skip up-to-date steps | ✅ Hash-based invalidation of code and data | ✅ State-based (`done` / `outdated`); changed [files](https://rpahl.github.io/pipeflow/dev/articles/v07b-emulate-targets.html#file-targets) and [helper functions](https://rpahl.github.io/pipeflow/dev/articles/v07b-emulate-targets.html#code-changes) via fingerprint params |
+| Metadata & provenance | ✅ `tar_meta()` records runtime, size, errors per target | 🟡 Not built in: the step table has the start and end time of the last run, the rest via a [recipe](https://rpahl.github.io/pipeflow/dev/articles/v07b-emulate-targets.html#metadata) |
 | Dependency validation | ✅ `tar_validate()` for pre-flight checks (opt-in) | ✅ On [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md), [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md), [`pip_remove()`](https://rpahl.github.io/pipeflow/dev/reference/pip_remove.md) — fails fast on broken references |
 | Modify pipeline at runtime | ❌ Must edit `_targets.R` and re-run | ✅ [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md) insert with `after =`, [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md), [`pip_remove()`](https://rpahl.github.io/pipeflow/dev/reference/pip_remove.md) |
 | Parameter management | ❌ No unified parameter view across targets | ✅ [`pip_get_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md) / [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md) — one call updates all steps |
@@ -32,9 +32,14 @@ packages to help you decide which one fits your project.
 | Self-modifying pipelines | ❌ | ✅ Steps can modify the pipeline at runtime via `.self` (add/remove/replace steps, set params) and restart the run with `.self$restart()` |
 | Distributed computing | ✅ `crew` for HPC and cloud workers | ❌ |
 | Cloud storage | ✅ AWS, GCS | ❌ |
-| File tracking | ✅ File targets with `format = "file"` | ❌ |
+| File tracking | ✅ File targets with `format = "file"` | 🟡 Not built in, via a [recipe](https://rpahl.github.io/pipeflow/dev/articles/v07b-emulate-targets.html#file-targets) |
 | Step locking | ❌ | ✅ [`pip_lock()`](https://rpahl.github.io/pipeflow/dev/reference/pip_lock.md) / [`pip_unlock()`](https://rpahl.github.io/pipeflow/dev/reference/pip_lock.md) — protect steps from accidental modification |
 | Visualization / monitoring | ✅ `tar_visnetwork()`, `tar_glimpse()`, `tar_watch()` (live Shiny app) | ✅ [`pip_graph()`](https://rpahl.github.io/pipeflow/dev/reference/pip_graph.md) → visNetwork |
+
+✅ built in, 🟡 not built in but can be emulated with a few lines of
+code, ❌ not available. The recipes and their limits are in [Emulating
+targets
+features](https://rpahl.github.io/pipeflow/dev/articles/v07b-emulate-targets.md).
 
 In short, **{targets}** is the tool of choice for large-scale
 reproducible projects: it persists results to disk, captures provenance
@@ -260,7 +265,8 @@ print(p)
 # 3:   s2      x      s1 outdated   2
 # 4:   s3      x      s2 outdated   3
 # ---------------------------
-# <ready> last run: 2026-10-25 08:13:43
+# <ready> last run: 2026-10-25 19:31:09 (0.010 s)
+# steps: 4 outdated
 pip_run(p, lgr = NULL)
 
 # pipeflow: everything up to date -> skip-all
@@ -286,7 +292,7 @@ build that `tar_manifest()` performs[^1].
 
 ![](v07-vs-targets_files/figure-html/define-plot-1.png)
 
-Declaring the pipeline is roughly 15 to 85 times faster in pipeflow
+Declaring the pipeline is roughly 18 to 119 times faster in pipeflow
 across the four sizes, and the gap widens with `n`. Again, the targets
 bar covers writing `_targets.R` and the parse and graph build that
 `tar_manifest()` performs once here and then on every run.
@@ -298,7 +304,7 @@ already up to date, and we time a no-op run.
 
 ![](v07-vs-targets_files/figure-html/skip-plot-1.png)
 
-pipeflow’s skip check stays at or below 4.98 ms even at 128 steps.
+pipeflow’s skip check stays at or below 3.26 ms even at 128 steps.
 targets pays its per-run script re-source and graph rebuild even when no
 target runs. That fixed cost is what a targets user pays on *every*
 `tar_make()` in an interactive session — it buys the persistent,
@@ -490,7 +496,7 @@ updates avoid copying and keep re-runs cheap.
     # [1] stats     graphics  grDevices datasets  utils     methods   base     
     # 
     # other attached packages:
-    # [1] ggplot2_4.0.3       bench_1.1.4         targets_1.12.0      pipeflow_0.5.0.9015
+    # [1] ggplot2_4.0.3       bench_1.1.4         targets_1.12.0      pipeflow_0.5.0.9024
     # 
     # loaded via a namespace (and not attached):
     #  [1] sass_0.4.10         renv_1.3.1          digest_0.6.39       magrittr_2.0.5     

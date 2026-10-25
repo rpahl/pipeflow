@@ -38,6 +38,7 @@ inner
 # 3: coefs     fit,digits     fit   new
 # ---------------------------------
 # <ready> last run: never
+# steps: 3 new
 ```
 
 ### A pipeline as a function
@@ -68,12 +69,12 @@ see this now:
 ``` r
 
 params <- list(input_df = iris, xVar = "Sepal.Length", yVar = "Sepal.Width")
-inner$set_params(params)$run()
-# info [2026-10-25 08:13:06.060 UTC]: Starting run of pipeflow 'coefficients'
-# info [2026-10-25 08:13:06.061 UTC]: Step 1/3 input
-# info [2026-10-25 08:13:06.063 UTC]: Step 2/3 fit
-# info [2026-10-25 08:13:06.067 UTC]: Step 3/3 coefs
-# info [2026-10-25 08:13:06.069 UTC]: Finished in 0.008 s (3 done, 0 skipped, 0 failed)
+pip_set_params(inner, params) |> pip_run()
+# info [2026-10-25 19:30:42.846 UTC]: Starting run of pipeflow 'coefficients'
+# info [2026-10-25 19:30:42.847 UTC]: Step 1/3 input
+# info [2026-10-25 19:30:42.848 UTC]: Step 2/3 fit
+# info [2026-10-25 19:30:42.851 UTC]: Step 3/3 coefs
+# info [2026-10-25 19:30:42.852 UTC]: Finished in 0.006 s (3 done, 0 skipped, 0 failed)
 
 inner[["coefs", "out"]]
 #  (Intercept) Sepal.Length 
@@ -111,6 +112,7 @@ outer_all
 # 2: inner_run input_df,xVar,yVar,digits      df   new
 # -----------------------------
 # <ready> last run: never
+# steps: 2 new
 ```
 
 As for any other step function, `params` of
@@ -145,10 +147,10 @@ outer_all |>
         list(df = iris, xVar = "Sepal.Length", yVar = "Sepal.Width")
     ) |>
     pip_run()
-# info [2026-10-25 08:13:06.277 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-10-25 08:13:06.277 UTC]: Step 1/2 df
-# info [2026-10-25 08:13:06.278 UTC]: Step 2/2 inner_run
-# info [2026-10-25 08:13:06.302 UTC]: Finished in 0.024 s (2 done, 0 skipped, 0 failed)
+# info [2026-10-25 19:30:42.964 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-10-25 19:30:42.970 UTC]: Step 1/2 df
+# info [2026-10-25 19:30:42.971 UTC]: Step 2/2 inner_run
+# info [2026-10-25 19:30:42.984 UTC]: Finished in 0.020 s (2 done, 0 skipped, 0 failed)
 
 outer_all[["inner_run", "out"]]
 #  (Intercept) Sepal.Length 
@@ -229,6 +231,7 @@ outer
 # 4:   combine                     coefs inner_run   new reduce
 # ----------------------------------
 # <ready> last run: never
+# steps: 4 new
 ```
 
 The split output is partitioned, so the function is called once per
@@ -262,12 +265,12 @@ outer |>
         )
     ) |>
     pip_run()
-# info [2026-10-25 08:13:06.578 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-25 08:13:06.578 UTC]: Step 1/4 df
-# info [2026-10-25 08:13:06.579 UTC]: Step 2/4 split_df
-# info [2026-10-25 08:13:06.580 UTC]: Step 3/4 inner_run
-# info [2026-10-25 08:13:06.601 UTC]: Step 4/4 combine
-# info [2026-10-25 08:13:06.602 UTC]: Finished in 0.025 s (4 done, 0 skipped, 0 failed)
+# info [2026-10-25 19:30:43.137 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-10-25 19:30:43.137 UTC]: Step 1/4 df
+# info [2026-10-25 19:30:43.138 UTC]: Step 2/4 split_df
+# info [2026-10-25 19:30:43.139 UTC]: Step 3/4 inner_run
+# info [2026-10-25 19:30:43.153 UTC]: Step 4/4 combine
+# info [2026-10-25 19:30:43.154 UTC]: Finished in 0.017 s (4 done, 0 skipped, 0 failed)
 ```
 
 The output of the `inner_run` step is a partitioned list of coefficient
@@ -319,7 +322,8 @@ outer
 # 3: inner_run input_df,xVar,yVar,digits  split_df outdated           <list[3]>   auto
 # 4:   combine                     coefs inner_run outdated   <data.frame[3x2]> reduce
 # ----------------------------------
-# <ready> last run: 2026-10-25 08:13:06
+# <ready> last run: 2026-10-25 19:30:43 (0.017 s)
+# steps: 2 done, 2 outdated
 ```
 
 Since `xVar` is a parameter of the `inner_run` step, this step and its
@@ -434,7 +438,8 @@ inner_pips[["a"]]
 # 2: square         x   input  done      1, 4, 9,16
 # 3:  scale sq,factor  square  done  10, 40, 90,160
 # ------------------------------
-# <ready> last run: 2026-10-25 08:13:07
+# <ready> last run: 2026-10-25 19:30:43 (0.003 s)
+# steps: 3 done
 ```
 
 A few things to know:
@@ -515,6 +520,7 @@ manual
 # 4:   combine                            coefs inner_run   new
 # ----------------------------------
 # <ready> last run: never
+# steps: 4 new
 ```
 
 In this version, the `inner_run` step does not declare the parameters of
@@ -553,12 +559,12 @@ manual |>
         )
     ) |>
     pip_run()
-# info [2026-10-25 08:13:07.304 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-25 08:13:07.304 UTC]: Step 1/4 df
-# info [2026-10-25 08:13:07.305 UTC]: Step 2/4 split_df
-# info [2026-10-25 08:13:07.306 UTC]: Step 3/4 inner_run
-# info [2026-10-25 08:13:07.328 UTC]: Step 4/4 combine
-# info [2026-10-25 08:13:07.329 UTC]: Finished in 0.025 s (4 done, 0 skipped, 0 failed)
+# info [2026-10-25 19:30:43.649 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-10-25 19:30:43.649 UTC]: Step 1/4 df
+# info [2026-10-25 19:30:43.650 UTC]: Step 2/4 split_df
+# info [2026-10-25 19:30:43.651 UTC]: Step 3/4 inner_run
+# info [2026-10-25 19:30:43.666 UTC]: Step 4/4 combine
+# info [2026-10-25 19:30:43.667 UTC]: Finished in 0.018 s (4 done, 0 skipped, 0 failed)
 
 manual[["combine", "out"]]
 #            (Intercept) Sepal.Length

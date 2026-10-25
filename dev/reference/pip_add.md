@@ -96,7 +96,9 @@ pip_add(
   If a split step fails, a `reduce` step also accepts the resulting
   failure object when it takes it via `~try()`. In summary:
 
-  - auto: map if partitioned input appears, otherwise single call
+  - auto: map if partitioned input appears, otherwise single call.
+    Several partitioned inputs must have the same keys in the same
+    order.
 
   - split: single call, then mark output as partitioned
 
@@ -127,14 +129,14 @@ add steps at runtime, or to call `.self$restart()` or `.self$halt()`
 `.self` is always the full pipeline, also when a view is run. pipeflow
 provides it each time the step runs, but only if the body of the step
 function contains the name `.self` (also within functions defined in the
-body). Indirect access, such as `get(".self")`, is not detected. `.self`
-is a reserved name: it can't be an argument of `fun` or a name in
-`params`.
+body). Indirect access, such as `get(".self")`, is not detected.
 
-`.self` is valid while the step runs only. It is released once the step
-returned, so that outputs of the step don't keep the pipeline alive. A
-step that returns a function which refers to `.self` therefore fails
-with `object '.self' not found` when that function is called later.
+A step that changes its own function, params or exec mode via `.self`,
+ends the run as `"outdated"`. The same is true for other steps changed
+via `.self`. Lastly, `.self` is only valid while the step runs and
+released once the step was returned. For this reason, a step that
+returns a function referring to `.self` fails with
+`object '.self' not found` when called later.
 
 ## Examples
 
@@ -147,12 +149,12 @@ p <- pip_new("analysis") |>
   pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
 
 pip_run(p)
-#> info [2026-10-25 08:12:09.604 UTC]: Starting run of pipeflow 'analysis'
-#> info [2026-10-25 08:12:09.604 UTC]: Step 1/4 load
-#> info [2026-10-25 08:12:09.605 UTC]: Step 2/4 clean
-#> info [2026-10-25 08:12:09.606 UTC]: Step 3/4 fit
-#> info [2026-10-25 08:12:09.608 UTC]: Step 4/4 report
-#> info [2026-10-25 08:12:09.609 UTC]: Finished in 0.005 s (4 done, 0 skipped, 0 failed)
+#> info [2026-10-25 19:30:01.612 UTC]: Starting run of pipeflow 'analysis'
+#> info [2026-10-25 19:30:01.612 UTC]: Step 1/4 load
+#> info [2026-10-25 19:30:01.613 UTC]: Step 2/4 clean
+#> info [2026-10-25 19:30:01.614 UTC]: Step 3/4 fit
+#> info [2026-10-25 19:30:01.615 UTC]: Step 4/4 report
+#> info [2026-10-25 19:30:01.615 UTC]: Finished in 0.003 s (4 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> analysis (4 steps)
 #> -----------------------------
@@ -162,7 +164,8 @@ p
 #> 3:    fit      x   clean  done             30 model,core,daily
 #> 4: report      x     fit  done     result: 30           report
 #> -----------------------------
-#> <ready> last run: 2026-10-25 08:12:09
+#> <ready> last run: 2026-10-25 19:30:01 (0.003 s)
+#> steps: 4 done
 
 # Filter by tag using pip_view — keeps steps with any matching tag
 pip_view(p, tags = "daily")
@@ -171,14 +174,16 @@ pip_view(p, tags = "daily")
 #>    step params depends state out             tags
 #> 1:  fit      x   clean  done  30 model,core,daily
 #> ---------------------------------------
-#> <ready> last run: 2026-10-25 08:12:09
+#> <ready> last run: 2026-10-25 19:30:01 (0.003 s)
+#> steps: 1 done
 pip_view(p, tags = "core")
 #> <pipeflow_view> analysis (1 of 4 steps)
 #> ---------------------------------------
 #>    step params depends state out             tags
 #> 1:  fit      x   clean  done  30 model,core,daily
 #> ---------------------------------------
-#> <ready> last run: 2026-10-25 08:12:09
+#> <ready> last run: 2026-10-25 19:30:01 (0.003 s)
+#> steps: 1 done
 pip_view(p, tags = c("raw", "report"))
 #> <pipeflow_view> analysis (2 of 4 steps)
 #> ---------------------------------------
@@ -186,7 +191,8 @@ pip_view(p, tags = c("raw", "report"))
 #> 1:   load      n          done  1,2,3,4,5 io,raw
 #> 2: report      x     fit  done result: 30 report
 #> ---------------------------------------
-#> <ready> last run: 2026-10-25 08:12:09
+#> <ready> last run: 2026-10-25 19:30:01 (0.003 s)
+#> steps: 2 done
 
 # --- Split / reduce execution modes ---
 q <- pip_new("split-demo") |>
@@ -200,12 +206,12 @@ q <- pip_new("split-demo") |>
   )
 
 pip_run(q)
-#> info [2026-10-25 08:12:09.620 UTC]: Starting run of pipeflow 'split-demo'
-#> info [2026-10-25 08:12:09.620 UTC]: Step 1/4 data
-#> info [2026-10-25 08:12:09.625 UTC]: Step 2/4 split
-#> info [2026-10-25 08:12:09.627 UTC]: Step 3/4 stats
-#> info [2026-10-25 08:12:09.632 UTC]: Step 4/4 combine
-#> info [2026-10-25 08:12:09.634 UTC]: Finished in 0.014 s (4 done, 0 skipped, 0 failed)
+#> info [2026-10-25 19:30:01.623 UTC]: Starting run of pipeflow 'split-demo'
+#> info [2026-10-25 19:30:01.623 UTC]: Step 1/4 data
+#> info [2026-10-25 19:30:01.623 UTC]: Step 2/4 split
+#> info [2026-10-25 19:30:01.624 UTC]: Step 3/4 stats
+#> info [2026-10-25 19:30:01.628 UTC]: Step 4/4 combine
+#> info [2026-10-25 19:30:01.628 UTC]: Finished in 0.006 s (4 done, 0 skipped, 0 failed)
 q[["stats", "out"]]   # partitioned list — one summary per species
 #> $setosa
 #>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   
@@ -302,6 +308,7 @@ p2
 #> 2:  fit      x    load   new
 #> --------------------------------
 #> <ready> last run: never
+#> steps: 2 new
 pip_add(p2, "clean", \(x = ~load) x * 2, after = "load")
 p2  # "load", "clean", "fit" — inserted after "load"
 #> <pipeflow> insert-demo (3 steps)
@@ -312,6 +319,7 @@ p2  # "load", "clean", "fit" — inserted after "load"
 #> 3:   fit      x    load   new
 #> --------------------------------
 #> <ready> last run: never
+#> steps: 3 new
 
 # after = 0 inserts the new step at the very beginning
 pip_add(p2, "preload", \(x = 1) x, after = 0)
@@ -325,6 +333,7 @@ p2
 #> 4:     fit      x    load   new
 #> --------------------------------
 #> <ready> last run: never
+#> steps: 4 new
 
 # --- Provide parameter values with 'params' ---
 # 'params' override the defaults of the function ...
@@ -336,11 +345,11 @@ p3 <- pip_new("params-demo") |>
   # ... and give values to parameters without default, e.g. of mean()
   pip_add("avg", mean, params = list(x = ~scale, na.rm = TRUE))
 pip_run(p3)
-#> info [2026-10-25 08:12:09.648 UTC]: Starting run of pipeflow 'params-demo'
-#> info [2026-10-25 08:12:09.648 UTC]: Step 1/3 data
-#> info [2026-10-25 08:12:09.649 UTC]: Step 2/3 scale
-#> info [2026-10-25 08:12:09.650 UTC]: Step 3/3 avg
-#> info [2026-10-25 08:12:09.651 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)
+#> info [2026-10-25 19:30:01.642 UTC]: Starting run of pipeflow 'params-demo'
+#> info [2026-10-25 19:30:01.642 UTC]: Step 1/3 data
+#> info [2026-10-25 19:30:01.643 UTC]: Step 2/3 scale
+#> info [2026-10-25 19:30:01.643 UTC]: Step 3/3 avg
+#> info [2026-10-25 19:30:01.644 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)
 p3
 #> <pipeflow> params-demo (3 steps)
 #> --------------------------------
@@ -349,7 +358,8 @@ p3
 #> 2: scale x,factor    data  done 10,NA,30
 #> 3:   avg  x,na.rm   scale  done       20
 #> --------------------------------
-#> <ready> last run: 2026-10-25 08:12:09
+#> <ready> last run: 2026-10-25 19:30:01 (0.002 s)
+#> steps: 3 done
 p3[["avg", "out"]] # 20
 #> [1] 20
 
@@ -357,9 +367,9 @@ p3[["avg", "out"]] # 20
 p4 <- pip_new("dots-demo") |>
   pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
 pip_run(p4)
-#> info [2026-10-25 08:12:09.656 UTC]: Starting run of pipeflow 'dots-demo'
-#> info [2026-10-25 08:12:09.656 UTC]: Step 1/1 load
-#> info [2026-10-25 08:12:09.657 UTC]: Finished in 0.001 s (1 done, 0 skipped, 0 failed)
+#> info [2026-10-25 19:30:01.647 UTC]: Starting run of pipeflow 'dots-demo'
+#> info [2026-10-25 19:30:01.647 UTC]: Step 1/1 load
+#> info [2026-10-25 19:30:01.648 UTC]: Finished in 0.001 s (1 done, 0 skipped, 0 failed)
 p4[["load", "out"]] # c(1, size = 42)
 #>      size 
 #>    1   42 

@@ -302,7 +302,8 @@ p6
 #     step   params depends state out
 # 1: speed distance          done 150
 # -------------------------
-# <ready> last run: 2026-10-25 08:13:21
+# <ready> last run: 2026-10-25 19:30:54 (0.001 s)
+# steps: 1 done
 ```
 
 #### Errors while setting

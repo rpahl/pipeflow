@@ -14,6 +14,7 @@
 <url><loc>https://rpahl.github.io/pipeflow/dev/articles/v05e-output-value.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/articles/v06-self-modify-pipeline.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/articles/v07-vs-targets.html</loc></url>
+<url><loc>https://rpahl.github.io/pipeflow/dev/articles/v07b-emulate-targets.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/authors.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/index.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/news/index.html</loc></url>
@@ -40,7 +41,6 @@
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_tag.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pip_view.html</loc></url>
-<url><loc>https://rpahl.github.io/pipeflow/dev/reference/pipeflow-operators.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pipeflow-package.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/pipeflow_lgr.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/dev/reference/print.html</loc></url>

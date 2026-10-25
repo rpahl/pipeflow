@@ -94,11 +94,11 @@ Three forms of row selection are supported:
   `p[step %in% c("load", "fit") & tags %like% "io"]`.
 
 Boolean filters may reference the columns of the step table (`step`,
-`fun`, `params`, `depends`, `tags`, `state`, ...) directly as variables,
-and the [data.table filter
-operators](https://rpahl.github.io/pipeflow/dev/reference/pipeflow-operators.md)
-re-exported by pipeflow (e.g. `%like%`, `%chin%`, `%between%`) are
-available. `p[]` returns a copy of the pipeline.
+`fun`, `params`, `depends`, `tags`, `state`, ...) directly as variables.
+The filter operators of data.table (`%like%`, `%ilike%`, `%flike%`,
+`%plike%`, `%chin%`, `%between%`, `%inrange%` and `%notin%`) are
+available in the filter without attaching data.table. `p[]` returns a
+copy of the pipeline.
 
 Note that `tags` is a list column, so `%like%` matches the pattern
 against the tags of each step converted to a single string, e.g.
@@ -199,7 +199,8 @@ integer row index and `property` selects what to update:
   /
   [`pip_unlock()`](https://rpahl.github.io/pipeflow/dev/reference/pip_lock.md)
 
-- `p[[step, "exec"]] <- mode` – set the step's execution mode.
+- `p[[step, "exec"]] <- mode` – set the step's execution mode. A new
+  mode marks the step and its downstream steps as `"outdated"`.
 
 - `p[[step, "state"]] <- state` – set the step's state.
 
@@ -210,8 +211,13 @@ integer row index and `property` selects what to update:
   last run (a single `POSIXct` value, which can be `NA` for a step that
   never ran).
 
+- `p[[step, "duration"]] <- duration` – set the duration of the step's
+  last run (a single `difftime` value, which can be `NA` for a step that
+  never ran).
+
 - `p[[step, "out"]] <- value` – set the step's stored output (mostly
-  useful for debugging)
+  useful for debugging). The downstream steps are marked as
+  `"outdated"`, so that the next run computes them from the new output.
 
 Assigning to any other step-table column, or to a meta field other than
 `name` and `view`, is not supported.
@@ -221,6 +227,27 @@ the steps covered by the view: an integer refers to the n-th visible
 step, and a step name must be part of the view. Because views share the
 pipeline environment, step properties are written through to the
 originating pipeline, while `name` only renames the view itself.
+
+#### Which assignments outdate steps
+
+Results that may no longer match the steps are marked as `"outdated"`,
+so that the next
+[`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
+computes them again. As always, steps that never ran stay `"new"`.
+
+- `fun`: the step becomes `"new"` and its downstream steps `"outdated"`.
+
+- `params` and `exec`: the step and its downstream steps, if a value
+  changes.
+
+- `out`: the downstream steps, while the step keeps its state.
+
+- `step` (a new name), `state`, `time`, `time_start`, `duration`, `tags`
+  and `locked` don't change any result and outdate no step.
+
+This holds for all forms of assignment: `[[<-`, `[<-` (which assigns row
+by row) and assignments through a view, which also outdate the
+downstream steps that are not part of the view.
 
 ### Bulk assignment of step properties (`x[i, j] <- value`)
 
@@ -241,26 +268,32 @@ the same list value (e.g. a set of tags) to all rows, wrap it in
 must itself be a list (e.g.
 `p[1:2, "params"] <- list(list(a = 1), list(b = 2))`).
 
+The selected steps are assigned one after another, but the assignment
+changes all of them or none, that is, if it fails for one step, the
+pipeline is restored as it was.
+
 If `value` is a `pipeflow` pipeline or view, the writable step
 properties of its steps are copied to the selected rows:
 `p[i, ] <- q[i, ]` copies the steps of `q` selected by `i` into the
 steps of `p` selected by `i` (the rows of both sides are aligned by
 position and must have the same length). In this form, `i` is required
 and `j` must be omitted. The properties are copied in the order `step`,
-`fun`, `params`, `out`, `state`, `time`, `time_start`, `tags`, `locked`,
-`exec`: the step is renamed to the source name (a no-op when it is
-unchanged), the function and the params are replaced with those of the
-source (same as
+`fun`, `params`, `exec`, `out`, `state`, `time`, `time_start`,
+`duration`, `tags`, `locked`: the step is renamed to the source name (a
+no-op when it is unchanged), the function, the params and the execution
+mode are replaced with those of the source (same as
 [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
-with the params of the source), and the runtime state and annotation
-columns are overwritten (locked steps included). A copied step refers to
-the steps that the source step depends on by name, also if it was
-defined with a relative reference such as `~-1`, and these steps are
-looked up in `p`. The structural columns `nodeId`, `depends` and
-`unbound` are not copied but recomputed against the steps of `p`.
-Instead of `p[i, j] <- q`, use `p[i, j] <- q[i, j]` to copy the values
-of a single property; the one-column table returned by the extraction
-form is unwrapped and assigned element-wise.
+with the params and `exec` of the source), and the runtime state and
+annotation columns are overwritten (locked steps included). A copied
+step refers to the steps that the source step depends on by name, also
+if it was defined with a relative reference such as `~-1`, and these
+steps are looked up in `p`. The structural columns `nodeId`, `depends`
+and `unbound` are not copied but recomputed against the steps of `p`. If
+a step can't be copied (e.g. because it refers to a step that is not in
+`p`), `p` is left as it was. Instead of `p[i, j] <- q`, use
+`p[i, j] <- q[i, j]` to copy the values of a single property; the
+one-column table returned by the extraction form is unwrapped and
+assigned element-wise.
 
 ### Extract and assign via \$ (`x$i / x$i <- value`)
 
@@ -285,6 +318,7 @@ p["total"] # view with a single step
 #> 1: total      x  square   new model,report
 #> -----------------------------------
 #> <ready> last run: never
+#> steps: 1 new
 
 # Select by name vector or integer row index
 p[c("load", "square")][["step"]]   # view -> "load", "square"
@@ -308,11 +342,11 @@ p[tags %like% "report", view = FALSE][["step"]] # "load", "square", "total"
 # No arguments returns a copy of the pipeline
 p2 <- p[]
 pip_run(p2)
-#> info [2026-10-25 08:12:08.098 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-25 08:12:08.098 UTC]: Step 1/3 load
-#> info [2026-10-25 08:12:08.099 UTC]: Step 2/3 square
-#> info [2026-10-25 08:12:08.102 UTC]: Step 3/3 total
-#> info [2026-10-25 08:12:08.103 UTC]: Finished in 0.005 s (3 done, 0 skipped, 0 failed)
+#> info [2026-10-25 19:30:00.594 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-25 19:30:00.594 UTC]: Step 1/3 load
+#> info [2026-10-25 19:30:00.595 UTC]: Step 2/3 square
+#> info [2026-10-25 19:30:00.597 UTC]: Step 3/3 total
+#> info [2026-10-25 19:30:00.598 UTC]: Finished in 0.004 s (3 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> pipe (3 steps)
 #> -------------------------
@@ -322,6 +356,7 @@ p
 #> 3:  total      x  square   new model,report
 #> -------------------------
 #> <ready> last run: never
+#> steps: 3 new
 p2
 #> <pipeflow> pipe (3 steps)
 #> -------------------------
@@ -330,7 +365,8 @@ p2
 #> 2: square      x    load  done  1, 4, 9,16,25        model
 #> 3:  total      x  square  done             55 model,report
 #> -------------------------
-#> <ready> last run: 2026-10-25 08:12:08
+#> <ready> last run: 2026-10-25 19:30:00 (0.004 s)
+#> steps: 3 done
 
 # Two-index extraction selects step-table columns by name
 p[, "step"]                     # one-column data.table
@@ -360,10 +396,10 @@ p <- pip_new() |>
   pip_add("load", \(x = 1) x) |>
   pip_add("fit", \(x = ~load) x + 1)
 pip_run(p)
-#> info [2026-10-25 08:12:08.115 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-25 08:12:08.116 UTC]: Step 1/2 load
-#> info [2026-10-25 08:12:08.116 UTC]: Step 2/2 fit
-#> info [2026-10-25 08:12:08.118 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
+#> info [2026-10-25 19:30:00.610 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-25 19:30:00.611 UTC]: Step 1/2 load
+#> info [2026-10-25 19:30:00.611 UTC]: Step 2/2 fit
+#> info [2026-10-25 19:30:00.612 UTC]: Finished in 0.001 s (2 done, 0 skipped, 0 failed)
 
 # Meta fields
 p[["name"]]              # "pipe"
@@ -371,36 +407,40 @@ p[["name"]]              # "pipe"
 p[["view"]]              # NULL - not a view
 #> NULL
 p[["pipenv"]]            # the inner pipeline environment
-#> <environment: 0x55a77dafc220>
+#> <environment: 0x55645af0e9d8>
 p[["pipenv"]][["data"]]  # the underlying step table
 #> Indices: <step>, <nodeId>
 #>      step           fun    params    out  state   tags locked   exec
 #>    <char>        <list>    <list> <list> <char> <list> <lgcl> <char>
 #> 1:   load <function[1]> <list[1]>      1   done         FALSE   auto
 #> 2:    fit <function[1]> <list[1]>      2   done         FALSE   auto
-#>                   time          time_start depends unbound nodeId
-#>                 <POSc>              <POSc>  <list>  <list>  <int>
-#> 1: 2026-10-25 08:12:08 2026-10-25 08:12:08               x      0
-#> 2: 2026-10-25 08:12:08 2026-10-25 08:12:08    load              1
+#>                   time          time_start          duration depends unbound
+#>                 <POSc>              <POSc>        <difftime>  <list>  <list>
+#> 1: 2026-10-25 19:30:00 2026-10-25 19:30:00 7.629395e-05 secs               x
+#> 2: 2026-10-25 19:30:00 2026-10-25 19:30:00 6.628036e-05 secs    load        
+#>    nodeId
+#>     <int>
+#> 1:      0
+#> 2:      1
 
 # Virtual methods
 p$add("s3", \(x = ~fit) x * 10)
 p$run()
-#> info [2026-10-25 08:12:08.125 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-25 08:12:08.125 UTC]: Step 1/3 load - skipping done step
-#> info [2026-10-25 08:12:08.125 UTC]: Step 2/3 fit - skipping done step
-#> info [2026-10-25 08:12:08.125 UTC]: Step 3/3 s3
-#> info [2026-10-25 08:12:08.127 UTC]: Finished in 0.002 s (1 done, 2 skipped, 0 failed)
+#> info [2026-10-25 19:30:00.616 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-25 19:30:00.616 UTC]: Step 1/3 load - skipping done step
+#> info [2026-10-25 19:30:00.616 UTC]: Step 2/3 fit - skipping done step
+#> info [2026-10-25 19:30:00.616 UTC]: Step 3/3 s3
+#> info [2026-10-25 19:30:00.617 UTC]: Finished in 0.001 s (1 done, 2 skipped, 0 failed)
 p$restart   # a function; call p$restart() to request a restart
 #> function (...) 
 #> fn(x, ...)
-#> <bytecode: 0x55a77d832a50>
-#> <environment: 0x55a781164430>
+#> <bytecode: 0x5564575c1138>
+#> <environment: 0x55645948d828>
 p$halt      # a function; call p$halt() to halt the current run
 #> function (...) 
 #> fn(x, ...)
-#> <bytecode: 0x55a77d832a50>
-#> <environment: 0x55a7810b6cd0>
+#> <bytecode: 0x5564575c1138>
+#> <environment: 0x556458780f90>
 
 # Column access, named by steps
 p[["step"]]   # c(load = "load", fit = "fit")
@@ -477,6 +517,7 @@ p
 #> 3: report      x     fit      new [NULL]              auto
 #> -------------------------
 #> <ready> last run: never
+#> steps: 1 outdated, 2 new
 
 # Restrict to a view covering selected steps, then clear it again
 p[["view"]] <- c("read", "fit")
@@ -522,6 +563,6 @@ p$name <- "renamed"   # same as p[["name"]] <- "renamed"
 p$run                 # a virtual method; call p$run() to run the pipeline
 #> function (...) 
 #> fn(x, ...)
-#> <bytecode: 0x55a77d832a50>
-#> <environment: 0x55a77e636338>
+#> <bytecode: 0x5564575c1138>
+#> <environment: 0x556459a05f48>
 ```

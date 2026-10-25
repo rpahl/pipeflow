@@ -54,6 +54,7 @@ p                        # "load", "transform"
 #> 2: transform      x    load   new
 #> -------------------------
 #> <ready> last run: never
+#> steps: 2 new
 
 # Trying to remove a step that others depend on raises an error:
 # pip_remove(p, "load")  # Error!
@@ -76,6 +77,7 @@ p                        # "load"
 #> 1: load      x           new
 #> ------------------------
 #> <ready> last run: never
+#> steps: 1 new
 
 # force = TRUE removes the step and all its downstream dependents
 pip_remove(p, "load", force = TRUE)

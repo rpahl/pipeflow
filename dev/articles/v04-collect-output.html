@@ -32,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9015</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9024</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -74,8 +74,9 @@
     <li><a class="dropdown-item" href="../articles/v05e-output-value.html">Annotated step outputs</a></li>
     <li><a class="dropdown-item" href="../articles/v06-self-modify-pipeline.html">Self-modifying pipelines</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Benchmarks</h6></li>
-    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">pipeflow vs targets</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>pipeflow vs targets</h6></li>
+    <li><a class="dropdown-item" href="../articles/v07-vs-targets.html">Comparison and benchmarks</a></li>
+    <li><a class="dropdown-item" href="../articles/v07b-emulate-targets.html">Emulating targets features</a></li>
   </ul>
 </li>
       </ul>
@@ -154,7 +155,8 @@ column.</p>
 <span><span class="co"># 4:     model_fit    x,k      prep  done  4, 8,12,16,20     model,fit</span></span>
 <span><span class="co"># 5: model_summary      x model_fit  done             60 model,summary</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-25 08:12:52</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-25 19:30:32 (0.007 s)</span></span>
+<span><span class="co"># steps: 5 done</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="flat-output-collection">Flat output collection<a class="anchor" aria-label="anchor" href="#flat-output-collection"></a>
@@ -212,7 +214,7 @@ report.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span><span class="op">[</span><span class="va">step</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"data"</span>, <span class="st">"prep"</span><span class="op">)</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_tag.html">pip_tag</a></span><span class="op">(</span><span class="st">"Introduction"</span><span class="op">)</span></span>
 <span><span class="va">pip</span><span class="op">[</span><span class="va">step</span> <span class="op">==</span> <span class="st">"model_fit"</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_tag.html">pip_tag</a></span><span class="op">(</span><span class="st">"Model"</span><span class="op">)</span></span>
-<span><span class="va">pip</span><span class="op">[</span><span class="va">step</span> <span class="op"><a href="../reference/pipeflow-operators.html">%like%</a></span> <span class="st">"summary"</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_tag.html">pip_tag</a></span><span class="op">(</span><span class="st">"Summary"</span><span class="op">)</span></span>
+<span><span class="va">pip</span><span class="op">[</span><span class="va">step</span> <span class="op">%like%</span> <span class="st">"summary"</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_tag.html">pip_tag</a></span><span class="op">(</span><span class="st">"Summary"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">pip</span></span>
 <span><span class="co"># &lt;pipeflow&gt; my-pip (5 steps)</span></span>
@@ -224,7 +226,8 @@ report.</p>
 <span><span class="co"># 4:     model_fit    x,k      prep  done  4, 8,12,16,20       model,fit,Model</span></span>
 <span><span class="co"># 5: model_summary      x model_fit  done             60 model,summary,Summary</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-25 08:12:52</span></span></code></pre></div>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-25 19:30:32 (0.007 s)</span></span>
+<span><span class="co"># steps: 5 done</span></span></code></pre></div>
 <p>Naturally, we then would group the output as follows:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">report</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>

@@ -32,8 +32,8 @@ The run state is one of
   [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
   carries out right after the step.
 
-- `"halted"`: a step halted the run (see section 'Runtime control flow
-  via restart and halt' in
+- `"halted"`: a step or the `progress` callback halted the run (see
+  section 'Runtime control flow via restart and halt' in
   [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)).
 
 - `"failed"`: the last run stopped on an error (`on_error = "stop"`).

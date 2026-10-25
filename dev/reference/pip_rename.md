@@ -44,6 +44,7 @@ p
 #> 2:        s2      x load_data   new
 #> -------------------------
 #> <ready> last run: never
+#> steps: 2 new
 
 # Trying to rename to an existing step name raises an error:
 try(pip_rename(p, "load_data", to = "s2"))  # step 's2' already exists!
