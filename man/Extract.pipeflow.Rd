@@ -77,10 +77,11 @@ step table, e.g. \code{p[state == "new"]} or
 }
 
 Boolean filters may reference the columns of the step table (\code{step}, \code{fun},
-\code{params}, \code{depends}, \code{tags}, \code{state}, ...) directly as variables, and the
-\link[=pipeflow-operators]{data.table filter operators} re-exported by pipeflow
-(e.g. \verb{\%like\%}, \verb{\%chin\%}, \verb{\%between\%}) are available. \code{p[]} returns a copy
-of the pipeline.
+\code{params}, \code{depends}, \code{tags}, \code{state}, ...) directly as variables. The
+filter operators of \pkg{data.table} (\verb{\%like\%}, \verb{\%ilike\%}, \verb{\%flike\%},
+\verb{\%plike\%}, \verb{\%chin\%}, \verb{\%between\%}, \verb{\%inrange\%} and \verb{\%notin\%}) are
+available in the filter without attaching \pkg{data.table}. \code{p[]} returns
+a copy of the pipeline.
 
 Note that \code{tags} is a list column, so \verb{\%like\%} matches the pattern against
 the tags of each step converted to a single string, e.g. \code{"character(0)"}

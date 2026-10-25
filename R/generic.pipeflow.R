@@ -483,10 +483,11 @@ dim.pipeflow <- function(x) {
 #'   `p[step %in% c("load", "fit") & tags %like% "io"]`.
 #'
 #' Boolean filters may reference the columns of the step table (`step`, `fun`,
-#' `params`, `depends`, `tags`, `state`, ...) directly as variables, and the
-#' [data.table filter operators][pipeflow-operators] re-exported by pipeflow
-#' (e.g. `%like%`, `%chin%`, `%between%`) are available. `p[]` returns a copy
-#' of the pipeline.
+#' `params`, `depends`, `tags`, `state`, ...) directly as variables. The
+#' filter operators of \pkg{data.table} (`%like%`, `%ilike%`, `%flike%`,
+#' `%plike%`, `%chin%`, `%between%`, `%inrange%` and `%notin%`) are
+#' available in the filter without attaching \pkg{data.table}. `p[]` returns
+#' a copy of the pipeline.
 #'
 #' Note that `tags` is a list column, so `%like%` matches the pattern against
 #' the tags of each step converted to a single string, e.g. `"character(0)"`
@@ -1249,38 +1250,3 @@ rbind.pipeflow <- function(..., deparse.level = 1) {
     }
     out
 }
-
-
-# ---------------------------------------------------------------------------
-# Re-exports: data.table row-filter operators
-# ---------------------------------------------------------------------------
-
-`%like%` <- data.table::`%like%`
-`%ilike%` <- data.table::`%ilike%`
-`%flike%` <- data.table::`%flike%`
-`%plike%` <- data.table::`%plike%`
-`%chin%` <- data.table::`%chin%`
-`%between%` <- data.table::`%between%`
-`%inrange%` <- data.table::`%inrange%`
-`%notin%` <- data.table::`%notin%`
-
-#' Row-filter operators re-exported from data.table
-#'
-#' pipeflow re-exports the row-filter operators of \pkg{data.table} so that
-#' they are available after attaching pipeflow and can be used in boolean
-#' filters passed to `[.pipeflow`, e.g. `p[tags %like% "daily"]`. They behave
-#' exactly as in \pkg{data.table}; see its documentation for details.
-#'
-#' @name pipeflow-operators
-#' @aliases %like% %ilike% %flike% %plike% %chin% %between% %inrange% %notin%
-#' @usage NULL
-#' @keywords internal
-#' @rawNamespace export("%like%")
-#' @rawNamespace export("%ilike%")
-#' @rawNamespace export("%flike%")
-#' @rawNamespace export("%plike%")
-#' @rawNamespace export("%chin%")
-#' @rawNamespace export("%between%")
-#' @rawNamespace export("%inrange%")
-#' @rawNamespace export("%notin%")
-NULL

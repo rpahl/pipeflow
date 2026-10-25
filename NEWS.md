@@ -4,6 +4,11 @@
 
 - The deprecated aliases `pip_collect_out()` and `pip_get_graph()` were
   removed. Use `pip_collect()` and `pip_graph()`.
+- pipeflow no longer re-exports the data.table operators `%like%`,
+  `%ilike%`, `%flike%`, `%plike%`, `%chin%`, `%between%`, `%inrange%` and
+  `%notin%`. They still work in the filters of `[`, e.g.
+  `p[tags %like% "model"]`, without attaching data.table. To use them
+  elsewhere, call `library(data.table)`.
 
 # pipeflow 0.5.0.9018
 
