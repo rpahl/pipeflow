@@ -2602,6 +2602,11 @@ pip_rename <- function(x, from, to) {
     if (!nzchar(to)) {
         stop("to must be a non-empty string")
     }
+    # A name, e.g. of a step taken from `p[["step"]]` (a named vector), would
+    # fail the identical() checks below and in .pip_rename_failures(), and
+    # `to` would carry it into the renamed failures.
+    from <- unname(from)
+    to <- unname(to)
 
     if (!.pip_step_exists(x, from)) {
         stop("step '", from, "' does not exist")

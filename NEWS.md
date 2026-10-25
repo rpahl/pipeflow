@@ -1,3 +1,13 @@
+# pipeflow 0.5.0.9020
+
+## Bug fixes
+
+- `pip_rename()` now also renames the step in the failures of failed keys
+  if the step name has a name attribute, e.g. if it is taken from
+  `p[["step"]]`. Before, the failures in the outputs of the step and its
+  dependents kept the old name, and renaming a step to its own name this
+  way failed with "already exists".
+
 # pipeflow 0.5.0.9019
 
 ## Breaking changes

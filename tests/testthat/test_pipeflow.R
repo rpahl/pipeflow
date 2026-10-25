@@ -2291,6 +2291,18 @@ describe("pip_rename", {
         )
     })
 
+    it("ignores the names of named step names", {
+        p <- test_pip()
+        # p[["step"]] is a named vector
+        from <- p[["step"]][1]
+
+        expect_no_error(pip_rename(p, from = from, to = "f1"))
+        pip_rename(p, from = from, to = c(new = "first"))
+
+        expect_identical(unname(p[["step"]]), c("first", "f2", "f3"))
+        expect_identical(p[["f3", "depends"]], c(a = "first", b = "f2"))
+    })
+
     it("keeps the params of a single-step pipeline intact", {
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 5) x * 2)
@@ -5265,6 +5277,24 @@ describe("pip_run", {
                     )
                 )
                 expect_equal(p[["model", "out"]][["a"]], 10)
+            })
+
+            it("renames the failures also for a named step name", {
+                p <- key_pip() |>
+                    pip_add("twice", \(x = ~fit) x * 2)
+                suppressWarnings(
+                    pip_run(p, lgr = NULL, on_error = "continue"),
+                    classes = "pipeflow_run_failed"
+                )
+                # p[["step"]] is a named vector
+                pip_rename(p, p[["step"]][2], to = c(new = "model"))
+
+                f <- p[["model", "out"]][["b"]]
+                expect_identical(f[["step"]], "model")
+                expect_identical(f[["failed_step"]], "model")
+                f <- p[["twice", "out"]][["b"]]
+                expect_identical(f[["failed_step"]], "model")
+                expect_match(conditionMessage(f), "step 'model' failed")
             })
 
             it("re-runs the whole step and its dependents on retry", {
