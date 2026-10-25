@@ -4,22 +4,26 @@
 \alias{pip_graph}
 \title{Build pipeline graph data}
 \usage{
-pip_graph(x, include_upstream = FALSE)
+pip_graph(x, include_upstream = FALSE, format = c("visNetwork", "mermaid"))
 }
 \arguments{
 \item{x}{A pipeflow pip or view.}
 
 \item{include_upstream}{Logical. Only relevant for views. If \code{TRUE}, add
 all upstream dependencies of selected steps.}
+
+\item{format}{The output format, either \code{"visNetwork"} or \code{"mermaid"}.}
 }
 \value{
-A named list with two \code{data.frame}s: \code{nodes} (columns \code{id},
-\code{label}, \code{shape}, \code{color} and \code{title}) and \code{edges} (columns \code{from}, \code{to},
-\code{arrows} and \code{dashes}).
+For \code{format = "visNetwork"}, a named list with two
+\code{data.frame}s: \code{nodes} (columns \code{id}, \code{label}, \code{shape}, \code{color} and
+\code{title}) and \code{edges} (columns \code{from}, \code{to}, \code{arrows} and \code{dashes}). For
+\code{format = "mermaid"}, a single string with the mermaid flowchart.
 }
 \description{
 Builds graph data (nodes and edges) describing the pipeline's step
-structure, suitable for visualisation with \code{\link[visNetwork:visNetwork]{visNetwork::visNetwork()}}.
+structure, suitable for visualisation with \code{\link[visNetwork:visNetwork]{visNetwork::visNetwork()}},
+or the graph as a \href{https://mermaid.js.org}{mermaid} flowchart.
 }
 \details{
 Node shapes reflect execution mode:
@@ -38,6 +42,16 @@ parameters and the steps it depends on.
 An edge is dashed if the step refers to the other step only with
 \code{~try()}, i.e. if the step also runs when the other step failed (see
 \code{\link[=pip_run]{pip_run()}}).
+\subsection{Mermaid}{
+
+With \code{format = "mermaid"}, the graph is returned as the text of a mermaid
+flowchart. It renders without extra packages in a code block marked
+\code{mermaid}, e.g. on GitHub or in a Quarto document.
+It has the same colors and dashed edges as the visNetwork graph, but no
+hover text.
+The shapes are a hexagon for \code{auto}/\code{plain}, a trapezoid that widens for
+\code{split} and one that narrows for \code{reduce}.
+}
 }
 \examples{
 p <- pip_new()
@@ -57,4 +71,7 @@ pip_graph(v, include_upstream = TRUE)
 if (require("visNetwork", quietly = TRUE)) {
   do.call(what = visNetwork::visNetwork, args = graph)
 }
+
+# The graph as a mermaid flowchart
+cat(pip_graph(p, format = "mermaid"))
 }

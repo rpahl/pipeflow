@@ -72,6 +72,7 @@ describe("pip_graph", {
             pip_graph(p, include_upstream = c(TRUE, FALSE)),
             "include_upstream must be a single logical value"
         )
+        expect_error(pip_graph(p, format = "dot"), "should be one of")
     })
 
     it("returns empty nodes and edges for empty pipeline", {
@@ -206,5 +207,81 @@ describe("pip_graph", {
                 "params: x = &quot;&lt;i&gt;&quot;"
             )
         )
+    })
+
+    describe("format = 'mermaid'", {
+        it("returns a flowchart with shapes by exec mode and state colors", {
+            p <- test_pip()
+            env <- p[["pipenv"]]
+            env[["data"]][["state"]] <- c("new", "done", "new")
+
+            m <- pip_graph(p, format = "mermaid")
+
+            expect_type(m, "character")
+            expect_length(m, 1L)
+            expect_equal(
+                strsplit(m, "\n")[[1L]],
+                c(
+                    "flowchart LR",
+                    '    n0[/"s1"\\]',
+                    '    n1[\\"s2"/]',
+                    '    n2{{"s3"}}',
+                    "    n0 --> n1",
+                    "    n1 --> n2",
+                    "    classDef new fill:#47b8ff,color:#000",
+                    "    classDef done fill:#87ff6f,color:#000",
+                    "    class n0,n2 new",
+                    "    class n1 done"
+                )
+            )
+        })
+
+        it("draws ~try() references as dashed edges", {
+            p <- pip_new() |>
+                pip_add("a", \(x = 1) x) |>
+                pip_add("b", \(x = ~ try(a)) x) |>
+                pip_add("c", \(x = ~a, y = ~ try(a)) x)
+
+            lines <- strsplit(pip_graph(p, format = "mermaid"), "\n")[[1L]]
+
+            expect_true("    n0 -.-> n1" %in% lines)
+            expect_true("    n0 --> n2" %in% lines)
+        })
+
+        it("escapes step names in the quoted labels", {
+            p <- pip_new() |>
+                pip_add("a \"<#1>\" & b]-->{{", \(x = 1) x)
+
+            lines <- strsplit(pip_graph(p, format = "mermaid"), "\n")[[1L]]
+
+            expect_equal(
+                lines[[2L]],
+                '    n0{{"a #quot;#lt;#35;1#gt;#quot; #amp; b]--#gt;{{"}}'
+            )
+        })
+
+        it("covers the steps of a view, with or without upstream", {
+            v <- pip_view(test_pip(), step = "s3")
+
+            expect_equal(
+                pip_graph(v, format = "mermaid"),
+                paste(
+                    "flowchart LR",
+                    '    n2{{"s3"}}',
+                    "    classDef new fill:#47b8ff,color:#000",
+                    "    class n2 new",
+                    sep = "\n"
+                )
+            )
+            m <- pip_graph(v, include_upstream = TRUE, format = "mermaid")
+            expect_match(m, "n0 --> n1\n    n1 --> n2", fixed = TRUE)
+        })
+
+        it("returns only the header for an empty pipeline", {
+            expect_equal(
+                pip_graph(pip_new(), format = "mermaid"),
+                "flowchart LR"
+            )
+        })
     })
 })

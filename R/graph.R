@@ -1,7 +1,8 @@
 #' Build pipeline graph data
 #'
 #' Builds graph data (nodes and edges) describing the pipeline's step
-#' structure, suitable for visualisation with [visNetwork::visNetwork()].
+#' structure, suitable for visualisation with [visNetwork::visNetwork()],
+#' or the graph as a [mermaid](https://mermaid.js.org) flowchart.
 #'
 #' @details
 #' Node shapes reflect execution mode:
@@ -19,13 +20,24 @@
 #' `~try()`, i.e. if the step also runs when the other step failed (see
 #' [pip_run()]).
 #'
+#' ## Mermaid
+#' With `format = "mermaid"`, the graph is returned as the text of a mermaid
+#' flowchart. It renders without extra packages in a code block marked
+#' `mermaid`, e.g. on GitHub or in a Quarto document.
+#' It has the same colors and dashed edges as the visNetwork graph, but no
+#' hover text.
+#' The shapes are a hexagon for `auto`/`plain`, a trapezoid that widens for
+#' `split` and one that narrows for `reduce`.
+#'
 #' @param x A pipeflow pip or view.
 #' @param include_upstream Logical. Only relevant for views. If `TRUE`, add
 #' all upstream dependencies of selected steps.
+#' @param format The output format, either `"visNetwork"` or `"mermaid"`.
 #'
-#' @return A named list with two `data.frame`s: `nodes` (columns `id`,
-#' `label`, `shape`, `color` and `title`) and `edges` (columns `from`, `to`,
-#' `arrows` and `dashes`).
+#' @return For `format = "visNetwork"`, a named list with two
+#' `data.frame`s: `nodes` (columns `id`, `label`, `shape`, `color` and
+#' `title`) and `edges` (columns `from`, `to`, `arrows` and `dashes`). For
+#' `format = "mermaid"`, a single string with the mermaid flowchart.
 #' @export
 #' @examples
 #' p <- pip_new()
@@ -45,11 +57,19 @@
 #' if (require("visNetwork", quietly = TRUE)) {
 #'   do.call(what = visNetwork::visNetwork, args = graph)
 #' }
-pip_graph <- function(x, include_upstream = FALSE) {
+#'
+#' # The graph as a mermaid flowchart
+#' cat(pip_graph(p, format = "mermaid"))
+pip_graph <- function(
+    x,
+    include_upstream = FALSE,
+    format = c("visNetwork", "mermaid")
+) {
     .assert_pip_or_view(x)
     if (!.is_single(include_upstream, "logical")) {
         stop("include_upstream must be a single logical value")
     }
+    format <- match.arg(format)
 
     isView <- .is_pipeflow_view(x)
     env <- .pip_pipenv(x)
@@ -69,32 +89,7 @@ pip_graph <- function(x, include_upstream = FALSE) {
     }
 
     sub <- dat[rows]
-
-    # Nodes
-    colors <- vapply(
-        sub[["state"]],
-        FUN = \(st) .step_states[[st]][["color"]],
-        FUN.VALUE = character(1)
-    )
-
     ids <- as.integer(sub[["nodeId"]])
-    shape <- rep("hexagon", nrow(sub))
-    if ("exec" %in% names(sub)) {
-        shape[sub[["exec"]] %in% "split"] <- "star"
-        shape[sub[["exec"]] %in% "reduce"] <- "dot"
-    }
-    titles <- vapply(
-        seq_len(nrow(sub)),
-        FUN = \(k) .pip_graph_title(sub, k),
-        FUN.VALUE = character(1)
-    )
-    nodes <- data.frame(
-        id = ids,
-        label = sub[["step"]],
-        shape = shape,
-        color = unname(colors),
-        title = titles
-    )
 
     # Edges from direct dependencies only (no transitive links).
     stepToId <- stats::setNames(ids, sub[["step"]])
@@ -128,6 +123,35 @@ pip_graph <- function(x, include_upstream = FALSE) {
     } else {
         do.call(what = rbind, args = edgeRows)
     }
+
+    if (format == "mermaid") {
+        return(.pip_graph_mermaid(sub, edges))
+    }
+
+    # Nodes
+    colors <- vapply(
+        sub[["state"]],
+        FUN = \(st) .step_states[[st]][["color"]],
+        FUN.VALUE = character(1)
+    )
+
+    shape <- rep("hexagon", nrow(sub))
+    if ("exec" %in% names(sub)) {
+        shape[sub[["exec"]] %in% "split"] <- "star"
+        shape[sub[["exec"]] %in% "reduce"] <- "dot"
+    }
+    titles <- vapply(
+        seq_len(nrow(sub)),
+        FUN = \(k) .pip_graph_title(sub, k),
+        FUN.VALUE = character(1)
+    )
+    nodes <- data.frame(
+        id = ids,
+        label = sub[["step"]],
+        shape = shape,
+        color = unname(colors),
+        title = titles
+    )
 
     list(nodes = nodes, edges = edges)
 }
@@ -266,4 +290,84 @@ pip_graph <- function(x, include_upstream = FALSE) {
         "</b><br>",
         paste0(names(lines), ": ", .html_escape(lines), collapse = "<br>")
     )
+}
+
+
+#' Escape a mermaid label
+#'
+#' Replaces the characters that mermaid would misread in a quoted label by
+#' entity codes: `#` (which starts an entity code) first, then `"`, `<`,
+#' `>` and `&`. Line breaks become spaces.
+#'
+#' @param x Character vector.
+#' @return `x`, escaped.
+#' @noRd
+.mermaid_escape <- function(x) {
+    x <- gsub("#", "#35;", x, fixed = TRUE)
+    x <- gsub("\"", "#quot;", x, fixed = TRUE)
+    x <- gsub("<", "#lt;", x, fixed = TRUE)
+    x <- gsub(">", "#gt;", x, fixed = TRUE)
+    x <- gsub("&", "#amp;", x, fixed = TRUE)
+    gsub("[\r\n]+", " ", x)
+}
+
+#' Build the mermaid flowchart of the graph
+#'
+#' Each step is a node `n<nodeId>` with the step name as quoted label, so
+#' that any step name is safe. Its shape reflects the exec mode: a hexagon
+#' for `auto`/`plain`, a trapezoid that widens (`[/ \]`) for `split` and one
+#' that narrows (`[\ /]`) for `reduce`. A `~try()` edge is dashed (`-.->`).
+#' Each state that occurs gets a `classDef` with the color of
+#' `.step_states` and a `class` line with its nodes.
+#'
+#' @param dat The step table of the steps in the graph.
+#' @param edges The edges as built by `pip_graph()`.
+#' @return A single string.
+#' @noRd
+.pip_graph_mermaid <- function(dat, edges) {
+    ids <- paste0("n", dat[["nodeId"]])
+    label <- sprintf("\"%s\"", .mermaid_escape(dat[["step"]]))
+    exec <- dat[["exec"]]
+    node <- ifelse(
+        exec == "split",
+        sprintf("%s[/%s\\]", ids, label),
+        ifelse(
+            exec == "reduce",
+            sprintf("%s[\\%s/]", ids, label),
+            sprintf("%s{{%s}}", ids, label)
+        )
+    )
+
+    arrow <- ifelse(edges[["dashes"]], "-.->", "-->")
+    edge <- sprintf(
+        "n%s %s n%s",
+        edges[["from"]],
+        arrow,
+        edges[["to"]]
+    )
+
+    states <- unique(dat[["state"]])
+    classDef <- vapply(
+        states,
+        FUN = \(st) {
+            # Drop the alpha channel of the color
+            color <- substr(.step_states[[st]][["color"]], 1L, 7L)
+            sprintf("classDef %s fill:%s,color:#000", st, color)
+        },
+        FUN.VALUE = character(1)
+    )
+    class <- vapply(
+        states,
+        FUN = \(st) {
+            nodes <- paste(ids[dat[["state"]] == st], collapse = ",")
+            sprintf("class %s %s", nodes, st)
+        },
+        FUN.VALUE = character(1)
+    )
+
+    lines <- c(node, edge, classDef, class)
+    if (length(lines) > 0L) {
+        lines <- paste0("    ", lines)
+    }
+    paste(c("flowchart LR", lines), collapse = "\n")
 }

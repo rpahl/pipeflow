@@ -50,6 +50,11 @@
   parameters and the steps it depends on.
 - The edges of `pip_graph()` have a `dashes` column, so that visNetwork
   draws a `~try()` reference as a dashed edge.
+- `pip_graph(format = "mermaid")` returns the graph as the text of a
+  mermaid flowchart, which renders e.g. on GitHub and in Quarto. It has the
+  colors and dashed edges of the visNetwork graph, a hexagon for `auto` and
+  `plain` steps and a trapezoid for `split` (widening) and `reduce`
+  (narrowing) steps.
 
 ## Bug fixes
 
