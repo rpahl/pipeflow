@@ -2978,8 +2978,9 @@ pip_remove <- function(x, step, force = FALSE) {
 #' v <- pip_view(p, step = c("load_data", "s2"))
 #' pip_rename(v, from = "load_data", to = "input")
 #' p[["step"]]                                 # "input", "s2"
-
-#' v2 <- pip_view(p, step = "s2") try(pip_rename(v2, from = "input", to = "data"))
+#'
+#' v2 <- pip_view(p, step = "s2")
+#' try(pip_rename(v2, from = "input", to = "data"))
 #' @export
 pip_rename <- function(x, from, to) {
     .assert_pip_or_view(x)

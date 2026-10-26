@@ -35,5 +35,7 @@ try(pip_rename(p, "load_data", to = "s2"))  # step 's2' already exists!
 v <- pip_view(p, step = c("load_data", "s2"))
 pip_rename(v, from = "load_data", to = "input")
 p[["step"]]                                 # "input", "s2"
-v2 <- pip_view(p, step = "s2") try(pip_rename(v2, from = "input", to = "data"))
+
+v2 <- pip_view(p, step = "s2")
+try(pip_rename(v2, from = "input", to = "data"))
 }
