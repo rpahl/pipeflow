@@ -12,6 +12,20 @@ data model, `.step_call` and the run loop.
 
 ## 1. Function map
 
+The banners and sections of `R/as_function.R` (see
+[pipeflow.md](pipeflow.md#sections) for the conventions and a command that
+prints the current outline):
+
+- **Making the function**: Asserts, Function construction
+- **Calling the function**: Call, Slots, Run check & result
+- **Kept pipelines**: Cache access, Updates on pipeline edits
+- **Exported API**: Pipeline as a function, Inner pipelines
+
+`tests/testthat/test_as_function.R` opens with an **Internal helpers**
+banner, whose sections test helpers one by one, in the order of the source
+sections. The outer `describe()` that follows tests the behaviour, under
+indented banners named like the four above.
+
 | Function | Role |
 |---|---|
 | `as.function.pipeflow(x, out, cache, on_error, lgr)` | Entry point. Validates the arguments, takes a reset snapshot (`template`), builds the formals from `pip_get_params()`, and assembles the function. |
@@ -31,7 +45,6 @@ data model, `.step_call` and the run loop.
 | `.fun_failure_causes(dat)` | Follows failures along the run (honouring `~try()` and `locked`) and returns step → failing step. |
 | `.fun_out(pip, out)` | Builds the result: `pip_collect()`, one or more step outputs, or `out(snapshot)`. |
 | `.fun_snapshot(pip)` | A light copy (`.pip_clone(deep = FALSE)`) that keeps the run state and last-run time. |
-| `.fun_pips(fun)` | All kept pipelines of a function. Only the tests use it. |
 | `pip_inner(x, step)` | Exported. Snapshots of the kept pipelines of an outer step. |
 
 ## 2. Construction
@@ -253,4 +266,6 @@ If you change any of the core functions above, check `as_function.R` too,
 and run `tests/testthat/test_as_function.R`. That file defines its
 fixtures inline and not in a `helper_*.R` file. Closures from a helper
 would have the attached package environment as an ancestor, and under
-`load_all()` they cannot be serialised without a warning.
+`load_all()` they cannot be serialised without a warning. The tests read the
+kept pipelines of a function with `.fun_pips(fun)`, which is defined in
+`helper_general.R` and is only called, never used as a step.

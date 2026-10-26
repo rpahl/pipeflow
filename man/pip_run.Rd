@@ -16,207 +16,194 @@ pip_run(
 \arguments{
 \item{x}{A pipeflow pip or view}
 
-\item{lgr}{A logging function with the arguments \code{level} (\code{"info"},
-\code{"warn"} or \code{"error"}) and \code{msg}, which is called as
-\code{lgr(level = level, msg = msg)}. The default is \code{\link[=pipeflow_lgr]{pipeflow_lgr()}}, which
-can also be used to build custom loggers. To suppress logging, you can set
-\code{lgr = NULL}.}
+\item{lgr}{A logging function with the arguments \code{level} (\code{"info"}, \code{"warn"} or
+\code{"error"}) and \code{msg}, which is called as \code{lgr(level = level, msg = msg)}. The default
+is \code{\link[=pipeflow_lgr]{pipeflow_lgr()}}, which can also be used to build custom loggers. To suppress
+logging, you can set \code{lgr = NULL}.}
 
-\item{force}{Logical indicating if all steps should be forced to run,
-regardless of whether they are outdated or not.}
+\item{force}{Logical indicating if all steps should be forced to run, regardless of
+whether they are outdated or not.}
 
-\item{progress}{Optional callback of the form
-\verb{function(value, detail)} called before each step, with the position of
-the step in the run and its name. If it returns \code{FALSE}, the run is
-halted before the step, as by \code{.self$halt()} (see section 'Runtime
-control flow via restart and halt' below).}
+\item{progress}{Optional callback of the form \verb{function(value, detail)} called before
+each step, with the position of the step in the run and its name. If it returns
+\code{FALSE}, the run is halted before the step, as by \code{.self$halt()} (see section
+'Runtime control flow via restart and halt' below).}
 
-\item{on_error}{What to do when a step fails: \code{"stop"} (the default)
-aborts the run, \code{"continue"} goes on with all steps that do not depend on
-a failed step (see section 'Continuing after errors' below).}
+\item{on_error}{What to do when a step fails: \code{"stop"} (the default) aborts the run,
+\code{"continue"} goes on with all steps that do not depend on a failed step (see section
+'Continuing after errors' below).}
 
-\item{map}{Optional function like \code{\link[=lapply]{lapply()}} that runs the calls of a
-step mapped over partitions (\code{exec = "auto"}, see \code{\link[=pip_add]{pip_add()}}), for
-example \code{parallel::mclapply} or \code{future.apply::future_lapply}. It is
-called as \code{map(X, FUN)} and must return a list of the results of \code{FUN}
-for the elements of \code{X}. The default \code{NULL} calls them one after another
-(see section 'Mapping in parallel' below).}
+\item{map}{Optional function like \code{\link[=lapply]{lapply()}} that runs the calls of a step mapped
+over partitions (\code{exec = "auto"}, see \code{\link[=pip_add]{pip_add()}}), for example \code{parallel::mclapply}
+or \code{future.apply::future_lapply}. It is called as \code{map(X, FUN)} and must return a
+list of the results of \code{FUN} for the elements of \code{X}. The default \code{NULL} calls them
+one after another (see section 'Mapping in parallel' below).}
 }
 \value{
 The updated pipeline or view, invisibly.
 }
 \description{
-Executes all pending steps in order. On repeated runs, steps that are
-already \code{"done"} are skipped and only steps that are still \code{"new"} or were
-marked \code{"outdated"} (because one of their dependencies changed) are
-executed. Use \code{force = TRUE} to re-execute every step.
+Executes all pending steps in order. On repeated runs, steps that are already
+\code{"done"} are skipped and only steps that are still \code{"new"} or were marked
+\code{"outdated"} (because one of their dependencies changed) are executed. Use
+\code{force = TRUE} to re-execute every step.
 }
 \details{
 \subsection{Step states}{
 
 A step can take the following states:
 \itemize{
-\item new: the step has been added but not yet executed, or was reset via
-\code{\link[=pip_reset]{pip_reset()}}.
+\item new: the step has been added but not yet executed, or was reset via \code{\link[=pip_reset]{pip_reset()}}.
 \item outdated: a step can get outdated in the following scenarios:
 \itemize{
 \item one of the step's parameters were changed (e.g. via \code{\link[=pip_set_params]{pip_set_params()}})
 \item the step's execution mode was changed (\code{p[[step, "exec"]] <- mode})
-\item a step it depends on was re-executed, replaced or reset, got a new
-execution mode, or its output was set (\code{p[[step, "out"]] <- value})
-\item a step it depends on was executed, but the run did not reach the step
-itself, either on purpose (see section 'Running views' below) or
-because the run was aborted early due to a failed step
+\item a step it depends on was re-executed, replaced or reset, got a new execution
+mode, or its output was set (\code{p[[step, "out"]] <- value})
+\item a step it depends on was executed, but the run did not reach the step itself,
+either on purpose (see section 'Running views' below) or because the run was
+aborted early due to a failed step
 }
 \item done: the step was executed successfully with its current inputs
 \item failed: the step raised an error during its last execution
 }
 
-Only steps that have run before can become outdated: a step in state
-\code{"new"} stays \code{"new"} until it is executed.
-A "done" step is skipped unless \code{force = TRUE} was set. For all other
-states, the step will be re-executed in the next \code{\link[=pip_run]{pip_run()}}.
+Only steps that have run before can become outdated: a step in state \code{"new"} stays
+\code{"new"} until it is executed. A "done" step is skipped unless \code{force = TRUE} was set.
+For all other states, the step will be re-executed in the next \code{\link[=pip_run]{pip_run()}}.
 }
 
 \subsection{Time stamps}{
 
 The step table has two time stamps and a duration per step:
 \itemize{
-\item \code{time_start}: the start of the step's last run. It is set each time the
-step is run, also if the run fails. It is \code{NA} for a step that has not
-run since it was added, replaced (see \code{\link[=pip_replace]{pip_replace()}}) or reset (see
-\code{\link[=pip_reset]{pip_reset()}}). A skipped step (because it is \code{"done"}, locked or has a
-failed input) keeps its value.
-\item \code{duration}: how long the step's last run took (a \code{difftime} in
-seconds), also if the run failed. It is \code{NA} and kept in the same cases
-as \code{time_start}.
-\item \code{time}: the time the step was added or replaced, or the end of its last
-successful run. A failed run does not change it. It is the time stamp
-that \code{\link[=pip_output_value]{pip_output_value()}} gets in \code{ctx}.
+\item \code{time_start}: the start of the step's last run. It is set each time the step is
+run, also if the run fails. It is \code{NA} for a step that has not run since it was
+added, replaced (see \code{\link[=pip_replace]{pip_replace()}}) or reset (see \code{\link[=pip_reset]{pip_reset()}}). A skipped step
+(because it is \code{"done"}, locked or has a failed input) keeps its value.
+\item \code{duration}: how long the step's last run took (a \code{difftime} in seconds), also if
+the run failed. It is \code{NA} and kept in the same cases as \code{time_start}.
+\item \code{time}: the time the step was added or replaced, or the end of its last successful
+run. A failed run does not change it. It is the time stamp that
+\code{\link[=pip_output_value]{pip_output_value()}} gets in \code{ctx}.
 }
 
-With \code{t0 <- Sys.time()} taken before \code{pip_run()}, a step was run in that
-run if \code{time_start >= t0}. Its last run succeeded if its state is
-\code{"done"} and \code{time >= time_start}.
+With \code{t0 <- Sys.time()} taken before \code{pip_run()}, a step was run in that run if
+\code{time_start >= t0}. Its last run succeeded if its state is \code{"done"} and
+\code{time >= time_start}.
 }
 
 \subsection{Running views}{
 
-When \code{x} is a view, the requested rows are run together with their
-upstream dependencies, so the steps covered by the view are brought up to
-date even if their inputs come from steps outside the view. The rest of
-the pipeline is not executed; downstream steps of executed steps are
-marked \code{"outdated"}. Steps whose inputs were not re-executed (for example,
-because they were already \code{"done"}) keep their state.
+When \code{x} is a view, the requested rows are run together with their upstream
+dependencies, so the steps covered by the view are brought up to date even if their
+inputs come from steps outside the view. The rest of the pipeline is not executed;
+downstream steps of executed steps are marked \code{"outdated"}. Steps whose inputs were
+not re-executed (for example, because they were already \code{"done"}) keep their state.
 }
 
 \subsection{Runtime errors}{
 
-By default, a failing step stops the run: the step gets state \code{"failed"},
-the pipeline run state becomes \code{"failed"}, and steps after it that were
-not reached are marked \code{"outdated"}, so the next run retries them.
+By default, a failing step stops the run: the step gets state \code{"failed"}, the
+pipeline run state becomes \code{"failed"}, and steps after it that were not reached are
+marked \code{"outdated"}, so the next run retries them.
 
-The error message names the step, and for a step mapped over partitions
-(see \code{exec} in \code{\link[=pip_add]{pip_add()}}) also the partition key, e.g.
-\code{"step 'fit': key 'b': negative"}. The error has class
-\code{pipeflow_step_error} and keeps the original error in its field
-\code{parent}:
-\code{tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)}.
+The error message names the step, and for a step mapped over partitions (see \code{exec}
+in \code{\link[=pip_add]{pip_add()}}) also the partition key, e.g. \code{"step 'fit': key 'b': negative"}. The
+error has class \code{pipeflow_step_error} and keeps the original error in its field
+\code{parent}: \code{tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)}.
 }
 
 \subsection{Continuing after errors}{
 
 With \code{on_error = "continue"}, the run does not stop at a failed step:
 \itemize{
-\item The failed step gets state \code{"failed"}, and its error is stored as its
-output.
-\item Steps that depend on a failed step are not run, and neither are their
-own dependents. All other steps are run.
-\item To run a step despite a failed input, refer to that input via \code{try()},
-e.g. \code{x = ~try(fit)} (see \code{\link[=pip_add]{pip_add()}}). The argument then receives a
-failure object (an error condition) whose message tells which step
-failed, e.g. \code{"step 'fit' failed: negative"}.
+\item The failed step gets state \code{"failed"}, and its error is stored as its output.
+\item Steps that depend on a failed step are not run, and neither are their own
+dependents. All other steps are run.
+\item To run a step despite a failed input, refer to that input via \code{try()}, e.g.
+\code{x = ~try(fit)} (see \code{\link[=pip_add]{pip_add()}}). The argument then receives a failure object (an
+error condition) whose message tells which step failed, e.g.
+\code{"step 'fit' failed: negative"}.
 \item Locked steps are never run, so a failed input does not affect them.
 }
 
 A step mapped over partitions fails only for the keys whose call failed:
 \itemize{
-\item Its output keeps the results of the other keys and holds a failure
-object for each failed key, e.g. \code{"step 'fit' failed: key 'b': negative"}. The step gets state \code{"failed"}, and printing the pipeline
-shows its output as e.g. \verb{<partitioned: 1/3 failed>}.
-\item A mapped step after it is not run for the failed keys, whose output is
-then a failure object too (\code{"step 'show' was not run: step 'fit' failed: key 'b': negative"}), unless it takes the input via \code{try()}.
-\item A step that is not mapped (e.g. \code{exec = "reduce"}) is not run, unless
-it takes the input via \code{try()}. Then it receives the results of all
-keys, including the failure objects.
+\item Its output keeps the results of the other keys and holds a failure object for each
+failed key, e.g. \code{"step 'fit' failed: key 'b': negative"}. The step gets state
+\code{"failed"}, and printing the pipeline shows its output as e.g.
+\verb{<partitioned: 1/3 failed>}.
+\item A mapped step after it is not run for the failed keys, whose output is then a
+failure object too
+(\code{"step 'show' was not run: step 'fit' failed: key 'b': negative"}), unless it
+takes the input via \code{try()}.
+\item A step that is not mapped (e.g. \code{exec = "reduce"}) is not run, unless it takes the
+input via \code{try()}. Then it receives the results of all keys, including the failure
+objects.
 }
 
-At the end of the run, the pipeline run state is \code{"continued"}, and a
-warning of class \code{pipeflow_run_failed} lists the failed steps (with the
-number of failed keys) and the steps that were not run.
+At the end of the run, the pipeline run state is \code{"continued"}, and a warning of
+class \code{pipeflow_run_failed} lists the failed steps (with the number of failed keys)
+and the steps that were not run.
 
-The next run retries the failed steps and the steps that were not run;
-once a failed step succeeds, the steps after it, including those that
-received failure objects, are run again. A mapped step is only run again
-for its failed keys, keeping the results of the other keys, unless
-something changed that affects all keys: its parameters, its execution
-mode or an input step (which marks it \code{"outdated"}), an input step that is
-run again in the same run, or \code{force = TRUE}. See
+The next run retries the failed steps and the steps that were not run; once a failed
+step succeeds, the steps after it, including those that received failure objects, are
+run again. A mapped step is only run again for its failed keys, keeping the results
+of the other keys, unless something changed that affects all keys: its parameters,
+its execution mode or an input step (which marks it \code{"outdated"}), an input step that
+is run again in the same run, or \code{force = TRUE}. See
 \code{vignette("v05c-error-handling", package = "pipeflow")} for examples.
 }
 
 \subsection{Mapping in parallel}{
 
-With \code{map}, the keys of a step that is mapped over partitions are run by
-\code{map}, for example in parallel processes. This applies to all mapped
-steps of the run, but not to the runs of inner pipelines, such as of a
-function made by \code{\link[=as.function.pipeflow]{as.function.pipeflow()}}. For backends that need more
-arguments, pass a wrapper, e.g. \verb{\\(X, FUN) parallel::parLapply(cl, X, FUN)}
-or \verb{\\(X, FUN) parallel::mclapply(X, FUN, mc.cores = 4)}.
+With \code{map}, the keys of a step that is mapped over partitions are run by \code{map}, for
+example in parallel processes. This applies to all mapped steps of the run, but not
+to the runs of inner pipelines, such as of a function made by
+\code{\link[=as.function.pipeflow]{as.function.pipeflow()}}. For backends that need more arguments, pass a wrapper, e.g.
+\verb{\\(X, FUN) parallel::parLapply(cl, X, FUN)} or
+\verb{\\(X, FUN) parallel::mclapply(X, FUN, mc.cores = 4)}.
 
-The keys of a step whose function was made by \code{\link[=as.function.pipeflow]{as.function.pipeflow()}}
-run in parallel only if the function was made with \code{cache = FALSE}. With
-\code{cache = TRUE} (the default), they run one after another, because the
-inner pipelines that the function keeps for them would be lost in
-another process.
+The keys of a step whose function was made by \code{\link[=as.function.pipeflow]{as.function.pipeflow()}} run in
+parallel only if the function was made with \code{cache = FALSE}. With \code{cache = TRUE} (the
+default), they run one after another, because the inner pipelines that the function
+keeps for them would be lost in another process.
 
-Errors are handled as without \code{map} (see 'Runtime errors' and 'Continuing
-after errors' above), but all keys of a step run before the error of the
-first failed key is raised. Warnings and messages of the step reach \code{lgr}
-only if the backend relays them, as \code{future.apply::future_lapply} does and
-\code{parallel::mclapply} does not. Random numbers are up to the backend as
-well, e.g. \code{future.seed = TRUE} for \code{future.apply::future_lapply}.
+Errors are handled as without \code{map} (see 'Runtime errors' and 'Continuing after
+errors' above), but all keys of a step run before the error of the first failed key
+is raised. Warnings and messages of the step reach \code{lgr} only if the backend relays
+them, as \code{future.apply::future_lapply} does and \code{parallel::mclapply} does not. Random
+numbers are up to the backend as well, e.g. \code{future.seed = TRUE} for
+\code{future.apply::future_lapply}.
 }
 
 \subsection{Runtime control flow via restart and halt}{
 
-A running pipeline can be interrupted via the \code{restart()} and \code{halt()}
-virtual methods. They are intended for advanced, self-modifying pipelines
-and are most often called from within a step function via \code{.self} (see
-section 'The pipeline as \code{.self}' in \code{\link[=pip_add]{pip_add()}}).
+A running pipeline can be interrupted via the \code{restart()} and \code{halt()} virtual
+methods. They are intended for advanced, self-modifying pipelines and are most often
+called from within a step function via \code{.self} (see section 'The pipeline as \code{.self}'
+in \code{\link[=pip_add]{pip_add()}}).
 \itemize{
-\item \code{.self$restart(force = TRUE, times = 1L)}: aborts the current run after the
-current step has finished and restarts it from the first step.
-The default parameters are \code{force = TRUE} and \code{times = 1L}, that is, the
-above call is the same as just invoking .self$restart().
-To skip steps that are already in state \code{"done"}, set \code{force = FALSE}.
-The \code{times} parameter limits the number of consecutive restarts within a
-single \code{pip_run()} call.
-If a view is being run, a restart covers the view steps together with
-their upstream dependencies.
-\item \code{p$halt()}: aborts the current run after the current step has finished.
-This is a \emph{controlled halt} and deliberately distinct from \code{\link[base:stop]{base::stop()}}:
-no error is raised and the pipeline is not marked as \code{"failed"}. The run
-simply ends with run state \code{"halted"} (see \code{\link[=pip_run_state]{pip_run_state()}}) and a
-subsequent \code{\link[=pip_run]{pip_run()}} will continue where the run left off.
+\item \code{.self$restart(force = TRUE, times = 1L)}: aborts the current run after the current
+step has finished and restarts it from the first step. The default parameters are
+\code{force = TRUE} and \code{times = 1L}, that is, the above call is the same as just
+invoking .self$restart(). To skip steps that are already in state \code{"done"}, set
+\code{force = FALSE}. The \code{times} parameter limits the number of consecutive restarts
+within a single \code{pip_run()} call. If a view is being run, a restart covers the view
+steps together with their upstream dependencies.
+\item \code{p$halt()}: aborts the current run after the current step has finished. This is
+a \emph{controlled halt} and deliberately distinct from \code{\link[base:stop]{base::stop()}}: no error is
+raised and the pipeline is not marked as \code{"failed"}. The run simply ends with run
+state \code{"halted"} (see \code{\link[=pip_run_state]{pip_run_state()}}) and a subsequent \code{\link[=pip_run]{pip_run()}} will continue
+where the run left off.
 }
 
-A run can also be halted from outside: if the \code{progress} callback returns
-\code{FALSE}, the run ends before the next step, e.g. when a user cancels the
-run in a Shiny app.
+A run can also be halted from outside: if the \code{progress} callback returns \code{FALSE},
+the run ends before the next step, e.g. when a user cancels the run in a Shiny app.
 
-In all cases, steps downstream of executed steps that have not been
-executed until the restart or halt happens are marked as \code{"outdated"}.
+In all cases, steps downstream of executed steps that have not been executed until
+the restart or halt happens are marked as \code{"outdated"}.
 }
 }
 \examples{
@@ -302,6 +289,6 @@ if (.Platform$OS.type == "unix") {
 }
 }
 \seealso{
-\code{vignette("v06-self-modify-pipeline", package = "pipeflow")}
-for an advanced example of dynamic pipelines.
+\code{vignette("v06-self-modify-pipeline", package = "pipeflow")} for an advanced
+example of dynamic pipelines.
 }

@@ -22,6 +22,7 @@ jobs:
     # Not ubuntu-latest: renv.lock pins the P3M binaries for Ubuntu 24.04
     # (noble), which don't load on newer Ubuntu releases
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     permissions:
       contents: read
       security-events: write   # if uploading SARIF
@@ -70,6 +71,7 @@ jobs:
   check:
     name: R CMD check
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     needs: lint
     permissions:
       contents: read           # private repos need this
@@ -124,6 +126,7 @@ jobs:
   check-oldest-r:
     name: R CMD check (R 4.2, oldest supported)
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     needs: lint
     permissions:
       contents: read
@@ -153,6 +156,7 @@ jobs:
   coverage:
     name: Coverage (covr)
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     needs: check
     permissions:
       contents: read

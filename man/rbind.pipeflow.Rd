@@ -9,26 +9,24 @@
 \arguments{
 \item{...}{Two or more pipeflow pipeline objects.}
 
-\item{deparse.level}{Not used, for compatibility with the generic
-\code{rbind()}.}
+\item{deparse.level}{Not used, for compatibility with the generic \code{rbind()}.}
 }
 \value{
 A new pipeflow pipeline object representing the bound pipelines.
 }
 \description{
-Binds two or more pipelines together by concatenating their steps. If the
-pipelines have steps with the same name, the step names of later pipelines
-are automatically adapted to avoid name clashes. A single pipeline is
-returned unchanged.
+Binds two or more pipelines together by concatenating their steps. If the pipelines
+have steps with the same name, the step names of later pipelines are automatically
+adapted to avoid name clashes. A single pipeline is returned unchanged.
 }
 \details{
-To feed steps of the second pipeline with the output of steps of the
-first one, bind their params with \code{\link[=pip_set_params]{pip_set_params()}} afterwards, e.g.
-\code{pip_set_params(ab, list(data = ~prep))}. This binds the param in all
-steps that have it unbound, so to bind only the steps of the second
-pipeline, select them with a view, e.g. \code{ab[-seq_along(a)]}. Locked
-steps are not bound: unlock them before and lock them again afterwards,
-e.g. with \code{\link[=pip_unlock]{pip_unlock()}} and \code{\link[=pip_lock]{pip_lock()}} on the same view.
+To feed steps of the second pipeline with the output of steps of the first one, bind
+their params with \code{\link[=pip_set_params]{pip_set_params()}} afterwards, e.g.
+\code{pip_set_params(ab, list(data = ~prep))}. This binds the param in all steps that have
+it unbound, so to bind only the steps of the second pipeline, select them with a
+view, e.g. \code{ab[-seq_along(a)]}. Locked steps are not bound: unlock them before and
+lock them again afterwards, e.g. with \code{\link[=pip_unlock]{pip_unlock()}} and \code{\link[=pip_lock]{pip_lock()}} on the same
+view.
 }
 \examples{
 a <- pip_new("a") |>

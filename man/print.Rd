@@ -28,32 +28,29 @@
 
 \item{rows}{Row indices to be printed. If empty, all rows are printed.}
 
-\item{cols}{The columns to be printed. Can be either one of
-\code{core} or \code{all} to print the core or all columns, respectively,
-or an explicit character vector of columns to be printed. The \code{params}
-column lists the names of the step's parameters. In the \code{out} column, some
-outputs are shown in short form: a condition (the output of a step that
-failed in a run with \code{on_error = "continue"}) as \verb{<kind/class>}, e.g.
+\item{cols}{The columns to be printed. Can be either one of \code{core} or \code{all} to print
+the core or all columns, respectively, or an explicit character vector of columns to
+be printed. The \code{params} column lists the names of the step's parameters. In the
+\code{out} column, some outputs are shown in short form: a condition (the output of a step
+that failed in a run with \code{on_error = "continue"}) as \verb{<kind/class>}, e.g.
 \verb{<error/simpleError>}; a matrix, array or table as \verb{<class[dims]>}, e.g.
-\verb{<matrix[4x2]>}; and a function or environment (e.g. an R6 object) as
-\verb{<class>}. Strings longer than 40 characters are cut off and marked with
-\code{"..."}. The \code{duration} column is shown in short form, e.g. \verb{0.251 s} or
-\verb{2 min 5 s}.}
+\verb{<matrix[4x2]>}; and a function or environment (e.g. an R6 object) as \verb{<class>}.
+Strings longer than 40 characters are cut off and marked with \code{"..."}. The \code{duration}
+column is shown in short form, e.g. \verb{0.251 s} or \verb{2 min 5 s}.}
 
-\item{topn}{The number of rows to be printed from the beginning
-and end of tables with more than \code{nrows} rows.}
+\item{topn}{The number of rows to be printed from the beginning and end of tables
+with more than \code{nrows} rows.}
 
 \item{nrows}{The number of rows printed before truncation is enforced.}
 
 \item{row.names}{If TRUE, row indices will be printed alongside x.}
 
-\item{class}{If TRUE, the resulting output will include above each
-column its storage class (or a self-evident abbreviation thereof).}
+\item{class}{If TRUE, the resulting output will include above each column its storage
+class (or a self-evident abbreviation thereof).}
 
-\item{header}{If TRUE, a header with the pipeline name and number
-of steps, and a footer will be printed. The footer shows the run state,
-the time and the duration of the last run, and how many of the printed
-steps are in each state, e.g.
+\item{header}{If TRUE, a header with the pipeline name and number of steps, and a
+footer will be printed. The footer shows the run state, the time and the duration of
+the last run, and how many of the printed steps are in each state, e.g.
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{<ready> last run: 2026-10-25 14:03:12 (0.251 s)
 steps: 3 done, 1 failed, 2 new

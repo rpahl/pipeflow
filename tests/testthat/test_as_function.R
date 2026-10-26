@@ -1,7 +1,214 @@
+# ======================================================================================
+# Internal helpers
+# ======================================================================================
+
+# ---------------------
+# Function construction
+# ---------------------
+
+describe(".fun_quote", {
+    it("wraps symbols and calls in quote() and keeps other values", {
+        args <- list(a = quote(x), b = 1, c = quote(f(y)), d = NULL, e = ~s)
+        res <- .fun_quote(args)
+
+        expect_equal(res[["a"]], call("quote", quote(x)))
+        expect_equal(res[["c"]], call("quote", quote(f(y))))
+        expect_equal(res[c("b", "d")], list(b = 1, d = NULL))
+        # A formula is language as well
+        expect_equal(eval(res[["e"]]), ~s)
+        expect_equal(lapply(res, eval), args)
+    })
+})
+
+# -----
+# Slots
+# -----
+
+describe(".fun_keep_keys", {
+    new_slots <- function(keys) {
+        slots <- .fun_slots()
+        for (key in keys) {
+            assign(key, paste("pip", key), envir = slots$pips)
+        }
+        slots$keys <- keys
+        slots$mapped <- TRUE
+        slots
+    }
+
+    it("drops the slots of the keys that are gone", {
+        slots <- new_slots(c("A", "B", "C"))
+        .fun_keep_keys(slots, keys = c("C", "A", "D"), mapped = TRUE)
+
+        expect_setequal(names(slots$pips), c("A", "C"))
+        expect_equal(slots$keys, c("C", "A", "D"))
+        # The kept pipelines come in the order of the keys of the last call
+        expect_equal(.fun_slot_pips(slots), list(C = "pip C", A = "pip A"))
+    })
+
+    it("drops all partitions when the step is no longer mapped", {
+        slots <- new_slots(c("A", "B"))
+        .fun_keep_keys(slots, keys = .fun_key_single, mapped = FALSE)
+
+        expect_length(names(slots$pips), 0L)
+        expect_false(slots$mapped)
+    })
+
+    it("tells a partition named as the single key from a single call", {
+        slots <- new_slots(.fun_key_single)
+        slots$mapped <- FALSE
+        .fun_keep_keys(slots, keys = .fun_key_single, mapped = TRUE)
+
+        expect_true(slots$mapped)
+        expect_equal(names(slots$pips), .fun_key_single)
+    })
+})
+
+# ------------------
+# Run check & result
+# ------------------
+
+describe(".fun_failure_causes", {
+    no_log <- \(level, msg) NULL
+    run_continued <- function(p) {
+        suppressWarnings(pip_run(p, on_error = "continue", lgr = no_log))
+        .pip_pipenv(p)[["data"]]
+    }
+
+    it("is empty if no step failed", {
+        p <- pip_new() |> pip_add("a", \() 1)
+        expect_equal(.fun_failure_causes(run_continued(p)), list())
+    })
+
+    it("follows a failure to the steps that were skipped because of it", {
+        p <- pip_new() |>
+            pip_add("a", \() stop("boom")) |>
+            pip_add("b", \(x = ~a) x) |>
+            pip_add("c", \(x = ~b) x) |>
+            pip_add("d", \() 1)
+
+        expect_equal(
+            .fun_failure_causes(run_continued(p)),
+            list(a = "a", b = "a", c = "a")
+        )
+    })
+
+    it("does not follow a failure past a step that got it via ~try()", {
+        p <- pip_new() |>
+            pip_add("a", \() stop("boom")) |>
+            pip_add("b", \(x = ~ try(a)) 1) |>
+            pip_add("c", \(x = ~b) x)
+
+        expect_equal(.fun_failure_causes(run_continued(p)), list(a = "a"))
+    })
+
+    it("does not follow a failure past a locked step", {
+        p <- pip_new() |>
+            pip_add("a", \() stop("boom")) |>
+            pip_add("l", \(x = ~a) x) |>
+            pip_add("m", \(x = ~l) x)
+        pip_lock(p["l"])
+
+        expect_equal(.fun_failure_causes(run_continued(p)), list(a = "a"))
+    })
+
+    it("names the input of a mapped step whose keys were not run", {
+        p <- pip_new() |>
+            pip_add("s", \() list(k1 = 1, k2 = 2), exec = "split") |>
+            pip_add("t", \(x = ~s) if (x == 2) stop("bad") else x) |>
+            pip_add("u", \(x = ~t) x) |>
+            pip_add("v", \(x = ~u) x, exec = "reduce")
+
+        # t failed for key k2 itself, u failed for it because t failed
+        expect_equal(
+            .fun_failure_causes(run_continued(p)),
+            list(t = "t", u = "t", v = "t")
+        )
+    })
+})
+
+# ------------
+# Cache access
+# ------------
+
+describe(".fun_cache", {
+    p <- pip_new() |> pip_add("a", \(x = 1) x)
+
+    it("is the cache of a function made by as.function()", {
+        expect_s3_class(.fun_cache(as.function(p)), "pipeflow_fun_cache")
+        expect_s3_class(
+            .fun_cache(as.function(p, cache = FALSE)),
+            "pipeflow_fun_cache"
+        )
+    })
+
+    it("is NULL for other objects", {
+        expect_null(.fun_cache(\(x) x))
+        expect_null(.fun_cache(\(x) f(x)))
+        expect_null(.fun_cache(sum))
+        expect_null(.fun_cache(1))
+        expect_null(.fun_cache(NULL))
+    })
+})
+
+describe(".fun_keeps", {
+    p <- pip_new() |> pip_add("a", \(x = 1) x)
+
+    it("is TRUE only for a function made with cache = TRUE", {
+        expect_true(.fun_keeps(as.function(p)))
+        expect_false(.fun_keeps(as.function(p, cache = FALSE)))
+        expect_false(.fun_keeps(\(x) x))
+        expect_false(.fun_keeps(sum))
+    })
+})
+
+# -------------------------
+# Updates on pipeline edits
+# -------------------------
+
+describe(".fun_rename and .fun_release", {
+    p <- pip_new() |> pip_add("a", \(x = 1) x)
+    with_slots <- function(steps) {
+        f <- as.function(p)
+        cache <- .fun_cache(f)
+        for (step in steps) {
+            cache$slots[[step]] <- .fun_slots()
+        }
+        f
+    }
+
+    it("moves the slots of a renamed step", {
+        f <- with_slots(c("s1", "s2"))
+        slots <- .fun_cache(f)$slots[["s1"]]
+        .fun_rename(f, from = "s1", to = "t1")
+
+        expect_equal(names(.fun_cache(f)$slots), c("s2", "t1"))
+        expect_identical(.fun_cache(f)$slots[["t1"]], slots)
+    })
+
+    it("does nothing for a step without slots", {
+        f <- with_slots("s1")
+        .fun_rename(f, from = "zz", to = "t1")
+        expect_equal(names(.fun_cache(f)$slots), "s1")
+    })
+
+    it("drops the slots of a released step", {
+        f <- with_slots(c("s1", "s2"))
+        .fun_release(f, "s1")
+        expect_equal(names(.fun_cache(f)$slots), "s2")
+        expect_no_error(.fun_release(f, "zz"))
+    })
+
+    it("does nothing for other functions", {
+        expect_null(.fun_rename(\(x) x, from = "a", to = "b"))
+        expect_null(.fun_release(\(x) x, step = "a"))
+    })
+})
+
+
 describe("as.function.pipeflow", {
-    # Fixtures are defined here and not in a helper file: closures from a
-    # helper would have the attached package environment as an ancestor, which
-    # cannot be serialised without a warning when loaded with load_all().
+    # Fixtures are defined here and not in a helper file: closures from a helper would
+    # have the attached package environment as an ancestor, which cannot be serialised
+    # without a warning when loaded with load_all().
 
     # A param value with a label; the step functions see only the value.
     annotated <- function(value, label) {
@@ -24,9 +231,8 @@ describe("as.function.pipeflow", {
         )
     }
 
-    # The inner pipeline: fits a polynomial to a batch (the slow step, with
-    # `delay` seconds) and rounds the coefficients. `calls` counts how often
-    # each step ran.
+    # The inner pipeline: fits a polynomial to a batch (the slow step, with `delay`
+    # seconds) and rounds the coefficients. `calls` counts how often each step ran.
     demo_inner <- function(calls, delay = 0) {
         pip_new("inner") |>
             pip_add("data", \(data = NULL) data) |>
@@ -50,8 +256,8 @@ describe("as.function.pipeflow", {
             )
     }
 
-    # The outer pipeline: split by batch, one inner pipeline per batch (`fun`),
-    # one table.
+    # The outer pipeline: split by batch, one inner pipeline per batch (`fun`), one
+    # table.
     demo_outer <- function(fun, data = demo_batches(), params = list()) {
         outer <- pip_new("outer") |>
             pip_add("data", \(data = NULL) data) |>
@@ -96,6 +302,107 @@ describe("as.function.pipeflow", {
         pip_run(demo$outer, lgr = NULL)
         invisible(demo)
     }
+
+    # ==================================================================================
+    # Making the function
+    # ==================================================================================
+
+    describe("input checks", {
+        it("rejects views", {
+            inner <- demo_inner(new.env())
+
+            expect_error(as.function(inner[1:2]), "not a view")
+        })
+
+        it("rejects an invalid out", {
+            inner <- demo_inner(new.env())
+
+            expect_error(as.function(inner, out = "nope"), "nope")
+            expect_error(as.function(inner, out = 1L), "step names")
+            expect_error(as.function(inner, out = character()), "step names")
+            expect_error(as.function(inner, out = NA_character_), "step names")
+            expect_error(
+                as.function(inner, out = \() 1),
+                "a function with at least one argument"
+            )
+            expect_error(
+                as.function(inner, out = `if`),
+                "a function with at least one argument"
+            )
+        })
+
+        it("accepts a function with at least one argument as out", {
+            inner <- demo_inner(new.env())
+
+            expect_no_error(as.function(inner, out = \(...) 1))
+            expect_no_error(as.function(inner, out = length))
+            expect_no_error(as.function(inner, out = pip_collect))
+        })
+
+        it("rejects an invalid cache", {
+            inner <- demo_inner(new.env())
+            msg <- "cache must be a single logical value"
+
+            expect_error(as.function(inner, cache = 0), msg)
+            expect_error(as.function(inner, cache = 16L), msg)
+            expect_error(as.function(inner, cache = Inf), msg)
+            expect_error(as.function(inner, cache = "TRUE"), msg)
+            expect_error(as.function(inner, cache = c(TRUE, FALSE)), msg)
+            expect_error(as.function(inner, cache = logical()), msg)
+            expect_error(as.function(inner, cache = NA), msg)
+            expect_error(as.function(inner, cache = NULL), msg)
+        })
+
+        it("rejects an invalid on_error", {
+            inner <- demo_inner(new.env())
+
+            expect_error(
+                as.function(inner, on_error = "later"),
+                "should be one of"
+            )
+        })
+
+        it("rejects an invalid lgr", {
+            inner <- demo_inner(new.env())
+
+            expect_error(as.function(inner, lgr = "a"), "lgr must be a")
+            expect_error(
+                as.function(inner, lgr = \(x) x),
+                "lgr must be a function with arguments 'level' and 'msg'"
+            )
+        })
+
+        it("accepts TRUE and FALSE as cache", {
+            inner <- demo_inner(new.env())
+            d <- demo_batches()[1:6, ]
+
+            for (cache in c(TRUE, FALSE)) {
+                f <- as.function(inner, out = "data", cache = cache)
+                expect_identical(f(data = d), d)
+            }
+        })
+
+        it("keeps the pipelines by default", {
+            expect_true(formals(as.function.pipeflow)$cache)
+        })
+
+        it("does not capture the environment of the caller", {
+            inner <- demo_inner(new.env())
+            plain <- as.function(inner)
+            f <- local({
+                big <- numeric(1e6)
+                as.function(inner)
+            })
+
+            diff <- length(serialize(f, NULL)) - length(serialize(plain, NULL))
+
+            expect_lt(abs(diff), 1e4)
+        })
+    })
+
+    # ==================================================================================
+    # Calling the function
+    # ==================================================================================
 
     describe("as a step of an outer pipeline", {
         it("maps over the partitions and gives a partitioned output", {
@@ -159,8 +466,8 @@ describe("as.function.pipeflow", {
                 demo$outer[["coef_table", "out"]]
             )
 
-            # the kept copies hold the params of the last call, which is
-            # not an obstacle for the other pipeline
+            # the kept copies hold the params of the last call, which is not an obstacle
+            # for the other pipeline
             pip_set_params(demo$outer, list(digits = 3))
             run_outer(demo)
             run_outer(list(outer = second))
@@ -338,6 +645,90 @@ describe("as.function.pipeflow", {
             f <- as.function(inner, out = "total")
 
             expect_identical(f(data = demo_batches()), 18L)
+        })
+    })
+
+    describe("binding", {
+        it("takes relative references", {
+            inner <- pip_new("rel") |> pip_add("s", \(x = 1) x * 2)
+            outer <- pip_new("outer") |>
+                pip_add("a", \(v = 5) v) |>
+                pip_add(
+                    "run",
+                    as.function(inner, out = "s"),
+                    params = list(x = ~ -1)
+                )
+
+            pip_run(outer, lgr = NULL)
+
+            expect_identical(outer[["run", "depends"]][["x"]], "a")
+            expect_identical(outer[["run", "out"]], 10)
+        })
+
+        it("hands the failure of ~try(step) to the inner pipeline", {
+            inner <- pip_new("try") |>
+                pip_add("s", \(x = 1) {
+                    failed <- inherits(x, "pipeflow_failure")
+                    if (failed) "failed upstream" else x
+                })
+            outer <- pip_new("outer") |>
+                pip_add("bad", \() stop("nope")) |>
+                pip_add(
+                    "run",
+                    as.function(inner, out = "s"),
+                    params = list(x = ~ try(bad))
+                )
+
+            suppressWarnings(
+                pip_run(outer, lgr = NULL, on_error = "continue")
+            )
+
+            expect_identical(outer[["bad", "state"]], "failed")
+            expect_identical(outer[["run", "out"]], "failed upstream")
+        })
+
+        it("reruns a partition if any of its bound inputs changed", {
+            calls <- new.env()
+            calls$n <- 0L
+            inner <- pip_new("two") |>
+                pip_add("in_a", \(a = NULL) a) |>
+                pip_add("in_b", \(b = NULL) b) |>
+                pip_add("total", \(a = ~in_a, b = ~in_b) {
+                    calls$n <- calls$n + 1L
+                    a + b
+                })
+            fun <- as.function(inner, out = "total")
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "parts",
+                    \(values = list(p = 1, q = 2)) values,
+                    exec = "split"
+                ) |>
+                pip_add("offset", \(offset = 10) offset) |>
+                pip_add("run", fun, params = list(a = ~parts, b = ~offset))
+
+            run_outer(list(outer = outer))
+            expect_identical(calls$n, 2L)
+            expect_equal(unlist(outer[["run", "out"]]), c(p = 11, q = 12))
+
+            # a changed bound input is a new input: all partitions run
+            pip_set_params(outer, list(offset = 20))
+            run_outer(list(outer = outer))
+            expect_identical(calls$n, 4L)
+            expect_equal(unlist(outer[["run", "out"]]), c(p = 21, q = 22))
+
+            # back to the old input: the pipeline of a partition only has the last one,
+            # so all partitions run again
+            pip_set_params(outer, list(offset = 10))
+            run_outer(list(outer = outer))
+            expect_identical(calls$n, 6L)
+            expect_named(.fun_pips(fun), c("p", "q"))
+
+            # only the partition with the changed input runs
+            pip_set_params(outer, list(values = list(p = 5, q = 2)))
+            run_outer(list(outer = outer))
+            expect_identical(calls$n, 7L)
+            expect_equal(unlist(outer[["run", "out"]]), c(p = 15, q = 12))
         })
     })
 
@@ -618,103 +1009,753 @@ describe("as.function.pipeflow", {
         })
     })
 
-    describe("input checks", {
-        it("rejects views", {
-            inner <- demo_inner(new.env())
+    describe("continuing after errors of inner steps", {
+        # `bad` fails for the input "boom". `report` takes its output via `~try()`,
+        # `use` plainly, and `other` does not depend on it.
+        failing_inner <- function(calls = new.env()) {
+            calls$other <- 0L
+            pip_new("failing") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("bad", \(x = ~input) {
+                    if (identical(x, "boom")) {
+                        stop("boom")
+                    }
+                    x
+                }) |>
+                pip_add("report", \(b = ~ try(bad)) {
+                    if (inherits(b, "pipeflow_failure")) "no result" else b
+                }) |>
+                pip_add("use", \(b = ~bad) b) |>
+                pip_add("other", \(x = ~input) {
+                    calls$other <- calls$other + 1L
+                    "other output"
+                })
+        }
 
-            expect_error(as.function(inner[1:2]), "not a view")
+        it("stops at the first failed inner step by default", {
+            f <- as.function(failing_inner(), out = "report")
+
+            # `~try(bad)` has no effect, since the run does not continue
+            expect_error(f(x = "boom"), "step 'bad': boom")
+            expect_identical(f(x = "fine"), "fine")
         })
 
-        it("rejects an invalid out", {
-            inner <- demo_inner(new.env())
+        it("hands the failure to a ~try() step with on_error = continue", {
+            f <- as.function(
+                failing_inner(),
+                out = "report",
+                on_error = "continue"
+            )
 
-            expect_error(as.function(inner, out = "nope"), "nope")
-            expect_error(as.function(inner, out = 1L), "step names")
-            expect_error(as.function(inner, out = character()), "step names")
-            expect_error(as.function(inner, out = NA_character_), "step names")
+            expect_warning(
+                out <- f(x = "boom"),
+                "continued after 1 failed step"
+            )
+            expect_identical(out, "no result")
+        })
+
+        it("runs and keeps the steps that do not depend on the failure", {
+            calls <- new.env()
+            f <- as.function(
+                failing_inner(calls),
+                out = "other",
+                on_error = "continue"
+            )
+
+            expect_warning(out <- f(x = "boom"), "continued")
+            expect_identical(out, "other output")
+            expect_identical(calls$other, 1L)
+
+            pip <- .fun_pips(f)[[1L]]
+            expect_identical(pip[["other", "state"]], "done")
+            expect_identical(pip[["bad", "state"]], "failed")
+
+            # the kept pipeline only retries the failed step
+            expect_warning(f(x = "boom"), "continued")
+            expect_identical(calls$other, 1L)
+        })
+
+        it("fails if a requested step failed or was not run", {
+            failed <- as.function(
+                failing_inner(),
+                out = c("other", "bad"),
+                on_error = "continue"
+            )
+            skipped <- as.function(
+                failing_inner(),
+                out = "use",
+                on_error = "continue"
+            )
+
             expect_error(
-                as.function(inner, out = \() 1),
-                "a function with at least one argument"
+                suppressWarnings(failed(x = "boom")),
+                "step 'bad': boom"
             )
             expect_error(
-                as.function(inner, out = `if`),
-                "a function with at least one argument"
+                suppressWarnings(skipped(x = "boom")),
+                "step 'bad': boom"
             )
         })
 
-        it("accepts a function with at least one argument as out", {
-            inner <- demo_inner(new.env())
+        it("names the step that kept a requested step from running", {
+            inner <- pip_new("two_failures") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("bad_a", \(x = ~input) stop("A failed")) |>
+                pip_add("rescue", \(a = ~ try(bad_a)) "recovered") |>
+                pip_add("bad_b", \(x = ~input) stop("B failed")) |>
+                pip_add("result", \(r = ~rescue, b = ~bad_b) list(r, b))
+            f <- as.function(inner, out = "result", on_error = "continue")
 
-            expect_no_error(as.function(inner, out = \(...) 1))
-            expect_no_error(as.function(inner, out = length))
-            expect_no_error(as.function(inner, out = pip_collect))
+            err <- tryCatch(suppressWarnings(f(x = 1)), error = \(e) e)
+
+            # `rescue` handled the failure of `bad_a`, so only `bad_b` kept `result`
+            # from running
+            expect_identical(err[["step"]], "bad_b")
+            expect_match(conditionMessage(err), "step 'bad_b': B failed")
         })
 
-        it("rejects an invalid cache", {
-            inner <- demo_inner(new.env())
-            msg <- "cache must be a single logical value"
+        it("does not follow a failure past a locked step", {
+            state <- new.env()
+            state$fail <- FALSE
+            inner <- pip_new("locked") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("bad_a", \(x = ~input) {
+                    if (state$fail) {
+                        stop("A failed")
+                    }
+                    x
+                }) |>
+                pip_add("kept", \(a = ~bad_a) "kept output") |>
+                pip_add("bad_b", \(x = ~input) {
+                    if (state$fail) {
+                        stop("B failed")
+                    }
+                    x
+                }) |>
+                pip_add("result", \(k = ~kept, b = ~bad_b) list(k, b))
+            pip_run(inner, lgr = NULL)
+            pip_lock(pip_view(inner, step = "kept"))
+            state$fail <- TRUE
+            f <- as.function(inner, out = "result", on_error = "continue")
 
-            expect_error(as.function(inner, cache = 0), msg)
-            expect_error(as.function(inner, cache = 16L), msg)
-            expect_error(as.function(inner, cache = Inf), msg)
-            expect_error(as.function(inner, cache = "TRUE"), msg)
-            expect_error(as.function(inner, cache = c(TRUE, FALSE)), msg)
-            expect_error(as.function(inner, cache = logical()), msg)
-            expect_error(as.function(inner, cache = NA), msg)
-            expect_error(as.function(inner, cache = NULL), msg)
+            err <- tryCatch(suppressWarnings(f(x = 1)), error = \(e) e)
+
+            # `kept` is not run, so the failure of `bad_a` stops there
+            expect_identical(err[["step"]], "bad_b")
         })
 
-        it("rejects an invalid on_error", {
-            inner <- demo_inner(new.env())
+        it("keeps the key of a failed mapped inner step in the error", {
+            inner <- pip_new("mapped") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("parts", \(x = ~input) x, exec = "split") |>
+                pip_add("double", \(p = ~parts) {
+                    if (is.character(p)) {
+                        stop("not a number")
+                    }
+                    p * 2
+                })
+            f <- as.function(inner, out = "double", on_error = "continue")
 
-            expect_error(
-                as.function(inner, on_error = "later"),
-                "should be one of"
+            err <- tryCatch(
+                suppressWarnings(f(x = list(a = 1, b = "x"))),
+                error = \(e) e
             )
-        })
 
-        it("rejects an invalid lgr", {
-            inner <- demo_inner(new.env())
-
-            expect_error(as.function(inner, lgr = "a"), "lgr must be a")
-            expect_error(
-                as.function(inner, lgr = \(x) x),
-                "lgr must be a function with arguments 'level' and 'msg'"
+            expect_match(
+                conditionMessage(err),
+                "step 'double': key 'b': not a number"
             )
+            expect_s3_class(err[["parent"]], "pipeflow_key_error")
+            expect_identical(err[["parent"]][["key"]], "b")
         })
 
-        it("accepts TRUE and FALSE as cache", {
-            inner <- demo_inner(new.env())
-            d <- demo_batches()[1:6, ]
+        it("names the failed inner step for a mapped step after it", {
+            inner <- pip_new("mapped") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("parts", \(x = ~input) x, exec = "split") |>
+                pip_add("double", \(p = ~parts) {
+                    if (is.character(p)) {
+                        stop("not a number")
+                    }
+                    p * 2
+                }) |>
+                pip_add("plus", \(d = ~double) d + 1)
+            f <- as.function(inner, out = "plus", on_error = "continue")
 
-            for (cache in c(TRUE, FALSE)) {
-                f <- as.function(inner, out = "data", cache = cache)
-                expect_identical(f(data = d), d)
+            err <- tryCatch(
+                suppressWarnings(f(x = list(a = 1, b = "x"))),
+                error = \(e) e
+            )
+
+            expect_match(
+                conditionMessage(err),
+                "step 'double': key 'b': not a number"
+            )
+            expect_s3_class(err[["parent"]], "pipeflow_key_error")
+        })
+
+        it("returns the failed keys of a mapped inner step via ~try()", {
+            inner <- pip_new("mapped") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("parts", \(x = ~input) x, exec = "split") |>
+                pip_add("double", \(p = ~parts) {
+                    if (is.character(p)) {
+                        stop("not a number")
+                    }
+                    p * 2
+                }) |>
+                pip_add("report", \(d = ~ try(double)) {
+                    if (inherits(d, "pipeflow_failure")) "no result" else d
+                })
+            f <- as.function(inner, out = "report", on_error = "continue")
+
+            expect_warning(
+                out <- f(x = list(a = 1, b = "x")),
+                class = "pipeflow_run_failed"
+            )
+            expect_equal(unclass(out), list(a = 2, b = "no result"))
+        })
+
+        it("fails a mapped pipeline step only for the failing key", {
+            inner <- pip_new("inner") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("double", \(p = ~input) {
+                    if (is.character(p)) {
+                        stop("not a number")
+                    }
+                    p * 2
+                })
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "parts",
+                    \(x = list(a = 1, b = "x", c = 3)) x,
+                    exec = "split"
+                ) |>
+                pip_add(
+                    "nested",
+                    as.function(inner, out = "double"),
+                    params = list(x = ~parts)
+                )
+
+            expect_warning(
+                pip_run(outer, lgr = NULL, on_error = "continue"),
+                class = "pipeflow_run_failed"
+            )
+
+            out <- outer[["nested", "out"]]
+            expect_equal(out[c("a", "c")], list(a = 2, c = 6))
+            f <- out[["b"]]
+            expect_s3_class(f, "pipeflow_failure")
+            expect_equal(f[["key"]], "b")
+            expect_equal(
+                conditionMessage(f),
+                "step 'nested' failed: key 'b': step 'double': not a number"
+            )
+            expect_identical(outer[["nested", "state"]], "failed")
+        })
+
+        it("keeps the inner pipelines of all keys on a retry", {
+            env <- new.env()
+            env$flaky <- TRUE
+            inner <- pip_new("inner") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("double", \(p = ~input) {
+                    if (env$flaky && p < 0) {
+                        stop("negative")
+                    }
+                    p * 2
+                })
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "parts",
+                    \(x = list(a = 1, b = -1, c = 3)) x,
+                    exec = "split"
+                ) |>
+                pip_add(
+                    "nested",
+                    as.function(inner, out = "double"),
+                    params = list(x = ~parts)
+                )
+            suppressWarnings(
+                pip_run(outer, lgr = NULL, on_error = "continue"),
+                classes = "pipeflow_run_failed"
+            )
+
+            env$flaky <- FALSE
+            pip_run(outer, lgr = NULL)
+
+            expect_equal(
+                unclass(outer[["nested", "out"]]),
+                list(a = 2, b = -2, c = 6)
+            )
+            expect_named(pip_inner(outer, "nested"), c("a", "b", "c"))
+        })
+
+        it("names a failed inner step that was renamed in the run", {
+            inner <- pip_new("rename") |>
+                pip_add("parts", \(x = list(a = 1, b = -1)) x, exec = "split")
+            pip_run(inner, lgr = NULL)
+            pip_lock(inner["parts"])
+            inner |>
+                pip_add("fit", \(x = ~parts) {
+                    if (x < 0) stop("negative") else x
+                }) |>
+                pip_add("show", \(x = ~fit) x) |>
+                pip_add("all", \(x = ~fit) unlist(x), exec = "reduce") |>
+                pip_add("rename", \(x = 1) {
+                    if ("fit" %in% .self[["step"]]) {
+                        .self$rename("fit", "model")
+                    }
+                    x
+                })
+
+            for (out in c("show", "all")) {
+                f <- as.function(inner, out = out, on_error = "continue")
+                err <- tryCatch(suppressWarnings(f()), error = \(e) e)
+                expect_s3_class(err, "pipeflow_step_error")
+                expect_equal(
+                    conditionMessage(err),
+                    "step 'model': key 'b': negative"
+                )
             }
         })
 
-        it("keeps the pipelines by default", {
-            expect_true(formals(as.function.pipeflow)$cache)
+        it("names the current failure, not failed keys of a former call", {
+            inner <- pip_new("former") |>
+                pip_add(
+                    "parts",
+                    \(x = list(a = 1)) {
+                        if (!is.list(x)) stop("not a list") else x
+                    },
+                    exec = "split"
+                ) |>
+                pip_add("fit", \(x = ~parts) {
+                    if (x < 0) stop("negative") else x
+                })
+            f <- as.function(inner, out = "fit", on_error = "continue")
+            msg <- \(expr) {
+                tryCatch(suppressWarnings(expr), error = conditionMessage)
+            }
+
+            expect_equal(
+                msg(f(x = list(a = 1, b = -1))),
+                "step 'fit': key 'b': negative"
+            )
+            expect_equal(msg(f(x = "oops")), "step 'parts': not a list")
         })
 
-        it("does not capture the environment of the caller", {
-            inner <- demo_inner(new.env())
-            plain <- as.function(inner)
-            f <- local({
-                big <- numeric(1e6)
-                as.function(inner)
-            })
+        it("names the failed key of the requested step, not of its input", {
+            inner <- pip_new("recover") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("parts", \(x = ~input) x, exec = "split") |>
+                pip_add("calc", \(p = ~parts) {
+                    if (p < 3) stop("calc failed") else p
+                }) |>
+                pip_add("report", \(r = ~ try(calc)) {
+                    key <- .pip_step_call()[["key"]]
+                    if (key == "a") "recovered" else r
+                })
+            f <- as.function(inner, out = "report", on_error = "continue")
 
-            diff <- length(serialize(f, NULL)) - length(serialize(plain, NULL))
+            err <- tryCatch(
+                suppressWarnings(f(x = list(a = 1, b = 2, c = 3))),
+                error = \(e) e
+            )
 
-            expect_lt(abs(diff), 1e4)
+            # 'report' recovered key 'a', but forwards the failure of 'b'
+            expect_match(
+                conditionMessage(err),
+                "step 'calc': key 'b': calc failed"
+            )
+            expect_identical(err[["parent"]][["key"]], "b")
+        })
+
+        it("does not return a kept output when an input fails later", {
+            inner <- pip_new("stale") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("bad", \(x = ~input, mode = "ok") {
+                    if (identical(mode, "boom")) {
+                        stop("boom")
+                    }
+                    x
+                }) |>
+                pip_add("use", \(b = ~bad) b * 2)
+            f <- as.function(
+                inner,
+                out = "use",
+                on_error = "continue"
+            )
+
+            expect_identical(f(x = 2), 4)
+            expect_error(
+                suppressWarnings(f(x = 2, mode = "boom")),
+                "step 'bad': boom"
+            )
+        })
+
+        it("reruns the ~try() step when the failed step succeeds again", {
+            state <- new.env()
+            state$fail <- TRUE
+            inner <- pip_new("recover") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("bad", \(x = ~input) {
+                    if (state$fail) {
+                        stop("boom")
+                    }
+                    x
+                }) |>
+                pip_add("report", \(b = ~ try(bad)) {
+                    if (inherits(b, "pipeflow_failure")) "no result" else b * 10
+                })
+            f <- as.function(
+                inner,
+                out = "report",
+                on_error = "continue"
+            )
+
+            expect_warning(out <- f(x = 3), "continued")
+            expect_identical(out, "no result")
+
+            state$fail <- FALSE
+            expect_identical(f(x = 3), 30)
+        })
+
+        it("returns the requested outputs beside an unrequested failure", {
+            for (cache in c(FALSE, TRUE)) {
+                f <- as.function(
+                    failing_inner(),
+                    out = c("report", "other"),
+                    cache = cache,
+                    on_error = "continue"
+                )
+
+                expect_warning(out <- f(x = "boom"), "continued")
+                expect_identical(
+                    out,
+                    list(report = "no result", other = "other output")
+                )
+            }
+        })
+
+        it("lets the outer run succeed when the inner pipeline recovers", {
+            fun <- as.function(
+                failing_inner(),
+                out = "report",
+                on_error = "continue"
+            )
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "parts",
+                    \(values = list(a = "fine", b = "boom")) values,
+                    exec = "split"
+                ) |>
+                pip_add("run", fun, params = list(x = ~parts))
+
+            # the outer run never sees an error, although `bad` failed for 'b'
+            suppressWarnings(pip_run(outer, lgr = NULL))
+
+            expect_identical(outer[["run", "state"]], "done")
+            expect_identical(
+                unlist(outer[["run", "out"]]),
+                c(a = "fine", b = "no result")
+            )
+        })
+
+        it("requests all steps with out = NULL", {
+            f <- as.function(failing_inner(), on_error = "continue")
+
+            expect_error(suppressWarnings(f(x = "boom")), "step 'bad': boom")
+            expect_named(
+                f(x = "fine"),
+                c("input", "bad", "report", "use", "other")
+            )
+        })
+
+        it("leaves it to the outer run what happens to the outer step", {
+            fun <- as.function(
+                failing_inner(),
+                out = "use",
+                on_error = "continue"
+            )
+            outer <- pip_new("outer") |>
+                pip_add("source", \(x = "boom") x) |>
+                pip_add("run", fun, params = list(x = ~source)) |>
+                pip_add("after", \(r = ~run) r) |>
+                pip_add("rescue", \(r = ~ try(run)) {
+                    if (inherits(r, "pipeflow_failure")) "rescued" else r
+                })
+
+            suppressWarnings(pip_run(outer, lgr = NULL, on_error = "continue"))
+
+            expect_identical(outer[["run", "state"]], "failed")
+            expect_match(
+                conditionMessage(outer[["run", "out"]]),
+                "step 'bad': boom"
+            )
+            expect_null(outer[["after", "out"]])
+            expect_identical(outer[["rescue", "out"]], "rescued")
+        })
+
+        it("retries only the failed step when the input comes again", {
+            state <- new.env()
+            state$up <- 0L
+            state$fail <- TRUE
+            inner <- pip_new("retry") |>
+                pip_add("input", \(x = NULL) x) |>
+                pip_add("up", \(x = ~input) {
+                    state$up <- state$up + 1L
+                    x + 1
+                }) |>
+                pip_add("down", \(u = ~up) {
+                    if (state$fail) {
+                        stop("boom")
+                    }
+                    u * 2
+                })
+            f <- as.function(
+                inner,
+                out = "down",
+                on_error = "continue"
+            )
+
+            expect_error(suppressWarnings(f(x = 1)), "step 'down': boom")
+            expect_identical(state$up, 1L)
+
+            state$fail <- FALSE
+            expect_identical(f(x = 1), 4)
+            expect_identical(state$up, 1L)
+            expect_length(.fun_pips(f), 1L)
         })
     })
 
+    describe("failures and messages", {
+        # The steps and partition keys named by a condition and its parents, from the
+        # outer to the inner level
+        error_path <- function(e) {
+            path <- character()
+            while (!is.null(e)) {
+                if (inherits(e, "pipeflow_step_error")) {
+                    path <- c(path, step = e[["step"]])
+                } else if (inherits(e, "pipeflow_key_error")) {
+                    path <- c(path, key = e[["key"]])
+                }
+                e <- e[["parent"]]
+            }
+            path
+        }
+
+        # An inner pipeline whose step `check` fails for x > 1
+        checked <- function() {
+            pip_new("checked") |>
+                pip_add("input", \(x = 1) x) |>
+                pip_add("check", \(x = ~input) {
+                    if (x > 1) stop("too big") else x
+                })
+        }
+
+        it("is a step error of the outer step that names the inner step", {
+            demo <- demo_nested()
+            bad <- data.frame(batch = "D", x = 1:3, y = NA_real_)
+            data <- rbind(demo_batches(), bad)
+            pip_set_params(demo$outer, list(data = data))
+
+            err <- expect_error(
+                pip_run(demo$outer, lgr = NULL),
+                class = "pipeflow_step_error"
+            )
+
+            expect_true(startsWith(
+                conditionMessage(err),
+                "step 'by_batch': key 'D': step 'fit': "
+            ))
+            expect_identical(
+                error_path(err),
+                c(step = "by_batch", key = "D", step = "fit")
+            )
+            expect_identical(demo$outer[["by_batch", "state"]], "failed")
+        })
+
+        it("names the inner step after an outer step that is not mapped", {
+            outer <- pip_new("outer") |>
+                pip_add(
+                    "run",
+                    as.function(checked(), out = "check"),
+                    params = list(x = 2)
+                )
+
+            err <- tryCatch(pip_run(outer, lgr = NULL), error = identity)
+
+            expect_equal(
+                conditionMessage(err),
+                "step 'run': step 'check': too big"
+            )
+            expect_identical(error_path(err), c(step = "run", step = "check"))
+            original <- err[["parent"]][["parent"]]
+            expect_s3_class(original, "simpleError")
+            expect_equal(conditionMessage(original), "too big")
+        })
+
+        it("names one step per level of nested pipeline functions", {
+            middle <- pip_new("middle") |>
+                pip_add("check_all", as.function(checked(), out = "check"))
+            f <- as.function(middle, out = "check_all")
+
+            err <- tryCatch(f(x = 2), error = identity)
+            expect_equal(
+                conditionMessage(err),
+                "step 'check_all': step 'check': too big"
+            )
+            expect_identical(
+                error_path(err),
+                c(step = "check_all", step = "check")
+            )
+
+            outer <- pip_new("outer") |> pip_add("run", f, params = list(x = 2))
+            err <- tryCatch(pip_run(outer, lgr = NULL), error = identity)
+            expect_equal(
+                conditionMessage(err),
+                "step 'run': step 'check_all': step 'check': too big"
+            )
+            expect_identical(
+                error_path(err),
+                c(step = "run", step = "check_all", step = "check")
+            )
+        })
+
+        it("keeps the inner step error in the failures of a continued run", {
+            f <- as.function(checked(), out = "check")
+            outer <- pip_new("outer") |>
+                pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
+                pip_add("mapped", f, params = list(x = ~parts)) |>
+                pip_add("single", f, params = list(x = 2)) |>
+                pip_add("after", \(x = ~ try(single)) x)
+
+            w <- expect_warning(
+                pip_run(outer, lgr = NULL, on_error = "continue"),
+                class = "pipeflow_run_failed"
+            )
+
+            # a failed key holds a failure, with the key error as its parent
+            failure <- outer[["mapped", "out"]][["b"]]
+            expect_identical(
+                error_path(failure[["parent"]]),
+                c(key = "b", step = "check")
+            )
+            # a failed step that is not mapped keeps the inner step error as its output,
+            # and passes it on in the failure of a ~try() input
+            expect_identical(
+                error_path(outer[["single", "out"]]),
+                c(step = "check")
+            )
+            expect_identical(
+                error_path(outer[["after", "out"]][["parent"]]),
+                c(step = "check")
+            )
+            expect_identical(
+                error_path(w[["failed"]][["mapped"]]),
+                c(key = "b", step = "check")
+            )
+            expect_identical(
+                error_path(w[["failed"]][["single"]]),
+                c(step = "check")
+            )
+        })
+
+        it("passes on warnings of inner steps to the outer run", {
+            inner <- pip_new("w") |>
+                pip_add("s", \(x = 1) {
+                    warning("inner warning")
+                    x
+                })
+            outer <- pip_new("o") |> pip_add("in", as.function(inner))
+            msgs <- character()
+            log <- \(level, msg) msgs <<- c(msgs, paste(level, msg))
+
+            expect_warning(pip_run(outer, lgr = log), "inner warning")
+            expect_true(any(grepl("inner warning", msgs)))
+        })
+
+        it("passes on messages of inner steps to the outer run", {
+            inner <- pip_new("m") |>
+                pip_add("s", \(x = 1) {
+                    message("inner message")
+                    x
+                })
+            outer <- pip_new("o") |> pip_add("in", as.function(inner))
+            msgs <- character()
+            log <- \(level, msg) msgs <<- c(msgs, paste(level, msg))
+
+            expect_message(pip_run(outer, lgr = log), "inner message")
+
+            expect_true(any(grepl("inner message", msgs)))
+        })
+    })
+
+    describe("logging of the inner run", {
+        collect_logs <- function(logs) {
+            function(level, msg) logs$msgs <- c(logs$msgs, msg)
+        }
+
+        it("runs the inner pipeline silently by default", {
+            f <- as.function(demo_inner(new.env()), out = "coefs")
+
+            expect_silent(f(data = demo_batches()[1:6, ]))
+        })
+
+        it("logs the steps of the inner run with lgr", {
+            logs <- new.env()
+            f <- as.function(
+                demo_inner(new.env()),
+                out = "coefs",
+                lgr = collect_logs(logs)
+            )
+
+            f(data = demo_batches()[1:6, ])
+
+            expect_match(logs$msgs[[1L]], "Starting run of pipeflow 'inner'")
+            expect_true(any(grepl("Step 3/3 coefs", logs$msgs, fixed = TRUE)))
+        })
+
+        it("logs the steps that are skipped on a later call", {
+            logs <- new.env()
+            d <- demo_batches()[1:6, ]
+            f <- as.function(
+                demo_inner(new.env()),
+                out = "coefs",
+                lgr = collect_logs(logs)
+            )
+
+            f(data = d)
+            logs$msgs <- character()
+            f(data = d)
+
+            skipped <- grepl("skipping done step", logs$msgs, fixed = TRUE)
+            expect_identical(sum(skipped), 3L)
+        })
+
+        it("logs one inner run per partition", {
+            logs <- new.env()
+            fun <- as.function(
+                demo_inner(new.env()),
+                out = "coefs",
+                lgr = collect_logs(logs)
+            )
+
+            pip_run(demo_outer(fun), lgr = NULL)
+
+            starts <- grepl("Starting run", logs$msgs, fixed = TRUE)
+            expect_identical(sum(starts), 3L)
+        })
+    })
+
+    # ==================================================================================
+    # Kept pipelines
+    # ==================================================================================
+
     describe("reuse of the inner pipelines", {
-        # Doubles each value of a split step with an inner pipeline per key.
-        # `calls$ran` collects the inputs of the inner runs; the inner step
-        # fails for the input `calls$fail`.
+        # Doubles each value of a split step with an inner pipeline per key. `calls$ran`
+        # collects the inputs of the inner runs; the inner step fails for the input
+        # `calls$fail`.
         keyed_outer <- function(values = list(A = 1, B = 2, C = 3)) {
             calls <- new.env(parent = emptyenv())
             calls$ran <- numeric()
@@ -1273,8 +2314,8 @@ describe("as.function.pipeflow", {
     })
 
     describe("calls made by the running inner pipeline", {
-        # The function calls itself with n - 1: the sum of 1, ..., n. The
-        # inner step `sum` fails for n = 0 as long as `state$fail` is set.
+        # The function calls itself with n - 1: the sum of 1, ..., n. The inner step
+        # `sum` fails for n = 0 as long as `state$fail` is set.
         recursive <- function(state = new.env(parent = emptyenv())) {
             state$fail <- FALSE
             f <- NULL
@@ -1296,8 +2337,8 @@ describe("as.function.pipeflow", {
             f <- recursive()$f
 
             expect_identical(f(n = 2), 3)
-            # the pipeline of the step still has n = 1, with the output of
-            # the call that ran in it: this call must get the right result
+            # the pipeline of the step still has n = 1, with the output of the call that
+            # ran in it: this call must get the right result
             expect_identical(f(n = 1), 1)
             expect_identical(f(n = 3), 6)
             expect_identical(f(n = 2), 3)
@@ -1330,796 +2371,6 @@ describe("as.function.pipeflow", {
             demo$state$fail <- FALSE
             expect_identical(demo$f(n = 2), 3)
             expect_length(.fun_cache(demo$f)$active, 0L)
-        })
-    })
-
-    describe("finding the kept pipelines", {
-        it("finds the cache of a function made by as.function()", {
-            f <- as.function(pip_new("p") |> pip_add("s", \(x = 1) x))
-
-            expect_s3_class(.fun_cache(f), "pipeflow_fun_cache")
-            expect_identical(.fun_pips(f), list())
-        })
-
-        it("finds nothing for other functions and objects", {
-            expect_null(.fun_cache(sum))
-            expect_null(.fun_cache(\(x) x))
-            braced <- function(x) {
-                x
-            }
-            expect_null(.fun_cache(braced))
-            expect_null(.fun_cache(NULL))
-            expect_null(.fun_cache("f"))
-            expect_silent(.fun_release(sum, "s"))
-            expect_silent(.fun_release(NULL, "s"))
-        })
-    })
-
-    describe("pip_inner", {
-        it("returns the pipelines by partition key", {
-            demo <- run_outer(demo_nested())
-
-            inner <- pip_inner(demo$outer, "by_batch")
-
-            expect_named(inner, c("A", "B", "C"))
-            expect_true(all(vapply(
-                inner,
-                \(p) inherits(p, "pipeflow"),
-                logical(1)
-            )))
-            expect_identical(
-                inner$B[["coefs", "out"]],
-                demo$outer[["by_batch", "out"]]$B
-            )
-        })
-
-        it("returns the pipeline of an unpartitioned step", {
-            f <- as.function(pip_new("p") |> pip_add("s", \(x = 1) x + 1))
-            outer <- pip_new("outer") |>
-                pip_add("step", f, params = list(x = 5))
-            pip_run(outer, lgr = NULL)
-
-            inner <- pip_inner(outer, "step")
-
-            expect_s3_class(inner, "pipeflow")
-            expect_identical(inner[["s", "out"]], 6)
-        })
-
-        it("returns an empty list before the first run", {
-            demo <- demo_nested()
-
-            expect_identical(pip_inner(demo$outer, "by_batch"), list())
-        })
-
-        it("returns an empty list with cache = FALSE", {
-            demo <- run_outer(demo_nested(cache = FALSE))
-
-            expect_identical(pip_inner(demo$outer, "by_batch"), list())
-        })
-
-        it("returns copies that are independent of the kept pipelines", {
-            demo <- run_outer(demo_nested())
-
-            inner <- pip_inner(demo$outer, "by_batch")
-            pip_set_params(inner$A, list(digits = 0))
-            pip_run(inner$A, lgr = NULL)
-            pip_remove(inner$B, "coefs")
-
-            kept <- .fun_pips(demo$fun)
-            expect_identical(kept$A[["coefs", "state"]], "done")
-            expect_true(.pip_step_exists(kept$B, "coefs"))
-            expect_false(
-                identical(
-                    pip_get_params(kept$A)$digits,
-                    pip_get_params(inner$A)$digits
-                )
-            )
-        })
-
-        it("keeps the pipelines of a renamed step", {
-            demo <- run_outer(demo_nested())
-
-            pip_rename(demo$outer, from = "by_batch", to = "fits")
-
-            expect_named(pip_inner(demo$outer, "fits"), c("A", "B", "C"))
-            pip_set_params(demo$outer, list(digits = 3))
-            pip_run(demo$outer, lgr = NULL)
-            expect_identical(c(demo$calls$fit, demo$calls$coefs), c(3L, 6L))
-            expect_length(.fun_pips(demo$fun), 3L)
-        })
-
-        it("returns a list for a partition named as the single key", {
-            f <- as.function(
-                pip_new("i") |> pip_add("s", \(x = NULL) x * 2),
-                out = "s"
-            )
-            parts <- stats::setNames(list(1), .fun_key_single)
-            outer <- pip_new("outer") |>
-                pip_add("parts", \(values = parts) values, exec = "split") |>
-                pip_add("run", f, params = list(x = ~parts))
-            pip_run(outer, lgr = NULL)
-
-            inner <- pip_inner(outer, "run")
-
-            expect_type(inner, "list")
-            expect_named(inner, .fun_key_single)
-            expect_identical(inner[[.fun_key_single]][["s", "out"]], 2)
-        })
-
-        it("rejects steps whose function is not a pipeline function", {
-            outer <- pip_new("outer") |> pip_add("s", \(x = 1) x)
-
-            expect_error(
-                pip_inner(outer, "s"),
-                "step 's' was not made by as.function()",
-                fixed = TRUE
-            )
-            expect_error(
-                pip_inner(outer, "nope"),
-                "step 'nope' does not exist",
-                fixed = TRUE
-            )
-            expect_error(pip_inner("outer", "s"))
-        })
-    })
-
-    describe("binding", {
-        it("takes relative references", {
-            inner <- pip_new("rel") |> pip_add("s", \(x = 1) x * 2)
-            outer <- pip_new("outer") |>
-                pip_add("a", \(v = 5) v) |>
-                pip_add(
-                    "run",
-                    as.function(inner, out = "s"),
-                    params = list(x = ~ -1)
-                )
-
-            pip_run(outer, lgr = NULL)
-
-            expect_identical(outer[["run", "depends"]][["x"]], "a")
-            expect_identical(outer[["run", "out"]], 10)
-        })
-
-        it("hands the failure of ~try(step) to the inner pipeline", {
-            inner <- pip_new("try") |>
-                pip_add("s", \(x = 1) {
-                    failed <- inherits(x, "pipeflow_failure")
-                    if (failed) "failed upstream" else x
-                })
-            outer <- pip_new("outer") |>
-                pip_add("bad", \() stop("nope")) |>
-                pip_add(
-                    "run",
-                    as.function(inner, out = "s"),
-                    params = list(x = ~ try(bad))
-                )
-
-            suppressWarnings(
-                pip_run(outer, lgr = NULL, on_error = "continue")
-            )
-
-            expect_identical(outer[["bad", "state"]], "failed")
-            expect_identical(outer[["run", "out"]], "failed upstream")
-        })
-
-        it("reruns a partition if any of its bound inputs changed", {
-            calls <- new.env()
-            calls$n <- 0L
-            inner <- pip_new("two") |>
-                pip_add("in_a", \(a = NULL) a) |>
-                pip_add("in_b", \(b = NULL) b) |>
-                pip_add("total", \(a = ~in_a, b = ~in_b) {
-                    calls$n <- calls$n + 1L
-                    a + b
-                })
-            fun <- as.function(inner, out = "total")
-            outer <- pip_new("outer") |>
-                pip_add(
-                    "parts",
-                    \(values = list(p = 1, q = 2)) values,
-                    exec = "split"
-                ) |>
-                pip_add("offset", \(offset = 10) offset) |>
-                pip_add("run", fun, params = list(a = ~parts, b = ~offset))
-
-            run_outer(list(outer = outer))
-            expect_identical(calls$n, 2L)
-            expect_equal(unlist(outer[["run", "out"]]), c(p = 11, q = 12))
-
-            # a changed bound input is a new input: all partitions run
-            pip_set_params(outer, list(offset = 20))
-            run_outer(list(outer = outer))
-            expect_identical(calls$n, 4L)
-            expect_equal(unlist(outer[["run", "out"]]), c(p = 21, q = 22))
-
-            # back to the old input: the pipeline of a partition only has
-            # the last one, so all partitions run again
-            pip_set_params(outer, list(offset = 10))
-            run_outer(list(outer = outer))
-            expect_identical(calls$n, 6L)
-            expect_named(.fun_pips(fun), c("p", "q"))
-
-            # only the partition with the changed input runs
-            pip_set_params(outer, list(values = list(p = 5, q = 2)))
-            run_outer(list(outer = outer))
-            expect_identical(calls$n, 7L)
-            expect_equal(unlist(outer[["run", "out"]]), c(p = 15, q = 12))
-        })
-    })
-
-    describe("continuing after errors of inner steps", {
-        # `bad` fails for the input "boom". `report` takes its output via
-        # `~try()`, `use` plainly, and `other` does not depend on it.
-        failing_inner <- function(calls = new.env()) {
-            calls$other <- 0L
-            pip_new("failing") |>
-                pip_add("input", \(x = NULL) x) |>
-                pip_add("bad", \(x = ~input) {
-                    if (identical(x, "boom")) {
-                        stop("boom")
-                    }
-                    x
-                }) |>
-                pip_add("report", \(b = ~ try(bad)) {
-                    if (inherits(b, "pipeflow_failure")) "no result" else b
-                }) |>
-                pip_add("use", \(b = ~bad) b) |>
-                pip_add("other", \(x = ~input) {
-                    calls$other <- calls$other + 1L
-                    "other output"
-                })
-        }
-
-        it("stops at the first failed inner step by default", {
-            f <- as.function(failing_inner(), out = "report")
-
-            # `~try(bad)` has no effect, since the run does not continue
-            expect_error(f(x = "boom"), "step 'bad': boom")
-            expect_identical(f(x = "fine"), "fine")
-        })
-
-        it("hands the failure to a ~try() step with on_error = continue", {
-            f <- as.function(
-                failing_inner(),
-                out = "report",
-                on_error = "continue"
-            )
-
-            expect_warning(
-                out <- f(x = "boom"),
-                "continued after 1 failed step"
-            )
-            expect_identical(out, "no result")
-        })
-
-        it("runs and keeps the steps that do not depend on the failure", {
-            calls <- new.env()
-            f <- as.function(
-                failing_inner(calls),
-                out = "other",
-                on_error = "continue"
-            )
-
-            expect_warning(out <- f(x = "boom"), "continued")
-            expect_identical(out, "other output")
-            expect_identical(calls$other, 1L)
-
-            pip <- .fun_pips(f)[[1L]]
-            expect_identical(pip[["other", "state"]], "done")
-            expect_identical(pip[["bad", "state"]], "failed")
-
-            # the kept pipeline only retries the failed step
-            expect_warning(f(x = "boom"), "continued")
-            expect_identical(calls$other, 1L)
-        })
-
-        it("fails if a requested step failed or was not run", {
-            failed <- as.function(
-                failing_inner(),
-                out = c("other", "bad"),
-                on_error = "continue"
-            )
-            skipped <- as.function(
-                failing_inner(),
-                out = "use",
-                on_error = "continue"
-            )
-
-            expect_error(
-                suppressWarnings(failed(x = "boom")),
-                "step 'bad': boom"
-            )
-            expect_error(
-                suppressWarnings(skipped(x = "boom")),
-                "step 'bad': boom"
-            )
-        })
-
-        it("names the step that kept a requested step from running", {
-            inner <- pip_new("two_failures") |>
-                pip_add("input", \(x = NULL) x) |>
-                pip_add("bad_a", \(x = ~input) stop("A failed")) |>
-                pip_add("rescue", \(a = ~ try(bad_a)) "recovered") |>
-                pip_add("bad_b", \(x = ~input) stop("B failed")) |>
-                pip_add("result", \(r = ~rescue, b = ~bad_b) list(r, b))
-            f <- as.function(inner, out = "result", on_error = "continue")
-
-            err <- tryCatch(suppressWarnings(f(x = 1)), error = \(e) e)
-
-            # `rescue` handled the failure of `bad_a`, so only `bad_b` kept
-            # `result` from running
-            expect_identical(err[["step"]], "bad_b")
-            expect_match(conditionMessage(err), "step 'bad_b': B failed")
-        })
-
-        it("does not follow a failure past a locked step", {
-            state <- new.env()
-            state$fail <- FALSE
-            inner <- pip_new("locked") |>
-                pip_add("input", \(x = NULL) x) |>
-                pip_add("bad_a", \(x = ~input) {
-                    if (state$fail) {
-                        stop("A failed")
-                    }
-                    x
-                }) |>
-                pip_add("kept", \(a = ~bad_a) "kept output") |>
-                pip_add("bad_b", \(x = ~input) {
-                    if (state$fail) {
-                        stop("B failed")
-                    }
-                    x
-                }) |>
-                pip_add("result", \(k = ~kept, b = ~bad_b) list(k, b))
-            pip_run(inner, lgr = NULL)
-            pip_lock(pip_view(inner, step = "kept"))
-            state$fail <- TRUE
-            f <- as.function(inner, out = "result", on_error = "continue")
-
-            err <- tryCatch(suppressWarnings(f(x = 1)), error = \(e) e)
-
-            # `kept` is not run, so the failure of `bad_a` stops there
-            expect_identical(err[["step"]], "bad_b")
-        })
-
-        it("keeps the key of a failed mapped inner step in the error", {
-            inner <- pip_new("mapped") |>
-                pip_add("input", \(x = NULL) x) |>
-                pip_add("parts", \(x = ~input) x, exec = "split") |>
-                pip_add("double", \(p = ~parts) {
-                    if (is.character(p)) {
-                        stop("not a number")
-                    }
-                    p * 2
-                })
-            f <- as.function(inner, out = "double", on_error = "continue")
-
-            err <- tryCatch(
-                suppressWarnings(f(x = list(a = 1, b = "x"))),
-                error = \(e) e
-            )
-
-            expect_match(
-                conditionMessage(err),
-                "step 'double': key 'b': not a number"
-            )
-            expect_s3_class(err[["parent"]], "pipeflow_key_error")
-            expect_identical(err[["parent"]][["key"]], "b")
-        })
-
-        it("names the failed inner step for a mapped step after it", {
-            inner <- pip_new("mapped") |>
-                pip_add("input", \(x = NULL) x) |>
-                pip_add("parts", \(x = ~input) x, exec = "split") |>
-                pip_add("double", \(p = ~parts) {
-                    if (is.character(p)) {
-                        stop("not a number")
-                    }
-                    p * 2
-                }) |>
-                pip_add("plus", \(d = ~double) d + 1)
-            f <- as.function(inner, out = "plus", on_error = "continue")
-
-            err <- tryCatch(
-                suppressWarnings(f(x = list(a = 1, b = "x"))),
-                error = \(e) e
-            )
-
-            expect_match(
-                conditionMessage(err),
-                "step 'double': key 'b': not a number"
-            )
-            expect_s3_class(err[["parent"]], "pipeflow_key_error")
-        })
-
-        it("returns the failed keys of a mapped inner step via ~try()", {
-            inner <- pip_new("mapped") |>
-                pip_add("input", \(x = NULL) x) |>
-                pip_add("parts", \(x = ~input) x, exec = "split") |>
-                pip_add("double", \(p = ~parts) {
-                    if (is.character(p)) {
-                        stop("not a number")
-                    }
-                    p * 2
-                }) |>
-                pip_add("report", \(d = ~ try(double)) {
-                    if (inherits(d, "pipeflow_failure")) "no result" else d
-                })
-            f <- as.function(inner, out = "report", on_error = "continue")
-
-            expect_warning(
-                out <- f(x = list(a = 1, b = "x")),
-                class = "pipeflow_run_failed"
-            )
-            expect_equal(unclass(out), list(a = 2, b = "no result"))
-        })
-
-        it("fails a mapped pipeline step only for the failing key", {
-            inner <- pip_new("inner") |>
-                pip_add("input", \(x = NULL) x) |>
-                pip_add("double", \(p = ~input) {
-                    if (is.character(p)) {
-                        stop("not a number")
-                    }
-                    p * 2
-                })
-            outer <- pip_new("outer") |>
-                pip_add(
-                    "parts",
-                    \(x = list(a = 1, b = "x", c = 3)) x,
-                    exec = "split"
-                ) |>
-                pip_add(
-                    "nested",
-                    as.function(inner, out = "double"),
-                    params = list(x = ~parts)
-                )
-
-            expect_warning(
-                pip_run(outer, lgr = NULL, on_error = "continue"),
-                class = "pipeflow_run_failed"
-            )
-
-            out <- outer[["nested", "out"]]
-            expect_equal(out[c("a", "c")], list(a = 2, c = 6))
-            f <- out[["b"]]
-            expect_s3_class(f, "pipeflow_failure")
-            expect_equal(f[["key"]], "b")
-            expect_equal(
-                conditionMessage(f),
-                "step 'nested' failed: key 'b': step 'double': not a number"
-            )
-            expect_identical(outer[["nested", "state"]], "failed")
-        })
-
-        it("keeps the inner pipelines of all keys on a retry", {
-            env <- new.env()
-            env$flaky <- TRUE
-            inner <- pip_new("inner") |>
-                pip_add("input", \(x = NULL) x) |>
-                pip_add("double", \(p = ~input) {
-                    if (env$flaky && p < 0) {
-                        stop("negative")
-                    }
-                    p * 2
-                })
-            outer <- pip_new("outer") |>
-                pip_add(
-                    "parts",
-                    \(x = list(a = 1, b = -1, c = 3)) x,
-                    exec = "split"
-                ) |>
-                pip_add(
-                    "nested",
-                    as.function(inner, out = "double"),
-                    params = list(x = ~parts)
-                )
-            suppressWarnings(
-                pip_run(outer, lgr = NULL, on_error = "continue"),
-                classes = "pipeflow_run_failed"
-            )
-
-            env$flaky <- FALSE
-            pip_run(outer, lgr = NULL)
-
-            expect_equal(
-                unclass(outer[["nested", "out"]]),
-                list(a = 2, b = -2, c = 6)
-            )
-            expect_named(pip_inner(outer, "nested"), c("a", "b", "c"))
-        })
-
-        it("names a failed inner step that was renamed in the run", {
-            inner <- pip_new("rename") |>
-                pip_add("parts", \(x = list(a = 1, b = -1)) x, exec = "split")
-            pip_run(inner, lgr = NULL)
-            pip_lock(inner["parts"])
-            inner |>
-                pip_add("fit", \(x = ~parts) {
-                    if (x < 0) stop("negative") else x
-                }) |>
-                pip_add("show", \(x = ~fit) x) |>
-                pip_add("all", \(x = ~fit) unlist(x), exec = "reduce") |>
-                pip_add("rename", \(x = 1) {
-                    if ("fit" %in% .self[["step"]]) {
-                        .self$rename("fit", "model")
-                    }
-                    x
-                })
-
-            for (out in c("show", "all")) {
-                f <- as.function(inner, out = out, on_error = "continue")
-                err <- tryCatch(suppressWarnings(f()), error = \(e) e)
-                expect_s3_class(err, "pipeflow_step_error")
-                expect_equal(
-                    conditionMessage(err),
-                    "step 'model': key 'b': negative"
-                )
-            }
-        })
-
-        it("names the current failure, not failed keys of a former call", {
-            inner <- pip_new("former") |>
-                pip_add(
-                    "parts",
-                    \(x = list(a = 1)) {
-                        if (!is.list(x)) stop("not a list") else x
-                    },
-                    exec = "split"
-                ) |>
-                pip_add("fit", \(x = ~parts) {
-                    if (x < 0) stop("negative") else x
-                })
-            f <- as.function(inner, out = "fit", on_error = "continue")
-            msg <- \(expr) {
-                tryCatch(suppressWarnings(expr), error = conditionMessage)
-            }
-
-            expect_equal(
-                msg(f(x = list(a = 1, b = -1))),
-                "step 'fit': key 'b': negative"
-            )
-            expect_equal(msg(f(x = "oops")), "step 'parts': not a list")
-        })
-
-        it("names the failed key of the requested step, not of its input", {
-            inner <- pip_new("recover") |>
-                pip_add("input", \(x = NULL) x) |>
-                pip_add("parts", \(x = ~input) x, exec = "split") |>
-                pip_add("calc", \(p = ~parts) {
-                    if (p < 3) stop("calc failed") else p
-                }) |>
-                pip_add("report", \(r = ~ try(calc)) {
-                    key <- .pip_step_call()[["key"]]
-                    if (key == "a") "recovered" else r
-                })
-            f <- as.function(inner, out = "report", on_error = "continue")
-
-            err <- tryCatch(
-                suppressWarnings(f(x = list(a = 1, b = 2, c = 3))),
-                error = \(e) e
-            )
-
-            # 'report' recovered key 'a', but forwards the failure of 'b'
-            expect_match(
-                conditionMessage(err),
-                "step 'calc': key 'b': calc failed"
-            )
-            expect_identical(err[["parent"]][["key"]], "b")
-        })
-
-        it("does not return a kept output when an input fails later", {
-            inner <- pip_new("stale") |>
-                pip_add("input", \(x = NULL) x) |>
-                pip_add("bad", \(x = ~input, mode = "ok") {
-                    if (identical(mode, "boom")) {
-                        stop("boom")
-                    }
-                    x
-                }) |>
-                pip_add("use", \(b = ~bad) b * 2)
-            f <- as.function(
-                inner,
-                out = "use",
-                on_error = "continue"
-            )
-
-            expect_identical(f(x = 2), 4)
-            expect_error(
-                suppressWarnings(f(x = 2, mode = "boom")),
-                "step 'bad': boom"
-            )
-        })
-
-        it("reruns the ~try() step when the failed step succeeds again", {
-            state <- new.env()
-            state$fail <- TRUE
-            inner <- pip_new("recover") |>
-                pip_add("input", \(x = NULL) x) |>
-                pip_add("bad", \(x = ~input) {
-                    if (state$fail) {
-                        stop("boom")
-                    }
-                    x
-                }) |>
-                pip_add("report", \(b = ~ try(bad)) {
-                    if (inherits(b, "pipeflow_failure")) "no result" else b * 10
-                })
-            f <- as.function(
-                inner,
-                out = "report",
-                on_error = "continue"
-            )
-
-            expect_warning(out <- f(x = 3), "continued")
-            expect_identical(out, "no result")
-
-            state$fail <- FALSE
-            expect_identical(f(x = 3), 30)
-        })
-
-        it("returns the requested outputs beside an unrequested failure", {
-            for (cache in c(FALSE, TRUE)) {
-                f <- as.function(
-                    failing_inner(),
-                    out = c("report", "other"),
-                    cache = cache,
-                    on_error = "continue"
-                )
-
-                expect_warning(out <- f(x = "boom"), "continued")
-                expect_identical(
-                    out,
-                    list(report = "no result", other = "other output")
-                )
-            }
-        })
-
-        it("lets the outer run succeed when the inner pipeline recovers", {
-            fun <- as.function(
-                failing_inner(),
-                out = "report",
-                on_error = "continue"
-            )
-            outer <- pip_new("outer") |>
-                pip_add(
-                    "parts",
-                    \(values = list(a = "fine", b = "boom")) values,
-                    exec = "split"
-                ) |>
-                pip_add("run", fun, params = list(x = ~parts))
-
-            # the outer run never sees an error, although `bad` failed for 'b'
-            suppressWarnings(pip_run(outer, lgr = NULL))
-
-            expect_identical(outer[["run", "state"]], "done")
-            expect_identical(
-                unlist(outer[["run", "out"]]),
-                c(a = "fine", b = "no result")
-            )
-        })
-
-        it("requests all steps with out = NULL", {
-            f <- as.function(failing_inner(), on_error = "continue")
-
-            expect_error(suppressWarnings(f(x = "boom")), "step 'bad': boom")
-            expect_named(
-                f(x = "fine"),
-                c("input", "bad", "report", "use", "other")
-            )
-        })
-
-        it("leaves it to the outer run what happens to the outer step", {
-            fun <- as.function(
-                failing_inner(),
-                out = "use",
-                on_error = "continue"
-            )
-            outer <- pip_new("outer") |>
-                pip_add("source", \(x = "boom") x) |>
-                pip_add("run", fun, params = list(x = ~source)) |>
-                pip_add("after", \(r = ~run) r) |>
-                pip_add("rescue", \(r = ~ try(run)) {
-                    if (inherits(r, "pipeflow_failure")) "rescued" else r
-                })
-
-            suppressWarnings(pip_run(outer, lgr = NULL, on_error = "continue"))
-
-            expect_identical(outer[["run", "state"]], "failed")
-            expect_match(
-                conditionMessage(outer[["run", "out"]]),
-                "step 'bad': boom"
-            )
-            expect_null(outer[["after", "out"]])
-            expect_identical(outer[["rescue", "out"]], "rescued")
-        })
-
-        it("retries only the failed step when the input comes again", {
-            state <- new.env()
-            state$up <- 0L
-            state$fail <- TRUE
-            inner <- pip_new("retry") |>
-                pip_add("input", \(x = NULL) x) |>
-                pip_add("up", \(x = ~input) {
-                    state$up <- state$up + 1L
-                    x + 1
-                }) |>
-                pip_add("down", \(u = ~up) {
-                    if (state$fail) {
-                        stop("boom")
-                    }
-                    u * 2
-                })
-            f <- as.function(
-                inner,
-                out = "down",
-                on_error = "continue"
-            )
-
-            expect_error(suppressWarnings(f(x = 1)), "step 'down': boom")
-            expect_identical(state$up, 1L)
-
-            state$fail <- FALSE
-            expect_identical(f(x = 1), 4)
-            expect_identical(state$up, 1L)
-            expect_length(.fun_pips(f), 1L)
-        })
-    })
-
-    describe("logging of the inner run", {
-        collect_logs <- function(logs) {
-            function(level, msg) logs$msgs <- c(logs$msgs, msg)
-        }
-
-        it("runs the inner pipeline silently by default", {
-            f <- as.function(demo_inner(new.env()), out = "coefs")
-
-            expect_silent(f(data = demo_batches()[1:6, ]))
-        })
-
-        it("logs the steps of the inner run with lgr", {
-            logs <- new.env()
-            f <- as.function(
-                demo_inner(new.env()),
-                out = "coefs",
-                lgr = collect_logs(logs)
-            )
-
-            f(data = demo_batches()[1:6, ])
-
-            expect_match(logs$msgs[[1L]], "Starting run of pipeflow 'inner'")
-            expect_true(any(grepl("Step 3/3 coefs", logs$msgs, fixed = TRUE)))
-        })
-
-        it("logs the steps that are skipped on a later call", {
-            logs <- new.env()
-            d <- demo_batches()[1:6, ]
-            f <- as.function(
-                demo_inner(new.env()),
-                out = "coefs",
-                lgr = collect_logs(logs)
-            )
-
-            f(data = d)
-            logs$msgs <- character()
-            f(data = d)
-
-            skipped <- grepl("skipping done step", logs$msgs, fixed = TRUE)
-            expect_identical(sum(skipped), 3L)
-        })
-
-        it("logs one inner run per partition", {
-            logs <- new.env()
-            fun <- as.function(
-                demo_inner(new.env()),
-                out = "coefs",
-                lgr = collect_logs(logs)
-            )
-
-            pip_run(demo_outer(fun), lgr = NULL)
-
-            starts <- grepl("Starting run", logs$msgs, fixed = TRUE)
-            expect_identical(sum(starts), 3L)
         })
     })
 
@@ -2162,6 +2413,72 @@ describe("as.function.pipeflow", {
 
             expect_identical(demo$calls$fit, 3L)
             expect_identical(demo$outer[["by_batch", "state"]], "done")
+        })
+    })
+
+    describe("finding the kept pipelines", {
+        it("finds the cache of a function made by as.function()", {
+            f <- as.function(pip_new("p") |> pip_add("s", \(x = 1) x))
+
+            expect_s3_class(.fun_cache(f), "pipeflow_fun_cache")
+            expect_identical(.fun_pips(f), list())
+        })
+
+        it("finds nothing for other functions and objects", {
+            expect_null(.fun_cache(sum))
+            expect_null(.fun_cache(\(x) x))
+            braced <- function(x) {
+                x
+            }
+            expect_null(.fun_cache(braced))
+            expect_null(.fun_cache(NULL))
+            expect_null(.fun_cache("f"))
+            expect_silent(.fun_release(sum, "s"))
+            expect_silent(.fun_release(NULL, "s"))
+        })
+    })
+
+    describe("lifetime", {
+        # The finalizer only knows the flag, not the function.
+        set_flag <- function(flag) {
+            force(flag)
+            function(e) flag$collected <- TRUE
+        }
+        track_collection <- function(fun, flag) {
+            runnerEnv <- environment(body(fun)[[1L]])
+            reg.finalizer(runnerEnv, set_flag(flag))
+        }
+
+        it("is collected with its kept pipelines", {
+            flag <- new.env()
+            flag$collected <- FALSE
+            f <- as.function(demo_inner(new.env()), out = "coefs")
+            f(data = demo_batches()[1:6, ])
+            expect_length(.fun_pips(f), 1L)
+            track_collection(f, flag)
+
+            rm(f)
+            gc()
+
+            expect_true(flag$collected)
+        })
+
+        it("is collected if a step of the pipeline refers to it", {
+            flag <- new.env()
+            flag$collected <- FALSE
+            # the step closure refers to the frame that holds `f`
+            make <- function() {
+                p <- pip_new("local") |> pip_add("s", \(x = 1) x)
+                f <- as.function(p, out = "s")
+                f()
+                track_collection(f, flag)
+                invisible(NULL)
+            }
+
+            make()
+            gc()
+
+            expect_true(flag$collected)
         })
     })
 
@@ -2287,210 +2604,115 @@ describe("as.function.pipeflow", {
         })
     })
 
-    describe("lifetime", {
-        # The finalizer only knows the flag, not the function.
-        set_flag <- function(flag) {
-            force(flag)
-            function(e) flag$collected <- TRUE
-        }
-        track_collection <- function(fun, flag) {
-            runnerEnv <- environment(body(fun)[[1L]])
-            reg.finalizer(runnerEnv, set_flag(flag))
-        }
+    # ==================================================================================
+    # Exported API
+    # ==================================================================================
 
-        it("is collected with its kept pipelines", {
-            flag <- new.env()
-            flag$collected <- FALSE
-            f <- as.function(demo_inner(new.env()), out = "coefs")
-            f(data = demo_batches()[1:6, ])
-            expect_length(.fun_pips(f), 1L)
-            track_collection(f, flag)
+    describe("pip_inner", {
+        it("returns the pipelines by partition key", {
+            demo <- run_outer(demo_nested())
 
-            rm(f)
-            gc()
+            inner <- pip_inner(demo$outer, "by_batch")
 
-            expect_true(flag$collected)
+            expect_named(inner, c("A", "B", "C"))
+            expect_true(all(vapply(
+                inner,
+                \(p) inherits(p, "pipeflow"),
+                logical(1)
+            )))
+            expect_identical(
+                inner$B[["coefs", "out"]],
+                demo$outer[["by_batch", "out"]]$B
+            )
         })
 
-        it("is collected if a step of the pipeline refers to it", {
-            flag <- new.env()
-            flag$collected <- FALSE
-            # the step closure refers to the frame that holds `f`
-            make <- function() {
-                p <- pip_new("local") |> pip_add("s", \(x = 1) x)
-                f <- as.function(p, out = "s")
-                f()
-                track_collection(f, flag)
-                invisible(NULL)
-            }
+        it("returns the pipeline of an unpartitioned step", {
+            f <- as.function(pip_new("p") |> pip_add("s", \(x = 1) x + 1))
+            outer <- pip_new("outer") |>
+                pip_add("step", f, params = list(x = 5))
+            pip_run(outer, lgr = NULL)
 
-            make()
-            gc()
+            inner <- pip_inner(outer, "step")
 
-            expect_true(flag$collected)
+            expect_s3_class(inner, "pipeflow")
+            expect_identical(inner[["s", "out"]], 6)
         })
-    })
 
-    describe("failures and messages", {
-        # The steps and partition keys named by a condition and its parents,
-        # from the outer to the inner level
-        error_path <- function(e) {
-            path <- character()
-            while (!is.null(e)) {
-                if (inherits(e, "pipeflow_step_error")) {
-                    path <- c(path, step = e[["step"]])
-                } else if (inherits(e, "pipeflow_key_error")) {
-                    path <- c(path, key = e[["key"]])
-                }
-                e <- e[["parent"]]
-            }
-            path
-        }
-
-        # An inner pipeline whose step `check` fails for x > 1
-        checked <- function() {
-            pip_new("checked") |>
-                pip_add("input", \(x = 1) x) |>
-                pip_add("check", \(x = ~input) {
-                    if (x > 1) stop("too big") else x
-                })
-        }
-
-        it("is a step error of the outer step that names the inner step", {
+        it("returns an empty list before the first run", {
             demo <- demo_nested()
-            bad <- data.frame(batch = "D", x = 1:3, y = NA_real_)
-            data <- rbind(demo_batches(), bad)
-            pip_set_params(demo$outer, list(data = data))
 
-            err <- expect_error(
-                pip_run(demo$outer, lgr = NULL),
-                class = "pipeflow_step_error"
-            )
-
-            expect_true(startsWith(
-                conditionMessage(err),
-                "step 'by_batch': key 'D': step 'fit': "
-            ))
-            expect_identical(
-                error_path(err),
-                c(step = "by_batch", key = "D", step = "fit")
-            )
-            expect_identical(demo$outer[["by_batch", "state"]], "failed")
+            expect_identical(pip_inner(demo$outer, "by_batch"), list())
         })
 
-        it("names the inner step after an outer step that is not mapped", {
-            outer <- pip_new("outer") |>
-                pip_add(
-                    "run",
-                    as.function(checked(), out = "check"),
-                    params = list(x = 2)
+        it("returns an empty list with cache = FALSE", {
+            demo <- run_outer(demo_nested(cache = FALSE))
+
+            expect_identical(pip_inner(demo$outer, "by_batch"), list())
+        })
+
+        it("returns copies that are independent of the kept pipelines", {
+            demo <- run_outer(demo_nested())
+
+            inner <- pip_inner(demo$outer, "by_batch")
+            pip_set_params(inner$A, list(digits = 0))
+            pip_run(inner$A, lgr = NULL)
+            pip_remove(inner$B, "coefs")
+
+            kept <- .fun_pips(demo$fun)
+            expect_identical(kept$A[["coefs", "state"]], "done")
+            expect_true(.pip_step_exists(kept$B, "coefs"))
+            expect_false(
+                identical(
+                    pip_get_params(kept$A)$digits,
+                    pip_get_params(inner$A)$digits
                 )
-
-            err <- tryCatch(pip_run(outer, lgr = NULL), error = identity)
-
-            expect_equal(
-                conditionMessage(err),
-                "step 'run': step 'check': too big"
-            )
-            expect_identical(error_path(err), c(step = "run", step = "check"))
-            original <- err[["parent"]][["parent"]]
-            expect_s3_class(original, "simpleError")
-            expect_equal(conditionMessage(original), "too big")
-        })
-
-        it("names one step per level of nested pipeline functions", {
-            middle <- pip_new("middle") |>
-                pip_add("check_all", as.function(checked(), out = "check"))
-            f <- as.function(middle, out = "check_all")
-
-            err <- tryCatch(f(x = 2), error = identity)
-            expect_equal(
-                conditionMessage(err),
-                "step 'check_all': step 'check': too big"
-            )
-            expect_identical(
-                error_path(err),
-                c(step = "check_all", step = "check")
-            )
-
-            outer <- pip_new("outer") |> pip_add("run", f, params = list(x = 2))
-            err <- tryCatch(pip_run(outer, lgr = NULL), error = identity)
-            expect_equal(
-                conditionMessage(err),
-                "step 'run': step 'check_all': step 'check': too big"
-            )
-            expect_identical(
-                error_path(err),
-                c(step = "run", step = "check_all", step = "check")
             )
         })
 
-        it("keeps the inner step error in the failures of a continued run", {
-            f <- as.function(checked(), out = "check")
+        it("keeps the pipelines of a renamed step", {
+            demo <- run_outer(demo_nested())
+
+            pip_rename(demo$outer, from = "by_batch", to = "fits")
+
+            expect_named(pip_inner(demo$outer, "fits"), c("A", "B", "C"))
+            pip_set_params(demo$outer, list(digits = 3))
+            pip_run(demo$outer, lgr = NULL)
+            expect_identical(c(demo$calls$fit, demo$calls$coefs), c(3L, 6L))
+            expect_length(.fun_pips(demo$fun), 3L)
+        })
+
+        it("returns a list for a partition named as the single key", {
+            f <- as.function(
+                pip_new("i") |> pip_add("s", \(x = NULL) x * 2),
+                out = "s"
+            )
+            parts <- stats::setNames(list(1), .fun_key_single)
             outer <- pip_new("outer") |>
-                pip_add("parts", \(x = list(a = 1, b = 2)) x, exec = "split") |>
-                pip_add("mapped", f, params = list(x = ~parts)) |>
-                pip_add("single", f, params = list(x = 2)) |>
-                pip_add("after", \(x = ~ try(single)) x)
+                pip_add("parts", \(values = parts) values, exec = "split") |>
+                pip_add("run", f, params = list(x = ~parts))
+            pip_run(outer, lgr = NULL)
 
-            w <- expect_warning(
-                pip_run(outer, lgr = NULL, on_error = "continue"),
-                class = "pipeflow_run_failed"
-            )
+            inner <- pip_inner(outer, "run")
 
-            # a failed key holds a failure, with the key error as its parent
-            failure <- outer[["mapped", "out"]][["b"]]
-            expect_identical(
-                error_path(failure[["parent"]]),
-                c(key = "b", step = "check")
-            )
-            # a failed step that is not mapped keeps the inner step error as
-            # its output, and passes it on in the failure of a ~try() input
-            expect_identical(
-                error_path(outer[["single", "out"]]),
-                c(step = "check")
-            )
-            expect_identical(
-                error_path(outer[["after", "out"]][["parent"]]),
-                c(step = "check")
-            )
-            expect_identical(
-                error_path(w[["failed"]][["mapped"]]),
-                c(key = "b", step = "check")
-            )
-            expect_identical(
-                error_path(w[["failed"]][["single"]]),
-                c(step = "check")
-            )
+            expect_type(inner, "list")
+            expect_named(inner, .fun_key_single)
+            expect_identical(inner[[.fun_key_single]][["s", "out"]], 2)
         })
 
-        it("passes on warnings of inner steps to the outer run", {
-            inner <- pip_new("w") |>
-                pip_add("s", \(x = 1) {
-                    warning("inner warning")
-                    x
-                })
-            outer <- pip_new("o") |> pip_add("in", as.function(inner))
-            msgs <- character()
-            log <- \(level, msg) msgs <<- c(msgs, paste(level, msg))
+        it("rejects steps whose function is not a pipeline function", {
+            outer <- pip_new("outer") |> pip_add("s", \(x = 1) x)
 
-            expect_warning(pip_run(outer, lgr = log), "inner warning")
-            expect_true(any(grepl("inner warning", msgs)))
-        })
-
-        it("passes on messages of inner steps to the outer run", {
-            inner <- pip_new("m") |>
-                pip_add("s", \(x = 1) {
-                    message("inner message")
-                    x
-                })
-            outer <- pip_new("o") |> pip_add("in", as.function(inner))
-            msgs <- character()
-            log <- \(level, msg) msgs <<- c(msgs, paste(level, msg))
-
-            expect_message(pip_run(outer, lgr = log), "inner message")
-
-            expect_true(any(grepl("inner message", msgs)))
+            expect_error(
+                pip_inner(outer, "s"),
+                "step 's' was not made by as.function()",
+                fixed = TRUE
+            )
+            expect_error(
+                pip_inner(outer, "nope"),
+                "step 'nope' does not exist",
+                fixed = TRUE
+            )
+            expect_error(pip_inner("outer", "s"))
         })
     })
 })

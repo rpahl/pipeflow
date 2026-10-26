@@ -20,10 +20,9 @@
 }
 }
 \description{
-Treats a pipeline as a table of steps: \code{length()} and \code{nrow()} return the
-number of steps, \code{ncol()} returns the number of columns of the underlying
-step table, and \code{dim()} returns both. Views report only the steps covered
-by the view.
+Treats a pipeline as a table of steps: \code{length()} and \code{nrow()} return the number of
+steps, \code{ncol()} returns the number of columns of the underlying step table, and
+\code{dim()} returns both. Views report only the steps covered by the view.
 }
 \examples{
 p <- pip_new() |>

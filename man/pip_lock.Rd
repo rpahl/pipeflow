@@ -16,10 +16,10 @@ pip_unlock(x)
 The updated pipeline or view, invisibly.
 }
 \description{
-Locks or unlocks all steps of a pipeline, or a subset of steps defined by
-a view. Locked steps are skipped during \code{\link[=pip_run]{pip_run()}} and are protected
-against modification from \code{\link[=pip_set_params]{pip_set_params()}}, \code{\link[=pip_tag]{pip_tag()}} or
-\code{\link[=pip_untag]{pip_untag()}}. Calling \code{\link[=pip_unlock]{pip_unlock()}} removes the lock again.
+Locks or unlocks all steps of a pipeline, or a subset of steps defined by a view.
+Locked steps are skipped during \code{\link[=pip_run]{pip_run()}} and are protected against modification
+from \code{\link[=pip_set_params]{pip_set_params()}}, \code{\link[=pip_tag]{pip_tag()}} or \code{\link[=pip_untag]{pip_untag()}}. Calling \code{\link[=pip_unlock]{pip_unlock()}} removes
+the lock again.
 }
 \examples{
 p <- pip_new() |>

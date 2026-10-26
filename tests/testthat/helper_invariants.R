@@ -1,8 +1,7 @@
-# Checks for tests that run long chains of edits (test_edit_chains.R): the
-# invariants of the pipeline (dev/pipeflow.md, section 3), the bookkeeping of
-# failed keys (section 8, "Errors and failures") and the freshness of the
-# outputs. Each check collects its violations as messages, so that a failed
-# expectation lists all of them.
+# Checks for tests that run long chains of edits (test_edit_chains.R): the invariants of
+# the pipeline (dev/pipeflow.md, section 3), the bookkeeping of failed keys (section 8,
+# "Errors and failures") and the freshness of the outputs. Each check collects its
+# violations as messages, so that a failed expectation lists all of them.
 
 # The violations of the invariants of the pipeline that `x` is a handle of.
 pip_invariant_violations <- function(x) {
@@ -68,8 +67,8 @@ pip_invariant_violations <- function(x) {
             "its unbound params are not its params without dependency"
         )
 
-        # 5. The reference formulas mirror the dependencies. A relative
-        # reference (e.g. ~-1) was resolved when the step was added.
+        # 5. The reference formulas mirror the dependencies. A relative reference (e.g.
+        #    ~-1) was resolved when the step was added.
         refs <- formula_deps(params)
         isName <- !grepl("^-?[0-9]+$", refs)
         check(
@@ -92,12 +91,11 @@ pip_invariant_violations <- function(x) {
 
 
 # The violations of the bookkeeping of failed keys:
-# - The failure of a failed key of a failed step names its key and steps of
-#   the pipeline: the step itself, or an upstream step that failed for the
-#   key (also after renames, see .pip_rename_failures()). Its message matches
-#   these names.
-# - A step marked in `.steps_with_current_out` is not done, and if it
-#   failed, it failed for some keys.
+# - The failure of a failed key of a failed step names its key and steps of the
+#   pipeline: the step itself, or an upstream step that failed for the key (also after
+#   renames, see .pip_rename_failures()). Its message matches these names.
+# - A step marked in `.steps_with_current_out` is not done, and if it failed, it failed
+#   for some keys.
 failure_violations <- function(x) {
     env <- .pip_pipenv(x)
     dat <- env[["data"]]
@@ -133,8 +131,8 @@ failure_violations <- function(x) {
             }
         }
 
-        # A mark is only kept by a step that failed for some keys, or that
-        # was outdated or reset since
+        # A mark is only kept by a step that failed for some keys, or that was outdated
+        # or reset since
         mayBeMarked <- state != "done" &&
             (state != "failed" || length(failedKeys) > 0L)
         if (isTRUE(marks[[steps[[k]]]]) && !mayBeMarked) {
@@ -145,13 +143,12 @@ failure_violations <- function(x) {
 }
 
 
-# The violations of freshness: a step that is done must hold the output of a
-# run from scratch, and a step that failed must fail in the same way (for
-# the same keys, with the same outputs for the other keys). The run from
-# scratch is a continued run of a reset clone of the pipeline, in which the
-# locked steps keep their outputs. So do the `pinned` steps, whose outputs
-# were set by hand, if they are done. Locked and pinned steps are not
-# compared.
+# The violations of freshness: a step that is done must hold the output of a run from
+# scratch, and a step that failed must fail in the same way (for the same keys, with the
+# same outputs for the other keys). The run from scratch is a continued run of a reset
+# clone of the pipeline, in which the locked steps keep their outputs. So do the
+# `pinned` steps, whose outputs were set by hand, if they are done. Locked and pinned
+# steps are not compared.
 freshness_violations <- function(x, pinned = character()) {
     dat <- .pip_pipenv(x)[["data"]]
     fresh <- pip_clone(.wrap_pipenv(.pip_pipenv(x), name = x[["name"]]))
@@ -183,8 +180,8 @@ freshness_violations <- function(x, pinned = character()) {
 }
 
 
-# A step output in which conditions (whole-step failures, failed keys) are
-# replaced by their messages, as they differ in their calls.
+# A step output in which conditions (whole-step failures, failed keys) are replaced by
+# their messages, as they differ in their calls.
 comparable_out <- function(out) {
     asText <- function(value) {
         if (inherits(value, "condition")) {
@@ -200,13 +197,12 @@ comparable_out <- function(out) {
 }
 
 
-# Follow a pipeline through a chain of edits. The returned function checks
-# the pipeline after each edit: its invariants, the freshness of its outputs
-# (unless `fresh = FALSE`, see freshness_violations()), and that its steps
-# keep their node ids and that the ids of removed steps are not used again
-# (invariant 3). It can follow a copy of the pipeline instead (pip_clone(),
-# readRDS(), rbind() with the pipeline as first argument), which keeps the
-# node ids. `info` is added to the message of a failed check.
+# Follow a pipeline through a chain of edits. The returned function checks the pipeline
+# after each edit: its invariants, the freshness of its outputs (unless `fresh = FALSE`,
+# see freshness_violations()), and that its steps keep their node ids and that the ids
+# of removed steps are not used again (invariant 3). It can follow a copy of the
+# pipeline instead (pip_clone(), readRDS(), rbind() with the pipeline as first
+# argument), which keeps the node ids. `info` is added to the message of a failed check.
 edit_chain <- function() {
     ids <- stats::setNames(integer(), character())
     retired <- integer()
@@ -237,8 +233,8 @@ edit_chain <- function() {
 }
 
 
-# Run `x` with on_error = "continue" and return the log messages, e.g. to see
-# which keys were run again. Muffles the warning about failed steps.
+# Run `x` with on_error = "continue" and return the log messages, e.g. to see which keys
+# were run again. Muffles the warning about failed steps.
 run_log <- function(x, ...) {
     msgs <- character()
     lgr <- function(level, msg, ...) msgs <<- c(msgs, msg)

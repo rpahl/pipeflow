@@ -78,3 +78,7 @@ scratch.md
 
 # pkgdown site, published to the gh-pages branch by CI
 /docs/
+
+# Personal coding agent configs
+kilo.json
+.kilo/

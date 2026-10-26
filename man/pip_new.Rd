@@ -13,19 +13,18 @@ pip_new(name = "pipe")
 A pipeflow pipeline object.
 }
 \description{
-Creates a new, empty pipeline. Add steps with \code{\link[=pip_add]{pip_add()}} and execute
-them with \code{\link[=pip_run]{pip_run()}}.
+Creates a new, empty pipeline. Add steps with \code{\link[=pip_add]{pip_add()}} and execute them with
+\code{\link[=pip_run]{pip_run()}}.
 }
 \section{Saving pipelines}{
 
-A pipeline can be saved with \code{\link[=saveRDS]{saveRDS()}} and read back with \code{\link[=readRDS]{readRDS()}}
-(or serialized in other ways, e.g. to send it to another R process), with
-its steps, parameters, outputs and states. The dependency graph of the
-steps is kept outside of R and is not saved, but it is rebuilt from the
-steps the first time it is needed. Views that are saved in the same object
-as their pipeline, as in \code{saveRDS(list(p, v), file)}, are read as views of
-the read pipeline. A view that is saved on its own is read with its own
-copy of the pipeline.
+A pipeline can be saved with \code{\link[=saveRDS]{saveRDS()}} and read back with \code{\link[=readRDS]{readRDS()}} (or
+serialized in other ways, e.g. to send it to another R process), with its steps,
+parameters, outputs and states. The dependency graph of the steps is kept outside of
+R and is not saved, but it is rebuilt from the steps the first time it is needed.
+Views that are saved in the same object as their pipeline, as in
+\code{saveRDS(list(p, v), file)}, are read as views of the read pipeline. A view that is
+saved on its own is read with its own copy of the pipeline.
 }
 
 \examples{

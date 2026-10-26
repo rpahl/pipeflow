@@ -25,117 +25,106 @@
 \arguments{
 \item{x}{A pipeflow pipeline or view object.}
 
-\item{i}{The row or field selector. For \code{[} and \verb{[<-}, the rows to select:
-integer row indices, character step names, or a boolean filter expression
-evaluated in the context of the step table. For \code{[[}, a
-step-table column name, a meta field, or — in the two-index form — a step
-name or integer row index. For \verb{[[<-}, a step name, an integer row index,
-or one of the meta fields \code{"name"} and \code{"view"}. For a view, indices are
-relative to the covered steps and step names must be part of the view.}
+\item{i}{The row or field selector. For \code{[} and \verb{[<-}, the rows to select: integer
+row indices, character step names, or a boolean filter expression evaluated in the
+context of the step table. For \code{[[}, a step-table column name, a meta field, or — in
+the two-index form — a step name or integer row index. For \verb{[[<-}, a step name, an
+integer row index, or one of the meta fields \code{"name"} and \code{"view"}. For a view,
+indices are relative to the covered steps and step names must be part of the view.}
 
-\item{j}{For \code{[}, an optional character vector of step-table column names
-to extract. For \verb{[<-}, the single step property to assign. For \code{[[} and
-\verb{[[<-}, the column or step property to extract or assign.}
+\item{j}{For \code{[}, an optional character vector of step-table column names to extract.
+For \verb{[<-}, the single step property to assign. For \code{[[} and \verb{[[<-}, the column or
+step property to extract or assign.}
 
-\item{view}{For \code{[}, if \code{TRUE} (default), a view referencing the selected
-steps is returned. If \code{FALSE}, a new pipeline is returned that includes the
-selected steps and all their upstream dependencies. Ignored when \code{j} is
-provided. With no selection, \code{v[, view = FALSE]} turns a view into a
-standalone pipeline of all its covered steps, which is also the way to
-get a copy of a view, as \code{\link[=pip_clone]{pip_clone()}} requires a full pipeline.}
+\item{view}{For \code{[}, if \code{TRUE} (default), a view referencing the selected steps is
+returned. If \code{FALSE}, a new pipeline is returned that includes the selected steps and
+all their upstream dependencies. Ignored when \code{j} is provided. With no selection,
+\code{v[, view = FALSE]} turns a view into a standalone pipeline of all its covered steps,
+which is also the way to get a copy of a view, as \code{\link[=pip_clone]{pip_clone()}} requires a full
+pipeline.}
 
 \item{value}{The value to assign (\verb{[[<-}, \verb{[<-}).}
 }
 \value{
-For \code{[}, a pipeflow view (if \code{view = TRUE}) or a new pipeflow
-pipeline (if \code{view = FALSE}); if \code{j} is provided, a \code{data.table} with the
-selected rows and columns. For \code{[[}, the extracted step-table column,
-single cell, or meta field. For the assignment forms, the updated
-pipeline, invisibly.
+For \code{[}, a pipeflow view (if \code{view = TRUE}) or a new pipeflow pipeline (if
+\code{view = FALSE}); if \code{j} is provided, a \code{data.table} with the selected rows and
+columns. For \code{[[}, the extracted step-table column, single cell, or meta field. For
+the assignment forms, the updated pipeline, invisibly.
 }
 \description{
-A pipeline can be subset, read from and written to with the usual extract
-and replace operators, treating it as a table of steps. The extraction
-operators mirror base R, and the replacement operators update steps (or
-their properties) in place.
+A pipeline can be subset, read from and written to with the usual extract and replace
+operators, treating it as a table of steps. The extraction operators mirror base R,
+and the replacement operators update steps (or their properties) in place.
 }
 \details{
 \subsection{Extract or subset a pipeline (\code{x[i, j, view = TRUE]})}{
 
-\code{p[...]} selects steps from a pipeline. By default, a lightweight
-\code{\link[=pip_view]{pip_view()}} is returned that references the selected steps without
-copying them. Set \code{view = FALSE} to instead get a new, self-contained
-pipeline that includes all required upstream dependencies.
+\code{p[...]} selects steps from a pipeline. By default, a lightweight \code{\link[=pip_view]{pip_view()}} is
+returned that references the selected steps without copying them. Set \code{view = FALSE}
+to instead get a new, self-contained pipeline that includes all required upstream
+dependencies.
 
 Three forms of row selection are supported:
 \itemize{
 \item \strong{row indices} (relative to the current selection), e.g. \code{p[2:3]},
 \item \strong{step names}, e.g. \code{p[c("load", "fit")]},
-\item a \strong{boolean filter} that is evaluated in the context of the pipeline's
-step table, e.g. \code{p[state == "new"]} or
-\code{p[step \%in\% c("load", "fit") & tags \%like\% "io"]}.
+\item a \strong{boolean filter} that is evaluated in the context of the pipeline's step table,
+e.g. \code{p[state == "new"]} or \code{p[step \%in\% c("load", "fit") & tags \%like\% "io"]}.
 }
 
-Boolean filters may reference the columns of the step table (\code{step}, \code{fun},
-\code{params}, \code{depends}, \code{tags}, \code{state}, ...) directly as variables. The
-filter operators of \pkg{data.table} (\verb{\%like\%}, \verb{\%ilike\%}, \verb{\%flike\%},
-\verb{\%plike\%}, \verb{\%chin\%}, \verb{\%between\%}, \verb{\%inrange\%} and \verb{\%notin\%}) are
-available in the filter without attaching \pkg{data.table}. \code{p[]} returns
-a copy of the pipeline.
+Boolean filters may reference the columns of the step table (\code{step}, \code{fun}, \code{params},
+\code{depends}, \code{tags}, \code{state}, ...) directly as variables. The filter operators of
+\pkg{data.table} (\verb{\%like\%}, \verb{\%ilike\%}, \verb{\%flike\%}, \verb{\%plike\%}, \verb{\%chin\%}, \verb{\%between\%},
+\verb{\%inrange\%} and \verb{\%notin\%}) are available in the filter without attaching
+\pkg{data.table}. \code{p[]} returns a copy of the pipeline.
 
-Note that \code{tags} is a list column, so \verb{\%like\%} matches the pattern against
-the tags of each step converted to a single string, e.g. \code{"character(0)"}
-for a step without tags and \code{'c("io", "daily")'} for a step with two tags.
-A pattern can therefore also match untagged steps (e.g.
-\code{tags \%like\% "a"}), and anchored patterns such as \code{"^io$"} miss steps with
-several tags. To match tags exactly, use the \code{tags} argument of
+Note that \code{tags} is a list column, so \verb{\%like\%} matches the pattern against the tags
+of each step converted to a single string, e.g. \code{"character(0)"} for a step without
+tags and \code{'c("io", "daily")'} for a step with two tags. A pattern can therefore also
+match untagged steps (e.g. \code{tags \%like\% "a"}), and anchored patterns such as \code{"^io$"}
+miss steps with several tags. To match tags exactly, use the \code{tags} argument of
 \code{\link[=pip_view]{pip_view()}}, e.g. \code{pip_view(p, tags = "io")}.
 
-When \code{j} is provided, the selected steps are returned as a step-table
-extraction rather than a pipeline. \code{j} must be a character vector of column
-names: \code{p[, j]} keeps those columns for all steps and \code{p[i, j]} first
-selects the rows and then keeps those columns. The result in this case is a
-\code{data.table}.
+When \code{j} is provided, the selected steps are returned as a step-table extraction
+rather than a pipeline. \code{j} must be a character vector of column names: \code{p[, j]}
+keeps those columns for all steps and \code{p[i, j]} first selects the rows and then keeps
+those columns. The result in this case is a \code{data.table}.
 
-If done on a view, row selection is relative to the covered steps, and step
-names must be part of the view. For validated,
-programmatic filters with dedicated arguments (such as matching \emph{any} of a
-set of tags) use \code{\link[=pip_view]{pip_view()}} instead.
+If done on a view, row selection is relative to the covered steps, and step names
+must be part of the view. For validated, programmatic filters with dedicated
+arguments (such as matching \emph{any} of a set of tags) use \code{\link[=pip_view]{pip_view()}} instead.
 }
 
 \subsection{Extract values from a pipeline or view (\code{x[[i, j]]})}{
 
-A pipeline can be read like a data.frame of steps: \code{p[[column]]} returns a
-column of the step table, and \code{p[[row, column]]} extracts a single cell.
-In addition, a few meta fields are accessible by name.
+A pipeline can be read like a data.frame of steps: \code{p[[column]]} returns a column of
+the step table, and \code{p[[row, column]]} extracts a single cell. In addition, a few
+meta fields are accessible by name.
 \subsection{Meta fields}{
 
 The following meta fields are available via \code{p[["..."]]} (or \code{p$...}):
 \itemize{
 \item \code{name} -- the name of the pipeline.
-\item \code{view} -- the names of the steps covered by a view, or \code{NULL} for a full
-pipeline.
-\item \code{pipenv} -- the shared inner environment holding the pipeline's state.
-All views and extracted subsets reference the same environment, so
-mutations are shared. The step table is available as
-\code{p[["pipenv"]][["data"]]} (see also \code{\link[=pip_data]{pip_data()}}).
+\item \code{view} -- the names of the steps covered by a view, or \code{NULL} for a full pipeline.
+\item \code{pipenv} -- the shared inner environment holding the pipeline's state. All views
+and extracted subsets reference the same environment, so mutations are shared. The
+step table is available as \code{p[["pipenv"]][["data"]]} (see also \code{\link[=pip_data]{pip_data()}}).
 }
 }
 
 \subsection{Virtual methods}{
 
-All pipeline functions are exposed as \emph{virtual} methods via \code{p$...}
-(or \code{p[["..."]]}). For example, \code{p$add(...)} is shorthand for
-\code{pip_add(p, ...)} and returns the updated pipeline.
+All pipeline functions are exposed as \emph{virtual} methods via \code{p$...} (or
+\code{p[["..."]]}). For example, \code{p$add(...)} is shorthand for \code{pip_add(p, ...)} and
+returns the updated pipeline.
 }
 
 \subsection{Step-table columns}{
 
-\code{p[["column"]]} returns the raw values of a column of the step table,
-named by the step names.
-For views, the column is restricted to the steps covered by the
-view. The two-index form \code{p[[row, column]]} extracts a single cell,
-where \code{row} is an integer row index or a step name.
+\code{p[["column"]]} returns the raw values of a column of the step table, named by the
+step names. For views, the column is restricted to the steps covered by the view. The
+two-index form \code{p[[row, column]]} extracts a single cell, where \code{row} is an integer
+row index or a step name.
 }
 
 }
@@ -144,134 +133,121 @@ where \code{row} is an integer row index or a step name.
 \subsection{Assigning meta fields}{
 \itemize{
 \item \code{p[["name"]] <- value} -- sets the name of the pipeline
-\item \code{p[["view"]] <- steps} -- allows to define the pipeline view explicitly
-via a character vector of step names, which is equivalent to
-\code{p[steps]} or \code{p[steps, ]}. Assigning \code{p[["view"]] <- NULL} clears
-the view and returns a full pipeline.
+\item \code{p[["view"]] <- steps} -- allows to define the pipeline view explicitly via a
+character vector of step names, which is equivalent to \code{p[steps]} or \code{p[steps, ]}.
+Assigning \code{p[["view"]] <- NULL} clears the view and returns a full pipeline.
 }
 }
 
 \subsection{Assigning step properties}{
 
-The two-index form \code{p[[step, property]] <- value} provides interactive
-shortcuts for modifying a single step, where \code{step} is a step name or an
-integer row index and \code{property} selects what to update:
+The two-index form \code{p[[step, property]] <- value} provides interactive shortcuts for
+modifying a single step, where \code{step} is a step name or an integer row index and
+\code{property} selects what to update:
 \itemize{
 \item \code{p[[step, "step"]] <- newName} -- rename the step; same as
 \code{pip_rename(p, step, newName)}).
 \itemize{
-\item \code{p[[step, "step"]] <- NULL} -- remove the step, together with its
-downstream dependencies; same as \code{pip_remove(p, step, force = TRUE)}
+\item \code{p[[step, "step"]] <- NULL} -- remove the step, together with its downstream
+dependencies; same as \code{pip_remove(p, step, force = TRUE)}
 }
-\item \code{p[[step, "fun"]] <- fun} -- replace the step's function;
-same as \code{\link[=pip_replace]{pip_replace()}}, that is, tags and execution mode are kept
-\item \code{p[[step, "params"]] <- list(...)} -- update the step's parameters;
-same as \code{pip_set_params(p, list(...))}
-\item \code{p[[step, "tags"]] <- tags} -- set the step's tags explicitly to \code{tags}
-(a character vector); in contrast, \code{\link[=pip_tag]{pip_tag()}} will just add tags.
+\item \code{p[[step, "fun"]] <- fun} -- replace the step's function; same as \code{\link[=pip_replace]{pip_replace()}},
+that is, tags and execution mode are kept
+\item \code{p[[step, "params"]] <- list(...)} -- update the step's parameters; same as
+\code{pip_set_params(p, list(...))}
+\item \code{p[[step, "tags"]] <- tags} -- set the step's tags explicitly to \code{tags} (a
+character vector); in contrast, \code{\link[=pip_tag]{pip_tag()}} will just add tags.
 \itemize{
 \item \code{p[[step, "tags"]] <- NULL} clears all tags
 }
-\item \code{p[[step, "locked"]] <- TRUE|FALSE} -- lock or unlock the step;
-same as \code{\link[=pip_lock]{pip_lock()}} / \code{\link[=pip_unlock]{pip_unlock()}}
-\item \code{p[[step, "exec"]] <- mode} -- set the step's execution mode. A new
-mode marks the step and its downstream steps as \code{"outdated"}.
+\item \code{p[[step, "locked"]] <- TRUE|FALSE} -- lock or unlock the step; same as
+\code{\link[=pip_lock]{pip_lock()}} / \code{\link[=pip_unlock]{pip_unlock()}}
+\item \code{p[[step, "exec"]] <- mode} -- set the step's execution mode. A new mode marks the
+step and its downstream steps as \code{"outdated"}.
 \item \code{p[[step, "state"]] <- state} -- set the step's state.
-\item \code{p[[step, "time"]] <- time} -- set the step's time stamp (a single
-\code{POSIXct} value).
-\item \code{p[[step, "time_start"]] <- time} -- set the start time of the step's
-last run (a single \code{POSIXct} value, which can be \code{NA} for a step that
-never ran).
-\item \code{p[[step, "duration"]] <- duration} -- set the duration of the step's
-last run (a single \code{difftime} value, which can be \code{NA} for a step that
-never ran).
-\item \code{p[[step, "out"]] <- value} -- set the step's stored output (mostly
-useful for debugging). The downstream steps are marked as
-\code{"outdated"}, so that the next run computes them from the new output.
+\item \code{p[[step, "time"]] <- time} -- set the step's time stamp (a single \code{POSIXct}
+value).
+\item \code{p[[step, "time_start"]] <- time} -- set the start time of the step's last run (a
+single \code{POSIXct} value, which can be \code{NA} for a step that never ran).
+\item \code{p[[step, "duration"]] <- duration} -- set the duration of the step's last run (a
+single \code{difftime} value, which can be \code{NA} for a step that never ran).
+\item \code{p[[step, "out"]] <- value} -- set the step's stored output (mostly useful for
+debugging). The downstream steps are marked as \code{"outdated"}, so that the next run
+computes them from the new output.
 }
 
-Assigning to any other step-table column, or to a meta field other than
-\code{name} and \code{view}, is not supported.
+Assigning to any other step-table column, or to a meta field other than \code{name} and
+\code{view}, is not supported.
 
-Views are supported as well. For a view, \code{i} is interpreted relative to the
-steps covered by the view: an integer refers to the n-th visible step, and a
-step name must be part of the view. Because views share the pipeline
-environment, step properties are written through to the originating
-pipeline, while \code{name} only renames the view itself.
+Views are supported as well. For a view, \code{i} is interpreted relative to the steps
+covered by the view: an integer refers to the n-th visible step, and a step name must
+be part of the view. Because views share the pipeline environment, step properties
+are written through to the originating pipeline, while \code{name} only renames the view
+itself.
 }
 
 \subsection{Which assignments outdate steps}{
 
-Results that may no longer match the steps are marked as \code{"outdated"},
-so that the next \code{\link[=pip_run]{pip_run()}} computes them again. As always, steps that
-never ran stay \code{"new"}.
+Results that may no longer match the steps are marked as \code{"outdated"}, so that the
+next \code{\link[=pip_run]{pip_run()}} computes them again. As always, steps that never ran stay \code{"new"}.
 \itemize{
 \item \code{fun}: the step becomes \code{"new"} and its downstream steps \code{"outdated"}.
-\item \code{params} and \code{exec}: the step and its downstream steps, if a value
-changes.
+\item \code{params} and \code{exec}: the step and its downstream steps, if a value changes.
 \item \code{out}: the downstream steps, while the step keeps its state.
-\item \code{step} (a new name), \code{state}, \code{time}, \code{time_start}, \code{duration}, \code{tags}
-and \code{locked} don't change any result and outdate no step.
+\item \code{step} (a new name), \code{state}, \code{time}, \code{time_start}, \code{duration}, \code{tags} and \code{locked}
+don't change any result and outdate no step.
 }
 
-This holds for all forms of assignment: \verb{[[<-}, \verb{[<-} (which assigns row
-by row) and assignments through a view, which also outdate the downstream
-steps that are not part of the view.
+This holds for all forms of assignment: \verb{[[<-}, \verb{[<-} (which assigns row by row) and
+assignments through a view, which also outdate the downstream steps that are not part
+of the view.
 }
 
 }
 
 \subsection{Bulk assignment of step properties (\code{x[i, j] <- value})}{
 
-\code{p[i, j] <- value} assigns the step property \code{j} to the selected steps
-(see \verb{[[<-.pipeflow} above for the supported properties),
-mirroring the row
-and column selection of the extraction form \code{p[i, j]}. \code{i} selects rows
-like in the extraction form (including negative row indices, which
-select all rows but the excluded ones) and \code{j} must be a single
-property name; \code{p[, j] <- value} selects all steps. With more than one
-selected row, a value of length 1 is replicated to all selected rows and
-a value whose length equals the number of selected rows is assigned
-element-wise (\code{p[i, j] <- value} behaves like \code{p[[i[k], j]] <- value[[k]]}).
-As in base R, longer values are recycled if the number of selected rows
-is a multiple of the value length, otherwise an error is raised. To
-assign the same list value (e.g. a set of tags) to all rows, wrap it in
-\code{list(...)}. With a single selected row, \code{value} is stored as-is (like
-\code{p[[i, j]] <- value}). For the \code{params} property, the value of each row
-must itself be a list (e.g. \code{p[1:2, "params"] <- list(list(a = 1), list(b = 2))}).
+\code{p[i, j] <- value} assigns the step property \code{j} to the selected steps (see
+\verb{[[<-.pipeflow} above for the supported properties), mirroring the row and column
+selection of the extraction form \code{p[i, j]}. \code{i} selects rows like in the extraction
+form (including negative row indices, which select all rows but the excluded ones)
+and \code{j} must be a single property name; \code{p[, j] <- value} selects all steps. With
+more than one selected row, a value of length 1 is replicated to all selected rows
+and a value whose length equals the number of selected rows is assigned element-wise
+(\code{p[i, j] <- value} behaves like \code{p[[i[k], j]] <- value[[k]]}). As in base R, longer
+values are recycled if the number of selected rows is a multiple of the value length,
+otherwise an error is raised. To assign the same list value (e.g. a set of tags) to
+all rows, wrap it in \code{list(...)}. With a single selected row, \code{value} is stored as-is
+(like \code{p[[i, j]] <- value}). For the \code{params} property, the value of each row must
+itself be a list (e.g. \code{p[1:2, "params"] <- list(list(a = 1), list(b = 2))}).
 
-The selected steps are assigned one after another, but the assignment
-changes all of them or none, that is, if it fails for one step,
-the pipeline is restored as it was.
+The selected steps are assigned one after another, but the assignment changes all of
+them or none, that is, if it fails for one step, the pipeline is restored as it was.
 
-If \code{value} is a \code{pipeflow} pipeline or view, the writable step properties
-of its steps are copied to the selected rows: \code{p[i, ] <- q[i, ]} copies
-the steps of \code{q} selected by \code{i} into the steps of \code{p} selected by \code{i}
-(the rows of both sides are aligned by position and must have the same
-length). In this form, \code{i} is required and \code{j} must be omitted. The
-properties are copied in the order \code{step}, \code{fun}, \code{params}, \code{exec},
-\code{out}, \code{state}, \code{time}, \code{time_start}, \code{duration}, \code{tags}, \code{locked}: the
-step is renamed to the source name (a no-op when it is unchanged), the
-function, the params and the execution mode are replaced with those of
-the source (same as \code{\link[=pip_replace]{pip_replace()}} with the params and \code{exec} of the
-source), and the runtime state and annotation columns are overwritten
-(locked steps included). A copied step refers to the steps
-that the source step depends on by name, also if it was defined with a
-relative reference such as \code{~-1}, and these steps are looked up in \code{p}.
-The structural columns \code{nodeId}, \code{depends} and \code{unbound} are not copied
-but recomputed against the steps of \code{p}. If a step can't be copied (e.g.
-because it refers to a step that is not in \code{p}), \code{p} is left as it was.
-Instead of \code{p[i, j] <- q}, use \code{p[i, j] <- q[i, j]} to copy the values of
-a single property; the one-column table returned by the extraction form
-is unwrapped and assigned element-wise.
+If \code{value} is a \code{pipeflow} pipeline or view, the writable step properties of its
+steps are copied to the selected rows: \code{p[i, ] <- q[i, ]} copies the steps of \code{q}
+selected by \code{i} into the steps of \code{p} selected by \code{i} (the rows of both sides are
+aligned by position and must have the same length). In this form, \code{i} is required and
+\code{j} must be omitted. The properties are copied in the order \code{step}, \code{fun}, \code{params},
+\code{exec}, \code{out}, \code{state}, \code{time}, \code{time_start}, \code{duration}, \code{tags}, \code{locked}: the step
+is renamed to the source name (a no-op when it is unchanged), the function, the
+params and the execution mode are replaced with those of the source (same as
+\code{\link[=pip_replace]{pip_replace()}} with the params and \code{exec} of the source), and the runtime state and
+annotation columns are overwritten (locked steps included). A copied step refers to
+the steps that the source step depends on by name, also if it was defined with a
+relative reference such as \code{~-1}, and these steps are looked up in \code{p}. The
+structural columns \code{nodeId}, \code{depends} and \code{unbound} are not copied but recomputed
+against the steps of \code{p}. If a step can't be copied (e.g. because it refers to a step
+that is not in \code{p}), \code{p} is left as it was. Instead of \code{p[i, j] <- q}, use
+\code{p[i, j] <- q[i, j]} to copy the values of a single property; the one-column table
+returned by the extraction form is unwrapped and assigned element-wise.
 }
 
 \subsection{Extract and assign via $ (\code{x$i / x$i <- value})}{
 
-\code{$} is a shortcut for the one-index form of \code{[[} / \verb{[[<-}: \code{p$name} is
-equivalent to \code{p[["name"]]}, and \code{p$name <- value} to
-\code{p[["name"]] <- value}. This works for meta fields, step-table columns,
-and the virtual methods (e.g. \code{p$add(...)} or \code{p$run()}).
+\code{$} is a shortcut for the one-index form of \code{[[} / \verb{[[<-}: \code{p$name} is equivalent to
+\code{p[["name"]]}, and \code{p$name <- value} to \code{p[["name"]] <- value}. This works for meta
+fields, step-table columns, and the virtual methods (e.g. \code{p$add(...)} or \code{p$run()}).
 }
 }
 \examples{

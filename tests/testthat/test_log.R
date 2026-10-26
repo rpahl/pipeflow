@@ -107,8 +107,8 @@ describe("pip_run total time", {
             })
         msgs <- capture_logs(\(lgr) pip_run(p, lgr = lgr))
         expect_true(any(grepl("Restarting run", msgs, fixed = TRUE)))
-        # The restarted run skips the done step "slow", so only the time
-        # of the first run makes the total exceed its sleep.
+        # The restarted run skips the done step "slow", so only the time of the first
+        # run makes the total exceed its sleep.
         expect_gte(finished_secs(msgs), 0.09)
         expect_false(exists(".run_start", envir = p[["pipenv"]]))
     })

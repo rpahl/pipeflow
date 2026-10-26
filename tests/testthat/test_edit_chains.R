@@ -1,15 +1,13 @@
 # Long chains of edits, with runs in between. After each edit, the checks of
-# helper_invariants.R make sure that the pipeline keeps its invariants
-# (dev/pipeflow.md, section 3), that its steps keep their node ids, that the
-# steps that are done hold the outputs of a run from scratch, and that the
-# failures of failed keys and the marks of `.steps_with_current_out` are in
-# line with the step table.
+# helper_invariants.R make sure that the pipeline keeps its invariants (dev/pipeflow.md,
+# section 3), that its steps keep their node ids, that the steps that are done hold the
+# outputs of a run from scratch, and that the failures of failed keys and the marks of
+# `.steps_with_current_out` are in line with the step table.
 
-# Fails for the multiples of the values in the option `pipeflow.test.bad`.
-# Removing a value lets a step succeed in the next run without an edit of
-# the pipeline, so that the run only re-runs its failed keys. An option,
-# unlike a variable, also reaches the copies of the step functions that
-# readRDS() makes.
+# Fails for the multiples of the values in the option `pipeflow.test.bad`. Removing a
+# value lets a step succeed in the next run without an edit of the pipeline, so that the
+# run only re-runs its failed keys. An option, unlike a variable, also reaches the
+# copies of the step functions that readRDS() makes.
 fail_if_bad <- function(value) {
     if (any(outer(round(value), getOption("pipeflow.test.bad"), "%%") == 0)) {
         stop("bad value ", paste(value, collapse = " "))
@@ -17,9 +15,9 @@ fail_if_bad <- function(value) {
     value
 }
 
-# `square` is mapped over the keys of `parts` and fails for the bad values.
-# For its failed keys, `plus` is not run, `total` is skipped (its input
-# failed) and `safe` gets the failures via ~try().
+# `square` is mapped over the keys of `parts` and fails for the bad values. For its
+# failed keys, `plus` is not run, `total` is skipped (its input failed) and `safe` gets
+# the failures via ~try().
 keys_pip <- function() {
     pip_new("keys") |>
         pip_add(
@@ -71,8 +69,7 @@ describe("a chain of structural edits", {
         pip_set_params(v, params = list(k = ~a2))
         check(p)
 
-        # Running the view runs its upstream steps and outdates the steps
-        # after it
+        # Running the view runs its upstream steps and outdates the steps after it
         pip_run(v, lgr = NULL)
         check(p)
         expect_equal(
@@ -97,8 +94,8 @@ describe("a chain of structural edits", {
         check(p)
         expect_equal(v[["view"]], "d")
 
-        # Steps added with the names of removed steps get new node ids, and
-        # the view doesn't cover them
+        # Steps added with the names of removed steps get new node ids, and the view
+        # doesn't cover them
         pip_add(p, "beta", \(x = ~a) x - 1)
         pip_add(p, "c", \(x = ~beta, y = ~d) x + y)
         check(p)
@@ -185,8 +182,8 @@ describe("a chain of edits of a pipeline with failed keys", {
         )
         expect_equal(.pip_failed_keys(p[["plus", "out"]]), "b")
 
-        # Rename the failed step, with a name from the (named) step column:
-        # the failures and the retry follow the new name
+        # Rename the failed step, with a name from the (named) step column: the failures
+        # and the retry follow the new name
         pip_rename(p, p[["step"]][2], "sq")
         check(p)
         expect_equal(p[["plus", "out"]][["b"]][["failed_step"]], "sq")
@@ -225,8 +222,8 @@ describe("a chain of edits of a pipeline with failed keys", {
         check(p)
         expect_equal(.pip_failed_keys(p[["sq", "out"]]), "c")
 
-        # A clone runs all keys again, a pipeline read with readRDS() only
-        # the failed ones
+        # A clone runs all keys again, a pipeline read with readRDS() only the failed
+        # ones
         q <- pip_clone(p)
         p <- save_and_read(p)
         options(pipeflow.test.bad = NULL)
@@ -251,8 +248,8 @@ describe("a chain of edits of a pipeline with failed keys", {
         expect_false(is_retry(run_log(p)))
         check(p)
 
-        # Binding renames the steps with taken names, also in the failures,
-        # and drops the marks
+        # Binding renames the steps with taken names, also in the failures, and drops
+        # the marks
         options(pipeflow.test.bad = 16)
         run_log(p, force = TRUE)
         pre <- pip_new("pre") |>
@@ -282,10 +279,9 @@ describe("a chain of edits of a pipeline with failed keys", {
 
 
 describe("random chains of edits", {
-    # Step functions for random steps, which take single values, partitioned
-    # values and failures (and fail for the latter): `map_step` and
-    # `map2_step` add their inputs and fail for bad values, `split_step`
-    # splits the sum of its input into `n` keys.
+    # Step functions for random steps, which take single values, partitioned values and
+    # failures (and fail for the latter): `map_step` and `map2_step` add their inputs
+    # and fail for bad values, `split_step` splits the sum of its input into `n` keys.
     map_step <- function(x, k = 1) {
         fail_if_bad(sum(as.numeric(unlist(x))) + k)
     }
@@ -298,9 +294,8 @@ describe("random chains of edits", {
     }
     is_split_step <- function(fun) identical(body(fun), body(split_step))
 
-    # Run a chain of `n` random edits and check the pipeline after each one.
-    # The bad values only get fewer, as the outputs of done steps would be
-    # stale otherwise.
+    # Run a chain of `n` random edits and check the pipeline after each one. The bad
+    # values only get fewer, as the outputs of done steps would be stale otherwise.
     run_random_chain <- function(seed, n) {
         oldSeed <- get0(".Random.seed", envir = globalenv(), inherits = FALSE)
         on.exit({
@@ -388,8 +383,8 @@ describe("random chains of edits", {
             dat[["step"]][rows[isPinned]]
         }
 
-        # Do `edit`, or if it `is_rejected`, expect it to fail with `error`
-        # and to change nothing
+        # Do `edit`, or if it `is_rejected`, expect it to fail with `error` and to
+        # change nothing
         edit_or_reject <- function(edit, is_rejected, error) {
             if (!is_rejected) {
                 return(force(edit))
@@ -399,10 +394,9 @@ describe("random chains of edits", {
             expect_equal(pip_internals(p), before)
         }
 
-        # Each edit gets the step names and returns a description of what it
-        # did. In `p[i, ...]`, `i` is evaluated in the step table, whose
-        # column `step` would select all steps, so `sel` names the selected
-        # steps there.
+        # Each edit gets the step names and returns a description of what it did. In
+        # `p[i, ...]`, `i` is evaluated in the step table, whose column `step` would
+        # select all steps, so `sel` names the selected steps there.
         edits <- list(
             add = function(steps) {
                 pos <- sample.int(length(steps) + 1L, 1) - 1L
@@ -632,8 +626,8 @@ describe("random chains of edits", {
                 paste("set output of", step)
             },
             copy = function(steps) {
-                # A copy is computed from the same inputs only if they are
-                # done, so that the clone does not run them again
+                # A copy is computed from the same inputs only if they are done, so that
+                # the clone does not run them again
                 env <- .pip_pipenv(p)
                 ids <- env[["data"]][["nodeId"]]
                 isReady <- vapply(
@@ -661,8 +655,8 @@ describe("random chains of edits", {
                 paste("copy", sel, "from a clone")
             },
             lock = function(steps) {
-                # A step that is not done may have passed a failure to its
-                # dependents, which they would not get from a locked step
+                # A step that is not done may have passed a failure to its dependents,
+                # which they would not get from a locked step
                 isDone <- p[["state"]] == "done"
                 if (!any(isDone)) {
                     return("no step to lock")
@@ -719,8 +713,8 @@ describe("random chains of edits", {
             } else {
                 sample(names(weights), 1, prob = weights)
             }
-            # An edit that fails other than expected fails the test, with
-            # the edits so far (failed expectations are reported as they are)
+            # An edit that fails other than expected fails the test, with the edits so
+            # far (failed expectations are reported as they are)
             what <- withCallingHandlers(
                 suppressMessages(edits[[edit]](steps)),
                 error = function(e) {
@@ -744,8 +738,8 @@ describe("random chains of edits", {
         }
     }
 
-    # Set the environment variable PIPEFLOW_RANDOM_CHAINS to run more chains,
-    # e.g. after changing how edits or runs work.
+    # Set the environment variable PIPEFLOW_RANDOM_CHAINS to run more chains, e.g. after
+    # changing how edits or runs work.
     nChains <- as.integer(Sys.getenv("PIPEFLOW_RANDOM_CHAINS", "5"))
     for (seed in seq_len(nChains)) {
         it(sprintf("keep the invariants after each edit (seed %d)", seed), {
