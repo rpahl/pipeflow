@@ -130,17 +130,17 @@ pip_get_params(p) # list(n = 10, factor = 0.5)
 #> [1] 0.5
 #> 
 (pip_run(p))
-#> info [2026-10-26 16:24:38.560 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-26 16:24:38.560 UTC]: Step 1/2 load
-#> info [2026-10-26 16:24:38.561 UTC]: Step 2/2 scale
-#> info [2026-10-26 16:24:38.562 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:50:51.056 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-26 16:50:51.056 UTC]: Step 1/2 load
+#> info [2026-10-26 16:50:51.057 UTC]: Step 2/2 scale
+#> info [2026-10-26 16:50:51.058 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
 #> <pipeflow> pipe (2 steps)
 #> -------------------------
 #>     step   params depends state                             out
 #> 1:  load        n          done             1,2,3,4,5,6,...[10]
 #> 2: scale x,factor    load  done 0.5,1.0,1.5,2.0,2.5,3.0,...[10]
 #> -------------------------
-#> <ready> last run: 2026-10-26 16:24:38 (0.002 s)
+#> <ready> last run: 2026-10-26 16:50:51 (0.002 s)
 #> steps: 2 done
 
 # Updating params marks affected steps (and their dependents) outdated
@@ -152,20 +152,20 @@ p
 #> 1:  load        n         outdated             1,2,3,4,5,6,...[10]
 #> 2: scale x,factor    load outdated 0.5,1.0,1.5,2.0,2.5,3.0,...[10]
 #> -------------------------
-#> <ready> last run: 2026-10-26 16:24:38 (0.002 s)
+#> <ready> last run: 2026-10-26 16:50:51 (0.002 s)
 #> steps: 2 outdated
 (pip_run(p))
-#> info [2026-10-26 16:24:38.567 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-26 16:24:38.567 UTC]: Step 1/2 load
-#> info [2026-10-26 16:24:38.568 UTC]: Step 2/2 scale
-#> info [2026-10-26 16:24:38.569 UTC]: Finished in 0.001 s (2 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:50:51.064 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-26 16:50:51.064 UTC]: Step 1/2 load
+#> info [2026-10-26 16:50:51.065 UTC]: Step 2/2 scale
+#> info [2026-10-26 16:50:51.065 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
 #> <pipeflow> pipe (2 steps)
 #> -------------------------
 #>     step   params depends state            out
 #> 1:  load        n          done      1,2,3,4,5
 #> 2: scale x,factor    load  done  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-10-26 16:24:38 (0.001 s)
+#> <ready> last run: 2026-10-26 16:50:51 (0.002 s)
 #> steps: 2 done
 
 # Setting the same values again doesn't outdate any step
@@ -177,7 +177,7 @@ p
 #> 1:  load        n          done      1,2,3,4,5
 #> 2: scale x,factor    load  done  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-10-26 16:24:38 (0.001 s)
+#> <ready> last run: 2026-10-26 16:50:51 (0.002 s)
 #> steps: 2 done
 
 # Use force = TRUE to outdate the steps anyway
@@ -189,7 +189,7 @@ p
 #> 1:  load        n         outdated      1,2,3,4,5
 #> 2: scale x,factor    load outdated  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-10-26 16:24:38 (0.001 s)
+#> <ready> last run: 2026-10-26 16:50:51 (0.002 s)
 #> steps: 2 outdated
 
 # Setting a parameter that is not defined in the pipeline yields a warning
@@ -243,13 +243,13 @@ q
 #> <ready> last run: never
 #> steps: 5 new
 pip_run(q)
-#> info [2026-10-26 16:24:38.589 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-26 16:24:38.589 UTC]: Step 1/5 load
-#> info [2026-10-26 16:24:38.590 UTC]: Step 2/5 fit_mean
-#> info [2026-10-26 16:24:38.590 UTC]: Step 3/5 fit_max
-#> info [2026-10-26 16:24:38.591 UTC]: Step 4/5 report
-#> info [2026-10-26 16:24:38.592 UTC]: Step 5/5 report_mean
-#> info [2026-10-26 16:24:38.592 UTC]: Finished in 0.003 s (5 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:50:51.087 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-26 16:50:51.087 UTC]: Step 1/5 load
+#> info [2026-10-26 16:50:51.088 UTC]: Step 2/5 fit_mean
+#> info [2026-10-26 16:50:51.089 UTC]: Step 3/5 fit_max
+#> info [2026-10-26 16:50:51.090 UTC]: Step 4/5 report
+#> info [2026-10-26 16:50:51.090 UTC]: Step 5/5 report_mean
+#> info [2026-10-26 16:50:51.091 UTC]: Finished in 0.004 s (5 done, 0 skipped, 0 failed)
 q[["report", "out"]]
 #> [1] "result: 5"
 q[["report_mean", "out"]]

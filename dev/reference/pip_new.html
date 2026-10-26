@@ -122,7 +122,7 @@ saved on its own is read with its own copy of the pipeline.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> List of 3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  $ name  : chr "demo"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  $ view  : NULL</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  $ pipenv:&lt;environment: 0x563bd0ef12b8&gt; </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  $ pipenv:&lt;environment: 0x556bfc8fe918&gt; </span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"name"</span><span class="op">]</span><span class="op">]</span>  <span class="co"># "demo"</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "demo"</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"view"</span><span class="op">]</span><span class="op">]</span>  <span class="co"># initially NULL</span></span></span>
@@ -143,11 +143,11 @@ saved on its own is read with its own copy of the pipeline.</p>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">p</span>, <span class="va">file</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="va">file</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p2</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:24:36.153 UTC]: Starting run of pipeflow 'demo'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:24:36.153 UTC]: Step 1/3 numbers</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:24:36.154 UTC]: Step 2/3 squared</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:24:36.155 UTC]: Step 3/3 total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:24:36.155 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:48.565 UTC]: Starting run of pipeflow 'demo'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:48.565 UTC]: Step 1/3 numbers</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:48.566 UTC]: Step 2/3 squared</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:48.567 UTC]: Step 3/3 total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:48.567 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">p2</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; demo (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
@@ -156,7 +156,7 @@ saved on its own is read with its own copy of the pipeline.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: squared      x numbers  done  1, 4, 9,16,25</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:   total      x squared  done             55</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-26 16:24:36 (0.003 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-26 16:50:48 (0.003 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 3 done</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">file</span><span class="op">)</span></span></span>
 </code></pre></div>

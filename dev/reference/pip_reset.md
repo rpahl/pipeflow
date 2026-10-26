@@ -42,10 +42,10 @@ p <- pip_new() |>
   pip_add("square", \(x = ~load) x^2)
 
 pip_run(p)
-#> info [2026-10-26 16:24:37.566 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-26 16:24:37.566 UTC]: Step 1/2 load
-#> info [2026-10-26 16:24:37.567 UTC]: Step 2/2 square
-#> info [2026-10-26 16:24:37.568 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:50:50.022 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-26 16:50:50.023 UTC]: Step 1/2 load
+#> info [2026-10-26 16:50:50.024 UTC]: Step 2/2 square
+#> info [2026-10-26 16:50:50.024 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
 p[["state"]] # "done", "done"
 #>   load square 
 #> "done" "done" 
@@ -97,10 +97,10 @@ p[["out"]]   # NULL, NULL
 
 # Resetting a step outdates its downstream steps
 pip_run(p)
-#> info [2026-10-26 16:24:37.578 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-26 16:24:37.578 UTC]: Step 1/2 load
-#> info [2026-10-26 16:24:37.579 UTC]: Step 2/2 square
-#> info [2026-10-26 16:24:37.579 UTC]: Finished in 0.001 s (2 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:50:50.034 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-26 16:50:50.034 UTC]: Step 1/2 load
+#> info [2026-10-26 16:50:50.035 UTC]: Step 2/2 square
+#> info [2026-10-26 16:50:50.036 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
 pip_reset(pip_view(p, step = "load"))
 p[["state"]] # "new", "outdated"
 #>       load     square 

@@ -336,12 +336,12 @@ unchanged.</p>
 produces the following output:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-26 16:24:47.631 UTC]: Starting run of pipeflow 'my-pip'</span></span>
-<span><span class="co"># info [2026-10-26 16:24:47.631 UTC]: Step 1/4 data</span></span>
-<span><span class="co"># info [2026-10-26 16:24:47.634 UTC]: Step 2/4 prep</span></span>
-<span><span class="co"># info [2026-10-26 16:24:47.634 UTC]: Step 3/4 fit</span></span>
-<span><span class="co"># info [2026-10-26 16:24:47.637 UTC]: Step 4/4 plot</span></span>
-<span><span class="co"># info [2026-10-26 16:24:48.003 UTC]: Finished in 0.372 s (4 done, 0 skipped, 0 failed)</span></span></code></pre></div>
+<span><span class="co"># info [2026-10-26 16:51:00.394 UTC]: Starting run of pipeflow 'my-pip'</span></span>
+<span><span class="co"># info [2026-10-26 16:51:00.394 UTC]: Step 1/4 data</span></span>
+<span><span class="co"># info [2026-10-26 16:51:00.396 UTC]: Step 2/4 prep</span></span>
+<span><span class="co"># info [2026-10-26 16:51:00.397 UTC]: Step 3/4 fit</span></span>
+<span><span class="co"># info [2026-10-26 16:51:00.400 UTC]: Step 4/4 plot</span></span>
+<span><span class="co"># info [2026-10-26 16:51:00.765 UTC]: Finished in 0.371 s (4 done, 0 skipped, 0 failed)</span></span></code></pre></div>
 <p>Let’s inspect the pipeline again.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pip</span></span>
@@ -353,10 +353,10 @@ produces the following output:</p>
 <span><span class="co"># 3:  fit                  data,xVar     prep  done            &lt;lm[13]&gt;</span></span>
 <span><span class="co"># 4: plot model,data,xVar,xLab,title fit,prep  done   &lt;ggplot2::ggplot&gt;</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:24:48 (0.372 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:51:00 (0.371 s)</span></span>
 <span><span class="co"># steps: 4 done</span></span></code></pre></div>
 <div id="htmlwidget-e5c8c404fe174e4c81bd" style="width:600px;height:100px;" class="visNetwork html-widget"></div>
-<script type="application/json" data-for="htmlwidget-e5c8c404fe174e4c81bd">{"x":{"nodes":{"id":[0,1,2,3],"label":["data","prep","fit","plot"],"shape":["hexagon","hexagon","hexagon","hexagon"],"color":["#87ff6fff","#87ff6fff","#87ff6fff","#87ff6fff"],"title":["<b>data<\/b><br>state: done<br>exec: auto<br>last run: 2026-10-26 16:24:47 (0.000474 secs)<br>params: data = &lt;data.frame&gt;","<b>prep<\/b><br>state: done<br>exec: auto<br>last run: 2026-10-26 16:24:47 (0.000207 secs)<br>depends: data","<b>fit<\/b><br>state: done<br>exec: auto<br>last run: 2026-10-26 16:24:47 (0.0023 secs)<br>params: xVar = &quot;Temp.Celsius&quot;<br>depends: prep","<b>plot<\/b><br>state: done<br>exec: auto<br>last run: 2026-10-26 16:24:47 (0.365 secs)<br>params: xVar = &quot;Temp.Celsius&quot;, xLab = &quot;Temperature in degrees Celsiu..., title = &quot;Linear model fit&quot;<br>depends: fit, prep"]},"edges":{"from":[0,1,2,1],"to":[1,2,3,3],"arrows":["to","to","to","to"],"dashes":[false,false,false,false]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR"}}},"groups":null,"width":600,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>We can see that the <code>state</code> of all steps have been changed
+<script type="application/json" data-for="htmlwidget-e5c8c404fe174e4c81bd">{"x":{"nodes":{"id":[0,1,2,3],"label":["data","prep","fit","plot"],"shape":["hexagon","hexagon","hexagon","hexagon"],"color":["#87ff6fff","#87ff6fff","#87ff6fff","#87ff6fff"],"title":["<b>data<\/b><br>state: done<br>exec: auto<br>last run: 2026-10-26 16:51:00 (0.000529 secs)<br>params: data = &lt;data.frame&gt;","<b>prep<\/b><br>state: done<br>exec: auto<br>last run: 2026-10-26 16:51:00 (0.000199 secs)<br>depends: data","<b>fit<\/b><br>state: done<br>exec: auto<br>last run: 2026-10-26 16:51:00 (0.00246 secs)<br>params: xVar = &quot;Temp.Celsius&quot;<br>depends: prep","<b>plot<\/b><br>state: done<br>exec: auto<br>last run: 2026-10-26 16:51:00 (0.364 secs)<br>params: xVar = &quot;Temp.Celsius&quot;, xLab = &quot;Temperature in degrees Celsiu..., title = &quot;Linear model fit&quot;<br>depends: fit, prep"]},"edges":{"from":[0,1,2,1],"to":[1,2,3,3],"arrows":["to","to","to","to"],"dashes":[false,false,false,false]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR"}}},"groups":null,"width":600,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>We can see that the <code>state</code> of all steps have been changed
 from <code>new</code> to <code>done</code>, which graphically is
 represented by the color change from blue to green.</p>
 <p>In addition, the output was added in a new <code>out</code> column<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt; Technically, the &lt;code&gt;out&lt;/code&gt; column was there all
@@ -441,21 +441,21 @@ the parameter change and mark them as <code>outdated</code> (see column
 <span><span class="co"># 3:  fit                  data,xVar     prep outdated            &lt;lm[13]&gt;</span></span>
 <span><span class="co"># 4: plot model,data,xVar,xLab,title fit,prep outdated   &lt;ggplot2::ggplot&gt;</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:24:48 (0.372 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:51:00 (0.371 s)</span></span>
 <span><span class="co"># steps: 2 done, 2 outdated</span></span></code></pre></div>
 <div id="htmlwidget-36aa3d2a04d42bbc2145" style="width:600px;height:100px;" class="visNetwork html-widget"></div>
-<script type="application/json" data-for="htmlwidget-36aa3d2a04d42bbc2145">{"x":{"nodes":{"id":[0,1,2,3],"label":["data","prep","fit","plot"],"shape":["hexagon","hexagon","hexagon","hexagon"],"color":["#87ff6fff","#87ff6fff","#ffa040ff","#ffa040ff"],"title":["<b>data<\/b><br>state: done<br>exec: auto<br>last run: 2026-10-26 16:24:47 (0.000474 secs)<br>params: data = &lt;data.frame&gt;","<b>prep<\/b><br>state: done<br>exec: auto<br>last run: 2026-10-26 16:24:47 (0.000207 secs)<br>depends: data","<b>fit<\/b><br>state: outdated<br>exec: auto<br>last run: 2026-10-26 16:24:47<br>params: xVar = &quot;Solar.R&quot;<br>depends: prep","<b>plot<\/b><br>state: outdated<br>exec: auto<br>last run: 2026-10-26 16:24:47<br>params: xVar = &quot;Solar.R&quot;, xLab = &quot;Solar radiation in Langleys&quot;, title = &quot;Linear model fit&quot;<br>depends: fit, prep"]},"edges":{"from":[0,1,2,1],"to":[1,2,3,3],"arrows":["to","to","to","to"],"dashes":[false,false,false,false]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR"}}},"groups":null,"width":600,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>We can see that the <code>fit</code> and <code>plot</code> steps are
+<script type="application/json" data-for="htmlwidget-36aa3d2a04d42bbc2145">{"x":{"nodes":{"id":[0,1,2,3],"label":["data","prep","fit","plot"],"shape":["hexagon","hexagon","hexagon","hexagon"],"color":["#87ff6fff","#87ff6fff","#ffa040ff","#ffa040ff"],"title":["<b>data<\/b><br>state: done<br>exec: auto<br>last run: 2026-10-26 16:51:00 (0.000529 secs)<br>params: data = &lt;data.frame&gt;","<b>prep<\/b><br>state: done<br>exec: auto<br>last run: 2026-10-26 16:51:00 (0.000199 secs)<br>depends: data","<b>fit<\/b><br>state: outdated<br>exec: auto<br>last run: 2026-10-26 16:51:00<br>params: xVar = &quot;Solar.R&quot;<br>depends: prep","<b>plot<\/b><br>state: outdated<br>exec: auto<br>last run: 2026-10-26 16:51:00<br>params: xVar = &quot;Solar.R&quot;, xLab = &quot;Solar radiation in Langleys&quot;, title = &quot;Linear model fit&quot;<br>depends: fit, prep"]},"edges":{"from":[0,1,2,1],"to":[1,2,3,3],"arrows":["to","to","to","to"],"dashes":[false,false,false,false]},"nodesToDataframe":true,"edgesToDataframe":true,"options":{"width":"100%","height":"100%","nodes":{"shape":"dot"},"manipulation":{"enabled":false},"layout":{"hierarchical":{"enabled":true,"direction":"LR"}}},"groups":null,"width":600,"height":100,"idselection":{"enabled":false},"byselection":{"enabled":false},"main":null,"submain":null,"footer":null,"background":"rgba(0, 0, 0, 0)"},"evals":[],"jsHooks":[]}</script><p>We can see that the <code>fit</code> and <code>plot</code> steps are
 now in state <code>outdated</code>, because the <code>xVar</code> and
 <code>xLab</code> parameters were updated. To update the results, we
 just run the pipeline again.</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.097 UTC]: Starting run of pipeflow 'my-pip'</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.097 UTC]: Step 1/4 data - skipping done step</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.098 UTC]: Step 2/4 prep - skipping done step</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.098 UTC]: Step 3/4 fit</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.101 UTC]: Step 4/4 plot</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.116 UTC]: Finished in 0.019 s (2 done, 2 skipped, 0 failed)</span></span></code></pre></div>
+<span><span class="co"># info [2026-10-26 16:51:01.834 UTC]: Starting run of pipeflow 'my-pip'</span></span>
+<span><span class="co"># info [2026-10-26 16:51:01.834 UTC]: Step 1/4 data - skipping done step</span></span>
+<span><span class="co"># info [2026-10-26 16:51:01.834 UTC]: Step 2/4 prep - skipping done step</span></span>
+<span><span class="co"># info [2026-10-26 16:51:01.834 UTC]: Step 3/4 fit</span></span>
+<span><span class="co"># info [2026-10-26 16:51:01.838 UTC]: Step 4/4 plot</span></span>
+<span><span class="co"># info [2026-10-26 16:51:01.852 UTC]: Finished in 0.018 s (2 done, 2 skipped, 0 failed)</span></span></code></pre></div>
 <p>A closer look at the run log shows that the pipeline skipped the
 first two steps and ran only the steps that were outdated, which
 basically can be thought of caching or mimicking the behavior of
@@ -483,16 +483,16 @@ on the pipeline. To just change the title of the plot, only the
 <span><span class="co"># 3:  fit                  data,xVar     prep     done            &lt;lm[13]&gt;</span></span>
 <span><span class="co"># 4: plot model,data,xVar,xLab,title fit,prep outdated   &lt;ggplot2::ggplot&gt;</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:24:49 (0.019 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:51:01 (0.018 s)</span></span>
 <span><span class="co"># steps: 3 done, 1 outdated</span></span></code></pre></div>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.545 UTC]: Starting run of pipeflow 'my-pip'</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.545 UTC]: Step 1/4 data - skipping done step</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.545 UTC]: Step 2/4 prep - skipping done step</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.545 UTC]: Step 3/4 fit - skipping done step</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.545 UTC]: Step 4/4 plot</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.556 UTC]: Finished in 0.012 s (1 done, 3 skipped, 0 failed)</span></span>
+<span><span class="co"># info [2026-10-26 16:51:02.273 UTC]: Starting run of pipeflow 'my-pip'</span></span>
+<span><span class="co"># info [2026-10-26 16:51:02.274 UTC]: Step 1/4 data - skipping done step</span></span>
+<span><span class="co"># info [2026-10-26 16:51:02.274 UTC]: Step 2/4 prep - skipping done step</span></span>
+<span><span class="co"># info [2026-10-26 16:51:02.274 UTC]: Step 3/4 fit - skipping done step</span></span>
+<span><span class="co"># info [2026-10-26 16:51:02.274 UTC]: Step 4/4 plot</span></span>
+<span><span class="co"># info [2026-10-26 16:51:02.284 UTC]: Finished in 0.010 s (1 done, 3 skipped, 0 failed)</span></span>
 <span><span class="va">pip</span><span class="op">[[</span><span class="st">"plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
 <p><img src="v01-get-started_files/figure-html/inspect-plot-after-title-change-1.png" class="r-plt" alt="model-plot" width="700"></p>
 <p>Once we change the input data parameter from the <code>data</code>
@@ -510,16 +510,16 @@ rerun.</p>
 <span><span class="co"># 3:  fit                  data,xVar     prep outdated            &lt;lm[13]&gt;</span></span>
 <span><span class="co"># 4: plot model,data,xVar,xLab,title fit,prep outdated   &lt;ggplot2::ggplot&gt;</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:24:49 (0.012 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:51:02 (0.010 s)</span></span>
 <span><span class="co"># steps: 4 outdated</span></span></code></pre></div>
 <div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">pip</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.899 UTC]: Starting run of pipeflow 'my-pip'</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.899 UTC]: Step 1/4 data</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.901 UTC]: Step 2/4 prep</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.904 UTC]: Step 3/4 fit</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.906 UTC]: Step 4/4 plot</span></span>
-<span><span class="co"># info [2026-10-26 16:24:49.915 UTC]: Finished in 0.016 s (4 done, 0 skipped, 0 failed)</span></span>
+<span><span class="co"># info [2026-10-26 16:51:02.620 UTC]: Starting run of pipeflow 'my-pip'</span></span>
+<span><span class="co"># info [2026-10-26 16:51:02.620 UTC]: Step 1/4 data</span></span>
+<span><span class="co"># info [2026-10-26 16:51:02.622 UTC]: Step 2/4 prep</span></span>
+<span><span class="co"># info [2026-10-26 16:51:02.625 UTC]: Step 3/4 fit</span></span>
+<span><span class="co"># info [2026-10-26 16:51:02.627 UTC]: Step 4/4 plot</span></span>
+<span><span class="co"># info [2026-10-26 16:51:02.637 UTC]: Finished in 0.017 s (4 done, 0 skipped, 0 failed)</span></span>
 <span><span class="va">pip</span><span class="op">[[</span><span class="st">"plot"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
 <p><img src="v01-get-started_files/figure-html/inspect-plot-after-data-change-1.png" class="r-plt" alt="model-plot" width="700"></p>
 <div class="section level4">
@@ -540,7 +540,7 @@ changed.</p>
 <span><span class="co"># 3:  fit                  data,xVar     prep  done           &lt;lm[13]&gt;</span></span>
 <span><span class="co"># 4: plot model,data,xVar,xLab,title fit,prep  done  &lt;ggplot2::ggplot&gt;</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:24:49 (0.016 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:51:02 (0.017 s)</span></span>
 <span><span class="co"># steps: 4 done</span></span></code></pre></div>
 <p>If you do want to outdate the steps anyway, for example because a
 parameter is an environment that was modified in place, use
@@ -556,7 +556,7 @@ parameter is an environment that was modified in place, use
 <span><span class="co"># 3:  fit                  data,xVar     prep     done           &lt;lm[13]&gt;</span></span>
 <span><span class="co"># 4: plot model,data,xVar,xLab,title fit,prep outdated  &lt;ggplot2::ggplot&gt;</span></span>
 <span><span class="co"># ---------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:24:49 (0.016 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:51:02 (0.017 s)</span></span>
 <span><span class="co"># steps: 3 done, 1 outdated</span></span></code></pre></div>
 </div>
 <div class="section level4">
