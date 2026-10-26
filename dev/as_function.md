@@ -12,6 +12,20 @@ data model, `.step_call` and the run loop.
 
 ## 1. Function map
 
+The banners and sections of `R/as_function.R` (see
+[pipeflow.md](pipeflow.md#sections) for the conventions and a command that
+prints the current outline):
+
+- **Making the function**: Asserts, Function construction
+- **Calling the function**: Call, Slots, Run check & result
+- **Kept pipelines**: Cache access, Updates on pipeline edits
+- **Exported API**: Pipeline as a function, Inner pipelines
+
+`tests/testthat/test_as_function.R` opens with an **Internal helpers**
+banner, whose sections test helpers one by one, in the order of the source
+sections. The outer `describe()` that follows tests the behaviour, under
+indented banners named like the four above.
+
 | Function | Role |
 |---|---|
 | `as.function.pipeflow(x, out, cache, on_error, lgr)` | Entry point. Validates the arguments, takes a reset snapshot (`template`), builds the formals from `pip_get_params()`, and assembles the function. |

@@ -143,13 +143,20 @@ have changed the pipeline.
 - `R/pipeflow.R` holds the exported `pip_*` API (except `pip_graph()`, see
   `R/graph.R` below), with internal `.pip_*` helpers at the top.
 - `R/generic.pipeflow.R` holds the S3 methods: `[`, `[[`, `$`, their
-  assignment forms, `rbind` (pipeline binding), `length`, `dim` and `str`.
+  assignment forms, `rbind` (pipeline binding), `length`, `dim` and `str`,
+  with the helpers that only they use at the top.
 - `R/print.pipeflow.R` holds the print method.
 - `R/log.R` holds the default logger, `pipeflow_lgr(level, msg)`.
 - `R/graph.R` holds `pip_graph()` and its helpers (`.pip_graph_*`).
 - The package imports all of `data.table`. Its filter operators (`%like%`,
   `%between%`, …) are not exported, but `[` filters find them via
   `.filter_ops` (`.pip_select_rows()`).
+- The larger files are split into sections: a full-width `# ====` banner
+  opens a block, a short `# ---` rule a section within it. Put a new
+  function in the section it belongs to, and a helper in the file that uses
+  it (a test-only helper goes into `tests/testthat/helper_*.R`). The test
+  files follow the sections of their source file in the same order. For
+  the outline, see "Sections" in `dev/pipeflow.md`.
 
 ## Conventions
 
