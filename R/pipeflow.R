@@ -301,8 +301,8 @@
     ) {
         .pip_add_time_cols(pipenv)
     }
-    # Pipelines saved with older versions of pipeflow have no
-    # `.steps_with_current_out` (see pip_new())
+    # Pipelines saved with older versions of pipeflow have no `.steps_with_current_out`
+    # (see pip_new())
     if (is.environment(pipenv) && is.null(pipenv[[".steps_with_current_out"]])) {
         pipenv[[".steps_with_current_out"]] <- new.env(parent = emptyenv())
     }
@@ -378,8 +378,8 @@
     steps <- dat[["step"]]
     ids <- as.integer(dat[["nodeId"]])
 
-    # Other functions find the nodes of steps via the step->node map, so it
-    # must match the step table.
+    # Other functions find the nodes of steps via the step->node map, so it must match
+    # the step table.
     stepsToNodes <- pipenv[[".steps_to_nodes"]]
     mapped <- mget(
         steps,
@@ -527,8 +527,8 @@
 #' @noRd
 .pip_get_reachable_nodes <- function(x, steps, downstream = TRUE) {
     env <- .pip_pipenv(x)
-    # mget() fails on empty names and would look up NA as "NA"; unknown
-    # steps are dropped below.
+    # mget() fails on empty names and would look up NA as "NA"; unknown steps are
+    # dropped below.
     steps <- unique(as.character(steps))
     steps <- steps[!is.na(steps) & nzchar(steps)]
     if (length(steps) == 0L) {
@@ -636,9 +636,9 @@
         )
     }
 
-    # References to other steps are marked using a formula and can be either
-    # referencing earlier steps (e.g. x = ~step1) or using positional indices
-    # by pointing backwards a certain number of steps (e.g. x = ~-2)
+    # References to other steps are marked using a formula and can be either referencing
+    # earlier steps (e.g. x = ~step1) or using positional indices by pointing backwards
+    # a certain number of steps (e.g. x = ~-2)
     depends <- formula_deps(params)
     if (length(depends) == 0) {
         return(character(0))
@@ -745,9 +745,9 @@
     env <- .pip_pipenv(x)
     data <- env[["data"]]
 
-    # Dependencies may only point to steps that precede the insertion point
-    # (mirroring the previous step-by-step rebuild, this keeps the row order
-    # a valid topological order).
+    # Dependencies may only point to steps that precede the insertion point (mirroring
+    # the previous step-by-step rebuild, this keeps the row order a valid topological
+    # order).
     prefixSteps <- data[["step"]][seq_len(pos)]
     steps <- c(prefixSteps, step)
     depends <- .extract_depends(params = params, steps = steps)
@@ -854,15 +854,15 @@
     dat <- env[["data"]]
     rows <- .pip_view_rows(x)
 
-    # A one-sided formula binds the param to the step it refers to. The
-    # references are checked only for the params that are bound below.
+    # A one-sided formula binds the param to the step it refers to. The references are
+    # checked only for the params that are bound below.
     isRef <- bind & vapply(params, is_one_sided_formula, logical(1))
     refs <- params[isRef]
     targets <- formula_deps(refs)
 
-    # Signal parameters that are not defined in any of the selected steps,
-    # including the locked ones. A param that is bound as given already is
-    # not unknown, so that setting the binding again just does nothing.
+    # Signal parameters that are not defined in any of the selected steps, including the
+    # locked ones. A param that is bound as given already is not unknown, so that
+    # setting the binding again just does nothing.
     defined <- unique(unlist(dat[["unbound"]][rows]))
     isBound <- vapply(
         names(refs),
@@ -898,8 +898,8 @@
     rowsAffected <- rowsConsidered[hasOverlap]
 
     if (any(hasOverlap)) {
-        # Bindings must refer to a step that comes before the bound step,
-        # which is checked before anything is changed.
+        # Bindings must refer to a step that comes before the bound step, which is
+        # checked before anything is changed.
         namesBound <- lapply(namesAffected, FUN = intersect, y = names(refs))
         toBind <- unique(unlist(namesBound))
         .pip_assert_bind_targets(x, refs[toBind])
@@ -910,9 +910,9 @@
             targets[toBind]
         )
 
-        # Determine the value to store for every affected row and name
-        # before anything is changed, so that a failing method leaves the
-        # pipeline untouched and all failures are reported at once.
+        # Determine the value to store for every affected row and name before anything
+        # is changed, so that a failing method leaves the pipeline untouched and all
+        # failures are reported at once.
         merged <- vector("list", length(rowsAffected))
         errors <- list()
         for (j in seq_along(rowsAffected)) {
@@ -939,9 +939,9 @@
             stop(.pip_set_params_error(errors))
         }
 
-        # Update parameters in all affected rows, skipping values that are
-        # identical to the stored ones (unless forced), and bind params,
-        # which always changes the step
+        # Update parameters in all affected rows, skipping values that are identical to
+        # the stored ones (unless forced), and bind params, which always changes the
+        # step
         isChanged <- logical(length(rowsAffected))
         for (j in seq_along(rowsAffected)) {
             i <- rowsAffected[[j]]
@@ -1347,8 +1347,8 @@
     failed <- lapply(conds[isFailed], \(f) f[["parent"]])
     skipped <- names(failures)[!isFailed]
 
-    # A step that failed for some keys is listed with the message of its
-    # first failed key, or with the step that failed for it.
+    # A step that failed for some keys is listed with the message of its first failed
+    # key, or with the step that failed for it.
     reasons <- vapply(
         names(failed),
         FUN = function(step) {
@@ -1439,8 +1439,8 @@
     details <- vapply(
         argKeys[differs],
         FUN = function(keys) {
-            # The common keys in the order of the reference and of the
-            # argument, and those whose position differs between the two
+            # The common keys in the order of the reference and of the argument, and
+            # those whose position differs between the two
             common <- intersect(ref, keys)
             moved <- common[common != intersect(keys, ref)]
             diffs <- list(
@@ -1558,31 +1558,30 @@
     keep = list(),
     map = NULL
 ) {
-    # A partitioned argument is a list of per-key values produced by a
-    # step with exec = "split" and tagged with class "pipeflow_partitioned".
+    # A partitioned argument is a list of per-key values produced by a step with exec =
+    # "split" and tagged with class "pipeflow_partitioned".
     partIdx <- which(vapply(
         args,
         FUN = .is_pipeflow_partitioned,
         FUN.VALUE = logical(1)
     ))
 
-    # Split mode: run the function once on the full (unpartitioned) inputs and
-    # mark the result as partitioned so downstream steps can map over it.
+    # Split mode: run the function once on the full (unpartitioned) inputs and mark the
+    # result as partitioned so downstream steps can map over it.
     if (exec == "split") {
         out <- .pip_call_step(fun, args = args, step = step)
         return(.as_pipeflow_partitioned(out))
     }
 
-    # Plain mode: only executes a single call, so partitioned inputs
-    # (which would require mapping) are not allowed.
+    # Plain mode: only executes a single call, so partitioned inputs (which would
+    # require mapping) are not allowed.
     if (exec == "plain" && length(partIdx) > 0L) {
         stop("plain mode does not accept partitioned inputs")
     }
 
-    # Reduce mode: combines partitioned inputs in a single call,
-    # so it needs at least one partitioned input to be meaningful. A failure
-    # object counts as one, because a failed split step yields a single
-    # failure instead of a partitioned output.
+    # Reduce mode: combines partitioned inputs in a single call, so it needs at least
+    # one partitioned input to be meaningful. A failure object counts as one, because a
+    # failed split step yields a single failure instead of a partitioned output.
     if (exec == "reduce" && length(partIdx) == 0L) {
         hasFailure <- any(vapply(
             args,
@@ -1596,16 +1595,16 @@
     }
 
     # Single-call, which happens in three scenarios:
-    # 1) there are no partitioned inputs, which is the standard case in a
-    #    standard pipeline that runs without any split/reduce steps
+    # 1) there are no partitioned inputs, which is the standard case in a standard
+    #    pipeline that runs without any split/reduce steps
     # 2) plain mode was explicitly requested (to ensure non-split mode)
     # 3) reduce mode was requested to re-combine partitioned inputs
     if (length(partIdx) == 0L || exec == "plain" || exec == "reduce") {
         return(.pip_call_step(fun, args = args, step = step))
     }
 
-    # Auto mode with partitioned inputs: map the function over the partition
-    # keys. Keys are taken from the first partitioned argument...
+    # Auto mode with partitioned inputs: map the function over the partition keys. Keys
+    # are taken from the first partitioned argument...
     argKeys <- lapply(args[partIdx], FUN = names)
     keys <- argKeys[[1L]]
     mismatch <- .pip_keys_mismatch(argKeys)
@@ -1613,15 +1612,15 @@
         stop(mismatch)
     }
 
-    # With no key there is no call, which could tell a pipeline function that
-    # the keys it keeps pipelines for are gone.
+    # With no key there is no call, which could tell a pipeline function that the keys
+    # it keeps pipelines for are gone.
     if (length(keys) == 0L) {
         .fun_release(fun, step)
     }
 
-    # Errors are re-raised with the key name so a failing partition can
-    # be located without inspecting the whole output. In a continued
-    # run, the error is kept as the output of the key instead.
+    # Errors are re-raised with the key name so a failing partition can be located
+    # without inspecting the whole output. In a continued run, the error is kept as the
+    # output of the key instead.
     keyFailed <- function(e, key) {
         keyError <- .pip_key_error(key, parent = e)
         if (onError == "stop") {
@@ -1630,9 +1629,9 @@
         .pip_failure(step, parent = keyError, key = key)
     }
 
-    # ...and each key is computed separately by slicing all partitioned
-    # arguments down to that key before calling the function. With `map`,
-    # the keys to run are collected first and then run by `map`.
+    # ...and each key is computed separately by slicing all partitioned arguments down
+    # to that key before calling the function. With `map`, the keys to run are collected
+    # first and then run by `map`.
     out <- stats::setNames(vector(mode = "list", length = length(keys)), keys)
     todo <- list()
     blocked <- character()
@@ -1646,8 +1645,8 @@
             keyArgs[[idx]] <- args[[idx]][[key]]
         }
 
-        # A key whose input failed (in a continued run) is only allowed to run
-        # if all arguments that get a failure refer to their step via try().
+        # A key whose input failed (in a continued run) is only allowed to run if all
+        # arguments that get a failure refer to their step via try().
         isFailed <- vapply(
             keyArgs[partIdx],
             FUN = inherits,
@@ -1663,8 +1662,8 @@
                 failedStep = cause[["failed_step"]],
                 key = key
             )
-            # With `map`, it is raised in the order of the keys, after the
-            # keys that are run by `map` (see below).
+            # With `map`, it is raised in the order of the keys, after the keys that are
+            # run by `map` (see below).
             if (onError == "stop" && is.null(map)) {
                 stop(.pip_key_error(key, parent = failure))
             }
@@ -1690,8 +1689,8 @@
         )
     }
 
-    # The errors of the keys are only raised (or kept) after all keys ran,
-    # in the order of the keys.
+    # The errors of the keys are only raised (or kept) after all keys ran, in the order
+    # of the keys.
     res <- .pip_map_keys(todo, map = map, fun = fun, step = step, keys = keys)
     for (key in intersect(keys, c(names(res), blocked))) {
         if (key %in% blocked) {
@@ -1741,8 +1740,8 @@
             )
         )
     }
-    # A worker that died (e.g. a 'try-error' of parallel::mclapply()) gives
-    # no result of the worker function.
+    # A worker that died (e.g. a 'try-error' of parallel::mclapply()) gives no result of
+    # the worker function.
     res <- lapply(res, FUN = \(r) {
         if (is.list(r) && identical(names(r), c("ok", "value"))) {
             return(r)
@@ -1823,8 +1822,8 @@
             if (inherits(out[[key]], "pipeflow_failure")) {
                 return(out[[key]])
             }
-            # As in `.pip_execute_step_call()`, errors are re-raised with the
-            # key name, so a failing partition can be located.
+            # As in `.pip_execute_step_call()`, errors are re-raised with the key name,
+            # so a failing partition can be located.
             tryCatch(
                 expr = pip_output_value(
                     out[[key]],
@@ -1887,8 +1886,8 @@
     depends <- dat[["depends"]][[i]]
     exec <- dat[["exec"]][[i]]
 
-    # If calculation depends on results of earlier steps, get them from
-    # respective referenced output slots of the pipeline.
+    # If calculation depends on results of earlier steps, get them from respective
+    # referenced output slots of the pipeline.
     if (length(depends) > 0) {
         refsOut <- dat[["out"]][data.table::chmatch(depends, dat[["step"]])]
         args[names(depends)] <- refsOut
@@ -1897,20 +1896,19 @@
 
     step <- dat[["step"]][[i]]
 
-    # Provide `.self` (the full pipeline being run) to a step function that
-    # refers to it, in an environment of its own for this call. That
-    # environment is released once the step returned (or failed), so that
-    # outputs capturing the call frame don't keep the pipeline alive.
+    # Provide `.self` (the full pipeline being run) to a step function that refers to
+    # it, in an environment of its own for this call. That environment is released once
+    # the step returned (or failed), so that outputs capturing the call frame don't keep
+    # the pipeline alive.
     funSelf <- .wrap_self(fun, self = x)
     if (!identical(environment(funSelf), environment(fun))) {
         on.exit(.release_self(environment(funSelf)), add = TRUE)
     }
 
     # A step that refers to `.self`, or whose function was made by
-    # as.function.pipeflow() with `cache = TRUE`, changes state outside of
-    # its output (the pipeline, or the kept pipelines of the function). Its
-    # keys always run here, as the changes made on another process would be
-    # lost.
+    # as.function.pipeflow() with `cache = TRUE`, changes state outside of its output
+    # (the pipeline, or the kept pipelines of the function). Its keys always run here,
+    # as the changes made on another process would be lost.
     if (!identical(funSelf, fun) || .fun_keeps(fun)) {
         map <- NULL
     }
@@ -1924,22 +1922,20 @@
         keep <- prev[setdiff(names(prev), .pip_failed_keys(prev))]
     }
 
-    # The start of every attempt, also of one that fails. Row `i` is still
-    # the step's row here, as only the step call can shift the rows.
+    # The start of every attempt, also of one that fails. Row `i` is still the step's
+    # row here, as only the step call can shift the rows.
     startTime <- Sys.time()
     data.table::set(dat, i = i, j = "time_start", value = startTime)
 
-    # `.steps_with_current_out` remembers the steps whose stored output comes
-    # from their last attempt (an environment: step name -> TRUE/FALSE). Here,
-    # at the start of an attempt, we unmark the current step and it will be
-    # marked again only if this attempt successfully stores an output (see
-    # below).
+    # `.steps_with_current_out` remembers the steps whose stored output comes from their
+    # last attempt (an environment: step name -> TRUE/FALSE). Here, at the start of an
+    # attempt, we unmark the current step and it will be marked again only if this
+    # attempt successfully stores an output (see below).
     pipenv <- .pip_pipenv(x)
     currentOut <- pipenv[[".steps_with_current_out"]]
     currentOut[[step]] <- FALSE
-    # The step may change its own function, params or exec mode while it
-    # runs (via `.self`), which makes the outputs of this attempt stale right
-    # away.
+    # The step may change its own function, params or exec mode while it runs (via
+    # `.self`), which makes the outputs of this attempt stale right away.
     funAtStart <- dat[["fun"]][[i]]
     paramsAtStart <- dat[["params"]][[i]]
 
@@ -1957,8 +1953,8 @@
                 map = map
             )
 
-            # One time stamp for the whole step, also for all keys of a
-            # partitioned output, and the one that is stored below.
+            # One time stamp for the whole step, also for all keys of a partitioned
+            # output, and the one that is stored below.
             runTime <- Sys.time()
             .pip_annotate_output(
                 res,
@@ -1968,8 +1964,8 @@
             )
         },
         error = function(e) {
-            # The step call may have shifted the rows (via `.self`), so the
-            # step's row is looked up by name.
+            # The step call may have shifted the rows (via `.self`), so the step's row
+            # is looked up by name.
             dat <- .pip_pipenv(x)[["data"]]
             rowNow <- data.table::chmatch(step, dat[["step"]])
             if (!is.na(rowNow)) {
@@ -1994,8 +1990,8 @@
         }
     )
 
-    # Only the keys that failed in this step are logged, not those that were
-    # not run because an input failed.
+    # Only the keys that failed in this step are logged, not those that were not run
+    # because an input failed.
     failedKeys <- .pip_failed_keys(out)
     for (key in failedKeys) {
         f <- out[[key]]
@@ -2004,14 +2000,14 @@
         }
     }
 
-    # Re-read pipeline after execution to handle scenarios where the pipeline
-    # modified itself at runtime. Since we update by step name, if the current
-    # step does not exist anymore, we simply skip the update.
+    # Re-read pipeline after execution to handle scenarios where the pipeline modified
+    # itself at runtime. Since we update by step name, if the current step does not
+    # exist anymore, we simply skip the update.
     dat <- .pip_pipenv(x)[["data"]]
     rowNow <- data.table::chmatch(step, dat[["step"]])
     stepStillExists <- !is.na(rowNow)
-    # Whether the step changed its own function, params or exec mode during
-    # the attempt (via `.self`), so that its output is stale already.
+    # Whether the step changed its own function, params or exec mode during the attempt
+    # (via `.self`), so that its output is stale already.
     stepHasChangedItself <- stepStillExists &&
         any(
             !identical(dat[["fun"]][[rowNow]], funAtStart),
@@ -2029,14 +2025,14 @@
                 .as_duration(runTime - startTime)
             )
         )
-        # Remember that the step's output now comes from this (current)
-        # attempt, unless the step changed itself during the attempt.
+        # Remember that the step's output now comes from this (current) attempt, unless
+        # the step changed itself during the attempt.
         if (!stepHasChangedItself) {
             currentOut[[step]] <- TRUE
         }
     } else if (stepStillExists) {
-        # A step that changed itself computed its output with the old
-        # definition, so it is outdated rather than done.
+        # A step that changed itself computed its output with the old definition, so it
+        # is outdated rather than done.
         state <- if (stepHasChangedItself) "outdated" else "done"
         data.table::set(
             dat,
@@ -2145,8 +2141,8 @@ pip_new <- function(name = "pipe") {
         stop("name must not be NA")
     }
 
-    # Main pipeline components live in an inner environment that is shared by
-    # reference with all views of this pipeline.
+    # Main pipeline components live in an inner environment that is shared by reference
+    # with all views of this pipeline.
     hash_map <- function() new.env(parent = emptyenv())
     env <- hash_map()
     env[["data"]] <- .empty_pipeline()
@@ -2165,8 +2161,8 @@ pip_new <- function(name = "pipe") {
     env[[".restart_count"]] <- 0L
     env[[".restart_force"]] <- TRUE
 
-    # Steps whose stored output comes from their last attempt (see
-    # .pip_run_row()), not copied by pip_clone()
+    # Steps whose stored output comes from their last attempt (see .pip_run_row()), not
+    # copied by pip_clone()
     env[[".steps_with_current_out"]] <- hash_map()
 
     structure(
@@ -2369,8 +2365,8 @@ pip_add <- function(
         if (!.pip_step_exists(x, after)) {
             stop("step '", after, "' does not exist")
         }
-        # Most of the time the new step is added at the end, so we check that
-        # first to avoid the more expensive match() call in the common case.
+        # Most of the time the new step is added at the end, so we check that first to
+        # avoid the more expensive match() call in the common case.
         pos <- n
         last <- .pip_pipenv(x)[["data"]][["step"]][n]
         if (after != last) {
@@ -2569,10 +2565,9 @@ pip_collect <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
     }
 
     tab <- if (is.list(byCol)) {
-        # For list columns (like tags) the table is expanded by duplicating
-        # rows with multiple entries so that each row contains one entry.
-        # For example, tags = c("a", "b") will produce two rows, one for
-        # tags = "a" and one for tags = "b".
+        # For list columns (like tags) the table is expanded by duplicating rows with
+        # multiple entries so that each row contains one entry. For example, tags =
+        # c("a", "b") will produce two rows, one for tags = "a" and one for tags = "b".
         keysAll <- byCol
         lens <- lengths(keysAll)
         has <- which(lens > 0L)
@@ -2809,8 +2804,8 @@ pip_set_params <- function(
         stop("All parameters must be named")
     }
 
-    # The options in `...` go to the methods of `pip_param_value<-`() only,
-    # so that they can't clash with the arguments of .pip_set_params()
+    # The options in `...` go to the methods of `pip_param_value<-`() only, so that they
+    # can't clash with the arguments of .pip_set_params()
     setValue <- \(current, value) {
         `pip_param_value<-`(current, ..., value = value)
     }
@@ -3008,9 +3003,9 @@ pip_rename <- function(x, from, to) {
     if (!nzchar(to)) {
         stop("to must be a non-empty string")
     }
-    # A name, e.g. of a step taken from `p[["step"]]` (a named vector), would
-    # fail the identical() checks below and in .pip_rename_failures(), and
-    # `to` would carry it into the renamed failures.
+    # A name, e.g. of a step taken from `p[["step"]]` (a named vector), would fail the
+    # identical() checks below and in .pip_rename_failures(), and `to` would carry it
+    # into the renamed failures.
     from <- unname(from)
     to <- unname(to)
 
@@ -3044,9 +3039,9 @@ pip_rename <- function(x, from, to) {
         }
     )
 
-    # Keep the formula references in params in sync with the renamed steps.
-    # The formulas are informational (step resolution uses `depends`), but
-    # they are user visible (e.g. when printing the params column).
+    # Keep the formula references in params in sync with the renamed steps. The formulas
+    # are informational (step resolution uses `depends`), but they are user visible
+    # (e.g. when printing the params column).
     newParams <- dat[["params"]]
     for (i in seq_along(newParams)) {
         dep <- newDepends[[i]]
@@ -3065,8 +3060,8 @@ pip_rename <- function(x, from, to) {
     data.table::set(dat, j = "depends", value = newDepends)
     data.table::set(dat, j = "params", value = list(newParams))
 
-    # The failures stored for the failed keys of mapped steps name the steps
-    # they come from.
+    # The failures stored for the failed keys of mapped steps name the steps they come
+    # from.
     for (i in seq_len(nrow(dat))) {
         out <- dat[["out"]][[i]]
         if (length(.pip_failed_keys(out)) > 0L) {
@@ -3080,9 +3075,9 @@ pip_rename <- function(x, from, to) {
     stepsToNodes[[to]] <- nodeId
     rm(list = from, envir = stepsToNodes, inherits = FALSE)
 
-    # Whether the stored output comes from the step's last attempt (see
-    # .pip_run_row()) does not change with its name. The new name may still
-    # carry a mark of a removed step, which is overwritten (also with NULL).
+    # Whether the stored output comes from the step's last attempt (see .pip_run_row())
+    # does not change with its name. The new name may still carry a mark of a removed
+    # step, which is overwritten (also with NULL).
     currentOut <- env[[".steps_with_current_out"]]
     currentOut[[to]] <- currentOut[[from]]
     currentOut[[from]] <- NULL
@@ -3243,8 +3238,8 @@ pip_replace <- function(
         inherits = FALSE
     )
 
-    # Update the incoming DAG edges of the replaced step (its node and all
-    # outgoing edges stay the same).
+    # Update the incoming DAG edges of the replaced step (its node and all outgoing
+    # edges stay the same).
     d <- .pip_dag(env)
     nodeId <- env[[".steps_to_nodes"]][[step]]
     oldDeps <- data[["depends"]][[iStep]]
@@ -3267,8 +3262,8 @@ pip_replace <- function(
         dag_add_edges_to(d, from = toAdd, to = nodeId)
     }
 
-    # Reset the step row: new function and params, fresh runtime state (like
-    # a freshly added step), but with the given or kept tags and exec.
+    # Reset the step row: new function and params, fresh runtime state (like a freshly
+    # added step), but with the given or kept tags and exec.
     values <- list(
         "fun" = list(fun),
         "params" = list(params),
@@ -3285,8 +3280,8 @@ pip_replace <- function(
     )
     data.table::set(data, i = iStep, j = names(values), value = values)
 
-    # Mark downstream dependent steps as outdated (the replaced step itself
-    # is "new" and therefore stays "new").
+    # Mark downstream dependent steps as outdated (the replaced step itself is "new" and
+    # therefore stays "new").
     .pip_outdate_downstream(x, steps = step)
 
     invisible(x)
@@ -3593,16 +3588,15 @@ pip_run <- function(
         rowsToRun <- as.integer(sort(unique(c(requested, upRows))))
         names(rowsToRun) <- ifelse(rowsToRun %in% requested, "view", "upstream")
     }
-    # Mark the steps downstream of the executed steps as outdated if they were
-    # not executed themselves, which can happen in two different ways:
-    # a) when running a view that does not cover the entire pipeline or
-    # b) the run was aborted in the middle (due to an error or manual halt).
-    # Steps downstream of steps that were only skipped keep their state, as
-    # do locked steps.
+    # Mark the steps downstream of the executed steps as outdated if they were not
+    # executed themselves, which can happen in two different ways: a) when running a
+    # view that does not cover the entire pipeline or b) the run was aborted in the
+    # middle (due to an error or manual halt). Steps downstream of steps that were only
+    # skipped keep their state, as do locked steps.
     executedSteps <- character()
 
-    # Failure objects of the steps that failed or were not run because an
-    # input failed, by step name (only used with on_error = "continue").
+    # Failure objects of the steps that failed or were not run because an input failed,
+    # by step name (only used with on_error = "continue").
     failures <- list()
     outdate_downstream_of_executed <- function() {
         dat <- pipenv[["data"]]
@@ -3612,11 +3606,10 @@ pip_run <- function(
             steps = executedSteps,
             keep = c(executedSteps, locked)
         )
-        # An executed step that ended outdated (or new, if it was replaced)
-        # was changed during the run, by itself or by a later step, so the
-        # steps after it that ran with its output are outdated too. Failed
-        # steps are left out, as their dependents only run again once they
-        # succeed.
+        # An executed step that ended outdated (or new, if it was replaced) was changed
+        # during the run, by itself or by a later step, so the steps after it that ran
+        # with its output are outdated too. Failed steps are left out, as their
+        # dependents only run again once they succeed.
         staleStates <- c(
             .step_states[["outdated"]][["name"]],
             .step_states[["new"]][["name"]]
@@ -3634,8 +3627,8 @@ pip_run <- function(
 
     state <- pipenv[[".run_state"]]
     isRestart <- state == .run_states[["restart"]][["name"]]
-    # A restart hands over the start of the run, so that the total time
-    # logged at the end covers the whole run.
+    # A restart hands over the start of the run, so that the total time logged at the
+    # end covers the whole run.
     runStart <- pipenv[[".run_start"]]
     if (!isRestart || is.null(runStart)) {
         runStart <- Sys.time()
@@ -3653,8 +3646,8 @@ pip_run <- function(
             for (i in seq_along(rowsToRun)) {
                 row <- rowsToRun[[i]]
                 step <- dat[["step"]][[row]]
-                # A progress callback that returns FALSE cancels the run
-                # before the step, like a halt.
+                # A progress callback that returns FALSE cancels the run before the
+                # step, like a halt.
                 if (!is.null(progress)) {
                     if (isFALSE(progress(value = i, detail = step))) {
                         log_info("Aborting pipeline execution on cancel.")
@@ -3669,12 +3662,12 @@ pip_run <- function(
                     sprintf("Step %i/%i %s", i, length(rowsToRun), step)
                 }
 
-                # Arguments whose input step failed or was not run in this
-                # run (only possible with on_error = "continue"). Unless all
-                # of them refer to their step via try(), the step is not run
-                # and counts as failed for its own dependents. An input that
-                # failed for some keys only counts for a step that is not
-                # mapped over the keys; a mapped step handles it per key.
+                # Arguments whose input step failed or was not run in this run (only
+                # possible with on_error = "continue"). Unless all of them refer to
+                # their step via try(), the step is not run and counts as failed for its
+                # own dependents. An input that failed for some keys only counts for a
+                # step that is not mapped over the keys; a mapped step handles it per
+                # key.
                 depends <- dat[["depends"]][[row]]
                 failedArgs <- names(depends)[depends %in% names(failures)]
                 isPartial <- vapply(
@@ -3712,8 +3705,8 @@ pip_run <- function(
                     }
                 }
 
-                # A done step is re-run if one of its inputs was executed in
-                # this run, since its output may then be stale.
+                # A done step is re-run if one of its inputs was executed in this run,
+                # since its output may then be stale.
                 inputsChanged <- hasFailedInput ||
                     any(depends %in% executedSteps)
                 isDone <- dat[["state"]][[row]] == "done"
@@ -3726,15 +3719,15 @@ pip_run <- function(
                     next()
                 }
 
-                # A step that failed for some keys and is still "failed"
-                # (its params and upstream steps did not change since, which
-                # would have outdated it) only re-runs these keys, unless an
-                # input was run again in this run or the run is forced.
+                # A step that failed for some keys and is still "failed" (its params and
+                # upstream steps did not change since, which would have outdated it)
+                # only re-runs these keys, unless an input was run again in this run or
+                # the run is forced.
                 retryKeys <- character()
                 isFailed <- dat[["state"]][[row]] == "failed"
-                # To ensure that we don't use outdated outputs for the other
-                # keys (the ones that did not fail), their output is only
-                # re-used if they come from the most recent step's attempt.
+                # To ensure that we don't use outdated outputs for the other keys (the
+                # ones that did not fail), their output is only re-used if they come
+                # from the most recent step's attempt.
                 isOutCurrent <- isTRUE(
                     pipenv[[".steps_with_current_out"]][[step]]
                 )
@@ -3749,18 +3742,18 @@ pip_run <- function(
                     )
                 }
 
-                # Always pass the full pipeline object (not a view) to the
-                # step function, so that it can modify itself if needed.
+                # Always pass the full pipeline object (not a view) to the step
+                # function, so that it can modify itself if needed.
                 self <- .wrap_pipenv(pipenv, pipname, view = NULL)
                 log_info(msg)
 
-                # Take the name from the current data, since a step that
-                # modified the pipeline may have shifted the rows.
+                # Take the name from the current data, since a step that modified the
+                # pipeline may have shifted the rows.
                 execStep <- pipenv[["data"]][["step"]][[row]]
                 executedSteps <- c(executedSteps, execStep)
 
-                # Prepare the list of failed inputs for the current step. An
-                # input that failed for some keys is passed as it is.
+                # Prepare the list of failed inputs for the current step. An input that
+                # failed for some keys is passed as it is.
                 failed <- stats::setNames(
                     failures[unname(depends[failedArgs])],
                     failedArgs
@@ -3788,8 +3781,8 @@ pip_run <- function(
                     }
                 )
 
-                # Keep the condition of a failed step as its output and
-                # continue with the next step.
+                # Keep the condition of a failed step as its output and continue with
+                # the next step.
                 if (!is.null(cond)) {
                     failures[[execStep]] <- .pip_failure(execStep, cond)
                     datNow <- pipenv[["data"]]
@@ -3801,8 +3794,8 @@ pip_run <- function(
                     )
                 }
 
-                # A step that failed for some keys keeps its output, which
-                # its dependents get per key (see .pip_execute_step_call()).
+                # A step that failed for some keys keeps its output, which its
+                # dependents get per key (see .pip_execute_step_call()).
                 if (length(.pip_failed_keys(out)) > 0L) {
                     failures[[execStep]] <- out
                 }
@@ -3813,9 +3806,9 @@ pip_run <- function(
                     log_info("Restarting pipeline execution.")
                     doForce <- pipenv[[".restart_force"]]
 
-                    # Mark what has run so far before handing the remaining
-                    # work to a nested run, which then re-runs the outdated
-                    # steps and does its own marking at the end.
+                    # Mark what has run so far before handing the remaining work to a
+                    # nested run, which then re-runs the outdated steps and does its own
+                    # marking at the end.
                     outdate_downstream_of_executed()
                     pipenv[[".run_start"]] <- runStart
                     pip_run(
@@ -3869,8 +3862,8 @@ pip_run <- function(
             pipenv[[".last_run"]] <- lastRun
             pipenv[[".last_run_duration"]] <- .as_duration(lastRun - runStart)
 
-            # Re-signal step errors as they are, so that callers can get the
-            # failed step and its original condition.
+            # Re-signal step errors as they are, so that callers can get the failed step
+            # and its original condition.
             if (inherits(e, "pipeflow_step_error")) {
                 stop(e)
             }
@@ -3878,8 +3871,8 @@ pip_run <- function(
         }
     )
 
-    # Report the failures of a continued run once all states are final, so
-    # that condition handlers already see them.
+    # Report the failures of a continued run once all states are final, so that
+    # condition handlers already see them.
     if (length(failures) > 0L) {
         outdate_downstream_of_executed()
         w <- .pip_run_failed_warning(pipname, failures)
@@ -3962,8 +3955,8 @@ pip_reset <- function(x) {
             .as_duration(rep(NA, length(rowsConsidered)))
         )
     )
-    # The downstream steps ran with the cleared outputs. The reset steps are
-    # new and stay new.
+    # The downstream steps ran with the cleared outputs. The reset steps are new and
+    # stay new.
     .pip_outdate_downstream(
         x,
         steps = dat[["step"]][rowsConsidered],
@@ -4434,8 +4427,8 @@ pip_view <- function(x, ..., join = c("intersect", "union"), fixed = TRUE) {
         ))
     }
 
-    # For view-of-view, filter only within parent view rows and map local
-    # matches back to absolute row indices of the underlying pipeline.
+    # For view-of-view, filter only within parent view rows and map local matches back
+    # to absolute row indices of the underlying pipeline.
     parent_rows <- .pip_view_rows(x)
     sub <- dat[parent_rows]
 

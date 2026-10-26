@@ -64,8 +64,8 @@ create_bin_tree_dag <- function() {
     d
 }
 
-# The structure of a DAG: its node order and the sorted incoming and outgoing
-# nodes of each node, by node id.
+# The structure of a DAG: its node order and the sorted incoming and outgoing nodes of
+# each node, by node id.
 dag_structure <- function(d) {
     ids <- dag_get_nodes_order(d)
     edges <- function(get) {

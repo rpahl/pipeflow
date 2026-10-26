@@ -18,9 +18,8 @@ get_run_state <- function(x) {
     as.character(.pip_pipenv(x)[[".run_state"]])
 }
 
-# The parts of a pipeline that editing its steps changes: the step table,
-# the DAG and the two step maps. The step table is copied, because edits
-# change it in place.
+# The parts of a pipeline that editing its steps changes: the step table, the DAG and
+# the two step maps. The step table is copied, because edits change it in place.
 pip_internals <- function(x) {
     env <- .pip_pipenv(x)
     d <- .pip_dag(env)
@@ -35,9 +34,8 @@ pip_internals <- function(x) {
     )
 }
 
-# Write `x` with saveRDS() and read it back with readRDS(). Objects that are
-# saved together share their environments after reading, like a pipeline and
-# its views.
+# Write `x` with saveRDS() and read it back with readRDS(). Objects that are saved
+# together share their environments after reading, like a pipeline and its views.
 save_and_read <- function(x) {
     f <- tempfile(fileext = ".rds")
     on.exit(unlink(f))
@@ -45,15 +43,14 @@ save_and_read <- function(x) {
     readRDS(f)
 }
 
-# The rows of the step table for the DAG node ids `nodes`, in the order of
-# `nodes`, not in pipeline order. A view does not restrict the rows. An
-# unknown id gives a row of NAs with that node id.
+# The rows of the step table for the DAG node ids `nodes`, in the order of `nodes`, not
+# in pipeline order. A view does not restrict the rows. An unknown id gives a row of NAs
+# with that node id.
 .pip_filter_nodes <- function(x, nodes) {
     .pip_pipenv(x)[["data"]][list(nodes), on = "nodeId"]
 }
 
-# The kept pipelines of a function made by as.function(), named by
-# partition key.
+# The kept pipelines of a function made by as.function(), named by partition key.
 .fun_pips <- function(fun) {
     cache <- .fun_cache(fun)
     pips <- lapply(unname(cache$slots), .fun_slot_pips)

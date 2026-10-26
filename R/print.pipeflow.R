@@ -155,8 +155,8 @@ print.pipeflow <- function(
     } else {
         dat <- data[rows, cols, with = FALSE]
         if ("params" %in% names(dat)) {
-            # We print the parameter names of each step as a list column, so
-            # that data.table renders and truncates them like `depends`.
+            # We print the parameter names of each step as a list column, so that
+            # data.table renders and truncates them like `depends`.
             params_names <- lapply(dat[["params"]], \(p) as.character(names(p)))
             data.table::set(dat, j = "params", value = params_names)
         }
@@ -171,8 +171,8 @@ print.pipeflow <- function(
             data.table::set(dat, j = "duration", value = duration)
         }
         if ("out" %in% names(dat)) {
-            # Fix outputs that data.table prints poorly (e.g. matrices, or
-            # the condition of a failed step) in short form.
+            # Fix outputs that data.table prints poorly (e.g. matrices, or the condition
+            # of a failed step) in short form.
             out <- lapply(dat[["out"]], .format_out)
             data.table::set(dat, j = "out", value = out)
         }

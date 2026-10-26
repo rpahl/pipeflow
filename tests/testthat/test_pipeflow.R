@@ -1095,8 +1095,8 @@ describe("pipelines read with readRDS()", {
         pip_remove(p, "e")
     }
 
-    # Read pipeline `q` has the same steps and DAG as pipeline `p`. Params
-    # that refer to steps are compared via `depends`.
+    # Read pipeline `q` has the same steps and DAG as pipeline `p`. Params that refer to
+    # steps are compared via `depends`.
     expect_same_pip <- function(q, p) {
         cols <- c("step", "out", "state", "tags", "locked", "exec", "depends")
         expect_equal(q[, cols], p[, cols])
@@ -1124,10 +1124,10 @@ describe("pipelines read with readRDS()", {
     })
 
     it("get the time_start and duration columns if saved without", {
-        # Pipelines saved with pipeflow 0.5.0 have no time_start and no
-        # duration column. Any access via .pip_pipenv() adds them back, so
-        # the view is made before the columns are dropped, and the step
-        # table is read with .subset2() until the pipeline is used.
+        # Pipelines saved with pipeflow 0.5.0 have no time_start and no duration column.
+        # Any access via .pip_pipenv() adds them back, so the view is made before the
+        # columns are dropped, and the step table is read with .subset2() until the
+        # pipeline is used.
         rawData <- \(x) .subset2(x, "pipenv")[["data"]]
         p <- pip_run(test_pip(), lgr = NULL)
         v <- p[c("b", "c")]
@@ -1157,8 +1157,8 @@ describe("pipelines read with readRDS()", {
     })
 
     it("get a duration column if saved with time_start but without it", {
-        # Pipelines saved with a development version between 0.5.0 and the
-        # duration column have time_start, which is kept.
+        # Pipelines saved with a development version between 0.5.0 and the duration
+        # column have time_start, which is kept.
         rawData <- \(x) .subset2(x, "pipenv")[["data"]]
         p <- pip_run(test_pip(), lgr = NULL)
         rawData(p)[, duration := NULL]
@@ -1175,9 +1175,8 @@ describe("pipelines read with readRDS()", {
 
     it("re-run only failed keys if saved without step marks", {
         # Pipelines saved with older versions of pipeflow have no
-        # .steps_with_current_out environment. The step function of the
-        # read pipeline has its own copy of this environment, so its factor
-        # is passed via a file.
+        # .steps_with_current_out environment. The step function of the read pipeline
+        # has its own copy of this environment, so its factor is passed via a file.
         multFile <- tempfile()
         on.exit(unlink(multFile))
         writeLines("1", multFile)
@@ -4828,8 +4827,8 @@ describe("pip_run", {
     })
 
     describe(".self in step functions", {
-        # Walks the environment chain of a step output up to the empty
-        # environment, which is where a leaked `.self` would show up.
+        # Walks the environment chain of a step output up to the empty environment,
+        # which is where a leaked `.self` would show up.
         has_self <- function(env) {
             while (!identical(env, emptyenv())) {
                 if (exists(".self", envir = env, inherits = FALSE)) {
@@ -4969,9 +4968,9 @@ describe("pip_run", {
         })
 
         it("doesn't keep the pipeline alive via outputs of other steps", {
-            # The step function is defined outside of this test (whose
-            # environment holds `p`), has no source references and forces
-            # `x`, so only `.self` could make the closure reach the pipeline.
+            # The step function is defined outside of this test (whose environment holds
+            # `p`), has no source references and forces `x`, so only `.self` could make
+            # the closure reach the pipeline.
             adder <- utils::removeSource(\(x = 1) {
                 force(x)
                 function(y) x + y
@@ -5049,10 +5048,9 @@ describe("pip_run", {
         })
 
         it("doesn't keep the pipeline alive via outputs that use it", {
-            # The step function is defined outside of this test (whose
-            # environment holds `p`), has no source references and forces
-            # `x`, so only `.self` could make the returned closure reach
-            # the pipeline.
+            # The step function is defined outside of this test (whose environment holds
+            # `p`), has no source references and forces `x`, so only `.self` could make
+            # the returned closure reach the pipeline.
             maker <- utils::removeSource(\(x = 1) {
                 force(x)
                 nm <- .self[["name"]]
@@ -5964,8 +5962,8 @@ describe("pip_run", {
                         })
                     run_flaky(p)
 
-                    # A full attempt with new params stops at key 'a' and
-                    # keeps the output of the first run, with 'b' failed
+                    # A full attempt with new params stops at key 'a' and keeps the
+                    # output of the first run, with 'b' failed
                     pip_set_params(p, list(mult = 100))
                     env$failKeys <- "a"
                     expect_error(pip_run(p, lgr = NULL), "boom")
@@ -6014,8 +6012,8 @@ describe("pip_run", {
                     run_flaky(p)
                     run_flaky(q)
 
-                    # q keeps its output of the first run after an attempt
-                    # with new params stopped, and p gets its step
+                    # q keeps its output of the first run after an attempt with new
+                    # params stopped, and p gets its step
                     pip_set_params(q, list(mult = 100))
                     env$failKeys <- "a"
                     expect_error(pip_run(q, lgr = NULL), "boom")
@@ -7050,8 +7048,8 @@ describe("pip_run_state", {
 # ----------------
 
 describe("pip_param_value", {
-    # S3 methods are looked up from the package namespace, so test methods
-    # must be registered there.
+    # S3 methods are looked up from the package namespace, so test methods must be
+    # registered there.
     register_param_value <- function(cls, fn) {
         registerS3method(
             "pip_param_value",
@@ -7184,8 +7182,8 @@ describe("pip_param_value", {
 
 
 describe("pip_param_value<-", {
-    # S3 methods are looked up from the package namespace, so test methods
-    # must be registered there.
+    # S3 methods are looked up from the package namespace, so test methods must be
+    # registered there.
     register_setter <- function(cls, fn) {
         registerS3method(
             "pip_param_value<-",
@@ -7348,9 +7346,8 @@ describe("pip_param_value<-", {
     })
 
     it("leaves the stored value of a copying method untouched on failure", {
-        # The all-or-nothing guarantee holds for methods that return a new
-        # value. For a reference-backed value that means copying it first,
-        # as the method below does.
+        # The all-or-nothing guarantee holds for methods that return a new value. For a
+        # reference-backed value that means copying it first, as the method below does.
         sv_env <- function(value) {
             e <- new.env(parent = emptyenv())
             e[["value"]] <- value
@@ -7395,8 +7392,8 @@ describe("pip_param_value<-", {
         pip_set_params(p, list(x = structure(list(), class = "sv_locked")))
         pip_lock(p["s1"])
 
-        # 'x' is held by the locked step only, so it is neither merged
-        # nor reported as unknown
+        # 'x' is held by the locked step only, so it is neither merged nor reported as
+        # unknown
         expect_no_warning(pip_set_params(p, list(x = 5, y = 7)))
         expect_s3_class(pip_get_params(p)[["x"]], "sv_locked")
         expect_equal(pip_get_params(p)[["y"]], 7)
@@ -7418,8 +7415,8 @@ describe("pip_param_value<-", {
 
 
 describe("pip_output_value", {
-    # S3 methods are looked up from the package namespace, so test methods
-    # must be registered there.
+    # S3 methods are looked up from the package namespace, so test methods must be
+    # registered there.
     register_output_value <- function(cls, fn) {
         registerS3method(
             "pip_output_value",

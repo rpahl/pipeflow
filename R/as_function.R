@@ -1,16 +1,15 @@
 # A pipeline as a function
 #
-# `as.function()` of a pipeline gives a function whose formals are the unbound
-# params of the pipeline. Added with `pip_add()`, the params become params of
-# the outer step and the exec modes map the function over partitions.
+# `as.function()` of a pipeline gives a function whose formals are the unbound params of
+# the pipeline. Added with `pip_add()`, the params become params of the outer step and
+# the exec modes map the function over partitions.
 #
-# The function keeps the inner pipelines it has run, so that a later call only
-# runs the steps that its changed params or inputs outdate. Every call is
-# served by a slot: the pipeline of its step and partition key. A call that is
-# not mapped over partitions uses the single key, a direct call (outside of a
-# step) the step reserved for direct calls. The kept pipelines belong to the
-# function (they live in the environment of its runner): they are dropped with
-# it, and serialising the function copies them.
+# The function keeps the inner pipelines it has run, so that a later call only runs the
+# steps that its changed params or inputs outdate. Every call is served by a slot: the
+# pipeline of its step and partition key. A call that is not mapped over partitions uses
+# the single key, a direct call (outside of a step) the step reserved for direct calls.
+# The kept pipelines belong to the function (they live in the environment of its
+# runner): they are dropped with it, and serialising the function copies them.
 
 # ======================================================================================
 # Making the function
@@ -36,8 +35,8 @@
         "with at least one argument"
     )
     if (is.function(out)) {
-        # args() also gives the formals of a primitive, e.g. length(), and
-        # NULL for a language construct such as `if`
+        # args() also gives the formals of a primitive, e.g. length(), and NULL for a
+        # language construct such as `if`
         outArgs <- args(out)
         if (is.null(outArgs) || length(formals(outArgs)) == 0L) {
             stop_no_call(msg)
@@ -219,11 +218,10 @@
 # -----
 # Slots
 # -----
-# Placeholder names of the slots of calls without a partition key and without
-# a step. They must be non-empty, since `x[[""]]` never finds an element of a
-# list. A clash with a real step name or partition key only makes the calls
-# share a pipeline of the same template: that is slower, never wrong, since
-# every call sets all params and inputs.
+# Placeholder names of the slots of calls without a partition key and without a step.
+# They must be non-empty, since `x[[""]]` never finds an element of a list. A clash with
+# a real step name or partition key only makes the calls share a pipeline of the same
+# template: that is slower, never wrong, since every call sets all params and inputs.
 .fun_key_single <- "<single>"
 .fun_step_direct <- "<direct>"
 
@@ -313,11 +311,11 @@
     step <- affected[[1L]]
     stepOut <- pip[[step, "out"]]
 
-    # If the requested step failed for some keys in this run, its output holds
-    # a failure for each of them, naming the step and key that failed. That is
-    # more precise than the output of its cause, which may also hold failed
-    # keys the requested step recovered from via ~try(). A step that was skipped
-    # in this run still has its output of an earlier run, which does not count.
+    # If the requested step failed for some keys in this run, its output holds a failure
+    # for each of them, naming the step and key that failed. That is more precise than
+    # the output of its cause, which may also hold failed keys the requested step
+    # recovered from via ~try(). A step that was skipped in this run still has its
+    # output of an earlier run, which does not count.
     wasSkipped <- pip[[step, "state"]] != .step_states[["failed"]][["name"]]
     if (!wasSkipped && length(.pip_failed_keys(stepOut)) > 0L) {
         f <- .pip_first_failure(stepOut, step = step)
@@ -352,8 +350,8 @@
             next
         }
         if (dat[["state"]][[i]] == .step_states[["failed"]][["name"]]) {
-            # A mapped step whose failed keys were all not run because an
-            # input failed has the step of that input as its cause.
+            # A mapped step whose failed keys were all not run because an input failed
+            # has the step of that input as its cause.
             out <- dat[["out"]][[i]]
             causes[[step]] <- if (length(.pip_failed_keys(out)) > 0L) {
                 .pip_first_failure(out, step = step)[["failed_step"]]

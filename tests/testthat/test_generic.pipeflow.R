@@ -1328,8 +1328,8 @@ describe("extract operator [[", {
         expect_true(data.table::is.data.table(p[["pipenv"]][["data"]]))
         expect_false(is.null(p[["pipenv"]][[".dag"]]))
 
-        # Inner-env bindings are not exposed through `[[`; the step table is
-        # available via the `data` virtual method (and pip_data()).
+        # Inner-env bindings are not exposed through `[[`; the step table is available
+        # via the `data` virtual method (and pip_data()).
         expect_true(data.table::is.data.table(p[["data"]]()))
         expect_null(p[[".dag"]])
         expect_null(p[[".steps_to_nodes"]])
@@ -1386,8 +1386,8 @@ describe("extract operator [[", {
                 pip_add("data", \(x = ~name, y = "world") paste(x, y))
 
             expect_equal(p[["name"]], "pipe")
-            # "data" is a virtual method (the step-table accessor), not a
-            # column; a step of that name stays reachable via p[[step, col]]
+            # "data" is a virtual method (the step-table accessor), not a column; a step
+            # of that name stays reachable via p[[step, col]]
             expect_true(is.function(p[["data"]]))
             expect_true(is.function(p$data))
             expect_equal(pip_data(p)[["step"]], c("name", "data"))
@@ -2396,8 +2396,7 @@ describe("[<-.pipeflow", {
 
         pip_run(p, lgr = NULL)
 
-        # The run sees the restored step table, so s2 is not skipped as
-        # locked
+        # The run sees the restored step table, so s2 is not skipped as locked
         expect_false(any(p[["locked"]]))
         expect_equal(unname(p[["state"]]), rep("done", 3))
         expect_equal(p[["s3", "out"]], 3)
@@ -2600,8 +2599,8 @@ describe("assignments that outdate steps", {
         q[1:3, "out"] <- list(5, 10, 11)
         q[1:3, "state"] <- "done"
 
-        # Each copied output outdates the steps after it, which then get
-        # their copied states
+        # Each copied output outdates the steps after it, which then get their copied
+        # states
         p[1:3, ] <- q[1:3, ]
 
         expect_equal(unname(p[["state"]]), rep("done", 4))
@@ -2681,8 +2680,8 @@ describe("cross-pipeline assignment", {
         q <- pip_clone(p)
         pip_rename(q, "s1", "first")
         pip_rename(q, "s2", "second")
-        # Function defaults still reference the old names; point the renamed
-        # step at the renamed upstream so the replacement resolves in `p`.
+        # Function defaults still reference the old names; point the renamed step at the
+        # renamed upstream so the replacement resolves in `p`.
         q[["second", "fun"]] <- \(x = ~first, k = 2) x * k
 
         p[1:2, ] <- q[1:2, ]

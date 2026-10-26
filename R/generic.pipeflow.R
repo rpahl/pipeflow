@@ -89,15 +89,14 @@
 #' the pipeline see the restored pipeline as well.
 #' @noRd
 .pip_restore <- function(pipenv, snapshot) {
-    # The step table that was edited in place, or replaced by a new one if
-    # steps were removed
+    # The step table that was edited in place, or replaced by a new one if steps were
+    # removed
     dat <- snapshot[["data"]]
     columns <- snapshot[["columns"]]
     data.table::set(dat, j = names(columns), value = columns)
     pipenv[["data"]] <- dat
 
-    # Nothing keeps the DAG across a step call (see .pip_dag()), so it can
-    # be replaced
+    # Nothing keeps the DAG across a step call (see .pip_dag()), so it can be replaced
     pipenv[[".dag"]] <- snapshot[["dag"]]
 
     for (name in names(snapshot[["maps"]])) {
@@ -149,9 +148,9 @@
     useRebuild <- length(rows) / nrow(data) >= rebuildThresh
 
     if (useRebuild) {
-        # Clone the existing DAG, drop all nodes that are not kept, and let
-        # the C++ side compact the node ids. Nodes that are still alive
-        # correspond to the current rows of `data`.
+        # Clone the existing DAG, drop all nodes that are not kept, and let the C++ side
+        # compact the node ids. Nodes that are still alive correspond to the current
+        # rows of `data`.
         d <- dag_clone(.pip_dag(pipenv))
         dead <- setdiff(data[["nodeId"]], keepNodes)
         for (id in dead) {
@@ -177,8 +176,8 @@
         depends <- subDat[["depends"]]
         for (k in seq_along(nodeIds)) {
             dag_add_node(d)
-            # A step can refer to the same step with several arguments, but
-            # there is only one edge
+            # A step can refer to the same step with several arguments, but there is
+            # only one edge
             deps <- unique(depends[[k]])
             if (length(deps) == 0L) {
                 next
@@ -205,8 +204,8 @@
 # -------------
 # Row selection
 # -------------
-# The data.table operators that are available in the boolean filters of
-# `[.pipeflow`, also when data.table is not attached.
+# The data.table operators that are available in the boolean filters of `[.pipeflow`,
+# also when data.table is not attached.
 .filter_ops <- list(
     `%like%` = data.table::`%like%`,
     `%ilike%` = data.table::`%ilike%`,
@@ -485,8 +484,8 @@
             }
             return(.pip_pipenv(x)[["data"]][["step"]][.pip_view_rows(x)])
         }
-        # Via .pip_pipenv(), so that the step table of a saved pipeline gets
-        # its missing columns also when it is read directly.
+        # Via .pip_pipenv(), so that the step table of a saved pipeline gets its missing
+        # columns also when it is read directly.
         if (identical(i, "pipenv")) {
             return(.pip_pipenv(x))
         }
@@ -498,8 +497,8 @@
             }
         }
 
-        # Virtual methods (an O(1) lookup followed by a single closure that
-        # binds the backend to the current object).
+        # Virtual methods (an O(1) lookup followed by a single closure that binds the
+        # backend to the current object).
         if (is.character(i) && length(i) == 1L && !is.na(i)) {
             fn <- get0(i, envir = .pip_method_table(), inherits = FALSE)
             if (!is.null(fn)) {
@@ -617,13 +616,12 @@
         "locked"
     )
 
-    # Since the source can be `x` itself, we will work on a snapshot to
-    # prevent that any writes below would alter rows that are still to be
-    # copied (e.g. pip_replace() marking downstream steps as outdated).
+    # Since the source can be `x` itself, we will work on a snapshot to prevent that any
+    # writes below would alter rows that are still to be copied (e.g. pip_replace()
+    # marking downstream steps as outdated).
     qSnapshot <- dataQ[rowsQ, c(props, "depends"), with = FALSE]
 
-    # If a row fails, the rows copied before are undone, so that `x` is left
-    # as it was.
+    # If a row fails, the rows copied before are undone, so that `x` is left as it was.
     .pip_all_or_nothing(x, {
         for (k in seq_len(n)) {
             pRow <- rowsP[[k]]
@@ -634,23 +632,22 @@
             # 1) Step name (a no-op when both pipelines use the same names).
             x[[dataP[["step"]][[pRow]], "step"]] <- qVals[["step"]]
 
-            # 2) Function, params and exec mode. The exec mode is set here,
-            #    because setting a new one in 3) would outdate the copied state.
-            #    The params of q override the defaults of the function. Their
-            #    references are pointed to the steps that the step of q depends
-            #    on, by name, because a relative reference (~-1) is stale once
-            #    steps were inserted or removed before it. pip_replace() then
-            #    resolves them against the steps of `x`.
+            # 2) Function, params and exec mode. The exec mode is set here, because
+            #    setting a new one in 3) would outdate the copied state. The params of q
+            #    override the defaults of the function. Their references are pointed to
+            #    the steps that the step of q depends on, by name, because a relative
+            #    reference (~-1) is stale once steps were inserted or removed before it.
+            #    pip_replace() then resolves them against the steps of `x`.
             params <- qVals[["params"]]
             depends <- qSnapshot[["depends"]][[k]]
             for (arg in intersect(names(depends), names(params))) {
                 params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
             }
-            # An unbound param can still have a formula as value: the function
-            # made by as.function() sets its arguments as values, also formulas,
-            # and a step can expose that pipeline, e.g. via pip_clone(.self).
-            # pip_replace() would take it as a reference, so it is replaced with
-            # a placeholder and its value is put back below.
+            # An unbound param can still have a formula as value: the function made by
+            # as.function() sets its arguments as values, also formulas, and a step can
+            # expose that pipeline, e.g. via pip_clone(.self). pip_replace() would take
+            # it as a reference, so it is replaced with a placeholder and its value is
+            # put back below.
             isValue <- !(names(params) %in% names(depends)) &
                 vapply(params, is_one_sided_formula, logical(1))
             values <- params[isValue]
@@ -725,10 +722,9 @@
         reserved <- c(reserved, yyDat[["step"]][[k]])
     }
 
-    # Append all (potentially renamed) steps of y in one pass: transform each
-    # row (re-create the formula dependencies after renaming), allocate a
-    # fresh node id, wire the DAG edges, and collect the rows for a single
-    # rbindlist.
+    # Append all (potentially renamed) steps of y in one pass: transform each row
+    # (re-create the formula dependencies after renaming), allocate a fresh node id,
+    # wire the DAG edges, and collect the rows for a single rbindlist.
     outEnv <- .pip_pipenv(out)
     d <- .pip_dag(outEnv)
     stepsToNodes <- outEnv[[".steps_to_nodes"]]
@@ -741,23 +737,22 @@
         params <- yyDat[["params"]][[k]]
         depends <- yyDat[["depends"]][[k]]
 
-        # Point the formula dependencies to the (renamed) steps of y, which
-        # also turns relative references into step names. References wrapped
-        # in try() stay wrapped.
+        # Point the formula dependencies to the (renamed) steps of y, which also turns
+        # relative references into step names. References wrapped in try() stay wrapped.
         for (arg in intersect(names(depends), names(params))) {
             params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
         }
-        # Fold current parameter values into the defaults of the existing
-        # function arguments. `[<-` with list() keeps a NULL value, which
-        # `[[<-` would drop together with the argument.
+        # Fold current parameter values into the defaults of the existing function
+        # arguments. `[<-` with list() keeps a NULL value, which `[[<-` would drop
+        # together with the argument.
         fml <- formals(fun)
         for (nm in intersect(names(params), setdiff(names(fml), "..."))) {
             fml[nm] <- list(params[[nm]])
         }
         formals(fun) <- fml
 
-        # Update DAG: allocate the node, register the step, add edges to its
-        # upstream steps (which are either in `out` or already appended).
+        # Update DAG: allocate the node, register the step, add edges to its upstream
+        # steps (which are either in `out` or already appended).
         nodeId <- as.integer(dag_add_node(d))
         stepsToNodes[[step]] <- nodeId
         if (length(depends) > 0L) {
@@ -980,8 +975,8 @@ dim.pipeflow <- function(x) {
     dat <- pipenv[["data"]]
 
     if (missing(i)) {
-        # x[] returns a copy of the pipeline, or the view itself. On a view,
-        # x[, view = FALSE] materializes all covered steps instead.
+        # x[] returns a copy of the pipeline, or the view itself. On a view, x[, view =
+        # FALSE] materializes all covered steps instead.
         if (!.is_pipeflow_view(x)) {
             return(pip_clone(x))
         }
@@ -999,8 +994,8 @@ dim.pipeflow <- function(x) {
         return(.wrap_pipenv(pipenv, name = name, view = selector))
     }
 
-    # Resolve all nodes reachable from the selected rows via upstream edges,
-    # then build a self-contained, compact pipeline from them.
+    # Resolve all nodes reachable from the selected rows via upstream edges, then build
+    # a self-contained, compact pipeline from them.
     keepNodes <- dag_get_reachable_nodes_up(
         .pip_dag(pipenv),
         as.integer(unique(dat[["nodeId"]][rows]))
@@ -1203,8 +1198,8 @@ dim.pipeflow <- function(x) {
         ))
     }
     if (identical(i, "view")) {
-        # Build a full wrapper over the shared environment and, if requested,
-        # derive a new view from it.
+        # Build a full wrapper over the shared environment and, if requested, derive a
+        # new view from it.
         x <- .wrap_pipenv(
             .pip_pipenv(x),
             name = x[["name"]],
@@ -1220,9 +1215,8 @@ dim.pipeflow <- function(x) {
     data <- env[["data"]]
     rows <- .pip_view_rows(x)
 
-    # Determine the absolute row index of the step to modify. For a view, `i`
-    # is interpreted relative to the covered rows and step names must be part
-    # of the view.
+    # Determine the absolute row index of the step to modify. For a view, `i` is
+    # interpreted relative to the covered rows and step names must be part of the view.
     if (is.character(i)) {
         step <- i
         if (!.pip_step_exists(x, step)) {
@@ -1263,14 +1257,13 @@ dim.pipeflow <- function(x) {
     } else if (j == "params") {
         pip_set_params(pip_view(x, step = step), params = value)
     } else if (j == "out") {
-        # wrap value in list of list to enable arbitrary objects
-        # (e.g. a data.frame) to be stored as-is.
+        # wrap value in list of list to enable arbitrary objects (e.g. a data.frame) to
+        # be stored as-is.
         data.table::set(data, i = i, j = "out", value = list(list(value)))
-        # An output set from outside does not come from the step's last
-        # attempt, so a retry runs all keys (see .pip_run_row()).
+        # An output set from outside does not come from the step's last attempt, so a
+        # retry runs all keys (see .pip_run_row()).
         env[[".steps_with_current_out"]][[step]] <- FALSE
-        # The downstream steps ran with the old output. The step itself
-        # keeps its state.
+        # The downstream steps ran with the old output. The step itself keeps its state.
         .pip_outdate_downstream(x, steps = step, keep = step)
     } else if (j == "state") {
         .assert_state(value)
@@ -1288,8 +1281,8 @@ dim.pipeflow <- function(x) {
         data.table::set(data, i = i, j = "locked", value = value)
     } else if (j == "exec") {
         .assert_exec_mode(value)
-        # The exec mode decides how the step is called, so a new mode
-        # outdates its output and the outputs of its downstream steps.
+        # The exec mode decides how the step is called, so a new mode outdates its
+        # output and the outputs of its downstream steps.
         if (!identical(value, data[["exec"]][[i]])) {
             data.table::set(data, i = i, j = "exec", value = value)
             .pip_outdate_downstream(x, steps = step)
@@ -1446,14 +1439,13 @@ dim.pipeflow <- function(x) {
     }
 
     if (hasOneColumnTable) {
-        # If we get here, i is multi-row, e.g. value == q[1:3, "state"], so we
-        # unwrap and assign element-wise to the selected rows.
+        # If we get here, i is multi-row, e.g. value == q[1:3, "state"], so we unwrap
+        # and assign element-wise to the selected rows.
         value <- value[[1L]]
     }
 
-    # Determine the value for each selected row. An element of an atomic
-    # vector is taken with `[`, which keeps its class (e.g. `difftime`),
-    # unlike `[[` and as.list().
+    # Determine the value for each selected row. An element of an atomic vector is taken
+    # with `[`, which keeps its class (e.g. `difftime`), unlike `[[` and as.list().
     element <- function(v, m) {
         if (is.atomic(v)) unname(v[m]) else v[[m]]
     }
@@ -1478,17 +1470,16 @@ dim.pipeflow <- function(x) {
         }
     }
 
-    # The step names are resolved up front: removing steps shifts the row
-    # indices, and force-removing one step may already remove its
-    # downstream steps.
+    # The step names are resolved up front: removing steps shifts the row indices, and
+    # force-removing one step may already remove its downstream steps.
     stepNames <- if (j == "step") {
         .pip_pipenv(x)[["data"]][["step"]][rows]
     } else {
         character(0)
     }
 
-    # If a row fails, the rows assigned before are undone, so that `x` is
-    # left as it was.
+    # If a row fails, the rows assigned before are undone, so that `x` is left as it
+    # was.
     .pip_all_or_nothing(x, {
         for (k in seq_len(n)) {
             if (j == "step") {

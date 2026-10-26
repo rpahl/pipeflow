@@ -206,9 +206,9 @@ describe(".fun_rename and .fun_release", {
 
 
 describe("as.function.pipeflow", {
-    # Fixtures are defined here and not in a helper file: closures from a
-    # helper would have the attached package environment as an ancestor, which
-    # cannot be serialised without a warning when loaded with load_all().
+    # Fixtures are defined here and not in a helper file: closures from a helper would
+    # have the attached package environment as an ancestor, which cannot be serialised
+    # without a warning when loaded with load_all().
 
     # A param value with a label; the step functions see only the value.
     annotated <- function(value, label) {
@@ -231,9 +231,8 @@ describe("as.function.pipeflow", {
         )
     }
 
-    # The inner pipeline: fits a polynomial to a batch (the slow step, with
-    # `delay` seconds) and rounds the coefficients. `calls` counts how often
-    # each step ran.
+    # The inner pipeline: fits a polynomial to a batch (the slow step, with `delay`
+    # seconds) and rounds the coefficients. `calls` counts how often each step ran.
     demo_inner <- function(calls, delay = 0) {
         pip_new("inner") |>
             pip_add("data", \(data = NULL) data) |>
@@ -257,8 +256,8 @@ describe("as.function.pipeflow", {
             )
     }
 
-    # The outer pipeline: split by batch, one inner pipeline per batch (`fun`),
-    # one table.
+    # The outer pipeline: split by batch, one inner pipeline per batch (`fun`), one
+    # table.
     demo_outer <- function(fun, data = demo_batches(), params = list()) {
         outer <- pip_new("outer") |>
             pip_add("data", \(data = NULL) data) |>
@@ -467,8 +466,8 @@ describe("as.function.pipeflow", {
                 demo$outer[["coef_table", "out"]]
             )
 
-            # the kept copies hold the params of the last call, which is
-            # not an obstacle for the other pipeline
+            # the kept copies hold the params of the last call, which is not an obstacle
+            # for the other pipeline
             pip_set_params(demo$outer, list(digits = 3))
             run_outer(demo)
             run_outer(list(outer = second))
@@ -718,8 +717,8 @@ describe("as.function.pipeflow", {
             expect_identical(calls$n, 4L)
             expect_equal(unlist(outer[["run", "out"]]), c(p = 21, q = 22))
 
-            # back to the old input: the pipeline of a partition only has
-            # the last one, so all partitions run again
+            # back to the old input: the pipeline of a partition only has the last one,
+            # so all partitions run again
             pip_set_params(outer, list(offset = 10))
             run_outer(list(outer = outer))
             expect_identical(calls$n, 6L)
@@ -1011,8 +1010,8 @@ describe("as.function.pipeflow", {
     })
 
     describe("continuing after errors of inner steps", {
-        # `bad` fails for the input "boom". `report` takes its output via
-        # `~try()`, `use` plainly, and `other` does not depend on it.
+        # `bad` fails for the input "boom". `report` takes its output via `~try()`,
+        # `use` plainly, and `other` does not depend on it.
         failing_inner <- function(calls = new.env()) {
             calls$other <- 0L
             pip_new("failing") |>
@@ -1109,8 +1108,8 @@ describe("as.function.pipeflow", {
 
             err <- tryCatch(suppressWarnings(f(x = 1)), error = \(e) e)
 
-            # `rescue` handled the failure of `bad_a`, so only `bad_b` kept
-            # `result` from running
+            # `rescue` handled the failure of `bad_a`, so only `bad_b` kept `result`
+            # from running
             expect_identical(err[["step"]], "bad_b")
             expect_match(conditionMessage(err), "step 'bad_b': B failed")
         })
@@ -1530,8 +1529,8 @@ describe("as.function.pipeflow", {
     })
 
     describe("failures and messages", {
-        # The steps and partition keys named by a condition and its parents,
-        # from the outer to the inner level
+        # The steps and partition keys named by a condition and its parents, from the
+        # outer to the inner level
         error_path <- function(e) {
             path <- character()
             while (!is.null(e)) {
@@ -1642,8 +1641,8 @@ describe("as.function.pipeflow", {
                 error_path(failure[["parent"]]),
                 c(key = "b", step = "check")
             )
-            # a failed step that is not mapped keeps the inner step error as
-            # its output, and passes it on in the failure of a ~try() input
+            # a failed step that is not mapped keeps the inner step error as its output,
+            # and passes it on in the failure of a ~try() input
             expect_identical(
                 error_path(outer[["single", "out"]]),
                 c(step = "check")
@@ -1754,9 +1753,9 @@ describe("as.function.pipeflow", {
     # ==================================================================================
 
     describe("reuse of the inner pipelines", {
-        # Doubles each value of a split step with an inner pipeline per key.
-        # `calls$ran` collects the inputs of the inner runs; the inner step
-        # fails for the input `calls$fail`.
+        # Doubles each value of a split step with an inner pipeline per key. `calls$ran`
+        # collects the inputs of the inner runs; the inner step fails for the input
+        # `calls$fail`.
         keyed_outer <- function(values = list(A = 1, B = 2, C = 3)) {
             calls <- new.env(parent = emptyenv())
             calls$ran <- numeric()
@@ -2315,8 +2314,8 @@ describe("as.function.pipeflow", {
     })
 
     describe("calls made by the running inner pipeline", {
-        # The function calls itself with n - 1: the sum of 1, ..., n. The
-        # inner step `sum` fails for n = 0 as long as `state$fail` is set.
+        # The function calls itself with n - 1: the sum of 1, ..., n. The inner step
+        # `sum` fails for n = 0 as long as `state$fail` is set.
         recursive <- function(state = new.env(parent = emptyenv())) {
             state$fail <- FALSE
             f <- NULL
@@ -2338,8 +2337,8 @@ describe("as.function.pipeflow", {
             f <- recursive()$f
 
             expect_identical(f(n = 2), 3)
-            # the pipeline of the step still has n = 1, with the output of
-            # the call that ran in it: this call must get the right result
+            # the pipeline of the step still has n = 1, with the output of the call that
+            # ran in it: this call must get the right result
             expect_identical(f(n = 1), 1)
             expect_identical(f(n = 3), 6)
             expect_identical(f(n = 2), 3)
