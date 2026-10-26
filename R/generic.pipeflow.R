@@ -194,10 +194,16 @@
 # --------------
 # Element access
 # --------------
-# Method registry (built lazily) maps method names to API functions. The
-# map is then used to implement the virtual method dispatch via
-# `[[.pipeflow` and `$`, i.e. to allow stuff like `p$add(...)` as a
-# shorthand for `pip_add(p, ...)`.
+#' The virtual methods of a pipeline
+#'
+#' Maps method names to the functions that implement them, so that `[[` and
+#' `$` can offer `p$add(...)` as a shorthand for `pip_add(p, ...)`. The map is
+#' built on the first call, since the `pip_*` functions are not all defined
+#' yet when this file is sourced.
+#'
+#' @return An environment: method name -> function whose first argument is
+#' the pipeline or view.
+#' @noRd
 .pip_method_table <- local({
     table <- NULL
     function() {
@@ -239,7 +245,25 @@
 })
 
 
-# Internal implementation of [[ for pipeflow objects.
+#' Extract a field, method, column or cell of a pipeline or view
+#'
+#' Does the work of `[[.pipeflow`. With `j = NULL`, `i` is looked up in this
+#' order:
+#' 1. `"view"`: the steps covered by a view, `NULL` for a pipeline.
+#' 2. `"pipenv"` and the other fields of the wrapper (`"name"`).
+#' 3. A virtual method (see `.pip_method_table()`), returned as a function
+#'    with `x` bound as its first argument.
+#' 4. A column of the step table, by name or position, with its values of
+#'    the covered rows named by step, or `NULL` for an unknown column.
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param i A single field, method or column name or column position, or,
+#' with `j`, a single step name or row position. Row positions count among
+#' the rows covered by `x`.
+#' @param j `NULL`, or a single column name to extract one cell.
+#' @return The extracted value. A cell keeps the class of its column, see
+#' `.cell()`.
+#' @noRd
 .pip_subset2 <- function(x, i, j = NULL) {
     if (missing(i)) {
         stop("i must be provided")
@@ -331,12 +355,26 @@
 # -------------------
 # Cross-pipeline copy
 # -------------------
-# Copy step properties of the selected rows of one pipeline/view to
-# the selected rows of another. The rows of `x` and `q` are aligned by
-# position and must have equal length. The structural columns
-# (`nodeId`, `depends`, `unbound`) are never copied:
-# - `depends` is recomputed when the function is replaced and
-# - `nodeId`/`unbound` are also derived.
+#' Copy steps of one pipeline or view onto selected steps of another
+#'
+#' Does the work of `x[i] <- q` when `q` is a pipeline or view. The k-th
+#' selected row of `x` gets the step name, function, params, exec mode,
+#' output, state, times, tags and lock of the k-th covered row of `q`. The
+#' derived columns (`nodeId`, `depends`, `unbound`) are not copied but
+#' follow from the copied function and params. The references in the params
+#' of `q` are given by name, so a relative reference (`~-1`) keeps pointing
+#' to the step that it pointed to in `q`, which must exist in `x`. If a row
+#' fails, the rows copied before are undone (see `.pip_all_or_nothing()`).
+#' `q` may be `x` itself.
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param i The unevaluated `i` of `[<-`, see `.pip_select_rows()`. Its rows
+#' are taken in the given order.
+#' @param q A pipeflow pipeline or view with as many covered rows as `i`
+#' selects.
+#' @param enclos The environment to evaluate `i` in.
+#' @return `x`.
+#' @noRd
 .pip_copy_from <- function(x, i, q, enclos) {
     rowsP <- .pip_select_rows(x, i, enclos, keep_order = TRUE)
     n <- length(rowsP)

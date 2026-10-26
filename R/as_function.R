@@ -12,7 +12,6 @@
 # function (they live in the environment of its runner): they are dropped with
 # it, and serialising the function copies them.
 
-
 # ==============================================================================
 # Making the function
 # ==============================================================================
@@ -20,6 +19,15 @@
 # -------
 # Asserts
 # -------
+#' Check the `out` of `as.function.pipeflow()`
+#'
+#' @param x The pipeline.
+#' @param out `NULL` (all outputs), a character vector of steps of `x`, or a
+#' function that takes at least one argument, the run inner pipeline. A
+#' primitive, e.g. `length()`, counts with the arguments that `args()` gives
+#' it.
+#' @return `out`, invisibly.
+#' @noRd
 .assert_fun_out <- function(x, out) {
     if (is.null(out)) {
         return(invisible(out))
@@ -106,6 +114,8 @@
 #' made by `as.function.pipeflow()`, see `.fun_cache()`.
 #'
 #' @param ctx The context made by `as.function.pipeflow()`.
+#' @return A function of the named list of all arguments of a call, which
+#' returns the result of the call, see `.fun_call()`.
 #' @noRd
 .fun_runner <- function(ctx) {
     force(ctx)
@@ -129,6 +139,7 @@
 #' @param args All arguments of the call, as a named list.
 #' @param ctx The context made by `as.function.pipeflow()`.
 #' @param cache The kept pipelines of the function.
+#' @return The result of the call, see `.fun_out()`.
 #' @noRd
 .fun_call <- function(args, ctx, cache) {
     # Read before the inner run, whose steps set their own
@@ -375,6 +386,9 @@
 #'
 #' @param pip The inner pipeline, after the run.
 #' @param out The `out` of `as.function.pipeflow()`.
+#' @return For `out = NULL`, the outputs of all steps (see [pip_collect()]),
+#' for a function `out`, its result, for a single step, its output, and for
+#' several steps, a list of their outputs, named by step.
 #' @noRd
 .fun_out <- function(pip, out) {
     if (is.null(out)) {
@@ -450,6 +464,7 @@
 
 #' The kept pipelines of a function made by `as.function.pipeflow()`
 #'
+#' @param fun A function made by `as.function.pipeflow()`.
 #' @return A list of the pipelines of all slots, named by partition key.
 #' @noRd
 .fun_pips <- function(fun) {

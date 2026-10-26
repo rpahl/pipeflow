@@ -1,3 +1,210 @@
+# ==============================================================================
+# Internal helpers
+# ==============================================================================
+
+# ---------------------
+# Function construction
+# ---------------------
+
+describe(".fun_quote", {
+    it("wraps symbols and calls in quote() and keeps other values", {
+        args <- list(a = quote(x), b = 1, c = quote(f(y)), d = NULL, e = ~s)
+        res <- .fun_quote(args)
+
+        expect_equal(res[["a"]], call("quote", quote(x)))
+        expect_equal(res[["c"]], call("quote", quote(f(y))))
+        expect_equal(res[c("b", "d")], list(b = 1, d = NULL))
+        # A formula is language as well
+        expect_equal(eval(res[["e"]]), ~s)
+        expect_equal(lapply(res, eval), args)
+    })
+})
+
+# -----
+# Slots
+# -----
+
+describe(".fun_keep_keys", {
+    new_slots <- function(keys) {
+        slots <- .fun_slots()
+        for (key in keys) {
+            assign(key, paste("pip", key), envir = slots$pips)
+        }
+        slots$keys <- keys
+        slots$mapped <- TRUE
+        slots
+    }
+
+    it("drops the slots of the keys that are gone", {
+        slots <- new_slots(c("A", "B", "C"))
+        .fun_keep_keys(slots, keys = c("C", "A", "D"), mapped = TRUE)
+
+        expect_setequal(names(slots$pips), c("A", "C"))
+        expect_equal(slots$keys, c("C", "A", "D"))
+        # The kept pipelines come in the order of the keys of the last call
+        expect_equal(.fun_slot_pips(slots), list(C = "pip C", A = "pip A"))
+    })
+
+    it("drops all partitions when the step is no longer mapped", {
+        slots <- new_slots(c("A", "B"))
+        .fun_keep_keys(slots, keys = .fun_key_single, mapped = FALSE)
+
+        expect_length(names(slots$pips), 0L)
+        expect_false(slots$mapped)
+    })
+
+    it("tells a partition named as the single key from a single call", {
+        slots <- new_slots(.fun_key_single)
+        slots$mapped <- FALSE
+        .fun_keep_keys(slots, keys = .fun_key_single, mapped = TRUE)
+
+        expect_true(slots$mapped)
+        expect_equal(names(slots$pips), .fun_key_single)
+    })
+})
+
+# ------------------
+# Run check & result
+# ------------------
+
+describe(".fun_failure_causes", {
+    no_log <- \(level, msg) NULL
+    run_continued <- function(p) {
+        suppressWarnings(pip_run(p, on_error = "continue", lgr = no_log))
+        .pip_pipenv(p)[["data"]]
+    }
+
+    it("is empty if no step failed", {
+        p <- pip_new() |> pip_add("a", \() 1)
+        expect_equal(.fun_failure_causes(run_continued(p)), list())
+    })
+
+    it("follows a failure to the steps that were skipped because of it", {
+        p <- pip_new() |>
+            pip_add("a", \() stop("boom")) |>
+            pip_add("b", \(x = ~a) x) |>
+            pip_add("c", \(x = ~b) x) |>
+            pip_add("d", \() 1)
+
+        expect_equal(
+            .fun_failure_causes(run_continued(p)),
+            list(a = "a", b = "a", c = "a")
+        )
+    })
+
+    it("does not follow a failure past a step that got it via ~try()", {
+        p <- pip_new() |>
+            pip_add("a", \() stop("boom")) |>
+            pip_add("b", \(x = ~ try(a)) 1) |>
+            pip_add("c", \(x = ~b) x)
+
+        expect_equal(.fun_failure_causes(run_continued(p)), list(a = "a"))
+    })
+
+    it("does not follow a failure past a locked step", {
+        p <- pip_new() |>
+            pip_add("a", \() stop("boom")) |>
+            pip_add("l", \(x = ~a) x) |>
+            pip_add("m", \(x = ~l) x)
+        pip_lock(p["l"])
+
+        expect_equal(.fun_failure_causes(run_continued(p)), list(a = "a"))
+    })
+
+    it("names the input of a mapped step whose keys were not run", {
+        p <- pip_new() |>
+            pip_add("s", \() list(k1 = 1, k2 = 2), exec = "split") |>
+            pip_add("t", \(x = ~s) if (x == 2) stop("bad") else x) |>
+            pip_add("u", \(x = ~t) x) |>
+            pip_add("v", \(x = ~u) x, exec = "reduce")
+
+        # t failed for key k2 itself, u failed for it because t failed
+        expect_equal(
+            .fun_failure_causes(run_continued(p)),
+            list(t = "t", u = "t", v = "t")
+        )
+    })
+})
+
+# ------------
+# Cache access
+# ------------
+
+describe(".fun_cache", {
+    p <- pip_new() |> pip_add("a", \(x = 1) x)
+
+    it("is the cache of a function made by as.function()", {
+        expect_s3_class(.fun_cache(as.function(p)), "pipeflow_fun_cache")
+        expect_s3_class(
+            .fun_cache(as.function(p, cache = FALSE)),
+            "pipeflow_fun_cache"
+        )
+    })
+
+    it("is NULL for other objects", {
+        expect_null(.fun_cache(\(x) x))
+        expect_null(.fun_cache(\(x) f(x)))
+        expect_null(.fun_cache(sum))
+        expect_null(.fun_cache(1))
+        expect_null(.fun_cache(NULL))
+    })
+})
+
+describe(".fun_keeps", {
+    p <- pip_new() |> pip_add("a", \(x = 1) x)
+
+    it("is TRUE only for a function made with cache = TRUE", {
+        expect_true(.fun_keeps(as.function(p)))
+        expect_false(.fun_keeps(as.function(p, cache = FALSE)))
+        expect_false(.fun_keeps(\(x) x))
+        expect_false(.fun_keeps(sum))
+    })
+})
+
+# -------------------------
+# Updates on pipeline edits
+# -------------------------
+
+describe(".fun_rename and .fun_release", {
+    p <- pip_new() |> pip_add("a", \(x = 1) x)
+    with_slots <- function(steps) {
+        f <- as.function(p)
+        cache <- .fun_cache(f)
+        for (step in steps) {
+            cache$slots[[step]] <- .fun_slots()
+        }
+        f
+    }
+
+    it("moves the slots of a renamed step", {
+        f <- with_slots(c("s1", "s2"))
+        slots <- .fun_cache(f)$slots[["s1"]]
+        .fun_rename(f, from = "s1", to = "t1")
+
+        expect_equal(names(.fun_cache(f)$slots), c("s2", "t1"))
+        expect_identical(.fun_cache(f)$slots[["t1"]], slots)
+    })
+
+    it("does nothing for a step without slots", {
+        f <- with_slots("s1")
+        .fun_rename(f, from = "zz", to = "t1")
+        expect_equal(names(.fun_cache(f)$slots), "s1")
+    })
+
+    it("drops the slots of a released step", {
+        f <- with_slots(c("s1", "s2"))
+        .fun_release(f, "s1")
+        expect_equal(names(.fun_cache(f)$slots), "s2")
+        expect_no_error(.fun_release(f, "zz"))
+    })
+
+    it("does nothing for other functions", {
+        expect_null(.fun_rename(\(x) x, from = "a", to = "b"))
+        expect_null(.fun_release(\(x) x, step = "a"))
+    })
+})
+
+
 describe("as.function.pipeflow", {
     # Fixtures are defined here and not in a helper file: closures from a
     # helper would have the attached package environment as an ancestor, which
@@ -97,7 +304,6 @@ describe("as.function.pipeflow", {
         invisible(demo)
     }
 
-
     # ==========================================================================
     # Making the function
     # ==========================================================================
@@ -195,7 +401,6 @@ describe("as.function.pipeflow", {
         })
     })
 
-
     # ==========================================================================
     # Calling the function
     # ==========================================================================
@@ -287,7 +492,6 @@ describe("as.function.pipeflow", {
             )
         })
     })
-
 
     describe("as a plain function", {
         it("has the unbound params as arguments", {
@@ -445,7 +649,6 @@ describe("as.function.pipeflow", {
         })
     })
 
-
     describe("binding", {
         it("takes relative references", {
             inner <- pip_new("rel") |> pip_add("s", \(x = 1) x * 2)
@@ -529,7 +732,6 @@ describe("as.function.pipeflow", {
             expect_equal(unlist(outer[["run", "out"]]), c(p = 15, q = 12))
         })
     })
-
 
     describe("out as a function", {
         new_calls <- function() {
@@ -760,7 +962,6 @@ describe("as.function.pipeflow", {
         })
     })
 
-
     describe("snapshot of the pipeline", {
         it("does not change the pipeline it was made from", {
             demo <- run_outer(demo_nested())
@@ -808,7 +1009,6 @@ describe("as.function.pipeflow", {
             expect_s3_class(f(data = demo_batches()[1:6, ]), "lm")
         })
     })
-
 
     describe("continuing after errors of inner steps", {
         # `bad` fails for the input "boom". `report` takes its output via
@@ -1329,7 +1529,6 @@ describe("as.function.pipeflow", {
         })
     })
 
-
     describe("failures and messages", {
         # The steps and partition keys named by a condition and its parents,
         # from the outer to the inner level
@@ -1493,7 +1692,6 @@ describe("as.function.pipeflow", {
         })
     })
 
-
     describe("logging of the inner run", {
         collect_logs <- function(logs) {
             function(level, msg) logs$msgs <- c(logs$msgs, msg)
@@ -1550,7 +1748,6 @@ describe("as.function.pipeflow", {
             expect_identical(sum(starts), 3L)
         })
     })
-
 
     # ==========================================================================
     # Kept pipelines
@@ -2117,7 +2314,6 @@ describe("as.function.pipeflow", {
         })
     })
 
-
     describe("calls made by the running inner pipeline", {
         # The function calls itself with n - 1: the sum of 1, ..., n. The
         # inner step `sum` fails for n = 0 as long as `state$fail` is set.
@@ -2179,7 +2375,6 @@ describe("as.function.pipeflow", {
         })
     })
 
-
     describe("limits of the reuse", {
         it("takes the first default of params with the same name", {
             p <- pip_new("same") |>
@@ -2222,7 +2417,6 @@ describe("as.function.pipeflow", {
         })
     })
 
-
     describe("finding the kept pipelines", {
         it("finds the cache of a function made by as.function()", {
             f <- as.function(pip_new("p") |> pip_add("s", \(x = 1) x))
@@ -2244,7 +2438,6 @@ describe("as.function.pipeflow", {
             expect_silent(.fun_release(NULL, "s"))
         })
     })
-
 
     describe("lifetime", {
         # The finalizer only knows the flag, not the function.
@@ -2289,7 +2482,6 @@ describe("as.function.pipeflow", {
             expect_true(flag$collected)
         })
     })
-
 
     describe("serialisation", {
         big_batch <- function(n = 1e5) {
@@ -2412,7 +2604,6 @@ describe("as.function.pipeflow", {
             )
         })
     })
-
 
     # ==========================================================================
     # Exported API

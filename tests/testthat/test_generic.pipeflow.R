@@ -2,6 +2,89 @@
 # Helpers
 # ==============================================================================
 
+# --------------------
+# All-or-nothing edits
+# --------------------
+
+describe(".pip_all_or_nothing", {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1) |>
+            pip_run(lgr = \(level, msg) NULL)
+    }
+    state_of <- function(p) {
+        env <- p[["pipenv"]]
+        list(
+            data = data.table::copy(env[["data"]]),
+            map = as.list(env[[".steps_to_nodes"]]),
+            dag = dag_structure(env[[".dag"]])
+        )
+    }
+
+    it("keeps a successful edit, which can assign in the calling frame", {
+        p <- test_pip()
+        .pip_all_or_nothing(p, {
+            pip_rename(p, from = "a", to = "a1")
+            res <- "assigned"
+        })
+
+        expect_equal(unname(p[["step"]]), c("a1", "b"))
+        expect_equal(res, "assigned")
+    })
+
+    it("undoes all changes of a failing edit and signals its error", {
+        p <- test_pip()
+        before <- state_of(p)
+
+        expect_error(
+            .pip_all_or_nothing(p, {
+                pip_rename(p, from = "a", to = "a1")
+                pip_add(p, "c", \(x = ~b) x)
+                pip_set_params(p, list(x = 5))
+                pip_remove(p, "c")
+                stop("fail")
+            }),
+            "fail"
+        )
+
+        expect_equal(state_of(p), before)
+    })
+
+    it("undoes the changes in place, so that views see them undone", {
+        p <- test_pip()
+        v <- p["b"]
+        dat <- p[["pipenv"]][["data"]]
+        try(
+            .pip_all_or_nothing(p, {
+                pip_remove(v, "b")
+                stop("fail")
+            }),
+            silent = TRUE
+        )
+
+        expect_identical(p[["pipenv"]][["data"]], dat)
+        expect_equal(unname(v[["step"]]), "b")
+    })
+
+    it("undoes the changes before handlers outside see the error", {
+        p <- test_pip()
+        seen <- NULL
+        try(
+            withCallingHandlers(
+                .pip_all_or_nothing(p, {
+                    pip_rename(p, from = "a", to = "a1")
+                    stop("fail")
+                }),
+                error = function(e) seen <<- unname(p[["step"]])
+            ),
+            silent = TRUE
+        )
+
+        expect_equal(seen, c("a", "b"))
+    })
+})
+
 # ----------
 # Compaction
 # ----------
@@ -187,6 +270,30 @@ describe(".pip_compact", {
             got <- .pip_compact(q, keepNodes = keep, rebuildThresh = frac)
             check_equal_compact(ref, got)
         }
+    })
+})
+
+
+# --------------
+# Element access
+# --------------
+
+describe(".cell", {
+    it("keeps the class of an element of an atomic column", {
+        d <- .as_duration(c(1.5, 2))
+        expect_equal(.cell(d, 2), .as_duration(2))
+        expect_s3_class(.cell(d, 2), "difftime")
+
+        t <- as.POSIXct(c("2026-01-01", "2026-01-02"), tz = "UTC")
+        expect_equal(.cell(t, 1), t[1])
+        expect_equal(.cell(c(a = 1, b = 2), 2), c(b = 2))
+    })
+
+    it("returns the element of a list column itself", {
+        col <- list(1:3, NULL, list(x = 1))
+        expect_equal(.cell(col, 1), 1:3)
+        expect_null(.cell(col, 2))
+        expect_equal(.cell(col, 3), list(x = 1))
     })
 })
 
