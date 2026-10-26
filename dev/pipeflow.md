@@ -2,7 +2,7 @@
 
 This file describes how the package is built: the data model, which modules
 and functions call each other, and the flows that build, edit and run a
-pipeline. It is meant for developers and coding agents. `CLAUDE.md` gives the
+pipeline. It is meant for developers and coding agents. `AGENTS.md` gives the
 short version. For pipelines used as functions (`as.function()`,
 `pip_inner()`), see [as_function.md](as_function.md).
 

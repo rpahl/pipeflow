@@ -1,16 +1,16 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to coding agents (Claude Code, GitHub Copilot, Kilo) when
-working with code in this repository.
+This file provides guidance to coding agents when working with code in this repository.
 
 `pipeflow` is an R package (CRAN) for building interactive data analysis pipelines.
 Users add R functions as steps with `pip_add()`, and the dependencies between steps live
 in a C++ DAG (Rcpp).
 
-This is the single source of agent instructions. `.github/copilot-instructions.md` and
-`kilo.json` only point here, so add new instructions to this file. For call graphs, flow
-diagrams and invariants, see `dev/pipeflow.md` (core) and `dev/as_function.md`
-(pipelines as functions). Update them when you change a flow they describe.
+This is the single source of agent instructions. `CLAUDE.md` (for Claude Code) and
+`.github/copilot-instructions.md` only point here, so add new instructions to this file.
+For call graphs, flow diagrams and invariants, see `dev/pipeflow.md` (core) and
+`dev/as_function.md` (pipelines as functions). Update them when you change a flow they
+describe.
 
 ## Environment
 

@@ -1,7 +1,0 @@
-{
-  "$schema": "https://app.kilo.ai/config.json",
-  "instructions": [
-    "CLAUDE.md"
-  ],
-  "auto_collapse_reasoning": true
-}

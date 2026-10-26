@@ -59,7 +59,7 @@ jobs:
       # branch above; committing keeps it out for the whole run.
       - name: Keep internal files out of the site
         run: |
-          git rm --quiet CLAUDE.md
+          git rm --quiet AGENTS.md CLAUDE.md
           git commit --quiet -m "Drop internal files from the site build"
 
       - name: Build and deploy site
