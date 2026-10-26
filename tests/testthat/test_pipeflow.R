@@ -3938,6 +3938,103 @@ describe("pip_run", {
         })
     })
 
+    describe("stores the error of a failed step as its output", {
+        it("replaces an earlier output and keeps the class of the error", {
+            p <- pip_new() |>
+                pip_add("a", \(fail = FALSE) {
+                    if (fail) {
+                        stop(errorCondition("boom", class = "my_error"))
+                    }
+                    1
+                })
+            pip_run(p, lgr = NULL)
+            expect_equal(p[["a", "out"]], 1)
+
+            pip_set_params(p, list(fail = TRUE))
+            expect_error(pip_run(p, lgr = NULL), "boom")
+
+            expect_equal(unname(p[["a", "state"]]), "failed")
+            expect_s3_class(p[["a", "out"]], "my_error")
+            expect_equal(conditionMessage(p[["a", "out"]]), "boom")
+        })
+
+        it("stores the key error of a mapped step and re-runs all keys", {
+            for (map in list(NULL, lapply)) {
+                env <- new.env()
+                env$failKeys <- "b"
+                env$calls <- character()
+                p <- pip_new() |>
+                    pip_add(
+                        "parts",
+                        \(x = list(a = 1, b = 2, c = 3)) x,
+                        exec = "split"
+                    ) |>
+                    pip_add("fit", \(x = ~parts) {
+                        key <- .pip_step_call()[["key"]]
+                        env$calls <- c(env$calls, key)
+                        if (key %in% env$failKeys) stop("boom") else x * 10
+                    })
+
+                expect_error(pip_run(p, lgr = NULL, map = map), "key 'b': boom")
+                out <- p[["fit", "out"]]
+                expect_s3_class(out, "pipeflow_key_error")
+                expect_equal(out[["key"]], "b")
+                expect_equal(conditionMessage(out[["parent"]]), "boom")
+
+                env$failKeys <- character()
+                env$calls <- character()
+                pip_run(p, lgr = NULL, map = map)
+                expect_equal(env$calls, c("a", "b", "c"))
+                expect_equal(
+                    unclass(p[["fit", "out"]]),
+                    list(a = 10, b = 20, c = 30)
+                )
+            }
+        })
+
+        it("keeps it after a continued run that did not run the step", {
+            p <- pip_new() |>
+                pip_add(
+                    "parts",
+                    \(bad = "b") {
+                        lapply(
+                            c(a = "a", b = "b", c = "c"),
+                            \(k) list(k = k, bad = bad)
+                        )
+                    },
+                    exec = "split"
+                ) |>
+                pip_add("fit", \(x = ~parts) {
+                    if (x$k == x$bad) stop("boom ", x$k) else paste(x$k, x$bad)
+                }) |>
+                pip_add("other", \(z = 1) stop("other fails"))
+            suppressWarnings(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                classes = "pipeflow_run_failed"
+            )
+            expect_equal(.pip_failed_keys(p[["fit", "out"]]), "b")
+
+            # The stopped run replaces the output of the first run
+            pip_set_params(p, list(bad = "c"))
+            expect_error(pip_run(p, lgr = NULL), "key 'c': boom c")
+            out <- p[["fit", "out"]]
+            expect_s3_class(out, "pipeflow_key_error")
+            expect_equal(out[["key"]], "c")
+
+            suppressWarnings(
+                pip_run(
+                    pip_view(p, step = "other"),
+                    lgr = NULL,
+                    on_error = "continue"
+                ),
+                classes = "pipeflow_run_failed"
+            )
+            expect_equal(get_run_state(p), "continued")
+            expect_equal(unname(p[["fit", "state"]]), "failed")
+            expect_identical(p[["fit", "out"]], out)
+        })
+    })
+
     describe("running views", {
         it("can run parts of the pipeline via views", {
             p <- test_pip()
@@ -5112,7 +5209,7 @@ describe("pip_run", {
                 unname(p[["state"]]),
                 c("done", "failed", "new", "new", "new")
             )
-            expect_null(p[["a", "out"]])
+            expect_s3_class(p[["a", "out"]], "simpleError")
             expect_equal(get_run_state(p), "failed")
         })
 
@@ -5656,7 +5753,7 @@ describe("pip_run", {
                 )
                 expect_s3_class(err[["parent"]], "pipeflow_key_error")
                 expect_equal(unname(p[["fit", "state"]]), "failed")
-                expect_null(p[["fit", "out"]])
+                expect_identical(p[["fit", "out"]], err[["parent"]])
             })
 
             it("stops at a failed key of a locked input with 'stop'", {
@@ -5962,12 +6059,13 @@ describe("pip_run", {
                         })
                     run_flaky(p)
 
-                    # A full attempt with new params stops at key 'a' and keeps the
-                    # output of the first run, with 'b' failed
+                    # A full attempt with new params stops at key 'a' and stores
+                    # its key error as the output
                     pip_set_params(p, list(mult = 100))
                     env$failKeys <- "a"
                     expect_error(pip_run(p, lgr = NULL), "boom")
                     expect_equal(unname(p[["fit", "state"]]), "failed")
+                    expect_s3_class(p[["fit", "out"]], "pipeflow_key_error")
 
                     env$failKeys <- character()
                     pip_run(p, lgr = NULL)
@@ -6009,21 +6107,20 @@ describe("pip_run", {
                     }
                     p <- mk()
                     q <- mk()
+                    pip_set_params(q, list(mult = 100))
                     run_flaky(p)
                     run_flaky(q)
 
-                    # q keeps its output of the first run after an attempt with new
-                    # params stopped, and p gets its step
-                    pip_set_params(q, list(mult = 100))
-                    env$failKeys <- "a"
-                    expect_error(pip_run(q, lgr = NULL), "boom")
-                    p["fit"] <- q["fit"]
+                    # p gets the output of q, which has failed keys but comes from
+                    # other params, and stays failed
+                    p[["fit", "out"]] <- q[["fit", "out"]]
+                    expect_equal(unname(p[["fit", "state"]]), "failed")
 
                     env$failKeys <- character()
                     pip_run(p, lgr = NULL)
                     expect_equal(
                         unclass(p[["fit", "out"]]),
-                        list(a = 100, b = 200, c = 300)
+                        list(a = 1, b = 2, c = 3)
                     )
                 })
 

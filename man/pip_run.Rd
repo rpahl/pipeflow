@@ -104,9 +104,9 @@ not re-executed (for example, because they were already \code{"done"}) keep thei
 
 \subsection{Runtime errors}{
 
-By default, a failing step stops the run: the step gets state \code{"failed"}, the
-pipeline run state becomes \code{"failed"}, and steps after it that were not reached are
-marked \code{"outdated"}, so the next run retries them.
+By default, a failing step stops the run: the step gets state \code{"failed"} and its
+error is stored as its output, the pipeline run state becomes \code{"failed"}, and steps
+after it that were not reached are marked \code{"outdated"}, so the next run retries them.
 
 The error message names the step, and for a step mapped over partitions (see \code{exec}
 in \code{\link[=pip_add]{pip_add()}}) also the partition key, e.g. \code{"step 'fit': key 'b': negative"}. The
@@ -118,7 +118,8 @@ error has class \code{pipeflow_step_error} and keeps the original error in its f
 
 With \code{on_error = "continue"}, the run does not stop at a failed step:
 \itemize{
-\item The failed step gets state \code{"failed"}, and its error is stored as its output.
+\item The failed step gets state \code{"failed"}, and its error is stored as its output (as
+above).
 \item Steps that depend on a failed step are not run, and neither are their own
 dependents. All other steps are run.
 \item To run a step despite a failed input, refer to that input via \code{try()}, e.g.
