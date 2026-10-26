@@ -56,6 +56,7 @@ pip_rename(v, from = "load_data", to = "input")
 p[["step"]]                                 # "input", "s2"
 #>   input      s2 
 #> "input"    "s2" 
+
 v2 <- pip_view(p, step = "s2")
 try(pip_rename(v2, from = "input", to = "data"))
 #> Error in pip_rename(v2, from = "input", to = "data") : 

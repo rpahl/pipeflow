@@ -149,12 +149,12 @@ p <- pip_new("analysis") |>
   pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
 
 pip_run(p)
-#> info [2026-10-25 19:30:01.612 UTC]: Starting run of pipeflow 'analysis'
-#> info [2026-10-25 19:30:01.612 UTC]: Step 1/4 load
-#> info [2026-10-25 19:30:01.613 UTC]: Step 2/4 clean
-#> info [2026-10-25 19:30:01.614 UTC]: Step 3/4 fit
-#> info [2026-10-25 19:30:01.615 UTC]: Step 4/4 report
-#> info [2026-10-25 19:30:01.615 UTC]: Finished in 0.003 s (4 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:24:33.730 UTC]: Starting run of pipeflow 'analysis'
+#> info [2026-10-26 16:24:33.731 UTC]: Step 1/4 load
+#> info [2026-10-26 16:24:33.732 UTC]: Step 2/4 clean
+#> info [2026-10-26 16:24:33.733 UTC]: Step 3/4 fit
+#> info [2026-10-26 16:24:33.733 UTC]: Step 4/4 report
+#> info [2026-10-26 16:24:33.734 UTC]: Finished in 0.004 s (4 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> analysis (4 steps)
 #> -----------------------------
@@ -164,7 +164,7 @@ p
 #> 3:    fit      x   clean  done             30 model,core,daily
 #> 4: report      x     fit  done     result: 30           report
 #> -----------------------------
-#> <ready> last run: 2026-10-25 19:30:01 (0.003 s)
+#> <ready> last run: 2026-10-26 16:24:33 (0.004 s)
 #> steps: 4 done
 
 # Filter by tag using pip_view — keeps steps with any matching tag
@@ -174,7 +174,7 @@ pip_view(p, tags = "daily")
 #>    step params depends state out             tags
 #> 1:  fit      x   clean  done  30 model,core,daily
 #> ---------------------------------------
-#> <ready> last run: 2026-10-25 19:30:01 (0.003 s)
+#> <ready> last run: 2026-10-26 16:24:33 (0.004 s)
 #> steps: 1 done
 pip_view(p, tags = "core")
 #> <pipeflow_view> analysis (1 of 4 steps)
@@ -182,7 +182,7 @@ pip_view(p, tags = "core")
 #>    step params depends state out             tags
 #> 1:  fit      x   clean  done  30 model,core,daily
 #> ---------------------------------------
-#> <ready> last run: 2026-10-25 19:30:01 (0.003 s)
+#> <ready> last run: 2026-10-26 16:24:33 (0.004 s)
 #> steps: 1 done
 pip_view(p, tags = c("raw", "report"))
 #> <pipeflow_view> analysis (2 of 4 steps)
@@ -191,7 +191,7 @@ pip_view(p, tags = c("raw", "report"))
 #> 1:   load      n          done  1,2,3,4,5 io,raw
 #> 2: report      x     fit  done result: 30 report
 #> ---------------------------------------
-#> <ready> last run: 2026-10-25 19:30:01 (0.003 s)
+#> <ready> last run: 2026-10-26 16:24:33 (0.004 s)
 #> steps: 2 done
 
 # --- Split / reduce execution modes ---
@@ -206,12 +206,12 @@ q <- pip_new("split-demo") |>
   )
 
 pip_run(q)
-#> info [2026-10-25 19:30:01.623 UTC]: Starting run of pipeflow 'split-demo'
-#> info [2026-10-25 19:30:01.623 UTC]: Step 1/4 data
-#> info [2026-10-25 19:30:01.623 UTC]: Step 2/4 split
-#> info [2026-10-25 19:30:01.624 UTC]: Step 3/4 stats
-#> info [2026-10-25 19:30:01.628 UTC]: Step 4/4 combine
-#> info [2026-10-25 19:30:01.628 UTC]: Finished in 0.006 s (4 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:24:33.747 UTC]: Starting run of pipeflow 'split-demo'
+#> info [2026-10-26 16:24:33.747 UTC]: Step 1/4 data
+#> info [2026-10-26 16:24:33.748 UTC]: Step 2/4 split
+#> info [2026-10-26 16:24:33.749 UTC]: Step 3/4 stats
+#> info [2026-10-26 16:24:33.754 UTC]: Step 4/4 combine
+#> info [2026-10-26 16:24:33.754 UTC]: Finished in 0.008 s (4 done, 0 skipped, 0 failed)
 q[["stats", "out"]]   # partitioned list — one summary per species
 #> $setosa
 #>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   
@@ -345,11 +345,11 @@ p3 <- pip_new("params-demo") |>
   # ... and give values to parameters without default, e.g. of mean()
   pip_add("avg", mean, params = list(x = ~scale, na.rm = TRUE))
 pip_run(p3)
-#> info [2026-10-25 19:30:01.642 UTC]: Starting run of pipeflow 'params-demo'
-#> info [2026-10-25 19:30:01.642 UTC]: Step 1/3 data
-#> info [2026-10-25 19:30:01.643 UTC]: Step 2/3 scale
-#> info [2026-10-25 19:30:01.643 UTC]: Step 3/3 avg
-#> info [2026-10-25 19:30:01.644 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:24:33.769 UTC]: Starting run of pipeflow 'params-demo'
+#> info [2026-10-26 16:24:33.769 UTC]: Step 1/3 data
+#> info [2026-10-26 16:24:33.770 UTC]: Step 2/3 scale
+#> info [2026-10-26 16:24:33.770 UTC]: Step 3/3 avg
+#> info [2026-10-26 16:24:33.771 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)
 p3
 #> <pipeflow> params-demo (3 steps)
 #> --------------------------------
@@ -358,7 +358,7 @@ p3
 #> 2: scale x,factor    data  done 10,NA,30
 #> 3:   avg  x,na.rm   scale  done       20
 #> --------------------------------
-#> <ready> last run: 2026-10-25 19:30:01 (0.002 s)
+#> <ready> last run: 2026-10-26 16:24:33 (0.002 s)
 #> steps: 3 done
 p3[["avg", "out"]] # 20
 #> [1] 20
@@ -367,9 +367,9 @@ p3[["avg", "out"]] # 20
 p4 <- pip_new("dots-demo") |>
   pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
 pip_run(p4)
-#> info [2026-10-25 19:30:01.647 UTC]: Starting run of pipeflow 'dots-demo'
-#> info [2026-10-25 19:30:01.647 UTC]: Step 1/1 load
-#> info [2026-10-25 19:30:01.648 UTC]: Finished in 0.001 s (1 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:24:33.776 UTC]: Starting run of pipeflow 'dots-demo'
+#> info [2026-10-26 16:24:33.776 UTC]: Step 1/1 load
+#> info [2026-10-26 16:24:33.777 UTC]: Finished in 0.001 s (1 done, 0 skipped, 0 failed)
 p4[["load", "out"]] # c(1, size = 42)
 #>      size 
 #>    1   42 

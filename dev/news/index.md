@@ -1,5 +1,20 @@
 # Changelog
 
+## pipeflow 0.5.0.9025
+
+### New features
+
+- [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
+  has a new argument `map`, a function like
+  [`lapply()`](https://rdrr.io/r/base/lapply.html) that runs the keys of
+  a step mapped over partitions (`exec = "auto"`), for example in
+  parallel with
+  [`parallel::mclapply`](https://rdrr.io/r/parallel/mclapply.html) or
+  `future.apply::future_lapply`. Steps that refer to `.self` or whose
+  function was made by
+  [`as.function()`](https://rdrr.io/r/base/as.function.html) (with
+  `cache = TRUE`, the default) still run their keys one after another.
+
 ## pipeflow 0.5.0.9024
 
 ### New features

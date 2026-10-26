@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9024</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9025</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -109,22 +109,20 @@
 
 
 <dt id="arg-cols">cols<a class="anchor" aria-label="anchor" href="#arg-cols"></a></dt>
-<dd><p>The columns to be printed. Can be either one of
-<code>core</code> or <code>all</code> to print the core or all columns, respectively,
-or an explicit character vector of columns to be printed. The <code>params</code>
-column lists the names of the step's parameters. In the <code>out</code> column, some
-outputs are shown in short form: a condition (the output of a step that
-failed in a run with <code>on_error = "continue"</code>) as <code>&lt;kind/class&gt;</code>, e.g.
+<dd><p>The columns to be printed. Can be either one of <code>core</code> or <code>all</code> to print
+the core or all columns, respectively, or an explicit character vector of columns to
+be printed. The <code>params</code> column lists the names of the step's parameters. In the
+<code>out</code> column, some outputs are shown in short form: a condition (the output of a step
+that failed in a run with <code>on_error = "continue"</code>) as <code>&lt;kind/class&gt;</code>, e.g.
 <code>&lt;error/simpleError&gt;</code>; a matrix, array or table as <code>&lt;class[dims]&gt;</code>, e.g.
-<code>&lt;matrix[4x2]&gt;</code>; and a function or environment (e.g. an R6 object) as
-<code>&lt;class&gt;</code>. Strings longer than 40 characters are cut off and marked with
-<code>"..."</code>. The <code>duration</code> column is shown in short form, e.g. <code>0.251 s</code> or
-<code>2 min 5 s</code>.</p></dd>
+<code>&lt;matrix[4x2]&gt;</code>; and a function or environment (e.g. an R6 object) as <code>&lt;class&gt;</code>.
+Strings longer than 40 characters are cut off and marked with <code>"..."</code>. The <code>duration</code>
+column is shown in short form, e.g. <code>0.251 s</code> or <code>2 min 5 s</code>.</p></dd>
 
 
 <dt id="arg-topn">topn<a class="anchor" aria-label="anchor" href="#arg-topn"></a></dt>
-<dd><p>The number of rows to be printed from the beginning
-and end of tables with more than <code>nrows</code> rows.</p></dd>
+<dd><p>The number of rows to be printed from the beginning and end of tables
+with more than <code>nrows</code> rows.</p></dd>
 
 
 <dt id="arg-nrows">nrows<a class="anchor" aria-label="anchor" href="#arg-nrows"></a></dt>
@@ -136,15 +134,14 @@ and end of tables with more than <code>nrows</code> rows.</p></dd>
 
 
 <dt id="arg-class">class<a class="anchor" aria-label="anchor" href="#arg-class"></a></dt>
-<dd><p>If TRUE, the resulting output will include above each
-column its storage class (or a self-evident abbreviation thereof).</p></dd>
+<dd><p>If TRUE, the resulting output will include above each column its storage
+class (or a self-evident abbreviation thereof).</p></dd>
 
 
 <dt id="arg-header">header<a class="anchor" aria-label="anchor" href="#arg-header"></a></dt>
-<dd><p>If TRUE, a header with the pipeline name and number
-of steps, and a footer will be printed. The footer shows the run state,
-the time and the duration of the last run, and how many of the printed
-steps are in each state, e.g.</p>
+<dd><p>If TRUE, a header with the pipeline name and number of steps, and a
+footer will be printed. The footer shows the run state, the time and the duration of
+the last run, and how many of the printed steps are in each state, e.g.</p>
 <p></p><div class="sourceCode"><pre><code><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="sc">&lt;</span>ready<span class="sc">&gt;</span> last run<span class="sc">:</span> <span class="dv">2026-10-25</span> <span class="dv">14</span><span class="sc">:</span><span class="dv">03</span><span class="sc">:</span><span class="dv">12</span> (<span class="fl">0.251</span> s)</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>steps<span class="sc">:</span> <span class="dv">3</span> done, <span class="dv">1</span> failed, <span class="dv">2</span> new</span></code></pre><p></p></div></dd>
 
@@ -179,9 +176,9 @@ steps are in each state, e.g.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: square &lt;function[1]&gt;      x [NULL]   new compute  FALSE auto</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  total &lt;function[1]&gt;      x [NULL]   new compute  FALSE auto</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                   time time_start duration depends unbound nodeId</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 2026-10-25 19:30:05       &lt;NA&gt;     &lt;NA&gt;               n      0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 2026-10-25 19:30:05       &lt;NA&gt;     &lt;NA&gt;    load              1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: 2026-10-25 19:30:05       &lt;NA&gt;     &lt;NA&gt;  square              2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 2026-10-26 16:24:39       &lt;NA&gt;     &lt;NA&gt;               n      0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 2026-10-26 16:24:39       &lt;NA&gt;     &lt;NA&gt;    load              1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: 2026-10-26 16:24:39       &lt;NA&gt;     &lt;NA&gt;  square              2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: never</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 3 new</span>

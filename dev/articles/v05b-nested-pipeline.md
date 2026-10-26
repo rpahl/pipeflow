@@ -70,11 +70,11 @@ see this now:
 
 params <- list(input_df = iris, xVar = "Sepal.Length", yVar = "Sepal.Width")
 pip_set_params(inner, params) |> pip_run()
-# info [2026-10-25 19:30:42.846 UTC]: Starting run of pipeflow 'coefficients'
-# info [2026-10-25 19:30:42.847 UTC]: Step 1/3 input
-# info [2026-10-25 19:30:42.848 UTC]: Step 2/3 fit
-# info [2026-10-25 19:30:42.851 UTC]: Step 3/3 coefs
-# info [2026-10-25 19:30:42.852 UTC]: Finished in 0.006 s (3 done, 0 skipped, 0 failed)
+# info [2026-10-26 16:25:39.243 UTC]: Starting run of pipeflow 'coefficients'
+# info [2026-10-26 16:25:39.244 UTC]: Step 1/3 input
+# info [2026-10-26 16:25:39.246 UTC]: Step 2/3 fit
+# info [2026-10-26 16:25:39.249 UTC]: Step 3/3 coefs
+# info [2026-10-26 16:25:39.250 UTC]: Finished in 0.007 s (3 done, 0 skipped, 0 failed)
 
 inner[["coefs", "out"]]
 #  (Intercept) Sepal.Length 
@@ -147,10 +147,10 @@ outer_all |>
         list(df = iris, xVar = "Sepal.Length", yVar = "Sepal.Width")
     ) |>
     pip_run()
-# info [2026-10-25 19:30:42.964 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-10-25 19:30:42.970 UTC]: Step 1/2 df
-# info [2026-10-25 19:30:42.971 UTC]: Step 2/2 inner_run
-# info [2026-10-25 19:30:42.984 UTC]: Finished in 0.020 s (2 done, 0 skipped, 0 failed)
+# info [2026-10-26 16:25:39.459 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-10-26 16:25:39.459 UTC]: Step 1/2 df
+# info [2026-10-26 16:25:39.460 UTC]: Step 2/2 inner_run
+# info [2026-10-26 16:25:39.480 UTC]: Finished in 0.021 s (2 done, 0 skipped, 0 failed)
 
 outer_all[["inner_run", "out"]]
 #  (Intercept) Sepal.Length 
@@ -265,12 +265,12 @@ outer |>
         )
     ) |>
     pip_run()
-# info [2026-10-25 19:30:43.137 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-25 19:30:43.137 UTC]: Step 1/4 df
-# info [2026-10-25 19:30:43.138 UTC]: Step 2/4 split_df
-# info [2026-10-25 19:30:43.139 UTC]: Step 3/4 inner_run
-# info [2026-10-25 19:30:43.153 UTC]: Step 4/4 combine
-# info [2026-10-25 19:30:43.154 UTC]: Finished in 0.017 s (4 done, 0 skipped, 0 failed)
+# info [2026-10-26 16:25:39.758 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-10-26 16:25:39.758 UTC]: Step 1/4 df
+# info [2026-10-26 16:25:39.759 UTC]: Step 2/4 split_df
+# info [2026-10-26 16:25:39.760 UTC]: Step 3/4 inner_run
+# info [2026-10-26 16:25:39.773 UTC]: Step 4/4 combine
+# info [2026-10-26 16:25:39.774 UTC]: Finished in 0.016 s (4 done, 0 skipped, 0 failed)
 ```
 
 The output of the `inner_run` step is a partitioned list of coefficient
@@ -322,7 +322,7 @@ outer
 # 3: inner_run input_df,xVar,yVar,digits  split_df outdated           <list[3]>   auto
 # 4:   combine                     coefs inner_run outdated   <data.frame[3x2]> reduce
 # ----------------------------------
-# <ready> last run: 2026-10-25 19:30:43 (0.017 s)
+# <ready> last run: 2026-10-26 16:25:39 (0.016 s)
 # steps: 2 done, 2 outdated
 ```
 
@@ -438,7 +438,7 @@ inner_pips[["a"]]
 # 2: square         x   input  done      1, 4, 9,16
 # 3:  scale sq,factor  square  done  10, 40, 90,160
 # ------------------------------
-# <ready> last run: 2026-10-25 19:30:43 (0.003 s)
+# <ready> last run: 2026-10-26 16:25:40 (0.007 s)
 # steps: 3 done
 ```
 
@@ -461,6 +461,55 @@ A few things to know:
 See the “Pipeline functions with partitioned inputs” section of
 [`?as.function.pipeflow`](https://rpahl.github.io/pipeflow/dev/reference/as.function.pipeflow.md)
 for how the inner pipelines are kept and reused.
+
+#### Running subsets in parallel
+
+The `map` argument of
+[`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
+runs the subsets of a mapped step in parallel (see the [previous
+vignette](https://rpahl.github.io/pipeflow/dev/articles/v05a-split-map-reduce.html#run-partitions-in-parallel)).
+A pipeline function that keeps its inner pipelines can’t do this, as the
+pipelines it updates in another process would be lost, so its subsets
+are still run one after another. A function made with `cache = FALSE`
+keeps nothing and runs a new copy of the inner pipeline for each call,
+so its subsets can run in parallel. Here we replace the function of the
+`inner_run` step in a copy of `outer`. As
+[`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
+takes the params of the new function, we give the binding and the model
+settings again:
+
+``` r
+
+par_outer <- pip_clone(outer) |>
+    pip_replace(
+        "inner_run",
+        as.function(inner, out = "coefs", cache = FALSE),
+        params = list(
+            input_df = ~split_df,
+            xVar = "Petal.Length",
+            yVar = "Sepal.Width"
+        )
+    )
+
+mc2 <- \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
+pip_run(par_outer, map = mc2)
+# info [2026-10-26 16:25:40.398 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-10-26 16:25:40.398 UTC]: Step 1/4 df - skipping done step
+# info [2026-10-26 16:25:40.398 UTC]: Step 2/4 split_df - skipping done step
+# info [2026-10-26 16:25:40.398 UTC]: Step 3/4 inner_run
+# info [2026-10-26 16:25:40.428 UTC]: Step 4/4 combine
+# info [2026-10-26 16:25:40.431 UTC]: Finished in 0.034 s (2 done, 2 skipped, 0 failed)
+
+par_outer[["combine", "out"]]
+#            (Intercept) Petal.Length
+# setosa           2.861        0.388
+# versicolor       1.175        0.374
+# virginica        1.673        0.234
+```
+
+The price is that every run of the step runs all inner steps again, so
+this pays off when each subset takes long to compute and is mostly
+computed anew anyway.
 
 ### Full control: running the inner pipeline yourself
 
@@ -559,12 +608,12 @@ manual |>
         )
     ) |>
     pip_run()
-# info [2026-10-25 19:30:43.649 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-25 19:30:43.649 UTC]: Step 1/4 df
-# info [2026-10-25 19:30:43.650 UTC]: Step 2/4 split_df
-# info [2026-10-25 19:30:43.651 UTC]: Step 3/4 inner_run
-# info [2026-10-25 19:30:43.666 UTC]: Step 4/4 combine
-# info [2026-10-25 19:30:43.667 UTC]: Finished in 0.018 s (4 done, 0 skipped, 0 failed)
+# info [2026-10-26 16:25:40.575 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-10-26 16:25:40.575 UTC]: Step 1/4 df
+# info [2026-10-26 16:25:40.576 UTC]: Step 2/4 split_df
+# info [2026-10-26 16:25:40.577 UTC]: Step 3/4 inner_run
+# info [2026-10-26 16:25:40.594 UTC]: Step 4/4 combine
+# info [2026-10-26 16:25:40.595 UTC]: Finished in 0.021 s (4 done, 0 skipped, 0 failed)
 
 manual[["combine", "out"]]
 #            (Intercept) Sepal.Length
@@ -599,5 +648,16 @@ while nested pipelines are the more general tool. As a rule of thumb:
 - **Run log and state**: the built-in modes produce one unified run over
   all partitions, while a nested pipeline is run as one step of the
   outer pipeline, with its own log silenced by default.
-- **Parallelism**: the built-in modes are handled by {pipeflow}, whereas
-  with a manual loop you control it and can parallelize it yourself.
+- **Parallelism**: with the built-in modes, `pip_run(map = )` runs the
+  partitions in parallel (see the [previous
+  vignette](https://rpahl.github.io/pipeflow/dev/articles/v05a-split-map-reduce.html#run-partitions-in-parallel)).
+  A step whose function was made by
+  [`as.function()`](https://rdrr.io/r/base/as.function.html) runs its
+  partitions one after another, because the pipelines that it keeps for
+  them would be lost in another process, unless it keeps none
+  (`cache = FALSE`, see [Running subsets in
+  parallel](#running-subsets-in-parallel)). If you run the inner
+  pipeline yourself, you control the loop and can parallelize it,
+  e.g. with
+  [`parallel::mcMap()`](https://rdrr.io/r/parallel/mclapply.html)
+  instead of [`Map()`](https://rdrr.io/r/base/funprog.html).

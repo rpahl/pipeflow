@@ -47,7 +47,9 @@ as.function(
 
   Whether to keep the run copies of `x` for reuse, `TRUE` (the default)
   or `FALSE`. The function keeps one copy per outer step and partition,
-  see Details.
+  see Details. With `FALSE`, a step mapped over partitions can run the
+  function in parallel, see the `map` argument of
+  [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md).
 
 - on_error:
 
@@ -285,7 +287,7 @@ print(outer)
 #> 3:  coefs input_df,degree,digits  by_cyl outdated           <list[3]>   auto
 #> 4:  table                  coefs   coefs outdated       <matrix[3x2]> reduce
 #> --------------------------
-#> <ready> last run: 2026-10-25 19:30:01 (0.016 s)
+#> <ready> last run: 2026-10-26 16:24:32 (0.016 s)
 #> steps: 2 done, 2 outdated
 pip_run(outer, lgr = NULL)
 outer[["table", "out"]]

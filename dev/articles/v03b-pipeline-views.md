@@ -44,7 +44,7 @@ before we move on.
 # 3:    fit      x   clean  done             30 model,core
 # 4: report      x     fit  done     result: 30     report
 # ---------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.005 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.004 s)
 # steps: 4 done
 ```
 
@@ -63,7 +63,7 @@ pip_view(pip, tags = "core")
 # 1: clean      x    load  done  2, 4, 6, 8,10    io,core
 # 2:   fit      x   clean  done             30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.005 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.004 s)
 # steps: 2 done
 ```
 
@@ -80,7 +80,7 @@ pip_view(pip, tags = "core", state = "done")
 # 1: clean      x    load  done  2, 4, 6, 8,10    io,core
 # 2:   fit      x   clean  done             30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.005 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.004 s)
 # steps: 2 done
 
 pip_view(pip, step = c("clean", "fit"))
@@ -90,7 +90,7 @@ pip_view(pip, step = c("clean", "fit"))
 # 1: clean      x    load  done  2, 4, 6, 8,10    io,core
 # 2:   fit      x   clean  done             30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.005 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.004 s)
 # steps: 2 done
 ```
 
@@ -105,7 +105,7 @@ pip_view(pip, tags = "report", step = "clean", join = "union")
 # 1:  clean      x    load  done  2, 4, 6, 8,10 io,core
 # 2: report      x     fit  done     result: 30  report
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.005 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.004 s)
 # steps: 2 done
 ```
 
@@ -120,7 +120,7 @@ pip_view(pip, step = "^f", fixed = FALSE)
 #    step params depends state out       tags
 # 1:  fit      x   clean  done  30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.005 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.004 s)
 # steps: 1 done
 ```
 
@@ -157,7 +157,7 @@ pip[c("load", "fit")]
 # 1: load      n          done 1,2,3,4,5   io,daily
 # 2:  fit      x   clean  done        30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.016 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.019 s)
 # steps: 2 done
 
 pip[1:3]
@@ -168,7 +168,7 @@ pip[1:3]
 # 2: clean      x    load  done  2, 4, 6, 8,10    io,core
 # 3:   fit      x   clean  done             30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.016 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.019 s)
 # steps: 3 done
 ```
 
@@ -186,7 +186,7 @@ pip[tags %like% "core"]
 # 1: clean      x    load  done  2, 4, 6, 8,10    io,core
 # 2:   fit      x   clean  done             30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.016 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.019 s)
 # steps: 2 done
 
 pip[step %in% c("clean", "fit") & state == "done"]
@@ -196,7 +196,7 @@ pip[step %in% c("clean", "fit") & state == "done"]
 # 1: clean      x    load  done  2, 4, 6, 8,10    io,core
 # 2:   fit      x   clean  done             30 model,core
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.016 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.019 s)
 # steps: 2 done
 ```
 
@@ -217,7 +217,7 @@ pip[-2]
 # 2:    fit      x   clean  done         30 model,core
 # 3: report      x     fit  done result: 30     report
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.016 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.019 s)
 # steps: 3 done
 ```
 
@@ -282,7 +282,7 @@ v1
 # 1:  load      n          done      1,2,3,4,5 io,daily
 # 2: clean      x    load  done  2, 4, 6, 8,10  io,core
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.016 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.019 s)
 # steps: 2 done
 
 v2 <- v1 |> pip_view(tags = "core") # clean only
@@ -292,7 +292,7 @@ v2
 #     step params depends state            out    tags
 # 1: clean      x    load  done  2, 4, 6, 8,10 io,core
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.016 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.019 s)
 # steps: 1 done
 ```
 
@@ -318,7 +318,7 @@ w
 # 1:  load      n          done      1,2,3,4,5 io,daily
 # 2: clean      x    load  done  2, 4, 6, 8,10  io,core
 # -------------------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.016 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.019 s)
 # steps: 2 done
 
 w[["view"]] <- NULL # back to the full pipeline
@@ -331,7 +331,7 @@ w
 # 3:    fit      x   clean  done             30 model,core
 # 4: report      x     fit  done     result: 30     report
 # ---------------------------
-# <ready> last run: 2026-10-25 19:30:28 (0.016 s)
+# <ready> last run: 2026-10-26 16:25:14 (0.019 s)
 # steps: 4 done
 ```
 
@@ -396,12 +396,12 @@ dependencies as `[upstream]`:
 
 pip_reset(pip)
 pip_run(pip_view(pip, step = "report"))
-# info [2026-10-25 19:30:28.553 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-10-25 19:30:28.553 UTC]: Step 1/4 [upstream] load
-# info [2026-10-25 19:30:28.554 UTC]: Step 2/4 [upstream] clean
-# info [2026-10-25 19:30:28.555 UTC]: Step 3/4 [upstream] fit
-# info [2026-10-25 19:30:28.555 UTC]: Step 4/4 [view] report
-# info [2026-10-25 19:30:28.556 UTC]: Finished in 0.003 s (4 done, 0 skipped, 0 failed)
+# info [2026-10-26 16:25:15.250 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-10-26 16:25:15.250 UTC]: Step 1/4 [upstream] load
+# info [2026-10-26 16:25:15.251 UTC]: Step 2/4 [upstream] clean
+# info [2026-10-26 16:25:15.251 UTC]: Step 3/4 [upstream] fit
+# info [2026-10-26 16:25:15.252 UTC]: Step 4/4 [view] report
+# info [2026-10-26 16:25:15.253 UTC]: Finished in 0.003 s (4 done, 0 skipped, 0 failed)
 ```
 
 Afterwards, the original pipeline is up to date for the covered steps.

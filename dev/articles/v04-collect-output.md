@@ -53,7 +53,7 @@ Let’s briefly run the pipeline and see what’s in the `out` column.
 # 4:     model_fit    x,k      prep  done  4, 8,12,16,20     model,fit
 # 5: model_summary      x model_fit  done             60 model,summary
 # ---------------------------
-# <ready> last run: 2026-10-25 19:30:32 (0.007 s)
+# <ready> last run: 2026-10-26 16:25:21 (0.004 s)
 # steps: 5 done
 ```
 
@@ -132,7 +132,7 @@ pip
 # 4:     model_fit    x,k      prep  done  4, 8,12,16,20       model,fit,Model
 # 5: model_summary      x model_fit  done             60 model,summary,Summary
 # ---------------------------
-# <ready> last run: 2026-10-25 19:30:32 (0.007 s)
+# <ready> last run: 2026-10-26 16:25:21 (0.004 s)
 # steps: 5 done
 ```
 

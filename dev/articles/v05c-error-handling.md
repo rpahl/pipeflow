@@ -37,10 +37,10 @@ stops at the first step that fails.
 ``` r
 
 pip_run(pip)
-# info [2026-10-25 19:30:48.014 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-10-25 19:30:48.014 UTC]: Step 1/4 data
-# info [2026-10-25 19:30:48.015 UTC]: Step 2/4 check
-# error [2026-10-25 19:30:48.017 UTC]: data exceeds limit
+# info [2026-10-26 16:25:47.646 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-10-26 16:25:47.647 UTC]: Step 1/4 data
+# info [2026-10-26 16:25:47.649 UTC]: Step 2/4 check
+# error [2026-10-26 16:25:47.649 UTC]: data exceeds limit
 # Error:
 # ! step 'check': data exceeds limit
 
@@ -53,7 +53,7 @@ pip
 # 3: model       x   check    new    [NULL]
 # 4: total       x    data    new    [NULL]
 # -----------------------------
-# <failed> last run: 2026-10-25 19:30:48 (0.004 s)
+# <failed> last run: 2026-10-26 16:25:47 (0.003 s)
 # steps: 1 done, 1 failed, 2 new
 
 pip_run_state(pip)
@@ -100,14 +100,14 @@ all other steps that do not depend on it:
 pip_reset(pip)
 
 suppressWarnings(pip_run(pip, on_error = "continue"))
-# info [2026-10-25 19:30:48.180 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-10-25 19:30:48.180 UTC]: Step 1/4 data
-# info [2026-10-25 19:30:48.187 UTC]: Step 2/4 check
-# error [2026-10-25 19:30:48.188 UTC]: data exceeds limit
-# info [2026-10-25 19:30:48.189 UTC]: Step 3/4 model - skipping step, input 'x' failed
-# info [2026-10-25 19:30:48.189 UTC]: Step 4/4 total
-# info [2026-10-25 19:30:48.190 UTC]: Finished in 0.010 s (2 done, 1 skipped, 1 failed)
-# warn [2026-10-25 19:30:48.191 UTC]: Run of pipeline 'analysis' continued after 1 failed step:
+# info [2026-10-26 16:25:47.926 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-10-26 16:25:47.926 UTC]: Step 1/4 data
+# info [2026-10-26 16:25:47.928 UTC]: Step 2/4 check
+# error [2026-10-26 16:25:47.928 UTC]: data exceeds limit
+# info [2026-10-26 16:25:47.929 UTC]: Step 3/4 model - skipping step, input 'x' failed
+# info [2026-10-26 16:25:47.929 UTC]: Step 4/4 total
+# info [2026-10-26 16:25:47.930 UTC]: Finished in 0.004 s (2 done, 1 skipped, 1 failed)
+# warn [2026-10-26 16:25:47.930 UTC]: Run of pipeline 'analysis' continued after 1 failed step:
 #   'check': data exceeds limit
 # Steps not run because an input failed: 'model'
 
@@ -120,7 +120,7 @@ pip
 # 3: model       x   check    new              [NULL]
 # 4: total       x    data   done                  15
 # -----------------------------
-# <continued> last run: 2026-10-25 19:30:48 (0.010 s)
+# <continued> last run: 2026-10-26 16:25:47 (0.004 s)
 # steps: 2 done, 1 failed, 1 new
 
 pip_run_state(pip)
@@ -185,15 +185,15 @@ pip_add(
 )
 
 suppressWarnings(pip_run(pip, on_error = "continue"))
-# info [2026-10-25 19:30:48.302 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-10-25 19:30:48.302 UTC]: Step 1/5 data - skipping done step
-# info [2026-10-25 19:30:48.302 UTC]: Step 2/5 check
-# error [2026-10-25 19:30:48.303 UTC]: data exceeds limit
-# info [2026-10-25 19:30:48.304 UTC]: Step 3/5 model - skipping step, input 'x' failed
-# info [2026-10-25 19:30:48.304 UTC]: Step 4/5 total - skipping done step
-# info [2026-10-25 19:30:48.304 UTC]: Step 5/5 report
-# info [2026-10-25 19:30:48.305 UTC]: Finished in 0.003 s (1 done, 3 skipped, 1 failed)
-# warn [2026-10-25 19:30:48.305 UTC]: Run of pipeline 'analysis' continued after 1 failed step:
+# info [2026-10-26 16:25:48.131 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-10-26 16:25:48.131 UTC]: Step 1/5 data - skipping done step
+# info [2026-10-26 16:25:48.131 UTC]: Step 2/5 check
+# error [2026-10-26 16:25:48.132 UTC]: data exceeds limit
+# info [2026-10-26 16:25:48.132 UTC]: Step 3/5 model - skipping step, input 'x' failed
+# info [2026-10-26 16:25:48.132 UTC]: Step 4/5 total - skipping done step
+# info [2026-10-26 16:25:48.133 UTC]: Step 5/5 report
+# info [2026-10-26 16:25:48.133 UTC]: Finished in 0.003 s (1 done, 3 skipped, 1 failed)
+# warn [2026-10-26 16:25:48.134 UTC]: Run of pipeline 'analysis' continued after 1 failed step:
 #   'check': data exceeds limit
 # Steps not run because an input failed: 'model'
 
@@ -227,13 +227,13 @@ again. Let’s fix the cause by raising the limit and re-run:
 
 pip_set_params(pip, list(limit = 10))
 pip_run(pip)
-# info [2026-10-25 19:30:48.342 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-10-25 19:30:48.343 UTC]: Step 1/5 data - skipping done step
-# info [2026-10-25 19:30:48.343 UTC]: Step 2/5 check
-# info [2026-10-25 19:30:48.344 UTC]: Step 3/5 model
-# info [2026-10-25 19:30:48.344 UTC]: Step 4/5 total - skipping done step
-# info [2026-10-25 19:30:48.345 UTC]: Step 5/5 report
-# info [2026-10-25 19:30:48.347 UTC]: Finished in 0.005 s (3 done, 2 skipped, 0 failed)
+# info [2026-10-26 16:25:48.208 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-10-26 16:25:48.208 UTC]: Step 1/5 data - skipping done step
+# info [2026-10-26 16:25:48.208 UTC]: Step 2/5 check
+# info [2026-10-26 16:25:48.209 UTC]: Step 3/5 model
+# info [2026-10-26 16:25:48.209 UTC]: Step 4/5 total - skipping done step
+# info [2026-10-26 16:25:48.209 UTC]: Step 5/5 report
+# info [2026-10-26 16:25:48.213 UTC]: Finished in 0.005 s (3 done, 2 skipped, 0 failed)
 
 pip
 # <pipeflow> analysis (5 steps)
@@ -245,7 +245,7 @@ pip
 # 4:  total       x        data  done                  15
 # 5: report total,m total,model  done total: 15 - mean: 3
 # -----------------------------
-# <ready> last run: 2026-10-25 19:30:48 (0.005 s)
+# <ready> last run: 2026-10-26 16:25:48 (0.005 s)
 # steps: 5 done
 ```
 
@@ -309,15 +309,15 @@ and keeps the original condition as `parent` of a `pipeflow_key_error`:
 ``` r
 
 suppressWarnings(pip_run(pip, on_error = "continue"))
-# info [2026-10-25 19:30:48.455 UTC]: Starting run of pipeflow 'groups'
-# info [2026-10-25 19:30:48.456 UTC]: Step 1/5 data
-# info [2026-10-25 19:30:48.456 UTC]: Step 2/5 by_group
-# info [2026-10-25 19:30:48.458 UTC]: Step 3/5 spread
-# error [2026-10-25 19:30:48.461 UTC]: key 'c': need at least 2 rows
-# info [2026-10-25 19:30:48.461 UTC]: Step 4/5 label
-# info [2026-10-25 19:30:48.463 UTC]: Step 5/5 combine
-# info [2026-10-25 19:30:48.464 UTC]: Finished in 0.008 s (3 done, 0 skipped, 2 failed)
-# warn [2026-10-25 19:30:48.465 UTC]: Run of pipeline 'groups' continued after 2 failed steps:
+# info [2026-10-26 16:25:48.416 UTC]: Starting run of pipeflow 'groups'
+# info [2026-10-26 16:25:48.416 UTC]: Step 1/5 data
+# info [2026-10-26 16:25:48.417 UTC]: Step 2/5 by_group
+# info [2026-10-26 16:25:48.418 UTC]: Step 3/5 spread
+# error [2026-10-26 16:25:48.422 UTC]: key 'c': need at least 2 rows
+# info [2026-10-26 16:25:48.422 UTC]: Step 4/5 label
+# info [2026-10-26 16:25:48.424 UTC]: Step 5/5 combine
+# info [2026-10-26 16:25:48.425 UTC]: Finished in 0.009 s (3 done, 0 skipped, 2 failed)
+# warn [2026-10-26 16:25:48.425 UTC]: Run of pipeline 'groups' continued after 2 failed steps:
 #   'spread': key 'c': need at least 2 rows (1 of 3 keys)
 #   'label': key 'c': input step 'spread' failed (1 of 3 keys)
 
@@ -331,7 +331,7 @@ pip
 # 4:    label      s   spread failed <partitioned: 1/3 failed>   auto
 # 5:  combine      s   spread   done                       1,2 reduce
 # ---------------------------
-# <continued> last run: 2026-10-25 19:30:48 (0.008 s)
+# <continued> last run: 2026-10-26 16:25:48 (0.009 s)
 # steps: 3 done, 2 failed
 
 out <- pip[["spread", "out"]]
@@ -387,13 +387,13 @@ of them, and the pipeline completes:
 
 pip_set_params(pip, list(data = d[d$g != "c", ]))
 pip_run(pip)
-# info [2026-10-25 19:30:48.682 UTC]: Starting run of pipeflow 'groups'
-# info [2026-10-25 19:30:48.683 UTC]: Step 1/5 data
-# info [2026-10-25 19:30:48.683 UTC]: Step 2/5 by_group
-# info [2026-10-25 19:30:48.686 UTC]: Step 3/5 spread
-# info [2026-10-25 19:30:48.687 UTC]: Step 4/5 label
-# info [2026-10-25 19:30:48.688 UTC]: Step 5/5 combine
-# info [2026-10-25 19:30:48.691 UTC]: Finished in 0.009 s (5 done, 0 skipped, 0 failed)
+# info [2026-10-26 16:25:48.626 UTC]: Starting run of pipeflow 'groups'
+# info [2026-10-26 16:25:48.626 UTC]: Step 1/5 data
+# info [2026-10-26 16:25:48.628 UTC]: Step 2/5 by_group
+# info [2026-10-26 16:25:48.630 UTC]: Step 3/5 spread
+# info [2026-10-26 16:25:48.631 UTC]: Step 4/5 label
+# info [2026-10-26 16:25:48.632 UTC]: Step 5/5 combine
+# info [2026-10-26 16:25:48.635 UTC]: Finished in 0.008 s (5 done, 0 skipped, 0 failed)
 
 pip[["combine", "out"]]
 # a b 
@@ -446,11 +446,11 @@ step has no effect here, because
 ``` r
 
 pip_run(nested)
-# info [2026-10-25 19:30:48.766 UTC]: Starting run of pipeflow 'nested'
-# info [2026-10-25 19:30:48.767 UTC]: Step 1/3 data
-# info [2026-10-25 19:30:48.767 UTC]: Step 2/3 by_group
-# info [2026-10-25 19:30:48.769 UTC]: Step 3/3 per_group
-# error [2026-10-25 19:30:48.781 UTC]: key 'c': step 'spread': need at least 2 rows
+# info [2026-10-26 16:25:48.769 UTC]: Starting run of pipeflow 'nested'
+# info [2026-10-26 16:25:48.769 UTC]: Step 1/3 data
+# info [2026-10-26 16:25:48.770 UTC]: Step 2/3 by_group
+# info [2026-10-26 16:25:48.771 UTC]: Step 3/3 per_group
+# error [2026-10-26 16:25:48.785 UTC]: key 'c': step 'spread': need at least 2 rows
 # Error:
 # ! step 'per_group': key 'c': step 'spread': need at least 2 rows
 ```
@@ -490,15 +490,15 @@ pip_replace(
 )
 
 pip_run(nested)
-# info [2026-10-25 19:30:48.872 UTC]: Starting run of pipeflow 'nested'
-# info [2026-10-25 19:30:48.872 UTC]: Step 1/3 data - skipping done step
-# info [2026-10-25 19:30:48.872 UTC]: Step 2/3 by_group - skipping done step
-# info [2026-10-25 19:30:48.872 UTC]: Step 3/3 per_group
-# warn [2026-10-25 19:30:48.884 UTC]: Run of pipeline 'inner' continued after 1 failed step:
+# info [2026-10-26 16:25:48.935 UTC]: Starting run of pipeflow 'nested'
+# info [2026-10-26 16:25:48.936 UTC]: Step 1/3 data - skipping done step
+# info [2026-10-26 16:25:48.936 UTC]: Step 2/3 by_group - skipping done step
+# info [2026-10-26 16:25:48.936 UTC]: Step 3/3 per_group
+# warn [2026-10-26 16:25:48.946 UTC]: Run of pipeline 'inner' continued after 1 failed step:
 #   'spread': need at least 2 rows
 # Warning: Run of pipeline 'inner' continued after 1 failed step:
 #   'spread': need at least 2 rows
-# info [2026-10-25 19:30:48.885 UTC]: Finished in 0.013 s (1 done, 2 skipped, 0 failed)
+# info [2026-10-26 16:25:48.948 UTC]: Finished in 0.012 s (1 done, 2 skipped, 0 failed)
 
 nested[["per_group", "out"]]
 # $a

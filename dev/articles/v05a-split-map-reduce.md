@@ -78,11 +78,11 @@ pip |> pip_set_params(list(
 ))
 
 pip_run(pip)
-# info [2026-10-25 19:30:37.706 UTC]: Starting run of pipeflow 'linear-model-coeffs'
-# info [2026-10-25 19:30:37.707 UTC]: Step 1/3 data
-# info [2026-10-25 19:30:37.708 UTC]: Step 2/3 fit
-# info [2026-10-25 19:30:37.710 UTC]: Step 3/3 coefs
-# info [2026-10-25 19:30:37.712 UTC]: Finished in 0.005 s (3 done, 0 skipped, 0 failed)
+# info [2026-10-26 16:25:29.074 UTC]: Starting run of pipeflow 'linear-model-coeffs'
+# info [2026-10-26 16:25:29.074 UTC]: Step 1/3 data
+# info [2026-10-26 16:25:29.076 UTC]: Step 2/3 fit
+# info [2026-10-26 16:25:29.079 UTC]: Step 3/3 coefs
+# info [2026-10-26 16:25:29.080 UTC]: Finished in 0.006 s (3 done, 0 skipped, 0 failed)
 ```
 
 ``` r
@@ -107,21 +107,21 @@ run_pipeline_helper <- function(data) {
 }
 
 results <- lapply(split(iris, iris$Species), FUN = run_pipeline_helper)
-# info [2026-10-25 19:30:37.783 UTC]: Starting run of pipeflow 'linear-model-coeffs'
-# info [2026-10-25 19:30:37.783 UTC]: Step 1/3 data
-# info [2026-10-25 19:30:37.784 UTC]: Step 2/3 fit
-# info [2026-10-25 19:30:37.786 UTC]: Step 3/3 coefs
-# info [2026-10-25 19:30:37.788 UTC]: Finished in 0.006 s (3 done, 0 skipped, 0 failed)
-# info [2026-10-25 19:30:37.791 UTC]: Starting run of pipeflow 'linear-model-coeffs'
-# info [2026-10-25 19:30:37.791 UTC]: Step 1/3 data
-# info [2026-10-25 19:30:37.792 UTC]: Step 2/3 fit
-# info [2026-10-25 19:30:37.793 UTC]: Step 3/3 coefs
-# info [2026-10-25 19:30:37.794 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)
-# info [2026-10-25 19:30:37.795 UTC]: Starting run of pipeflow 'linear-model-coeffs'
-# info [2026-10-25 19:30:37.795 UTC]: Step 1/3 data
-# info [2026-10-25 19:30:37.795 UTC]: Step 2/3 fit
-# info [2026-10-25 19:30:37.797 UTC]: Step 3/3 coefs
-# info [2026-10-25 19:30:37.797 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)
+# info [2026-10-26 16:25:29.208 UTC]: Starting run of pipeflow 'linear-model-coeffs'
+# info [2026-10-26 16:25:29.209 UTC]: Step 1/3 data
+# info [2026-10-26 16:25:29.210 UTC]: Step 2/3 fit
+# info [2026-10-26 16:25:29.213 UTC]: Step 3/3 coefs
+# info [2026-10-26 16:25:29.214 UTC]: Finished in 0.006 s (3 done, 0 skipped, 0 failed)
+# info [2026-10-26 16:25:29.217 UTC]: Starting run of pipeflow 'linear-model-coeffs'
+# info [2026-10-26 16:25:29.217 UTC]: Step 1/3 data
+# info [2026-10-26 16:25:29.218 UTC]: Step 2/3 fit
+# info [2026-10-26 16:25:29.219 UTC]: Step 3/3 coefs
+# info [2026-10-26 16:25:29.220 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)
+# info [2026-10-26 16:25:29.221 UTC]: Starting run of pipeflow 'linear-model-coeffs'
+# info [2026-10-26 16:25:29.221 UTC]: Step 1/3 data
+# info [2026-10-26 16:25:29.222 UTC]: Step 2/3 fit
+# info [2026-10-26 16:25:29.223 UTC]: Step 3/3 coefs
+# info [2026-10-26 16:25:29.223 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)
 ```
 
 ``` r
@@ -218,12 +218,12 @@ pip |> pip_set_params(list(
 ))
 
 pip_run(pip)
-# info [2026-10-25 19:30:38.003 UTC]: Starting run of pipeflow 'my-split-pip'
-# info [2026-10-25 19:30:38.003 UTC]: Step 1/4 data
-# info [2026-10-25 19:30:38.004 UTC]: Step 2/4 split_data
-# info [2026-10-25 19:30:38.005 UTC]: Step 3/4 fit
-# info [2026-10-25 19:30:38.011 UTC]: Step 4/4 coefs
-# info [2026-10-25 19:30:38.012 UTC]: Finished in 0.009 s (4 done, 0 skipped, 0 failed)
+# info [2026-10-26 16:25:29.620 UTC]: Starting run of pipeflow 'my-split-pip'
+# info [2026-10-26 16:25:29.621 UTC]: Step 1/4 data
+# info [2026-10-26 16:25:29.621 UTC]: Step 2/4 split_data
+# info [2026-10-26 16:25:29.623 UTC]: Step 3/4 fit
+# info [2026-10-26 16:25:29.626 UTC]: Step 4/4 coefs
+# info [2026-10-26 16:25:29.627 UTC]: Finished in 0.006 s (4 done, 0 skipped, 0 failed)
 ```
 
 Looking at the pipeline overview, we see that the `out`puts following
@@ -240,7 +240,7 @@ pip
 # 3:        fit data,xVar,yVar split_data  done           <list[3]>  auto
 # 4:      coefs            fit        fit  done           <list[3]>  auto
 # ---------------------------------
-# <ready> last run: 2026-10-25 19:30:38 (0.009 s)
+# <ready> last run: 2026-10-26 16:25:29 (0.006 s)
 # steps: 4 done
 ```
 
@@ -301,7 +301,7 @@ pip
 # 4:         coefs            fit        fit  done           <list[3]>   auto
 # 5: combine_coefs          coefs      coefs   new              [NULL] reduce
 # ---------------------------------
-# <ready> last run: 2026-10-25 19:30:38 (0.009 s)
+# <ready> last run: 2026-10-26 16:25:29 (0.006 s)
 # steps: 4 done, 1 new
 ```
 
@@ -320,13 +320,13 @@ If we now run the pipeline, we see that the output of the
 ``` r
 
 pip_run(pip)
-# info [2026-10-25 19:30:38.254 UTC]: Starting run of pipeflow 'my-split-pip'
-# info [2026-10-25 19:30:38.254 UTC]: Step 1/5 data - skipping done step
-# info [2026-10-25 19:30:38.254 UTC]: Step 2/5 split_data - skipping done step
-# info [2026-10-25 19:30:38.254 UTC]: Step 3/5 fit - skipping done step
-# info [2026-10-25 19:30:38.254 UTC]: Step 4/5 coefs - skipping done step
-# info [2026-10-25 19:30:38.254 UTC]: Step 5/5 combine_coefs
-# info [2026-10-25 19:30:38.256 UTC]: Finished in 0.002 s (1 done, 4 skipped, 0 failed)
+# info [2026-10-26 16:25:30.088 UTC]: Starting run of pipeflow 'my-split-pip'
+# info [2026-10-26 16:25:30.088 UTC]: Step 1/5 data - skipping done step
+# info [2026-10-26 16:25:30.088 UTC]: Step 2/5 split_data - skipping done step
+# info [2026-10-26 16:25:30.088 UTC]: Step 3/5 fit - skipping done step
+# info [2026-10-26 16:25:30.088 UTC]: Step 4/5 coefs - skipping done step
+# info [2026-10-26 16:25:30.088 UTC]: Step 5/5 combine_coefs
+# info [2026-10-26 16:25:30.089 UTC]: Finished in 0.002 s (1 done, 4 skipped, 0 failed)
 
 pip[["combine_coefs", "out"]]
 #            (Intercept) Sepal.Length
@@ -341,6 +341,76 @@ other keys, and the steps after it go on with them. See the vignette on
 [error
 handling](https://rpahl.github.io/pipeflow/dev/articles/v05c-error-handling.md)
 for the details.
+
+### Run partitions in parallel
+
+By default, the keys of a mapped step (here `fit` and `coefs`) are run
+one after another.
+[`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
+takes a `map` function like
+[`lapply()`](https://rdrr.io/r/base/lapply.html) that runs them instead,
+for example in parallel processes. On Linux and macOS,
+[`parallel::mclapply()`](https://rdrr.io/r/parallel/mclapply.html) does
+this without any setup:
+
+``` r
+
+mc2 <- \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
+
+pip_run(pip, force = TRUE, map = mc2)
+# info [2026-10-26 16:25:30.155 UTC]: Starting run of pipeflow 'my-split-pip'
+# info [2026-10-26 16:25:30.156 UTC]: Step 1/5 data
+# info [2026-10-26 16:25:30.156 UTC]: Step 2/5 split_data
+# info [2026-10-26 16:25:30.159 UTC]: Step 3/5 fit
+# info [2026-10-26 16:25:30.177 UTC]: Step 4/5 coefs
+# info [2026-10-26 16:25:30.190 UTC]: Step 5/5 combine_coefs
+# info [2026-10-26 16:25:30.194 UTC]: Finished in 0.039 s (5 done, 0 skipped, 0 failed)
+
+pip[["combine_coefs", "out"]]
+#            (Intercept) Sepal.Length
+# setosa      -0.5694327    0.7985283
+# versicolor   0.8721460    0.3197193
+# virginica    1.4463054    0.2318905
+```
+
+`map` is called as `map(X, FUN)`, so a backend that needs more arguments
+is passed as a wrapper like `mc2` above. Functions that already have
+this form, such as `future.apply::future_lapply()`, are passed as they
+are and also work on Windows:
+
+``` r
+
+library(future.apply)
+plan(multisession, workers = 3)
+
+pip_run(pip, force = TRUE, map = future_lapply)
+```
+
+The `split`, `reduce` and other steps that are not mapped run as before.
+A few things to keep in mind:
+
+- Starting the workers and sending the data to them takes time, so this
+  pays off only if the work per key takes much longer than that. For the
+  three small models above it’s slower than a plain run.
+- A step function should only compute its output, as anything else it
+  changes in a worker process is lost. The keys of a step that refers to
+  `.self` (see the vignette on [self-modifying
+  pipelines](https://rpahl.github.io/pipeflow/dev/articles/v06-self-modify-pipeline.md))
+  or whose function was made by
+  [`as.function()`](https://rdrr.io/r/base/as.function.html) and keeps
+  its inner pipelines (see the [next
+  vignette](https://rpahl.github.io/pipeflow/dev/articles/v05b-nested-pipeline.md))
+  are therefore always run one after another.
+- Warnings and messages of the workers reach the log only if the backend
+  passes them on, which `future_lapply()` does and `mclapply()` doesn’t.
+- For random numbers, set up the backend accordingly, e.g. with
+  `future_lapply(..., future.seed = TRUE)`.
+
+See section ‘Mapping in parallel’ of
+[`?pip_run`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
+for the details.
+
+### Beyond split and reduce
 
 The `split` and `reduce` execution modes cover the common case where the
 pipeline itself performs the split. Whenever they fit, they are the

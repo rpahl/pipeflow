@@ -96,11 +96,11 @@ pip_get_params(ad) # `data` is no longer a param
 #> [1] 3
 #> 
 pip_run(ad)
-#> info [2026-10-25 19:30:05.625 UTC]: Starting run of pipeflow 'a-d'
-#> info [2026-10-25 19:30:05.625 UTC]: Step 1/3 prep
-#> info [2026-10-25 19:30:05.626 UTC]: Step 2/3 fit
-#> info [2026-10-25 19:30:05.626 UTC]: Step 3/3 scale
-#> info [2026-10-25 19:30:05.627 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:24:40.256 UTC]: Starting run of pipeflow 'a-d'
+#> info [2026-10-26 16:24:40.256 UTC]: Step 1/3 prep
+#> info [2026-10-26 16:24:40.257 UTC]: Step 2/3 fit
+#> info [2026-10-26 16:24:40.258 UTC]: Step 3/3 scale
+#> info [2026-10-26 16:24:40.258 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)
 ad[["scale", "out"]]
 #> [1] 6
 ```

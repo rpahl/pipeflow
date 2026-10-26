@@ -13,7 +13,8 @@ pip_run(
   lgr = pipeflow_lgr,
   force = FALSE,
   progress = NULL,
-  on_error = c("stop", "continue")
+  on_error = c("stop", "continue"),
+  map = NULL
 )
 ```
 
@@ -50,6 +51,19 @@ pip_run(
   What to do when a step fails: `"stop"` (the default) aborts the run,
   `"continue"` goes on with all steps that do not depend on a failed
   step (see section 'Continuing after errors' below).
+
+- map:
+
+  Optional function like
+  [`lapply()`](https://rdrr.io/r/base/lapply.html) that runs the calls
+  of a step mapped over partitions (`exec = "auto"`, see
+  [`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)),
+  for example
+  [`parallel::mclapply`](https://rdrr.io/r/parallel/mclapply.html) or
+  `future.apply::future_lapply`. It is called as `map(X, FUN)` and must
+  return a list of the results of `FUN` for the elements of `X`. The
+  default `NULL` calls them one after another (see section 'Mapping in
+  parallel' below).
 
 ## Value
 
@@ -189,6 +203,33 @@ is run again in the same run, or `force = TRUE`. See
 [`vignette("v05c-error-handling", package = "pipeflow")`](https://rpahl.github.io/pipeflow/dev/articles/v05c-error-handling.md)
 for examples.
 
+### Mapping in parallel
+
+With `map`, the keys of a step that is mapped over partitions are run by
+`map`, for example in parallel processes. This applies to all mapped
+steps of the run, but not to the runs of inner pipelines, such as of a
+function made by
+[`as.function.pipeflow()`](https://rpahl.github.io/pipeflow/dev/reference/as.function.pipeflow.md).
+For backends that need more arguments, pass a wrapper, e.g.
+`\(X, FUN) parallel::parLapply(cl, X, FUN)` or
+`\(X, FUN) parallel::mclapply(X, FUN, mc.cores = 4)`.
+
+The keys of a step whose function was made by
+[`as.function.pipeflow()`](https://rpahl.github.io/pipeflow/dev/reference/as.function.pipeflow.md)
+run in parallel only if the function was made with `cache = FALSE`. With
+`cache = TRUE` (the default), they run one after another, because the
+inner pipelines that the function keeps for them would be lost in
+another process.
+
+Errors are handled as without `map` (see 'Runtime errors' and
+'Continuing after errors' above), but all keys of a step run before the
+error of the first failed key is raised. Warnings and messages of the
+step reach `lgr` only if the backend relays them, as
+`future.apply::future_lapply` does and
+[`parallel::mclapply`](https://rdrr.io/r/parallel/mclapply.html) does
+not. Random numbers are up to the backend as well, e.g.
+`future.seed = TRUE` for `future.apply::future_lapply`.
+
 ### Runtime control flow via restart and halt
 
 A running pipeline can be interrupted via the `restart()` and `halt()`
@@ -236,12 +277,12 @@ pip_add("load", \(n = 3) seq_len(n)) |>
   pip_add("total", \(x = ~square) sum(x))
 
 pip_run(p)
-#> info [2026-10-25 19:30:04.208 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-25 19:30:04.209 UTC]: Step 1/4 load
-#> info [2026-10-25 19:30:04.209 UTC]: Step 2/4 prep
-#> info [2026-10-25 19:30:04.210 UTC]: Step 3/4 square
-#> info [2026-10-25 19:30:04.211 UTC]: Step 4/4 total
-#> info [2026-10-25 19:30:04.212 UTC]: Finished in 0.003 s (4 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:24:37.788 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-26 16:24:37.789 UTC]: Step 1/4 load
+#> info [2026-10-26 16:24:37.790 UTC]: Step 2/4 prep
+#> info [2026-10-26 16:24:37.790 UTC]: Step 3/4 square
+#> info [2026-10-26 16:24:37.791 UTC]: Step 4/4 total
+#> info [2026-10-26 16:24:37.791 UTC]: Finished in 0.003 s (4 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> pipe (4 steps)
 #> -------------------------
@@ -251,7 +292,7 @@ p
 #> 3: square        x    prep  done 1,4,9
 #> 4:  total        x  square  done    14
 #> -------------------------
-#> <ready> last run: 2026-10-25 19:30:04 (0.003 s)
+#> <ready> last run: 2026-10-26 16:24:37 (0.003 s)
 #> steps: 4 done
 
 pip_set_params(p, list(weight = 2))
@@ -264,29 +305,29 @@ p
 #> 3: square        x    prep outdated 1,4,9
 #> 4:  total        x  square outdated    14
 #> -------------------------
-#> <ready> last run: 2026-10-25 19:30:04 (0.003 s)
+#> <ready> last run: 2026-10-26 16:24:37 (0.003 s)
 #> steps: 1 done, 3 outdated
 
 # Already-done steps are skipped on a second run
 pip_run(p) # first step skipped
-#> info [2026-10-25 19:30:04.216 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-25 19:30:04.216 UTC]: Step 1/4 load - skipping done step
-#> info [2026-10-25 19:30:04.216 UTC]: Step 2/4 prep
-#> info [2026-10-25 19:30:04.217 UTC]: Step 3/4 square
-#> info [2026-10-25 19:30:04.217 UTC]: Step 4/4 total
-#> info [2026-10-25 19:30:04.218 UTC]: Finished in 0.002 s (3 done, 1 skipped, 0 failed)
+#> info [2026-10-26 16:24:37.802 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-26 16:24:37.802 UTC]: Step 1/4 load - skipping done step
+#> info [2026-10-26 16:24:37.802 UTC]: Step 2/4 prep
+#> info [2026-10-26 16:24:37.803 UTC]: Step 3/4 square
+#> info [2026-10-26 16:24:37.804 UTC]: Step 4/4 total
+#> info [2026-10-26 16:24:37.804 UTC]: Finished in 0.002 s (3 done, 1 skipped, 0 failed)
 
 # lgr = NULL suppresses log output
 pip_run(p, lgr = NULL)
 
 # force = TRUE re-executes every step regardless of state
 pip_run(p, force = TRUE)
-#> info [2026-10-25 19:30:04.220 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-25 19:30:04.220 UTC]: Step 1/4 load
-#> info [2026-10-25 19:30:04.220 UTC]: Step 2/4 prep
-#> info [2026-10-25 19:30:04.221 UTC]: Step 3/4 square
-#> info [2026-10-25 19:30:04.221 UTC]: Step 4/4 total
-#> info [2026-10-25 19:30:04.222 UTC]: Finished in 0.002 s (4 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:24:37.806 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-26 16:24:37.807 UTC]: Step 1/4 load
+#> info [2026-10-26 16:24:37.807 UTC]: Step 2/4 prep
+#> info [2026-10-26 16:24:37.808 UTC]: Step 3/4 square
+#> info [2026-10-26 16:24:37.808 UTC]: Step 4/4 total
+#> info [2026-10-26 16:24:37.809 UTC]: Finished in 0.002 s (4 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> pipe (4 steps)
 #> -------------------------
@@ -296,19 +337,19 @@ p
 #> 3: square        x    prep  done  4,16,36
 #> 4:  total        x  square  done       56
 #> -------------------------
-#> <ready> last run: 2026-10-25 19:30:04 (0.002 s)
+#> <ready> last run: 2026-10-26 16:24:37 (0.002 s)
 #> steps: 4 done
 
 # Run only a subset of steps via a view;
 # upstream dependencies are automatically included
 v <- pip_view(p, step = "total")
 pip_run(v)
-#> info [2026-10-25 19:30:04.224 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-25 19:30:04.225 UTC]: Step 1/4 [upstream] load - skipping done step
-#> info [2026-10-25 19:30:04.225 UTC]: Step 2/4 [upstream] prep - skipping done step
-#> info [2026-10-25 19:30:04.225 UTC]: Step 3/4 [upstream] square - skipping done step
-#> info [2026-10-25 19:30:04.225 UTC]: Step 4/4 [view] total - skipping done step
-#> info [2026-10-25 19:30:04.225 UTC]: Finished in 0.000 s (0 done, 4 skipped, 0 failed)
+#> info [2026-10-26 16:24:37.813 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-10-26 16:24:37.813 UTC]: Step 1/4 [upstream] load - skipping done step
+#> info [2026-10-26 16:24:37.813 UTC]: Step 2/4 [upstream] prep - skipping done step
+#> info [2026-10-26 16:24:37.813 UTC]: Step 3/4 [upstream] square - skipping done step
+#> info [2026-10-26 16:24:37.813 UTC]: Step 4/4 [view] total - skipping done step
+#> info [2026-10-26 16:24:37.814 UTC]: Finished in 0.001 s (0 done, 4 skipped, 0 failed)
 
 # Halt or restart pipeline at runtime (for advanced usage)
 p <- pip_new("restart") |>
@@ -325,16 +366,16 @@ p <- pip_new("restart") |>
   })
 
 pip_run(p)
-#> info [2026-10-25 19:30:04.226 UTC]: Starting run of pipeflow 'restart'
-#> info [2026-10-25 19:30:04.226 UTC]: Step 1/3 load
-#> info [2026-10-25 19:30:04.227 UTC]: Step 2/3 check
-#> info [2026-10-25 19:30:04.228 UTC]: Step 3/3 model
-#> info [2026-10-25 19:30:04.229 UTC]: Restarting pipeline execution.
-#> info [2026-10-25 19:30:04.230 UTC]: Restarting run of pipeflow 'restart'
-#> info [2026-10-25 19:30:04.230 UTC]: Step 1/3 load
-#> info [2026-10-25 19:30:04.230 UTC]: Step 2/3 check
-#> info [2026-10-25 19:30:04.231 UTC]: Step 3/3 model
-#> info [2026-10-25 19:30:04.231 UTC]: Finished in 0.005 s (3 done, 0 skipped, 0 failed)
+#> info [2026-10-26 16:24:37.817 UTC]: Starting run of pipeflow 'restart'
+#> info [2026-10-26 16:24:37.817 UTC]: Step 1/3 load
+#> info [2026-10-26 16:24:37.818 UTC]: Step 2/3 check
+#> info [2026-10-26 16:24:37.818 UTC]: Step 3/3 model
+#> info [2026-10-26 16:24:37.819 UTC]: Restarting pipeline execution.
+#> info [2026-10-26 16:24:37.820 UTC]: Restarting run of pipeflow 'restart'
+#> info [2026-10-26 16:24:37.820 UTC]: Step 1/3 load
+#> info [2026-10-26 16:24:37.820 UTC]: Step 2/3 check
+#> info [2026-10-26 16:24:37.821 UTC]: Step 3/3 model
+#> info [2026-10-26 16:24:37.822 UTC]: Finished in 0.005 s (3 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> restart (3 steps)
 #> ----------------------------
@@ -343,16 +384,16 @@ p
 #> 2: check      x    load  done         [NULL]
 #> 3: model      x    load  done  2, 4, 6, 8,10
 #> ----------------------------
-#> <ready> last run: 2026-10-25 19:30:04 (0.005 s)
+#> <ready> last run: 2026-10-26 16:24:37 (0.005 s)
 #> steps: 3 done
 
 pip_set_params(p, list(n = 15)) # now halt() in 'check' step is triggered
 pip_run(p)
-#> info [2026-10-25 19:30:04.234 UTC]: Starting run of pipeflow 'restart'
-#> info [2026-10-25 19:30:04.234 UTC]: Step 1/3 load
-#> info [2026-10-25 19:30:04.234 UTC]: Step 2/3 check
-#> info [2026-10-25 19:30:04.235 UTC]: Aborting pipeline execution on manual halt.
-#> info [2026-10-25 19:30:04.235 UTC]: Finished in 0.001 s (2 done, 1 skipped, 0 failed)
+#> info [2026-10-26 16:24:37.825 UTC]: Starting run of pipeflow 'restart'
+#> info [2026-10-26 16:24:37.826 UTC]: Step 1/3 load
+#> info [2026-10-26 16:24:37.826 UTC]: Step 2/3 check
+#> info [2026-10-26 16:24:37.827 UTC]: Aborting pipeline execution on manual halt.
+#> info [2026-10-26 16:24:37.827 UTC]: Finished in 0.002 s (2 done, 1 skipped, 0 failed)
 
 # Continue after errors and pass failures to the steps that allow them
 p <- pip_new("continue") |>
@@ -388,8 +429,33 @@ p
 #> 4:                                          15
 #> 5: step 'count' was not run: step 'check' f...
 #> -----------------------------
-#> <continued> last run: 2026-10-25 19:30:04 (0.003 s)
+#> <continued> last run: 2026-10-26 16:24:37 (0.003 s)
 #> steps: 3 done, 1 failed, 1 new
 p[["report", "out"]]
 #> [1] "step 'count' was not run: step 'check' failed: check failed"
+
+# Run the keys of a mapped step with a map function, e.g. in parallel
+p <- pip_new("map") |>
+  pip_add("parts", \(x = list(a = 1, b = 2, c = 3)) x, exec = "split") |>
+  pip_add("square", \(x = ~parts) x^2) |>
+  pip_add("total", \(x = ~square) sum(unlist(x)), exec = "reduce")
+
+pip_run(p, map = lapply)
+#> info [2026-10-26 16:24:37.840 UTC]: Starting run of pipeflow 'map'
+#> info [2026-10-26 16:24:37.840 UTC]: Step 1/3 parts
+#> info [2026-10-26 16:24:37.841 UTC]: Step 2/3 square
+#> info [2026-10-26 16:24:37.842 UTC]: Step 3/3 total
+#> info [2026-10-26 16:24:37.843 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)
+p[["total", "out"]]
+#> [1] 14
+
+if (.Platform$OS.type == "unix") {
+  mc2 <- \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
+  pip_run(p, force = TRUE, map = mc2)
+}
+#> info [2026-10-26 16:24:37.845 UTC]: Starting run of pipeflow 'map'
+#> info [2026-10-26 16:24:37.845 UTC]: Step 1/3 parts
+#> info [2026-10-26 16:24:37.845 UTC]: Step 2/3 square
+#> info [2026-10-26 16:24:37.863 UTC]: Step 3/3 total
+#> info [2026-10-26 16:24:37.865 UTC]: Finished in 0.021 s (3 done, 0 skipped, 0 failed)
 ```
