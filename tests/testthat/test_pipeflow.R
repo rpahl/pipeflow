@@ -1,3 +1,7 @@
+# ==============================================================================
+# Foundations
+# ==============================================================================
+
 # ---------------------
 # Pipeline construction
 # ---------------------
@@ -155,7 +159,6 @@ describe(".pip_clone", {
     })
 })
 
-
 # -------
 # Wrapper
 # -------
@@ -213,6 +216,182 @@ describe(".release_self", {
     })
 })
 
+
+# ==============================================================================
+# Pipeline structure
+# ==============================================================================
+
+# ---------------------------------
+# Pipeline environment & DAG access
+# ---------------------------------
+
+describe(".pip_dag", {
+    # Node ids a = 0, a2 = 4, b = 1, c = 2, d = 3; id 5 was removed with e
+    test_pip <- function() {
+        p <- pip_new("p") |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1) |>
+            pip_add("c", \(x = ~b, k = 2) x * k) |>
+            pip_add("d", \(x = ~a, y = ~c) x + y)
+        pip_add(p, "a2", \(x = ~a) x * 10, after = "a")
+        pip_add(p, "e", \(x = ~d) x)
+        pip_remove(p, "e")
+    }
+
+    it("returns the DAG of a pipeline as it is", {
+        pipenv <- test_pip()[["pipenv"]]
+        expect_identical(.pip_dag(pipenv), pipenv[[".dag"]])
+    })
+
+    it("rebuilds the DAG of a read pipeline with the same node ids", {
+        p <- test_pip()
+        pipenv <- save_and_read(p)[["pipenv"]]
+        expect_true(dag_is_null(pipenv[[".dag"]]))
+
+        d <- .pip_dag(pipenv)
+        expect_false(dag_is_null(d))
+        expect_identical(pipenv[[".dag"]], d)
+        expect_equal(pipenv[["data"]][["nodeId"]], c(0L, 4L, 1L, 2L, 3L))
+        expect_equal(dag_structure(d), dag_structure(p[["pipenv"]][[".dag"]]))
+    })
+
+    it("keeps the node ids of removed steps unused", {
+        p <- test_pip()
+        q <- save_and_read(p)
+        pip_add(p, "f", \(x = ~d) x)
+        pip_add(q, "f", \(x = ~d) x)
+        expect_equal(q[["nodeId"]][["f"]], 6L)
+        expect_equal(q[["nodeId"]], p[["nodeId"]])
+    })
+
+    it("rebuilds the DAG of an empty pipeline", {
+        pipenv <- save_and_read(pip_new())[["pipenv"]]
+        expect_equal(dag_size(.pip_dag(pipenv)), 0L)
+    })
+
+    it("signals a step to node map that does not match the step table", {
+        msg <- "the step to node map does not match the step table"
+
+        pipenv <- save_and_read(test_pip())[["pipenv"]]
+        rm("b", envir = pipenv[[".steps_to_nodes"]])
+        expect_error(.pip_dag(pipenv), msg)
+
+        pipenv <- save_and_read(test_pip())[["pipenv"]]
+        pipenv[[".steps_to_nodes"]][["b"]] <- 7L
+        expect_error(.pip_dag(pipenv), msg)
+
+        pipenv <- save_and_read(test_pip())[["pipenv"]]
+        pipenv[[".steps_to_nodes"]][["zz"]] <- 7L
+        expect_error(.pip_dag(pipenv), msg)
+        expect_true(dag_is_null(pipenv[[".dag"]]))
+    })
+
+    it("signals steps that depend on unknown steps", {
+        pipenv <- save_and_read(test_pip())[["pipenv"]]
+        data.table::set(
+            pipenv[["data"]],
+            i = 3L,
+            j = "depends",
+            value = list(list(c(x = "zz")))
+        )
+        expect_error(.pip_dag(pipenv), "steps depend on unknown steps")
+    })
+})
+
+# ---------------------
+# Views & row selection
+# ---------------------
+
+describe(".pip_view_rows", {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x) |>
+            pip_add("s3", \(x = ~s2) x)
+    }
+
+    it("returns all rows for a pipeline", {
+        expect_equal(.pip_view_rows(test_pip()), 1:3)
+        expect_equal(.pip_view_rows(pip_new()), integer(0))
+    })
+
+    it("returns the rows of the steps covered by a view", {
+        p <- test_pip()
+        pipenv <- p[["pipenv"]]
+        view <- .pip_rows_to_view(pipenv, c(3L, 1L))
+        v <- .wrap_pipenv(pipenv, "pipe", view = view)
+
+        # The selector holds node ids, the rows come in pipeline order
+        expect_equal(view, unname(p[["nodeId"]][c(3L, 1L)]))
+        expect_equal(.pip_view_rows(v), c(1L, 3L))
+    })
+
+    it("follows the steps when rows shift and drops removed steps", {
+        p <- test_pip()
+        v <- pip_view(p, step = c("s2", "s3"))
+
+        pip_add(p, "s0", \(x = 0) x, after = 0)
+        expect_equal(.pip_view_rows(v), c(3L, 4L))
+
+        pip_remove(p, "s3")
+        expect_equal(.pip_view_rows(v), 3L)
+
+        pip_remove(p, "s2")
+        expect_equal(.pip_view_rows(v), integer(0))
+        expect_true(.is_pipeflow_view(v))
+    })
+})
+
+# ---------------------------
+# Step lookup & DAG traversal
+# ---------------------------
+
+describe(".pip_steps_to_rows", {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x) |>
+            pip_add("s3", \(x = ~s2) x)
+    }
+
+    it("maps step names to row positions for pipelines and views", {
+        p <- test_pip()
+        expect_equal(.pip_steps_to_rows(p, c("s3", "s1")), c(3L, 1L))
+
+        v <- pip_view(p, step = c("s2", "s3"))
+        expect_equal(.pip_steps_to_rows(v, c("s1", "s3")), c(1L, 3L))
+    })
+
+    it("signals invalid step selectors with default messages", {
+        p <- test_pip()
+
+        expect_error(
+            .pip_steps_to_rows(p, c("s1", "")),
+            "step names must be non-empty strings"
+        )
+        expect_error(
+            .pip_steps_to_rows(p, c("s1", NA_character_)),
+            "step names must not contain NA"
+        )
+        expect_error(
+            .pip_steps_to_rows(p, c("s1", "unknown")),
+            "Unknown step names: unknown"
+        )
+    })
+
+    it("uses simple error messages consistently", {
+        p <- test_pip()
+
+        expect_error(
+            .pip_steps_to_rows(p, c("s1", "")),
+            "step names must be non-empty strings"
+        )
+        expect_error(
+            .pip_steps_to_rows(p, c("s1", "unknown")),
+            "Unknown step names: unknown"
+        )
+    })
+})
 
 # ------------------------------
 # Parameter & dependency parsing
@@ -398,6 +577,10 @@ describe(".extract_depends", {
 })
 
 
+# ==============================================================================
+# Execution
+# ==============================================================================
+
 # -----------------------------------------
 # Conditions: errors, failures and warnings
 # -----------------------------------------
@@ -489,7 +672,6 @@ describe(".pip_keys_mismatch", {
     })
 })
 
-
 # --------------
 # Step execution
 # --------------
@@ -578,7 +760,6 @@ describe(".pip_call_step", {
         expect_identical(.pip_step_call(), no_call)
     })
 })
-
 
 # -------------
 # State updates
@@ -1059,184 +1240,13 @@ describe(".pip_outdate_downstream", {
 })
 
 
-# ---------------------------------
-# Pipeline environment & DAG access
-# ---------------------------------
+# ==============================================================================
+# Exported API
+# ==============================================================================
 
-describe(".pip_dag", {
-    # Node ids a = 0, a2 = 4, b = 1, c = 2, d = 3; id 5 was removed with e
-    test_pip <- function() {
-        p <- pip_new("p") |>
-            pip_add("a", \(x = 1) x) |>
-            pip_add("b", \(x = ~a) x + 1) |>
-            pip_add("c", \(x = ~b, k = 2) x * k) |>
-            pip_add("d", \(x = ~a, y = ~c) x + y)
-        pip_add(p, "a2", \(x = ~a) x * 10, after = "a")
-        pip_add(p, "e", \(x = ~d) x)
-        pip_remove(p, "e")
-    }
-
-    it("returns the DAG of a pipeline as it is", {
-        pipenv <- test_pip()[["pipenv"]]
-        expect_identical(.pip_dag(pipenv), pipenv[[".dag"]])
-    })
-
-    it("rebuilds the DAG of a read pipeline with the same node ids", {
-        p <- test_pip()
-        pipenv <- save_and_read(p)[["pipenv"]]
-        expect_true(dag_is_null(pipenv[[".dag"]]))
-
-        d <- .pip_dag(pipenv)
-        expect_false(dag_is_null(d))
-        expect_identical(pipenv[[".dag"]], d)
-        expect_equal(pipenv[["data"]][["nodeId"]], c(0L, 4L, 1L, 2L, 3L))
-        expect_equal(dag_structure(d), dag_structure(p[["pipenv"]][[".dag"]]))
-    })
-
-    it("keeps the node ids of removed steps unused", {
-        p <- test_pip()
-        q <- save_and_read(p)
-        pip_add(p, "f", \(x = ~d) x)
-        pip_add(q, "f", \(x = ~d) x)
-        expect_equal(q[["nodeId"]][["f"]], 6L)
-        expect_equal(q[["nodeId"]], p[["nodeId"]])
-    })
-
-    it("rebuilds the DAG of an empty pipeline", {
-        pipenv <- save_and_read(pip_new())[["pipenv"]]
-        expect_equal(dag_size(.pip_dag(pipenv)), 0L)
-    })
-
-    it("signals a step to node map that does not match the step table", {
-        msg <- "the step to node map does not match the step table"
-
-        pipenv <- save_and_read(test_pip())[["pipenv"]]
-        rm("b", envir = pipenv[[".steps_to_nodes"]])
-        expect_error(.pip_dag(pipenv), msg)
-
-        pipenv <- save_and_read(test_pip())[["pipenv"]]
-        pipenv[[".steps_to_nodes"]][["b"]] <- 7L
-        expect_error(.pip_dag(pipenv), msg)
-
-        pipenv <- save_and_read(test_pip())[["pipenv"]]
-        pipenv[[".steps_to_nodes"]][["zz"]] <- 7L
-        expect_error(.pip_dag(pipenv), msg)
-        expect_true(dag_is_null(pipenv[[".dag"]]))
-    })
-
-    it("signals steps that depend on unknown steps", {
-        pipenv <- save_and_read(test_pip())[["pipenv"]]
-        data.table::set(
-            pipenv[["data"]],
-            i = 3L,
-            j = "depends",
-            value = list(list(c(x = "zz")))
-        )
-        expect_error(.pip_dag(pipenv), "steps depend on unknown steps")
-    })
-})
-
-
-# ---------------------
-# Views & row selection
-# ---------------------
-
-describe(".pip_view_rows", {
-    test_pip <- function() {
-        pip_new() |>
-            pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(x = ~s1) x) |>
-            pip_add("s3", \(x = ~s2) x)
-    }
-
-    it("returns all rows for a pipeline", {
-        expect_equal(.pip_view_rows(test_pip()), 1:3)
-        expect_equal(.pip_view_rows(pip_new()), integer(0))
-    })
-
-    it("returns the rows of the steps covered by a view", {
-        p <- test_pip()
-        pipenv <- p[["pipenv"]]
-        view <- .pip_rows_to_view(pipenv, c(3L, 1L))
-        v <- .wrap_pipenv(pipenv, "pipe", view = view)
-
-        # The selector holds node ids, the rows come in pipeline order
-        expect_equal(view, unname(p[["nodeId"]][c(3L, 1L)]))
-        expect_equal(.pip_view_rows(v), c(1L, 3L))
-    })
-
-    it("follows the steps when rows shift and drops removed steps", {
-        p <- test_pip()
-        v <- pip_view(p, step = c("s2", "s3"))
-
-        pip_add(p, "s0", \(x = 0) x, after = 0)
-        expect_equal(.pip_view_rows(v), c(3L, 4L))
-
-        pip_remove(p, "s3")
-        expect_equal(.pip_view_rows(v), 3L)
-
-        pip_remove(p, "s2")
-        expect_equal(.pip_view_rows(v), integer(0))
-        expect_true(.is_pipeflow_view(v))
-    })
-})
-
-
-# ---------------------------
-# Step lookup & DAG traversal
-# ---------------------------
-
-describe(".pip_steps_to_rows", {
-    test_pip <- function() {
-        pip_new() |>
-            pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(x = ~s1) x) |>
-            pip_add("s3", \(x = ~s2) x)
-    }
-
-    it("maps step names to row positions for pipelines and views", {
-        p <- test_pip()
-        expect_equal(.pip_steps_to_rows(p, c("s3", "s1")), c(3L, 1L))
-
-        v <- pip_view(p, step = c("s2", "s3"))
-        expect_equal(.pip_steps_to_rows(v, c("s1", "s3")), c(1L, 3L))
-    })
-
-    it("signals invalid step selectors with default messages", {
-        p <- test_pip()
-
-        expect_error(
-            .pip_steps_to_rows(p, c("s1", "")),
-            "step names must be non-empty strings"
-        )
-        expect_error(
-            .pip_steps_to_rows(p, c("s1", NA_character_)),
-            "step names must not contain NA"
-        )
-        expect_error(
-            .pip_steps_to_rows(p, c("s1", "unknown")),
-            "Unknown step names: unknown"
-        )
-    })
-
-    it("uses simple error messages consistently", {
-        p <- test_pip()
-
-        expect_error(
-            .pip_steps_to_rows(p, c("s1", "")),
-            "step names must be non-empty strings"
-        )
-        expect_error(
-            .pip_steps_to_rows(p, c("s1", "unknown")),
-            "Unknown step names: unknown"
-        )
-    })
-})
-
-
-# ---------------------------
-# Exported: pipeline creation
-# ---------------------------
+# -----------------
+# Pipeline creation
+# -----------------
 
 describe("pip_new", {
     it("creates a pipeflow pipeline with expected base structure", {
@@ -2340,10 +2350,9 @@ describe("pip_clone", {
     })
 })
 
-
-# -----------------------
-# Exported: pipeline data
-# -----------------------
+# -------------
+# Pipeline data
+# -------------
 
 describe("pip_collect", {
     it("returns empty list for empty pipeline", {
@@ -2613,10 +2622,9 @@ describe("pip_data", {
     })
 })
 
-
-# -------------------------
-# Exported: step parameters
-# -------------------------
+# ---------------
+# Step parameters
+# ---------------
 
 describe("pip_get_params", {
     test_pip <- function() {
@@ -3219,10 +3227,9 @@ describe("pip_set_params", {
     })
 })
 
-
-# ----------------------
-# Exported: step editing
-# ----------------------
+# ------------
+# Step editing
+# ------------
 
 describe("pip_remove", {
     test_pip <- function() {
@@ -3915,10 +3922,9 @@ describe("pip_replace", {
     })
 })
 
-
-# -----------------
-# Exported: running
-# -----------------
+# -------
+# Running
+# -------
 
 describe("pip_run", {
     test_pip <- function() {
@@ -7239,10 +7245,9 @@ describe("pip_run_state", {
     })
 })
 
-
-# --------------------------
-# Exported: extension points
-# --------------------------
+# ----------------
+# Extension points
+# ----------------
 
 describe("pip_param_value", {
     # S3 methods are looked up from the package namespace, so test methods
@@ -7921,10 +7926,9 @@ describe("pip_output_value", {
     })
 })
 
-
-# ------------------------
-# Exported: tags and locks
-# ------------------------
+# --------------
+# Tags and locks
+# --------------
 
 tag_lock_test_pip <- function() {
     pip_new("pipe") |>
@@ -8085,10 +8089,9 @@ describe("pip_unlock", {
     })
 })
 
-
-# ---------------
-# Exported: views
-# ---------------
+# -----
+# Views
+# -----
 
 describe("pip_view", {
     it("returns a view object with the expected structure", {
@@ -8351,9 +8354,9 @@ describe("pip_view", {
 })
 
 
-# ------------
+# ==============================================================================
 # Benchmarking
-# ------------
+# ==============================================================================
 
 describe("benchmarking", {
     skip("benchmarking tests are skipped by default")

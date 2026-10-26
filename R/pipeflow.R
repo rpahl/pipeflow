@@ -1,3 +1,7 @@
+# ==============================================================================
+# Foundations
+# ==============================================================================
+
 # ---------------------
 # Pipeline construction
 # ---------------------
@@ -264,6 +268,368 @@
     invisible()
 }
 
+# ==============================================================================
+# Pipeline structure
+# ==============================================================================
+
+# ---------------------------------
+# Pipeline environment & DAG access
+# ---------------------------------
+# Convenience helper function to retrieve the shared inner environment.
+.pip_pipenv <- function(x) {
+    pipenv <- .subset2(x, "pipenv")
+    dat <- pipenv[["data"]]
+    if (
+        is.data.frame(dat) &&
+            (is.null(dat[["time_start"]]) || is.null(dat[["duration"]]))
+    ) {
+        .pip_add_time_cols(pipenv)
+    }
+    # Pipelines saved with older versions of pipeflow have no
+    # `.steps_with_current_out` (see pip_new())
+    if (
+        is.environment(pipenv) && is.null(pipenv[[".steps_with_current_out"]])
+    ) {
+        pipenv[[".steps_with_current_out"]] <- new.env(parent = emptyenv())
+    }
+    pipenv
+}
+
+#' Add the time columns to the step table of a saved pipeline
+#'
+#' Pipelines saved with pipeflow 0.5.0 or earlier have no `time_start`
+#' and no `duration` column, and those saved with a later development
+#' version may have no `duration` column. A missing column is added with
+#' `NA` values (no step has a recorded run), `time_start` after `time`
+#' and `duration` after `time_start`. A table read with `readRDS()` has no
+#' spare column slots, so adding a column returns a new table, which is
+#' stored in `pipenv`.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @return The updated step table, invisibly.
+#' @noRd
+.pip_add_time_cols <- function(pipenv) {
+    dat <- pipenv[["data"]]
+    n <- nrow(dat)
+    if (is.null(dat[["time_start"]])) {
+        dat <- data.table::set(
+            dat,
+            j = "time_start",
+            value = rep(as.POSIXct(NA), n)
+        )
+        data.table::setcolorder(dat, "time_start", after = "time")
+    }
+    if (is.null(dat[["duration"]])) {
+        dat <- data.table::set(
+            dat,
+            j = "duration",
+            value = .as_duration(rep(NA, n))
+        )
+        data.table::setcolorder(dat, "duration", after = "time_start")
+    }
+    pipenv[["data"]] <- dat
+    invisible(dat)
+}
+
+#' Get the DAG of a pipeline
+#'
+#' All access to the DAG goes through this function. The DAG lives in C++
+#' behind an external pointer, which `saveRDS()` stores as a null pointer.
+#' In that case the DAG is rebuilt from the step table (see
+#' `.pip_dag_restore()`) and stored in `pipenv`, so the pipeline and all
+#' views on it use the rebuilt DAG from then on.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @return The external pointer to the DAG.
+#' @noRd
+.pip_dag <- function(pipenv) {
+    d <- pipenv[[".dag"]]
+    if (dag_is_null(d)) {
+        d <- .pip_dag_restore(pipenv)
+        pipenv[[".dag"]] <- d
+    }
+    d
+}
+
+#' Rebuild the DAG of a pipeline from its step table
+#'
+#' The nodes are the ids of the `nodeId` column, kept as they are since views
+#' refer to them, in the order of the rows, which is the topological order.
+#' The edges come from the `depends` column. The ids of removed steps are not
+#' reused, as `dag_restore()` takes the number of ids from the (null) pointer.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @return An external pointer to the rebuilt DAG.
+#' @noRd
+.pip_dag_restore <- function(pipenv) {
+    dat <- pipenv[["data"]]
+    steps <- dat[["step"]]
+    ids <- as.integer(dat[["nodeId"]])
+
+    # Other functions find the nodes of steps via the step->node map, so it
+    # must match the step table.
+    stepsToNodes <- pipenv[[".steps_to_nodes"]]
+    mapped <- mget(
+        steps,
+        envir = stepsToNodes,
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    )
+    if (
+        length(stepsToNodes) != length(steps) ||
+            !identical(as.integer(unlist(mapped, use.names = FALSE)), ids)
+    ) {
+        stop_no_call(
+            "cannot rebuild the pipeline DAG: the step to node map does not ",
+            "match the step table"
+        )
+    }
+
+    from <- lapply(
+        dat[["depends"]],
+        FUN = \(dep) unique(ids[data.table::chmatch(unname(dep), steps)])
+    )
+    to <- rep.int(ids, lengths(from))
+    from <- as.integer(unlist(from))
+    if (anyNA(from)) {
+        stop_no_call(
+            "cannot rebuild the pipeline DAG: steps depend on unknown steps"
+        )
+    }
+
+    dag_restore(pipenv[[".dag"]], order = ids, from = from, to = to)
+}
+
+# ---------------------
+# Views & row selection
+# ---------------------
+#' Build the view selector for rows of the step table
+#'
+#' Returns the node ids of the steps in the given rows. Unlike row numbers,
+#' node ids don't change when steps are added, removed, renamed or replaced,
+#' and they are never reused, so a view keeps covering its steps.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @param rows Absolute row indices of the step table.
+#' @return An integer vector of node ids, to be used as the `view` of
+#' `.wrap_pipenv()`.
+#' @noRd
+.pip_rows_to_view <- function(pipenv, rows) {
+    as.integer(pipenv[["data"]][["nodeId"]][rows])
+}
+
+# The rows covered by `x`: all pipeline rows for a full pipeline, or the rows
+# of the steps in the view's selector (in pipeline order) for a view. Steps
+# that were removed from the pipeline are no longer covered.
+.pip_view_rows <- function(x) {
+    view <- .subset2(x, "view")
+    nodeIds <- .pip_pipenv(x)[["data"]][["nodeId"]]
+    if (is.null(view)) {
+        return(seq_along(nodeIds))
+    }
+    which(nodeIds %in% view)
+}
+
+.pip_view_data <- function(x) {
+    rows <- .pip_view_rows(x)
+    .pip_pipenv(x)[["data"]][rows, ]
+}
+
+# The data.table operators that are available in the boolean filters of
+# `[.pipeflow`, also when data.table is not attached.
+.filter_ops <- list(
+    `%like%` = data.table::`%like%`,
+    `%ilike%` = data.table::`%ilike%`,
+    `%flike%` = data.table::`%flike%`,
+    `%plike%` = data.table::`%plike%`,
+    `%chin%` = data.table::`%chin%`,
+    `%between%` = data.table::`%between%`,
+    `%inrange%` = data.table::`%inrange%`,
+    `%notin%` = data.table::`%notin%`
+)
+
+# TRUE if `step` is covered by the rows of `x`. Always TRUE for a full
+# pipeline (where all rows are covered) and FALSE for a view that does not
+# cover the step.
+.pip_step_in_view <- function(x, step) {
+    absRow <- data.table::chmatch(step, .pip_pipenv(x)[["data"]][["step"]])
+    if (is.na(absRow)) {
+        return(FALSE)
+    }
+    absRow %in% .pip_view_rows(x)
+}
+
+# Resolve the `i` selector of `[.pipeflow` to absolute row indices. `i_expr`
+# is the unevaluated `i` expression; it is evaluated in the context of the
+# covered rows, i.e. the data of a view or the full step table of a pipeline.
+# `enclos` is used as the enclosing environment for boolean filter expressions,
+# with the data.table filter operators (`.filter_ops`) in between.
+.pip_select_rows <- function(x, i_expr, enclos, keep_order = FALSE) {
+    dat <- .pip_pipenv(x)[["data"]]
+    view <- .is_pipeflow_view(x)
+    rows <- .pip_view_rows(x)
+    sub <- if (view) dat[rows] else dat
+
+    value <- eval(
+        i_expr,
+        envir = sub,
+        enclos = list2env(.filter_ops, parent = enclos)
+    )
+
+    if (is.logical(value)) {
+        if (length(value) == 1L) {
+            value <- rep(value, nrow(sub))
+        }
+        if (length(value) != nrow(sub)) {
+            stop(sprintf(
+                "logical filter has length %d but the %s has %d rows",
+                length(value),
+                if (view) "view" else "pipeline",
+                nrow(sub)
+            ))
+        }
+        if (anyNA(value)) {
+            stop("logical filter must not contain NA")
+        }
+        return(rows[which(value)])
+    }
+
+    if (is.numeric(value)) {
+        if (anyNA(value)) {
+            stop("row indices in 'i' must not contain NA")
+        }
+        idx <- as.integer(value)
+        if (any(idx < 0L)) {
+            # Negative indices exclude the corresponding rows like in base R
+            if (any(idx > 0L)) {
+                stop("only 0's may be mixed with negative subscripts")
+            }
+            idx <- seq_len(nrow(sub))[idx]
+        }
+        if (!keep_order) {
+            idx <- sort(unique(idx))
+        }
+        bad <- idx[idx < 1L | idx > nrow(sub)]
+        if (length(bad) > 0L) {
+            stop("Invalid row indices in 'i': ", toString(bad))
+        }
+        return(rows[idx])
+    }
+
+    if (is.character(value)) {
+        if (anyNA(value)) {
+            stop("step names must not contain NA")
+        }
+        if (!all(nzchar(value))) {
+            stop("step names must be non-empty strings")
+        }
+        m <- data.table::chmatch(value, dat[["step"]])
+        if (anyNA(m)) {
+            unknown <- unique(value[is.na(m)])
+            stop("Unknown step names: ", toString(unknown), call. = FALSE)
+        }
+        if (!keep_order) {
+            m <- sort(unique(m))
+        }
+        outside <- m[!(m %in% rows)]
+        if (length(outside) > 0L) {
+            stop(
+                "step '",
+                dat[["step"]][[outside[[1L]]]],
+                "' is not part of the view"
+            )
+        }
+        return(m)
+    }
+
+    stop(sprintf(
+        "`i` must evaluate to row indices, step names, or a logical filter, ",
+        "not %s",
+        typeof(value)
+    ))
+}
+
+.pip_filter_nodes <- function(x, nodes) {
+    .pip_pipenv(x)[["data"]][list(nodes), on = "nodeId"]
+}
+
+# --------
+# Indexing
+# --------
+.pip_is_indexed <- function(x) {
+    !is.null(data.table::indices(.pip_pipenv(x)[["data"]]))
+}
+
+.pip_reindex <- function(x) {
+    data.table::setindexv(.pip_pipenv(x)[["data"]], list("step", "nodeId"))
+}
+
+# ---------------------------
+# Step lookup & DAG traversal
+# ---------------------------
+.pip_step_exists <- function(x, step) {
+    exists(
+        step,
+        where = .pip_pipenv(x)[[".steps_to_nodes"]],
+        inherits = FALSE
+    )
+}
+
+.pip_steps_to_nodes <- function(x, steps) {
+    mget(
+        steps,
+        envir = .pip_pipenv(x)[[".steps_to_nodes"]],
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    )
+}
+
+.pip_steps_to_rows <- function(x, steps) {
+    data <- .pip_pipenv(x)[["data"]]
+
+    if (anyNA(steps)) {
+        stop("step names must not contain NA", call. = FALSE)
+    }
+    if (!all(nzchar(steps))) {
+        stop("step names must be non-empty strings", call. = FALSE)
+    }
+
+    i <- data.table::chmatch(steps, data[["step"]])
+    if (anyNA(i)) {
+        unknown <- unique(steps[is.na(i)])
+        stop("Unknown step names: ", toString(unknown), call. = FALSE)
+    }
+    as.integer(i)
+}
+
+.pip_get_reachable_nodes <- function(x, steps, downstream = TRUE) {
+    env <- .pip_pipenv(x)
+    # mget() fails on empty names and would look up NA as "NA"; unknown
+    # steps are dropped below.
+    steps <- unique(as.character(steps))
+    steps <- steps[!is.na(steps) & nzchar(steps)]
+    if (length(steps) == 0L) {
+        return(integer(0))
+    }
+
+    start_ids <- as.integer(mget(
+        steps,
+        envir = env[[".steps_to_nodes"]],
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    ))
+    start_ids <- start_ids[!is.na(start_ids)]
+    if (length(start_ids) == 0L) {
+        return(integer(0))
+    }
+
+    if (downstream) {
+        dag_get_reachable_nodes_down(.pip_dag(env), start_ids)
+    } else {
+        dag_get_reachable_nodes_up(.pip_dag(env), start_ids)
+    }
+}
+
 # ------------------------------
 # Parameter & dependency parsing
 # ------------------------------
@@ -357,6 +723,529 @@
 
     unlist(depends)
 }
+
+# -----------------
+# Pipeline addition
+# -----------------
+.pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
+    params <- .extract_fun_params(fun, params)
+
+    # Determine and verify potential links to existing steps
+    env <- .pip_pipenv(x)
+    steps <- c(env[["data"]][["step"]], step)
+    depends <- .extract_depends(params = params, steps = steps)
+    refNodes <- mget(
+        depends,
+        envir = env[[".steps_to_nodes"]],
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    )
+    if (anyNA(refNodes)) {
+        notFound <- Filter(is.na, refNodes)
+        stop_no_call(
+            "while adding step '",
+            step,
+            "' - cannot reference unknown steps: ",
+            paste0("'", names(notFound), "'", collapse = ", ")
+        )
+    }
+
+    # Update DAG
+    d <- .pip_dag(env)
+    nodeId <- as.integer(dag_add_node(d))
+    if (length(refNodes) > 0) {
+        dag_add_edges_to(d, from = unique(as.integer(refNodes)), to = nodeId)
+    }
+
+    # Create and append step
+    newStep <- .new_step(
+        step = step,
+        fun = fun,
+        params = params,
+        depends = depends,
+        tags = tags,
+        exec = exec,
+        nodeId = nodeId
+    )
+
+    env[["data"]] <- data.table::rbindlist(
+        list(env[["data"]], newStep),
+        use.names = TRUE
+    )
+    env[[".steps_to_nodes"]][[step]] <- nodeId
+    x
+}
+
+# Insert a step at position `pos` (0 <= pos < number of steps) of the
+# pipeline, i.e. after the first `pos` steps. The new row is inserted into
+# the data table (one O(n) rbindlist) and the node is added to the DAG at
+# the corresponding position of its topological order, leaving all existing
+# steps (and their runtime state) untouched.
+.pip_insert <- function(x, step, fun, tags, exec, params, pos) {
+    params <- .extract_fun_params(fun, params)
+
+    env <- .pip_pipenv(x)
+    data <- env[["data"]]
+
+    # Dependencies may only point to steps that precede the insertion point
+    # (mirroring the previous step-by-step rebuild, this keeps the row order
+    # a valid topological order).
+    prefixSteps <- data[["step"]][seq_len(pos)]
+    steps <- c(prefixSteps, step)
+    depends <- .extract_depends(params = params, steps = steps)
+    if (length(depends) > 0L) {
+        forbidden <- unname(depends[!(depends %in% prefixSteps)])
+        if (length(forbidden) > 0L) {
+            later <- forbidden[forbidden %in% data[["step"]]]
+            if (length(later) > 0L) {
+                stop_no_call(
+                    "while adding step '",
+                    step,
+                    "' - cannot reference steps that come after the ",
+                    "insertion point: ",
+                    paste0("'", later, "'", collapse = ", ")
+                )
+            }
+            stop_no_call(
+                "while adding step '",
+                step,
+                "' - cannot reference unknown steps: ",
+                paste0("'", forbidden, "'", collapse = ", ")
+            )
+        }
+    }
+
+    refNodes <- mget(
+        depends,
+        envir = env[[".steps_to_nodes"]],
+        ifnotfound = NA_integer_,
+        inherits = FALSE
+    )
+    if (anyNA(refNodes)) {
+        notFound <- Filter(is.na, refNodes)
+        stop_no_call(
+            "while adding step '",
+            step,
+            "' - cannot reference unknown steps: ",
+            paste0("'", names(notFound), "'", collapse = ", ")
+        )
+    }
+
+    # Update DAG: add the node at the insertion position of its order
+    d <- .pip_dag(env)
+    nodeId <- as.integer(dag_add_node_at(d, pos))
+    if (length(refNodes) > 0) {
+        dag_add_edges_to(d, from = unique(as.integer(refNodes)), to = nodeId)
+    }
+
+    # Create the new step and insert its row after the first `pos` steps
+    newStep <- .new_step(
+        step = step,
+        fun = fun,
+        params = params,
+        depends = depends,
+        tags = tags,
+        exec = exec,
+        nodeId = nodeId
+    )
+    n <- nrow(data)
+    env[["data"]] <- data.table::rbindlist(
+        list(
+            data[seq_len(pos)],
+            newStep,
+            data[seq_len(n - pos) + pos]
+        ),
+        use.names = TRUE
+    )
+    env[[".steps_to_nodes"]][[step]] <- nodeId
+    x
+}
+
+# Bind two pipelines together by concatenating their steps.
+.pip_bind <- function(x, y) {
+    out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
+    yy <- pip_clone(y)
+    yyDat <- .pip_pipenv(yy)[["data"]]
+
+    # Resolve all name clashes directly on the cloned source pipeline.
+    reserved <- .pip_pipenv(out)[["data"]][["step"]]
+
+    `%chin%` <- data.table::`%chin%`
+    for (k in seq_len(nrow(yyDat))) {
+        step <- yyDat[["step"]][[k]]
+        if (step %chin% reserved) {
+            to <- step
+            i <- 2L
+            allSteps <- yyDat[["step"]]
+            while (to %chin% reserved || to %chin% allSteps) {
+                to <- paste0(step, i)
+                i <- i + 1L
+            }
+            pip_rename(yy, from = step, to = to)
+        }
+        reserved <- c(reserved, yyDat[["step"]][[k]])
+    }
+
+    # Append all (potentially renamed) steps of y in one pass: transform each
+    # row (re-create the formula dependencies after renaming), allocate a
+    # fresh node id, wire the DAG edges, and collect the rows for a single
+    # rbindlist.
+    outEnv <- .pip_pipenv(out)
+    d <- .pip_dag(outEnv)
+    stepsToNodes <- outEnv[[".steps_to_nodes"]]
+    rows <- vector("list", nrow(yyDat))
+    for (k in seq_len(nrow(yyDat))) {
+        step <- yyDat[["step"]][[k]]
+        fun <- yyDat[["fun"]][[k]]
+        tags <- yyDat[["tags"]][[k]]
+        exec <- yyDat[["exec"]][[k]]
+        params <- yyDat[["params"]][[k]]
+        depends <- yyDat[["depends"]][[k]]
+
+        # Point the formula dependencies to the (renamed) steps of y, which
+        # also turns relative references into step names. References wrapped
+        # in try() stay wrapped.
+        for (arg in intersect(names(depends), names(params))) {
+            params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
+        }
+        # Fold current parameter values into the defaults of the existing
+        # function arguments. `[<-` with list() keeps a NULL value, which
+        # `[[<-` would drop together with the argument.
+        fml <- formals(fun)
+        for (nm in intersect(names(params), setdiff(names(fml), "..."))) {
+            fml[nm] <- list(params[[nm]])
+        }
+        formals(fun) <- fml
+
+        # Update DAG: allocate the node, register the step, add edges to its
+        # upstream steps (which are either in `out` or already appended).
+        nodeId <- as.integer(dag_add_node(d))
+        stepsToNodes[[step]] <- nodeId
+        if (length(depends) > 0L) {
+            refNodes <- as.integer(unlist(mget(
+                unname(depends),
+                envir = stepsToNodes,
+                inherits = FALSE
+            )))
+            dag_add_edges_to(d, from = unique(refNodes), to = nodeId)
+        }
+
+        row <- .new_step(step, fun, params, depends, nodeId, tags, exec)
+        rows[[k]] <- row
+    }
+
+    # rbind all appended rows and preserve runtime state of the source steps
+    appRows <- data.table::rbindlist(rows, use.names = TRUE)
+    data.table::set(
+        appRows,
+        j = c("out", "state", "time", "time_start", "duration", "locked"),
+        value = list(
+            yyDat[["out"]],
+            yyDat[["state"]],
+            yyDat[["time"]],
+            yyDat[["time_start"]],
+            yyDat[["duration"]],
+            yyDat[["locked"]]
+        )
+    )
+    outEnv[["data"]] <- data.table::rbindlist(
+        list(outEnv[["data"]], appRows),
+        use.names = TRUE
+    )
+    out
+}
+
+# -----------------
+# Parameter binding
+# -----------------
+#' Set the unbound params of the selected steps
+#'
+#' Does the work of [pip_set_params()], whose inputs are checked.
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param params Named list of the params to set.
+#' @param unknown,force As for [pip_set_params()].
+#' @param bind If `TRUE`, a one-sided formula in `params` binds the param to
+#' the step that it refers to. If `FALSE`, all params are set as values,
+#' which a call of the function made by [as.function.pipeflow()] needs: its
+#' arguments are values, also if they are formulas.
+#' @param setValue Function of the current and the given value that returns
+#' the value to store, by default `` `pip_param_value<-`() ``.
+#' @return `x`, invisibly.
+#' @noRd
+.pip_set_params <- function(
+    x,
+    params,
+    unknown = "warn",
+    force = FALSE,
+    bind = TRUE,
+    setValue = `pip_param_value<-`
+) {
+    if (length(params) == 0L) {
+        return(invisible(x))
+    }
+    parNames <- names(params)
+    env <- .pip_pipenv(x)
+    dat <- env[["data"]]
+    rows <- .pip_view_rows(x)
+
+    # A one-sided formula binds the param to the step it refers to. The
+    # references are checked only for the params that are bound below.
+    isRef <- bind & vapply(params, is_one_sided_formula, logical(1))
+    refs <- params[isRef]
+    targets <- formula_deps(refs)
+
+    # Signal parameters that are not defined in any of the selected steps,
+    # including the locked ones. A param that is bound as given already is
+    # not unknown, so that setting the binding again just does nothing.
+    defined <- unique(unlist(dat[["unbound"]][rows]))
+    isBound <- vapply(
+        names(refs),
+        \(name) {
+            .pip_has_binding(dat, rows, name, refs[[name]], targets[[name]])
+        },
+        logical(1)
+    )
+    undefined <- setdiff(parNames, c(defined, names(refs)[isBound]))
+    if (length(undefined) > 0L && unknown != "ignore") {
+        msg <- paste0(
+            "Trying to set parameters not defined in the target: ",
+            toString(undefined)
+        )
+        if (unknown == "error") {
+            stop_no_call(msg)
+        }
+        warning(msg, call. = FALSE)
+    }
+
+    # Narrow down the considered rows
+    rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
+    if (length(rowsConsidered) == 0L) {
+        message("No steps to update: all selected steps are locked")
+        return(invisible(x))
+    }
+
+    # Determine which steps/rows are affected, i.e. have intersecting params
+    unbound <- dat[["unbound"]][rowsConsidered] # names of unbound params
+    intersects <- lapply(unbound, FUN = intersect, y = parNames)
+    hasOverlap <- lengths(intersects) > 0
+    namesAffected <- intersects[hasOverlap]
+    rowsAffected <- rowsConsidered[hasOverlap]
+
+    if (any(hasOverlap)) {
+        # Bindings must refer to a step that comes before the bound step,
+        # which is checked before anything is changed.
+        namesBound <- lapply(namesAffected, FUN = intersect, y = names(refs))
+        toBind <- unique(unlist(namesBound))
+        .pip_assert_bind_targets(x, refs[toBind])
+        .pip_check_bind_order(
+            dat,
+            rowsAffected,
+            namesBound,
+            targets[toBind]
+        )
+
+        # Determine the value to store for every affected row and name
+        # before anything is changed, so that a failing method leaves the
+        # pipeline untouched and all failures are reported at once.
+        merged <- vector("list", length(rowsAffected))
+        errors <- list()
+        for (j in seq_along(rowsAffected)) {
+            i <- rowsAffected[[j]]
+            rowPars <- dat[["params"]][[i]]
+            names <- setdiff(namesAffected[[j]], namesBound[[j]])
+            values <- stats::setNames(vector("list", length(names)), names)
+            for (name in names) {
+                values[name] <- list(tryCatch(
+                    setValue(rowPars[[name]], value = params[[name]]),
+                    error = function(e) {
+                        errors[[length(errors) + 1L]] <<- list(
+                            step = dat[["step"]][[i]],
+                            name = name,
+                            parent = e
+                        )
+                        NULL
+                    }
+                ))
+            }
+            merged[[j]] <- values
+        }
+        if (length(errors) > 0L) {
+            stop(.pip_set_params_error(errors))
+        }
+
+        # Update parameters in all affected rows, skipping values that are
+        # identical to the stored ones (unless forced), and bind params,
+        # which always changes the step
+        isChanged <- logical(length(rowsAffected))
+        for (j in seq_along(rowsAffected)) {
+            i <- rowsAffected[[j]]
+            rowPars <- dat[["params"]][[i]]
+            values <- merged[[j]]
+            names <- names(values)
+            if (!force) {
+                names <- Filter(
+                    \(name) !identical(rowPars[[name]], values[[name]]),
+                    names
+                )
+            }
+            if (length(names) > 0L) {
+                rowPars[names] <- values[names]
+                value <- list(list(rowPars)) # need to wrap in list() for set
+                data.table::set(dat, i = i, j = "params", value = value)
+                isChanged[[j]] <- TRUE
+            }
+            bound <- namesBound[[j]]
+            if (length(bound) > 0L) {
+                .pip_bind_row(env, i, refs[bound], targets[bound])
+                isChanged[[j]] <- TRUE
+            }
+        }
+
+        # Update states of changed steps and their downstream steps
+        rowsChanged <- rowsAffected[isChanged]
+        if (length(rowsChanged) > 0L) {
+            .pip_outdate_downstream(x, steps = dat[["step"]][rowsChanged])
+        }
+    }
+
+    invisible(x)
+}
+
+#' Check the steps that the bindings of pip_set_params() refer to
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param refs Named list of one-sided formulas, e.g. `list(model = ~fit)`.
+#' @return `refs`, invisibly. Signals an error for a relative reference
+#' (e.g. `~-1`) or a step that is not in the pipeline.
+#' @noRd
+.pip_assert_bind_targets <- function(x, refs) {
+    targets <- formula_deps(refs)
+    if (length(targets) == 0L) {
+        return(invisible(refs))
+    }
+    text <- paste0(names(refs), " = ", vapply(refs, deparse1, character(1)))
+    isRelative <- startsWith(targets, "-")
+    if (any(isRelative)) {
+        stop_no_call(
+            "params must refer to steps by name, not by relative position: ",
+            toString(text[isRelative])
+        )
+    }
+    isUnknown <- !(targets %in% .pip_pipenv(x)[["data"]][["step"]])
+    if (any(isUnknown)) {
+        stop_no_call(
+            "params refer to steps that are not in the pipeline: ",
+            toString(text[isUnknown]),
+            " - to set a formula as value, give it as a string and turn it ",
+            "into a formula in the step, e.g. with as.formula()"
+        )
+    }
+    invisible(refs)
+}
+
+#' Is a param bound as given in one of the rows?
+#'
+#' @param dat The step table.
+#' @param rows Row indices of `dat`.
+#' @param name Name of the param.
+#' @param ref The one-sided formula that binds the param.
+#' @param target The step that `ref` refers to.
+#' @return `TRUE` if the param of one of the `rows` refers to `target`, and
+#' is wrapped in `try()` just like `ref`.
+#' @noRd
+.pip_has_binding <- function(dat, rows, name, ref, target) {
+    for (i in rows) {
+        depends <- dat[["depends"]][[i]]
+        if (identical(unname(depends[name]), target)) {
+            isTry <- is_try_ref(dat[["params"]][[i]][[name]])
+            if (isTry == is_try_ref(ref)) {
+                return(TRUE)
+            }
+        }
+    }
+    FALSE
+}
+
+#' Check that params are bound to steps that come before
+#'
+#' @param dat The step table.
+#' @param rows Row indices of the steps whose params are bound.
+#' @param bound List with the names of the bound params of each of the
+#' `rows`.
+#' @param targets Named character vector: the step that each param is bound
+#' to.
+#' @return `NULL`, invisibly. Signals an error if a param is bound to a step
+#' that is the step itself or comes after it.
+#' @noRd
+.pip_check_bind_order <- function(dat, rows, bound, targets) {
+    for (name in names(targets)) {
+        target <- targets[[name]]
+        isBound <- vapply(bound, \(nms) name %in% nms, logical(1))
+        bad <- rows[
+            isBound & rows <= data.table::chmatch(target, dat[["step"]])
+        ]
+        if (length(bad) > 0L) {
+            stop_no_call(
+                "cannot bind '",
+                name,
+                "' to step '",
+                target,
+                "' in steps that don't come after it: ",
+                paste0("'", dat[["step"]][bad], "'", collapse = ", "),
+                " - use a view to select the steps to bind"
+            )
+        }
+    }
+    invisible(NULL)
+}
+
+#' Bind params of a step to other steps
+#'
+#' The params become references, like those in the defaults of the step
+#' function: they are added to `depends`, removed from `unbound`, and the DAG
+#' gets edges from the steps they refer to.
+#'
+#' @param env The inner pipeline environment.
+#' @param i Row index of the step.
+#' @param refs Named list of one-sided formulas, the bound params.
+#' @param targets Named character vector, the steps that `refs` refer to.
+#' @return `NULL`, invisibly.
+#' @noRd
+.pip_bind_row <- function(env, i, refs, targets) {
+    dat <- env[["data"]]
+    params <- dat[["params"]][[i]]
+    params[names(refs)] <- refs
+    oldDepends <- dat[["depends"]][[i]]
+    depends <- c(oldDepends, targets)
+    depends <- depends[order(match(names(depends), names(params)))]
+
+    newSteps <- setdiff(unique(targets), oldDepends)
+    if (length(newSteps) > 0L) {
+        from <- mget(
+            newSteps,
+            envir = env[[".steps_to_nodes"]],
+            inherits = FALSE
+        )
+        dag_add_edges_to(
+            .pip_dag(env),
+            from = as.integer(unlist(from)),
+            to = dat[["nodeId"]][[i]]
+        )
+    }
+
+    values <- list(
+        "params" = list(params),
+        "depends" = list(depends),
+        "unbound" = list(setdiff(dat[["unbound"]][[i]], names(refs)))
+    )
+    data.table::set(dat, i = i, j = names(values), value = values)
+    invisible(NULL)
+}
+
+# ==============================================================================
+# Execution
+# ==============================================================================
 
 # -----------------------------------------
 # Conditions: errors, failures and warnings
@@ -1352,886 +2241,13 @@
     invisible(x)
 }
 
-# ---------------------------------
-# Pipeline environment & DAG access
-# ---------------------------------
-# Convenience helper function to retrieve the shared inner environment.
-.pip_pipenv <- function(x) {
-    pipenv <- .subset2(x, "pipenv")
-    dat <- pipenv[["data"]]
-    if (
-        is.data.frame(dat) &&
-            (is.null(dat[["time_start"]]) || is.null(dat[["duration"]]))
-    ) {
-        .pip_add_time_cols(pipenv)
-    }
-    # Pipelines saved with older versions of pipeflow have no
-    # `.steps_with_current_out` (see pip_new())
-    if (
-        is.environment(pipenv) && is.null(pipenv[[".steps_with_current_out"]])
-    ) {
-        pipenv[[".steps_with_current_out"]] <- new.env(parent = emptyenv())
-    }
-    pipenv
-}
-
-#' Add the time columns to the step table of a saved pipeline
-#'
-#' Pipelines saved with pipeflow 0.5.0 or earlier have no `time_start`
-#' and no `duration` column, and those saved with a later development
-#' version may have no `duration` column. A missing column is added with
-#' `NA` values (no step has a recorded run), `time_start` after `time`
-#' and `duration` after `time_start`. A table read with `readRDS()` has no
-#' spare column slots, so adding a column returns a new table, which is
-#' stored in `pipenv`.
-#'
-#' @param pipenv The inner pipeline environment.
-#' @return The updated step table, invisibly.
-#' @noRd
-.pip_add_time_cols <- function(pipenv) {
-    dat <- pipenv[["data"]]
-    n <- nrow(dat)
-    if (is.null(dat[["time_start"]])) {
-        dat <- data.table::set(
-            dat,
-            j = "time_start",
-            value = rep(as.POSIXct(NA), n)
-        )
-        data.table::setcolorder(dat, "time_start", after = "time")
-    }
-    if (is.null(dat[["duration"]])) {
-        dat <- data.table::set(
-            dat,
-            j = "duration",
-            value = .as_duration(rep(NA, n))
-        )
-        data.table::setcolorder(dat, "duration", after = "time_start")
-    }
-    pipenv[["data"]] <- dat
-    invisible(dat)
-}
-
-#' Get the DAG of a pipeline
-#'
-#' All access to the DAG goes through this function. The DAG lives in C++
-#' behind an external pointer, which `saveRDS()` stores as a null pointer.
-#' In that case the DAG is rebuilt from the step table (see
-#' `.pip_dag_restore()`) and stored in `pipenv`, so the pipeline and all
-#' views on it use the rebuilt DAG from then on.
-#'
-#' @param pipenv The inner pipeline environment.
-#' @return The external pointer to the DAG.
-#' @noRd
-.pip_dag <- function(pipenv) {
-    d <- pipenv[[".dag"]]
-    if (dag_is_null(d)) {
-        d <- .pip_dag_restore(pipenv)
-        pipenv[[".dag"]] <- d
-    }
-    d
-}
-
-#' Rebuild the DAG of a pipeline from its step table
-#'
-#' The nodes are the ids of the `nodeId` column, kept as they are since views
-#' refer to them, in the order of the rows, which is the topological order.
-#' The edges come from the `depends` column. The ids of removed steps are not
-#' reused, as `dag_restore()` takes the number of ids from the (null) pointer.
-#'
-#' @param pipenv The inner pipeline environment.
-#' @return An external pointer to the rebuilt DAG.
-#' @noRd
-.pip_dag_restore <- function(pipenv) {
-    dat <- pipenv[["data"]]
-    steps <- dat[["step"]]
-    ids <- as.integer(dat[["nodeId"]])
-
-    # Other functions find the nodes of steps via the step->node map, so it
-    # must match the step table.
-    stepsToNodes <- pipenv[[".steps_to_nodes"]]
-    mapped <- mget(
-        steps,
-        envir = stepsToNodes,
-        ifnotfound = NA_integer_,
-        inherits = FALSE
-    )
-    if (
-        length(stepsToNodes) != length(steps) ||
-            !identical(as.integer(unlist(mapped, use.names = FALSE)), ids)
-    ) {
-        stop_no_call(
-            "cannot rebuild the pipeline DAG: the step to node map does not ",
-            "match the step table"
-        )
-    }
-
-    from <- lapply(
-        dat[["depends"]],
-        FUN = \(dep) unique(ids[data.table::chmatch(unname(dep), steps)])
-    )
-    to <- rep.int(ids, lengths(from))
-    from <- as.integer(unlist(from))
-    if (anyNA(from)) {
-        stop_no_call(
-            "cannot rebuild the pipeline DAG: steps depend on unknown steps"
-        )
-    }
-
-    dag_restore(pipenv[[".dag"]], order = ids, from = from, to = to)
-}
-
-# ---------------------
-# Views & row selection
-# ---------------------
-#' Build the view selector for rows of the step table
-#'
-#' Returns the node ids of the steps in the given rows. Unlike row numbers,
-#' node ids don't change when steps are added, removed, renamed or replaced,
-#' and they are never reused, so a view keeps covering its steps.
-#'
-#' @param pipenv The inner pipeline environment.
-#' @param rows Absolute row indices of the step table.
-#' @return An integer vector of node ids, to be used as the `view` of
-#' `.wrap_pipenv()`.
-#' @noRd
-.pip_rows_to_view <- function(pipenv, rows) {
-    as.integer(pipenv[["data"]][["nodeId"]][rows])
-}
-
-# The rows covered by `x`: all pipeline rows for a full pipeline, or the rows
-# of the steps in the view's selector (in pipeline order) for a view. Steps
-# that were removed from the pipeline are no longer covered.
-.pip_view_rows <- function(x) {
-    view <- .subset2(x, "view")
-    nodeIds <- .pip_pipenv(x)[["data"]][["nodeId"]]
-    if (is.null(view)) {
-        return(seq_along(nodeIds))
-    }
-    which(nodeIds %in% view)
-}
-
-.pip_view_data <- function(x) {
-    rows <- .pip_view_rows(x)
-    .pip_pipenv(x)[["data"]][rows, ]
-}
-
-# The data.table operators that are available in the boolean filters of
-# `[.pipeflow`, also when data.table is not attached.
-.filter_ops <- list(
-    `%like%` = data.table::`%like%`,
-    `%ilike%` = data.table::`%ilike%`,
-    `%flike%` = data.table::`%flike%`,
-    `%plike%` = data.table::`%plike%`,
-    `%chin%` = data.table::`%chin%`,
-    `%between%` = data.table::`%between%`,
-    `%inrange%` = data.table::`%inrange%`,
-    `%notin%` = data.table::`%notin%`
-)
-
-# TRUE if `step` is covered by the rows of `x`. Always TRUE for a full
-# pipeline (where all rows are covered) and FALSE for a view that does not
-# cover the step.
-.pip_step_in_view <- function(x, step) {
-    absRow <- data.table::chmatch(step, .pip_pipenv(x)[["data"]][["step"]])
-    if (is.na(absRow)) {
-        return(FALSE)
-    }
-    absRow %in% .pip_view_rows(x)
-}
-
-# Resolve the `i` selector of `[.pipeflow` to absolute row indices. `i_expr`
-# is the unevaluated `i` expression; it is evaluated in the context of the
-# covered rows, i.e. the data of a view or the full step table of a pipeline.
-# `enclos` is used as the enclosing environment for boolean filter expressions,
-# with the data.table filter operators (`.filter_ops`) in between.
-.pip_select_rows <- function(x, i_expr, enclos, keep_order = FALSE) {
-    dat <- .pip_pipenv(x)[["data"]]
-    view <- .is_pipeflow_view(x)
-    rows <- .pip_view_rows(x)
-    sub <- if (view) dat[rows] else dat
-
-    value <- eval(
-        i_expr,
-        envir = sub,
-        enclos = list2env(.filter_ops, parent = enclos)
-    )
-
-    if (is.logical(value)) {
-        if (length(value) == 1L) {
-            value <- rep(value, nrow(sub))
-        }
-        if (length(value) != nrow(sub)) {
-            stop(sprintf(
-                "logical filter has length %d but the %s has %d rows",
-                length(value),
-                if (view) "view" else "pipeline",
-                nrow(sub)
-            ))
-        }
-        if (anyNA(value)) {
-            stop("logical filter must not contain NA")
-        }
-        return(rows[which(value)])
-    }
-
-    if (is.numeric(value)) {
-        if (anyNA(value)) {
-            stop("row indices in 'i' must not contain NA")
-        }
-        idx <- as.integer(value)
-        if (any(idx < 0L)) {
-            # Negative indices exclude the corresponding rows like in base R
-            if (any(idx > 0L)) {
-                stop("only 0's may be mixed with negative subscripts")
-            }
-            idx <- seq_len(nrow(sub))[idx]
-        }
-        if (!keep_order) {
-            idx <- sort(unique(idx))
-        }
-        bad <- idx[idx < 1L | idx > nrow(sub)]
-        if (length(bad) > 0L) {
-            stop("Invalid row indices in 'i': ", toString(bad))
-        }
-        return(rows[idx])
-    }
-
-    if (is.character(value)) {
-        if (anyNA(value)) {
-            stop("step names must not contain NA")
-        }
-        if (!all(nzchar(value))) {
-            stop("step names must be non-empty strings")
-        }
-        m <- data.table::chmatch(value, dat[["step"]])
-        if (anyNA(m)) {
-            unknown <- unique(value[is.na(m)])
-            stop("Unknown step names: ", toString(unknown), call. = FALSE)
-        }
-        if (!keep_order) {
-            m <- sort(unique(m))
-        }
-        outside <- m[!(m %in% rows)]
-        if (length(outside) > 0L) {
-            stop(
-                "step '",
-                dat[["step"]][[outside[[1L]]]],
-                "' is not part of the view"
-            )
-        }
-        return(m)
-    }
-
-    stop(sprintf(
-        "`i` must evaluate to row indices, step names, or a logical filter, ",
-        "not %s",
-        typeof(value)
-    ))
-}
-
-.pip_filter_nodes <- function(x, nodes) {
-    .pip_pipenv(x)[["data"]][list(nodes), on = "nodeId"]
-}
-
-# --------
-# Indexing
-# --------
-.pip_is_indexed <- function(x) {
-    !is.null(data.table::indices(.pip_pipenv(x)[["data"]]))
-}
-
-.pip_reindex <- function(x) {
-    data.table::setindexv(.pip_pipenv(x)[["data"]], list("step", "nodeId"))
-}
-
-# ---------------------------
-# Step lookup & DAG traversal
-# ---------------------------
-.pip_step_exists <- function(x, step) {
-    exists(
-        step,
-        where = .pip_pipenv(x)[[".steps_to_nodes"]],
-        inherits = FALSE
-    )
-}
-
-.pip_steps_to_nodes <- function(x, steps) {
-    mget(
-        steps,
-        envir = .pip_pipenv(x)[[".steps_to_nodes"]],
-        ifnotfound = NA_integer_,
-        inherits = FALSE
-    )
-}
-
-.pip_steps_to_rows <- function(x, steps) {
-    data <- .pip_pipenv(x)[["data"]]
-
-    if (anyNA(steps)) {
-        stop("step names must not contain NA", call. = FALSE)
-    }
-    if (!all(nzchar(steps))) {
-        stop("step names must be non-empty strings", call. = FALSE)
-    }
-
-    i <- data.table::chmatch(steps, data[["step"]])
-    if (anyNA(i)) {
-        unknown <- unique(steps[is.na(i)])
-        stop("Unknown step names: ", toString(unknown), call. = FALSE)
-    }
-    as.integer(i)
-}
-
-.pip_get_reachable_nodes <- function(x, steps, downstream = TRUE) {
-    env <- .pip_pipenv(x)
-    # mget() fails on empty names and would look up NA as "NA"; unknown
-    # steps are dropped below.
-    steps <- unique(as.character(steps))
-    steps <- steps[!is.na(steps) & nzchar(steps)]
-    if (length(steps) == 0L) {
-        return(integer(0))
-    }
-
-    start_ids <- as.integer(mget(
-        steps,
-        envir = env[[".steps_to_nodes"]],
-        ifnotfound = NA_integer_,
-        inherits = FALSE
-    ))
-    start_ids <- start_ids[!is.na(start_ids)]
-    if (length(start_ids) == 0L) {
-        return(integer(0))
-    }
-
-    if (downstream) {
-        dag_get_reachable_nodes_down(.pip_dag(env), start_ids)
-    } else {
-        dag_get_reachable_nodes_up(.pip_dag(env), start_ids)
-    }
-}
+# ==============================================================================
+# Exported API
+# ==============================================================================
 
 # -----------------
-# Pipeline addition
+# Pipeline creation
 # -----------------
-.pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
-    params <- .extract_fun_params(fun, params)
-
-    # Determine and verify potential links to existing steps
-    env <- .pip_pipenv(x)
-    steps <- c(env[["data"]][["step"]], step)
-    depends <- .extract_depends(params = params, steps = steps)
-    refNodes <- mget(
-        depends,
-        envir = env[[".steps_to_nodes"]],
-        ifnotfound = NA_integer_,
-        inherits = FALSE
-    )
-    if (anyNA(refNodes)) {
-        notFound <- Filter(is.na, refNodes)
-        stop_no_call(
-            "while adding step '",
-            step,
-            "' - cannot reference unknown steps: ",
-            paste0("'", names(notFound), "'", collapse = ", ")
-        )
-    }
-
-    # Update DAG
-    d <- .pip_dag(env)
-    nodeId <- as.integer(dag_add_node(d))
-    if (length(refNodes) > 0) {
-        dag_add_edges_to(d, from = unique(as.integer(refNodes)), to = nodeId)
-    }
-
-    # Create and append step
-    newStep <- .new_step(
-        step = step,
-        fun = fun,
-        params = params,
-        depends = depends,
-        tags = tags,
-        exec = exec,
-        nodeId = nodeId
-    )
-
-    env[["data"]] <- data.table::rbindlist(
-        list(env[["data"]], newStep),
-        use.names = TRUE
-    )
-    env[[".steps_to_nodes"]][[step]] <- nodeId
-    x
-}
-
-# Insert a step at position `pos` (0 <= pos < number of steps) of the
-# pipeline, i.e. after the first `pos` steps. The new row is inserted into
-# the data table (one O(n) rbindlist) and the node is added to the DAG at
-# the corresponding position of its topological order, leaving all existing
-# steps (and their runtime state) untouched.
-.pip_insert <- function(x, step, fun, tags, exec, params, pos) {
-    params <- .extract_fun_params(fun, params)
-
-    env <- .pip_pipenv(x)
-    data <- env[["data"]]
-
-    # Dependencies may only point to steps that precede the insertion point
-    # (mirroring the previous step-by-step rebuild, this keeps the row order
-    # a valid topological order).
-    prefixSteps <- data[["step"]][seq_len(pos)]
-    steps <- c(prefixSteps, step)
-    depends <- .extract_depends(params = params, steps = steps)
-    if (length(depends) > 0L) {
-        forbidden <- unname(depends[!(depends %in% prefixSteps)])
-        if (length(forbidden) > 0L) {
-            later <- forbidden[forbidden %in% data[["step"]]]
-            if (length(later) > 0L) {
-                stop_no_call(
-                    "while adding step '",
-                    step,
-                    "' - cannot reference steps that come after the ",
-                    "insertion point: ",
-                    paste0("'", later, "'", collapse = ", ")
-                )
-            }
-            stop_no_call(
-                "while adding step '",
-                step,
-                "' - cannot reference unknown steps: ",
-                paste0("'", forbidden, "'", collapse = ", ")
-            )
-        }
-    }
-
-    refNodes <- mget(
-        depends,
-        envir = env[[".steps_to_nodes"]],
-        ifnotfound = NA_integer_,
-        inherits = FALSE
-    )
-    if (anyNA(refNodes)) {
-        notFound <- Filter(is.na, refNodes)
-        stop_no_call(
-            "while adding step '",
-            step,
-            "' - cannot reference unknown steps: ",
-            paste0("'", names(notFound), "'", collapse = ", ")
-        )
-    }
-
-    # Update DAG: add the node at the insertion position of its order
-    d <- .pip_dag(env)
-    nodeId <- as.integer(dag_add_node_at(d, pos))
-    if (length(refNodes) > 0) {
-        dag_add_edges_to(d, from = unique(as.integer(refNodes)), to = nodeId)
-    }
-
-    # Create the new step and insert its row after the first `pos` steps
-    newStep <- .new_step(
-        step = step,
-        fun = fun,
-        params = params,
-        depends = depends,
-        tags = tags,
-        exec = exec,
-        nodeId = nodeId
-    )
-    n <- nrow(data)
-    env[["data"]] <- data.table::rbindlist(
-        list(
-            data[seq_len(pos)],
-            newStep,
-            data[seq_len(n - pos) + pos]
-        ),
-        use.names = TRUE
-    )
-    env[[".steps_to_nodes"]][[step]] <- nodeId
-    x
-}
-
-# Bind two pipelines together by concatenating their steps.
-.pip_bind <- function(x, y) {
-    out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
-    yy <- pip_clone(y)
-    yyDat <- .pip_pipenv(yy)[["data"]]
-
-    # Resolve all name clashes directly on the cloned source pipeline.
-    reserved <- .pip_pipenv(out)[["data"]][["step"]]
-
-    `%chin%` <- data.table::`%chin%`
-    for (k in seq_len(nrow(yyDat))) {
-        step <- yyDat[["step"]][[k]]
-        if (step %chin% reserved) {
-            to <- step
-            i <- 2L
-            allSteps <- yyDat[["step"]]
-            while (to %chin% reserved || to %chin% allSteps) {
-                to <- paste0(step, i)
-                i <- i + 1L
-            }
-            pip_rename(yy, from = step, to = to)
-        }
-        reserved <- c(reserved, yyDat[["step"]][[k]])
-    }
-
-    # Append all (potentially renamed) steps of y in one pass: transform each
-    # row (re-create the formula dependencies after renaming), allocate a
-    # fresh node id, wire the DAG edges, and collect the rows for a single
-    # rbindlist.
-    outEnv <- .pip_pipenv(out)
-    d <- .pip_dag(outEnv)
-    stepsToNodes <- outEnv[[".steps_to_nodes"]]
-    rows <- vector("list", nrow(yyDat))
-    for (k in seq_len(nrow(yyDat))) {
-        step <- yyDat[["step"]][[k]]
-        fun <- yyDat[["fun"]][[k]]
-        tags <- yyDat[["tags"]][[k]]
-        exec <- yyDat[["exec"]][[k]]
-        params <- yyDat[["params"]][[k]]
-        depends <- yyDat[["depends"]][[k]]
-
-        # Point the formula dependencies to the (renamed) steps of y, which
-        # also turns relative references into step names. References wrapped
-        # in try() stay wrapped.
-        for (arg in intersect(names(depends), names(params))) {
-            params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
-        }
-        # Fold current parameter values into the defaults of the existing
-        # function arguments. `[<-` with list() keeps a NULL value, which
-        # `[[<-` would drop together with the argument.
-        fml <- formals(fun)
-        for (nm in intersect(names(params), setdiff(names(fml), "..."))) {
-            fml[nm] <- list(params[[nm]])
-        }
-        formals(fun) <- fml
-
-        # Update DAG: allocate the node, register the step, add edges to its
-        # upstream steps (which are either in `out` or already appended).
-        nodeId <- as.integer(dag_add_node(d))
-        stepsToNodes[[step]] <- nodeId
-        if (length(depends) > 0L) {
-            refNodes <- as.integer(unlist(mget(
-                unname(depends),
-                envir = stepsToNodes,
-                inherits = FALSE
-            )))
-            dag_add_edges_to(d, from = unique(refNodes), to = nodeId)
-        }
-
-        row <- .new_step(step, fun, params, depends, nodeId, tags, exec)
-        rows[[k]] <- row
-    }
-
-    # rbind all appended rows and preserve runtime state of the source steps
-    appRows <- data.table::rbindlist(rows, use.names = TRUE)
-    data.table::set(
-        appRows,
-        j = c("out", "state", "time", "time_start", "duration", "locked"),
-        value = list(
-            yyDat[["out"]],
-            yyDat[["state"]],
-            yyDat[["time"]],
-            yyDat[["time_start"]],
-            yyDat[["duration"]],
-            yyDat[["locked"]]
-        )
-    )
-    outEnv[["data"]] <- data.table::rbindlist(
-        list(outEnv[["data"]], appRows),
-        use.names = TRUE
-    )
-    out
-}
-
-# -----------------
-# Parameter binding
-# -----------------
-#' Set the unbound params of the selected steps
-#'
-#' Does the work of [pip_set_params()], whose inputs are checked.
-#'
-#' @param x A pipeflow pipeline or view.
-#' @param params Named list of the params to set.
-#' @param unknown,force As for [pip_set_params()].
-#' @param bind If `TRUE`, a one-sided formula in `params` binds the param to
-#' the step that it refers to. If `FALSE`, all params are set as values,
-#' which a call of the function made by [as.function.pipeflow()] needs: its
-#' arguments are values, also if they are formulas.
-#' @param setValue Function of the current and the given value that returns
-#' the value to store, by default `` `pip_param_value<-`() ``.
-#' @return `x`, invisibly.
-#' @noRd
-.pip_set_params <- function(
-    x,
-    params,
-    unknown = "warn",
-    force = FALSE,
-    bind = TRUE,
-    setValue = `pip_param_value<-`
-) {
-    if (length(params) == 0L) {
-        return(invisible(x))
-    }
-    parNames <- names(params)
-    env <- .pip_pipenv(x)
-    dat <- env[["data"]]
-    rows <- .pip_view_rows(x)
-
-    # A one-sided formula binds the param to the step it refers to. The
-    # references are checked only for the params that are bound below.
-    isRef <- bind & vapply(params, is_one_sided_formula, logical(1))
-    refs <- params[isRef]
-    targets <- formula_deps(refs)
-
-    # Signal parameters that are not defined in any of the selected steps,
-    # including the locked ones. A param that is bound as given already is
-    # not unknown, so that setting the binding again just does nothing.
-    defined <- unique(unlist(dat[["unbound"]][rows]))
-    isBound <- vapply(
-        names(refs),
-        \(name) {
-            .pip_has_binding(dat, rows, name, refs[[name]], targets[[name]])
-        },
-        logical(1)
-    )
-    undefined <- setdiff(parNames, c(defined, names(refs)[isBound]))
-    if (length(undefined) > 0L && unknown != "ignore") {
-        msg <- paste0(
-            "Trying to set parameters not defined in the target: ",
-            toString(undefined)
-        )
-        if (unknown == "error") {
-            stop_no_call(msg)
-        }
-        warning(msg, call. = FALSE)
-    }
-
-    # Narrow down the considered rows
-    rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
-    if (length(rowsConsidered) == 0L) {
-        message("No steps to update: all selected steps are locked")
-        return(invisible(x))
-    }
-
-    # Determine which steps/rows are affected, i.e. have intersecting params
-    unbound <- dat[["unbound"]][rowsConsidered] # names of unbound params
-    intersects <- lapply(unbound, FUN = intersect, y = parNames)
-    hasOverlap <- lengths(intersects) > 0
-    namesAffected <- intersects[hasOverlap]
-    rowsAffected <- rowsConsidered[hasOverlap]
-
-    if (any(hasOverlap)) {
-        # Bindings must refer to a step that comes before the bound step,
-        # which is checked before anything is changed.
-        namesBound <- lapply(namesAffected, FUN = intersect, y = names(refs))
-        toBind <- unique(unlist(namesBound))
-        .pip_assert_bind_targets(x, refs[toBind])
-        .pip_check_bind_order(
-            dat,
-            rowsAffected,
-            namesBound,
-            targets[toBind]
-        )
-
-        # Determine the value to store for every affected row and name
-        # before anything is changed, so that a failing method leaves the
-        # pipeline untouched and all failures are reported at once.
-        merged <- vector("list", length(rowsAffected))
-        errors <- list()
-        for (j in seq_along(rowsAffected)) {
-            i <- rowsAffected[[j]]
-            rowPars <- dat[["params"]][[i]]
-            names <- setdiff(namesAffected[[j]], namesBound[[j]])
-            values <- stats::setNames(vector("list", length(names)), names)
-            for (name in names) {
-                values[name] <- list(tryCatch(
-                    setValue(rowPars[[name]], value = params[[name]]),
-                    error = function(e) {
-                        errors[[length(errors) + 1L]] <<- list(
-                            step = dat[["step"]][[i]],
-                            name = name,
-                            parent = e
-                        )
-                        NULL
-                    }
-                ))
-            }
-            merged[[j]] <- values
-        }
-        if (length(errors) > 0L) {
-            stop(.pip_set_params_error(errors))
-        }
-
-        # Update parameters in all affected rows, skipping values that are
-        # identical to the stored ones (unless forced), and bind params,
-        # which always changes the step
-        isChanged <- logical(length(rowsAffected))
-        for (j in seq_along(rowsAffected)) {
-            i <- rowsAffected[[j]]
-            rowPars <- dat[["params"]][[i]]
-            values <- merged[[j]]
-            names <- names(values)
-            if (!force) {
-                names <- Filter(
-                    \(name) !identical(rowPars[[name]], values[[name]]),
-                    names
-                )
-            }
-            if (length(names) > 0L) {
-                rowPars[names] <- values[names]
-                value <- list(list(rowPars)) # need to wrap in list() for set
-                data.table::set(dat, i = i, j = "params", value = value)
-                isChanged[[j]] <- TRUE
-            }
-            bound <- namesBound[[j]]
-            if (length(bound) > 0L) {
-                .pip_bind_row(env, i, refs[bound], targets[bound])
-                isChanged[[j]] <- TRUE
-            }
-        }
-
-        # Update states of changed steps and their downstream steps
-        rowsChanged <- rowsAffected[isChanged]
-        if (length(rowsChanged) > 0L) {
-            .pip_outdate_downstream(x, steps = dat[["step"]][rowsChanged])
-        }
-    }
-
-    invisible(x)
-}
-
-#' Check the steps that the bindings of pip_set_params() refer to
-#'
-#' @param x A pipeflow pipeline or view.
-#' @param refs Named list of one-sided formulas, e.g. `list(model = ~fit)`.
-#' @return `refs`, invisibly. Signals an error for a relative reference
-#' (e.g. `~-1`) or a step that is not in the pipeline.
-#' @noRd
-.pip_assert_bind_targets <- function(x, refs) {
-    targets <- formula_deps(refs)
-    if (length(targets) == 0L) {
-        return(invisible(refs))
-    }
-    text <- paste0(names(refs), " = ", vapply(refs, deparse1, character(1)))
-    isRelative <- startsWith(targets, "-")
-    if (any(isRelative)) {
-        stop_no_call(
-            "params must refer to steps by name, not by relative position: ",
-            toString(text[isRelative])
-        )
-    }
-    isUnknown <- !(targets %in% .pip_pipenv(x)[["data"]][["step"]])
-    if (any(isUnknown)) {
-        stop_no_call(
-            "params refer to steps that are not in the pipeline: ",
-            toString(text[isUnknown]),
-            " - to set a formula as value, give it as a string and turn it ",
-            "into a formula in the step, e.g. with as.formula()"
-        )
-    }
-    invisible(refs)
-}
-
-#' Is a param bound as given in one of the rows?
-#'
-#' @param dat The step table.
-#' @param rows Row indices of `dat`.
-#' @param name Name of the param.
-#' @param ref The one-sided formula that binds the param.
-#' @param target The step that `ref` refers to.
-#' @return `TRUE` if the param of one of the `rows` refers to `target`, and
-#' is wrapped in `try()` just like `ref`.
-#' @noRd
-.pip_has_binding <- function(dat, rows, name, ref, target) {
-    for (i in rows) {
-        depends <- dat[["depends"]][[i]]
-        if (identical(unname(depends[name]), target)) {
-            isTry <- is_try_ref(dat[["params"]][[i]][[name]])
-            if (isTry == is_try_ref(ref)) {
-                return(TRUE)
-            }
-        }
-    }
-    FALSE
-}
-
-#' Check that params are bound to steps that come before
-#'
-#' @param dat The step table.
-#' @param rows Row indices of the steps whose params are bound.
-#' @param bound List with the names of the bound params of each of the
-#' `rows`.
-#' @param targets Named character vector: the step that each param is bound
-#' to.
-#' @return `NULL`, invisibly. Signals an error if a param is bound to a step
-#' that is the step itself or comes after it.
-#' @noRd
-.pip_check_bind_order <- function(dat, rows, bound, targets) {
-    for (name in names(targets)) {
-        target <- targets[[name]]
-        isBound <- vapply(bound, \(nms) name %in% nms, logical(1))
-        bad <- rows[
-            isBound & rows <= data.table::chmatch(target, dat[["step"]])
-        ]
-        if (length(bad) > 0L) {
-            stop_no_call(
-                "cannot bind '",
-                name,
-                "' to step '",
-                target,
-                "' in steps that don't come after it: ",
-                paste0("'", dat[["step"]][bad], "'", collapse = ", "),
-                " - use a view to select the steps to bind"
-            )
-        }
-    }
-    invisible(NULL)
-}
-
-#' Bind params of a step to other steps
-#'
-#' The params become references, like those in the defaults of the step
-#' function: they are added to `depends`, removed from `unbound`, and the DAG
-#' gets edges from the steps they refer to.
-#'
-#' @param env The inner pipeline environment.
-#' @param i Row index of the step.
-#' @param refs Named list of one-sided formulas, the bound params.
-#' @param targets Named character vector, the steps that `refs` refer to.
-#' @return `NULL`, invisibly.
-#' @noRd
-.pip_bind_row <- function(env, i, refs, targets) {
-    dat <- env[["data"]]
-    params <- dat[["params"]][[i]]
-    params[names(refs)] <- refs
-    oldDepends <- dat[["depends"]][[i]]
-    depends <- c(oldDepends, targets)
-    depends <- depends[order(match(names(depends), names(params)))]
-
-    newSteps <- setdiff(unique(targets), oldDepends)
-    if (length(newSteps) > 0L) {
-        from <- mget(
-            newSteps,
-            envir = env[[".steps_to_nodes"]],
-            inherits = FALSE
-        )
-        dag_add_edges_to(
-            .pip_dag(env),
-            from = as.integer(unlist(from)),
-            to = dat[["nodeId"]][[i]]
-        )
-    }
-
-    values <- list(
-        "params" = list(params),
-        "depends" = list(depends),
-        "unbound" = list(setdiff(dat[["unbound"]][[i]], names(refs)))
-    )
-    data.table::set(dat, i = i, j = names(values), value = values)
-    invisible(NULL)
-}
-
-# ---------------------------
-# Exported: pipeline creation
-# ---------------------------
 #' Create a pipeline
 #'
 #' Creates a new, empty pipeline. Add steps with [pip_add()] and execute
@@ -2596,9 +2612,9 @@ pip_clone <- function(x, name = NULL) {
     .pip_clone(x, name = newName)
 }
 
-# -----------------------
-# Exported: pipeline data
-# -----------------------
+# -------------
+# Pipeline data
+# -------------
 #' Collect step outputs
 #'
 #' Returns the outputs of the steps in a pipeline or view. With
@@ -2791,9 +2807,9 @@ pip_data <- function(x) {
     .pip_pipenv(x)[["data"]]
 }
 
-# -------------------------
-# Exported: step parameters
-# -------------------------
+# ---------------
+# Step parameters
+# ---------------
 #' @name pip_set_params
 #' @rdname pip_set_params
 #' @export
@@ -2981,9 +2997,9 @@ pip_set_params <- function(
     )
 }
 
-# ----------------------
-# Exported: step editing
-# ----------------------
+# ------------
+# Step editing
+# ------------
 #' Remove a step
 #'
 #' Removes a pipeline step by its name. If other steps depend on it,
@@ -3453,9 +3469,9 @@ pip_replace <- function(
     invisible(x)
 }
 
-# -----------------
-# Exported: running
-# -----------------
+# -------
+# Running
+# -------
 #' Run a pipeline
 #'
 #' Executes all pending steps in order. On repeated runs, steps that are
@@ -4202,9 +4218,9 @@ pip_run_state <- function(x) {
     as.character(.pip_pipenv(x)[[".run_state"]])
 }
 
-# --------------------------
-# Exported: extension points
-# --------------------------
+# ----------------
+# Extension points
+# ----------------
 #' Annotated parameter values
 #'
 #' `pip_param_value()` is an extension point for handling non-trivial
@@ -4391,9 +4407,9 @@ pip_output_value.default <- function(x, ctx = list(), ...) {
     x
 }
 
-# ------------------------
-# Exported: tags and locks
-# ------------------------
+# --------------
+# Tags and locks
+# --------------
 #' Add or remove tags
 #'
 #' Adds tags to, or removes tags from, all steps of a pipeline or a subset
@@ -4544,9 +4560,9 @@ pip_unlock <- function(x) {
     invisible(x)
 }
 
-# ---------------
-# Exported: views
-# ---------------
+# -----
+# Views
+# -----
 #' Create a pipeline view
 #'
 #' Creates a filtered view showing only a selected subset of steps.
