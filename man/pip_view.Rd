@@ -9,38 +9,35 @@ pip_view(x, ..., join = c("intersect", "union"), fixed = TRUE)
 \arguments{
 \item{x}{A pipeflow pipeline or view.}
 
-\item{...}{Named filters, which can be one or more of \code{step}, \code{params},
-\code{state}, \code{tags}, \code{exec}, and \code{depends}. Each filter value is a character
-vector of values to keep, or - if \code{fixed} is \code{FALSE} - a regular
-expression. The \code{params} filter matches against the actual parameter
-names of each step.}
+\item{...}{Named filters, which can be one or more of \code{step}, \code{params}, \code{state},
+\code{tags}, \code{exec}, and \code{depends}. Each filter value is a character vector of values to
+keep, or - if \code{fixed} is \code{FALSE} - a regular expression. The \code{params} filter matches
+against the actual parameter names of each step.}
 
 \item{join}{How individual filters are combined:
 \itemize{
 \item \code{"intersect"} (the default) keeps steps that match \emph{all} filters,
-\item \code{"union"} keeps steps that match \emph{any} filter. Within a single
-filter, multiple values are always treated as alternatives (OR).
+\item \code{"union"} keeps steps that match \emph{any} filter. Within a single filter, multiple
+values are always treated as alternatives (OR).
 }}
 
-\item{fixed}{If TRUE, values in \code{...} are treated as fixed strings,
-otherwise they are treated as regular expressions.}
+\item{fixed}{If TRUE, values in \code{...} are treated as fixed strings, otherwise they
+are treated as regular expressions.}
 }
 \value{
-A view: a \code{pipeflow} object that shares the pipeline's state and
-covers the selected steps.
+A view: a \code{pipeflow} object that shares the pipeline's state and covers the
+selected steps.
 }
 \description{
-Creates a filtered view showing only a selected subset of steps.
-A view references the underlying pipeline without copying it, so
-operations like \code{\link[=pip_run]{pip_run()}} and \code{\link[=pip_set_params]{pip_set_params()}} applied to a view
-work directly on the underlying pipeline, but are restricted to the
-steps defined by the view.
+Creates a filtered view showing only a selected subset of steps. A view references
+the underlying pipeline without copying it, so operations like \code{\link[=pip_run]{pip_run()}} and
+\code{\link[=pip_set_params]{pip_set_params()}} applied to a view work directly on the underlying pipeline, but
+are restricted to the steps defined by the view.
 }
 \details{
-A view keeps covering its steps when steps are added, removed, renamed or
-replaced, also through the pipeline or another view. Removed steps drop
-out of the view, and new steps are not added to it, even if they match
-the filters.
+A view keeps covering its steps when steps are added, removed, renamed or replaced,
+also through the pipeline or another view. Removed steps drop out of the view, and
+new steps are not added to it, even if they match the filters.
 }
 \examples{
 p <- pip_new() |>

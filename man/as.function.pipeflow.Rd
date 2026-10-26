@@ -14,28 +14,26 @@
 )
 }
 \arguments{
-\item{x}{A pipeflow pipeline (not a view; use \code{x[i, view = FALSE]} to turn
-a part of a pipeline into a function).}
+\item{x}{A pipeflow pipeline (not a view; use \code{x[i, view = FALSE]} to turn a part of
+a pipeline into a function).}
 
-\item{out}{The result of the function. \code{NULL} (the default) returns the
-outputs of all steps as a named list, see \code{\link[=pip_collect]{pip_collect()}}; a step name
-returns the output of that step; several step names return a named list
-of their outputs. A function with at least one argument is called with
-(a light copy of) the run inner pipeline and returns the result, see
-Details.}
+\item{out}{The result of the function. \code{NULL} (the default) returns the outputs of
+all steps as a named list, see \code{\link[=pip_collect]{pip_collect()}}; a step name returns the output of
+that step; several step names return a named list of their outputs. A function with
+at least one argument is called with (a light copy of) the run inner pipeline and
+returns the result, see Details.}
 
-\item{cache}{Whether to keep the run copies of \code{x} for reuse, \code{TRUE} (the
-default) or \code{FALSE}. The function keeps one copy per outer step and
-partition, see Details. With \code{FALSE}, a step mapped over partitions can
-run the function in parallel, see the \code{map} argument of \code{\link[=pip_run]{pip_run()}}.}
+\item{cache}{Whether to keep the run copies of \code{x} for reuse, \code{TRUE} (the default) or
+\code{FALSE}. The function keeps one copy per outer step and partition, see Details. With
+\code{FALSE}, a step mapped over partitions can run the function in parallel, see the
+\code{map} argument of \code{\link[=pip_run]{pip_run()}}.}
 
-\item{on_error}{What to do when an inner step fails: \code{"stop"} (the
-default) ends the inner run at that step, \code{"continue"} runs the inner
-steps that do not depend on it, see Details and \code{\link[=pip_run]{pip_run()}}.}
+\item{on_error}{What to do when an inner step fails: \code{"stop"} (the default) ends the
+inner run at that step, \code{"continue"} runs the inner steps that do not depend on it,
+see Details and \code{\link[=pip_run]{pip_run()}}.}
 
-\item{lgr}{The logger of the inner run, see \code{\link[=pip_run]{pip_run()}}. \code{NULL} (the
-default) runs the inner pipeline silently. To activate logging,
-set e.g. \code{lgr = pipeflow_lgr}.}
+\item{lgr}{The logger of the inner run, see \code{\link[=pip_run]{pip_run()}}. \code{NULL} (the default) runs
+the inner pipeline silently. To activate logging, set e.g. \code{lgr = pipeflow_lgr}.}
 
 \item{...}{Not used.}
 }
@@ -43,45 +41,39 @@ set e.g. \code{lgr = pipeflow_lgr}.}
 A function with the unbound params of \code{x} as arguments.
 }
 \description{
-Returns a function that runs a copy of the pipeline \code{x} and returns the
-output of selected steps. The function arguments are the unbound
-parameters of \code{x}, with their current values as defaults. As any other
-function, it can be added to an "outer" pipeline with \code{\link[=pip_add]{pip_add()}},
-in which case the unbound parameters of \code{x} become parameters of that
-pipeline.
-To bind parameters of \code{x} to output of steps of the outer pipeline,
-pass them as references in \code{params} of \code{\link[=pip_add]{pip_add()}}, e.g.
+Returns a function that runs a copy of the pipeline \code{x} and returns the output of
+selected steps. The function arguments are the unbound parameters of \code{x}, with their
+current values as defaults. As any other function, it can be added to an "outer"
+pipeline with \code{\link[=pip_add]{pip_add()}}, in which case the unbound parameters of \code{x} become
+parameters of that pipeline. To bind parameters of \code{x} to output of steps of the
+outer pipeline, pass them as references in \code{params} of \code{\link[=pip_add]{pip_add()}}, e.g.
 \code{pip_add(outer, "inner", f_inner, params = list(df = ~outer_step))}.
 }
 \details{
-By default, the inner pipeline is run silently, but warnings and messages
-of its steps are still passed on to the caller.
-A failing inner step results in an error of the caller which in turn
-makes the outer step fail.
-Param values of the outer pipeline reach the function unwrapped
-(see \code{\link[=pip_param_value]{pip_param_value()}}). The arguments of the function are values, also
-if they are formulas: unlike in \code{\link[=pip_set_params]{pip_set_params()}}, a formula argument
-does not bind a param of \code{x} to a step.
+By default, the inner pipeline is run silently, but warnings and messages of its
+steps are still passed on to the caller. A failing inner step results in an error of
+the caller which in turn makes the outer step fail. Param values of the outer
+pipeline reach the function unwrapped (see \code{\link[=pip_param_value]{pip_param_value()}}). The arguments of the
+function are values, also if they are formulas: unlike in \code{\link[=pip_set_params]{pip_set_params()}}, a
+formula argument does not bind a param of \code{x} to a step.
 \subsection{Choosing the output}{
 
-With step names in \code{out}, the function returns their outputs. If \code{out} is
-a function, it is called with the run inner pipeline, and its result is
-the result of the function, e.g. \verb{out = \\(p) pip_collect(p, by = "tags")}
-groups the outputs by tags. The pipeline that \code{out} gets is a light copy of
-the kept one: it has its own steps, but the values (params and outputs)
-are the same objects. Returning it, or a view of it, therefore keeps no
-extra copy of the data, and later calls of the function don't change it.
-Since the values are shared, don't modify them in place (e.g. with \verb{:=} on
+With step names in \code{out}, the function returns their outputs. If \code{out} is a function,
+it is called with the run inner pipeline, and its result is the result of the
+function, e.g. \verb{out = \\(p) pip_collect(p, by = "tags")} groups the outputs by tags.
+The pipeline that \code{out} gets is a light copy of the kept one: it has its own steps,
+but the values (params and outputs) are the same objects. Returning it, or a view of
+it, therefore keeps no extra copy of the data, and later calls of the function don't
+change it. Since the values are shared, don't modify them in place (e.g. with \verb{:=} on
 a \code{data.table} output).
 }
 
 \subsection{Errors of inner steps}{
 
-If an inner step fails, the error names it, e.g.
-\verb{step 'fit': negative}. As a step of an outer pipeline, the error also
-names the outer step and, if that step is mapped over partitions, the
-key: \verb{step 'by_batch': key 'D': step 'fit': negative}. Nested pipeline
-functions add one step per level:
+If an inner step fails, the error names it, e.g. \verb{step 'fit': negative}. As a step of
+an outer pipeline, the error also names the outer step and, if that step is mapped
+over partitions, the key: \verb{step 'by_batch': key 'D': step 'fit': negative}. Nested
+pipeline functions add one step per level:
 \verb{step 'outer': step 'middle': step 'fit': negative}.
 }
 
@@ -89,64 +81,59 @@ functions add one step per level:
 
 With \code{on_error = "continue"} the inner pipeline is run like
 \code{pip_run(on_error = "continue")}, that is, a failing inner step gets state
-\code{"failed"}, the inner steps that do not depend on it still run, and an
-inner step that refers to it via \code{~try(step)} runs and receives the
-failure.
+\code{"failed"}, the inner steps that do not depend on it still run, and an inner step
+that refers to it via \code{~try(step)} runs and receives the failure.
 
-The function still fails if one of the steps named in \code{out} failed or was
-not run because an input failed. Since with \code{out = NULL} or a function
-\code{out} \emph{all} steps are requested, you need to name the relevant steps in
-\code{out} to profit from a continuing inner run.
+The function still fails if one of the steps named in \code{out} failed or was not run
+because an input failed. Since with \code{out = NULL} or a function \code{out} \emph{all} steps are
+requested, you need to name the relevant steps in \code{out} to profit from a continuing
+inner run.
 }
 
 \subsection{Pipeline functions with partitioned inputs}{
 
-If the step with the pipeline function receives partitioned inputs (from
-an earlier step with \code{exec = "split"}), the function is called once per
-partition caching one inner pipeline of \code{x} per step and partition key.
-A call updates its parameters and inputs in the respective pipeline, so that
-(as usual in pipelines) only outdated inner steps are run again.
-This works for inputs bound via \code{params} of \code{\link[=pip_add]{pip_add()}} as well as for
-those bound in the step function.
+If the step with the pipeline function receives partitioned inputs (from an earlier
+step with \code{exec = "split"}), the function is called once per partition caching one
+inner pipeline of \code{x} per step and partition key. A call updates its parameters and
+inputs in the respective pipeline, so that (as usual in pipelines) only outdated
+inner steps are run again. This works for inputs bound via \code{params} of \code{\link[=pip_add]{pip_add()}} as
+well as for those bound in the step function.
 \itemize{
-\item A partition caches one pipeline for each key, which hold their inputs
-and outputs, so they need memory.
+\item A partition caches one pipeline for each key, which hold their inputs and outputs,
+so they need memory.
 \item A step without partitioned inputs keeps a single pipeline.
-\item Pure calls of the pipeline function (outside of a step) always share
-one pipeline, e.g. \code{lapply(subsets, f_pip)} don't cache anything.
-\item Do \emph{not} use the same pipeline function in two different pipelines -
-this avoids name clash of keys, which would prevent proper caching
-(not wrong but slower).
-\item Cached pipelines are stored in the function. If you save the function
-or send it to another process, they are copied, including their data
-and output, so new runs work independently from the original.
-A function that has not been called yet, or one made with
-\code{cache = FALSE}, has no pipelines and therefore is small to copy.
-\item In case of an error, the error message includes the key of the partition
-and the name of the failed inner step, see 'Errors of inner steps'.
+\item Pure calls of the pipeline function (outside of a step) always share one pipeline,
+e.g. \code{lapply(subsets, f_pip)} don't cache anything.
+\item Do \emph{not} use the same pipeline function in two different pipelines - this avoids
+name clash of keys, which would prevent proper caching (not wrong but slower).
+\item Cached pipelines are stored in the function. If you save the function or send it to
+another process, they are copied, including their data and output, so new runs work
+independently from the original. A function that has not been called yet, or one
+made with \code{cache = FALSE}, has no pipelines and therefore is small to copy.
+\item In case of an error, the error message includes the key of the partition and the
+name of the failed inner step, see 'Errors of inner steps'.
 }
 }
 
 \subsection{Limits}{
 \itemize{
-\item Params that several steps of \code{x} share by name become one argument, with
-the default of the first step as in \code{\link[=pip_get_params]{pip_get_params()}}. Every call sets
-this value in all of these steps, so a step whose own default differs
-from it runs with the value of the argument.
-\item Inputs are compared as they are. A change made in place to an
-environment or another reference object (e.g. R6) is not seen: as for
-\code{\link[=pip_set_params]{pip_set_params()}} of a pipeline, which needs \code{force = TRUE}, the
-steps stay up to date. A forced run of the outer pipeline
-(\code{pip_run(force = TRUE)}) does not force the inner pipelines either,
-but you can force them by setting \code{cache = FALSE}.
+\item Params that several steps of \code{x} share by name become one argument, with the
+default of the first step as in \code{\link[=pip_get_params]{pip_get_params()}}. Every call sets this value in
+all of these steps, so a step whose own default differs from it runs with the value
+of the argument.
+\item Inputs are compared as they are. A change made in place to an environment or
+another reference object (e.g. R6) is not seen: as for \code{\link[=pip_set_params]{pip_set_params()}} of a
+pipeline, which needs \code{force = TRUE}, the steps stay up to date. A forced run of
+the outer pipeline (\code{pip_run(force = TRUE)}) does not force the inner pipelines
+either, but you can force them by setting \code{cache = FALSE}.
 }
 }
 }
 \note{
-The conversion is done by taking a snapshot of \code{x}. Later changes of \code{x}
-therefore don't have an impact on the function. Also all steps start as new,
-so the pipeline function result does not depend on whether \code{x} has been run
-before, except for locked steps, which keep their outputs.
+The conversion is done by taking a snapshot of \code{x}. Later changes of \code{x} therefore
+don't have an impact on the function. Also all steps start as new, so the pipeline
+function result does not depend on whether \code{x} has been run before, except for locked
+steps, which keep their outputs.
 }
 \examples{
 inner <- pip_new("inner") |>

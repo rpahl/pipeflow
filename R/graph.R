@@ -1,8 +1,8 @@
 #' Build pipeline graph data
 #'
-#' Builds graph data (nodes and edges) describing the pipeline's step
-#' structure, suitable for visualisation with [visNetwork::visNetwork()],
-#' or the graph as a [mermaid](https://mermaid.js.org) flowchart.
+#' Builds graph data (nodes and edges) describing the pipeline's step structure,
+#' suitable for visualisation with [visNetwork::visNetwork()], or the graph as a
+#' [mermaid](https://mermaid.js.org) flowchart.
 #'
 #' @details
 #' Node shapes reflect execution mode:
@@ -10,34 +10,30 @@
 #' * `reduce`: `dot`
 #' * `split`: `star`
 #'
-#' Node colors reflect the step state (`new`, `done`, `outdated` or
-#' `failed`). Hovering over a node shows its `title`: the state, the exec
-#' mode, the tags, whether it is locked, the start of its last run (and its
-#' duration if it succeeded), the failed keys of a mapped step, its
-#' parameters and the steps it depends on.
+#' Node colors reflect the step state (`new`, `done`, `outdated` or `failed`). Hovering
+#' over a node shows its `title`: the state, the exec mode, the tags, whether it is
+#' locked, the start of its last run (and its duration if it succeeded), the failed keys
+#' of a mapped step, its parameters and the steps it depends on.
 #'
-#' An edge is dashed if the step refers to the other step only with
-#' `~try()`, i.e. if the step also runs when the other step failed (see
-#' [pip_run()]).
+#' An edge is dashed if the step refers to the other step only with `~try()`, i.e. if
+#' the step also runs when the other step failed (see [pip_run()]).
 #'
 #' ## Mermaid
-#' With `format = "mermaid"`, the graph is returned as the text of a mermaid
-#' flowchart. It renders without extra packages in a code block marked
-#' `mermaid`, e.g. on GitHub or in a Quarto document.
-#' It has the same colors and dashed edges as the visNetwork graph, but no
-#' hover text.
-#' The shapes are a hexagon for `auto`/`plain`, a trapezoid that widens for
-#' `split` and one that narrows for `reduce`.
+#' With `format = "mermaid"`, the graph is returned as the text of a mermaid flowchart.
+#' It renders without extra packages in a code block marked `mermaid`, e.g. on GitHub or
+#' in a Quarto document. It has the same colors and dashed edges as the visNetwork
+#' graph, but no hover text. The shapes are a hexagon for `auto`/`plain`, a trapezoid
+#' that widens for `split` and one that narrows for `reduce`.
 #'
 #' @param x A pipeflow pip or view.
-#' @param include_upstream Logical. Only relevant for views. If `TRUE`, add
-#' all upstream dependencies of selected steps.
+#' @param include_upstream Logical. Only relevant for views. If `TRUE`, add all upstream
+#' dependencies of selected steps.
 #' @param format The output format, either `"visNetwork"` or `"mermaid"`.
 #'
-#' @return For `format = "visNetwork"`, a named list with two
-#' `data.frame`s: `nodes` (columns `id`, `label`, `shape`, `color` and
-#' `title`) and `edges` (columns `from`, `to`, `arrows` and `dashes`). For
-#' `format = "mermaid"`, a single string with the mermaid flowchart.
+#' @return For `format = "visNetwork"`, a named list with two `data.frame`s: `nodes`
+#' (columns `id`, `label`, `shape`, `color` and `title`) and `edges` (columns `from`,
+#' `to`, `arrows` and `dashes`). For `format = "mermaid"`, a single string with the
+#' mermaid flowchart.
 #' @export
 #' @examples
 #' p <- pip_new()
@@ -172,9 +168,9 @@ pip_graph <- function(
 
 #' Format a value in short form for the graph
 #'
-#' A language object or a short atomic vector is deparsed, any other value
-#' is shown as `<class>`, so that a large value (e.g. a data set) is not
-#' deparsed. The result is cut off after `maxChars` characters.
+#' A language object or a short atomic vector is deparsed, any other value is shown as
+#' `<class>`, so that a large value (e.g. a data set) is not deparsed. The result is cut
+#' off after `maxChars` characters.
 #'
 #' @param x Any value.
 #' @param maxChars The maximum number of characters.
@@ -194,8 +190,8 @@ pip_graph <- function(
 #' Collapse strings to a short list
 #'
 #' @param x Character vector.
-#' @param maxItems The maximum number of items shown. If `x` is longer, the
-#' rest is marked with `"..."`.
+#' @param maxItems The maximum number of items shown. If `x` is longer, the rest is
+#' marked with `"..."`.
 #' @return A single character string with the items separated by `", "`.
 #' @noRd
 .pip_graph_format_list <- function(x, maxItems = 5L) {
@@ -208,12 +204,11 @@ pip_graph <- function(
 #' Get the step references of a step for the graph
 #'
 #' @param params The step's parameters.
-#' @param depends The step's dependencies, i.e. the referenced step names,
-#' named by parameter.
-#' @return A `data.frame` with one row per referenced step and columns
-#' `step` and `try`. `try` is `TRUE` if all parameters that reference the
-#' step are `~try()` references (see `formula_try_args()`), i.e. if the
-#' step also runs if the referenced step failed.
+#' @param depends The step's dependencies, i.e. the referenced step names, named by
+#' parameter.
+#' @return A `data.frame` with one row per referenced step and columns `step` and `try`.
+#' `try` is `TRUE` if all parameters that reference the step are `~try()` references
+#' (see `formula_try_args()`), i.e. if the step also runs if the referenced step failed.
 #' @noRd
 .pip_graph_refs <- function(params, depends) {
     isTry <- names(depends) %in% formula_try_args(params)
@@ -231,10 +226,9 @@ pip_graph <- function(
 
 #' Build the hover text of a step for the graph
 #'
-#' Lists the state, the exec mode and, if set, the tags, the lock, the last
-#' run (its start and, if it succeeded, its duration), the failed keys of a
-#' mapped step, the unbound parameters and the referenced steps (a `~try()`
-#' reference as `try(step)`).
+#' Lists the state, the exec mode and, if set, the tags, the lock, the last run (its
+#' start and, if it succeeded, its duration), the failed keys of a mapped step, the
+#' unbound parameters and the referenced steps (a `~try()` reference as `try(step)`).
 #'
 #' @param dat The step table.
 #' @param k The row of the step.
@@ -295,9 +289,9 @@ pip_graph <- function(
 
 #' Escape a mermaid label
 #'
-#' Replaces the characters that mermaid would misread in a quoted label by
-#' entity codes: `#` (which starts an entity code) first, then `"`, `<`,
-#' `>` and `&`. Line breaks become spaces.
+#' Replaces the characters that mermaid would misread in a quoted label by entity codes:
+#' `#` (which starts an entity code) first, then `"`, `<`, `>` and `&`. Line breaks
+#' become spaces.
 #'
 #' @param x Character vector.
 #' @return `x`, escaped.
@@ -313,12 +307,11 @@ pip_graph <- function(
 
 #' Build the mermaid flowchart of the graph
 #'
-#' Each step is a node `n<nodeId>` with the step name as quoted label, so
-#' that any step name is safe. Its shape reflects the exec mode: a hexagon
-#' for `auto`/`plain`, a trapezoid that widens (`[/ \]`) for `split` and one
-#' that narrows (`[\ /]`) for `reduce`. A `~try()` edge is dashed (`-.->`).
-#' Each state that occurs gets a `classDef` with the color of
-#' `.step_states` and a `class` line with its nodes.
+#' Each step is a node `n<nodeId>` with the step name as quoted label, so that any step
+#' name is safe. Its shape reflects the exec mode: a hexagon for `auto`/`plain`, a
+#' trapezoid that widens (`[/ \]`) for `split` and one that narrows (`[\ /]`) for
+#' `reduce`. A `~try()` edge is dashed (`-.->`). Each state that occurs gets a
+#' `classDef` with the color of `.step_states` and a `class` line with its nodes.
 #'
 #' @param dat The step table of the steps in the graph.
 #' @param edges The edges as built by `pip_graph()`.

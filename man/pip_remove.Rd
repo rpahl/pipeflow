@@ -11,22 +11,21 @@ pip_remove(x, step, force = FALSE)
 
 \item{step}{\code{string} the name of the step to be removed.}
 
-\item{force}{\code{logical} if \code{TRUE} the step is removed together
-with all its downstream dependencies.}
+\item{force}{\code{logical} if \code{TRUE} the step is removed together with all its downstream
+dependencies.}
 }
 \value{
 The updated pipeline or view, invisibly.
 }
 \description{
-Removes a pipeline step by its name. If other steps depend on it,
-an error is given and the removal of the step is blocked, unless
-\code{force} was set to \code{TRUE}, which will remove the selected step
-together with all its downstream dependent steps.
+Removes a pipeline step by its name. If other steps depend on it, an error is given
+and the removal of the step is blocked, unless \code{force} was set to \code{TRUE}, which will
+remove the selected step together with all its downstream dependent steps.
 }
 \note{
-If called on a view, the step to be removed must be part of the view.
-The view, as well as any other view on the same pipeline, stays valid:
-the removed steps just drop out of it.
+If called on a view, the step to be removed must be part of the view. The view, as
+well as any other view on the same pipeline, stays valid: the removed steps just drop
+out of it.
 }
 \examples{
 p <- pip_new() |>

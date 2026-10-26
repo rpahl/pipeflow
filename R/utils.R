@@ -29,13 +29,12 @@ is_one_sided_formula <- function(x) {
 
 #' Check for a step reference wrapped in `try()`
 #'
-#' A step reference wrapped in `try()`, e.g. `~try(step)`, marks an argument
-#' that may receive a failed input (see [pip_run()]). Only `try()` calls with
-#' exactly one argument count.
+#' A step reference wrapped in `try()`, e.g. `~try(step)`, marks an argument that may
+#' receive a failed input (see [pip_run()]). Only `try()` calls with exactly one
+#' argument count.
 #'
 #' @param x Any object.
-#' @return `TRUE` if `x` is a one-sided formula of the form `~try(<ref>)`,
-#' else `FALSE`.
+#' @return `TRUE` if `x` is a one-sided formula of the form `~try(<ref>)`, else `FALSE`.
 #' @noRd
 is_try_ref <- function(x) {
     is_one_sided_formula(x) &&
@@ -46,12 +45,11 @@ is_try_ref <- function(x) {
 
 #' Extract the step references of a list of parameters
 #'
-#' @param x List of parameters. Its one-sided formulas are step references,
-#' where a reference wrapped in `try()` (see `is_try_ref()`) is unwrapped.
-#' @return Character vector of the referenced step names or relative
-#' positions (e.g. `"-1"`), named like the respective elements of `x`. A
-#' step name is returned as is, also if it is non-syntactic, e.g.
-#' `"source data"` for ``~`source data` ``.
+#' @param x List of parameters. Its one-sided formulas are step references, where a
+#' reference wrapped in `try()` (see `is_try_ref()`) is unwrapped.
+#' @return Character vector of the referenced step names or relative positions (e.g.
+#' `"-1"`), named like the respective elements of `x`. A step name is returned as is,
+#' also if it is non-syntactic, e.g. `"source data"` for ``~`source data` ``.
 #' @noRd
 formula_deps <- function(x) {
     deps <- Filter(f = is_one_sided_formula, x = x) |>
@@ -70,8 +68,8 @@ formula_deps <- function(x) {
 #' Get the arguments with step references wrapped in `try()`
 #'
 #' @param x List of parameters.
-#' @return Character vector of the names of the elements of `x` that are
-#' step references wrapped in `try()` (see `is_try_ref()`).
+#' @return Character vector of the names of the elements of `x` that are step references
+#' wrapped in `try()` (see `is_try_ref()`).
 #' @noRd
 formula_try_args <- function(x) {
     as.character(names(Filter(f = is_try_ref, x = x)))
@@ -79,10 +77,9 @@ formula_try_args <- function(x) {
 
 #' Point a step reference to another step
 #'
-#' Only the referenced name is swapped, so that the formula keeps its
-#' environment and a `try()` wrapper (see `is_try_ref()`). Building the
-#' formula from a string instead would attach the calling frame and fail for
-#' non-syntactic step names.
+#' Only the referenced name is swapped, so that the formula keeps its environment and a
+#' `try()` wrapper (see `is_try_ref()`). Building the formula from a string instead
+#' would attach the calling frame and fail for non-syntactic step names.
 #'
 #' @param x One-sided formula that references a step.
 #' @param step Name of the step to refer to.

@@ -13,22 +13,21 @@ pip_run_state(x)
 A single character string.
 }
 \description{
-Returns the state of the last (or current) run of a pipeline. Views share
-the run state of their pipeline.
+Returns the state of the last (or current) run of a pipeline. Views share the run
+state of their pipeline.
 }
 \details{
 The run state is one of
 \itemize{
-\item \code{"ready"}: the pipeline is new, was reset, or its last run finished
-without failures.
+\item \code{"ready"}: the pipeline is new, was reset, or its last run finished without
+failures.
 \item \code{"running"}: a run is in progress (seen from within a step).
-\item \code{"restart"}: a step requested a restart, which \code{\link[=pip_run]{pip_run()}} carries out
-right after the step.
-\item \code{"halted"}: a step or the \code{progress} callback halted the run (see
-section 'Runtime control flow via restart and halt' in \code{\link[=pip_run]{pip_run()}}).
+\item \code{"restart"}: a step requested a restart, which \code{\link[=pip_run]{pip_run()}} carries out right after
+the step.
+\item \code{"halted"}: a step or the \code{progress} callback halted the run (see section 'Runtime
+control flow via restart and halt' in \code{\link[=pip_run]{pip_run()}}).
 \item \code{"failed"}: the last run stopped on an error (\code{on_error = "stop"}).
-\item \code{"continued"}: the last run had failed steps but went on
-(\code{on_error = "continue"}).
+\item \code{"continued"}: the last run had failed steps but went on (\code{on_error = "continue"}).
 }
 
 \code{\link[=pip_reset]{pip_reset()}} sets the run state back to \code{"ready"}.

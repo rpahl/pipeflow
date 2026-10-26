@@ -6,7 +6,7 @@ applyTo: '**/*.Rmd'
 
 # R Markdown / Vignette Conventions
 
-- Keep lines wrapped at ≤80 characters where feasible.
+- Keep lines wrapped at ≤88 characters where feasible.
 - Use informative chunk labels (e.g., `data-prep`, `model-fit`) rather
   than auto-numbering.
 - Set global knitr options at the top of each `.Rmd` file:

@@ -13,15 +13,14 @@ pip_data(x)
 The underlying step table as a \code{data.table}.
 }
 \description{
-This is a convenience wrapper for accessing the internal \code{data.table},
-which normally is reachable via \code{p[["pipenv"]][["data"]]}.
+This is a convenience wrapper for accessing the internal \code{data.table}, which normally
+is reachable via \code{p[["pipenv"]][["data"]]}.
 }
 \details{
-The internal \code{data.table} is holding the pipeline steps, one row
-per step. Unless you know what you are doing, this table should not be
-modified directly, as this can corrupt the pipeline including any views
-that are derived from it. If you want to experiment, consider cloning the
-pipeline first with \code{\link[=pip_clone]{pip_clone()}}.
+The internal \code{data.table} is holding the pipeline steps, one row per step.
+Unless you know what you are doing, this table should not be modified directly, as
+this can corrupt the pipeline including any views that are derived from it. If you
+want to experiment, consider cloning the pipeline first with \code{\link[=pip_clone]{pip_clone()}}.
 }
 \examples{
 p <- pip_new() |>

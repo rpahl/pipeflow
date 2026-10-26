@@ -7,45 +7,43 @@
 pip_output_value(x, ctx = list(), ...)
 }
 \arguments{
-\item{x}{The output value of a step, or one of its partitions if the
-output is partitioned.}
+\item{x}{The output value of a step, or one of its partitions if the output is
+partitioned.}
 
 \item{ctx}{Named list describing the context of the value:
 \itemize{
 \item \code{step}: the name of the step, as it was before the step ran.
 \item \code{key}: the partition key, or \code{NULL} if the output is not partitioned.
-\item \code{time}: the time stamp of the step's run, which is the same for all
-partition keys and is also stored as the step's \code{time}.
+\item \code{time}: the time stamp of the step's run, which is the same for all partition keys
+and is also stored as the step's \code{time}.
 }}
 
-\item{...}{Currently unused, reserved for future extensions. Methods
-should accept it.}
+\item{...}{Currently unused, reserved for future extensions. Methods should accept
+it.}
 }
 \value{
 The value that is stored as the step's output.
 }
 \description{
-\code{pip_output_value()} is an extension point for annotating the outputs
-of a pipeline, for example to stamp a result with the step it came
-from or the time it was computed.
-It can be thought of as a hook that allows you to postprocess or annotate
-the output of a step before it is stored.
-The generic is applied to the output of a step right after the step
-function returns, and its result is what is stored as the step's output.
+\code{pip_output_value()} is an extension point for annotating the outputs of a pipeline,
+for example to stamp a result with the step it came from or the time it was computed.
+It can be thought of as a hook that allows you to postprocess or annotate the output
+of a step before it is stored. The generic is applied to the output of a step right
+after the step function returns, and its result is what is stored as the step's
+output.
 }
 \details{
-The default method returns \code{x} unchanged. Methods are meant for your own
-classes, not for base classes such as \code{numeric} or \code{character}.
+The default method returns \code{x} unchanged. Methods are meant for your own classes, not
+for base classes such as \code{numeric} or \code{character}.
 
-The generic is applied once to the output as a whole, so a method sees
-the whole object a step returned. The one exception is a partitioned
-output (a step with \code{exec = "split"}, or a step that was mapped over a
-partitioned input): there the generic is applied once per partition, and
-each partition gets its key in \code{ctx$key}.
+The generic is applied once to the output as a whole, so a method sees the whole
+object a step returned. The one exception is a partitioned output (a step with
+\code{exec = "split"}, or a step that was mapped over a partitioned input): there the
+generic is applied once per partition, and each partition gets its key in \code{ctx$key}.
 
-If you want to annotate an output element-wise instead of the whole
-object, just write a method that walks over each element. For example,
-for a plain list, a method could look something like this:
+If you want to annotate an output element-wise instead of the whole object, just
+write a method that walks over each element. For example, for a plain list, a method
+could look something like this:
 
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{pip_output_value.list <- function(x, ctx = list(), ...) \{
     x[] <- lapply(x, FUN = pip_output_value, ctx = ctx)
@@ -54,11 +52,10 @@ for a plain list, a method could look something like this:
 }\if{html}{\out{</div>}}
 
 The generic is \emph{not} applied to the outputs of failed steps (see
-\code{pip_run(on_error = "continue")}), which remain the condition of the
-failure, nor to the inputs a step receives from other steps: it acts on
-what a step returns, once. An error in a method is an error of the step
-and is handled like any other step error; for a partitioned output it
-names the partition key the method failed for.
+\code{pip_run(on_error = "continue")}), which remain the condition of the failure, nor to
+the inputs a step receives from other steps: it acts on what a step returns, once. An
+error in a method is an error of the step and is handled like any other step error;
+for a partitioned output it names the partition key the method failed for.
 }
 \examples{
 # Stamp every output with the step it came from

@@ -13,17 +13,16 @@ pip_inner(x, step)
 \code{\link[=as.function.pipeflow]{as.function.pipeflow()}}.}
 }
 \value{
-For a step that is mapped over partitions, a list of pipelines
-named by partition key, otherwise the pipeline of the last call of the
-step. The pipelines are copies that share the values of the kept ones, so
-don't modify the values in place. An empty list is returned if the function
-has kept nothing (yet), e.g. before the first run or with
-\code{cache = FALSE}.
+For a step that is mapped over partitions, a list of pipelines named by
+partition key, otherwise the pipeline of the last call of the step. The pipelines are
+copies that share the values of the kept ones, so don't modify the values in place.
+An empty list is returned if the function has kept nothing (yet), e.g. before the
+first run or with \code{cache = FALSE}.
 }
 \description{
 Returns the inner pipelines that the function of \code{step}, made by
-\code{\link[=as.function.pipeflow]{as.function.pipeflow()}}, has kept, e.g. to debug an inner run or to look
-at the steps behind the returned output.
+\code{\link[=as.function.pipeflow]{as.function.pipeflow()}}, has kept, e.g. to debug an inner run or to look at the
+steps behind the returned output.
 }
 \examples{
 inner <- pip_new("inner") |>

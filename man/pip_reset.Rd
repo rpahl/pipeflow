@@ -7,29 +7,26 @@
 pip_reset(x)
 }
 \arguments{
-\item{x}{A pipeflow pip or view. If a view is given, only the steps covered
-by the view are reset.}
+\item{x}{A pipeflow pip or view. If a view is given, only the steps covered by the
+view are reset.}
 }
 \value{
 The updated pipeline or view, invisibly.
 }
 \description{
-Resets all unlocked steps of a pipeline (or a subset of steps defined by a
-view) to state \code{"new"} and clears their outputs, so a subsequent
-\code{\link[=pip_run]{pip_run()}} re-executes the cleaned steps from scratch. Their downstream
-steps that have run are marked \code{"outdated"}, as they ran with the cleared
-outputs.
-Any pending restart counters are cleared, but parameters, tags, and
-locked flags are left unchanged. If all steps of the pipeline are
-selected, the run state is set to \code{"ready"} and the time of the last run
-is cleared. A view that covers only some steps leaves both alone, as they
+Resets all unlocked steps of a pipeline (or a subset of steps defined by a view) to
+state \code{"new"} and clears their outputs, so a subsequent \code{\link[=pip_run]{pip_run()}} re-executes the
+cleaned steps from scratch. Their downstream steps that have run are marked
+\code{"outdated"}, as they ran with the cleared outputs. Any pending restart counters are
+cleared, but parameters, tags, and locked flags are left unchanged. If all steps of
+the pipeline are selected, the run state is set to \code{"ready"} and the time of the last
+run is cleared. A view that covers only some steps leaves both alone, as they
 describe the whole pipeline.
 }
 \details{
-Locked steps are skipped: their state and output are preserved,
-also if they are downstream of a reset step.
-If all selected steps are locked, a message is shown and nothing is
-changed.
+Locked steps are skipped: their state and output are preserved, also if they
+are downstream of a reset step. If all selected steps are locked, a message is shown
+and nothing is changed.
 }
 \examples{
 p <- pip_new() |>

@@ -23,16 +23,15 @@
 #' Edit a pipeline completely or not at all
 #'
 #' Evaluates `edit`, which changes the pipeline one step at a time, e.g. in
-#' `p[i, j] <- value`. If it fails, the pipeline is restored from a
-#' snapshot (`.pip_snapshot()`), so that the failed edit changes nothing.
-#' The pipeline is restored as soon as the error is signalled, before the
-#' handlers outside see it. So a step that edits its own pipeline via
-#' `.self` and fails with the edit is still marked `"failed"` by
-#' `.pip_run_row()`. An interrupt restores the pipeline on exit.
+#' `p[i, j] <- value`. If it fails, the pipeline is restored from a snapshot
+#' (`.pip_snapshot()`), so that the failed edit changes nothing. The pipeline is
+#' restored as soon as the error is signalled, before the handlers outside see it. So a
+#' step that edits its own pipeline via `.self` and fails with the edit is still marked
+#' `"failed"` by `.pip_run_row()`. An interrupt restores the pipeline on exit.
 #'
 #' @param x A pipeflow pipeline or view.
-#' @param edit The code that edits `x`. It is evaluated in the calling
-#' frame, so it can assign to the variables there.
+#' @param edit The code that edits `x`. It is evaluated in the calling frame, so it can
+#' assign to the variables there.
 #' @return `NULL`, invisibly.
 #' @noRd
 .pip_all_or_nothing <- function(x, edit) {
@@ -54,17 +53,16 @@
 
 #' Take a snapshot of a pipeline to undo a failed edit
 #'
-#' Like `.pip_clone(deep = FALSE)`, the snapshot is a light copy of the step
-#' table: its columns are new vectors, but the functions, params and outputs
-#' are shared. The step table and the two step maps are restored in place
-#' (see `.pip_restore()`), because a running pipeline keeps references to
-#' them (`pip_run()`, `.pip_run_row()`).
+#' Like `.pip_clone(deep = FALSE)`, the snapshot is a light copy of the step table: its
+#' columns are new vectors, but the functions, params and outputs are shared. The step
+#' table and the two step maps are restored in place (see `.pip_restore()`), because a
+#' running pipeline keeps references to them (`pip_run()`, `.pip_run_row()`).
 #'
 #' @param pipenv The inner pipeline environment.
-#' @return A list with the step table and copies of its columns, a copy of
-#' the DAG, the two step maps and copies of their entries, and the kept inner
-#' pipelines of the step functions made by [as.function.pipeflow()], which a
-#' rename moves (see `.fun_rename()`).
+#' @return A list with the step table and copies of its columns, a copy of the DAG, the
+#' two step maps and copies of their entries, and the kept inner pipelines of the step
+#' functions made by [as.function.pipeflow()], which a rename moves (see
+#' `.fun_rename()`).
 #' @noRd
 .pip_snapshot <- function(pipenv) {
     dat <- pipenv[["data"]]
@@ -87,8 +85,8 @@
 #'
 #' @param pipenv The inner pipeline environment.
 #' @param snapshot The result of `.pip_snapshot(pipenv)`.
-#' @return `pipenv`, invisibly. The snapshot is written into `pipenv`, so
-#' the views of the pipeline see the restored pipeline as well.
+#' @return `pipenv`, invisibly. The snapshot is written into `pipenv`, so the views of
+#' the pipeline see the restored pipeline as well.
 #' @noRd
 .pip_restore <- function(pipenv, snapshot) {
     # The step table that was edited in place, or replaced by a new one if
@@ -122,22 +120,20 @@
 # ----------
 #' Compact a pipeline to a subset of steps
 #'
-#' Helper to build new pipeline from the steps of `x` whose `nodeId` is
-#' contained in `keepNodes`. The kept rows get a compact node id sequence,
-#' and the DAG and the step->node lookup are re-built from the `depends`
-#' values.
-#' For a small number of kept steps, the DAG is built node by node in R. If
-#' roughly a third or more of the steps are kept, it is faster to clone the
-#' existing DAG, remove the excluded nodes in place, and compact the ids in
-#' C++ via dag_rebuild().
+#' Helper to build new pipeline from the steps of `x` whose `nodeId` is contained in
+#' `keepNodes`. The kept rows get a compact node id sequence, and the DAG and the
+#' step->node lookup are re-built from the `depends` values. For a small number of kept
+#' steps, the DAG is built node by node in R. If roughly a third or more of the steps
+#' are kept, it is faster to clone the existing DAG, remove the excluded nodes in place,
+#' and compact the ids in C++ via dag_rebuild().
 #'
 #' @param x A pipeflow pipeline.
 #' @param keepNodes Integer vector of node ids to keep.
-#' @param rebuildThresh Fraction of steps to keep above which the DAG is
-#' rebuilt. The default value of 0.3 was determined empirically, that is,
-#' at this fraction both methods take roughly the same time.
-#' @return A new pipeflow pipeline with the selected steps and a compact
-#' node id sequence.
+#' @param rebuildThresh Fraction of steps to keep above which the DAG is rebuilt. The
+#' default value of 0.3 was determined empirically, that is, at this fraction both
+#' methods take roughly the same time.
+#' @return A new pipeflow pipeline with the selected steps and a compact node id
+#' sequence.
 #' @noRd
 .pip_compact <- function(x, keepNodes, rebuildThresh = 0.3) {
     pipenv <- .pip_pipenv(x)
@@ -224,26 +220,23 @@
 
 #' Resolve the `i` selector of `[.pipeflow` to rows of the step table
 #'
-#' `i_expr` is evaluated with the columns of the covered rows (those of the
-#' view, or all rows of a pipeline) as variables, so a filter like
-#' `state == "done"` only sees the steps of a view. What it evaluates to
-#' selects the rows:
-#' * logical: a filter over the covered rows. A single value is recycled,
-#'   otherwise it needs one value per covered row and no `NA`.
-#' * numeric: positions among the covered rows, so `1` is the first step of
-#'   a view, not of the pipeline. Negative positions exclude rows, as in
-#'   base R.
+#' `i_expr` is evaluated with the columns of the covered rows (those of the view, or all
+#' rows of a pipeline) as variables, so a filter like `state == "done"` only sees the
+#' steps of a view. What it evaluates to selects the rows:
+#' * logical: a filter over the covered rows. A single value is recycled, otherwise it
+#'   needs one value per covered row and no `NA`.
+#' * numeric: positions among the covered rows, so `1` is the first step of a view, not
+#'   of the pipeline. Negative positions exclude rows, as in base R.
 #' * character: step names, which must be covered by the view.
 #'
 #' @param x A pipeflow pipeline or view.
 #' @param i_expr The unevaluated `i` expression.
-#' @param enclos The enclosing environment of the evaluation, e.g. the
-#' caller of `[`. The data.table filter operators (`.filter_ops`) are put
-#' in between, so `%like%` and others work without attaching data.table.
-#' @param keep_order If `FALSE`, positions and step names are sorted and
-#' made unique, so the rows come in pipeline order. If `TRUE`, they are
-#' kept in the given order, with repeats. Logical filters always give rows
-#' in pipeline order.
+#' @param enclos The enclosing environment of the evaluation, e.g. the caller of `[`.
+#' The data.table filter operators (`.filter_ops`) are put in between, so `%like%` and
+#' others work without attaching data.table.
+#' @param keep_order If `FALSE`, positions and step names are sorted and made unique, so
+#' the rows come in pipeline order. If `TRUE`, they are kept in the given order, with
+#' repeats. Logical filters always give rows in pipeline order.
 #' @return Integer vector of absolute row indices of the step table.
 #' @noRd
 .pip_select_rows <- function(x, i_expr, enclos, keep_order = FALSE) {
@@ -337,8 +330,8 @@
 #'
 #' @param x A pipeflow pipeline or view. A view does not restrict the steps.
 #' @param steps Character vector of step names.
-#' @return Integer vector of absolute row indices, in the order of `steps`.
-#' Signals an error for `NA`, empty or unknown step names.
+#' @return Integer vector of absolute row indices, in the order of `steps`. Signals an
+#' error for `NA`, empty or unknown step names.
 #' @noRd
 .pip_steps_to_rows <- function(x, steps) {
     data <- .pip_pipenv(x)[["data"]]
@@ -363,12 +356,10 @@
 # Run control
 # -----------
 #'
-#' Does the work of `.self$restart()`, called from within a step (see the
-#' `$` method). Sets the run state to `"restart"`, so that `pip_run()`
-#' starts over after the step.
-#' `times` limits the number of restarts: once the pipeline has restarted
-#' `times` times, the call does not restart it again but resets the count,
-#' so the run goes on.
+#' Does the work of `.self$restart()`, called from within a step (see the `$` method).
+#' Sets the run state to `"restart"`, so that `pip_run()` starts over after the step.
+#' `times` limits the number of restarts: once the pipeline has restarted `times` times,
+#' the call does not restart it again but resets the count, so the run goes on.
 #'
 #' @param pipenv The inner pipeline environment.
 #' @param force The `force` of the restarted run, see [pip_run()].
@@ -397,9 +388,8 @@
 
 #' Ask a running pipeline to stop after the current step
 #'
-#' Does the work of `.self$halt()`, called from within a step (see the `$`
-#' method). Sets the run state to `"halted"`, so that `pip_run()` runs no
-#' further steps.
+#' Does the work of `.self$halt()`, called from within a step (see the `$` method). Sets
+#' the run state to `"halted"`, so that `pip_run()` runs no further steps.
 #'
 #' @param pipenv The inner pipeline environment.
 #' @return `NULL`, invisibly.
@@ -415,13 +405,13 @@
 # --------------
 #' The virtual methods of a pipeline
 #'
-#' Maps method names to the functions that implement them, so that `[[` and
-#' `$` can offer `p$add(...)` as a shorthand for `pip_add(p, ...)`. The map is
-#' built on the first call, since the `pip_*` functions are not all defined
-#' yet when this file is sourced.
+#' Maps method names to the functions that implement them, so that `[[` and `$` can
+#' offer `p$add(...)` as a shorthand for `pip_add(p, ...)`. The map is built on the
+#' first call, since the `pip_*` functions are not all defined yet when this file is
+#' sourced.
 #'
-#' @return An environment: method name -> function whose first argument is
-#' the pipeline or view.
+#' @return An environment: method name -> function whose first argument is the pipeline
+#' or view.
 #' @noRd
 .pip_method_table <- local({
     table <- NULL
@@ -466,22 +456,19 @@
 
 #' Extract a field, method, column or cell of a pipeline or view
 #'
-#' Does the work of `[[.pipeflow`. With `j = NULL`, `i` is looked up in this
-#' order:
+#' Does the work of `[[.pipeflow`. With `j = NULL`, `i` is looked up in this order:
 #' 1. `"view"`: the steps covered by a view, `NULL` for a pipeline.
 #' 2. `"pipenv"` and the other fields of the wrapper (`"name"`).
-#' 3. A virtual method (see `.pip_method_table()`), returned as a function
-#'    with `x` bound as its first argument.
-#' 4. A column of the step table, by name or position, with its values of
-#'    the covered rows named by step, or `NULL` for an unknown column.
+#' 3. A virtual method (see `.pip_method_table()`), returned as a function with `x`
+#'    bound as its first argument.
+#' 4. A column of the step table, by name or position, with its values of the covered
+#'    rows named by step, or `NULL` for an unknown column.
 #'
 #' @param x A pipeflow pipeline or view.
-#' @param i A single field, method or column name or column position, or,
-#' with `j`, a single step name or row position. Row positions count among
-#' the rows covered by `x`.
+#' @param i A single field, method or column name or column position, or, with `j`, a
+#' single step name or row position. Row positions count among the rows covered by `x`.
 #' @param j `NULL`, or a single column name to extract one cell.
-#' @return The extracted value. A cell keeps the class of its column, see
-#' `.cell()`.
+#' @return The extracted value. A cell keeps the class of its column, see `.cell()`.
 #' @noRd
 .pip_subset2 <- function(x, i, j = NULL) {
     if (missing(i)) {
@@ -558,9 +545,9 @@
 
 #' Get one element of a step table column
 #'
-#' Unlike `[[`, which drops the class of an atomic vector unless it has its
-#' own `[[` method (as `POSIXct` has, but `difftime` hasn't), the element of
-#' an atomic column keeps its class, e.g. a `duration` stays a `difftime`.
+#' Unlike `[[`, which drops the class of an atomic vector unless it has its own `[[`
+#' method (as `POSIXct` has, but `difftime` hasn't), the element of an atomic column
+#' keeps its class, e.g. a `duration` stays a `difftime`.
 #'
 #' @param col A column of the step table.
 #' @param row A single row index.
@@ -576,21 +563,19 @@
 # -------------------
 #' Copy steps of one pipeline or view onto selected steps of another
 #'
-#' Does the work of `x[i] <- q` when `q` is a pipeline or view. The k-th
-#' selected row of `x` gets the step name, function, params, exec mode,
-#' output, state, times, tags and lock of the k-th covered row of `q`. The
-#' derived columns (`nodeId`, `depends`, `unbound`) are not copied but
-#' follow from the copied function and params. The references in the params
-#' of `q` are given by name, so a relative reference (`~-1`) keeps pointing
-#' to the step that it pointed to in `q`, which must exist in `x`. If a row
-#' fails, the rows copied before are undone (see `.pip_all_or_nothing()`).
-#' `q` may be `x` itself.
+#' Does the work of `x[i] <- q` when `q` is a pipeline or view. The k-th selected row of
+#' `x` gets the step name, function, params, exec mode, output, state, times, tags and
+#' lock of the k-th covered row of `q`. The derived columns (`nodeId`, `depends`,
+#' `unbound`) are not copied but follow from the copied function and params. The
+#' references in the params of `q` are given by name, so a relative reference (`~-1`)
+#' keeps pointing to the step that it pointed to in `q`, which must exist in `x`. If a
+#' row fails, the rows copied before are undone (see `.pip_all_or_nothing()`). `q` may
+#' be `x` itself.
 #'
 #' @param x A pipeflow pipeline or view.
-#' @param i The unevaluated `i` of `[<-`, see `.pip_select_rows()`. Its rows
-#' are taken in the given order.
-#' @param q A pipeflow pipeline or view with as many covered rows as `i`
-#' selects.
+#' @param i The unevaluated `i` of `[<-`, see `.pip_select_rows()`. Its rows are taken
+#' in the given order.
+#' @param q A pipeflow pipeline or view with as many covered rows as `i` selects.
 #' @param enclos The environment to evaluate `i` in.
 #' @return `x`.
 #' @noRd
@@ -706,13 +691,12 @@
 # ----------------
 #' Bind two pipelines by appending the steps of one to the other
 #'
-#' Does the work of `rbind()` for two pipelines. A step of `y` whose name is
-#' taken (by a step of `x` or an earlier step of `y`) is renamed by adding
-#' the first free number from 2 on, e.g. `a` becomes `a2`, and references to
-#' it in `y` follow. Relative references of `y` become references by name,
-#' so they keep pointing to the steps of `y`. The current params of the
-#' steps of `y` become the defaults of their functions. Outputs, states,
-#' times and locks of the steps of `y` are kept.
+#' Does the work of `rbind()` for two pipelines. A step of `y` whose name is taken (by a
+#' step of `x` or an earlier step of `y`) is renamed by adding the first free number
+#' from 2 on, e.g. `a` becomes `a2`, and references to it in `y` follow. Relative
+#' references of `y` become references by name, so they keep pointing to the steps of
+#' `y`. The current params of the steps of `y` become the defaults of their functions.
+#' Outputs, states, times and locks of the steps of `y` are kept.
 #'
 #' @param x,y Pipeflow pipelines (not views). Neither is changed.
 #' @return A new pipeline named `"<name of x>-<name of y>"`.
@@ -828,10 +812,9 @@ length.pipeflow <- function(x) {
 
 #' Dimensions of a pipeflow pipeline or view
 #'
-#' Treats a pipeline as a table of steps: `length()` and `nrow()` return the
-#' number of steps, `ncol()` returns the number of columns of the underlying
-#' step table, and `dim()` returns both. Views report only the steps covered
-#' by the view.
+#' Treats a pipeline as a table of steps: `length()` and `nrow()` return the number of
+#' steps, `ncol()` returns the number of columns of the underlying step table, and
+#' `dim()` returns both. Views report only the steps covered by the view.
 #' @param x A pipeflow pipeline or view
 #' @return
 #' * `length()`, `nrow()`: the number of steps
@@ -872,74 +855,66 @@ dim.pipeflow <- function(x) {
 # -------------------
 #' Extract or replace parts of a pipeline
 #'
-#' A pipeline can be subset, read from and written to with the usual extract
-#' and replace operators, treating it as a table of steps. The extraction
-#' operators mirror base R, and the replacement operators update steps (or
-#' their properties) in place.
+#' A pipeline can be subset, read from and written to with the usual extract and replace
+#' operators, treating it as a table of steps. The extraction operators mirror base R,
+#' and the replacement operators update steps (or their properties) in place.
 #'
 #' @details
 #' ## Extract or subset a pipeline (`x[i, j, view = TRUE]`)
 #'
-#' `p[...]` selects steps from a pipeline. By default, a lightweight
-#' [pip_view()] is returned that references the selected steps without
-#' copying them. Set `view = FALSE` to instead get a new, self-contained
-#' pipeline that includes all required upstream dependencies.
+#' `p[...]` selects steps from a pipeline. By default, a lightweight [pip_view()] is
+#' returned that references the selected steps without copying them. Set `view = FALSE`
+#' to instead get a new, self-contained pipeline that includes all required upstream
+#' dependencies.
 #'
 #' Three forms of row selection are supported:
 #' * **row indices** (relative to the current selection), e.g. `p[2:3]`,
 #' * **step names**, e.g. `p[c("load", "fit")]`,
-#' * a **boolean filter** that is evaluated in the context of the pipeline's
-#'   step table, e.g. `p[state == "new"]` or
-#'   `p[step %in% c("load", "fit") & tags %like% "io"]`.
+#' * a **boolean filter** that is evaluated in the context of the pipeline's step table,
+#'   e.g. `p[state == "new"]` or `p[step %in% c("load", "fit") & tags %like% "io"]`.
 #'
-#' Boolean filters may reference the columns of the step table (`step`, `fun`,
-#' `params`, `depends`, `tags`, `state`, ...) directly as variables. The
-#' filter operators of \pkg{data.table} (`%like%`, `%ilike%`, `%flike%`,
-#' `%plike%`, `%chin%`, `%between%`, `%inrange%` and `%notin%`) are
-#' available in the filter without attaching \pkg{data.table}. `p[]` returns
-#' a copy of the pipeline.
+#' Boolean filters may reference the columns of the step table (`step`, `fun`, `params`,
+#' `depends`, `tags`, `state`, ...) directly as variables. The filter operators of
+#' \pkg{data.table} (`%like%`, `%ilike%`, `%flike%`, `%plike%`, `%chin%`, `%between%`,
+#' `%inrange%` and `%notin%`) are available in the filter without attaching
+#' \pkg{data.table}. `p[]` returns a copy of the pipeline.
 #'
-#' Note that `tags` is a list column, so `%like%` matches the pattern against
-#' the tags of each step converted to a single string, e.g. `"character(0)"`
-#' for a step without tags and `'c("io", "daily")'` for a step with two tags.
-#' A pattern can therefore also match untagged steps (e.g.
-#' `tags %like% "a"`), and anchored patterns such as `"^io$"` miss steps with
-#' several tags. To match tags exactly, use the `tags` argument of
+#' Note that `tags` is a list column, so `%like%` matches the pattern against the tags
+#' of each step converted to a single string, e.g. `"character(0)"` for a step without
+#' tags and `'c("io", "daily")'` for a step with two tags. A pattern can therefore also
+#' match untagged steps (e.g. `tags %like% "a"`), and anchored patterns such as `"^io$"`
+#' miss steps with several tags. To match tags exactly, use the `tags` argument of
 #' [pip_view()], e.g. `pip_view(p, tags = "io")`.
 #'
-#' When `j` is provided, the selected steps are returned as a step-table
-#' extraction rather than a pipeline. `j` must be a character vector of column
-#' names: `p[, j]` keeps those columns for all steps and `p[i, j]` first
-#' selects the rows and then keeps those columns. The result in this case is a
-#' `data.table`.
+#' When `j` is provided, the selected steps are returned as a step-table extraction
+#' rather than a pipeline. `j` must be a character vector of column names: `p[, j]`
+#' keeps those columns for all steps and `p[i, j]` first selects the rows and then keeps
+#' those columns. The result in this case is a `data.table`.
 #'
-#' If done on a view, row selection is relative to the covered steps, and step
-#' names must be part of the view. For validated,
-#' programmatic filters with dedicated arguments (such as matching *any* of a
-#' set of tags) use [pip_view()] instead.
+#' If done on a view, row selection is relative to the covered steps, and step names
+#' must be part of the view. For validated, programmatic filters with dedicated
+#' arguments (such as matching *any* of a set of tags) use [pip_view()] instead.
 #' @param x A pipeflow pipeline or view object.
-#' @param i The row or field selector. For `[` and `[<-`, the rows to select:
-#' integer row indices, character step names, or a boolean filter expression
-#' evaluated in the context of the step table. For `[[`, a
-#' step-table column name, a meta field, or — in the two-index form — a step
-#' name or integer row index. For `[[<-`, a step name, an integer row index,
-#' or one of the meta fields `"name"` and `"view"`. For a view, indices are
-#' relative to the covered steps and step names must be part of the view.
-#' @param j For `[`, an optional character vector of step-table column names
-#' to extract. For `[<-`, the single step property to assign. For `[[` and
-#' `[[<-`, the column or step property to extract or assign.
-#' @param view For `[`, if `TRUE` (default), a view referencing the selected
-#' steps is returned. If `FALSE`, a new pipeline is returned that includes the
-#' selected steps and all their upstream dependencies. Ignored when `j` is
-#' provided. With no selection, `v[, view = FALSE]` turns a view into a
-#' standalone pipeline of all its covered steps, which is also the way to
-#' get a copy of a view, as [pip_clone()] requires a full pipeline.
+#' @param i The row or field selector. For `[` and `[<-`, the rows to select: integer
+#' row indices, character step names, or a boolean filter expression evaluated in the
+#' context of the step table. For `[[`, a step-table column name, a meta field, or — in
+#' the two-index form — a step name or integer row index. For `[[<-`, a step name, an
+#' integer row index, or one of the meta fields `"name"` and `"view"`. For a view,
+#' indices are relative to the covered steps and step names must be part of the view.
+#' @param j For `[`, an optional character vector of step-table column names to extract.
+#' For `[<-`, the single step property to assign. For `[[` and `[[<-`, the column or
+#' step property to extract or assign.
+#' @param view For `[`, if `TRUE` (default), a view referencing the selected steps is
+#' returned. If `FALSE`, a new pipeline is returned that includes the selected steps and
+#' all their upstream dependencies. Ignored when `j` is provided. With no selection,
+#' `v[, view = FALSE]` turns a view into a standalone pipeline of all its covered steps,
+#' which is also the way to get a copy of a view, as [pip_clone()] requires a full
+#' pipeline.
 #' @param value The value to assign (`[[<-`, `[<-`).
-#' @return For `[`, a pipeflow view (if `view = TRUE`) or a new pipeflow
-#' pipeline (if `view = FALSE`); if `j` is provided, a `data.table` with the
-#' selected rows and columns. For `[[`, the extracted step-table column,
-#' single cell, or meta field. For the assignment forms, the updated
-#' pipeline, invisibly.
+#' @return For `[`, a pipeflow view (if `view = TRUE`) or a new pipeflow pipeline (if
+#' `view = FALSE`); if `j` is provided, a `data.table` with the selected rows and
+#' columns. For `[[`, the extracted step-table column, single cell, or meta field. For
+#' the assignment forms, the updated pipeline, invisibly.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(n = 5) seq_len(n), tags = c("io", "daily")) |>
@@ -1047,35 +1022,32 @@ dim.pipeflow <- function(x) {
 #' @details
 #' ## Extract values from a pipeline or view (`x[[i, j]]`)
 #'
-#' A pipeline can be read like a data.frame of steps: `p[[column]]` returns a
-#' column of the step table, and `p[[row, column]]` extracts a single cell.
-#' In addition, a few meta fields are accessible by name.
+#' A pipeline can be read like a data.frame of steps: `p[[column]]` returns a column of
+#' the step table, and `p[[row, column]]` extracts a single cell. In addition, a few
+#' meta fields are accessible by name.
 #'
 #' ### Meta fields
 #'
 #' The following meta fields are available via `p[["..."]]` (or `p$...`):
 #'
 #' * `name` -- the name of the pipeline.
-#' * `view` -- the names of the steps covered by a view, or `NULL` for a full
-#'   pipeline.
-#' * `pipenv` -- the shared inner environment holding the pipeline's state.
-#'   All views and extracted subsets reference the same environment, so
-#'   mutations are shared. The step table is available as
-#'   `p[["pipenv"]][["data"]]` (see also [pip_data()]).
+#' * `view` -- the names of the steps covered by a view, or `NULL` for a full pipeline.
+#' * `pipenv` -- the shared inner environment holding the pipeline's state. All views
+#'   and extracted subsets reference the same environment, so mutations are shared. The
+#'   step table is available as `p[["pipenv"]][["data"]]` (see also [pip_data()]).
 #'
 #' ### Virtual methods
 #'
-#' All pipeline functions are exposed as *virtual* methods via `p$...`
-#' (or `p[["..."]]`). For example, `p$add(...)` is shorthand for
-#' `pip_add(p, ...)` and returns the updated pipeline.
+#' All pipeline functions are exposed as *virtual* methods via `p$...` (or
+#' `p[["..."]]`). For example, `p$add(...)` is shorthand for `pip_add(p, ...)` and
+#' returns the updated pipeline.
 #'
 #' ### Step-table columns
 #'
-#' `p[["column"]]` returns the raw values of a column of the step table,
-#' named by the step names.
-#' For views, the column is restricted to the steps covered by the
-#' view. The two-index form `p[[row, column]]` extracts a single cell,
-#' where `row` is an integer row index or a step name.
+#' `p[["column"]]` returns the raw values of a column of the step table, named by the
+#' step names. For views, the column is restricted to the steps covered by the view. The
+#' two-index form `p[[row, column]]` extracts a single cell, where `row` is an integer
+#' row index or a step name.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(x = 1) x) |>
@@ -1122,67 +1094,62 @@ dim.pipeflow <- function(x) {
 #'
 #' ### Assigning meta fields
 #' * `p[["name"]] <- value` -- sets the name of the pipeline
-#' * `p[["view"]] <- steps` -- allows to define the pipeline view explicitly
-#'    via a character vector of step names, which is equivalent to
-#'    `p[steps]` or `p[steps, ]`. Assigning `p[["view"]] <- NULL` clears
-#'    the view and returns a full pipeline.
+#' * `p[["view"]] <- steps` -- allows to define the pipeline view explicitly via a
+#'    character vector of step names, which is equivalent to `p[steps]` or `p[steps, ]`.
+#'    Assigning `p[["view"]] <- NULL` clears the view and returns a full pipeline.
 #'
 #' ### Assigning step properties
-#' The two-index form `p[[step, property]] <- value` provides interactive
-#' shortcuts for modifying a single step, where `step` is a step name or an
-#' integer row index and `property` selects what to update:
+#' The two-index form `p[[step, property]] <- value` provides interactive shortcuts for
+#' modifying a single step, where `step` is a step name or an integer row index and
+#' `property` selects what to update:
 #'
 #' * `p[[step, "step"]] <- newName` -- rename the step; same as
 #'   `pip_rename(p, step, newName)`).
-#'   * `p[[step, "step"]] <- NULL` -- remove the step, together with its
-#'      downstream dependencies; same as `pip_remove(p, step, force = TRUE)`
-#' * `p[[step, "fun"]] <- fun` -- replace the step's function;
-#'    same as [pip_replace()], that is, tags and execution mode are kept
-#' * `p[[step, "params"]] <- list(...)` -- update the step's parameters;
-#'   same as `pip_set_params(p, list(...))`
-#' * `p[[step, "tags"]] <- tags` -- set the step's tags explicitly to `tags`
-#'   (a character vector); in contrast, [pip_tag()] will just add tags.
+#'   * `p[[step, "step"]] <- NULL` -- remove the step, together with its downstream
+#'      dependencies; same as `pip_remove(p, step, force = TRUE)`
+#' * `p[[step, "fun"]] <- fun` -- replace the step's function; same as [pip_replace()],
+#'    that is, tags and execution mode are kept
+#' * `p[[step, "params"]] <- list(...)` -- update the step's parameters; same as
+#'   `pip_set_params(p, list(...))`
+#' * `p[[step, "tags"]] <- tags` -- set the step's tags explicitly to `tags` (a
+#'   character vector); in contrast, [pip_tag()] will just add tags.
 #'    * `p[[step, "tags"]] <- NULL` clears all tags
-#' * `p[[step, "locked"]] <- TRUE|FALSE` -- lock or unlock the step;
-#'   same as [pip_lock()] / [pip_unlock()]
-#' * `p[[step, "exec"]] <- mode` -- set the step's execution mode. A new
-#'   mode marks the step and its downstream steps as `"outdated"`.
+#' * `p[[step, "locked"]] <- TRUE|FALSE` -- lock or unlock the step; same as
+#'   [pip_lock()] / [pip_unlock()]
+#' * `p[[step, "exec"]] <- mode` -- set the step's execution mode. A new mode marks the
+#'   step and its downstream steps as `"outdated"`.
 #' * `p[[step, "state"]] <- state` -- set the step's state.
-#' * `p[[step, "time"]] <- time` -- set the step's time stamp (a single
-#'   `POSIXct` value).
-#' * `p[[step, "time_start"]] <- time` -- set the start time of the step's
-#'   last run (a single `POSIXct` value, which can be `NA` for a step that
-#'   never ran).
-#' * `p[[step, "duration"]] <- duration` -- set the duration of the step's
-#'   last run (a single `difftime` value, which can be `NA` for a step that
-#'   never ran).
-#' * `p[[step, "out"]] <- value` -- set the step's stored output (mostly
-#'    useful for debugging). The downstream steps are marked as
-#'    `"outdated"`, so that the next run computes them from the new output.
+#' * `p[[step, "time"]] <- time` -- set the step's time stamp (a single `POSIXct`
+#'   value).
+#' * `p[[step, "time_start"]] <- time` -- set the start time of the step's last run (a
+#'   single `POSIXct` value, which can be `NA` for a step that never ran).
+#' * `p[[step, "duration"]] <- duration` -- set the duration of the step's last run (a
+#'   single `difftime` value, which can be `NA` for a step that never ran).
+#' * `p[[step, "out"]] <- value` -- set the step's stored output (mostly useful for
+#'    debugging). The downstream steps are marked as `"outdated"`, so that the next run
+#'    computes them from the new output.
 #'
-#' Assigning to any other step-table column, or to a meta field other than
-#' `name` and `view`, is not supported.
+#' Assigning to any other step-table column, or to a meta field other than `name` and
+#' `view`, is not supported.
 #'
-#' Views are supported as well. For a view, `i` is interpreted relative to the
-#' steps covered by the view: an integer refers to the n-th visible step, and a
-#' step name must be part of the view. Because views share the pipeline
-#' environment, step properties are written through to the originating
-#' pipeline, while `name` only renames the view itself.
+#' Views are supported as well. For a view, `i` is interpreted relative to the steps
+#' covered by the view: an integer refers to the n-th visible step, and a step name must
+#' be part of the view. Because views share the pipeline environment, step properties
+#' are written through to the originating pipeline, while `name` only renames the view
+#' itself.
 #'
 #' ### Which assignments outdate steps
-#' Results that may no longer match the steps are marked as `"outdated"`,
-#' so that the next [pip_run()] computes them again. As always, steps that
-#' never ran stay `"new"`.
+#' Results that may no longer match the steps are marked as `"outdated"`, so that the
+#' next [pip_run()] computes them again. As always, steps that never ran stay `"new"`.
 #' * `fun`: the step becomes `"new"` and its downstream steps `"outdated"`.
-#' * `params` and `exec`: the step and its downstream steps, if a value
-#'   changes.
+#' * `params` and `exec`: the step and its downstream steps, if a value changes.
 #' * `out`: the downstream steps, while the step keeps its state.
-#' * `step` (a new name), `state`, `time`, `time_start`, `duration`, `tags`
-#'   and `locked` don't change any result and outdate no step.
+#' * `step` (a new name), `state`, `time`, `time_start`, `duration`, `tags` and `locked`
+#'   don't change any result and outdate no step.
 #'
-#' This holds for all forms of assignment: `[[<-`, `[<-` (which assigns row
-#' by row) and assignments through a view, which also outdate the downstream
-#' steps that are not part of the view.
+#' This holds for all forms of assignment: `[[<-`, `[<-` (which assigns row by row) and
+#' assignments through a view, which also outdate the downstream steps that are not part
+#' of the view.
 #' @examples
 #' p <- pip_new("pipe") |>
 #'   pip_add("load", \(x = 1) x) |>
@@ -1367,48 +1334,40 @@ dim.pipeflow <- function(x) {
 #' @details
 #' ## Bulk assignment of step properties (`x[i, j] <- value`)
 #'
-#' `p[i, j] <- value` assigns the step property `j` to the selected steps
-#' (see `[[<-.pipeflow` above for the supported properties),
-#' mirroring the row
-#' and column selection of the extraction form `p[i, j]`. `i` selects rows
-#' like in the extraction form (including negative row indices, which
-#' select all rows but the excluded ones) and `j` must be a single
-#' property name; `p[, j] <- value` selects all steps. With more than one
-#' selected row, a value of length 1 is replicated to all selected rows and
-#' a value whose length equals the number of selected rows is assigned
-#' element-wise (`p[i, j] <- value` behaves like `p[[i[k], j]] <- value[[k]]`).
-#' As in base R, longer values are recycled if the number of selected rows
-#' is a multiple of the value length, otherwise an error is raised. To
-#' assign the same list value (e.g. a set of tags) to all rows, wrap it in
-#' `list(...)`. With a single selected row, `value` is stored as-is (like
-#' `p[[i, j]] <- value`). For the `params` property, the value of each row
-#' must itself be a list (e.g. `p[1:2, "params"] <- list(list(a = 1),
-#' list(b = 2))`).
+#' `p[i, j] <- value` assigns the step property `j` to the selected steps (see
+#' `[[<-.pipeflow` above for the supported properties), mirroring the row and column
+#' selection of the extraction form `p[i, j]`. `i` selects rows like in the extraction
+#' form (including negative row indices, which select all rows but the excluded ones)
+#' and `j` must be a single property name; `p[, j] <- value` selects all steps. With
+#' more than one selected row, a value of length 1 is replicated to all selected rows
+#' and a value whose length equals the number of selected rows is assigned element-wise
+#' (`p[i, j] <- value` behaves like `p[[i[k], j]] <- value[[k]]`). As in base R, longer
+#' values are recycled if the number of selected rows is a multiple of the value length,
+#' otherwise an error is raised. To assign the same list value (e.g. a set of tags) to
+#' all rows, wrap it in `list(...)`. With a single selected row, `value` is stored as-is
+#' (like `p[[i, j]] <- value`). For the `params` property, the value of each row must
+#' itself be a list (e.g. `p[1:2, "params"] <- list(list(a = 1), list(b = 2))`).
 #'
-#' The selected steps are assigned one after another, but the assignment
-#' changes all of them or none, that is, if it fails for one step,
-#' the pipeline is restored as it was.
+#' The selected steps are assigned one after another, but the assignment changes all of
+#' them or none, that is, if it fails for one step, the pipeline is restored as it was.
 #'
-#' If `value` is a `pipeflow` pipeline or view, the writable step properties
-#' of its steps are copied to the selected rows: `p[i, ] <- q[i, ]` copies
-#' the steps of `q` selected by `i` into the steps of `p` selected by `i`
-#' (the rows of both sides are aligned by position and must have the same
-#' length). In this form, `i` is required and `j` must be omitted. The
-#' properties are copied in the order `step`, `fun`, `params`, `exec`,
-#' `out`, `state`, `time`, `time_start`, `duration`, `tags`, `locked`: the
-#' step is renamed to the source name (a no-op when it is unchanged), the
-#' function, the params and the execution mode are replaced with those of
-#' the source (same as [pip_replace()] with the params and `exec` of the
-#' source), and the runtime state and annotation columns are overwritten
-#' (locked steps included). A copied step refers to the steps
-#' that the source step depends on by name, also if it was defined with a
-#' relative reference such as `~-1`, and these steps are looked up in `p`.
-#' The structural columns `nodeId`, `depends` and `unbound` are not copied
-#' but recomputed against the steps of `p`. If a step can't be copied (e.g.
-#' because it refers to a step that is not in `p`), `p` is left as it was.
-#' Instead of `p[i, j] <- q`, use `p[i, j] <- q[i, j]` to copy the values of
-#' a single property; the one-column table returned by the extraction form
-#' is unwrapped and assigned element-wise.
+#' If `value` is a `pipeflow` pipeline or view, the writable step properties of its
+#' steps are copied to the selected rows: `p[i, ] <- q[i, ]` copies the steps of `q`
+#' selected by `i` into the steps of `p` selected by `i` (the rows of both sides are
+#' aligned by position and must have the same length). In this form, `i` is required and
+#' `j` must be omitted. The properties are copied in the order `step`, `fun`, `params`,
+#' `exec`, `out`, `state`, `time`, `time_start`, `duration`, `tags`, `locked`: the step
+#' is renamed to the source name (a no-op when it is unchanged), the function, the
+#' params and the execution mode are replaced with those of the source (same as
+#' [pip_replace()] with the params and `exec` of the source), and the runtime state and
+#' annotation columns are overwritten (locked steps included). A copied step refers to
+#' the steps that the source step depends on by name, also if it was defined with a
+#' relative reference such as `~-1`, and these steps are looked up in `p`. The
+#' structural columns `nodeId`, `depends` and `unbound` are not copied but recomputed
+#' against the steps of `p`. If a step can't be copied (e.g. because it refers to a step
+#' that is not in `p`), `p` is left as it was. Instead of `p[i, j] <- q`, use
+#' `p[i, j] <- q[i, j]` to copy the values of a single property; the one-column table
+#' returned by the extraction form is unwrapped and assigned element-wise.
 #' @examples
 #' p <- pip_new("pipe") |>
 #'   pip_add("load", \(n = 5) seq_len(n)) |>
@@ -1548,10 +1507,9 @@ dim.pipeflow <- function(x) {
 #' @details
 #' ## Extract and assign via $ (`x$i / x$i <- value`)
 #'
-#' `$` is a shortcut for the one-index form of `[[` / `[[<-`: `p$name` is
-#' equivalent to `p[["name"]]`, and `p$name <- value` to
-#' `p[["name"]] <- value`. This works for meta fields, step-table columns,
-#' and the virtual methods (e.g. `p$add(...)` or `p$run()`).
+#' `$` is a shortcut for the one-index form of `[[` / `[[<-`: `p$name` is equivalent to
+#' `p[["name"]]`, and `p$name <- value` to `p[["name"]] <- value`. This works for meta
+#' fields, step-table columns, and the virtual methods (e.g. `p$add(...)` or `p$run()`).
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(x = 1) x) |>
@@ -1585,27 +1543,24 @@ dim.pipeflow <- function(x) {
 #' @param x A pipeflow pipeline or view.
 #' @param object A pipeflow pipeline or view, for [utils::str()].
 #' @param rows Row indices to be printed. If empty, all rows are printed.
-#' @param cols The columns to be printed. Can be either one of
-#' `core` or `all` to print the core or all columns, respectively,
-#' or an explicit character vector of columns to be printed. The `params`
-#' column lists the names of the step's parameters. In the `out` column, some
-#' outputs are shown in short form: a condition (the output of a step that
-#' failed in a run with `on_error = "continue"`) as `<kind/class>`, e.g.
+#' @param cols The columns to be printed. Can be either one of `core` or `all` to print
+#' the core or all columns, respectively, or an explicit character vector of columns to
+#' be printed. The `params` column lists the names of the step's parameters. In the
+#' `out` column, some outputs are shown in short form: a condition (the output of a step
+#' that failed in a run with `on_error = "continue"`) as `<kind/class>`, e.g.
 #' `<error/simpleError>`; a matrix, array or table as `<class[dims]>`, e.g.
-#' `<matrix[4x2]>`; and a function or environment (e.g. an R6 object) as
-#' `<class>`. Strings longer than 40 characters are cut off and marked with
-#' `"..."`. The `duration` column is shown in short form, e.g. `0.251 s` or
-#' `2 min 5 s`.
-#' @param topn The number of rows to be printed from the beginning
-#' and end of tables with more than `nrows` rows.
+#' `<matrix[4x2]>`; and a function or environment (e.g. an R6 object) as `<class>`.
+#' Strings longer than 40 characters are cut off and marked with `"..."`. The `duration`
+#' column is shown in short form, e.g. `0.251 s` or `2 min 5 s`.
+#' @param topn The number of rows to be printed from the beginning and end of tables
+#' with more than `nrows` rows.
 #' @param nrows The number of rows printed before truncation is enforced.
-#' @param class If TRUE, the resulting output will include above each
-#' column its storage class (or a self-evident abbreviation thereof).
+#' @param class If TRUE, the resulting output will include above each column its storage
+#' class (or a self-evident abbreviation thereof).
 #' @param row.names If TRUE, row indices will be printed alongside x.
-#' @param header If TRUE, a header with the pipeline name and number
-#' of steps, and a footer will be printed. The footer shows the run state,
-#' the time and the duration of the last run, and how many of the printed
-#' steps are in each state, e.g.
+#' @param header If TRUE, a header with the pipeline name and number of steps, and a
+#' footer will be printed. The footer shows the run state, the time and the duration of
+#' the last run, and how many of the printed steps are in each state, e.g.
 #' ```
 #' <ready> last run: 2026-10-25 14:03:12 (0.251 s)
 #' steps: 3 done, 1 failed, 2 new
@@ -1637,21 +1592,19 @@ str.pipeflow <- function(object, ...) {
 # -------
 #' Bind pipelines
 #'
-#' Binds two or more pipelines together by concatenating their steps. If the
-#' pipelines have steps with the same name, the step names of later pipelines
-#' are automatically adapted to avoid name clashes. A single pipeline is
-#' returned unchanged.
+#' Binds two or more pipelines together by concatenating their steps. If the pipelines
+#' have steps with the same name, the step names of later pipelines are automatically
+#' adapted to avoid name clashes. A single pipeline is returned unchanged.
 #'
-#' To feed steps of the second pipeline with the output of steps of the
-#' first one, bind their params with [pip_set_params()] afterwards, e.g.
-#' `pip_set_params(ab, list(data = ~prep))`. This binds the param in all
-#' steps that have it unbound, so to bind only the steps of the second
-#' pipeline, select them with a view, e.g. `ab[-seq_along(a)]`. Locked
-#' steps are not bound: unlock them before and lock them again afterwards,
-#' e.g. with [pip_unlock()] and [pip_lock()] on the same view.
+#' To feed steps of the second pipeline with the output of steps of the first one, bind
+#' their params with [pip_set_params()] afterwards, e.g.
+#' `pip_set_params(ab, list(data = ~prep))`. This binds the param in all steps that have
+#' it unbound, so to bind only the steps of the second pipeline, select them with a
+#' view, e.g. `ab[-seq_along(a)]`. Locked steps are not bound: unlock them before and
+#' lock them again afterwards, e.g. with [pip_unlock()] and [pip_lock()] on the same
+#' view.
 #' @param ... Two or more pipeflow pipeline objects.
-#' @param deparse.level Not used, for compatibility with the generic
-#' `rbind()`.
+#' @param deparse.level Not used, for compatibility with the generic `rbind()`.
 #' @return A new pipeflow pipeline object representing the bound pipelines.
 #' @examples
 #' a <- pip_new("a") |>

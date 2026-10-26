@@ -19,62 +19,55 @@ pip_add(
 
 \item{step}{Unique step name.}
 
-\item{fun}{Function to execute for the step. Each function parameter needs
-a value: a default value in \code{fun} or an entry in \code{params}.
-Default values that are simple constants are resolved immediately.
-Default values that are formulas like \code{~other_step} are
-treated as dependencies to those steps and resolved to the respective output
-values at runtime once the step is executed. A reference wrapped in \code{try()},
-like \code{~try(other_step)}, accepts a failed input when the pipeline is run
-with \code{on_error = "continue"}: instead of the output of the referenced step,
-the argument then receives a condition of class \code{pipeflow_failure} (see
-section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). The function can refer
-to the running pipeline as \code{.self} (see section 'The pipeline as \code{.self}'
-in \code{\link[=pip_add]{pip_add()}}).}
+\item{fun}{Function to execute for the step. Each function parameter needs a value: a
+default value in \code{fun} or an entry in \code{params}. Default values that are simple
+constants are resolved immediately. Default values that are formulas like
+\code{~other_step} are treated as dependencies to those steps and resolved to the
+respective output values at runtime once the step is executed. A reference wrapped in
+\code{try()}, like \code{~try(other_step)}, accepts a failed input when the pipeline is run
+with \code{on_error = "continue"}: instead of the output of the referenced step, the
+argument then receives a condition of class \code{pipeflow_failure} (see section
+'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). The function can refer to the running
+pipeline as \code{.self} (see section 'The pipeline as \code{.self}' in \code{\link[=pip_add]{pip_add()}}).}
 
-\item{tags}{Optional character vector of tags belonging to the step.
-Can also be adjusted later using \verb{[pip_tag()]}.}
+\item{tags}{Optional character vector of tags belonging to the step. Can also be
+adjusted later using \verb{[pip_tag()]}.}
 
-\item{after}{Optional position after which the new step should be inserted
-(defaults to last position). Can be a step name or an integer index. If
-set to 0, the new step will be inserted at the beginning of the pipeline.}
+\item{after}{Optional position after which the new step should be inserted (defaults
+to last position). Can be a step name or an integer index. If set to 0, the new step
+will be inserted at the beginning of the pipeline.}
 
-\item{params}{Optional named list of parameter values. They override the
-defaults of \code{fun} and give a value to parameters of \code{fun} that have no
-default. As in the defaults of \code{fun}, a formula like \code{~other_step} refers
-to the output of another step. Names that are no parameters of \code{fun} add
-params to the step, which are passed on to \code{fun} as well, so \code{fun} needs a
-\code{...} argument for them. Use cases for \code{params} are:
+\item{params}{Optional named list of parameter values. They override the defaults of
+\code{fun} and give a value to parameters of \code{fun} that have no default. As in the
+defaults of \code{fun}, a formula like \code{~other_step} refers to the output of another step.
+Names that are no parameters of \code{fun} add params to the step, which are passed on to
+\code{fun} as well, so \code{fun} needs a \code{...} argument for them. Use cases for \code{params} are:
 \enumerate{
-\item Set param values programmatically, e.g. when adding steps in a loop or
-at runtime.
+\item Set param values programmatically, e.g. when adding steps in a loop or at runtime.
 \item Use existing functions whose parameters have no defaults, e.g.
 \code{pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))}.
-\item Provide extra param values to "mark" dependencies that are defined in
-pipelines nested in a step, which ensures that it is re-executed when
-one of the nested param values change. See the
+\item Provide extra param values to "mark" dependencies that are defined in pipelines
+nested in a step, which ensures that it is re-executed when one of the nested param
+values change. See the
 \href{../doc/v05b-nested-pipeline.html}{nested pipelines vignette}.
 }}
 
-\item{exec}{Execution mode for this step. One of "auto", "split",
-"reduce" or "plain".
-Using execution mode \code{exec = split}, the output of the step is marked as
-partitioned output. In this mode, any step that depends on the split step
-(directly or indirectly) will have its output automatically mapped
-partition-wise during step execution. The \code{reduce} mode expects
-partitioned input and passes it through without mapping, while \code{plain}
-mode only accepts non-partitioned input and always intends to execute
-a single call. In a run with \code{on_error = "continue"}, a mapped step that
-fails for some partition keys keeps the outputs of the other keys (see
-section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). If a split step fails,
-a \code{reduce} step also accepts the resulting failure object when it takes
-it via \code{~try()}. In summary:
+\item{exec}{Execution mode for this step. One of "auto", "split", "reduce" or
+"plain". Using execution mode \code{exec = split}, the output of the step is marked as
+partitioned output. In this mode, any step that depends on the split step (directly
+or indirectly) will have its output automatically mapped partition-wise during step
+execution. The \code{reduce} mode expects partitioned input and passes it through without
+mapping, while \code{plain} mode only accepts non-partitioned input and always intends to
+execute a single call. In a run with \code{on_error = "continue"}, a mapped step that
+fails for some partition keys keeps the outputs of the other keys (see section
+'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). If a split step fails, a \code{reduce} step
+also accepts the resulting failure object when it takes it via \code{~try()}. In summary:
 \itemize{
-\item auto: map if partitioned input appears, otherwise single call. Several
-partitioned inputs must have the same keys in the same order.
+\item auto: map if partitioned input appears, otherwise single call. Several partitioned
+inputs must have the same keys in the same order.
 \item split: single call, then mark output as partitioned
-\item reduce: single call, but only valid with partitioned input or, via
-\code{~try()}, a failure object
+\item reduce: single call, but only valid with partitioned input or, via \code{~try()}, a
+failure object
 \item plain: single call, only valid with non-partitioned input
 }}
 }
@@ -82,32 +75,31 @@ partitioned inputs must have the same keys in the same order.
 The updated pipeline, invisibly.
 }
 \description{
-Adds a named step to the pipeline. Each step is a function whose parameters
-either hold constant defaults or reference the output of a prior step using
-formula notation (\code{~step_name}). Dependencies are validated when the step
-is added.
+Adds a named step to the pipeline. Each step is a function whose parameters either
+hold constant defaults or reference the output of a prior step using formula notation
+(\code{~step_name}). Dependencies are validated when the step is added.
 }
 \details{
-If \code{after} was specified, the new step will be inserted after the given
-step or position. Be aware that in contrast to adding a step at the end,
-inserting a step in the middle is a rather expensive operation as it
-requires re-wiring parts of the internal pipeline structure, especially
-if the new step is inserted at an early position.
+If \code{after} was specified, the new step will be inserted after the given step or
+position. Be aware that in contrast to adding a step at the end, inserting a step in
+the middle is a rather expensive operation as it requires re-wiring parts of the
+internal pipeline structure, especially if the new step is inserted at an early
+position.
 \subsection{The pipeline as \code{.self}}{
 
-A step function can refer to the pipeline that is being run as \code{.self}
-without declaring it as an argument, for example to set parameters or add
-steps at runtime, or to call \code{.self$restart()} or \code{.self$halt()} (see
-\code{\link[=pip_run]{pip_run()}}). \code{.self} is always the full pipeline, also when a view is
-run. pipeflow provides it each time the step runs, but only if the body of
-the step function contains the name \code{.self} (also within functions defined
-in the body). Indirect access, such as \code{get(".self")}, is not detected.
+A step function can refer to the pipeline that is being run as \code{.self} without
+declaring it as an argument, for example to set parameters or add steps at runtime,
+or to call \code{.self$restart()} or \code{.self$halt()} (see \code{\link[=pip_run]{pip_run()}}). \code{.self} is always
+the full pipeline, also when a view is run. pipeflow provides it each time the step
+runs, but only if the body of the step function contains the name \code{.self} (also
+within functions defined in the body). Indirect access, such as \code{get(".self")}, is
+not detected.
 
-A step that changes its own function, params or exec mode via \code{.self},
-ends the run as \code{"outdated"}. The same is true for other steps changed
-via \code{.self}. Lastly, \code{.self} is only valid while the step runs and
-released once the step was returned. For this reason, a step that returns
-a function referring to \code{.self} fails with \verb{object '.self' not found} when called later.
+A step that changes its own function, params or exec mode via \code{.self}, ends the run
+as \code{"outdated"}. The same is true for other steps changed via \code{.self}. Lastly,
+\code{.self} is only valid while the step runs and released once the step was returned.
+For this reason, a step that returns a function referring to \code{.self} fails with
+\verb{object '.self' not found} when called later.
 }
 }
 \examples{

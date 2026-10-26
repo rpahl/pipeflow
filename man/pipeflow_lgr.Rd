@@ -15,16 +15,15 @@ pipeflow_lgr(level, msg)
 \code{NULL}, invisibly.
 }
 \description{
-The logging function that \code{\link[=pip_run]{pip_run()}} uses by default. It writes one line
-per message to the console in the form
-\verb{<level> [<UTC time stamp>]: <msg>}, for example
+The logging function that \code{\link[=pip_run]{pip_run()}} uses by default. It writes one line per message
+to the console in the form \verb{<level> [<UTC time stamp>]: <msg>}, for example
 \verb{info [2026-01-01 12:34:56.789 UTC]: Step 1/2 load}.
 }
 \details{
-It is exported so that custom loggers can build on it, for example to add a
-prefix, or to drop some levels and pass the rest on to the default logger.
-A logger is any function with the arguments \code{level} and \code{msg}.
-\code{\link[=pip_run]{pip_run()}} calls it as \code{lgr(level = level, msg = msg)}.
+It is exported so that custom loggers can build on it, for example to add a prefix,
+or to drop some levels and pass the rest on to the default logger. A logger is any
+function with the arguments \code{level} and \code{msg}. \code{\link[=pip_run]{pip_run()}} calls it as
+\code{lgr(level = level, msg = msg)}.
 }
 \examples{
 pipeflow_lgr("info", "Hello")
@@ -48,6 +47,6 @@ quiet <- function(level, msg) {
 pip_run(p, lgr = quiet, force = TRUE)
 }
 \seealso{
-\code{\link[=pip_run]{pip_run()}} for how loggers are used and how to switch logging
-off with \code{lgr = NULL}.
+\code{\link[=pip_run]{pip_run()}} for how loggers are used and how to switch logging off with
+\code{lgr = NULL}.
 }

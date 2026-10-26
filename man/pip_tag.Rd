@@ -12,16 +12,14 @@ pip_untag(x, tags = character())
 \arguments{
 \item{x}{A pipeflow pip or view.}
 
-\item{tags}{Character vector of tags to add to or remove from each
-selected step.}
+\item{tags}{Character vector of tags to add to or remove from each selected step.}
 }
 \value{
 The updated pipeline or view, invisibly.
 }
 \description{
-Adds tags to, or removes tags from, all steps of a pipeline or a subset
-of steps defined by a view. Tagged steps can later be selected via
-\code{\link[=pip_view]{pip_view()}}.
+Adds tags to, or removes tags from, all steps of a pipeline or a subset of steps
+defined by a view. Tagged steps can later be selected via \code{\link[=pip_view]{pip_view()}}.
 }
 \examples{
 p <- pip_new() |>

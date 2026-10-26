@@ -1,9 +1,8 @@
 #' Format a condition in short form
 #'
-#' Formats a condition as `<kind/class>`, where `kind` is `"error"`,
-#' `"warning"`, `"message"` or `"condition"`, and `class` is the first class
-#' of the condition, e.g. `<error/simpleError>`. If the first class is the
-#' kind itself, only `<kind>` is shown.
+#' Formats a condition as `<kind/class>`, where `kind` is `"error"`, `"warning"`,
+#' `"message"` or `"condition"`, and `class` is the first class of the condition, e.g.
+#' `<error/simpleError>`. If the first class is the kind itself, only `<kind>` is shown.
 #'
 #' @param x A condition.
 #' @return A single character string.
@@ -22,26 +21,25 @@
 
 #' Format a step output for printing
 #'
-#' Formats the outputs that data.table doesn't print well in a list column
-#' in short form:
+#' Formats the outputs that data.table doesn't print well in a list column in short
+#' form:
 #' * a condition as `<kind/class>` (see `.format_condition()`),
 #' * a partitioned output with failed keys (see `.pip_failed_keys()`) as
 #'   `<partitioned: failed/all failed>`, e.g. `<partitioned: 1/3 failed>`,
-#' * an atomic object with dimensions (matrix, array, table) as
-#'   `<class[dims]>`, e.g. `<matrix[4x2]>`, similar to how data.table
-#'   prints data frames
+#' * an atomic object with dimensions (matrix, array, table) as `<class[dims]>`, e.g.
+#'   `<matrix[4x2]>`, similar to how data.table prints data frames
 #' * a function or an environment (e.g. an R6 object) as `<class>`.
 #'
-#' Strings longer than `maxChars` characters are cut off after `maxChars`
-#' characters and marked with `"..."`, so that a long output (e.g. a path or
-#' a query) doesn't widen the whole table.
+#' Strings longer than `maxChars` characters are cut off after `maxChars` characters and
+#' marked with `"..."`, so that a long output (e.g. a path or a query) doesn't widen the
+#' whole table.
 #'
 #' Other outputs are returned unchanged and left to data.table.
 #'
 #' @param x A step output.
 #' @param maxChars The maximum number of characters shown of each string.
-#' @return A single character string, a character vector with the cut off
-#' strings, or `x` unchanged.
+#' @return A single character string, a character vector with the cut off strings, or
+#' `x` unchanged.
 #' @noRd
 .format_out <- function(x, maxChars = 40L) {
     if (inherits(x, "condition")) {
@@ -75,9 +73,8 @@
 
 #' Format the number of steps per state
 #'
-#' Counts the steps per state, in the order `done`, `outdated`, `failed`,
-#' `new`, and leaves out the states without steps, e.g.
-#' `"steps: 3 done, 1 failed, 2 new"`.
+#' Counts the steps per state, in the order `done`, `outdated`, `failed`, `new`, and
+#' leaves out the states without steps, e.g. `"steps: 3 done, 1 failed, 2 new"`.
 #'
 #' @param states A character vector with the state of each step.
 #' @return A single character string.
