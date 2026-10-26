@@ -160,7 +160,7 @@ have changed the pipeline.
 
 ## Conventions
 
-- Use the native pipe `|>`, a 4-space indent and lines of at most 80
+- Use the native pipe `|>`, a 4-space indent and lines of at most 88
   characters (`.lintr`, `air.toml`). Local variables are camelCase. Internal
   helpers start with `.`, and exported functions start with `pip_`.
 - Keep the API lean: one way to write each operation. Docs and examples use
