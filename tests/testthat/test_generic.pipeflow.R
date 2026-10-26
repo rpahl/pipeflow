@@ -1,6 +1,10 @@
-# ------
-# Helper
-# ------
+# ==============================================================================
+# Helpers
+# ==============================================================================
+
+# ----------
+# Compaction
+# ----------
 
 describe(".pip_compact", {
     it("builds a compact self-contained pipeline from the kept nodes", {
@@ -186,9 +190,14 @@ describe(".pip_compact", {
     })
 })
 
-# ------------------------------------
-# Implementation of generic S3 methods
-# ------------------------------------
+
+# ==============================================================================
+# S3 methods
+# ==============================================================================
+
+# ----------
+# Dimensions
+# ----------
 
 describe("length", {
     it("returns an integer value", {
@@ -207,6 +216,7 @@ describe("length", {
         expect_equal(length(v), 1L)
     })
 })
+
 
 describe("nrow", {
     it("matches length for pipelines and views", {
@@ -232,6 +242,10 @@ describe("nrow", {
     })
 })
 
+
+# -------------------
+# Extract and replace
+# -------------------
 
 describe("extract operator [", {
     test_pip <- function() {
@@ -2329,42 +2343,9 @@ describe("cross-pipeline assignment", {
 })
 
 
-describe("benchmarking", {
-    skip("benchmarking tests are skipped by default")
-    v <- c("hello", "world")
-    w <- c("hello", "this", "is", "my", "world")
-    grepv(pattern = v, x = w)
-    `%chin%` <- data.table::`%chin%`
-
-    N <- 1e3
-    u <- as.character(as.hexmode(1:10000))
-    y <- sample(u, N, replace = TRUE)
-    x <- sample(u, 100)
-    system.time(x %in% y)
-    system.time(x %chin% y)
-
-    microbenchmark(
-        y %in% x,
-        y %chin% x,
-        times = 1000
-    )
-
-    # Please type 'example(chmatch)' to run this and see timings on your machine
-
-    microbenchmark(x %in% y, x %chin% y, times = 100)
-    system.time(a <- x %in% y) #  4.5s
-    system.time(b <- x %chin% y) #  1.7s
-    identical(a, b)
-
-    # Different example with more unique strings ...
-    u <- as.character(as.hexmode(1:(N / 10)))
-    y <- sample(u, N, replace = TRUE)
-    x <- sample(u, N, replace = TRUE)
-    system.time(a <- match(x, y)) # 46s
-    system.time(b <- chmatch(x, y)) # 16s
-    identical(a, b)
-})
-
+# -------
+# Binding
+# -------
 
 describe("rbind", {
     test_pip <- function(name = "p") {
@@ -2792,4 +2773,45 @@ describe("rbind followed by pip_set_params", {
         pip_run(out, lgr = NULL)
         expect_equal(out[["fit2", "out"]], 1200)
     })
+})
+
+
+# ==============================================================================
+# Benchmarking
+# ==============================================================================
+
+describe("benchmarking", {
+    skip("benchmarking tests are skipped by default")
+    v <- c("hello", "world")
+    w <- c("hello", "this", "is", "my", "world")
+    grepv(pattern = v, x = w)
+    `%chin%` <- data.table::`%chin%`
+
+    N <- 1e3
+    u <- as.character(as.hexmode(1:10000))
+    y <- sample(u, N, replace = TRUE)
+    x <- sample(u, 100)
+    system.time(x %in% y)
+    system.time(x %chin% y)
+
+    microbenchmark(
+        y %in% x,
+        y %chin% x,
+        times = 1000
+    )
+
+    # Please type 'example(chmatch)' to run this and see timings on your machine
+
+    microbenchmark(x %in% y, x %chin% y, times = 100)
+    system.time(a <- x %in% y) #  4.5s
+    system.time(b <- x %chin% y) #  1.7s
+    identical(a, b)
+
+    # Different example with more unique strings ...
+    u <- as.character(as.hexmode(1:(N / 10)))
+    y <- sample(u, N, replace = TRUE)
+    x <- sample(u, N, replace = TRUE)
+    system.time(a <- match(x, y)) # 46s
+    system.time(b <- chmatch(x, y)) # 16s
+    identical(a, b)
 })

@@ -1,7 +1,10 @@
-# ------
-# Helper
-# ------
+# ==============================================================================
+# Helpers
+# ==============================================================================
 
+# --------------------
+# All-or-nothing edits
+# --------------------
 #' Edit a pipeline completely or not at all
 #'
 #' Evaluates `edit`, which changes the pipeline one step at a time, e.g. in
@@ -99,6 +102,235 @@
 }
 
 
+# ----------
+# Compaction
+# ----------
+#' Compact a pipeline to a subset of steps
+#'
+#' Helper to build new pipeline from the steps of `x` whose `nodeId` is
+#' contained in `keepNodes`. The kept rows get a compact node id sequence,
+#' and the DAG and the step->node lookup are re-built from the `depends`
+#' values.
+#' For a small number of kept steps, the DAG is built node by node in R. If
+#' roughly a third or more of the steps are kept, it is faster to clone the
+#' existing DAG, remove the excluded nodes in place, and compact the ids in
+#' C++ via dag_rebuild().
+#'
+#' @param x A pipeflow pipeline.
+#' @param keepNodes Integer vector of node ids to keep.
+#' @param rebuildThresh Fraction of steps to keep above which the DAG is
+#' rebuilt. The default value of 0.3 was determined empirically, that is,
+#' at this fraction both methods take roughly the same time.
+#' @return A new pipeflow pipeline with the selected steps and a compact
+#' node id sequence.
+#' @noRd
+.pip_compact <- function(x, keepNodes, rebuildThresh = 0.3) {
+    pipenv <- .pip_pipenv(x)
+    data <- pipenv[["data"]]
+    out <- pip_new(name = x[["name"]])
+    keepNodes <- as.integer(keepNodes)
+    rows <- which(data[["nodeId"]] %in% keepNodes)
+    if (length(rows) == 0L) {
+        return(out)
+    }
+
+    subDat <- data.table::copy(data[rows])
+    useRebuild <- length(rows) / nrow(data) >= rebuildThresh
+
+    if (useRebuild) {
+        # Clone the existing DAG, drop all nodes that are not kept, and let
+        # the C++ side compact the node ids. Nodes that are still alive
+        # correspond to the current rows of `data`.
+        d <- dag_clone(.pip_dag(pipenv))
+        dead <- setdiff(data[["nodeId"]], keepNodes)
+        for (id in dead) {
+            dag_remove_node(d, id, force = TRUE)
+        }
+        oldOrder <- dag_rebuild(d)
+        subDat[["nodeId"]] <- match(subDat[["nodeId"]], oldOrder) - 1L
+    } else {
+        # Re-map node ids to a compact sequence
+        subDat[["nodeId"]] <- seq_along(subDat[["nodeId"]]) - 1L
+    }
+
+    # Rebuild the step->node lookup table
+    nodeIds <- subDat[["nodeId"]]
+    stepsToNodes <- list2env(
+        as.list(stats::setNames(nodeIds, subDat[["step"]])),
+        envir = new.env(parent = emptyenv())
+    )
+
+    if (!useRebuild) {
+        # Build a new DAG from scratch that matches the kept rows
+        d <- dag_new()
+        depends <- subDat[["depends"]]
+        for (k in seq_along(nodeIds)) {
+            dag_add_node(d)
+            # A step can refer to the same step with several arguments, but
+            # there is only one edge
+            deps <- unique(depends[[k]])
+            if (length(deps) == 0L) {
+                next
+            }
+            from <- as.integer(unname(unlist(mget(
+                deps,
+                envir = stepsToNodes,
+                inherits = FALSE
+            ))))
+            to <- as.integer(nodeIds[[k]])
+            dag_add_edges_to(d, from = from, to = to)
+        }
+    }
+
+    data.table::setindexv(subDat, list("step", "nodeId"))
+    env <- .pip_pipenv(out)
+    env[["data"]] <- subDat
+    env[[".dag"]] <- d
+    env[[".steps_to_nodes"]] <- stepsToNodes
+    out
+}
+
+
+# --------------
+# Element access
+# --------------
+# Method registry (built lazily) maps method names to API functions. The
+# map is then used to implement the virtual method dispatch via
+# `[[.pipeflow` and `$`, i.e. to allow stuff like `p$add(...)` as a
+# shorthand for `pip_add(p, ...)`.
+.pip_method_table <- local({
+    table <- NULL
+    function() {
+        if (is.null(table)) {
+            # Build table
+            table <<- new.env(parent = emptyenv())
+            values <- list(
+                add = pip_add,
+                remove = pip_remove,
+                rename = pip_rename,
+                replace = pip_replace,
+                run = pip_run,
+                reset = pip_reset,
+                tag = pip_tag,
+                untag = pip_untag,
+                lock = pip_lock,
+                unlock = pip_unlock,
+                set_params = pip_set_params,
+                get_params = pip_get_params,
+                collect = pip_collect,
+                clone = pip_clone,
+                graph = pip_graph,
+                data = pip_data,
+                restart = function(x, force = TRUE, times = 1L) {
+                    .pip_restart(
+                        .pip_pipenv(x),
+                        force = force,
+                        times = times
+                    )
+                },
+                halt = function(x) .pip_halt(.pip_pipenv(x))
+            )
+            for (nm in names(values)) {
+                table[[nm]] <- values[[nm]]
+            }
+        }
+        table
+    }
+})
+
+
+# Internal implementation of [[ for pipeflow objects.
+.pip_subset2 <- function(x, i, j = NULL) {
+    if (missing(i)) {
+        stop("i must be provided")
+    }
+    if (length(i) != 1L || is.na(i)) {
+        stop("i must be a single step name or row index")
+    }
+    if (is.null(j)) {
+        # The `view` field holds node ids, so the covered steps are returned.
+        if (identical(i, "view")) {
+            if (!.is_pipeflow_view(x)) {
+                return(NULL)
+            }
+            return(.pip_pipenv(x)[["data"]][["step"]][.pip_view_rows(x)])
+        }
+        # Via .pip_pipenv(), so that the step table of a saved pipeline gets
+        # its missing columns also when it is read directly.
+        if (identical(i, "pipenv")) {
+            return(.pip_pipenv(x))
+        }
+
+        # List fields of the wrapper have priority over column names.
+        if (is.character(i) && length(i) == 1L && !is.na(i)) {
+            if (i %in% names(x)) {
+                return(.subset2(x, i))
+            }
+        }
+
+        # Virtual methods (an O(1) lookup followed by a single closure that
+        # binds the backend to the current object).
+        if (is.character(i) && length(i) == 1L && !is.na(i)) {
+            fn <- get0(i, envir = .pip_method_table(), inherits = FALSE)
+            if (!is.null(fn)) {
+                return(function(...) fn(x, ...))
+            }
+        }
+
+        # case x[[col]]; only the column is read, not the whole step table
+        data <- .pip_pipenv(x)[["data"]]
+        col <- data[[i]]
+        if (is.null(col)) {
+            return(NULL)
+        }
+        rows <- .pip_view_rows(x)
+        return(stats::setNames(col[rows], data[["step"]][rows]))
+    }
+
+    # Two-index form extracts a single cell from a single row.
+    if (!is.character(j) || length(j) != 1L || is.na(j)) {
+        stop("j must be a single column name")
+    }
+
+    data <- .pip_pipenv(x)[["data"]]
+    rows <- .pip_view_rows(x)
+    if (is.character(i)) {
+        # case x[[stepName, col]]; the row is relative to the view's rows
+        row <- data.table::chmatch(i, data[["step"]][rows])
+        if (is.na(row)) {
+            .pip_steps_to_rows(x, steps = i) # signals unknown steps
+            stop("selected step not part of view: ", i)
+        }
+    } else {
+        # case x[[i, col]]
+        row <- as.integer(i)
+        if (row < 1L || row > length(rows)) {
+            stop("row index out of bounds")
+        }
+    }
+
+    .cell(data[[j]], rows[[row]])
+}
+
+
+#' Get one element of a step table column
+#'
+#' Unlike `[[`, which drops the class of an atomic vector unless it has its
+#' own `[[` method (as `POSIXct` has, but `difftime` hasn't), the element of
+#' an atomic column keeps its class, e.g. a `duration` stays a `difftime`.
+#'
+#' @param col A column of the step table.
+#' @param row A single row index.
+#' @return The element of `col` at `row`.
+#' @noRd
+.cell <- function(col, row) {
+    if (is.list(col)) col[[row]] else col[row]
+}
+
+
+# -------------------
+# Cross-pipeline copy
+# -------------------
 # Copy step properties of the selected rows of one pipeline/view to
 # the selected rows of another. The rows of `x` and `q` are aligned by
 # position and must have equal length. The structural columns
@@ -212,234 +444,20 @@
 }
 
 
-#' Compact a pipeline to a subset of steps
-#'
-#' Helper to build new pipeline from the steps of `x` whose `nodeId` is
-#' contained in `keepNodes`. The kept rows get a compact node id sequence,
-#' and the DAG and the step->node lookup are re-built from the `depends`
-#' values.
-#' For a small number of kept steps, the DAG is built node by node in R. If
-#' roughly a third or more of the steps are kept, it is faster to clone the
-#' existing DAG, remove the excluded nodes in place, and compact the ids in
-#' C++ via dag_rebuild().
-#'
-#' @param x A pipeflow pipeline.
-#' @param keepNodes Integer vector of node ids to keep.
-#' @param rebuildThresh Fraction of steps to keep above which the DAG is
-#' rebuilt. The default value of 0.3 was determined empirically, that is,
-#' at this fraction both methods take roughly the same time.
-#' @return A new pipeflow pipeline with the selected steps and a compact
-#' node id sequence.
-#' @noRd
-.pip_compact <- function(x, keepNodes, rebuildThresh = 0.3) {
-    pipenv <- .pip_pipenv(x)
-    data <- pipenv[["data"]]
-    out <- pip_new(name = x[["name"]])
-    keepNodes <- as.integer(keepNodes)
-    rows <- which(data[["nodeId"]] %in% keepNodes)
-    if (length(rows) == 0L) {
-        return(out)
-    }
+# ==============================================================================
+# S3 methods
+# ==============================================================================
 
-    subDat <- data.table::copy(data[rows])
-    useRebuild <- length(rows) / nrow(data) >= rebuildThresh
-
-    if (useRebuild) {
-        # Clone the existing DAG, drop all nodes that are not kept, and let
-        # the C++ side compact the node ids. Nodes that are still alive
-        # correspond to the current rows of `data`.
-        d <- dag_clone(.pip_dag(pipenv))
-        dead <- setdiff(data[["nodeId"]], keepNodes)
-        for (id in dead) {
-            dag_remove_node(d, id, force = TRUE)
-        }
-        oldOrder <- dag_rebuild(d)
-        subDat[["nodeId"]] <- match(subDat[["nodeId"]], oldOrder) - 1L
-    } else {
-        # Re-map node ids to a compact sequence
-        subDat[["nodeId"]] <- seq_along(subDat[["nodeId"]]) - 1L
-    }
-
-    # Rebuild the step->node lookup table
-    nodeIds <- subDat[["nodeId"]]
-    stepsToNodes <- list2env(
-        as.list(stats::setNames(nodeIds, subDat[["step"]])),
-        envir = new.env(parent = emptyenv())
-    )
-
-    if (!useRebuild) {
-        # Build a new DAG from scratch that matches the kept rows
-        d <- dag_new()
-        depends <- subDat[["depends"]]
-        for (k in seq_along(nodeIds)) {
-            dag_add_node(d)
-            # A step can refer to the same step with several arguments, but
-            # there is only one edge
-            deps <- unique(depends[[k]])
-            if (length(deps) == 0L) {
-                next
-            }
-            from <- as.integer(unname(unlist(mget(
-                deps,
-                envir = stepsToNodes,
-                inherits = FALSE
-            ))))
-            to <- as.integer(nodeIds[[k]])
-            dag_add_edges_to(d, from = from, to = to)
-        }
-    }
-
-    data.table::setindexv(subDat, list("step", "nodeId"))
-    env <- .pip_pipenv(out)
-    env[["data"]] <- subDat
-    env[[".dag"]] <- d
-    env[[".steps_to_nodes"]] <- stepsToNodes
-    out
-}
-
-# Method registry (built lazily) maps method names to API functions. The
-# map is then used to implement the virtual method dispatch via
-# `[[.pipeflow` and `$`, i.e. to allow stuff like `p$add(...)` as a
-# shorthand for `pip_add(p, ...)`.
-.pip_method_table <- local({
-    table <- NULL
-    function() {
-        if (is.null(table)) {
-            # Build table
-            table <<- new.env(parent = emptyenv())
-            values <- list(
-                add = pip_add,
-                remove = pip_remove,
-                rename = pip_rename,
-                replace = pip_replace,
-                run = pip_run,
-                reset = pip_reset,
-                tag = pip_tag,
-                untag = pip_untag,
-                lock = pip_lock,
-                unlock = pip_unlock,
-                set_params = pip_set_params,
-                get_params = pip_get_params,
-                collect = pip_collect,
-                clone = pip_clone,
-                graph = pip_graph,
-                data = pip_data,
-                restart = function(x, force = TRUE, times = 1L) {
-                    .pip_restart(
-                        .pip_pipenv(x),
-                        force = force,
-                        times = times
-                    )
-                },
-                halt = function(x) .pip_halt(.pip_pipenv(x))
-            )
-            for (nm in names(values)) {
-                table[[nm]] <- values[[nm]]
-            }
-        }
-        table
-    }
-})
-
-# Internal implementation of [[ for pipeflow objects.
-.pip_subset2 <- function(x, i, j = NULL) {
-    if (missing(i)) {
-        stop("i must be provided")
-    }
-    if (length(i) != 1L || is.na(i)) {
-        stop("i must be a single step name or row index")
-    }
-    if (is.null(j)) {
-        # The `view` field holds node ids, so the covered steps are returned.
-        if (identical(i, "view")) {
-            if (!.is_pipeflow_view(x)) {
-                return(NULL)
-            }
-            return(.pip_pipenv(x)[["data"]][["step"]][.pip_view_rows(x)])
-        }
-        # Via .pip_pipenv(), so that the step table of a saved pipeline gets
-        # its missing columns also when it is read directly.
-        if (identical(i, "pipenv")) {
-            return(.pip_pipenv(x))
-        }
-
-        # List fields of the wrapper have priority over column names.
-        if (is.character(i) && length(i) == 1L && !is.na(i)) {
-            if (i %in% names(x)) {
-                return(.subset2(x, i))
-            }
-        }
-
-        # Virtual methods (an O(1) lookup followed by a single closure that
-        # binds the backend to the current object).
-        if (is.character(i) && length(i) == 1L && !is.na(i)) {
-            fn <- get0(i, envir = .pip_method_table(), inherits = FALSE)
-            if (!is.null(fn)) {
-                return(function(...) fn(x, ...))
-            }
-        }
-
-        # case x[[col]]; only the column is read, not the whole step table
-        data <- .pip_pipenv(x)[["data"]]
-        col <- data[[i]]
-        if (is.null(col)) {
-            return(NULL)
-        }
-        rows <- .pip_view_rows(x)
-        return(stats::setNames(col[rows], data[["step"]][rows]))
-    }
-
-    # Two-index form extracts a single cell from a single row.
-    if (!is.character(j) || length(j) != 1L || is.na(j)) {
-        stop("j must be a single column name")
-    }
-
-    data <- .pip_pipenv(x)[["data"]]
-    rows <- .pip_view_rows(x)
-    if (is.character(i)) {
-        # case x[[stepName, col]]; the row is relative to the view's rows
-        row <- data.table::chmatch(i, data[["step"]][rows])
-        if (is.na(row)) {
-            .pip_steps_to_rows(x, steps = i) # signals unknown steps
-            stop("selected step not part of view: ", i)
-        }
-    } else {
-        # case x[[i, col]]
-        row <- as.integer(i)
-        if (row < 1L || row > length(rows)) {
-            stop("row index out of bounds")
-        }
-    }
-
-    .cell(data[[j]], rows[[row]])
-}
-
-
-#' Get one element of a step table column
-#'
-#' Unlike `[[`, which drops the class of an atomic vector unless it has its
-#' own `[[` method (as `POSIXct` has, but `difftime` hasn't), the element of
-#' an atomic column keeps its class, e.g. a `duration` stays a `difftime`.
-#'
-#' @param col A column of the step table.
-#' @param row A single row index.
-#' @return The element of `col` at `row`.
-#' @noRd
-.cell <- function(col, row) {
-    if (is.list(col)) col[[row]] else col[row]
-}
-
-
-# ------------------------------------
-# Implementation of generic S3 methods
-# ------------------------------------
-
+# ----------
+# Dimensions
+# ----------
 #' @name dim.pipeflow
 #' @rdname dim.pipeflow
 #' @export
 length.pipeflow <- function(x) {
     as.integer(length(.pip_view_rows(x)))
 }
+
 
 #' Dimensions of a pipeflow pipeline or view
 #'
@@ -482,6 +500,9 @@ dim.pipeflow <- function(x) {
 }
 
 
+# -------------------
+# Extract and replace
+# -------------------
 #' Extract or replace parts of a pipeline
 #'
 #' A pipeline can be subset, read from and written to with the usual extract
@@ -727,6 +748,7 @@ dim.pipeflow <- function(x) {
 `[[.pipeflow` <- function(x, i, j = NULL) {
     .pip_subset2(x = x, i = i, j = j)
 }
+
 
 #' @details
 #' ## Assign values to meta fields or step properties (`x[[i, j]] <- value`)
@@ -1155,6 +1177,7 @@ dim.pipeflow <- function(x) {
     x
 }
 
+
 #' @details
 #' ## Extract and assign via $ (`x$i / x$i <- value`)
 #'
@@ -1178,6 +1201,7 @@ dim.pipeflow <- function(x) {
     x[[i]]
 }
 
+
 #' @rdname Extract.pipeflow
 #' @export
 `$<-.pipeflow` <- function(x, i, value) {
@@ -1186,6 +1210,9 @@ dim.pipeflow <- function(x) {
 }
 
 
+# ---------
+# Structure
+# ---------
 #' Print pipeflow objects
 #'
 #' @param x A pipeflow pipeline or view.
@@ -1238,6 +1265,9 @@ str.pipeflow <- function(object, ...) {
 }
 
 
+# -------
+# Binding
+# -------
 #' Bind pipelines
 #'
 #' Binds two or more pipelines together by concatenating their steps. If the
