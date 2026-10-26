@@ -24,6 +24,20 @@
     )
 }
 
+#' Create the row of a new step
+#'
+#' @param step The name of the step.
+#' @param fun The step function.
+#' @param params Named list of the params of the step, see
+#' `.extract_fun_params()`.
+#' @param depends Named character vector of the steps that params refer to,
+#' see `.extract_depends()`. The other params are the unbound ones.
+#' @param nodeId The id of the step's node in the DAG.
+#' @param tags,exec As for [pip_add()].
+#' @return A list with one element per column of `.empty_pipeline()`, to be
+#' bound to the step table with `data.table::rbindlist()`. The step is in
+#' state `"new"`, unlocked and without output.
+#' @noRd
 .new_step <- function(
     step,
     fun,
@@ -216,10 +230,18 @@
 # -------
 # Wrapper
 # -------
-# Outer pipeline env wrapper that allows to create views as copied objects with
-# different names and view specifications, while sharing (i.e. pointing to) the
-# same underlying pipeline environment. The `view` of a view holds the node ids
-# of the covered steps (see `.pip_rows_to_view()`).
+#' Wrap a pipeline environment into a pipeflow object
+#'
+#' The object is a light wrapper, so a pipeline and all views on it can have
+#' their own names and selectors while sharing (i.e. pointing to) the same
+#' pipeline environment.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @param name The name of the pipeline or view.
+#' @param view `NULL` for a pipeline, or the node ids of the steps covered by
+#' a view (see `.pip_rows_to_view()`).
+#' @return A `pipeflow` object, `list(name, view, pipenv)`.
+#' @noRd
 .wrap_pipenv <- function(pipenv, name, view = NULL) {
     structure(
         list(name = name, view = view, pipenv = pipenv),
@@ -275,7 +297,18 @@
 # ---------------------------------
 # Pipeline environment & DAG access
 # ---------------------------------
-# Convenience helper function to retrieve the shared inner environment.
+#' Get the inner environment of a pipeline or view
+#'
+#' All access to the pipeline state goes through this function. A pipeline
+#' saved with an older version of pipeflow is brought up to date on the
+#' first access: missing time columns are added (see `.pip_add_time_cols()`)
+#' and so is `.steps_with_current_out`. The DAG is restored separately, by
+#' `.pip_dag()`.
+#'
+#' @param x A pipeflow pipeline or view.
+#' @return The inner pipeline environment, shared by the pipeline and all
+#' its views.
+#' @noRd
 .pip_pipenv <- function(x) {
     pipenv <- .subset2(x, "pipenv")
     dat <- pipenv[["data"]]
@@ -418,9 +451,13 @@
     as.integer(pipenv[["data"]][["nodeId"]][rows])
 }
 
-# The rows covered by `x`: all pipeline rows for a full pipeline, or the rows
-# of the steps in the view's selector (in pipeline order) for a view. Steps
-# that were removed from the pipeline are no longer covered.
+#' Get the rows of the step table covered by a pipeline or view
+#'
+#' @param x A pipeflow pipeline or view.
+#' @return Integer vector of absolute row indices in pipeline order: all
+#' rows for a pipeline, the rows of the steps in the selector for a view.
+#' Steps that were removed from the pipeline are no longer covered.
+#' @noRd
 .pip_view_rows <- function(x) {
     view <- .subset2(x, "view")
     nodeIds <- .pip_pipenv(x)[["data"]][["nodeId"]]
@@ -430,6 +467,12 @@
     which(nodeIds %in% view)
 }
 
+#' Get the rows of the step table covered by a pipeline or view
+#'
+#' @param x A pipeflow pipeline or view.
+#' @return A copy of the covered rows (see `.pip_view_rows()`) as a
+#' `data.table`.
+#' @noRd
 .pip_view_data <- function(x) {
     rows <- .pip_view_rows(x)
     .pip_pipenv(x)[["data"]][rows, ]
@@ -448,9 +491,13 @@
     `%notin%` = data.table::`%notin%`
 )
 
-# TRUE if `step` is covered by the rows of `x`. Always TRUE for a full
-# pipeline (where all rows are covered) and FALSE for a view that does not
-# cover the step.
+#' Is a step covered by a pipeline or view?
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param step A single step name.
+#' @return `TRUE` if `step` is a step of the pipeline and, for a view, is
+#' covered by it. `FALSE` otherwise, also for an unknown step.
+#' @noRd
 .pip_step_in_view <- function(x, step) {
     absRow <- data.table::chmatch(step, .pip_pipenv(x)[["data"]][["step"]])
     if (is.na(absRow)) {
@@ -459,11 +506,30 @@
     absRow %in% .pip_view_rows(x)
 }
 
-# Resolve the `i` selector of `[.pipeflow` to absolute row indices. `i_expr`
-# is the unevaluated `i` expression; it is evaluated in the context of the
-# covered rows, i.e. the data of a view or the full step table of a pipeline.
-# `enclos` is used as the enclosing environment for boolean filter expressions,
-# with the data.table filter operators (`.filter_ops`) in between.
+#' Resolve the `i` selector of `[.pipeflow` to rows of the step table
+#'
+#' `i_expr` is evaluated with the columns of the covered rows (those of the
+#' view, or all rows of a pipeline) as variables, so a filter like
+#' `state == "done"` only sees the steps of a view. What it evaluates to
+#' selects the rows:
+#' * logical: a filter over the covered rows. A single value is recycled,
+#'   otherwise it needs one value per covered row and no `NA`.
+#' * numeric: positions among the covered rows, so `1` is the first step of
+#'   a view, not of the pipeline. Negative positions exclude rows, as in
+#'   base R.
+#' * character: step names, which must be covered by the view.
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param i_expr The unevaluated `i` expression.
+#' @param enclos The enclosing environment of the evaluation, e.g. the
+#' caller of `[`. The data.table filter operators (`.filter_ops`) are put
+#' in between, so `%like%` and others work without attaching data.table.
+#' @param keep_order If `FALSE`, positions and step names are sorted and
+#' made unique, so the rows come in pipeline order. If `TRUE`, they are
+#' kept in the given order, with repeats. Logical filters always give rows
+#' in pipeline order.
+#' @return Integer vector of absolute row indices of the step table.
+#' @noRd
 .pip_select_rows <- function(x, i_expr, enclos, keep_order = FALSE) {
     dat <- .pip_pipenv(x)[["data"]]
     view <- .is_pipeflow_view(x)
@@ -543,12 +609,23 @@
     }
 
     stop(sprintf(
-        "`i` must evaluate to row indices, step names, or a logical filter, ",
-        "not %s",
+        paste(
+            "`i` must evaluate to row indices, step names, or a logical",
+            "filter, not %s"
+        ),
         typeof(value)
     ))
 }
 
+#' Get the rows of the step table for DAG node ids
+#'
+#' @param x A pipeflow pipeline or view. A view does not restrict the rows.
+#' @param nodes Integer vector of node ids, e.g. from
+#' `.pip_get_reachable_nodes()`.
+#' @return A `data.table` with one row per element of `nodes`, in the order
+#' of `nodes` (not in pipeline order). An unknown id gives a row of `NA`s
+#' with that `nodeId`.
+#' @noRd
 .pip_filter_nodes <- function(x, nodes) {
     .pip_pipenv(x)[["data"]][list(nodes), on = "nodeId"]
 }
@@ -567,6 +644,13 @@
 # ---------------------------
 # Step lookup & DAG traversal
 # ---------------------------
+#' Is a step in the pipeline?
+#'
+#' @param x A pipeflow pipeline or view. A view does not restrict the steps,
+#' see `.pip_step_in_view()` for that.
+#' @param step A single, non-empty step name.
+#' @return `TRUE` if the pipeline has a step of that name.
+#' @noRd
 .pip_step_exists <- function(x, step) {
     exists(
         step,
@@ -575,6 +659,12 @@
     )
 }
 
+#' Get the DAG node ids of steps
+#'
+#' @param x A pipeflow pipeline or view. A view does not restrict the steps.
+#' @param steps Character vector of non-empty step names.
+#' @return Named list by step of the node ids, with `NA` for unknown steps.
+#' @noRd
 .pip_steps_to_nodes <- function(x, steps) {
     mget(
         steps,
@@ -584,6 +674,13 @@
     )
 }
 
+#' Get the rows of the step table of steps
+#'
+#' @param x A pipeflow pipeline or view. A view does not restrict the steps.
+#' @param steps Character vector of step names.
+#' @return Integer vector of absolute row indices, in the order of `steps`.
+#' Signals an error for `NA`, empty or unknown step names.
+#' @noRd
 .pip_steps_to_rows <- function(x, steps) {
     data <- .pip_pipenv(x)[["data"]]
 
@@ -602,6 +699,17 @@
     as.integer(i)
 }
 
+#' Get the DAG nodes reachable from steps
+#'
+#' @param x A pipeflow pipeline or view. A view does not restrict the steps.
+#' @param steps Character vector of step names. `NA`, empty and unknown
+#' names are ignored.
+#' @param downstream `TRUE` for the steps that depend on `steps` (directly
+#' or not), `FALSE` for the steps that `steps` depend on.
+#' @return Integer vector of unique node ids, including those of `steps`
+#' themselves, in no particular order. Use `.pip_filter_nodes()` to get
+#' their rows.
+#' @noRd
 .pip_get_reachable_nodes <- function(x, steps, downstream = TRUE) {
     env <- .pip_pipenv(x)
     # mget() fails on empty names and would look up NA as "NA"; unknown
@@ -676,6 +784,21 @@
     values
 }
 
+#' Resolve the step references in the params of a step
+#'
+#' @param params Named list of the params of the step, see
+#' `.extract_fun_params()`. One-sided formulas are step references, by name
+#' (`~step1`) or by relative position (`~-1`), each possibly wrapped in
+#' `try()`.
+#' @param steps Character vector of the step names up to and including the
+#' step itself, in pipeline order.
+#' @param toPos The position of the step in `steps`, from which relative
+#' references count back: `~-1` is `steps[toPos - 1]`.
+#' @return Named character vector by param of the referenced step names,
+#' empty if there are none. References by name are not checked against
+#' `steps`, the callers do that. Signals an error for a relative reference
+#' that points before the first step.
+#' @noRd
 .extract_depends <- function(
     params,
     steps,
@@ -727,6 +850,17 @@
 # -----------------
 # Pipeline addition
 # -----------------
+#' Append a step to the end of a pipeline
+#'
+#' Does the work of [pip_add()] without `after`, whose inputs are checked.
+#'
+#' @param x A pipeflow pipeline (not a view).
+#' @param step The name of the new step, not yet in the pipeline.
+#' @param fun,tags,exec,params As for [pip_add()].
+#' @return `x`, with the step added to the step table, the DAG and the step
+#' to node map. Signals an error, before anything is changed, if `params`
+#' refer to unknown steps.
+#' @noRd
 .pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
     params <- .extract_fun_params(fun, params)
 
@@ -776,11 +910,24 @@
     x
 }
 
-# Insert a step at position `pos` (0 <= pos < number of steps) of the
-# pipeline, i.e. after the first `pos` steps. The new row is inserted into
-# the data table (one O(n) rbindlist) and the node is added to the DAG at
-# the corresponding position of its topological order, leaving all existing
-# steps (and their runtime state) untouched.
+#' Insert a step into a pipeline
+#'
+#' Does the work of [pip_add()] with `after`, whose inputs are checked. The
+#' new row is inserted into the step table (one O(n) `rbindlist()`) and the
+#' node is added to the DAG at the same position of its topological order,
+#' leaving all existing steps (and their run state) untouched.
+#'
+#' @param x A pipeflow pipeline (not a view).
+#' @param step The name of the new step, not yet in the pipeline.
+#' @param fun,tags,exec,params As for [pip_add()].
+#' @param pos The number of steps that come before the new one, with
+#' `0 <= pos < number of steps` (to add the step at the end, use
+#' `.pip_append()`). Relative references in `params` count back from the
+#' new step, so `~-1` is the step at `pos`.
+#' @return `x`, with the step added. Signals an error, before anything is
+#' changed, if `params` refer to steps that come after the insertion point
+#' or are unknown.
+#' @noRd
 .pip_insert <- function(x, step, fun, tags, exec, params, pos) {
     params <- .extract_fun_params(fun, params)
 
@@ -861,7 +1008,19 @@
     x
 }
 
-# Bind two pipelines together by concatenating their steps.
+#' Bind two pipelines by appending the steps of one to the other
+#'
+#' Does the work of `rbind()` for two pipelines. A step of `y` whose name is
+#' taken (by a step of `x` or an earlier step of `y`) is renamed by adding
+#' the first free number from 2 on, e.g. `a` becomes `a2`, and references to
+#' it in `y` follow. Relative references of `y` become references by name,
+#' so they keep pointing to the steps of `y`. The current params of the
+#' steps of `y` become the defaults of their functions. Outputs, states,
+#' times and locks of the steps of `y` are kept.
+#'
+#' @param x,y Pipeflow pipelines (not views). Neither is changed.
+#' @return A new pipeline named `"<name of x>-<name of y>"`.
+#' @noRd
 .pip_bind <- function(x, y) {
     out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
     yy <- pip_clone(y)
@@ -1618,6 +1777,17 @@
 # --------------
 # Step execution
 # --------------
+#' Mark the output of a step as partitioned
+#'
+#' The output of a step with exec mode `"split"`, and of a step mapped over
+#' partitioned inputs, is a partitioned output: a named list with one
+#' element per partition key.
+#'
+#' @param x The output of the step.
+#' @return `x`, with class `"pipeflow_partitioned"` added at the end of its
+#' classes. Signals an error if `x` is no list or its names are missing,
+#' empty, `NA` or not unique.
+#' @noRd
 .as_pipeflow_partitioned <- function(x) {
     if (!is.list(x)) {
         stop("split mode requires step output to be a list")
@@ -1983,14 +2153,33 @@
     pip_output_value(out, ctx = list(step = step, key = NULL, time = time))
 }
 
-# `failed` is an optional named list of failure objects that replace the
-# outputs of the referenced steps for the respective arguments. `onError` is
-# the `on_error` of the run: with "continue", a mapped step that fails for
-# some keys keeps the failures in its output, see .pip_execute_step_call().
-# Such a step gets state "failed" and keeps its time. With `retry = TRUE`,
-# such a step only calls its function for the keys that failed and keeps the
-# outputs of the other keys (see pip_run()). `map` is the `map` of the run,
-# see pip_run().
+#' Run one step of a pipeline
+#'
+#' Collects the arguments (the params, with the outputs of the referenced
+#' steps), calls the step function according to its exec mode, and stores
+#' the output, state, time and duration in the step's row. Messages,
+#' warnings and errors of the step are passed to `lgr`. If the step fails,
+#' its state becomes `"failed"` and a `pipeflow_step_error` is signalled
+#' (see `.pip_step_error()`). The step may change the pipeline via `.self`,
+#' so its row is looked up again by name after the call. If the step was
+#' removed, nothing is stored. If it changed its own function, params or
+#' exec mode, its state becomes `"outdated"` instead of `"done"`.
+#'
+#' @param x A pipeflow pipeline or view. `.self` refers to `x`.
+#' @param i The row index of the step in the step table.
+#' @param lgr The logger, see [pip_run()].
+#' @param failed Named list by argument of failure objects (see
+#' `.pip_failure()`) that replace the outputs of the referenced steps.
+#' @param onError The `on_error` of the run. With `"continue"`, a mapped
+#' step that fails for some keys keeps the failures in its output (see
+#' `.pip_execute_step_call()`). Such a step gets state `"failed"` and keeps
+#' its time.
+#' @param retry If `TRUE`, a step that failed for some keys only calls its
+#' function for those keys and keeps the outputs of the other keys (see
+#' [pip_run()]).
+#' @param map The `map` of the run, see [pip_run()].
+#' @return The output of the step.
+#' @noRd
 .pip_run_row <- function(
     x,
     i,
@@ -2183,6 +2372,20 @@
 # -------------
 # State updates
 # -------------
+#' Ask a running pipeline to restart
+#'
+#' Does the work of `.self$restart()`, called from within a step (see the
+#' `$` method). Sets the run state to `"restart"`, so that `pip_run()`
+#' starts over after the step.
+#' `times` limits the number of restarts: once the pipeline has restarted
+#' `times` times, the call does not restart it again but resets the count,
+#' so the run goes on.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @param force The `force` of the restarted run, see [pip_run()].
+#' @param times The maximum number of restarts.
+#' @return `NULL`, invisibly.
+#' @noRd
 .pip_restart <- function(pipenv, force = TRUE, times = 1L) {
     if (!.is_single(force, "logical")) {
         stop("force must be a single logical value")
@@ -2203,6 +2406,15 @@
     invisible()
 }
 
+#' Ask a running pipeline to stop after the current step
+#'
+#' Does the work of `.self$halt()`, called from within a step (see the `$`
+#' method). Sets the run state to `"halted"`, so that `pip_run()` runs no
+#' further steps.
+#'
+#' @param pipenv The inner pipeline environment.
+#' @return `NULL`, invisibly.
+#' @noRd
 .pip_halt <- function(pipenv) {
     pipenv[[".run_state"]][] <- .run_states[["halted"]][["name"]]
     invisible()

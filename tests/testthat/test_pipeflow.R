@@ -342,6 +342,156 @@ describe(".pip_view_rows", {
     })
 })
 
+describe(".pip_step_in_view", {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x) |>
+            pip_add("s3", \(x = ~s2) x)
+    }
+
+    it("is TRUE for every step of a pipeline", {
+        p <- test_pip()
+        expect_true(.pip_step_in_view(p, "s1"))
+        expect_true(.pip_step_in_view(p, "s3"))
+    })
+
+    it("is TRUE only for the steps covered by a view", {
+        v <- pip_view(test_pip(), step = "s2")
+        expect_true(.pip_step_in_view(v, "s2"))
+        expect_false(.pip_step_in_view(v, "s1"))
+        expect_false(.pip_step_in_view(v, "s3"))
+    })
+
+    it("is FALSE for unknown and removed steps", {
+        p <- test_pip()
+        v <- pip_view(p, step = c("s2", "s3"))
+        expect_false(.pip_step_in_view(p, "zz"))
+
+        pip_remove(p, "s3")
+        expect_false(.pip_step_in_view(v, "s3"))
+    })
+})
+
+describe(".pip_select_rows", {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x) |>
+            pip_add("s3", \(x = ~s2) x) |>
+            pip_add("s4", \(x = ~s3) x)
+    }
+    select <- function(x, i, keep_order = FALSE) {
+        .pip_select_rows(
+            x,
+            substitute(i),
+            enclos = parent.frame(),
+            keep_order = keep_order
+        )
+    }
+
+    it("selects rows of a pipeline by position, name or filter", {
+        p <- test_pip()
+        expect_equal(select(p, c(3, 1)), c(1L, 3L))
+        expect_equal(select(p, c("s4", "s2")), c(2L, 4L))
+        expect_equal(select(p, step %in% c("s2", "s3")), 2:3)
+        expect_equal(select(p, -1), 2:4)
+    })
+
+    it("counts positions among the rows of a view", {
+        v <- pip_view(test_pip(), step = c("s2", "s4"))
+        expect_equal(select(v, 1), 2L)
+        expect_equal(select(v, 2), 4L)
+        expect_equal(select(v, -1), 4L)
+        expect_error(select(v, 3), "Invalid row indices in 'i': 3")
+    })
+
+    it("evaluates filters on the rows of a view only", {
+        v <- pip_view(test_pip(), step = c("s2", "s4"))
+        expect_equal(select(v, TRUE), c(2L, 4L))
+        expect_equal(select(v, c(FALSE, TRUE)), 4L)
+        expect_equal(select(v, step != "s2"), 4L)
+        expect_error(
+            select(v, c(TRUE, TRUE, TRUE)),
+            "logical filter has length 3 but the view has 2 rows"
+        )
+    })
+
+    it("keeps the given order and repeats with keep_order = TRUE", {
+        p <- test_pip()
+        expect_equal(select(p, c(3, 1, 3)), c(1L, 3L))
+        expect_equal(select(p, c(3, 1, 3), keep_order = TRUE), c(3L, 1L, 3L))
+        expect_equal(
+            select(p, c("s3", "s1", "s3"), keep_order = TRUE),
+            c(3L, 1L, 3L)
+        )
+    })
+
+    it("finds the data.table filter operators and variables of enclos", {
+        p <- test_pip()
+        wanted <- c("s1", "s4")
+        expect_equal(select(p, step %like% "^s[23]$"), 2:3)
+        expect_equal(select(p, step %chin% wanted), c(1L, 4L))
+    })
+
+    it("selects no rows with an empty selector", {
+        p <- test_pip()
+        expect_equal(select(p, integer(0)), integer(0))
+        expect_equal(select(p, character(0)), integer(0))
+        expect_equal(select(p, FALSE), integer(0))
+    })
+
+    it("signals NA in a logical filter", {
+        expect_error(
+            select(test_pip(), c(TRUE, NA, TRUE, TRUE)),
+            "logical filter must not contain NA"
+        )
+    })
+
+    it("signals a selector of another type, naming the type", {
+        expect_error(
+            select(test_pip(), list(1)),
+            paste(
+                "`i` must evaluate to row indices, step names, or a logical",
+                "filter, not list"
+            ),
+            fixed = TRUE
+        )
+    })
+})
+
+describe(".pip_filter_nodes", {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x) |>
+            pip_add("s3", \(x = ~s2) x)
+    }
+
+    it("returns the rows of the nodes in the order of the nodes", {
+        p <- test_pip()
+        ids <- unname(p[["nodeId"]])
+        expect_equal(
+            .pip_filter_nodes(p, rev(ids))[["step"]],
+            c("s3", "s2", "s1")
+        )
+    })
+
+    it("is not restricted by a view", {
+        p <- test_pip()
+        v <- pip_view(p, step = "s2")
+        ids <- unname(p[["nodeId"]])
+        expect_equal(.pip_filter_nodes(v, ids)[["step"]], c("s1", "s2", "s3"))
+    })
+
+    it("gives a row of NAs for an unknown node id", {
+        p <- test_pip()
+        res <- .pip_filter_nodes(p, c(99L, p[["nodeId"]][["s2"]]))
+        expect_equal(res[["step"]], c(NA, "s2"))
+        expect_equal(res[["nodeId"]][[1]], 99L)
+    })
+})
+
 # ---------------------------
 # Step lookup & DAG traversal
 # ---------------------------
@@ -390,6 +540,69 @@ describe(".pip_steps_to_rows", {
             .pip_steps_to_rows(p, c("s1", "unknown")),
             "Unknown step names: unknown"
         )
+    })
+})
+
+describe(".pip_steps_to_nodes", {
+    it("maps step names to node ids, with NA for unknown steps", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = ~s1) x)
+        pip_add(p, "s0", \(x = 0) x, after = 0)
+
+        # Node ids are given in the order of adding, not of the rows
+        expect_equal(
+            .pip_steps_to_nodes(p, c("s0", "zz", "s1")),
+            list(s0 = 2L, zz = NA_integer_, s1 = 0L)
+        )
+    })
+})
+
+describe(".pip_get_reachable_nodes", {
+    # a -> b -> d, a -> c, e
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x) |>
+            pip_add("c", \(x = ~a) x) |>
+            pip_add("d", \(x = ~b) x) |>
+            pip_add("e", \(x = 1) x)
+    }
+    reach <- function(x, steps, downstream = TRUE) {
+        nodes <- .pip_get_reachable_nodes(x, steps, downstream = downstream)
+        sort(.pip_filter_nodes(x, nodes)[["step"]])
+    }
+
+    it("returns the steps downstream, including the start steps", {
+        p <- test_pip()
+        expect_equal(reach(p, "a"), c("a", "b", "c", "d"))
+        expect_equal(reach(p, "b"), c("b", "d"))
+        expect_equal(reach(p, "e"), "e")
+    })
+
+    it("returns the steps upstream with downstream = FALSE", {
+        p <- test_pip()
+        expect_equal(reach(p, "d", downstream = FALSE), c("a", "b", "d"))
+        expect_equal(reach(p, "a", downstream = FALSE), "a")
+    })
+
+    it("returns unique nodes for start steps that share nodes", {
+        p <- test_pip()
+        nodes <- .pip_get_reachable_nodes(p, c("a", "b", "b"))
+        expect_false(anyDuplicated(nodes) > 0L)
+        expect_equal(reach(p, c("b", "c")), c("b", "c", "d"))
+    })
+
+    it("ignores NA, empty and unknown step names", {
+        p <- test_pip()
+        expect_equal(reach(p, c("b", NA, "", "zz")), c("b", "d"))
+        expect_equal(.pip_get_reachable_nodes(p, c(NA, "", "zz")), integer(0))
+        expect_equal(.pip_get_reachable_nodes(p, character(0)), integer(0))
+    })
+
+    it("is not restricted by a view", {
+        v <- pip_view(test_pip(), step = "a")
+        expect_equal(reach(v, "a"), c("a", "b", "c", "d"))
     })
 })
 
@@ -585,6 +798,53 @@ describe(".extract_depends", {
 # Conditions: errors, failures and warnings
 # -----------------------------------------
 
+describe(".pip_failure", {
+    boom <- simpleError("boom")
+
+    it("describes the failure of the step itself", {
+        f <- .pip_failure("a", parent = boom)
+        expect_s3_class(f, c("pipeflow_failure", "error", "condition"))
+        expect_equal(conditionMessage(f), "step 'a' failed: boom")
+        expect_equal(f[["step"]], "a")
+        expect_equal(f[["failed_step"]], "a")
+        expect_identical(f[["parent"]], boom)
+        expect_false("key" %in% names(f))
+    })
+
+    it("describes a step that was not run because another step failed", {
+        f <- .pip_failure("b", parent = boom, failedStep = "a", key = "k1")
+        expect_equal(
+            conditionMessage(f),
+            "step 'b' was not run: step 'a' failed: boom"
+        )
+        expect_equal(f[["failed_step"]], "a")
+        expect_equal(f[["key"]], "k1")
+    })
+})
+
+describe(".pip_first_failure", {
+    boom <- simpleError("boom")
+
+    it("prefers the first key that failed in the step itself", {
+        out <- .as_pipeflow_partitioned(list(
+            k1 = 1,
+            k2 = .pip_failure("b", parent = boom, failedStep = "a", key = "k2"),
+            k3 = .pip_failure("b", parent = boom, key = "k3"),
+            k4 = .pip_failure("b", parent = boom, key = "k4")
+        ))
+        expect_equal(.pip_failed_keys(out), c("k2", "k3", "k4"))
+        expect_equal(.pip_first_failure(out, "b")[["key"]], "k3")
+    })
+
+    it("falls back to the first failed key", {
+        out <- .as_pipeflow_partitioned(list(
+            k1 = .pip_failure("b", parent = boom, failedStep = "a", key = "k1"),
+            k2 = .pip_failure("b", parent = boom, failedStep = "a", key = "k2")
+        ))
+        expect_equal(.pip_first_failure(out, "b")[["key"]], "k1")
+    })
+})
+
 describe(".pip_keys_mismatch", {
     prefix <- "partitioned arguments must share identical keys: "
 
@@ -676,6 +936,46 @@ describe(".pip_keys_mismatch", {
 # Step execution
 # --------------
 
+describe(".as_pipeflow_partitioned", {
+    it("adds the class at the end and keeps the list as it is", {
+        x <- structure(list(a = 1, b = NULL), class = "foo")
+        res <- .as_pipeflow_partitioned(x)
+        expect_equal(class(res), c("foo", "pipeflow_partitioned"))
+        expect_equal(unclass(res), unclass(x))
+        expect_true(.is_pipeflow_partitioned(res))
+    })
+
+    it("accepts an empty named list", {
+        res <- .as_pipeflow_partitioned(stats::setNames(list(), character()))
+        expect_true(.is_pipeflow_partitioned(res))
+        expect_length(res, 0L)
+    })
+
+    it("signals output that is no list", {
+        expect_error(
+            .as_pipeflow_partitioned(c(a = 1, b = 2)),
+            "split mode requires step output to be a list"
+        )
+    })
+
+    it("signals missing, empty or NA keys", {
+        msg <- "split output must be a named list with non-empty keys"
+        expect_error(.as_pipeflow_partitioned(list(1, 2)), msg)
+        expect_error(.as_pipeflow_partitioned(list(a = 1, 2)), msg)
+        expect_error(
+            .as_pipeflow_partitioned(stats::setNames(list(1), NA)),
+            msg
+        )
+    })
+
+    it("signals duplicated keys", {
+        expect_error(
+            .as_pipeflow_partitioned(list(a = 1, a = 2)),
+            "split output keys must be unique"
+        )
+    })
+})
+
 describe(".pip_call_step", {
     no_call <- list(step = NULL, key = NULL, keys = NULL)
 
@@ -758,6 +1058,78 @@ describe(".pip_call_step", {
 
         suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
         expect_identical(.pip_step_call(), no_call)
+    })
+})
+
+describe(".pip_map_keys", {
+    todo <- list(
+        k1 = list(key = "k1", args = list(x = 1)),
+        k2 = list(key = "k2", args = list(x = 2))
+    )
+    keys <- c("k1", "k2")
+    no_map <- \(X, FUN) stop("map was called")
+
+    it("returns an empty list without calling map if there is no key", {
+        res <- .pip_map_keys(list(), map = no_map, fun = identity, "s", keys)
+        expect_equal(res, list())
+    })
+
+    it("runs a single key without calling map", {
+        res <- .pip_map_keys(
+            todo["k2"],
+            map = no_map,
+            fun = \(x) x * 10,
+            step = "s",
+            keys = keys
+        )
+        expect_equal(res, list(k2 = list(ok = TRUE, value = 20)))
+    })
+
+    it("returns the output or the error of each key by key", {
+        res <- .pip_map_keys(
+            todo,
+            map = lapply,
+            fun = \(x) if (x == 2) stop("bad") else x,
+            step = "s",
+            keys = keys
+        )
+        expect_equal(names(res), keys)
+        expect_equal(res[["k1"]], list(ok = TRUE, value = 1))
+        expect_false(res[["k2"]][["ok"]])
+        expect_equal(conditionMessage(res[["k2"]][["value"]]), "bad")
+    })
+
+    it("turns results that don't come from the worker into errors", {
+        map <- function(X, FUN) {
+            list(
+                structure("Error : worker died\n", class = "try-error"),
+                "something else"
+            )
+        }
+        res <- .pip_map_keys(todo, map = map, fun = identity, "s", keys)
+        expect_false(res[["k1"]][["ok"]])
+        expect_equal(
+            conditionMessage(res[["k1"]][["value"]]),
+            "Error : worker died"
+        )
+        expect_false(res[["k2"]][["ok"]])
+        expect_equal(
+            conditionMessage(res[["k2"]][["value"]]),
+            "map did not return the result of the worker"
+        )
+    })
+
+    it("signals a map result that is no list of one result per key", {
+        expect_error(
+            .pip_map_keys(todo, \(X, FUN) list(1), identity, "s", keys),
+            "map must return a list of length 2 (one per key), not of length 1",
+            fixed = TRUE
+        )
+        expect_error(
+            .pip_map_keys(todo, \(X, FUN) 1:2, identity, "s", keys),
+            "not an object of class integer",
+            fixed = TRUE
+        )
     })
 })
 
