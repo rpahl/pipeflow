@@ -31,7 +31,6 @@ data model, `.step_call` and the run loop.
 | `.fun_failure_causes(dat)` | Follows failures along the run (honouring `~try()` and `locked`) and returns step → failing step. |
 | `.fun_out(pip, out)` | Builds the result: `pip_collect()`, one or more step outputs, or `out(snapshot)`. |
 | `.fun_snapshot(pip)` | A light copy (`.pip_clone(deep = FALSE)`) that keeps the run state and last-run time. |
-| `.fun_pips(fun)` | All kept pipelines of a function. Only the tests use it. |
 | `pip_inner(x, step)` | Exported. Snapshots of the kept pipelines of an outer step. |
 
 ## 2. Construction
@@ -253,4 +252,6 @@ If you change any of the core functions above, check `as_function.R` too,
 and run `tests/testthat/test_as_function.R`. That file defines its
 fixtures inline and not in a `helper_*.R` file. Closures from a helper
 would have the attached package environment as an ancestor, and under
-`load_all()` they cannot be serialised without a warning.
+`load_all()` they cannot be serialised without a warning. The tests read the
+kept pipelines of a function with `.fun_pips(fun)`, which is defined in
+`helper_general.R` and is only called, never used as a step.

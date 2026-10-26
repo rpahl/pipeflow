@@ -44,3 +44,18 @@ save_and_read <- function(x) {
     saveRDS(x, f)
     readRDS(f)
 }
+
+# The rows of the step table for the DAG node ids `nodes`, in the order of
+# `nodes`, not in pipeline order. A view does not restrict the rows. An
+# unknown id gives a row of NAs with that node id.
+.pip_filter_nodes <- function(x, nodes) {
+    .pip_pipenv(x)[["data"]][list(nodes), on = "nodeId"]
+}
+
+# The kept pipelines of a function made by as.function(), named by
+# partition key.
+.fun_pips <- function(fun) {
+    cache <- .fun_cache(fun)
+    pips <- lapply(unname(cache$slots), .fun_slot_pips)
+    as.list(unlist(pips, recursive = FALSE))
+}

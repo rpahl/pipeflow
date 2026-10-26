@@ -462,18 +462,6 @@
 }
 
 
-#' The kept pipelines of a function made by `as.function.pipeflow()`
-#'
-#' @param fun A function made by `as.function.pipeflow()`.
-#' @return A list of the pipelines of all slots, named by partition key.
-#' @noRd
-.fun_pips <- function(fun) {
-    cache <- .fun_cache(fun)
-    pips <- lapply(unname(cache$slots), .fun_slot_pips)
-    as.list(unlist(pips, recursive = FALSE))
-}
-
-
 # -------------------------
 # Updates on pipeline edits
 # -------------------------

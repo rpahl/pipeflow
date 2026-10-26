@@ -216,16 +216,6 @@
     invisible(x)
 }
 
-.assert_state <- function(state) {
-    if (!.is_single(state, "character") || is.na(state)) {
-        stop("state must be a single string")
-    }
-    allowed <- names(.step_states)
-    if (!(state %in% allowed)) {
-        stop("state must be one of: ", toString(allowed))
-    }
-    invisible(state)
-}
 
 # -------
 # Wrapper
@@ -433,9 +423,9 @@
     dag_restore(pipenv[[".dag"]], order = ids, from = from, to = to)
 }
 
-# ---------------------
-# Views & row selection
-# ---------------------
+# -----
+# Views
+# -----
 #' Build the view selector for rows of the step table
 #'
 #' Returns the node ids of the steps in the given rows. Unlike row numbers,
@@ -478,19 +468,6 @@
     .pip_pipenv(x)[["data"]][rows, ]
 }
 
-# The data.table operators that are available in the boolean filters of
-# `[.pipeflow`, also when data.table is not attached.
-.filter_ops <- list(
-    `%like%` = data.table::`%like%`,
-    `%ilike%` = data.table::`%ilike%`,
-    `%flike%` = data.table::`%flike%`,
-    `%plike%` = data.table::`%plike%`,
-    `%chin%` = data.table::`%chin%`,
-    `%between%` = data.table::`%between%`,
-    `%inrange%` = data.table::`%inrange%`,
-    `%notin%` = data.table::`%notin%`
-)
-
 #' Is a step covered by a pipeline or view?
 #'
 #' @param x A pipeflow pipeline or view.
@@ -506,129 +483,6 @@
     absRow %in% .pip_view_rows(x)
 }
 
-#' Resolve the `i` selector of `[.pipeflow` to rows of the step table
-#'
-#' `i_expr` is evaluated with the columns of the covered rows (those of the
-#' view, or all rows of a pipeline) as variables, so a filter like
-#' `state == "done"` only sees the steps of a view. What it evaluates to
-#' selects the rows:
-#' * logical: a filter over the covered rows. A single value is recycled,
-#'   otherwise it needs one value per covered row and no `NA`.
-#' * numeric: positions among the covered rows, so `1` is the first step of
-#'   a view, not of the pipeline. Negative positions exclude rows, as in
-#'   base R.
-#' * character: step names, which must be covered by the view.
-#'
-#' @param x A pipeflow pipeline or view.
-#' @param i_expr The unevaluated `i` expression.
-#' @param enclos The enclosing environment of the evaluation, e.g. the
-#' caller of `[`. The data.table filter operators (`.filter_ops`) are put
-#' in between, so `%like%` and others work without attaching data.table.
-#' @param keep_order If `FALSE`, positions and step names are sorted and
-#' made unique, so the rows come in pipeline order. If `TRUE`, they are
-#' kept in the given order, with repeats. Logical filters always give rows
-#' in pipeline order.
-#' @return Integer vector of absolute row indices of the step table.
-#' @noRd
-.pip_select_rows <- function(x, i_expr, enclos, keep_order = FALSE) {
-    dat <- .pip_pipenv(x)[["data"]]
-    view <- .is_pipeflow_view(x)
-    rows <- .pip_view_rows(x)
-    sub <- if (view) dat[rows] else dat
-
-    value <- eval(
-        i_expr,
-        envir = sub,
-        enclos = list2env(.filter_ops, parent = enclos)
-    )
-
-    if (is.logical(value)) {
-        if (length(value) == 1L) {
-            value <- rep(value, nrow(sub))
-        }
-        if (length(value) != nrow(sub)) {
-            stop(sprintf(
-                "logical filter has length %d but the %s has %d rows",
-                length(value),
-                if (view) "view" else "pipeline",
-                nrow(sub)
-            ))
-        }
-        if (anyNA(value)) {
-            stop("logical filter must not contain NA")
-        }
-        return(rows[which(value)])
-    }
-
-    if (is.numeric(value)) {
-        if (anyNA(value)) {
-            stop("row indices in 'i' must not contain NA")
-        }
-        idx <- as.integer(value)
-        if (any(idx < 0L)) {
-            # Negative indices exclude the corresponding rows like in base R
-            if (any(idx > 0L)) {
-                stop("only 0's may be mixed with negative subscripts")
-            }
-            idx <- seq_len(nrow(sub))[idx]
-        }
-        if (!keep_order) {
-            idx <- sort(unique(idx))
-        }
-        bad <- idx[idx < 1L | idx > nrow(sub)]
-        if (length(bad) > 0L) {
-            stop("Invalid row indices in 'i': ", toString(bad))
-        }
-        return(rows[idx])
-    }
-
-    if (is.character(value)) {
-        if (anyNA(value)) {
-            stop("step names must not contain NA")
-        }
-        if (!all(nzchar(value))) {
-            stop("step names must be non-empty strings")
-        }
-        m <- data.table::chmatch(value, dat[["step"]])
-        if (anyNA(m)) {
-            unknown <- unique(value[is.na(m)])
-            stop("Unknown step names: ", toString(unknown), call. = FALSE)
-        }
-        if (!keep_order) {
-            m <- sort(unique(m))
-        }
-        outside <- m[!(m %in% rows)]
-        if (length(outside) > 0L) {
-            stop(
-                "step '",
-                dat[["step"]][[outside[[1L]]]],
-                "' is not part of the view"
-            )
-        }
-        return(m)
-    }
-
-    stop(sprintf(
-        paste(
-            "`i` must evaluate to row indices, step names, or a logical",
-            "filter, not %s"
-        ),
-        typeof(value)
-    ))
-}
-
-#' Get the rows of the step table for DAG node ids
-#'
-#' @param x A pipeflow pipeline or view. A view does not restrict the rows.
-#' @param nodes Integer vector of node ids, e.g. from
-#' `.pip_get_reachable_nodes()`.
-#' @return A `data.table` with one row per element of `nodes`, in the order
-#' of `nodes` (not in pipeline order). An unknown id gives a row of `NA`s
-#' with that `nodeId`.
-#' @noRd
-.pip_filter_nodes <- function(x, nodes) {
-    .pip_pipenv(x)[["data"]][list(nodes), on = "nodeId"]
-}
 
 # --------
 # Indexing
@@ -674,31 +528,6 @@
     )
 }
 
-#' Get the rows of the step table of steps
-#'
-#' @param x A pipeflow pipeline or view. A view does not restrict the steps.
-#' @param steps Character vector of step names.
-#' @return Integer vector of absolute row indices, in the order of `steps`.
-#' Signals an error for `NA`, empty or unknown step names.
-#' @noRd
-.pip_steps_to_rows <- function(x, steps) {
-    data <- .pip_pipenv(x)[["data"]]
-
-    if (anyNA(steps)) {
-        stop("step names must not contain NA", call. = FALSE)
-    }
-    if (!all(nzchar(steps))) {
-        stop("step names must be non-empty strings", call. = FALSE)
-    }
-
-    i <- data.table::chmatch(steps, data[["step"]])
-    if (anyNA(i)) {
-        unknown <- unique(steps[is.na(i)])
-        stop("Unknown step names: ", toString(unknown), call. = FALSE)
-    }
-    as.integer(i)
-}
-
 #' Get the DAG nodes reachable from steps
 #'
 #' @param x A pipeflow pipeline or view. A view does not restrict the steps.
@@ -707,8 +536,7 @@
 #' @param downstream `TRUE` for the steps that depend on `steps` (directly
 #' or not), `FALSE` for the steps that `steps` depend on.
 #' @return Integer vector of unique node ids, including those of `steps`
-#' themselves, in no particular order. Use `.pip_filter_nodes()` to get
-#' their rows.
+#' themselves, in no particular order.
 #' @noRd
 .pip_get_reachable_nodes <- function(x, steps, downstream = TRUE) {
     env <- .pip_pipenv(x)
@@ -1008,111 +836,6 @@
     x
 }
 
-#' Bind two pipelines by appending the steps of one to the other
-#'
-#' Does the work of `rbind()` for two pipelines. A step of `y` whose name is
-#' taken (by a step of `x` or an earlier step of `y`) is renamed by adding
-#' the first free number from 2 on, e.g. `a` becomes `a2`, and references to
-#' it in `y` follow. Relative references of `y` become references by name,
-#' so they keep pointing to the steps of `y`. The current params of the
-#' steps of `y` become the defaults of their functions. Outputs, states,
-#' times and locks of the steps of `y` are kept.
-#'
-#' @param x,y Pipeflow pipelines (not views). Neither is changed.
-#' @return A new pipeline named `"<name of x>-<name of y>"`.
-#' @noRd
-.pip_bind <- function(x, y) {
-    out <- pip_clone(x, name = paste0(x[["name"]], "-", y[["name"]]))
-    yy <- pip_clone(y)
-    yyDat <- .pip_pipenv(yy)[["data"]]
-
-    # Resolve all name clashes directly on the cloned source pipeline.
-    reserved <- .pip_pipenv(out)[["data"]][["step"]]
-
-    `%chin%` <- data.table::`%chin%`
-    for (k in seq_len(nrow(yyDat))) {
-        step <- yyDat[["step"]][[k]]
-        if (step %chin% reserved) {
-            to <- step
-            i <- 2L
-            allSteps <- yyDat[["step"]]
-            while (to %chin% reserved || to %chin% allSteps) {
-                to <- paste0(step, i)
-                i <- i + 1L
-            }
-            pip_rename(yy, from = step, to = to)
-        }
-        reserved <- c(reserved, yyDat[["step"]][[k]])
-    }
-
-    # Append all (potentially renamed) steps of y in one pass: transform each
-    # row (re-create the formula dependencies after renaming), allocate a
-    # fresh node id, wire the DAG edges, and collect the rows for a single
-    # rbindlist.
-    outEnv <- .pip_pipenv(out)
-    d <- .pip_dag(outEnv)
-    stepsToNodes <- outEnv[[".steps_to_nodes"]]
-    rows <- vector("list", nrow(yyDat))
-    for (k in seq_len(nrow(yyDat))) {
-        step <- yyDat[["step"]][[k]]
-        fun <- yyDat[["fun"]][[k]]
-        tags <- yyDat[["tags"]][[k]]
-        exec <- yyDat[["exec"]][[k]]
-        params <- yyDat[["params"]][[k]]
-        depends <- yyDat[["depends"]][[k]]
-
-        # Point the formula dependencies to the (renamed) steps of y, which
-        # also turns relative references into step names. References wrapped
-        # in try() stay wrapped.
-        for (arg in intersect(names(depends), names(params))) {
-            params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
-        }
-        # Fold current parameter values into the defaults of the existing
-        # function arguments. `[<-` with list() keeps a NULL value, which
-        # `[[<-` would drop together with the argument.
-        fml <- formals(fun)
-        for (nm in intersect(names(params), setdiff(names(fml), "..."))) {
-            fml[nm] <- list(params[[nm]])
-        }
-        formals(fun) <- fml
-
-        # Update DAG: allocate the node, register the step, add edges to its
-        # upstream steps (which are either in `out` or already appended).
-        nodeId <- as.integer(dag_add_node(d))
-        stepsToNodes[[step]] <- nodeId
-        if (length(depends) > 0L) {
-            refNodes <- as.integer(unlist(mget(
-                unname(depends),
-                envir = stepsToNodes,
-                inherits = FALSE
-            )))
-            dag_add_edges_to(d, from = unique(refNodes), to = nodeId)
-        }
-
-        row <- .new_step(step, fun, params, depends, nodeId, tags, exec)
-        rows[[k]] <- row
-    }
-
-    # rbind all appended rows and preserve runtime state of the source steps
-    appRows <- data.table::rbindlist(rows, use.names = TRUE)
-    data.table::set(
-        appRows,
-        j = c("out", "state", "time", "time_start", "duration", "locked"),
-        value = list(
-            yyDat[["out"]],
-            yyDat[["state"]],
-            yyDat[["time"]],
-            yyDat[["time_start"]],
-            yyDat[["duration"]],
-            yyDat[["locked"]]
-        )
-    )
-    outEnv[["data"]] <- data.table::rbindlist(
-        list(outEnv[["data"]], appRows),
-        use.names = TRUE
-    )
-    out
-}
 
 # -----------------
 # Parameter binding
@@ -2373,52 +2096,6 @@
 # State updates
 # -------------
 #' Ask a running pipeline to restart
-#'
-#' Does the work of `.self$restart()`, called from within a step (see the
-#' `$` method). Sets the run state to `"restart"`, so that `pip_run()`
-#' starts over after the step.
-#' `times` limits the number of restarts: once the pipeline has restarted
-#' `times` times, the call does not restart it again but resets the count,
-#' so the run goes on.
-#'
-#' @param pipenv The inner pipeline environment.
-#' @param force The `force` of the restarted run, see [pip_run()].
-#' @param times The maximum number of restarts.
-#' @return `NULL`, invisibly.
-#' @noRd
-.pip_restart <- function(pipenv, force = TRUE, times = 1L) {
-    if (!.is_single(force, "logical")) {
-        stop("force must be a single logical value")
-    }
-    if (!.is_single(times, "numeric") || is.na(times) || times < 1L) {
-        stop("times must be a single integer value >= 1")
-    }
-
-    count <- pipenv[[".restart_count"]]
-    if (count >= times) {
-        pipenv[[".restart_count"]] <- 0L
-        return(invisible())
-    }
-
-    pipenv[[".run_state"]][] <- .run_states[["restart"]][["name"]]
-    pipenv[[".restart_count"]] <- count + 1L
-    pipenv[[".restart_force"]] <- force
-    invisible()
-}
-
-#' Ask a running pipeline to stop after the current step
-#'
-#' Does the work of `.self$halt()`, called from within a step (see the `$`
-#' method). Sets the run state to `"halted"`, so that `pip_run()` runs no
-#' further steps.
-#'
-#' @param pipenv The inner pipeline environment.
-#' @return `NULL`, invisibly.
-#' @noRd
-.pip_halt <- function(pipenv) {
-    pipenv[[".run_state"]][] <- .run_states[["halted"]][["name"]]
-    invisible()
-}
 
 #' Mark steps and their downstream steps as outdated
 #'
