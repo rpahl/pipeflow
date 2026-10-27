@@ -5,8 +5,8 @@
 - A step that fails in a run with `on_error = "stop"` (the default) now
   stores its error as its output, as in a run with `on_error = "continue"`.
   Before, it kept the output of an earlier attempt, which could come from
-  other params, so the output of a `"failed"` step could not be told from
-  a stale one.
+  other params, so the output of a `"failed"` step could not be told apart
+  from a stale one.
 
 # pipeflow 0.5.0.9025
 

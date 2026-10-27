@@ -1966,8 +1966,9 @@
         error = function(e) {
             # The step call may have shifted the rows (via `.self`), so the step's row
             # is looked up by name. The condition is stored as the output, so that the
-            # output of a failed step always comes from its last attempt. The step stays
-            # unmarked in `.steps_with_current_out`, as its output has no failed keys.
+            # output of a failed step always comes from its last attempt. The step still
+            # stays unmarked in `.steps_with_current_out`, which only marks outputs with
+            # failed keys, as only these are reused by a retry.
             dat <- .pip_pipenv(x)[["data"]]
             rowNow <- data.table::chmatch(step, dat[["step"]])
             if (!is.na(rowNow)) {
