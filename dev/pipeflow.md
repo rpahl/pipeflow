@@ -442,9 +442,9 @@ sequenceDiagram
         RR->>E: (failed keys: set out, state = failed, duration, keep time)
         R->>R: failed keys: record the output in failures
         alt step error
-            RR->>E: by step name: state = failed, duration
+            RR->>E: by step name: out = condition, state = failed, duration
             RR-->>R: pipeflow_step_error
-            R->>R: stop: re-signal / continue: store condition as out
+            R->>R: stop: re-signal / continue: record the failure
         end
         R->>E: check .run_state for restart (re-run pip_run) / halted (break)
     end
@@ -554,10 +554,11 @@ stateDiagram-v2
   `"step '<step>' was not run: "` in front if `step != failed_step`. `parent`
   is the original condition of the step that failed, or its
   `pipeflow_key_error` for a failed key.
-- **Whole-step failures.** In a continued run, the failed step's `out` is the
-  original condition (the key error for an error per key outside the key
-  loop, e.g. in `pip_output_value()`), and `pip_run()` records a
-  `.pip_failure()` for it in `failures`. A step with a failed non-`~try()`
+- **Whole-step failures.** In any run, the error handler of `.pip_run_row()`
+  stores the original condition as the failed step's `out` (the key error
+  for a failed key in a stopped run, or for an error per key outside the key
+  loop, e.g. in `pip_output_value()`). In a continued run, `pip_run()` also
+  records a `.pip_failure()` for it in `failures`. A step with a failed non-`~try()`
   input is not run and gets a failure with the upstream `failed_step`. A
   `~try()` argument receives the failure via `.pip_run_row(failed = )`.
   Errors outside of the per-key calls (split steps, `plain`/`reduce`
@@ -590,9 +591,10 @@ stateDiagram-v2
   annotated in their own run). All keys are still passed as `keys`, so a
   function made by `as.function()` keeps the inner pipelines of all keys.
   Dependents are not narrowed down: an input that ran makes them re-run all
-  keys. The stored output must also come from the step's last attempt: an
-  attempt that stops with an error keeps the previous output (and state
-  `failed`), which may be from before a change. `pipenv$.steps_with_current_out`
+  keys. The stored output must also come from the step's last attempt. An
+  attempt that stops with an error stores its condition (no failed keys),
+  but an output assigned from outside keeps state `failed` and may be from
+  before a change. `pipenv$.steps_with_current_out`
   is an environment (step name -> `TRUE`/`FALSE`, like `.steps_to_nodes` a
   hash) that marks the steps whose stored output comes from their last
   attempt: `.pip_run_row()` sets the step to `FALSE` at the start of each

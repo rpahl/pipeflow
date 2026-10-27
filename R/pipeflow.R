@@ -1965,15 +1965,19 @@
         },
         error = function(e) {
             # The step call may have shifted the rows (via `.self`), so the step's row
-            # is looked up by name.
+            # is looked up by name. The condition is stored as the output, so that the
+            # output of a failed step always comes from its last attempt. The step still
+            # stays unmarked in `.steps_with_current_out`, which only marks outputs with
+            # failed keys, as only these are reused by a retry.
             dat <- .pip_pipenv(x)[["data"]]
             rowNow <- data.table::chmatch(step, dat[["step"]])
             if (!is.na(rowNow)) {
                 data.table::set(
                     dat,
                     i = rowNow,
-                    j = c("state", "duration"),
+                    j = c("out", "state", "duration"),
                     value = list(
+                        list(e),
                         .step_states[["failed"]][["name"]],
                         .as_duration(Sys.time() - startTime)
                     )
@@ -3367,9 +3371,9 @@ pip_replace <- function(
 #' not re-executed (for example, because they were already `"done"`) keep their state.
 #'
 #' ## Runtime errors
-#' By default, a failing step stops the run: the step gets state `"failed"`, the
-#' pipeline run state becomes `"failed"`, and steps after it that were not reached are
-#' marked `"outdated"`, so the next run retries them.
+#' By default, a failing step stops the run: the step gets state `"failed"` and its
+#' error is stored as its output, the pipeline run state becomes `"failed"`, and steps
+#' after it that were not reached are marked `"outdated"`, so the next run retries them.
 #'
 #' The error message names the step, and for a step mapped over partitions (see `exec`
 #' in [pip_add()]) also the partition key, e.g. `"step 'fit': key 'b': negative"`. The
@@ -3379,7 +3383,8 @@ pip_replace <- function(
 #' ## Continuing after errors
 #' With `on_error = "continue"`, the run does not stop at a failed step:
 #'
-#' * The failed step gets state `"failed"`, and its error is stored as its output.
+#' * The failed step gets state `"failed"`, and its error is stored as its output (as
+#'   above).
 #' * Steps that depend on a failed step are not run, and neither are their own
 #'   dependents. All other steps are run.
 #' * To run a step despite a failed input, refer to that input via `try()`, e.g.
@@ -3782,17 +3787,10 @@ pip_run <- function(
                     }
                 )
 
-                # Keep the condition of a failed step as its output and continue with
-                # the next step.
+                # The failed step already holds its condition as its output (see
+                # .pip_run_row()). Record the failure and continue with the next step.
                 if (!is.null(cond)) {
                     failures[[execStep]] <- .pip_failure(execStep, cond)
-                    datNow <- pipenv[["data"]]
-                    data.table::set(
-                        datNow,
-                        i = data.table::chmatch(execStep, datNow[["step"]]),
-                        j = "out",
-                        value = list(list(cond))
-                    )
                 }
 
                 # A step that failed for some keys keeps its output, which its
