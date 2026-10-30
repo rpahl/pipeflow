@@ -624,6 +624,191 @@ describe(".extract_depends", {
     })
 })
 
+# -----------------
+# Pipeline addition
+# -----------------
+
+describe(".pip_warn_param_conflicts", {
+    local_conflict_warnings <- function(envir = parent.frame()) {
+        withr::local_options(
+            pipeflow.warn_param_conflicts = TRUE,
+            .local_envir = envir
+        )
+    }
+
+    it("warns if pip_add() adds a param with another value", {
+        local_conflict_warnings()
+        p <- pip_new() |> pip_add("s1", \(x = 1, y = "a") x)
+
+        w <- expect_warning(
+            pip_add(p, "s2", \(x = 2, y = "a") x),
+            class = "pipeflow_param_conflict"
+        )
+
+        expect_equal(
+            w[["conflicts"]],
+            data.frame(
+                step = "s2",
+                param = "x",
+                value = "2",
+                other = "s1",
+                other_value = "1"
+            )
+        )
+        expect_match(
+            conditionMessage(w),
+            "'x' is 2 in step 's2', but 1 in step 's1'",
+            fixed = TRUE
+        )
+        expect_equal(p[["s2", "params"]], list(x = 2, y = "a"))
+    })
+
+    it("lists all conflicting params of the new step", {
+        local_conflict_warnings()
+        p <- pip_new() |> pip_add("s1", \(x = 1, y = "a") x)
+
+        w <- expect_warning(
+            pip_add(p, "s2", \(x = 2, y = "b") x),
+            class = "pipeflow_param_conflict"
+        )
+
+        expect_equal(w[["conflicts"]][["param"]], c("x", "y"))
+    })
+
+    it("doesn't warn for equal values, bound params or params of one step", {
+        local_conflict_warnings()
+        expect_no_warning(
+            pip_new() |>
+                pip_add("s1", \(x = 1, data = mtcars) x) |>
+                pip_add("s2", \(x = 1, data = mtcars, z = 3) x) |>
+                pip_add("s3", \(x = ~s1) x) |>
+                pip_add("s4", \(z = 3) z, params = list())
+        )
+    })
+
+    it("compares the params given via params of pip_add()", {
+        local_conflict_warnings()
+        p <- pip_new() |> pip_add("s1", \(x = 1) x)
+
+        expect_no_warning(pip_add(p, "s2", \(x = 2) x, params = list(x = 1)))
+        expect_warning(
+            pip_add(p, "s3", \(x = 1) x, params = list(x = 3)),
+            class = "pipeflow_param_conflict"
+        )
+    })
+
+    it("compares with the first other step that has the param", {
+        local_conflict_warnings()
+        p <- pip_new() |> pip_add("s1", \(x = 1) x)
+        suppressWarnings(pip_add(p, "s2", \(x = 2) x))
+
+        expect_no_warning(pip_add(p, "s3", \(x = 1) x))
+        w <- expect_warning(
+            pip_add(p, "s4", \(x = 2) x),
+            class = "pipeflow_param_conflict"
+        )
+        expect_equal(w[["conflicts"]][["other"]], "s1")
+    })
+
+    it("compares with steps after an inserted step", {
+        local_conflict_warnings()
+        p <- pip_new() |> pip_add("s1", \(x = 1) x)
+
+        w <- expect_warning(
+            pip_add(p, "s0", \(x = 0) x, after = 0),
+            class = "pipeflow_param_conflict"
+        )
+        expect_equal(w[["conflicts"]][["other"]], "s1")
+    })
+
+    it("compares the values after pip_param_value()", {
+        local_conflict_warnings()
+        registerS3method(
+            "pip_param_value",
+            class = "pc_annot",
+            method = function(x, ...) x[["value"]],
+            envir = asNamespace("pipeflow")
+        )
+        annot <- function(value, label) {
+            structure(list(value = value, label = label), class = "pc_annot")
+        }
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x, params = list(x = annot(1, "one")))
+
+        expect_no_warning(pip_add(p, "s2", \(x = 1) x))
+        expect_no_warning(
+            pip_add(p, "s3", \(x = 1) x, params = list(x = annot(1, "uno")))
+        )
+        expect_warning(
+            pip_add(p, "s4", \(x = 1) x, params = list(x = annot(2, "two"))),
+            class = "pipeflow_param_conflict"
+        )
+    })
+
+    it("warns if pip_replace() gives a param another value", {
+        local_conflict_warnings()
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = 1) x)
+
+        w <- expect_warning(
+            pip_replace(pip_view(p, step = "s2"), "s2", \(x = 5) x),
+            class = "pipeflow_param_conflict"
+        )
+        expect_equal(w[["conflicts"]][["step"]], "s2")
+        expect_no_warning(pip_replace(p, "s2", \(x = 1) x * 2))
+    })
+
+    it("warns if rbind() binds pipelines with another value of a param", {
+        local_conflict_warnings()
+        a <- pip_new("a") |> pip_add("s1", \(x = 1) x)
+        b <- pip_new("b") |> pip_add("s1", \(x = 2) x)
+
+        w <- expect_warning(rbind(a, b), class = "pipeflow_param_conflict")
+
+        expect_equal(w[["conflicts"]][["step"]], "s12")
+        expect_equal(w[["conflicts"]][["other"]], "s1")
+        expect_no_warning(rbind(a, a))
+    })
+
+    it("compares the steps of the later pipeline only with the earlier ones", {
+        local_conflict_warnings()
+        a <- pip_new("a") |> pip_add("s1", \(x = 1) x)
+        b <- suppressWarnings(
+            pip_new("b") |>
+                pip_add("t1", \(y = 1) y) |>
+                pip_add("t2", \(y = 2) y)
+        )
+
+        expect_no_warning(rbind(a, b))
+    })
+
+    it("doesn't warn for values set by pip_set_params() or [[<-", {
+        local_conflict_warnings()
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = 1) x) |>
+            pip_add("s3", \(x = 1) x)
+
+        expect_no_warning(pip_set_params(p["s2"], list(x = 2), scope = "view"))
+        expect_no_warning(p[["s3", "params"]] <- list(x = 3))
+    })
+
+    it("can be silenced by class or turned off by option", {
+        local_conflict_warnings()
+        p <- pip_new() |> pip_add("s1", \(x = 1) x)
+
+        expect_no_warning(
+            suppressWarnings(
+                pip_add(p, "s2", \(x = 2) x),
+                classes = "pipeflow_param_conflict"
+            )
+        )
+        withr::local_options(pipeflow.warn_param_conflicts = FALSE)
+        expect_no_warning(pip_add(p, "s3", \(x = 3) x))
+    })
+})
+
 
 # ======================================================================================
 # Execution

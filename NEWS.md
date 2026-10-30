@@ -9,6 +9,14 @@
   the steps of the view only. Bindings (`list(x = ~step)`) are unchanged and
   only apply to the steps of the view.
 
+## New features
+
+- `pip_add()`, `pip_replace()` and `rbind()` warn if an unbound param of a
+  new step has another value than the same param in the other steps, since
+  `pip_get_params()` shows one value per name and `pip_set_params()` sets
+  it in all steps. The warning has class `pipeflow_param_conflict` and can
+  be turned off with `options(pipeflow.warn_param_conflicts = FALSE)`.
+
 # pipeflow 0.5.0.9026
 
 ## Bug fixes

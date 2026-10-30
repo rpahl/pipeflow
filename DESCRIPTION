@@ -30,7 +30,8 @@ Suggests:
     rmarkdown,
     targets,
     testthat,
-    visNetwork
+    visNetwork,
+    withr
 LinkingTo:
     Rcpp
 VignetteBuilder:

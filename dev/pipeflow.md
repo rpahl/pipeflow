@@ -328,6 +328,7 @@ sequenceDiagram
     I->>G: dag_add_edges_to(refNodes, nodeId)
     I->>E: rbindlist(data, .new_step(...))
     I->>E: .steps_to_nodes[[step]] <- nodeId
+    A->>A: .pip_warn_param_conflicts(p, step)
     A-->>U: invisible(p)
 ```
 
@@ -340,17 +341,27 @@ that refer to no step are listed in `unbound`. `pip_get_params()` and
 `pip_set_params()` work on these. When a step runs, `pip_param_value()`
 unwraps them (`.pip_unwrap_params()`).
 
+**One value per param name.** `pip_get_params()` returns one value per name
+and `pip_set_params()` sets a name in all steps (`scope = "pipeline"`), so
+`pip_add()`, `pip_replace()` and `.pip_bind()` call
+`.pip_warn_param_conflicts()`. It compares each unbound param of the new
+steps with the first other step that has it unbound (after
+`pip_param_value()`) and signals a `pipeflow_param_conflict` warning. The
+option `pipeflow.warn_param_conflicts = FALSE` turns it off, which
+`tests/testthat/setup.R` does for the tests, whose fixtures often give a
+name different values. Setting params never warns.
+
 ## 6. Editing a pipeline
 
 | Operation | Entry point | What changes |
 |---|---|---|
-| Replace a step | `pip_replace()`, `p[[s, "fun"]] <-` | Recomputes `params`, `depends` and `unbound`. Swaps the incoming DAG edges (`dag_remove_edge()`, `dag_add_edges_to()`). Keeps the node id. Outdates the step and its downstream steps. |
+| Replace a step | `pip_replace()`, `p[[s, "fun"]] <-` | Recomputes `params`, `depends` and `unbound`. Swaps the incoming DAG edges (`dag_remove_edge()`, `dag_add_edges_to()`). Keeps the node id. Outdates the step and its downstream steps. Warns about params whose values differ from other steps. |
 | Remove a step | `pip_remove()`, `p[[s, "step"]] <- NULL` | Without `force`, fails if other steps depend on the step. With `force`, removes all downstream steps too. Tombstones DAG nodes, then `dag_tidy_up()`. Updates `data` and `.steps_to_nodes`. |
 | Rename a step | `pip_rename()`, `p[[s, "step"]] <-` | Updates `step`, all `depends`, the reference formulas (`formula_set_ref()`), the failures of failed keys in the outputs (`.pip_rename_failures()`), `.steps_to_nodes` and `.steps_with_current_out`. Calls `.fun_rename()`. The DAG is unchanged, because it works on ids. |
 | Set params | `pip_set_params()`, `p[[s, "params"]] <-` | `.pip_set_params()` computes all new values first (two phases, `pip_param_value<-`). On a view, the view's rows select the names; values go to the unlocked rows of `scope` (`"pipeline"`: all rows that have the name unbound, `"view"`: the view's rows). A formula binds the param in the view's rows only (`.pip_bind_row()` adds DAG edges). `[[<-` uses `scope = "view"`. Outdates the changed steps and their downstream steps. |
 | Set the exec mode | `p[[s, "exec"]] <-` | Writes `exec` if the mode is new. Then outdates the step and its downstream steps. |
 | Set the output | `p[[s, "out"]] <-` | Writes `out` and sets the step to `FALSE` in `.steps_with_current_out`. Outdates the downstream steps; the step keeps its state. |
-| Bind pipelines | `rbind.pipeflow()` → `.pip_bind()` | Clones both pipelines and renames clashing steps of `y` with a number suffix. Folds params into the function defaults. Adds new nodes and edges. |
+| Bind pipelines | `rbind.pipeflow()` → `.pip_bind()` | Clones both pipelines and renames clashing steps of `y` with a number suffix. Folds params into the function defaults. Adds new nodes and edges. Warns about params of `y` whose values differ from `x`. |
 | Assign to several steps | `p[i, j] <- value` → `[<-.pipeflow` | Calls `[[<-` per row. If a row fails, the rows before it are undone (invariant 8). |
 | Copy steps | `p[i, ] <- q[i, ]` → `.pip_copy_from()` | Per row: rename, then `pip_replace()` (with the exec mode of the source, so that the copied state is not outdated again), then overwrite the runtime columns. If a row fails, the rows before it are undone (invariant 8). |
 | Reset steps | `pip_reset()` | Clears `out`, `time_start` and `duration` of the covered unlocked steps and makes them `new`. Outdates their downstream steps, except locked ones. |

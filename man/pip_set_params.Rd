@@ -73,8 +73,9 @@ the values. A name is set if it is unbound in one of the view's steps (locked on
 included), otherwise it is unknown (see \code{unknown}), also if other steps of the
 pipeline have it. With \code{scope = "pipeline"} (default), the value goes to every
 unlocked step of the whole pipeline that has the name unbound, so that a name keeps
-one value, as \code{\link[=pip_get_params]{pip_get_params()}} assumes. With \code{scope = "view"}, it only goes to the
-unlocked steps of the view. On a pipeline, both scopes are the same.
+one value, as \code{\link[=pip_get_params]{pip_get_params()}} assumes. Steps whose defaults differ get the same
+value then (\code{\link[=pip_add]{pip_add()}} warns about such defaults). With \code{scope = "view"}, it only
+goes to the unlocked steps of the view. On a pipeline, both scopes are the same.
 
 Bindings ignore \code{scope}: a one-sided formula binds a param only in the steps of the
 view. For example, in \code{pip_set_params(v, list(alpha = 5, data = ~load))}, \code{alpha}

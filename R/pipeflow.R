@@ -819,6 +819,98 @@
     x
 }
 
+#' Warn about unbound params whose values differ between steps
+#'
+#' A param name is meant to have one value in the whole pipeline: [pip_get_params()]
+#' returns the first one, and [pip_set_params()] sets one value in all steps that have
+#' the param. So if an unbound param of one of `steps` has another value than the same
+#' param in the first of `others` that has it unbound, that is most likely a mistake.
+#' Values are compared with [identical()] after [pip_param_value()], so that annotations
+#' (e.g. a label) don't count. The option `pipeflow.warn_param_conflicts = FALSE` turns
+#' the check off.
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param steps Names of the steps to check.
+#' @param others Names of the steps to compare with, by default all steps of the
+#' pipeline except `steps`.
+#' @return `x`, invisibly. Signals a warning of class `pipeflow_param_conflict` (see
+#' `.pip_param_conflict_warning()`) if there are conflicts.
+#' @noRd
+.pip_warn_param_conflicts <- function(x, steps, others = NULL) {
+    if (!isTRUE(getOption("pipeflow.warn_param_conflicts", default = TRUE))) {
+        return(invisible(x))
+    }
+    dat <- .pip_pipenv(x)[["data"]]
+    rows <- data.table::chmatch(steps, dat[["step"]])
+    otherRows <- if (is.null(others)) {
+        setdiff(seq_len(nrow(dat)), rows)
+    } else {
+        data.table::chmatch(others, dat[["step"]])
+    }
+    otherUnbound <- dat[["unbound"]][otherRows]
+    otherNames <- unlist(otherUnbound)
+    if (length(otherNames) == 0L) {
+        return(invisible(x))
+    }
+    otherRowOfName <- rep(otherRows, lengths(otherUnbound))
+
+    unwrap <- function(value) {
+        tryCatch(pip_param_value(value), error = function(e) value)
+    }
+    conflicts <- list()
+    for (i in rows) {
+        parNames <- dat[["unbound"]][[i]]
+        k <- data.table::chmatch(parNames, otherNames)
+        for (m in which(!is.na(k))) {
+            name <- parNames[[m]]
+            j <- otherRowOfName[[k[[m]]]]
+            value <- unwrap(dat[["params"]][[i]][[name]])
+            otherValue <- unwrap(dat[["params"]][[j]][[name]])
+            if (!identical(value, otherValue)) {
+                conflicts[[length(conflicts) + 1L]] <- data.frame(
+                    step = dat[["step"]][[i]],
+                    param = name,
+                    value = .format_value_short(value),
+                    other = dat[["step"]][[j]],
+                    other_value = .format_value_short(otherValue)
+                )
+            }
+        }
+    }
+    if (length(conflicts) > 0L) {
+        warning(.pip_param_conflict_warning(do.call(rbind, conflicts)))
+    }
+    invisible(x)
+}
+
+#' Create the warning about params whose values differ between steps
+#'
+#' @param conflicts A data.frame with one row per conflict and the columns `step`,
+#' `param`, `value` (the value in `step`, formatted), `other` (the step whose value
+#' differs) and `other_value`.
+#' @return A condition of class `c("pipeflow_param_conflict", "warning", "condition")`
+#' with the field `conflicts`.
+#' @noRd
+.pip_param_conflict_warning <- function(conflicts) {
+    lines <- sprintf(
+        "- '%s' is %s in step '%s', but %s in step '%s'",
+        conflicts[["param"]],
+        conflicts[["value"]],
+        conflicts[["step"]],
+        conflicts[["other_value"]],
+        conflicts[["other"]]
+    )
+    msg <- paste0(
+        "Params with the same name have different values, but pip_set_params() ",
+        "sets one value in all steps that have the param:\n",
+        paste(lines, collapse = "\n")
+    )
+    structure(
+        class = c("pipeflow_param_conflict", "warning", "condition"),
+        list(message = msg, call = NULL, conflicts = conflicts)
+    )
+}
+
 
 # -----------------
 # Parameter binding
@@ -2256,6 +2348,18 @@ pip_new <- function(name = "pipe") {
 #' internal pipeline structure, especially if the new step is inserted at an early
 #' position.
 #'
+#' ## Params with the same name
+#' A param name is meant to have one value in the whole pipeline: [pip_get_params()]
+#' returns one value per name, and [pip_set_params()] sets a value in all steps that
+#' have the param. Therefore, [pip_add()], [pip_replace()] and [rbind()][rbind.pipeflow]
+#' signal a warning of class `pipeflow_param_conflict` if an unbound param of a new step
+#' has another value than the same param in the other steps (compared with
+#' [identical()] after [pip_param_value()]). Its field `conflicts` is a data.frame of
+#' the conflicting params. To give steps different values on purpose, give the params
+#' different names, silence the warning with
+#' `suppressWarnings(..., classes = "pipeflow_param_conflict")`, or turn it off with
+#' `options(pipeflow.warn_param_conflicts = FALSE)`.
+#'
 #' ## The pipeline as `.self`
 #' A step function can refer to the pipeline that is being run as `.self` without
 #' declaring it as an argument, for example to set parameters or add steps at runtime,
@@ -2436,6 +2540,7 @@ pip_add <- function(
             pos = pos
         )
     }
+    .pip_warn_param_conflicts(x, steps = step)
     invisible(x)
 }
 
@@ -2704,8 +2809,9 @@ pip_get_params <- function(x) {
 #' included), otherwise it is unknown (see `unknown`), also if other steps of the
 #' pipeline have it. With `scope = "pipeline"` (default), the value goes to every
 #' unlocked step of the whole pipeline that has the name unbound, so that a name keeps
-#' one value, as [pip_get_params()] assumes. With `scope = "view"`, it only goes to the
-#' unlocked steps of the view. On a pipeline, both scopes are the same.
+#' one value, as [pip_get_params()] assumes. Steps whose defaults differ get the same
+#' value then ([pip_add()] warns about such defaults). With `scope = "view"`, it only
+#' goes to the unlocked steps of the view. On a pipeline, both scopes are the same.
 #'
 #' Bindings ignore `scope`: a one-sided formula binds a param only in the steps of the
 #' view. For example, in `pip_set_params(v, list(alpha = 5, data = ~load))`, `alpha`
@@ -3156,7 +3262,9 @@ pip_rename <- function(x, from, to) {
 #' `exec = NULL` mean "keep the current value". To change them, pass explicit values,
 #' where `tags = character(0)` removes all tags and `exec = "auto"` resets the execution
 #' mode to its default. Parameters, output, state and lock status are always reset, like
-#' for a freshly added step.
+#' for a freshly added step. As in [pip_add()], a warning is signalled if a param of the
+#' new function has another value than the same param in other steps (see Params with
+#' the same name in [pip_add()]).
 #'
 #' @inheritParams pip_add
 #' @param x A pipeflow pipeline or view object.
@@ -3341,6 +3449,7 @@ pip_replace <- function(
     # therefore stays "new").
     .pip_outdate_downstream(x, steps = step)
 
+    .pip_warn_param_conflicts(x, steps = step)
     invisible(x)
 }
 

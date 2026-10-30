@@ -85,6 +85,20 @@ position. Be aware that in contrast to adding a step at the end, inserting a ste
 the middle is a rather expensive operation as it requires re-wiring parts of the
 internal pipeline structure, especially if the new step is inserted at an early
 position.
+\subsection{Params with the same name}{
+
+A param name is meant to have one value in the whole pipeline: \code{\link[=pip_get_params]{pip_get_params()}}
+returns one value per name, and \code{\link[=pip_set_params]{pip_set_params()}} sets a value in all steps that
+have the param. Therefore, \code{\link[=pip_add]{pip_add()}}, \code{\link[=pip_replace]{pip_replace()}} and \link[=rbind.pipeflow]{rbind()}
+signal a warning of class \code{pipeflow_param_conflict} if an unbound param of a new step
+has another value than the same param in the other steps (compared with
+\code{\link[=identical]{identical()}} after \code{\link[=pip_param_value]{pip_param_value()}}). Its field \code{conflicts} is a data.frame of
+the conflicting params. To give steps different values on purpose, give the params
+different names, silence the warning with
+\code{suppressWarnings(..., classes = "pipeflow_param_conflict")}, or turn it off with
+\code{options(pipeflow.warn_param_conflicts = FALSE)}.
+}
+
 \subsection{The pipeline as \code{.self}}{
 
 A step function can refer to the pipeline that is being run as \code{.self} without

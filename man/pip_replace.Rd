@@ -57,7 +57,9 @@ By default, the step keeps its tags and execution mode: \code{tags = NULL} and
 \code{exec = NULL} mean "keep the current value". To change them, pass explicit values,
 where \code{tags = character(0)} removes all tags and \code{exec = "auto"} resets the execution
 mode to its default. Parameters, output, state and lock status are always reset, like
-for a freshly added step.
+for a freshly added step. As in \code{\link[=pip_add]{pip_add()}}, a warning is signalled if a param of the
+new function has another value than the same param in other steps (see Params with
+the same name in \code{\link[=pip_add]{pip_add()}}).
 }
 \examples{
 p <- pip_new() |>
