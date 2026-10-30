@@ -352,6 +352,8 @@ building a large pipeline quadratic in R code. The
 option `pipeflow.warn_param_conflicts = FALSE` turns it off, which
 `tests/testthat/setup.R` does for the tests, whose fixtures often give a
 name different values. Setting params never warns.
+`pip_get_params(x, simplify = FALSE)` lists the values of all steps by name,
+which shows such conflicts.
 
 ## 6. Editing a pipeline
 

@@ -660,6 +660,11 @@ describe(".pip_warn_param_conflicts", {
             "'x' is 2 in step 's2', but 1 in step 's1'",
             fixed = TRUE
         )
+        expect_match(
+            conditionMessage(w),
+            "pip_get_params(x, simplify = FALSE)",
+            fixed = TRUE
+        )
         expect_equal(p[["s2", "params"]], list(x = 2, y = "a"))
     })
 
@@ -2665,10 +2670,54 @@ describe("pip_get_params", {
         expect_equal(pip_get_params(v), list())
     })
 
+    it("returns the values of all steps by name if simplify = FALSE", {
+        p <- test_pip()
+
+        params <- pip_get_params(p, simplify = FALSE)
+
+        expect_equal(
+            params,
+            list(
+                data = list(s1 = data.frame(a = 1:2)),
+                x = list(s2 = 1, s4 = 9)
+            )
+        )
+    })
+
+    it("keeps list and NULL values if simplify = FALSE", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = list(a = 1), y = NULL) x) |>
+            pip_add("s2", \(y = NULL) y)
+
+        expect_equal(
+            pip_get_params(p, simplify = FALSE),
+            list(x = list(s1 = list(a = 1)), y = list(s1 = NULL, s2 = NULL))
+        )
+    })
+
+    it("includes locked steps and respects views if simplify = FALSE", {
+        p <- test_pip()
+        pip_lock(p["s2"])
+
+        expect_equal(
+            pip_get_params(p, simplify = FALSE)[["x"]],
+            list(s2 = 1, s4 = 9)
+        )
+        expect_equal(
+            pip_get_params(p[c("s3", "s4")], simplify = FALSE),
+            list(x = list(s4 = 9))
+        )
+        expect_equal(pip_get_params(p["s3"], simplify = FALSE), list())
+    })
+
     it("signals invalid input", {
         expect_error(
             pip_get_params(1),
             "x must be a pipeflow pip or view"
+        )
+        expect_error(
+            pip_get_params(test_pip(), simplify = NA),
+            "simplify must be a single logical value"
         )
     })
 })

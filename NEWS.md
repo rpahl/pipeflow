@@ -17,6 +17,9 @@
   `pip_get_params()` shows one value per name and `pip_set_params()` sets
   it in all steps. The warning has class `pipeflow_param_conflict` and can
   be turned off with `options(pipeflow.warn_param_conflicts = FALSE)`.
+- `pip_get_params(x, simplify = FALSE)` returns the values of all steps,
+  grouped by param name and named by step, e.g. to find the params whose
+  values differ between steps.
 
 # pipeflow 0.5.0.9026
 

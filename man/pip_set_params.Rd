@@ -5,7 +5,7 @@
 \alias{pip_get_params}
 \title{Get or set unbound parameters}
 \usage{
-pip_get_params(x)
+pip_get_params(x, simplify = TRUE)
 
 pip_set_params(
   x,
@@ -18,6 +18,9 @@ pip_set_params(
 }
 \arguments{
 \item{x}{A pipeflow pip or view.}
+
+\item{simplify}{If \code{TRUE} (default), \code{\link[=pip_get_params]{pip_get_params()}} returns one value per
+parameter name. If \code{FALSE}, it returns the values of all steps, grouped by name.}
 
 \item{params}{Named list of parameters to set. A one-sided formula binds the
 parameter to a step, see Binding parameters to steps.}
@@ -43,7 +46,10 @@ like an argument of \code{\link[=pip_set_params]{pip_set_params()}}, e.g. \code{
 \value{
 For \code{\link[=pip_get_params]{pip_get_params()}}, a named list of unbound parameter values; if the same
 parameter name appears in multiple steps, the first occurrence in pipeline order is
-returned. For \code{\link[=pip_set_params]{pip_set_params()}}, the updated pipeline or view, invisibly.
+returned. With \code{simplify = FALSE}, a named list with an element per parameter name,
+which is a list of the values named by step, e.g.
+\code{list(x = list(s1 = 1, s2 = 2), y = list(s1 = 3))}. For \code{\link[=pip_set_params]{pip_set_params()}}, the
+updated pipeline or view, invisibly.
 }
 \description{
 \code{\link[=pip_get_params]{pip_get_params()}} returns the current default values of all unbound parameters of a
@@ -144,6 +150,16 @@ pip_set_params(p, params = list(nope = 1))
 # ... which can be silenced or turned into an error
 pip_set_params(p, params = list(nope = 1), unknown = "ignore")
 try(pip_set_params(p, params = list(nope = 1), unknown = "error"))
+
+# With simplify = FALSE, the values of all steps, e.g. to find params whose values
+# differ between steps
+d <- suppressWarnings(
+  pip_new() |>
+    pip_add("s1", \(x = 1, y = 2) x + y) |>
+    pip_add("s2", \(x = 3) x)
+)
+pip_get_params(d, simplify = FALSE)
+Filter(\(v) length(unique(v)) > 1L, pip_get_params(d, simplify = FALSE))
 
 # pip_get_params() includes locked steps; a view can exclude them
 pip_lock(p["load"])

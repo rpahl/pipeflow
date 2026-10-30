@@ -93,7 +93,8 @@ have the param. Therefore, \code{\link[=pip_add]{pip_add()}}, \code{\link[=pip_r
 signal a warning of class \code{pipeflow_param_conflict} if an unbound param of a new step
 has another value than the same param in the other steps (compared with
 \code{\link[=identical]{identical()}} after \code{\link[=pip_param_value]{pip_param_value()}}). Its field \code{conflicts} is a data.frame of
-the conflicting params. To give steps different values on purpose, give the params
+the conflicting params, and \code{pip_get_params(x, simplify = FALSE)} shows the values of
+all steps. To give steps different values on purpose, give the params
 different names, silence the warning with
 \code{suppressWarnings(..., classes = "pipeflow_param_conflict")}, or turn it off with
 \code{options(pipeflow.warn_param_conflicts = FALSE)}.

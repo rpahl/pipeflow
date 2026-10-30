@@ -910,7 +910,8 @@
     msg <- paste0(
         "Params with the same name have different values, but pip_set_params() ",
         "sets one value in all steps that have the param:\n",
-        paste(lines, collapse = "\n")
+        paste(lines, collapse = "\n"),
+        "\nSee all values with pip_get_params(x, simplify = FALSE)."
     )
     structure(
         class = c("pipeflow_param_conflict", "warning", "condition"),
@@ -2362,7 +2363,8 @@ pip_new <- function(name = "pipe") {
 #' signal a warning of class `pipeflow_param_conflict` if an unbound param of a new step
 #' has another value than the same param in the other steps (compared with
 #' [identical()] after [pip_param_value()]). Its field `conflicts` is a data.frame of
-#' the conflicting params. To give steps different values on purpose, give the params
+#' the conflicting params, and `pip_get_params(x, simplify = FALSE)` shows the values of
+#' all steps. To give steps different values on purpose, give the params
 #' different names, silence the warning with
 #' `suppressWarnings(..., classes = "pipeflow_param_conflict")`, or turn it off with
 #' `options(pipeflow.warn_param_conflicts = FALSE)`.
@@ -2782,8 +2784,11 @@ pip_data <- function(x) {
 #' @name pip_set_params
 #' @rdname pip_set_params
 #' @export
-pip_get_params <- function(x) {
+pip_get_params <- function(x, simplify = TRUE) {
     .assert_pip_or_view(x)
+    if (!.is_single(simplify, "logical") || is.na(simplify)) {
+        stop("simplify must be a single logical value")
+    }
     dat <- .pip_view_data(x)
 
     params <- mapply(
@@ -2792,11 +2797,26 @@ pip_get_params <- function(x) {
         FUN = \(par, unbound) par[unbound],
         SIMPLIFY = FALSE
     ) |>
+        stats::setNames(dat[["step"]]) |>
         Filter(f = \(x) length(x) > 0)
 
     parNames <- unlist(lapply(params, FUN = names))
     parValues <- stats::setNames(unlist1(params), parNames)
-    as.list(parValues[!duplicated(names(parValues))])
+    if (length(parValues) == 0L) {
+        return(list())
+    }
+    if (simplify) {
+        return(as.list(parValues[!duplicated(names(parValues))]))
+    }
+
+    # Group the values by param name, in the order of the first occurrence, and name
+    # them by step
+    steps <- rep(names(params), lengths(params))
+    byName <- split(
+        seq_along(parValues),
+        factor(parNames, levels = unique(parNames))
+    )
+    lapply(byName, \(k) stats::setNames(as.list(parValues[k]), steps[k]))
 }
 
 #' Get or set unbound parameters
@@ -2863,6 +2883,8 @@ pip_get_params <- function(x) {
 #' unless `force = TRUE`.
 #'
 #' @param x A pipeflow pip or view.
+#' @param simplify If `TRUE` (default), [pip_get_params()] returns one value per
+#' parameter name. If `FALSE`, it returns the values of all steps, grouped by name.
 #' @param params Named list of parameters to set. A one-sided formula binds the
 #' parameter to a step, see Binding parameters to steps.
 #' @param unknown How to handle `params` that are not defined in any of the selected
@@ -2881,7 +2903,10 @@ pip_get_params <- function(x) {
 #' like an argument of [pip_set_params()], e.g. `scope`.
 #' @return For [pip_get_params()], a named list of unbound parameter values; if the same
 #' parameter name appears in multiple steps, the first occurrence in pipeline order is
-#' returned. For [pip_set_params()], the updated pipeline or view, invisibly.
+#' returned. With `simplify = FALSE`, a named list with an element per parameter name,
+#' which is a list of the values named by step, e.g.
+#' `list(x = list(s1 = 1, s2 = 2), y = list(s1 = 3))`. For [pip_set_params()], the
+#' updated pipeline or view, invisibly.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(n = 10) seq_len(n)) |>
@@ -2912,6 +2937,16 @@ pip_get_params <- function(x) {
 #' # ... which can be silenced or turned into an error
 #' pip_set_params(p, params = list(nope = 1), unknown = "ignore")
 #' try(pip_set_params(p, params = list(nope = 1), unknown = "error"))
+#'
+#' # With simplify = FALSE, the values of all steps, e.g. to find params whose values
+#' # differ between steps
+#' d <- suppressWarnings(
+#'   pip_new() |>
+#'     pip_add("s1", \(x = 1, y = 2) x + y) |>
+#'     pip_add("s2", \(x = 3) x)
+#' )
+#' pip_get_params(d, simplify = FALSE)
+#' Filter(\(v) length(unique(v)) > 1L, pip_get_params(d, simplify = FALSE))
 #'
 #' # pip_get_params() includes locked steps; a view can exclude them
 #' pip_lock(p["load"])
