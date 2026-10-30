@@ -822,12 +822,15 @@
 #' Warn about unbound params whose values differ between steps
 #'
 #' A param name is meant to have one value in the whole pipeline: [pip_get_params()]
-#' returns the first one, and [pip_set_params()] sets one value in all steps that have
-#' the param. So if an unbound param of one of `steps` has another value than the same
-#' param in the first of `others` that has it unbound, that is most likely a mistake.
-#' Values are compared with [identical()] after [pip_param_value()], so that annotations
-#' (e.g. a label) don't count. The option `pipeflow.warn_param_conflicts = FALSE` turns
-#' the check off.
+#' returns one value per name, and [pip_set_params()] sets one value in all steps that
+#' have the param. So if an unbound param of one of `steps` has another value than the
+#' same param in the first of `others` that has it unbound (the value that
+#' [pip_get_params()] returns), that is most likely a mistake. Only the first is
+#' compared, so that adding a step stays cheap in a large pipeline; a pipeline whose
+#' other steps already disagree was warned about when they were added. Values are
+#' compared with [identical()] after [pip_param_value()], so that annotations (e.g. a
+#' label) don't count. The option `pipeflow.warn_param_conflicts = FALSE` turns the
+#' check off.
 #'
 #' @param x A pipeflow pipeline or view.
 #' @param steps Names of the steps to check.
@@ -842,6 +845,10 @@
     }
     dat <- .pip_pipenv(x)[["data"]]
     rows <- data.table::chmatch(steps, dat[["step"]])
+    rows <- rows[lengths(dat[["unbound"]][rows]) > 0L]
+    if (length(rows) == 0L) {
+        return(invisible(x))
+    }
     otherRows <- if (is.null(others)) {
         setdiff(seq_len(nrow(dat)), rows)
     } else {

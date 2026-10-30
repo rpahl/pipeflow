@@ -783,6 +783,18 @@ describe(".pip_warn_param_conflicts", {
         expect_no_warning(rbind(a, b))
     })
 
+    it("compares each pipeline of rbind() with all pipelines before it", {
+        local_conflict_warnings()
+        a <- pip_new("a") |> pip_add("s1", \(x = 1) x)
+        b <- pip_new("b") |> pip_add("s2", \(y = 1) y)
+        c <- pip_new("c") |> pip_add("s3", \(y = 2) y)
+
+        w <- expect_warning(rbind(a, b, c), class = "pipeflow_param_conflict")
+
+        expect_equal(w[["conflicts"]][["step"]], "s3")
+        expect_equal(w[["conflicts"]][["other"]], "s2")
+    })
+
     it("doesn't warn for values set by pip_set_params() or [[<-", {
         local_conflict_warnings()
         p <- pip_new() |>
