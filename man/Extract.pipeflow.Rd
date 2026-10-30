@@ -154,7 +154,7 @@ dependencies; same as \code{pip_remove(p, step, force = TRUE)}
 \item \code{p[[step, "fun"]] <- fun} -- replace the step's function; same as \code{\link[=pip_replace]{pip_replace()}},
 that is, tags and execution mode are kept
 \item \code{p[[step, "params"]] <- list(...)} -- update the step's parameters; same as
-\code{pip_set_params(p, list(...))}
+\code{pip_set_params(pip_view(p, step = step), list(...), scope = "view")}
 \item \code{p[[step, "tags"]] <- tags} -- set the step's tags explicitly to \code{tags} (a
 character vector); in contrast, \code{\link[=pip_tag]{pip_tag()}} will just add tags.
 \itemize{

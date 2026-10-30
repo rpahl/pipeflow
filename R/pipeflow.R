@@ -829,7 +829,8 @@
 #'
 #' @param x A pipeflow pipeline or view.
 #' @param params Named list of the params to set.
-#' @param unknown,force As for [pip_set_params()].
+#' @param unknown,force,scope As for [pip_set_params()]. `scope` applies to values
+#' only: bindings always use the rows of the view.
 #' @param bind If `TRUE`, a one-sided formula in `params` binds the param to the step
 #' that it refers to. If `FALSE`, all params are set as values, which a call of the
 #' function made by [as.function.pipeflow()] needs: its arguments are values, also if
@@ -843,6 +844,7 @@
     params,
     unknown = "warn",
     force = FALSE,
+    scope = "pipeline",
     bind = TRUE,
     setValue = `pip_param_value<-`
 ) {
@@ -883,8 +885,18 @@
         warning(msg, call. = FALSE)
     }
 
-    # Narrow down the considered rows
-    rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
+    # The view selects the names to set. Values go to the unlocked rows of the scope,
+    # that is, with scope "pipeline", to all rows that have the name unbound, while
+    # bindings only go to the unlocked rows of the view.
+    valueNames <- intersect(setdiff(parNames, names(refs)), defined)
+    locked <- which(dat[["locked"]])
+    bindRows <- setdiff(rows, locked)
+    valueRows <- if (scope == "pipeline" && length(valueNames) > 0L) {
+        setdiff(seq_len(nrow(dat)), locked)
+    } else {
+        bindRows
+    }
+    rowsConsidered <- sort(union(valueRows, bindRows))
     if (length(rowsConsidered) == 0L) {
         message("No steps to update: all selected steps are locked")
         return(invisible(x))
@@ -892,7 +904,17 @@
 
     # Determine which steps/rows are affected, i.e. have intersecting params
     unbound <- dat[["unbound"]][rowsConsidered] # names of unbound params
-    intersects <- lapply(unbound, FUN = intersect, y = parNames)
+    intersects <- Map(
+        \(unboundNames, isValueRow, isBindRow) {
+            c(
+                if (isValueRow) intersect(unboundNames, valueNames),
+                if (isBindRow) intersect(unboundNames, names(refs))
+            )
+        },
+        unbound,
+        rowsConsidered %in% valueRows,
+        rowsConsidered %in% bindRows
+    )
     hasOverlap <- lengths(intersects) > 0
     namesAffected <- intersects[hasOverlap]
     rowsAffected <- rowsConsidered[hasOverlap]
@@ -2669,12 +2691,25 @@ pip_get_params <- function(x) {
 #'
 #' [pip_get_params()] returns the current default values of all unbound parameters of a
 #' pipeline or view (parameters wired to another step's output via `~step_name` are
-#' excluded). [pip_set_params()] updates these parameters for the whole pipeline or view
-#' except for locked steps. A one-sided formula binds a parameter to the output of a
-#' step instead (see below). Steps whose values change are marked as outdated, together
-#' with their downstream dependents (steps that have never run stay `"new"`). Values
-#' that are [identical()] to the stored ones are skipped and don't outdate any step,
-#' unless `force = TRUE`.
+#' excluded). [pip_set_params()] updates these parameters in all steps that have them,
+#' except for locked steps; on a view, see Views and scope. A one-sided formula binds a
+#' parameter to the output of a step instead (see below). Steps whose values change are
+#' marked as outdated, together with their downstream dependents (steps that have never
+#' run stay `"new"`). Values that are [identical()] to the stored ones are skipped and
+#' don't outdate any step, unless `force = TRUE`.
+#'
+#' @section Views and scope:
+#' On a view, the view selects the names that can be set and `scope` the steps that get
+#' the values. A name is set if it is unbound in one of the view's steps (locked ones
+#' included), otherwise it is unknown (see `unknown`), also if other steps of the
+#' pipeline have it. With `scope = "pipeline"` (default), the value goes to every
+#' unlocked step of the whole pipeline that has the name unbound, so that a name keeps
+#' one value, as [pip_get_params()] assumes. With `scope = "view"`, it only goes to the
+#' unlocked steps of the view. On a pipeline, both scopes are the same.
+#'
+#' Bindings ignore `scope`: a one-sided formula binds a param only in the steps of the
+#' view. For example, in `pip_set_params(v, list(alpha = 5, data = ~load))`, `alpha`
+#' is set in the whole pipeline and `data` is bound in the steps of `v` only.
 #'
 #' @section Storing annotated values:
 #' The value that is stored for a step is the result of `` `pip_param_value<-`() ``
@@ -2683,6 +2718,7 @@ pip_get_params <- function(x) {
 #' that its annotations survive (see [pip_param_value()]). The merged values of all
 #' affected steps are computed before anything is changed: if a method fails, nothing is
 #' set and an error of class `pipeflow_set_params_error` reports every failure at once.
+#' With `scope = "pipeline"`, these can be steps outside the view.
 #' The merged value is also what is compared with the stored one, so setting a plain
 #' value that an annotated object already holds doesn't outdate the step.
 #'
@@ -2693,8 +2729,8 @@ pip_get_params <- function(x) {
 #' that have it unbound, except for locked steps. These steps must come after the step
 #' that the formula refers to, otherwise an error is signalled and nothing is changed.
 #' If you want to bind parameters only for certain steps, use a view to select the
-#' desired steps. A relative reference such as `~-1` is not allowed, but `~try(fit)`
-#' works as in [pip_add()].
+#' desired steps (`scope` doesn't apply to bindings). A relative reference such as
+#' `~-1` is not allowed, but `~try(fit)` works as in [pip_add()].
 #'
 #' A bound parameter is no longer unbound: [pip_get_params()] doesn't return it, and
 #' [pip_set_params()] can't change it any more. Setting the same binding again does
@@ -2724,8 +2760,12 @@ pip_get_params <- function(x) {
 #' (together with its downstream steps), even if the values are [identical()] to the
 #' stored ones. This refreshes steps whose inputs are environments or reference objects
 #' that were modified in place.
+#' @param scope The steps that get the values if `x` is a view: `"pipeline"` (default)
+#' sets them in all steps of the pipeline that have the param, `"view"` only in the
+#' steps of the view. Doesn't apply to bindings, see Views and scope.
 #' @param ... Passed on to the methods of `` `pip_param_value<-`() ``, which
-#' [pip_set_params()] uses to determine the value to store.
+#' [pip_set_params()] uses to determine the value to store. An option can't be named
+#' like an argument of [pip_set_params()], e.g. `scope`.
 #' @return For [pip_get_params()], a named list of unbound parameter values; if the same
 #' parameter name appears in multiple steps, the first occurrence in pipeline order is
 #' returned. For [pip_set_params()], the updated pipeline or view, invisibly.
@@ -2765,6 +2805,15 @@ pip_get_params <- function(x) {
 #' pip_get_params(p) # list(n = 5, factor = 2.0)
 #' pip_get_params(p[!locked]) # list(factor = 2.0)
 #'
+#' # On a view, a value is set in the whole pipeline unless scope = "view"
+#' r <- pip_new() |>
+#'   pip_add("fit", \(alpha = 1) alpha) |>
+#'   pip_add("plot", \(x = ~fit, alpha = 1) c(x, alpha), tags = "rep")
+#' pip_set_params(pip_view(r, tags = "rep"), list(alpha = 5))
+#' r[["params"]] # alpha = 5 in both steps
+#' pip_set_params(pip_view(r, tags = "rep"), list(alpha = 2), scope = "view")
+#' r[["params"]] # alpha = 5 in "fit", 2 in "plot"
+#'
 #' # A formula binds a parameter to the output of a step
 #' q <- pip_new() |>
 #'   pip_add("load", \(n = 5) seq_len(n)) |>
@@ -2788,11 +2837,13 @@ pip_set_params <- function(
     params = list(),
     unknown = c("warn", "ignore", "error"),
     force = FALSE,
+    scope = c("pipeline", "view"),
     ...
 ) {
     # Input checking
     .assert_pip_or_view(x)
     unknown <- match.arg(unknown)
+    scope <- match.arg(scope)
     if (!is.list(params)) {
         stop("params must be a list")
     }
@@ -2818,6 +2869,7 @@ pip_set_params <- function(
         params,
         unknown = unknown,
         force = force,
+        scope = scope,
         setValue = setValue
     )
 }
@@ -4040,8 +4092,9 @@ pip_run_state <- function(x) {
 #' `pip_run(on_error = "continue")`.
 #'
 #' @param x The parameter value as stored in the step.
-#' @param ... Currently unused, reserved for future extensions. Methods should accept
-#' it.
+#' @param ... For `pip_param_value()`, currently unused, reserved for future extensions.
+#' For `` `pip_param_value<-`() ``, the options given to `...` of [pip_set_params()],
+#' which can't be named like its arguments (e.g. `scope`). Methods should accept it.
 #' @return The value the step function receives for the argument.
 #' @examples
 #' # A value that carries annotations

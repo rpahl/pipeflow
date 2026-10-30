@@ -1105,7 +1105,7 @@ dim.pipeflow <- function(x) {
 #' * `p[[step, "fun"]] <- fun` -- replace the step's function; same as [pip_replace()],
 #'    that is, tags and execution mode are kept
 #' * `p[[step, "params"]] <- list(...)` -- update the step's parameters; same as
-#'   `pip_set_params(p, list(...))`
+#'   `pip_set_params(pip_view(p, step = step), list(...), scope = "view")`
 #' * `p[[step, "tags"]] <- tags` -- set the step's tags explicitly to `tags` (a
 #'   character vector); in contrast, [pip_tag()] will just add tags.
 #'    * `p[[step, "tags"]] <- NULL` clears all tags
@@ -1255,7 +1255,7 @@ dim.pipeflow <- function(x) {
     } else if (j == "fun") {
         pip_replace(x, step = step, fun = value)
     } else if (j == "params") {
-        pip_set_params(pip_view(x, step = step), params = value)
+        pip_set_params(pip_view(x, step = step), params = value, scope = "view")
     } else if (j == "out") {
         # wrap value in list of list to enable arbitrary objects (e.g. a data.frame) to
         # be stored as-is.

@@ -12,6 +12,7 @@ pip_set_params(
   params = list(),
   unknown = c("warn", "ignore", "error"),
   force = FALSE,
+  scope = c("pipeline", "view"),
   ...
 )
 }
@@ -31,8 +32,13 @@ anything is changed.}
 stored ones. This refreshes steps whose inputs are environments or reference objects
 that were modified in place.}
 
+\item{scope}{The steps that get the values if \code{x} is a view: \code{"pipeline"} (default)
+sets them in all steps of the pipeline that have the param, \code{"view"} only in the
+steps of the view. Doesn't apply to bindings, see Views and scope.}
+
 \item{...}{Passed on to the methods of \code{`pip_param_value<-`()}, which
-\code{\link[=pip_set_params]{pip_set_params()}} uses to determine the value to store.}
+\code{\link[=pip_set_params]{pip_set_params()}} uses to determine the value to store. An option can't be named
+like an argument of \code{\link[=pip_set_params]{pip_set_params()}}, e.g. \code{scope}.}
 }
 \value{
 For \code{\link[=pip_get_params]{pip_get_params()}}, a named list of unbound parameter values; if the same
@@ -42,12 +48,12 @@ returned. For \code{\link[=pip_set_params]{pip_set_params()}}, the updated pipel
 \description{
 \code{\link[=pip_get_params]{pip_get_params()}} returns the current default values of all unbound parameters of a
 pipeline or view (parameters wired to another step's output via \code{~step_name} are
-excluded). \code{\link[=pip_set_params]{pip_set_params()}} updates these parameters for the whole pipeline or view
-except for locked steps. A one-sided formula binds a parameter to the output of a
-step instead (see below). Steps whose values change are marked as outdated, together
-with their downstream dependents (steps that have never run stay \code{"new"}). Values
-that are \code{\link[=identical]{identical()}} to the stored ones are skipped and don't outdate any step,
-unless \code{force = TRUE}.
+excluded). \code{\link[=pip_set_params]{pip_set_params()}} updates these parameters in all steps that have them,
+except for locked steps; on a view, see Views and scope. A one-sided formula binds a
+parameter to the output of a step instead (see below). Steps whose values change are
+marked as outdated, together with their downstream dependents (steps that have never
+run stay \code{"new"}). Values that are \code{\link[=identical]{identical()}} to the stored ones are skipped and
+don't outdate any step, unless \code{force = TRUE}.
 }
 \note{
 Parameters of locked steps are never changed and their state remains unchanged.
@@ -60,6 +66,21 @@ An environment (or a reference object such as an R6 object) that was modified in
 place is identical to the stored one, so setting it again doesn't outdate the step
 unless \code{force = TRUE}.
 }
+\section{Views and scope}{
+
+On a view, the view selects the names that can be set and \code{scope} the steps that get
+the values. A name is set if it is unbound in one of the view's steps (locked ones
+included), otherwise it is unknown (see \code{unknown}), also if other steps of the
+pipeline have it. With \code{scope = "pipeline"} (default), the value goes to every
+unlocked step of the whole pipeline that has the name unbound, so that a name keeps
+one value, as \code{\link[=pip_get_params]{pip_get_params()}} assumes. With \code{scope = "view"}, it only goes to the
+unlocked steps of the view. On a pipeline, both scopes are the same.
+
+Bindings ignore \code{scope}: a one-sided formula binds a param only in the steps of the
+view. For example, in \code{pip_set_params(v, list(alpha = 5, data = ~load))}, \code{alpha}
+is set in the whole pipeline and \code{data} is bound in the steps of \code{v} only.
+}
+
 \section{Storing annotated values}{
 
 The value that is stored for a step is the result of \code{`pip_param_value<-`()}
@@ -68,6 +89,7 @@ method of that generic can merge the given value into an annotated object instea
 that its annotations survive (see \code{\link[=pip_param_value]{pip_param_value()}}). The merged values of all
 affected steps are computed before anything is changed: if a method fails, nothing is
 set and an error of class \code{pipeflow_set_params_error} reports every failure at once.
+With \code{scope = "pipeline"}, these can be steps outside the view.
 The merged value is also what is compared with the stored one, so setting a plain
 value that an annotated object already holds doesn't outdate the step.
 }
@@ -80,8 +102,8 @@ function or in \code{params} of \code{\link[=pip_add]{pip_add()}}. The parameter
 that have it unbound, except for locked steps. These steps must come after the step
 that the formula refers to, otherwise an error is signalled and nothing is changed.
 If you want to bind parameters only for certain steps, use a view to select the
-desired steps. A relative reference such as \code{~-1} is not allowed, but \code{~try(fit)}
-works as in \code{\link[=pip_add]{pip_add()}}.
+desired steps (\code{scope} doesn't apply to bindings). A relative reference such as
+\code{~-1} is not allowed, but \code{~try(fit)} works as in \code{\link[=pip_add]{pip_add()}}.
 
 A bound parameter is no longer unbound: \code{\link[=pip_get_params]{pip_get_params()}} doesn't return it, and
 \code{\link[=pip_set_params]{pip_set_params()}} can't change it any more. Setting the same binding again does
@@ -126,6 +148,15 @@ try(pip_set_params(p, params = list(nope = 1), unknown = "error"))
 pip_lock(p["load"])
 pip_get_params(p) # list(n = 5, factor = 2.0)
 pip_get_params(p[!locked]) # list(factor = 2.0)
+
+# On a view, a value is set in the whole pipeline unless scope = "view"
+r <- pip_new() |>
+  pip_add("fit", \(alpha = 1) alpha) |>
+  pip_add("plot", \(x = ~fit, alpha = 1) c(x, alpha), tags = "rep")
+pip_set_params(pip_view(r, tags = "rep"), list(alpha = 5))
+r[["params"]] # alpha = 5 in both steps
+pip_set_params(pip_view(r, tags = "rep"), list(alpha = 2), scope = "view")
+r[["params"]] # alpha = 5 in "fit", 2 in "plot"
 
 # A formula binds a parameter to the output of a step
 q <- pip_new() |>

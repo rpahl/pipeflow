@@ -2615,12 +2615,12 @@ describe("pip_set_params", {
         )
     })
 
-    it("sets parameters only within the selected view", {
+    it("sets parameters only within the selected view if scope = 'view'", {
         p <- test_pip()
 
         v <- pip_view(p, step = "s3")
         expect_warning(
-            pip_set_params(v, params = list(z = 33, x = 11, y = 22)),
+            pip_set_params(v, params = list(z = 33, x = 11, y = 22), scope = "view"),
             "Trying to set parameters not defined in the target: y"
         )
         after <- p[["params"]]
@@ -2629,6 +2629,155 @@ describe("pip_set_params", {
         expect_equal(after[[2]][["y"]], 2)
         expect_equal(after[[3]][["x"]], 11)
         expect_equal(after[[3]][["z"]], 33)
+    })
+
+    scope_pip <- function() {
+        pip_new() |>
+            pip_add("fit", \(alpha = 1) alpha) |>
+            pip_add("plot", \(x = ~fit, alpha = 1) c(x, alpha), tags = "rep")
+    }
+
+    it("sets the view's params in the whole pipeline by default", {
+        p <- scope_pip()
+        v <- pip_view(p, tags = "rep")
+
+        pip_set_params(v, list(alpha = 5))
+
+        expect_equal(p[["fit", "params"]], list(alpha = 5))
+        expect_equal(p[["plot", "params"]][["alpha"]], 5)
+        pip_run(v, lgr = NULL)
+        expect_equal(p[["plot", "out"]], c(5, 5))
+    })
+
+    it("sets the view's params only in the view if scope = 'view'", {
+        p <- scope_pip()
+        v <- pip_view(p, tags = "rep")
+
+        pip_set_params(v, list(alpha = 5), scope = "view")
+
+        expect_equal(p[["fit", "params"]], list(alpha = 1))
+        expect_equal(p[["plot", "params"]][["alpha"]], 5)
+        pip_run(v, lgr = NULL)
+        expect_equal(p[["plot", "out"]], c(1, 5))
+    })
+
+    it("outdates changed steps outside the view and their downstream steps", {
+        p <- pip_new() |>
+            pip_add("a", \(k = 1) k) |>
+            pip_add("b", \(x = ~a) x) |>
+            pip_add("c", \(k = 1) k) |>
+            pip_add("d", \(k = 1) k)
+        pip_run(p[c("a", "b", "d")], lgr = NULL)
+        expect_equal(unname(p[["state"]]), c("done", "done", "new", "done"))
+
+        pip_set_params(p["d"], list(k = 2))
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("outdated", "outdated", "new", "outdated")
+        )
+        expect_equal(p[["c", "params"]], list(k = 2))
+    })
+
+    it("treats params that are unbound only outside the view as unknown", {
+        p <- test_pip()
+        v <- pip_view(p, step = "s3")
+
+        for (scope in c("pipeline", "view")) {
+            expect_warning(
+                pip_set_params(v, list(y = 22), scope = scope),
+                "not defined in the target: y"
+            )
+            expect_no_warning(
+                pip_set_params(v, list(y = 22), unknown = "ignore", scope = scope)
+            )
+            expect_error(
+                pip_set_params(v, list(y = 22), unknown = "error", scope = scope),
+                "not defined in the target: y"
+            )
+            expect_equal(p[["s2", "params"]][["y"]], 2)
+        }
+    })
+
+    it("doesn't change locked steps inside or outside the view", {
+        p <- pip_new() |>
+            pip_add("a", \(k = 1) k) |>
+            pip_add("b", \(k = 1) k) |>
+            pip_add("c", \(k = 1) k) |>
+            pip_add("d", \(k = 1) k)
+        pip_lock(p[c("a", "c")])
+
+        pip_set_params(p[c("c", "d")], list(k = 2))
+
+        expect_equal(
+            vapply(p[["params"]], \(par) par[["k"]], numeric(1)),
+            c(a = 1, b = 2, c = 1, d = 2)
+        )
+    })
+
+    it("sets the params of a locked view in the unlocked steps outside of it", {
+        p <- scope_pip()
+        pip_lock(p["plot"])
+        v <- pip_view(p, tags = "rep")
+
+        expect_message(
+            pip_set_params(v, list(alpha = 5), scope = "view"),
+            "all selected steps are locked"
+        )
+        expect_equal(p[["fit", "params"]], list(alpha = 1))
+
+        expect_no_message(pip_set_params(v, list(alpha = 5)))
+        expect_equal(p[["fit", "params"]], list(alpha = 5))
+        expect_equal(p[["plot", "params"]][["alpha"]], 1)
+    })
+
+    it("outdates every step with the param in the scope if force = TRUE", {
+        p <- pip_new() |>
+            pip_add("a", \(k = 1) k) |>
+            pip_add("b", \(j = 1) j) |>
+            pip_add("c", \(k = 1) k)
+        pip_run(p, lgr = NULL)
+
+        pip_set_params(p["c"], list(k = 1), force = TRUE, scope = "view")
+        expect_equal(unname(p[["state"]]), c("done", "done", "outdated"))
+
+        pip_run(p, lgr = NULL)
+        pip_set_params(p["c"], list(k = 1), force = TRUE)
+        expect_equal(unname(p[["state"]]), c("outdated", "done", "outdated"))
+    })
+
+    it("sets one step only via [[<- and [<- with 'params'", {
+        p <- pip_new() |>
+            pip_add("a", \(k = 1) k) |>
+            pip_add("b", \(k = 1) k) |>
+            pip_add("c", \(k = 1) k)
+
+        p[["b", "params"]] <- list(k = 2)
+        p[c("a", "b"), "params"] <- list(list(k = 3), list(k = 4))
+
+        expect_equal(
+            vapply(p[["params"]], \(par) par[["k"]], numeric(1)),
+            c(a = 3, b = 4, c = 1)
+        )
+    })
+
+    it("gives the same result for both scopes on a pipeline", {
+        p <- test_pip()
+        q <- test_pip()
+
+        pip_set_params(p, list(x = 11, y = 22), scope = "pipeline")
+        pip_set_params(q, list(x = 11, y = 22), scope = "view")
+
+        expect_equal(p[["params"]], q[["params"]])
+        expect_equal(p[["state"]], q[["state"]])
+    })
+
+    it("fails for invalid values of scope", {
+        p <- test_pip()
+        expect_error(
+            pip_set_params(p, list(x = 5), scope = "foo"),
+            "'arg' should be one of"
+        )
     })
 
     it("marks changed and dependent downstream steps as 'outdated'", {
@@ -2737,7 +2886,7 @@ describe("pip_set_params", {
 
     it("compares the values of each step separately", {
         p <- test_pip()
-        pip_set_params(pip_view(p, step = "s3"), params = list(x = 5))
+        pip_set_params(pip_view(p, step = "s3"), list(x = 5), scope = "view")
         pip_run(p, lgr = NULL)
 
         pip_set_params(p, params = list(x = 1))
@@ -3014,6 +3163,44 @@ describe("pip_set_params", {
 
         expect_equal(p[["data", "params"]], list(n = 6))
         expect_equal(p[["rep1", "params"]], list(model = 0, k = 1))
+    })
+
+    it("binds only within a view with both scopes", {
+        for (scope in c("pipeline", "view")) {
+            p <- bind_pip()
+
+            pip_set_params(p["rep2"], list(model = ~fit1), scope = scope)
+
+            expect_equal(p[["depends"]][["rep2"]], c(model = "fit1"))
+            expect_equal(p[["depends"]][["rep1"]], character(0))
+            expect_equal(p[["rep1", "params"]], list(model = 0, k = 1))
+        }
+    })
+
+    it("doesn't check the order of bindings outside the view", {
+        p <- pip_new() |>
+            pip_add("early", \(data = 0) data) |>
+            pip_add("load", \() 1) |>
+            pip_add("late", \(data = 0) data)
+
+        expect_no_error(pip_set_params(p["late"], list(data = ~load)))
+
+        expect_equal(p[["depends"]][["late"]], c(data = "load"))
+        expect_equal(p[["early", "params"]], list(data = 0))
+    })
+
+    it("sets values in the scope and binds in the view in one call", {
+        p <- pip_new() |>
+            pip_add("load", \() 1) |>
+            pip_add("a", \(data = 0, alpha = 1) data + alpha) |>
+            pip_add("b", \(data = 0, alpha = 1) data + alpha)
+
+        pip_set_params(p["b"], list(alpha = 5, data = ~load))
+
+        expect_equal(p[["a", "params"]], list(data = 0, alpha = 5))
+        expect_equal(p[["b", "params"]], list(data = ~load, alpha = 5))
+        expect_equal(p[["depends"]][["a"]], character(0))
+        expect_equal(p[["depends"]][["b"]], c(data = "load"))
     })
 
     it("binds via p[[step, 'params']] <- value", {
@@ -7355,7 +7542,11 @@ describe("pip_param_value<-", {
             pip_add("s1", \(x = 1) x) |>
             pip_add("s2", \(x = 1, y = 2) x + y)
         pip_set_params(p, list(x = sv_quantity(1, "km")))
-        pip_set_params(pip_view(p, step = "s2"), list(x = sv_quantity(1, "mi")))
+        pip_set_params(
+            pip_view(p, step = "s2"),
+            list(x = sv_quantity(1, "mi")),
+            scope = "view"
+        )
 
         pip_set_params(p, list(x = 4))
 
@@ -7440,6 +7631,30 @@ describe("pip_param_value<-", {
         # nothing was set and no step was outdated
         expect_s3_class(pip_get_params(p)[["a"]], "sv_broken")
         expect_equal(unname(p[["state"]]), c("done", "done"))
+    })
+
+    it("reports failures in steps outside the view and sets nothing", {
+        register_setter("sv_outside", function(x, ..., value) {
+            stop("cannot set")
+        })
+        p <- pip_new() |>
+            pip_add("s1", \(a = 1) a) |>
+            pip_add("s2", \(a = 2) a)
+        pip_set_params(
+            p["s1"],
+            list(a = structure(1, class = "sv_outside")),
+            scope = "view"
+        )
+
+        err <- expect_error(
+            pip_set_params(p["s2"], list(a = 9)),
+            class = "pipeflow_set_params_error"
+        )
+        expect_equal(err[["errors"]][["step"]], "s1")
+        expect_equal(p[["s2", "params"]], list(a = 2))
+
+        pip_set_params(p["s2"], list(a = 9), scope = "view")
+        expect_equal(p[["s2", "params"]], list(a = 9))
     })
 
     it("leaves the stored value of a copying method untouched on failure", {

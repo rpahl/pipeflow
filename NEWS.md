@@ -1,3 +1,14 @@
+# pipeflow (development version)
+
+## Breaking changes
+
+- `pip_set_params()` on a view now sets the values in every step of the
+  pipeline that has the param, also outside the view, so that a param keeps
+  one value. The view still selects which params can be set. The new
+  argument `scope = "view"` gives the old behaviour of setting the values in
+  the steps of the view only. Bindings (`list(x = ~step)`) are unchanged and
+  only apply to the steps of the view.
+
 # pipeflow 0.5.0.9026
 
 ## Bug fixes

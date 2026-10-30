@@ -347,7 +347,7 @@ unwraps them (`.pip_unwrap_params()`).
 | Replace a step | `pip_replace()`, `p[[s, "fun"]] <-` | Recomputes `params`, `depends` and `unbound`. Swaps the incoming DAG edges (`dag_remove_edge()`, `dag_add_edges_to()`). Keeps the node id. Outdates the step and its downstream steps. |
 | Remove a step | `pip_remove()`, `p[[s, "step"]] <- NULL` | Without `force`, fails if other steps depend on the step. With `force`, removes all downstream steps too. Tombstones DAG nodes, then `dag_tidy_up()`. Updates `data` and `.steps_to_nodes`. |
 | Rename a step | `pip_rename()`, `p[[s, "step"]] <-` | Updates `step`, all `depends`, the reference formulas (`formula_set_ref()`), the failures of failed keys in the outputs (`.pip_rename_failures()`), `.steps_to_nodes` and `.steps_with_current_out`. Calls `.fun_rename()`. The DAG is unchanged, because it works on ids. |
-| Set params | `pip_set_params()`, `p[[s, "params"]] <-` | `.pip_set_params()` computes all new values first (two phases, `pip_param_value<-`). A formula binds the param (`.pip_bind_row()` adds DAG edges). Outdates the changed steps and their downstream steps. |
+| Set params | `pip_set_params()`, `p[[s, "params"]] <-` | `.pip_set_params()` computes all new values first (two phases, `pip_param_value<-`). On a view, the view's rows select the names; values go to the unlocked rows of `scope` (`"pipeline"`: all rows that have the name unbound, `"view"`: the view's rows). A formula binds the param in the view's rows only (`.pip_bind_row()` adds DAG edges). `[[<-` uses `scope = "view"`. Outdates the changed steps and their downstream steps. |
 | Set the exec mode | `p[[s, "exec"]] <-` | Writes `exec` if the mode is new. Then outdates the step and its downstream steps. |
 | Set the output | `p[[s, "out"]] <-` | Writes `out` and sets the step to `FALSE` in `.steps_with_current_out`. Outdates the downstream steps; the step keeps its state. |
 | Bind pipelines | `rbind.pipeflow()` → `.pip_bind()` | Clones both pipelines and renames clashing steps of `y` with a number suffix. Folds params into the function defaults. Adds new nodes and edges. |
@@ -392,6 +392,11 @@ flowchart TD
 - Edits through a view (`pip_remove()`, `pip_rename()`, `pip_replace()`,
   `[[<-`) change the shared pipeline. They check `.pip_step_in_view()`
   first.
+- `pip_set_params()` on a view sets the names that are unbound in the
+  view's rows (locked ones included). By default (`scope = "pipeline"`), the
+  values go to all unlocked rows of the pipeline that have the name, so
+  that a name keeps one value. Bindings (formulas) only go to the view's
+  rows.
 - `pip_add()`, `pip_clone()`, `rbind()` and `as.function()` call
   `.assert_pip()` and reject views.
 - `p[i, view = FALSE]` keeps the selected steps plus all their upstream
