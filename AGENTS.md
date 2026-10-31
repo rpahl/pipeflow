@@ -8,9 +8,12 @@ in a C++ DAG (Rcpp).
 
 This is the single source of agent instructions. `CLAUDE.md` (for Claude Code) and
 `.github/copilot-instructions.md` only point here, so add new instructions to this file.
-For call graphs, flow diagrams and invariants, see `dev/pipeflow.md` (core) and
-`dev/as_function.md` (pipelines as functions). Update them when you change a flow they
-describe.
+Keep it to what an agent can't learn from the code or `dev/`: don't add overviews here.
+
+The architecture (data model, call graphs, run flow, views, DAG) is in `dev/pipeflow.md`.
+Pipelines as functions are in `dev/as_function.md`. Read the relevant section before you
+change a flow, and update it when you change a flow it describes. "Where to change what"
+in `dev/pipeflow.md` maps tasks to files.
 
 ## Environment
 
@@ -56,98 +59,38 @@ in total), stop and summarize instead of weakening tests or masking errors. If C
 still not green after about 45 minutes of work on an issue, commit the latest changes,
 summarize the attempts and blockers, and don't open a PR.
 
-## Architecture
+## Rules that are easy to break
 
-**Pipeline object.** A `pipeflow` is a small S3 list: `list(name, view, pipenv)`. All
-state lives in `pipenv`, an environment that `pip_new()` builds and that is shared by
-reference:
+The full list of invariants, with the functions that keep them, is in "Invariants" in
+`dev/pipeflow.md`. `tests/testthat/helper_invariants.R` checks them.
 
-- `data` is a `data.table` with one row per step. Its columns are `step`, `fun`,
-  `params`, `out`, `state`, `tags`, `locked`, `exec`, `time`, `depends`, `unbound` and
-  `nodeId` (see `.empty_pipeline()` in `R/pipeflow.R`). `depends`, `unbound` and
-  `nodeId` are derived columns (`.derived_cols`) and can't be assigned directly.
-- `.dag` is an external pointer to the C++ `Dag` (`src/dag.cpp`). `.steps_to_nodes` is a
-  hash env that maps step names to DAG node ids.
-- `.run_state` (`ready`/`restart`/`running`/`halted`/`failed`/`continued`), `.last_run`
-  and the restart counters hold the run state.
-
-Because `pipenv` is a reference, functions mostly mutate it in place (often with
-`data.table::set` or `:=`) and return `x` invisibly. `pip_clone()` or `p[]` on a
-pipeline makes a real copy, and that copy includes the DAG via `dag_clone()` (on a view,
-`v[]` is a view of the same pipeline).
-
-**Views.** A view is a `pipeflow` whose `view` field holds the node ids of the steps it
-covers (`v[["view"]]` shows them as step names). Views come from `pip_view()` or `p[i]`
-and share the same `pipenv`. Most functions call `.assert_pip_or_view()`; `pip_add()`,
-`pip_clone()` and `rbind()` call `.assert_pip()` and reject views. `pip_remove()`,
-`pip_rename()` and `pip_replace()` edit the shared pipeline through a view and gate the
-step they name with `.pip_step_in_view()`. Because the selector lives in the view object
-and not in `pipenv`, a view shrinks by reference but cannot grow by reference. Running a
-view also runs the upstream steps it depends on, then marks unprocessed downstream steps
-as `outdated`. `p[i, view = FALSE]` builds a standalone, compacted pipeline
-(`.pip_compact()` in `R/generic.pipeflow.R`).
-
-**Step dependencies.** Every argument of a step function needs a value: its default, or
-an entry in `params` of `pip_add()`/`pip_replace()`, which overrides the default
-(`.extract_fun_params()`). If a value is a formula, it refers to another step:
-`x = ~step1` by name, or `x = ~-1` by relative position. `.extract_depends()` and
-`formula_deps()` resolve these references into `depends` and DAG edges. The pipeline is
-checked when steps are added, not when it runs. A reference wrapped in `try()`
-(`x = ~try(step1)`, also `~try(-1)`) marks an argument that may receive a failed input
-in a continuing run (see Execution). The marker lives in the step's `params`, read via
-`formula_try_args()`; rename and `rbind()` rebuild reference formulas and must keep the
-`try()` wrapper. A one-sided formula in `params` is always a reference:
-`pip_set_params()` binds an unbound param to the step (`.pip_bind_row()`), also to
-connect pipelines after `rbind()`. Only the function made by `as.function()` sets
-formula arguments as values (`.pip_set_params(bind = FALSE)`).
-
-**C++ DAG (`src/dag.cpp`).** Nodes are stored by a running id. A separate `nodes_order`
-vector stores the topological order, so inserting a step only edits that vector. Removed
-nodes are tombstoned (`alive = false`) and later cleaned up by
-`dag_tidy_up`/`dag_rebuild`. R calls it through the generated `R/RcppExports.R` and
-`src/RcppExports.cpp`. Don't edit those two files by hand.
-`tests/testthat/test_RcppExports.R` tests the DAG directly.
-
-**Execution.** `pip_run()` loops over rows in order. It skips steps that are `done`
-(unless `force`) and steps that are locked, then calls `.pip_run_row()` and
-`.pip_execute_step_call()`. Step states are `new`, `done`, `outdated` and `failed`
-(`.step_states` in `R/pipeflow-package.R`). Each step's `exec` mode controls
-split/map/reduce:
-
-- `split` marks the output as `pipeflow_partitioned` (a named list).
-- `auto` maps the step over the partition keys when an input is partitioned.
-- `reduce` combines a partitioned input in a single call.
-- `plain` forbids partitioned inputs.
-
-With `pip_run(on_error = "continue")`, a failing step gets state `failed` (its condition
-is stored as `out`) and the run goes on. Steps with a failed input are skipped (they
-stay `new` or become `outdated`), unless that argument is a `~try()` reference: then the
-step runs and receives a `pipeflow_failure` condition. A run with failures ends in run
-state `continued` and signals a `pipeflow_run_failed` warning.
-
-**Self-modifying pipelines.** Inside a step body, `.self` refers to the full pipeline
-(it is injected via `.wrap_self()` and by `.pip_run_row()`). A step can call
-`.pip_restart()` or `.pip_halt()`. On restart, `pip_run()` calls itself recursively and
-hands off the remaining work. After each step, `.pip_run_row()` re-reads `pipenv$data`
-by step name, because the step may have changed the pipeline.
-
-**Code layout.**
-- `R/pipeflow.R` holds the exported `pip_*` API (except `pip_graph()`, see `R/graph.R`
-  below), with internal `.pip_*` helpers at the top.
-- `R/generic.pipeflow.R` holds the S3 methods: `[`, `[[`, `$`, their assignment forms,
-  `rbind` (pipeline binding), `length`, `dim` and `str`, with the helpers that only they
-  use at the top.
-- `R/print.pipeflow.R` holds the print method.
-- `R/log.R` holds the default logger, `pipeflow_lgr(level, msg)`.
-- `R/graph.R` holds `pip_graph()` and its helpers (`.pip_graph_*`).
-- The package imports all of `data.table`. Its filter operators (`%like%`, `%between%`,
-  …) are not exported, but `[` filters find them via `.filter_ops`
-  (`.pip_select_rows()`).
-- The larger files are split into sections: a full-width `# ====` banner opens a block,
-  a short `# ---` rule a section within it. Put a new function in the section it belongs
-  to, and a helper in the file that uses it (a test-only helper goes into
-  `tests/testthat/helper_*.R`). The test files follow the sections of their source file
-  in the same order. For the outline, see "Sections" in `dev/pipeflow.md`.
+- **State is shared by reference.** A `pipeflow` is `list(name, view, pipenv)`, and all
+  state lives in the `pipenv` environment. Edit it in place (`data.table::set`, `:=`)
+  and return `x` invisibly. Only `pip_clone()`, `p[]` on a pipeline and
+  `p[i, view = FALSE]` make real copies (including the DAG, via `dag_clone()`).
+- **Row order is a topological order.** A step may only refer to steps in earlier rows;
+  `pip_run()` just loops over the rows.
+- **Three step maps must agree:** the `nodeId` column, `.steps_to_nodes` and the C++
+  DAG. Anything that adds, removes or renames a step updates all three. Node ids are
+  never reused, because views store node ids, not row numbers.
+- **Derived columns** (`depends`, `unbound`, `nodeId`, see `.derived_cols`) are
+  recomputed from `fun` and `params`, never assigned.
+- **A one-sided formula in `params` is a step reference** (`~step1`, `~-1`). A
+  `~try(step1)` wrapper marks an argument that may receive a failed input; rename,
+  `rbind()` and `[<-` copying rebuild reference formulas and must keep the wrapper.
+  Only the function made by `as.function()` sets formula arguments as values
+  (`.pip_set_params(bind = FALSE)`).
+- **Views** share `pipenv` and store their selector in the view object, so a view can
+  shrink by reference but not grow. `pip_add()`, `pip_clone()` and `rbind()` reject
+  views; `pip_remove()`, `pip_rename()` and `pip_replace()` edit through a view and gate
+  the named step with `.pip_step_in_view()`.
+- **Steps can change their own pipeline** (via `.self`). After each step,
+  `.pip_run_row()` re-reads `pipenv$data` by step name, so never hold row indices
+  across a step call.
+- **A new `pipenv` field that edits change** must be added to `.pip_snapshot()` and
+  `.pip_restore()`, so a failed `[<-` changes nothing.
+- Don't edit the generated `R/RcppExports.R` and `src/RcppExports.cpp`; run
+  `Rcpp::compileAttributes()`. The DAG is tested directly in `test_RcppExports.R`.
 
 ## Conventions
 
@@ -160,12 +103,18 @@ by step name, because the step may have changed the pipeline.
   that has no `pip_*` setter. Don't add convenience wrappers that only save a line.
 - Every function has a roxygen header. Unexported functions end the header with `@noRd`.
   `NAMESPACE` and `man/` are generated by roxygen, so don't edit them by hand.
+- Where code goes: the exported `pip_*` API is in `R/pipeflow.R` (except `pip_graph()`
+  in `R/graph.R`), with internal `.pip_*` helpers at the top; S3 methods are in
+  `R/generic.pipeflow.R`. The larger files are split into sections: a full-width
+  `# ====` banner opens a block, a short `# ---` rule a section within it. Put a new
+  function in the section it belongs to, and a helper in the file that uses it (a
+  test-only helper goes into `tests/testthat/helper_*.R`). The test files follow the
+  sections of their source file in the same order. See "Sections" in `dev/pipeflow.md`.
 - Add tests together with new logic. Most source files `R/<x>.R` have tests in
-  `tests/testthat/test_<x>.R` (the DAG is tested in `test_RcppExports.R`; testthat
-  edition 3, run in parallel). Use `mockery` for external dependencies. Helpers live in
-  `tests/testthat/helper_*.R`. `test_edit_chains.R` runs long chains of edits and checks
-  the invariants after each edit (`helper_invariants.R`). After changing how edits or
-  runs work, run it with more random chains, e.g. `PIPEFLOW_RANDOM_CHAINS=100`.
+  `tests/testthat/test_<x>.R` (testthat edition 3, run in parallel). Use `mockery` for
+  external dependencies. `test_edit_chains.R` runs long chains of edits and checks the
+  invariants after each edit. After changing how edits or runs work, run it with more
+  random chains, e.g. `PIPEFLOW_RANDOM_CHAINS=100`.
 - Vignettes (`vignettes/v0*.Rmd`, plus `vignettes/articles/` for pkgdown-only articles)
   start like `vignettes/v01-get-started.Rmd`: the same YAML header (with their own
   `title`, `description` and `VignetteIndexEntry`) and the same `knitr-setup` chunk,
