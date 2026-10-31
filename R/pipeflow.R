@@ -2822,57 +2822,41 @@ pip_get_params <- function(x, simplify = TRUE) {
 #' Get or set unbound parameters
 #'
 #' [pip_get_params()] returns the current default values of all unbound parameters of a
-#' pipeline or view (parameters wired to another step's output via `~step_name` are
+#' pipeline or view (i.e., parameters bound to another step via `~step_name` are
 #' excluded). [pip_set_params()] updates these parameters in all steps that have them,
-#' except for locked steps; on a view, see Views and scope. A one-sided formula binds a
-#' parameter to the output of a step instead (see below). Steps whose values change are
-#' marked as outdated, together with their downstream dependents (steps that have never
-#' run stay `"new"`). Values that are [identical()] to the stored ones are skipped and
-#' don't outdate any step, unless `force = TRUE`.
+#' except for locked steps. Steps whose values change are marked as outdated, together
+#' with their downstream dependents. Values that are [identical()] to the stored ones
+#' are skipped and don't outdate any step, unless `force = TRUE`.
 #'
 #' @section Views and scope:
-#' On a view, the view selects the names that can be set and `scope` the steps that get
-#' the values. A name is set if it is unbound in one of the view's steps (locked ones
-#' included), otherwise it is unknown (see `unknown`), also if other steps of the
-#' pipeline have it. With `scope = "pipeline"` (default), the value goes to every
-#' unlocked step of the whole pipeline that has the name unbound, so that a name keeps
-#' one value, as [pip_get_params()] assumes. Steps whose defaults differ get the same
-#' value then ([pip_add()] warns about such defaults). With `scope = "view"`, it only
-#' goes to the unlocked steps of the view. On a pipeline, both scopes are the same.
+#' On a view, a parameter name is updated if it appears in one of the view's steps,
+#' otherwise it is considered unknown (see `unknown`).
+#' With `scope = "pipeline"`, the value is spread to every unbound step of the whole
+#' pipeline, so that all names get the same value, as [pip_get_params()] assumes.
+#' With `scope = "view"`, the update is limited to the steps of the view.
 #'
 #' Bindings ignore `scope`: a one-sided formula binds a param only in the steps of the
 #' view. For example, in `pip_set_params(v, list(alpha = 5, data = ~load))`, `alpha`
-#' is set in the whole pipeline and `data` is bound in the steps of `v` only.
-#'
-#' @section Storing annotated values:
-#' The value that is stored for a step is the result of `` `pip_param_value<-`() ``
-#' applied to the value the step currently holds, which by default is the given value. A
-#' method of that generic can merge the given value into an annotated object instead, so
-#' that its annotations survive (see [pip_param_value()]). The merged values of all
-#' affected steps are computed before anything is changed: if a method fails, nothing is
-#' set and an error of class `pipeflow_set_params_error` reports every failure at once.
-#' With `scope = "pipeline"`, these can be steps outside the view.
-#' The merged value is also what is compared with the stored one, so setting a plain
-#' value that an annotated object already holds doesn't outdate the step.
+#' is set in the whole pipeline while `data` is only bound in the steps of `v`.
 #'
 #' @section Binding parameters to steps:
 #' A one-sided formula binds a parameter to the output of a step, e.g.
-#' `pip_set_params(p, list(model = ~fit))`, as it does in the defaults of a step
-#' function or in `params` of [pip_add()]. The parameter is bound in all selected steps
-#' that have it unbound, except for locked steps. These steps must come after the step
-#' that the formula refers to, otherwise an error is signalled and nothing is changed.
+#' `pip_set_params(p, list(model = ~fit))`, as in [pip_add()].
+#' The parameter is bound in all selected steps, except for locked steps.
+#' These steps must come after the step that the formula refers to, otherwise an
+#' error is signalled and nothing is changed.
 #' If you want to bind parameters only for certain steps, use a view to select the
-#' desired steps (`scope` doesn't apply to bindings). A relative reference such as
-#' `~-1` is not allowed, but `~try(fit)` works as in [pip_add()].
+#' desired steps. A relative reference such as `~-1` is not allowed,
+#' but `~try(fit)` works as in [pip_add()].
 #'
 #' A bound parameter is no longer unbound: [pip_get_params()] doesn't return it, and
-#' [pip_set_params()] can't change it any more. Setting the same binding again does
-#' nothing, and any other value is taken as an unknown parameter (see `unknown`). To
-#' unbind or rebind it, replace the step with [pip_replace()]. Therefore, a one-sided
-#' formula can't be set as value. Give it as a string instead and turn it into a formula
-#' in the step, e.g. with [stats::as.formula()].
+#' [pip_set_params()] can't change it any more. To unbind or rebind it, replace the
+#' step with [pip_replace()]. A one-sided formula therfore can't be set as value.
+#' Give it as a string instead and turn it into a formula in the step, e.g.
+#' with [stats::as.formula()].
 #'
-#' @note Parameters of locked steps are never changed and their state remains unchanged.
+#' @section Locked steps:
+#' Parameters of locked steps are never changed and their state remains unchanged.
 #' [pip_get_params()] still returns them, so if a locked step comes first among the
 #' steps that share a parameter name, [pip_get_params()] keeps returning the locked
 #' step's value after the parameter was set. To read the parameters of the unlocked
@@ -2882,25 +2866,32 @@ pip_get_params <- function(x, simplify = TRUE) {
 #' place is identical to the stored one, so setting it again doesn't outdate the step
 #' unless `force = TRUE`.
 #'
+#' @section Storing annotated values:
+#' The value that is stored for a step is the result of `` `pip_param_value<-`() ``
+#' applied to the value the step currently holds, which by default is the given value. A
+#' method of that generic can merge the given value into an annotated object instead, so
+#' that its annotations survive (see [pip_param_value()]). The merged values of all
+#' affected steps are computed before anything is changed: if a method fails, nothing is
+#' set and an error of class `pipeflow_set_params_error` reports every failure at once.
+#' The merged value is also what is compared with the stored one, so setting a plain
+#' value that an annotated object already holds doesn't outdate the step.
+#'
+#'
 #' @param x A pipeflow pip or view.
-#' @param simplify For [pip_get_params()] only. If `TRUE` (default), one value is
-#' returned per parameter name. If `FALSE`, the values of all steps, grouped by name.
-#' @param params Named list of parameters to set. A one-sided formula binds the
-#' parameter to a step, see Binding parameters to steps.
-#' @param unknown How to handle `params` that are not defined in any of the selected
-#' steps, including locked ones: `"warn"` (default) signals a warning and sets the
-#' remaining parameters, `"ignore"` does so silently, and `"error"` fails before
-#' anything is changed.
-#' @param force Logical. If `TRUE`, every step that has one of the `params` is outdated
-#' (together with its downstream steps), even if the values are [identical()] to the
-#' stored ones. This refreshes steps whose inputs are environments or reference objects
-#' that were modified in place.
-#' @param scope The steps that get the values if `x` is a view: `"pipeline"` (default)
-#' sets them in all steps of the pipeline that have the param, `"view"` only in the
-#' steps of the view. Doesn't apply to bindings, see Views and scope.
-#' @param ... Passed on to the methods of `` `pip_param_value<-`() ``, which
-#' [pip_set_params()] uses to determine the value to store. An option can't be named
-#' like an argument of [pip_set_params()], e.g. `scope`.
+#' @param simplify If `TRUE` [pip_get_params()] returns one value per parameter name,
+#' otherwise the values of all steps, grouped by name.
+#' @param params A named list of parameters to set. One-sided formulas bind parameters
+#' to a step, see Binding parameters to steps.
+#' @param unknown How to handle undefined `params`:
+#' * `"warn"` (default) signals a warning and sets the remaining parameters,
+#' * `"ignore"` does so silently,
+#' * `"error"` fails before anything is changed
+#' @param force Logical. If `TRUE`, every step affected by a parameter update is
+#' outdated even if the values were [identical()] to the stored ones.
+#' @param scope Defines the scope of steps for the parameter update if `x` is a view:
+#' * `"pipeline"` (default) sets them in all steps of the pipeline that have the param
+#' * `"view"` only in the steps of the view (except bindings, see Views and scope)
+#' @param ... Passed on to the methods of `` `pip_param_value<-`() ``
 #' @return For [pip_get_params()], a named list of unbound parameter values; if the same
 #' parameter name appears in multiple steps, the first occurrence in pipeline order is
 #' returned. With `simplify = FALSE`, a named list with an element per parameter name,
@@ -2933,24 +2924,17 @@ pip_get_params <- function(x, simplify = TRUE) {
 #' \donttest{
 #' pip_set_params(p, params = list(nope = 1))
 #' }
-#'
 #' # ... which can be silenced or turned into an error
 #' pip_set_params(p, params = list(nope = 1), unknown = "ignore")
 #' try(pip_set_params(p, params = list(nope = 1), unknown = "error"))
 #'
-#' # With simplify = FALSE, the values of all steps, e.g. to find params whose values
-#' # differ between steps (compared as in the warning of pip_add())
+#' # Show the values of all steps with simplify = FALSE
 #' d <- suppressWarnings(
 #'   pip_new() |>
 #'     pip_add("s1", \(x = 1, y = 2) x + y) |>
 #'     pip_add("s2", \(x = 3) x)
 #' )
 #' pip_get_params(d, simplify = FALSE)
-#' differs <- function(values) {
-#'   values <- lapply(values, pip_param_value)
-#'   !all(vapply(values, identical, logical(1), values[[1L]]))
-#' }
-#' Filter(differs, pip_get_params(d, simplify = FALSE))
 #'
 #' # pip_get_params() includes locked steps; a view can exclude them
 #' pip_lock(p["load"])
