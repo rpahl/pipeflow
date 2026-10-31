@@ -621,6 +621,11 @@
     # marking downstream steps as outdated).
     qSnapshot <- dataQ[rowsQ, c(props, "depends"), with = FALSE]
 
+    # pip_replace() in 2) would check the params for conflicts while formula values are
+    # still replaced by placeholders, so the check runs once all rows are copied.
+    oldOpts <- options(pipeflow.warn_param_conflicts = FALSE)
+    on.exit(options(oldOpts), add = TRUE)
+
     # If a row fails, the rows copied before are undone, so that `x` is left as it was.
     .pip_all_or_nothing(x, {
         for (k in seq_len(n)) {
@@ -679,6 +684,8 @@
         }
     })
 
+    options(oldOpts)
+    .pip_warn_param_conflicts(x, steps = qSnapshot[["step"]])
     x
 }
 

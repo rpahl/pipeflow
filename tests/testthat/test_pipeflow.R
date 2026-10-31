@@ -800,6 +800,28 @@ describe(".pip_warn_param_conflicts", {
         expect_equal(w[["conflicts"]][["other"]], "s2")
     })
 
+    it("compares the formula values of a copy after they are restored", {
+        local_conflict_warnings()
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = 1) x)
+        .pip_set_params(p, list(x = ~y), bind = FALSE)
+
+        expect_no_warning(p["s2", ] <- p["s2", ])
+        expect_equal(p[["s2", "params"]][["x"]], ~y, ignore_formula_env = TRUE)
+    })
+
+    it("warns once if a copy brings another value of a param", {
+        local_conflict_warnings()
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = 1) x)
+        q <- pip_new() |> pip_add("s2", \(x = 2) x)
+
+        w <- expect_warning(p["s2", ] <- q, class = "pipeflow_param_conflict")
+        expect_equal(w[["conflicts"]][["step"]], "s2")
+    })
+
     it("doesn't warn for values set by pip_set_params() or [[<-", {
         local_conflict_warnings()
         p <- pip_new() |>
