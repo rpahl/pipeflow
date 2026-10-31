@@ -19,8 +19,8 @@ pip_set_params(
 \arguments{
 \item{x}{A pipeflow pip or view.}
 
-\item{simplify}{If \code{TRUE} (default), \code{\link[=pip_get_params]{pip_get_params()}} returns one value per
-parameter name. If \code{FALSE}, it returns the values of all steps, grouped by name.}
+\item{simplify}{For \code{\link[=pip_get_params]{pip_get_params()}} only. If \code{TRUE} (default), one value is
+returned per parameter name. If \code{FALSE}, the values of all steps, grouped by name.}
 
 \item{params}{Named list of parameters to set. A one-sided formula binds the
 parameter to a step, see Binding parameters to steps.}
@@ -152,14 +152,18 @@ pip_set_params(p, params = list(nope = 1), unknown = "ignore")
 try(pip_set_params(p, params = list(nope = 1), unknown = "error"))
 
 # With simplify = FALSE, the values of all steps, e.g. to find params whose values
-# differ between steps
+# differ between steps (compared as in the warning of pip_add())
 d <- suppressWarnings(
   pip_new() |>
     pip_add("s1", \(x = 1, y = 2) x + y) |>
     pip_add("s2", \(x = 3) x)
 )
 pip_get_params(d, simplify = FALSE)
-Filter(\(v) length(unique(v)) > 1L, pip_get_params(d, simplify = FALSE))
+differs <- function(values) {
+  values <- lapply(values, pip_param_value)
+  !all(vapply(values, identical, logical(1), values[[1L]]))
+}
+Filter(differs, pip_get_params(d, simplify = FALSE))
 
 # pip_get_params() includes locked steps; a view can exclude them
 pip_lock(p["load"])

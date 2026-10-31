@@ -662,7 +662,7 @@ describe(".pip_warn_param_conflicts", {
         )
         expect_match(
             conditionMessage(w),
-            "pip_get_params(x, simplify = FALSE)",
+            "pip_get_params() with simplify = FALSE",
             fixed = TRUE
         )
         expect_equal(p[["s2", "params"]], list(x = 2, y = "a"))
