@@ -35,8 +35,8 @@ Use cases for \code{params} are:
 \code{pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))}.
 \item Provide extra param values to "mark" dependencies that are defined in pipelines
 nested in a step, which ensures that it is re-executed when one of the nested param
-values change. See the
-\href{../doc/v05b-nested-pipeline.html}{nested pipelines vignette}.
+values change. See
+\code{vignette("v05b-nested-pipeline", package = "pipeflow")}.
 }}
 
 \item{exec}{Execution mode for the step, see \code{\link[=pip_add]{pip_add()}}. If \code{NULL} (the default),

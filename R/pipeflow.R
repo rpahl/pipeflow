@@ -2328,8 +2328,8 @@ pip_new <- function(name = "pipe") {
 #'   `pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))`.
 #' 3. Provide extra param values to "mark" dependencies that are defined in pipelines
 #'   nested in a step, which ensures that it is re-executed when one of the nested param
-#'   values change. See the
-#'   \href{../doc/v05b-nested-pipeline.html}{nested pipelines vignette}.
+#'   values change. See
+#'   `vignette("v05b-nested-pipeline", package = "pipeflow")`.
 #' @param exec Execution mode for this step. One of "auto", "split", "reduce" or
 #' "plain". Using execution mode `exec = split`, the output of the step is marked as
 #' partitioned output. In this mode, any step that depends on the split step (directly
