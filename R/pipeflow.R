@@ -2330,22 +2330,18 @@ pip_new <- function(name = "pipe") {
 #'   nested in a step, which ensures that it is re-executed when one of the nested param
 #'   values change. See
 #'   `vignette("v05b-nested-pipeline", package = "pipeflow")`.
-#' @param exec Execution mode for this step. One of "auto", "split", "reduce" or
-#' "plain". Using execution mode `exec = split`, the output of the step is marked as
-#' partitioned output. In this mode, any step that depends on the split step (directly
-#' or indirectly) will have its output automatically mapped partition-wise during step
-#' execution. The `reduce` mode expects partitioned input and passes it through without
-#' mapping, while `plain` mode only accepts non-partitioned input and always intends to
-#' execute a single call. In a run with `on_error = "continue"`, a mapped step that
-#' fails for some partition keys keeps the outputs of the other keys (see section
-#' 'Continuing after errors' in [pip_run()]). If a split step fails, a `reduce` step
-#' also accepts the resulting failure object when it takes it via `~try()`. In summary:
-#' * auto: map if partitioned input appears, otherwise single call. Several partitioned
-#'   inputs must have the same keys in the same order.
-#' * split: single call, then mark output as partitioned
-#' * reduce: single call, but only valid with partitioned input or, via `~try()`, a
-#'   failure object
-#' * plain: single call, only valid with non-partitioned input
+#' @param exec Execution mode for this step, which controls how partitioned input is
+#' handled. One of:
+#' * "auto": map over the partitions if an input is partitioned, otherwise a single
+#'   call. Several partitioned inputs must have the same keys in the same order.
+#' * "split": single call, then mark the output as partitioned.
+#' * "reduce": single call, only valid with partitioned input (or, via `~try()`, a
+#'   failure object).
+#' * "plain": single call, only valid with non-partitioned input.
+#'
+#' A mapped step that fails for some partition keys in a run with
+#' `on_error = "continue"` keeps the outputs of the other keys (see section
+#' 'Continuing after errors' in [pip_run()]).
 #'
 #' @details
 #' If `after` was specified, the new step will be inserted after the given step or

@@ -50,24 +50,20 @@ values change. See
 \code{vignette("v05b-nested-pipeline", package = "pipeflow")}.
 }}
 
-\item{exec}{Execution mode for this step. One of "auto", "split", "reduce" or
-"plain". Using execution mode \code{exec = split}, the output of the step is marked as
-partitioned output. In this mode, any step that depends on the split step (directly
-or indirectly) will have its output automatically mapped partition-wise during step
-execution. The \code{reduce} mode expects partitioned input and passes it through without
-mapping, while \code{plain} mode only accepts non-partitioned input and always intends to
-execute a single call. In a run with \code{on_error = "continue"}, a mapped step that
-fails for some partition keys keeps the outputs of the other keys (see section
-'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). If a split step fails, a \code{reduce} step
-also accepts the resulting failure object when it takes it via \code{~try()}. In summary:
+\item{exec}{Execution mode for this step, which controls how partitioned input is
+handled. One of:
 \itemize{
-\item auto: map if partitioned input appears, otherwise single call. Several partitioned
-inputs must have the same keys in the same order.
-\item split: single call, then mark output as partitioned
-\item reduce: single call, but only valid with partitioned input or, via \code{~try()}, a
-failure object
-\item plain: single call, only valid with non-partitioned input
-}}
+\item "auto": map over the partitions if an input is partitioned, otherwise a single
+call. Several partitioned inputs must have the same keys in the same order.
+\item "split": single call, then mark the output as partitioned.
+\item "reduce": single call, only valid with partitioned input (or, via \code{~try()}, a
+failure object).
+\item "plain": single call, only valid with non-partitioned input.
+}
+
+A mapped step that fails for some partition keys in a run with
+\code{on_error = "continue"} keeps the outputs of the other keys (see section
+'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}).}
 }
 \value{
 The updated pipeline, invisibly.
