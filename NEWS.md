@@ -1,3 +1,26 @@
+# pipeflow 0.5.0.9027
+
+## Breaking changes
+
+- `pip_set_params()` on a view now sets the values in every step of the
+  pipeline that has the param, also outside the view, so that a param keeps
+  one value. The view still selects which params can be set. The new
+  argument `scope = "view"` gives the old behaviour of setting the values in
+  the steps of the view only. Bindings (`list(x = ~step)`) are unchanged and
+  only apply to the steps of the view. An option named `scope` in `...` no
+  longer reaches the methods of `pip_param_value<-()`.
+
+## New features
+
+- `pip_add()`, `pip_replace()` and `rbind()` warn if an unbound param of a
+  new step has another value than the same param in the other steps, since
+  `pip_get_params()` shows one value per name and `pip_set_params()` sets
+  it in all steps. The warning has class `pipeflow_param_conflict` and can
+  be turned off with `options(pipeflow.warn_param_conflicts = FALSE)`.
+- `pip_get_params(x, simplify = FALSE)` returns the values of all steps,
+  grouped by param name and named by step, e.g. to find the params whose
+  values differ between steps.
+
 # pipeflow 0.5.0.9026
 
 ## Bug fixes

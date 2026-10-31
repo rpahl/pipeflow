@@ -473,16 +473,28 @@ describe("random chains of edits", {
                     return("no params")
                 }
                 params <- stats::setNames(list(sample(0:4, 1)), name)
-                w <- pip_view(p, step = unique(c(step, sample(steps, 1))))
+                viewSteps <- unique(c(step, sample(steps, 1)))
+                w <- pip_view(p, step = viewSteps)
                 sel <- step
+                scope <- sample(c("pipeline", "view"), 1)
+                how <- sample(4, 1)
                 switch(
-                    sample(4, 1),
-                    pip_set_params(pip_view(p, step = step), params),
-                    pip_set_params(w, params),
+                    how,
+                    pip_set_params(pip_view(p, step = step), params, scope = scope),
+                    pip_set_params(w, params, scope = scope),
                     p[[step, "params"]] <- params,
                     p[sel, "params"] <- params
                 )
-                paste("set", name, "of", step, "to", params[[1]])
+                target <- if (how > 2L) {
+                    step
+                } else if (scope == "pipeline") {
+                    "all steps"
+                } else if (how == 1L) {
+                    step
+                } else {
+                    toString(viewSteps)
+                }
+                paste("set", name, "of", target, "to", params[[1]])
             },
             bind = function(steps) {
                 k <- sample(seq_along(steps), 1)
@@ -648,7 +660,11 @@ describe("random chains of edits", {
                 sel <- sample(steps[isReady], 1)
                 q <- pip_clone(p)
                 if (!is.null(unbound_param(q, sel, "k"))) {
-                    pip_set_params(pip_view(q, step = sel), list(k = 9))
+                    pip_set_params(
+                        pip_view(q, step = sel),
+                        list(k = 9),
+                        scope = "view"
+                    )
                 }
                 run_log(q)
                 p[sel, ] <- q[sel, ]

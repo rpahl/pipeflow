@@ -819,6 +819,106 @@
     x
 }
 
+#' Warn about unbound params whose values differ between steps
+#'
+#' A param name is meant to have one value in the whole pipeline: [pip_get_params()]
+#' returns one value per name, and [pip_set_params()] sets one value in all steps that
+#' have the param. So if an unbound param of one of `steps` has another value than the
+#' same param in the first of `others` that has it unbound (the value that
+#' [pip_get_params()] returns), that is most likely a mistake. Only the first is
+#' compared, so that adding a step stays cheap in a large pipeline; a pipeline whose
+#' other steps already disagree was warned about when they were added. Values are
+#' compared with [identical()] after [pip_param_value()], so that annotations (e.g. a
+#' label) don't count. The option `pipeflow.warn_param_conflicts = FALSE` turns the
+#' check off.
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param steps Names of the steps to check.
+#' @param others Names of the steps to compare with, by default all steps of the
+#' pipeline except `steps`.
+#' @return `x`, invisibly. Signals a warning of class `pipeflow_param_conflict` (see
+#' `.pip_param_conflict_warning()`) if there are conflicts.
+#' @noRd
+.pip_warn_param_conflicts <- function(x, steps, others = NULL) {
+    if (!isTRUE(getOption("pipeflow.warn_param_conflicts", default = TRUE))) {
+        return(invisible(x))
+    }
+    dat <- .pip_pipenv(x)[["data"]]
+    rows <- data.table::chmatch(steps, dat[["step"]])
+    rows <- rows[lengths(dat[["unbound"]][rows]) > 0L]
+    if (length(rows) == 0L) {
+        return(invisible(x))
+    }
+    otherRows <- if (is.null(others)) {
+        setdiff(seq_len(nrow(dat)), rows)
+    } else {
+        data.table::chmatch(others, dat[["step"]])
+    }
+    otherUnbound <- dat[["unbound"]][otherRows]
+    otherNames <- unlist(otherUnbound)
+    if (length(otherNames) == 0L) {
+        return(invisible(x))
+    }
+    otherRowOfName <- rep(otherRows, lengths(otherUnbound))
+
+    unwrap <- function(value) {
+        tryCatch(pip_param_value(value), error = function(e) value)
+    }
+    conflicts <- list()
+    for (i in rows) {
+        parNames <- dat[["unbound"]][[i]]
+        k <- data.table::chmatch(parNames, otherNames)
+        for (m in which(!is.na(k))) {
+            name <- parNames[[m]]
+            j <- otherRowOfName[[k[[m]]]]
+            value <- unwrap(dat[["params"]][[i]][[name]])
+            otherValue <- unwrap(dat[["params"]][[j]][[name]])
+            if (!identical(value, otherValue)) {
+                conflicts[[length(conflicts) + 1L]] <- data.frame(
+                    step = dat[["step"]][[i]],
+                    param = name,
+                    value = .format_value_short(value),
+                    other = dat[["step"]][[j]],
+                    other_value = .format_value_short(otherValue)
+                )
+            }
+        }
+    }
+    if (length(conflicts) > 0L) {
+        warning(.pip_param_conflict_warning(do.call(rbind, conflicts)))
+    }
+    invisible(x)
+}
+
+#' Create the warning about params whose values differ between steps
+#'
+#' @param conflicts A data.frame with one row per conflict and the columns `step`,
+#' `param`, `value` (the value in `step`, formatted), `other` (the step whose value
+#' differs) and `other_value`.
+#' @return A condition of class `c("pipeflow_param_conflict", "warning", "condition")`
+#' with the field `conflicts`.
+#' @noRd
+.pip_param_conflict_warning <- function(conflicts) {
+    lines <- sprintf(
+        "- '%s' is %s in step '%s', but %s in step '%s'",
+        conflicts[["param"]],
+        conflicts[["value"]],
+        conflicts[["step"]],
+        conflicts[["other_value"]],
+        conflicts[["other"]]
+    )
+    msg <- paste0(
+        "Params with the same name have different values, but pip_set_params() ",
+        "sets one value in all steps that have the param:\n",
+        paste(lines, collapse = "\n"),
+        "\npip_get_params() with simplify = FALSE shows the values of all steps."
+    )
+    structure(
+        class = c("pipeflow_param_conflict", "warning", "condition"),
+        list(message = msg, call = NULL, conflicts = conflicts)
+    )
+}
+
 
 # -----------------
 # Parameter binding
@@ -829,7 +929,8 @@
 #'
 #' @param x A pipeflow pipeline or view.
 #' @param params Named list of the params to set.
-#' @param unknown,force As for [pip_set_params()].
+#' @param unknown,force,scope As for [pip_set_params()]. `scope` applies to values
+#' only: bindings always use the rows of the view.
 #' @param bind If `TRUE`, a one-sided formula in `params` binds the param to the step
 #' that it refers to. If `FALSE`, all params are set as values, which a call of the
 #' function made by [as.function.pipeflow()] needs: its arguments are values, also if
@@ -843,6 +944,7 @@
     params,
     unknown = "warn",
     force = FALSE,
+    scope = "pipeline",
     bind = TRUE,
     setValue = `pip_param_value<-`
 ) {
@@ -883,8 +985,18 @@
         warning(msg, call. = FALSE)
     }
 
-    # Narrow down the considered rows
-    rowsConsidered <- setdiff(rows, which(dat[["locked"]]))
+    # The view selects the names to set. Values go to the unlocked rows of the scope,
+    # that is, with scope "pipeline", to all rows that have the name unbound, while
+    # bindings only go to the unlocked rows of the view.
+    valueNames <- intersect(setdiff(parNames, names(refs)), defined)
+    locked <- which(dat[["locked"]])
+    bindRows <- setdiff(rows, locked)
+    valueRows <- if (scope == "pipeline" && length(valueNames) > 0L) {
+        setdiff(seq_len(nrow(dat)), locked)
+    } else {
+        bindRows
+    }
+    rowsConsidered <- sort(union(valueRows, bindRows))
     if (length(rowsConsidered) == 0L) {
         message("No steps to update: all selected steps are locked")
         return(invisible(x))
@@ -892,7 +1004,17 @@
 
     # Determine which steps/rows are affected, i.e. have intersecting params
     unbound <- dat[["unbound"]][rowsConsidered] # names of unbound params
-    intersects <- lapply(unbound, FUN = intersect, y = parNames)
+    intersects <- Map(
+        \(unboundNames, isValueRow, isBindRow) {
+            c(
+                if (isValueRow) intersect(unboundNames, valueNames),
+                if (isBindRow) intersect(unboundNames, names(refs))
+            )
+        },
+        unbound,
+        rowsConsidered %in% valueRows,
+        rowsConsidered %in% bindRows
+    )
     hasOverlap <- lengths(intersects) > 0
     namesAffected <- intersects[hasOverlap]
     rowsAffected <- rowsConsidered[hasOverlap]
@@ -2188,44 +2310,38 @@ pip_new <- function(name = "pipe") {
 #' constants are resolved immediately. Default values that are formulas like
 #' `~other_step` are treated as dependencies to those steps and resolved to the
 #' respective output values at runtime once the step is executed. A reference wrapped in
-#' `try()`, like `~try(other_step)`, accepts a failed input when the pipeline is run
-#' with `on_error = "continue"`: instead of the output of the referenced step, the
-#' argument then receives a condition of class `pipeflow_failure` (see section
-#' 'Continuing after errors' in [pip_run()]). The function can refer to the running
-#' pipeline as `.self` (see section 'The pipeline as `.self`' in [pip_add()]).
+#' `try()`, like `~try(other_step)`, accepts a failed input when the pipeline was run
+#' with `on_error = "continue"` (see section 'Continuing after errors' in [pip_run()]).
 #' @param tags Optional character vector of tags belonging to the step. Can also be
 #' adjusted later using `[pip_tag()]`.
 #' @param after Optional position after which the new step should be inserted (defaults
 #' to last position). Can be a step name or an integer index. If set to 0, the new step
 #' will be inserted at the beginning of the pipeline.
 #' @param params Optional named list of parameter values. They override the defaults of
-#' `fun` and give a value to parameters of `fun` that have no default. As in the
-#' defaults of `fun`, a formula like `~other_step` refers to the output of another step.
-#' Names that are no parameters of `fun` add params to the step, which are passed on to
-#' `fun` as well, so `fun` needs a `...` argument for them. Use cases for `params` are:
+#' `fun` and can be used to give a value to parameters of `fun` that have no default.
+#' As in `fun`, a formula like `~other_step` refers to the output of another step.
+#' It can contain names that are no parameters of `fun`, which are passed on to
+#' `fun` as well, but `fun` needs a `...` argument in this case for them.
+#' Use cases for `params` are:
 #' 1. Set param values programmatically, e.g. when adding steps in a loop or at runtime.
 #' 2. Use existing functions whose parameters have no defaults, e.g.
 #'   `pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))`.
 #' 3. Provide extra param values to "mark" dependencies that are defined in pipelines
 #'   nested in a step, which ensures that it is re-executed when one of the nested param
-#'   values change. See the
-#'   \href{../doc/v05b-nested-pipeline.html}{nested pipelines vignette}.
-#' @param exec Execution mode for this step. One of "auto", "split", "reduce" or
-#' "plain". Using execution mode `exec = split`, the output of the step is marked as
-#' partitioned output. In this mode, any step that depends on the split step (directly
-#' or indirectly) will have its output automatically mapped partition-wise during step
-#' execution. The `reduce` mode expects partitioned input and passes it through without
-#' mapping, while `plain` mode only accepts non-partitioned input and always intends to
-#' execute a single call. In a run with `on_error = "continue"`, a mapped step that
-#' fails for some partition keys keeps the outputs of the other keys (see section
-#' 'Continuing after errors' in [pip_run()]). If a split step fails, a `reduce` step
-#' also accepts the resulting failure object when it takes it via `~try()`. In summary:
-#' * auto: map if partitioned input appears, otherwise single call. Several partitioned
-#'   inputs must have the same keys in the same order.
-#' * split: single call, then mark output as partitioned
-#' * reduce: single call, but only valid with partitioned input or, via `~try()`, a
-#'   failure object
-#' * plain: single call, only valid with non-partitioned input
+#'   values change. See
+#'   `vignette("v05b-nested-pipeline", package = "pipeflow")`.
+#' @param exec Execution mode for this step, which controls how partitioned input is
+#' handled. One of:
+#' * "auto": map over the partitions if an input is partitioned, otherwise a single
+#'   call. Several partitioned inputs must have the same keys in the same order.
+#' * "split": single call, then mark the output as partitioned.
+#' * "reduce": single call, only valid with partitioned input (or, via `~try()`, a
+#'   failure object).
+#' * "plain": single call, only valid with non-partitioned input.
+#'
+#' A mapped step that fails for some partition keys in a run with
+#' `on_error = "continue"` keeps the outputs of the other keys (see section
+#' 'Continuing after errors' in [pip_run()]).
 #'
 #' @details
 #' If `after` was specified, the new step will be inserted after the given step or
@@ -2233,6 +2349,15 @@ pip_new <- function(name = "pipe") {
 #' the middle is a rather expensive operation as it requires re-wiring parts of the
 #' internal pipeline structure, especially if the new step is inserted at an early
 #' position.
+#'
+#' ## Params with the same name
+#' A param name is meant to have one value in the whole pipeline.Therefore,
+#' [pip_add()], [pip_replace()] and [rbind()][rbind.pipeflow]
+#' signal a warning if the default param value of a new step differs from the value
+#' of the same param in the other steps.
+#' To give steps different values on purpose, give the params different names, silence
+#' the warning with `suppressWarnings(..., classes = "pipeflow_param_conflict")`, or
+#' turn it off with `options(pipeflow.warn_param_conflicts = FALSE)`.
 #'
 #' ## The pipeline as `.self`
 #' A step function can refer to the pipeline that is being run as `.self` without
@@ -2414,6 +2539,7 @@ pip_add <- function(
             pos = pos
         )
     }
+    .pip_warn_param_conflicts(x, steps = step)
     invisible(x)
 }
 
@@ -2461,21 +2587,17 @@ pip_clone <- function(x, name = NULL) {
 #' default) the result is a named list of step outputs. With any other column, the
 #' outputs are grouped by the values of that column (typically `"tags"`).
 #'
-#' The result always takes one of two shapes:
+#' The result is one of two shapes:
 #'
-#' * **Flat**: a named list whose elements are the step outputs directly, e.g.
-#'   `list(s1 = 1, s2 = 2)`.
-#' * **Grouped**: a named list whose elements are themselves named lists of step
-#'   outputs, one per group, e.g.
+#' * **Flat**: a named list of step outputs, e.g. `list(s1 = 1, s2 = 2)`.
+#' * **Grouped**: a named list of such lists, one per group, e.g.
 #'   `list(io = list(s1 = 1, s2 = 2), model = list(s3 = 4))`.
 #'
-#' With `simplify = TRUE` (the default) the result is *flat* whenever every group
-#' contains exactly one step, which, for example, is always the case for `by = "step"`
-#' as step names are unique. If any group contains more than one step (or
-#' `simplify = FALSE`) the result is *grouped*. For list columns such as `tags`, a step
-#' with several entries contributes its output to every corresponding group, and steps
-#' without an entry (e.g. untagged steps) are omitted. You can use [pip_view()] to
-#' further narrow the selection before collecting.
+#' With `simplify = TRUE` (the default) the result is flat whenever every group has
+#' exactly one step, as is always the case for `by = "step"`. Otherwise, or with
+#' `simplify = FALSE`, it is grouped. For list columns such as `tags`, a step with
+#' several entries contributes to every group, and steps without an entry are omitted.
+#' Use [pip_view()] to narrow the selection first.
 #'
 #' @param x A pipeflow pip or view.
 #' @param by Single step-table column name to group by.
@@ -2648,8 +2770,11 @@ pip_data <- function(x) {
 #' @name pip_set_params
 #' @rdname pip_set_params
 #' @export
-pip_get_params <- function(x) {
+pip_get_params <- function(x, simplify = TRUE) {
     .assert_pip_or_view(x)
+    if (!.is_single(simplify, "logical") || is.na(simplify)) {
+        stop("simplify must be a single logical value")
+    }
     dat <- .pip_view_data(x)
 
     params <- mapply(
@@ -2658,52 +2783,67 @@ pip_get_params <- function(x) {
         FUN = \(par, unbound) par[unbound],
         SIMPLIFY = FALSE
     ) |>
+        stats::setNames(dat[["step"]]) |>
         Filter(f = \(x) length(x) > 0)
 
     parNames <- unlist(lapply(params, FUN = names))
-    parValues <- stats::setNames(unlist1(params), parNames)
-    as.list(parValues[!duplicated(names(parValues))])
+    parValues <- stats::setNames(unlist1(unname(params)), parNames)
+    if (length(parValues) == 0L) {
+        return(list())
+    }
+    if (simplify) {
+        return(as.list(parValues[!duplicated(names(parValues))]))
+    }
+
+    # Group the values by param name, in the order of the first occurrence, and name
+    # them by step
+    steps <- rep(names(params), lengths(params))
+    byName <- split(
+        seq_along(parValues),
+        factor(parNames, levels = unique(parNames))
+    )
+    lapply(byName, \(k) stats::setNames(as.list(parValues[k]), steps[k]))
 }
 
 #' Get or set unbound parameters
 #'
 #' [pip_get_params()] returns the current default values of all unbound parameters of a
-#' pipeline or view (parameters wired to another step's output via `~step_name` are
-#' excluded). [pip_set_params()] updates these parameters for the whole pipeline or view
-#' except for locked steps. A one-sided formula binds a parameter to the output of a
-#' step instead (see below). Steps whose values change are marked as outdated, together
-#' with their downstream dependents (steps that have never run stay `"new"`). Values
-#' that are [identical()] to the stored ones are skipped and don't outdate any step,
-#' unless `force = TRUE`.
+#' pipeline or view (i.e., parameters bound to another step via `~step_name` are
+#' excluded). [pip_set_params()] updates these parameters in all steps that have them,
+#' except for locked steps. Steps whose values change are marked as outdated, together
+#' with their downstream dependents. Values that are [identical()] to the stored ones
+#' are skipped and don't outdate any step, unless `force = TRUE`.
 #'
-#' @section Storing annotated values:
-#' The value that is stored for a step is the result of `` `pip_param_value<-`() ``
-#' applied to the value the step currently holds, which by default is the given value. A
-#' method of that generic can merge the given value into an annotated object instead, so
-#' that its annotations survive (see [pip_param_value()]). The merged values of all
-#' affected steps are computed before anything is changed: if a method fails, nothing is
-#' set and an error of class `pipeflow_set_params_error` reports every failure at once.
-#' The merged value is also what is compared with the stored one, so setting a plain
-#' value that an annotated object already holds doesn't outdate the step.
+#' @section Views and scope:
+#' On a view, a parameter name is updated if it appears in one of the view's steps,
+#' otherwise it is considered unknown (see `unknown`).
+#' With `scope = "pipeline"`, the value is spread to every unbound step of the whole
+#' pipeline, so that all names get the same value, as [pip_get_params()] assumes.
+#' With `scope = "view"`, the update is limited to the steps of the view.
+#'
+#' Bindings ignore `scope`: a one-sided formula binds a param only in the steps of the
+#' view. For example, in `pip_set_params(v, list(alpha = 5, data = ~load))`, `alpha`
+#' is set in the whole pipeline while `data` is only bound in the steps of `v`.
 #'
 #' @section Binding parameters to steps:
 #' A one-sided formula binds a parameter to the output of a step, e.g.
-#' `pip_set_params(p, list(model = ~fit))`, as it does in the defaults of a step
-#' function or in `params` of [pip_add()]. The parameter is bound in all selected steps
-#' that have it unbound, except for locked steps. These steps must come after the step
-#' that the formula refers to, otherwise an error is signalled and nothing is changed.
-#' If you want to bind parameters only for certain steps, use a view to select the
-#' desired steps. A relative reference such as `~-1` is not allowed, but `~try(fit)`
-#' works as in [pip_add()].
+#' `pip_set_params(p, list(model = ~fit))`, as in [pip_add()].
+#'
+#' * The parameter is bound in *all selected steps*, except for *locked steps*. To bind
+#'   it only in certain steps, select them with a view.
+#' * The bound steps *must come after* the step that the formula refers to, otherwise an
+#'   error is signalled and nothing is changed.
+#' * A *relative reference* such as `~-1` is not allowed, but `~try(fit)` works as in
+#'   [pip_add()].
 #'
 #' A bound parameter is no longer unbound: [pip_get_params()] doesn't return it, and
-#' [pip_set_params()] can't change it any more. Setting the same binding again does
-#' nothing, and any other value is taken as an unknown parameter (see `unknown`). To
-#' unbind or rebind it, replace the step with [pip_replace()]. Therefore, a one-sided
-#' formula can't be set as value. Give it as a string instead and turn it into a formula
-#' in the step, e.g. with [stats::as.formula()].
+#' [pip_set_params()] can't change it any more. To unbind or rebind it, replace the
+#' step with [pip_replace()]. A one-sided formula therfore can't be set as value.
+#' Give it as a string instead and turn it into a formula in the step, e.g.
+#' with [stats::as.formula()].
 #'
-#' @note Parameters of locked steps are never changed and their state remains unchanged.
+#' @section Locked steps:
+#' Parameters of locked steps are never changed and their state remains unchanged.
 #' [pip_get_params()] still returns them, so if a locked step comes first among the
 #' steps that share a parameter name, [pip_get_params()] keeps returning the locked
 #' step's value after the parameter was set. To read the parameters of the unlocked
@@ -2713,22 +2853,42 @@ pip_get_params <- function(x) {
 #' place is identical to the stored one, so setting it again doesn't outdate the step
 #' unless `force = TRUE`.
 #'
+#' @section Storing annotated values:
+#' A new value does not simply replace the stored one. For a step whose param currently
+#' holds `x`, the pipeline basically does `pip_param_value(x) <- new_value`
+#' and stores the result. For plain values, this is just `new_value`. For an annotated
+#' object (e.g. a value with units or labels), a method for its class can instead merge
+#' `new_value` into `x`, so that the annotations survive (see [pip_param_value()]).
+#' Here, the merging follows these rules:
+#'
+#' * *All or nothing*: the merged values of all affected steps are computed before
+#'   anything is changed. If a method fails, nothing is set and an error of class
+#'   `pipeflow_set_params_error` reports every failure at once.
+#' * *Comparison*: the merged value is what is compared with the stored one, so setting
+#'   a plain value that an annotated object already holds doesn't outdate the step.
+#'
 #' @param x A pipeflow pip or view.
-#' @param params Named list of parameters to set. A one-sided formula binds the
-#' parameter to a step, see Binding parameters to steps.
-#' @param unknown How to handle `params` that are not defined in any of the selected
-#' steps, including locked ones: `"warn"` (default) signals a warning and sets the
-#' remaining parameters, `"ignore"` does so silently, and `"error"` fails before
-#' anything is changed.
-#' @param force Logical. If `TRUE`, every step that has one of the `params` is outdated
-#' (together with its downstream steps), even if the values are [identical()] to the
-#' stored ones. This refreshes steps whose inputs are environments or reference objects
-#' that were modified in place.
-#' @param ... Passed on to the methods of `` `pip_param_value<-`() ``, which
-#' [pip_set_params()] uses to determine the value to store.
+#' @param simplify If `TRUE` [pip_get_params()] returns one value per parameter name,
+#' otherwise the values of all steps, grouped by name.
+#' @param params A named list of parameters to set. One-sided formulas bind parameters
+#' to a step, see Binding parameters to steps.
+#' @param unknown How to handle undefined `params`:
+#' * `"warn"` (default) signals a warning and sets the remaining parameters,
+#' * `"ignore"` does so silently,
+#' * `"error"` fails before anything is changed
+#' @param force Logical. If `TRUE`, every step affected by a parameter update is
+#' outdated even if the values were [identical()] to the stored ones.
+#' @param scope Defines the scope of steps for the parameter update if `x` is a view:
+#' * `"pipeline"` (default) sets them in all steps of the pipeline that have the param
+#' * `"view"` only in the steps of the view (except bindings, see Views and scope)
+#' @param ... Passed on to the methods of `` `pip_param_value<-`() ``
 #' @return For [pip_get_params()], a named list of unbound parameter values; if the same
 #' parameter name appears in multiple steps, the first occurrence in pipeline order is
-#' returned. For [pip_set_params()], the updated pipeline or view, invisibly.
+#' returned. With `simplify = FALSE`, a named list with an element per parameter name,
+#' which is a list of the values named by step, e.g.
+#' `list(x = list(s1 = 1, s2 = 2), y = list(s1 = 3))`. For [pip_set_params()], the
+#' updated pipeline or view, invisibly.
+#' @seealso [pip_param_value()] for storing and passing on annotated parameter values.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(n = 10) seq_len(n)) |>
@@ -2755,15 +2915,31 @@ pip_get_params <- function(x) {
 #' \donttest{
 #' pip_set_params(p, params = list(nope = 1))
 #' }
-#'
 #' # ... which can be silenced or turned into an error
 #' pip_set_params(p, params = list(nope = 1), unknown = "ignore")
 #' try(pip_set_params(p, params = list(nope = 1), unknown = "error"))
+#'
+#' # Show the values of all steps with simplify = FALSE
+#' d <- suppressWarnings(
+#'   pip_new() |>
+#'     pip_add("s1", \(x = 1, y = 2) x + y) |>
+#'     pip_add("s2", \(x = 3) x)
+#' )
+#' pip_get_params(d, simplify = FALSE)
 #'
 #' # pip_get_params() includes locked steps; a view can exclude them
 #' pip_lock(p["load"])
 #' pip_get_params(p) # list(n = 5, factor = 2.0)
 #' pip_get_params(p[!locked]) # list(factor = 2.0)
+#'
+#' # On a view, a value is set in the whole pipeline unless scope = "view"
+#' r <- pip_new() |>
+#'   pip_add("fit", \(alpha = 1) alpha) |>
+#'   pip_add("plot", \(x = ~fit, alpha = 1) c(x, alpha), tags = "rep")
+#' pip_set_params(pip_view(r, tags = "rep"), list(alpha = 5))
+#' r[["params"]] # alpha = 5 in both steps
+#' pip_set_params(pip_view(r, tags = "rep"), list(alpha = 2), scope = "view")
+#' r[["params"]] # alpha = 5 in "fit", 2 in "plot"
 #'
 #' # A formula binds a parameter to the output of a step
 #' q <- pip_new() |>
@@ -2788,11 +2964,13 @@ pip_set_params <- function(
     params = list(),
     unknown = c("warn", "ignore", "error"),
     force = FALSE,
+    scope = c("pipeline", "view"),
     ...
 ) {
     # Input checking
     .assert_pip_or_view(x)
     unknown <- match.arg(unknown)
+    scope <- match.arg(scope)
     if (!is.list(params)) {
         stop("params must be a list")
     }
@@ -2818,6 +2996,7 @@ pip_set_params <- function(
         params,
         unknown = unknown,
         force = force,
+        scope = scope,
         setValue = setValue
     )
 }
@@ -3100,11 +3279,17 @@ pip_rename <- function(x, from, to) {
 #' Downstream steps that have run before are automatically marked as outdated and will
 #' re-run on the next [pip_run()].
 #'
-#' By default, the step keeps its tags and execution mode: `tags = NULL` and
-#' `exec = NULL` mean "keep the current value". To change them, pass explicit values,
-#' where `tags = character(0)` removes all tags and `exec = "auto"` resets the execution
-#' mode to its default. Parameters, output, state and lock status are always reset, like
-#' for a freshly added step.
+#' The step keeps its tags and execution mode by default, while parameters, output,
+#' state and lock status are always reset, like for a freshly added step.
+#'
+#' * `tags = NULL` and `exec = NULL` mean *keep the current value*. To change them, pass
+#'   explicit values.
+#' * `tags = character(0)` *removes all tags* and `exec = "auto"` *resets* the execution
+#'   mode to its default.
+#'
+#' As in [pip_add()], a warning is signalled if a param of the
+#' new function has another value than the same param in other steps (see Params with
+#' the same name in [pip_add()]).
 #'
 #' @inheritParams pip_add
 #' @param x A pipeflow pipeline or view object.
@@ -3289,6 +3474,7 @@ pip_replace <- function(
     # therefore stays "new").
     .pip_outdate_downstream(x, steps = step)
 
+    .pip_warn_param_conflicts(x, steps = step)
     invisible(x)
 }
 
@@ -3359,9 +3545,8 @@ pip_replace <- function(
 #'   run. A failed run does not change it. It is the time stamp that
 #'   [pip_output_value()] gets in `ctx`.
 #'
-#' With `t0 <- Sys.time()` taken before `pip_run()`, a step was run in that run if
-#' `time_start >= t0`. Its last run succeeded if its state is `"done"` and
-#' `time >= time_start`.
+#' A step ran in a run if its `time_start` is not before a `Sys.time()` taken before the
+#' run, and it succeeded if its state is `"done"` and `time >= time_start`.
 #'
 #' ## Running views
 #' When `x` is a view, the requested rows are run together with their upstream
@@ -3375,10 +3560,9 @@ pip_replace <- function(
 #' error is stored as its output, the pipeline run state becomes `"failed"`, and steps
 #' after it that were not reached are marked `"outdated"`, so the next run retries them.
 #'
-#' The error message names the step, and for a step mapped over partitions (see `exec`
-#' in [pip_add()]) also the partition key, e.g. `"step 'fit': key 'b': negative"`. The
-#' error has class `pipeflow_step_error` and keeps the original error in its field
-#' `parent`: `tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)`.
+#' The error message names the step and, for a mapped step, the partition key. The error
+#' has class `pipeflow_step_error` and keeps the original error in its field `parent`:
+#' `tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)`.
 #'
 #' ## Continuing after errors
 #' With `on_error = "continue"`, the run does not stop at a failed step:
@@ -3411,34 +3595,25 @@ pip_replace <- function(
 #' class `pipeflow_run_failed` lists the failed steps (with the number of failed keys)
 #' and the steps that were not run.
 #'
-#' The next run retries the failed steps and the steps that were not run; once a failed
-#' step succeeds, the steps after it, including those that received failure objects, are
-#' run again. A mapped step is only run again for its failed keys, keeping the results
-#' of the other keys, unless something changed that affects all keys: its parameters,
-#' its execution mode or an input step (which marks it `"outdated"`), an input step that
-#' is run again in the same run, or `force = TRUE`. See
-#' `vignette("v05c-error-handling", package = "pipeflow")` for examples.
+#' The next run retries the failed steps and the steps that were not run. Once a failed
+#' step succeeds, the steps after it are run again, including those that received
+#' failure objects. A mapped step is only run again for its failed keys, unless
+#' something changed that affects all keys (its params or exec mode, an input step, or
+#' `force = TRUE`). See `vignette("v05c-error-handling", package = "pipeflow")`.
 #'
 #' ## Mapping in parallel
 #'
-#' With `map`, the keys of a step that is mapped over partitions are run by `map`, for
-#' example in parallel processes. This applies to all mapped steps of the run, but not
-#' to the runs of inner pipelines, such as of a function made by
-#' [as.function.pipeflow()]. For backends that need more arguments, pass a wrapper, e.g.
-#' `\(X, FUN) parallel::parLapply(cl, X, FUN)` or
+#' With `map`, the keys of a mapped step are run by `map`, for example in parallel
+#' processes. This applies to all mapped steps of the run, but not to inner pipelines of
+#' functions made by [as.function.pipeflow()], which run in parallel only if made with
+#' `cache = FALSE` (the cached inner pipelines would be lost in another process). For
+#' backends that need more arguments, pass a wrapper, e.g.
 #' `\(X, FUN) parallel::mclapply(X, FUN, mc.cores = 4)`.
 #'
-#' The keys of a step whose function was made by [as.function.pipeflow()] run in
-#' parallel only if the function was made with `cache = FALSE`. With `cache = TRUE` (the
-#' default), they run one after another, because the inner pipelines that the function
-#' keeps for them would be lost in another process.
-#'
-#' Errors are handled as without `map` (see 'Runtime errors' and 'Continuing after
-#' errors' above), but all keys of a step run before the error of the first failed key
-#' is raised. Warnings and messages of the step reach `lgr` only if the backend relays
-#' them, as `future.apply::future_lapply` does and `parallel::mclapply` does not. Random
-#' numbers are up to the backend as well, e.g. `future.seed = TRUE` for
-#' `future.apply::future_lapply`.
+#' Errors are handled as without `map`, but all keys of a step run before the error of
+#' the first failed key is raised. Warnings, messages and random numbers are up to the
+#' backend, e.g. `future.apply::future_lapply` relays warnings and messages and needs
+#' `future.seed = TRUE`, while `parallel::mclapply` does not relay them.
 #'
 #' ## Runtime control flow via restart and halt
 #'
@@ -3886,12 +4061,15 @@ pip_run <- function(
 #'
 #' Resets all unlocked steps of a pipeline (or a subset of steps defined by a view) to
 #' state `"new"` and clears their outputs, so a subsequent [pip_run()] re-executes the
-#' cleaned steps from scratch. Their downstream steps that have run are marked
-#' `"outdated"`, as they ran with the cleared outputs. Any pending restart counters are
-#' cleared, but parameters, tags, and locked flags are left unchanged. If all steps of
-#' the pipeline are selected, the run state is set to `"ready"` and the time of the last
-#' run is cleared. A view that covers only some steps leaves both alone, as they
-#' describe the whole pipeline.
+#' cleaned steps from scratch. Parameters, tags, and locked flags are left unchanged.
+#' Further effects:
+#'
+#' * *Downstream steps* that have run are marked `"outdated"`, as they ran with the
+#'   cleared outputs.
+#' * Any pending *restart counters* are cleared.
+#' * If *all steps* of the pipeline are selected, the *run state* is set to `"ready"`
+#'   and the time of the last run is cleared. A view that covers only some steps leaves
+#'   both alone, as they describe the whole pipeline.
 #'
 #' @details Locked steps are skipped: their state and output are preserved, also if they
 #' are downstream of a reset step. If all selected steps are locked, a message is shown
@@ -4040,8 +4218,9 @@ pip_run_state <- function(x) {
 #' `pip_run(on_error = "continue")`.
 #'
 #' @param x The parameter value as stored in the step.
-#' @param ... Currently unused, reserved for future extensions. Methods should accept
-#' it.
+#' @param ... For `pip_param_value()`, currently unused, reserved for future extensions.
+#' For `` `pip_param_value<-`() ``, the options given to `...` of [pip_set_params()],
+#' which can't be named like its arguments (e.g. `scope`). Methods should accept it.
 #' @return The value the step function receives for the argument.
 #' @examples
 #' # A value that carries annotations
@@ -4126,24 +4305,16 @@ pip_param_value.default <- function(x, ...) {
 
 #' Annotated step outputs
 #'
-#' `pip_output_value()` is an extension point for annotating the outputs of a pipeline,
-#' for example to stamp a result with the step it came from or the time it was computed.
-#' It can be thought of as a hook that allows you to postprocess or annotate the output
-#' of a step before it is stored. The generic is applied to the output of a step right
-#' after the step function returns, and its result is what is stored as the step's
-#' output.
+#' `pip_output_value()` is a hook to annotate or postprocess the output of a step, for
+#' example to stamp a result with the step it came from or the time it was computed. It
+#' is applied to the output right after the step function returns, and its result is
+#' what is stored as the step's output. The default method returns `x` unchanged.
+#' Methods are meant for your own classes, not for base classes such as `numeric`.
 #'
-#' The default method returns `x` unchanged. Methods are meant for your own classes, not
-#' for base classes such as `numeric` or `character`.
-#'
-#' The generic is applied once to the output as a whole, so a method sees the whole
-#' object a step returned. The one exception is a partitioned output (a step with
-#' `exec = "split"`, or a step that was mapped over a partitioned input): there the
-#' generic is applied once per partition, and each partition gets its key in `ctx$key`.
-#'
-#' If you want to annotate an output element-wise instead of the whole object, just
-#' write a method that walks over each element. For example, for a plain list, a method
-#' could look something like this:
+#' The generic is applied once to the whole output, except for a partitioned output (see
+#' `exec` in [pip_add()]): there it is applied once per partition, with the key in
+#' `ctx$key`. To annotate an output element-wise, write a method that walks over the
+#' elements, e.g. for a plain list:
 #'
 #' ```r
 #' pip_output_value.list <- function(x, ctx = list(), ...) {
@@ -4152,11 +4323,9 @@ pip_param_value.default <- function(x, ...) {
 #' }
 #' ```
 #'
-#' The generic is *not* applied to the outputs of failed steps (see
-#' `pip_run(on_error = "continue")`), which remain the condition of the failure, nor to
-#' the inputs a step receives from other steps: it acts on what a step returns, once. An
-#' error in a method is an error of the step and is handled like any other step error;
-#' for a partitioned output it names the partition key the method failed for.
+#' It is *not* applied to the outputs of failed steps, which remain the failure
+#' condition, nor to the inputs a step receives from other steps. An error in a method
+#' is a step error and, for a partitioned output, names the partition key.
 #'
 #' @param x The output value of a step, or one of its partitions if the output is
 #' partitioned.

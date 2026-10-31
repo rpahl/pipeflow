@@ -621,6 +621,11 @@
     # marking downstream steps as outdated).
     qSnapshot <- dataQ[rowsQ, c(props, "depends"), with = FALSE]
 
+    # pip_replace() in 2) would check the params for conflicts while formula values are
+    # still replaced by placeholders, so the check runs once all rows are copied.
+    oldOpts <- options(pipeflow.warn_param_conflicts = FALSE)
+    on.exit(options(oldOpts), add = TRUE)
+
     # If a row fails, the rows copied before are undone, so that `x` is left as it was.
     .pip_all_or_nothing(x, {
         for (k in seq_len(n)) {
@@ -679,6 +684,8 @@
         }
     })
 
+    options(oldOpts)
+    .pip_warn_param_conflicts(x, steps = qSnapshot[["step"]])
     x
 }
 
@@ -785,6 +792,11 @@
     outEnv[["data"]] <- data.table::rbindlist(
         list(outEnv[["data"]], appRows),
         use.names = TRUE
+    )
+    .pip_warn_param_conflicts(
+        out,
+        steps = yyDat[["step"]],
+        others = .pip_pipenv(x)[["data"]][["step"]]
     )
     out
 }
@@ -1025,9 +1037,9 @@ dim.pipeflow <- function(x) {
 #'
 #' The following meta fields are available via `p[["..."]]` (or `p$...`):
 #'
-#' * `name` -- the name of the pipeline.
-#' * `view` -- the names of the steps covered by a view, or `NULL` for a full pipeline.
-#' * `pipenv` -- the shared inner environment holding the pipeline's state. All views
+#' * `name`: the name of the pipeline.
+#' * `view`: the names of the steps covered by a view, or `NULL` for a full pipeline.
+#' * `pipenv`: the shared inner environment holding the pipeline's state. All views
 #'   and extracted subsets reference the same environment, so mutations are shared. The
 #'   step table is available as `p[["pipenv"]][["data"]]` (see also [pip_data()]).
 #'
@@ -1105,7 +1117,7 @@ dim.pipeflow <- function(x) {
 #' * `p[[step, "fun"]] <- fun` -- replace the step's function; same as [pip_replace()],
 #'    that is, tags and execution mode are kept
 #' * `p[[step, "params"]] <- list(...)` -- update the step's parameters; same as
-#'   `pip_set_params(p, list(...))`
+#'   `pip_set_params(pip_view(p, step = step), list(...), scope = "view")`
 #' * `p[[step, "tags"]] <- tags` -- set the step's tags explicitly to `tags` (a
 #'   character vector); in contrast, [pip_tag()] will just add tags.
 #'    * `p[[step, "tags"]] <- NULL` clears all tags
@@ -1255,7 +1267,7 @@ dim.pipeflow <- function(x) {
     } else if (j == "fun") {
         pip_replace(x, step = step, fun = value)
     } else if (j == "params") {
-        pip_set_params(pip_view(x, step = step), params = value)
+        pip_set_params(pip_view(x, step = step), params = value, scope = "view")
     } else if (j == "out") {
         # wrap value in list of list to enable arbitrary objects (e.g. a data.frame) to
         # be stored as-is.
@@ -1329,38 +1341,47 @@ dim.pipeflow <- function(x) {
 #'
 #' `p[i, j] <- value` assigns the step property `j` to the selected steps (see
 #' `[[<-.pipeflow` above for the supported properties), mirroring the row and column
-#' selection of the extraction form `p[i, j]`. `i` selects rows like in the extraction
-#' form (including negative row indices, which select all rows but the excluded ones)
-#' and `j` must be a single property name; `p[, j] <- value` selects all steps. With
-#' more than one selected row, a value of length 1 is replicated to all selected rows
-#' and a value whose length equals the number of selected rows is assigned element-wise
-#' (`p[i, j] <- value` behaves like `p[[i[k], j]] <- value[[k]]`). As in base R, longer
-#' values are recycled if the number of selected rows is a multiple of the value length,
-#' otherwise an error is raised. To assign the same list value (e.g. a set of tags) to
-#' all rows, wrap it in `list(...)`. With a single selected row, `value` is stored as-is
-#' (like `p[[i, j]] <- value`). For the `params` property, the value of each row must
-#' itself be a list (e.g. `p[1:2, "params"] <- list(list(a = 1), list(b = 2))`).
+#' selection of the extraction form `p[i, j]`: `i` selects rows (negative indices select
+#' all rows but the excluded ones), `j` must be a single property name, and
+#' `p[, j] <- value` selects all steps.
+#'
+#' * With a *single selected row*, `value` is stored *as-is* (like
+#'   `p[[i, j]] <- value`).
+#' * With *more than one selected row*, a value of length 1 is *replicated* to all rows
+#'   and a value with one element per row is assigned *element-wise*
+#'   (`p[i, j] <- value` behaves like `p[[i[k], j]] <- value[[k]]`). As in base R,
+#'   longer values are *recycled* if the number of rows is a multiple of the value
+#'   length, otherwise an error is raised.
+#' * To assign the *same list value* (e.g. a set of tags) to all rows, wrap it in
+#'   `list(...)`.
+#' * For the `params` property, the value of each row must *itself be a list*, e.g.
+#'   `p[1:2, "params"] <- list(list(a = 1), list(b = 2))`.
 #'
 #' The selected steps are assigned one after another, but the assignment changes all of
-#' them or none, that is, if it fails for one step, the pipeline is restored as it was.
+#' them or none: if it fails for one step, the pipeline is restored as it was.
 #'
 #' If `value` is a `pipeflow` pipeline or view, the writable step properties of its
 #' steps are copied to the selected rows: `p[i, ] <- q[i, ]` copies the steps of `q`
-#' selected by `i` into the steps of `p` selected by `i` (the rows of both sides are
-#' aligned by position and must have the same length). In this form, `i` is required and
-#' `j` must be omitted. The properties are copied in the order `step`, `fun`, `params`,
-#' `exec`, `out`, `state`, `time`, `time_start`, `duration`, `tags`, `locked`: the step
-#' is renamed to the source name (a no-op when it is unchanged), the function, the
-#' params and the execution mode are replaced with those of the source (same as
-#' [pip_replace()] with the params and `exec` of the source), and the runtime state and
-#' annotation columns are overwritten (locked steps included). A copied step refers to
-#' the steps that the source step depends on by name, also if it was defined with a
-#' relative reference such as `~-1`, and these steps are looked up in `p`. The
-#' structural columns `nodeId`, `depends` and `unbound` are not copied but recomputed
-#' against the steps of `p`. If a step can't be copied (e.g. because it refers to a step
-#' that is not in `p`), `p` is left as it was. Instead of `p[i, j] <- q`, use
-#' `p[i, j] <- q[i, j]` to copy the values of a single property; the one-column table
-#' returned by the extraction form is unwrapped and assigned element-wise.
+#' selected by `i` into the steps of `p` selected by `i`. In this form, `i` is required
+#' and `j` must be omitted.
+#'
+#' * The rows of both sides are *aligned by position* and must have the same length.
+#' * The step is *renamed* to the source name (a no-op when it is unchanged), and its
+#'   function, params and execution mode are *replaced* with those of the source (same
+#'   as [pip_replace()] with the params and `exec` of the source).
+#' * The runtime state and annotation columns (`out`, `state`, `time`, `time_start`,
+#'   `duration`, `tags`, `locked`) are *overwritten*, locked steps included.
+#' * A copied step refers to the steps that the source step depends on *by name*, also
+#'   if it was defined with a relative reference such as `~-1`, and these steps are
+#'   *looked up in `p`*.
+#' * The structural columns `nodeId`, `depends` and `unbound` are not copied but
+#'   *recomputed* against the steps of `p`.
+#' * If a step can't be copied (e.g. because it refers to a step that is not in `p`),
+#'   `p` is *left as it was*.
+#'
+#' Instead of `p[i, j] <- q`, use `p[i, j] <- q[i, j]` to copy the values of a single
+#' property; the one-column table returned by the extraction form is unwrapped and
+#' assigned element-wise.
 #' @examples
 #' p <- pip_new("pipe") |>
 #'   pip_add("load", \(n = 5) seq_len(n)) |>
@@ -1536,13 +1557,14 @@ dim.pipeflow <- function(x) {
 #' @param rows Row indices to be printed. If empty, all rows are printed.
 #' @param cols The columns to be printed. Can be either one of `core` or `all` to print
 #' the core or all columns, respectively, or an explicit character vector of columns to
-#' be printed. The `params` column lists the names of the step's parameters. In the
-#' `out` column, some outputs are shown in short form: a condition (the output of a step
-#' that failed in a run with `on_error = "continue"`) as `<kind/class>`, e.g.
-#' `<error/simpleError>`; a matrix, array or table as `<class[dims]>`, e.g.
-#' `<matrix[4x2]>`; and a function or environment (e.g. an R6 object) as `<class>`.
-#' Strings longer than 40 characters are cut off and marked with `"..."`. The `duration`
-#' column is shown in short form, e.g. `0.251 s` or `2 min 5 s`.
+#' be printed. Some columns are shown in short form:
+#' * `params`: the names of the step's parameters.
+#' * `out`: a condition (the output of a step that failed in a run with
+#'   `on_error = "continue"`) as `<kind/class>`, e.g. `<error/simpleError>`; a matrix,
+#'   array or table as `<class[dims]>`, e.g. `<matrix[4x2]>`; a function or environment
+#'   (e.g. an R6 object) as `<class>`; strings longer than 40 characters are cut off and
+#'   marked with `"..."`.
+#' * `duration`: e.g. `0.251 s` or `2 min 5 s`.
 #' @param topn The number of rows to be printed from the beginning and end of tables
 #' with more than `nrows` rows.
 #' @param nrows The number of rows printed before truncation is enforced.
@@ -1585,7 +1607,9 @@ str.pipeflow <- function(object, ...) {
 #'
 #' Binds two or more pipelines together by concatenating their steps. If the pipelines
 #' have steps with the same name, the step names of later pipelines are automatically
-#' adapted to avoid name clashes. A single pipeline is returned unchanged.
+#' adapted to avoid name clashes. A single pipeline is returned unchanged. A warning is
+#' signalled if an unbound param of a later pipeline has another value than the same
+#' param in the earlier ones (see Params with the same name in [pip_add()]).
 #'
 #' To feed steps of the second pipeline with the output of steps of the first one, bind
 #' their params with [pip_set_params()] afterwards, e.g.
@@ -1603,7 +1627,7 @@ str.pipeflow <- function(object, ...) {
 #'   pip_add("fit", \(x = ~prep) x + 10)
 #'
 #' # "prep" exists in both pipelines; the one from b gets a numeric suffix
-#' b <- pip_new("b") |> pip_add("prep", \(x = 5) x * 3)
+#' b <- pip_new("b") |> pip_add("prep", \(y = 5) y * 3)
 #'
 #' ab <- rbind(a, b)
 #' ab[["step"]] # "prep", "fit", "prep2" (step name conflict auto-resolved)

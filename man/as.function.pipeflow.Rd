@@ -59,13 +59,11 @@ formula argument does not bind a param of \code{x} to a step.
 \subsection{Choosing the output}{
 
 With step names in \code{out}, the function returns their outputs. If \code{out} is a function,
-it is called with the run inner pipeline, and its result is the result of the
-function, e.g. \verb{out = \\(p) pip_collect(p, by = "tags")} groups the outputs by tags.
-The pipeline that \code{out} gets is a light copy of the kept one: it has its own steps,
-but the values (params and outputs) are the same objects. Returning it, or a view of
-it, therefore keeps no extra copy of the data, and later calls of the function don't
-change it. Since the values are shared, don't modify them in place (e.g. with \verb{:=} on
-a \code{data.table} output).
+it is called with the run inner pipeline and its result is returned, e.g.
+\verb{out = \\(p) pip_collect(p, by = "tags")} groups the outputs by tags. That pipeline is
+a light copy that shares its values with the kept one, so returning it (or a view of
+it) keeps no extra copy of the data. Don't modify the values in place (e.g. with \verb{:=}
+on a \code{data.table} output).
 }
 
 \subsection{Errors of inner steps}{
@@ -73,31 +71,25 @@ a \code{data.table} output).
 If an inner step fails, the error names it, e.g. \verb{step 'fit': negative}. As a step of
 an outer pipeline, the error also names the outer step and, if that step is mapped
 over partitions, the key: \verb{step 'by_batch': key 'D': step 'fit': negative}. Nested
-pipeline functions add one step per level:
-\verb{step 'outer': step 'middle': step 'fit': negative}.
+pipeline functions add one step per level.
 }
 
 \subsection{Continuing after errors of inner steps}{
 
 With \code{on_error = "continue"} the inner pipeline is run like
-\code{pip_run(on_error = "continue")}, that is, a failing inner step gets state
-\code{"failed"}, the inner steps that do not depend on it still run, and an inner step
-that refers to it via \code{~try(step)} runs and receives the failure.
-
-The function still fails if one of the steps named in \code{out} failed or was not run
-because an input failed. Since with \code{out = NULL} or a function \code{out} \emph{all} steps are
-requested, you need to name the relevant steps in \code{out} to profit from a continuing
-inner run.
+\code{pip_run(on_error = "continue")}: inner steps that do not depend on a failed step
+still run, and a step that refers to it via \code{~try(step)} receives the failure. The
+function still fails if a step named in \code{out} failed or was not run. Since
+\code{out = NULL} or a function \code{out} requests \emph{all} steps, name the relevant steps in
+\code{out} to profit from a continuing inner run.
 }
 
 \subsection{Pipeline functions with partitioned inputs}{
 
 If the step with the pipeline function receives partitioned inputs (from an earlier
-step with \code{exec = "split"}), the function is called once per partition caching one
-inner pipeline of \code{x} per step and partition key. A call updates its parameters and
-inputs in the respective pipeline, so that (as usual in pipelines) only outdated
-inner steps are run again. This works for inputs bound via \code{params} of \code{\link[=pip_add]{pip_add()}} as
-well as for those bound in the step function.
+step with \code{exec = "split"}), the function is called once per partition, caching one
+inner pipeline of \code{x} per step and partition key. A call updates the params and
+inputs of the respective pipeline, so that only outdated inner steps are run again.
 \itemize{
 \item A partition caches one pipeline for each key, which hold their inputs and outputs,
 so they need memory.

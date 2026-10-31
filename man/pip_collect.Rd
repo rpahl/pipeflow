@@ -26,22 +26,18 @@ default) the result is a named list of step outputs. With any other column, the
 outputs are grouped by the values of that column (typically \code{"tags"}).
 }
 \details{
-The result always takes one of two shapes:
+The result is one of two shapes:
 \itemize{
-\item \strong{Flat}: a named list whose elements are the step outputs directly, e.g.
-\code{list(s1 = 1, s2 = 2)}.
-\item \strong{Grouped}: a named list whose elements are themselves named lists of step
-outputs, one per group, e.g.
+\item \strong{Flat}: a named list of step outputs, e.g. \code{list(s1 = 1, s2 = 2)}.
+\item \strong{Grouped}: a named list of such lists, one per group, e.g.
 \code{list(io = list(s1 = 1, s2 = 2), model = list(s3 = 4))}.
 }
 
-With \code{simplify = TRUE} (the default) the result is \emph{flat} whenever every group
-contains exactly one step, which, for example, is always the case for \code{by = "step"}
-as step names are unique. If any group contains more than one step (or
-\code{simplify = FALSE}) the result is \emph{grouped}. For list columns such as \code{tags}, a step
-with several entries contributes its output to every corresponding group, and steps
-without an entry (e.g. untagged steps) are omitted. You can use \code{\link[=pip_view]{pip_view()}} to
-further narrow the selection before collecting.
+With \code{simplify = TRUE} (the default) the result is flat whenever every group has
+exactly one step, as is always the case for \code{by = "step"}. Otherwise, or with
+\code{simplify = FALSE}, it is grouped. For list columns such as \code{tags}, a step with
+several entries contributes to every group, and steps without an entry are omitted.
+Use \code{\link[=pip_view]{pip_view()}} to narrow the selection first.
 }
 \examples{
 p <- pip_new() |>

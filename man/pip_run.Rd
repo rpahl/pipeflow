@@ -88,9 +88,8 @@ run. A failed run does not change it. It is the time stamp that
 \code{\link[=pip_output_value]{pip_output_value()}} gets in \code{ctx}.
 }
 
-With \code{t0 <- Sys.time()} taken before \code{pip_run()}, a step was run in that run if
-\code{time_start >= t0}. Its last run succeeded if its state is \code{"done"} and
-\code{time >= time_start}.
+A step ran in a run if its \code{time_start} is not before a \code{Sys.time()} taken before the
+run, and it succeeded if its state is \code{"done"} and \code{time >= time_start}.
 }
 
 \subsection{Running views}{
@@ -108,10 +107,9 @@ By default, a failing step stops the run: the step gets state \code{"failed"} an
 error is stored as its output, the pipeline run state becomes \code{"failed"}, and steps
 after it that were not reached are marked \code{"outdated"}, so the next run retries them.
 
-The error message names the step, and for a step mapped over partitions (see \code{exec}
-in \code{\link[=pip_add]{pip_add()}}) also the partition key, e.g. \code{"step 'fit': key 'b': negative"}. The
-error has class \code{pipeflow_step_error} and keeps the original error in its field
-\code{parent}: \code{tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)}.
+The error message names the step and, for a mapped step, the partition key. The error
+has class \code{pipeflow_step_error} and keeps the original error in its field \code{parent}:
+\code{tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)}.
 }
 
 \subsection{Continuing after errors}{
@@ -148,35 +146,26 @@ At the end of the run, the pipeline run state is \code{"continued"}, and a warni
 class \code{pipeflow_run_failed} lists the failed steps (with the number of failed keys)
 and the steps that were not run.
 
-The next run retries the failed steps and the steps that were not run; once a failed
-step succeeds, the steps after it, including those that received failure objects, are
-run again. A mapped step is only run again for its failed keys, keeping the results
-of the other keys, unless something changed that affects all keys: its parameters,
-its execution mode or an input step (which marks it \code{"outdated"}), an input step that
-is run again in the same run, or \code{force = TRUE}. See
-\code{vignette("v05c-error-handling", package = "pipeflow")} for examples.
+The next run retries the failed steps and the steps that were not run. Once a failed
+step succeeds, the steps after it are run again, including those that received
+failure objects. A mapped step is only run again for its failed keys, unless
+something changed that affects all keys (its params or exec mode, an input step, or
+\code{force = TRUE}). See \code{vignette("v05c-error-handling", package = "pipeflow")}.
 }
 
 \subsection{Mapping in parallel}{
 
-With \code{map}, the keys of a step that is mapped over partitions are run by \code{map}, for
-example in parallel processes. This applies to all mapped steps of the run, but not
-to the runs of inner pipelines, such as of a function made by
-\code{\link[=as.function.pipeflow]{as.function.pipeflow()}}. For backends that need more arguments, pass a wrapper, e.g.
-\verb{\\(X, FUN) parallel::parLapply(cl, X, FUN)} or
+With \code{map}, the keys of a mapped step are run by \code{map}, for example in parallel
+processes. This applies to all mapped steps of the run, but not to inner pipelines of
+functions made by \code{\link[=as.function.pipeflow]{as.function.pipeflow()}}, which run in parallel only if made with
+\code{cache = FALSE} (the cached inner pipelines would be lost in another process). For
+backends that need more arguments, pass a wrapper, e.g.
 \verb{\\(X, FUN) parallel::mclapply(X, FUN, mc.cores = 4)}.
 
-The keys of a step whose function was made by \code{\link[=as.function.pipeflow]{as.function.pipeflow()}} run in
-parallel only if the function was made with \code{cache = FALSE}. With \code{cache = TRUE} (the
-default), they run one after another, because the inner pipelines that the function
-keeps for them would be lost in another process.
-
-Errors are handled as without \code{map} (see 'Runtime errors' and 'Continuing after
-errors' above), but all keys of a step run before the error of the first failed key
-is raised. Warnings and messages of the step reach \code{lgr} only if the backend relays
-them, as \code{future.apply::future_lapply} does and \code{parallel::mclapply} does not. Random
-numbers are up to the backend as well, e.g. \code{future.seed = TRUE} for
-\code{future.apply::future_lapply}.
+Errors are handled as without \code{map}, but all keys of a step run before the error of
+the first failed key is raised. Warnings, messages and random numbers are up to the
+backend, e.g. \code{future.apply::future_lapply} relays warnings and messages and needs
+\code{future.seed = TRUE}, while \code{parallel::mclapply} does not relay them.
 }
 
 \subsection{Runtime control flow via restart and halt}{

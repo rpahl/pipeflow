@@ -214,6 +214,36 @@ pip_remove(q, "model", force = TRUE)
 v
 ```
 
+## Setting parameters through a view
+
+A view selects which parameters `pip_set_params()` can set, for example the
+parameters of the steps that a UI shows. By default, a value is then set in
+all steps of the pipeline that have the parameter, also outside the view, so
+that a parameter keeps a single value. Here, `plot` returns the `alpha` of
+`fit` and its own:
+
+```{r set-params-view}
+r <- pip_new("scope") |>
+    pip_add("fit", \(alpha = 1) alpha) |>
+    pip_add("plot", \(x = ~fit, alpha = 1) c(x, alpha), tags = "report")
+
+pip_set_params(pip_view(r, tags = "report"), list(alpha = 5))
+pip_run(r, lgr = NULL)
+r[["plot", "out"]]
+```
+
+With `scope = "view"`, the value only goes to the steps of the view:
+
+```{r set-params-view-scope}
+pip_set_params(pip_view(r, tags = "report"), list(alpha = 2), scope = "view")
+pip_run(r, lgr = NULL)
+r[["plot", "out"]]
+```
+
+A parameter that none of the view's steps has is unknown and is not set,
+with either scope. Binding a parameter to a step with a formula, e.g.
+`list(x = ~fit)`, only applies to the steps of the view.
+
 ## Running views
 
 Running a view executes the covered steps together with any upstream

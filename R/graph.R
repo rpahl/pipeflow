@@ -166,27 +166,6 @@ pip_graph <- function(
     gsub("'", "&#39;", x, fixed = TRUE)
 }
 
-#' Format a value in short form for the graph
-#'
-#' A language object or a short atomic vector is deparsed, any other value is shown as
-#' `<class>`, so that a large value (e.g. a data set) is not deparsed. The result is cut
-#' off after `maxChars` characters.
-#'
-#' @param x Any value.
-#' @param maxChars The maximum number of characters.
-#' @return A single character string.
-#' @noRd
-.pip_graph_format_value <- function(x, maxChars = 30L) {
-    isShort <- is.null(x) ||
-        is.language(x) ||
-        (is.atomic(x) && length(x) <= 10L && is.null(dim(x)))
-    s <- if (isShort) deparse1(x) else sprintf("<%s>", class(x)[[1L]])
-    if (nchar(s) > maxChars) {
-        s <- paste0(substr(s, 1L, maxChars), "...")
-    }
-    s
-}
-
 #' Collapse strings to a short list
 #'
 #' @param x Character vector.
@@ -265,7 +244,7 @@ pip_graph <- function(
     if (length(unbound) > 0L) {
         values <- vapply(
             unbound,
-            FUN = .pip_graph_format_value,
+            FUN = .format_value_short,
             FUN.VALUE = character(1)
         )
         lines[["params"]] <- .pip_graph_format_list(

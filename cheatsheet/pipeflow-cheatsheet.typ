@@ -631,7 +631,8 @@
       ]
 
       #fn[`pip_set_params(v, list(k = 3))`][
-        set parameters for all steps of the view.
+        set the view's parameters in the whole pipeline
+        (`scope = "view"`: only in the view).
       ]
       #fn[`pip_run(v)`][
         run the steps of the view, plus the upstream steps they need.

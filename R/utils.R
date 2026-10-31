@@ -94,3 +94,24 @@ formula_set_ref <- function(x, step) {
     }
     x
 }
+
+#' Format a value in short form
+#'
+#' A language object or a short atomic vector is deparsed, any other value is shown as
+#' `<class>`, so that a large value (e.g. a data set) is not deparsed. The result is cut
+#' off after `maxChars` characters.
+#'
+#' @param x Any value.
+#' @param maxChars The maximum number of characters.
+#' @return A single character string.
+#' @noRd
+.format_value_short <- function(x, maxChars = 30L) {
+    isShort <- is.null(x) ||
+        is.language(x) ||
+        (is.atomic(x) && length(x) <= 10L && is.null(dim(x)))
+    s <- if (isShort) deparse1(x) else sprintf("<%s>", class(x)[[1L]])
+    if (nchar(s) > maxChars) {
+        s <- paste0(substr(s, 1L, maxChars), "...")
+    }
+    s
+}

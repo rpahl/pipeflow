@@ -12,8 +12,9 @@ pip_param_value(x, ...) <- value
 \arguments{
 \item{x}{The parameter value as stored in the step.}
 
-\item{...}{Currently unused, reserved for future extensions. Methods should accept
-it.}
+\item{...}{For \code{pip_param_value()}, currently unused, reserved for future extensions.
+For \code{`pip_param_value<-`()}, the options given to \code{...} of \code{\link[=pip_set_params]{pip_set_params()}},
+which can't be named like its arguments (e.g. \code{scope}). Methods should accept it.}
 
 \item{value}{The plain value to set into the stored value \code{x}.}
 }

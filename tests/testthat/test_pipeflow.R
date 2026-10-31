@@ -624,6 +624,230 @@ describe(".extract_depends", {
     })
 })
 
+# -----------------
+# Pipeline addition
+# -----------------
+
+describe(".pip_warn_param_conflicts", {
+    local_conflict_warnings <- function(envir = parent.frame()) {
+        withr::local_options(
+            pipeflow.warn_param_conflicts = TRUE,
+            .local_envir = envir
+        )
+    }
+
+    it("warns if pip_add() adds a param with another value", {
+        local_conflict_warnings()
+        p <- pip_new() |> pip_add("s1", \(x = 1, y = "a") x)
+
+        w <- expect_warning(
+            pip_add(p, "s2", \(x = 2, y = "a") x),
+            class = "pipeflow_param_conflict"
+        )
+
+        expect_equal(
+            w[["conflicts"]],
+            data.frame(
+                step = "s2",
+                param = "x",
+                value = "2",
+                other = "s1",
+                other_value = "1"
+            )
+        )
+        expect_match(
+            conditionMessage(w),
+            "'x' is 2 in step 's2', but 1 in step 's1'",
+            fixed = TRUE
+        )
+        expect_match(
+            conditionMessage(w),
+            "pip_get_params() with simplify = FALSE",
+            fixed = TRUE
+        )
+        expect_equal(p[["s2", "params"]], list(x = 2, y = "a"))
+    })
+
+    it("lists all conflicting params of the new step", {
+        local_conflict_warnings()
+        p <- pip_new() |> pip_add("s1", \(x = 1, y = "a") x)
+
+        w <- expect_warning(
+            pip_add(p, "s2", \(x = 2, y = "b") x),
+            class = "pipeflow_param_conflict"
+        )
+
+        expect_equal(w[["conflicts"]][["param"]], c("x", "y"))
+    })
+
+    it("doesn't warn for equal values, bound params or params of one step", {
+        local_conflict_warnings()
+        expect_no_warning(
+            pip_new() |>
+                pip_add("s1", \(x = 1, data = mtcars) x) |>
+                pip_add("s2", \(x = 1, data = mtcars, z = 3) x) |>
+                pip_add("s3", \(x = ~s1) x) |>
+                pip_add("s4", \(z = 3) z, params = list())
+        )
+    })
+
+    it("compares the params given via params of pip_add()", {
+        local_conflict_warnings()
+        p <- pip_new() |> pip_add("s1", \(x = 1) x)
+
+        expect_no_warning(pip_add(p, "s2", \(x = 2) x, params = list(x = 1)))
+        expect_warning(
+            pip_add(p, "s3", \(x = 1) x, params = list(x = 3)),
+            class = "pipeflow_param_conflict"
+        )
+    })
+
+    it("compares with the first other step that has the param", {
+        local_conflict_warnings()
+        p <- pip_new() |> pip_add("s1", \(x = 1) x)
+        suppressWarnings(pip_add(p, "s2", \(x = 2) x))
+
+        expect_no_warning(pip_add(p, "s3", \(x = 1) x))
+        w <- expect_warning(
+            pip_add(p, "s4", \(x = 2) x),
+            class = "pipeflow_param_conflict"
+        )
+        expect_equal(w[["conflicts"]][["other"]], "s1")
+    })
+
+    it("compares with steps after an inserted step", {
+        local_conflict_warnings()
+        p <- pip_new() |> pip_add("s1", \(x = 1) x)
+
+        w <- expect_warning(
+            pip_add(p, "s0", \(x = 0) x, after = 0),
+            class = "pipeflow_param_conflict"
+        )
+        expect_equal(w[["conflicts"]][["other"]], "s1")
+    })
+
+    it("compares the values after pip_param_value()", {
+        local_conflict_warnings()
+        registerS3method(
+            "pip_param_value",
+            class = "pc_annot",
+            method = function(x, ...) x[["value"]],
+            envir = asNamespace("pipeflow")
+        )
+        annot <- function(value, label) {
+            structure(list(value = value, label = label), class = "pc_annot")
+        }
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x, params = list(x = annot(1, "one")))
+
+        expect_no_warning(pip_add(p, "s2", \(x = 1) x))
+        expect_no_warning(
+            pip_add(p, "s3", \(x = 1) x, params = list(x = annot(1, "uno")))
+        )
+        expect_warning(
+            pip_add(p, "s4", \(x = 1) x, params = list(x = annot(2, "two"))),
+            class = "pipeflow_param_conflict"
+        )
+    })
+
+    it("warns if pip_replace() gives a param another value", {
+        local_conflict_warnings()
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = 1) x)
+
+        w <- expect_warning(
+            pip_replace(pip_view(p, step = "s2"), "s2", \(x = 5) x),
+            class = "pipeflow_param_conflict"
+        )
+        expect_equal(w[["conflicts"]][["step"]], "s2")
+        expect_no_warning(pip_replace(p, "s2", \(x = 1) x * 2))
+    })
+
+    it("warns if rbind() binds pipelines with another value of a param", {
+        local_conflict_warnings()
+        a <- pip_new("a") |> pip_add("s1", \(x = 1) x)
+        b <- pip_new("b") |> pip_add("s1", \(x = 2) x)
+
+        w <- expect_warning(rbind(a, b), class = "pipeflow_param_conflict")
+
+        expect_equal(w[["conflicts"]][["step"]], "s12")
+        expect_equal(w[["conflicts"]][["other"]], "s1")
+        expect_no_warning(rbind(a, a))
+    })
+
+    it("compares the steps of the later pipeline only with the earlier ones", {
+        local_conflict_warnings()
+        a <- pip_new("a") |> pip_add("s1", \(x = 1) x)
+        b <- suppressWarnings(
+            pip_new("b") |>
+                pip_add("t1", \(y = 1) y) |>
+                pip_add("t2", \(y = 2) y)
+        )
+
+        expect_no_warning(rbind(a, b))
+    })
+
+    it("compares each pipeline of rbind() with all pipelines before it", {
+        local_conflict_warnings()
+        a <- pip_new("a") |> pip_add("s1", \(x = 1) x)
+        b <- pip_new("b") |> pip_add("s2", \(y = 1) y)
+        c <- pip_new("c") |> pip_add("s3", \(y = 2) y)
+
+        w <- expect_warning(rbind(a, b, c), class = "pipeflow_param_conflict")
+
+        expect_equal(w[["conflicts"]][["step"]], "s3")
+        expect_equal(w[["conflicts"]][["other"]], "s2")
+    })
+
+    it("compares the formula values of a copy after they are restored", {
+        local_conflict_warnings()
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = 1) x)
+        .pip_set_params(p, list(x = ~y), bind = FALSE)
+
+        expect_no_warning(p["s2", ] <- p["s2", ])
+        expect_equal(p[["s2", "params"]][["x"]], ~y, ignore_formula_env = TRUE)
+    })
+
+    it("warns once if a copy brings another value of a param", {
+        local_conflict_warnings()
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = 1) x)
+        q <- pip_new() |> pip_add("s2", \(x = 2) x)
+
+        w <- expect_warning(p["s2", ] <- q, class = "pipeflow_param_conflict")
+        expect_equal(w[["conflicts"]][["step"]], "s2")
+    })
+
+    it("doesn't warn for values set by pip_set_params() or [[<-", {
+        local_conflict_warnings()
+        p <- pip_new() |>
+            pip_add("s1", \(x = 1) x) |>
+            pip_add("s2", \(x = 1) x) |>
+            pip_add("s3", \(x = 1) x)
+
+        expect_no_warning(pip_set_params(p["s2"], list(x = 2), scope = "view"))
+        expect_no_warning(p[["s3", "params"]] <- list(x = 3))
+    })
+
+    it("can be silenced by class or turned off by option", {
+        local_conflict_warnings()
+        p <- pip_new() |> pip_add("s1", \(x = 1) x)
+
+        expect_no_warning(
+            suppressWarnings(
+                pip_add(p, "s2", \(x = 2) x),
+                classes = "pipeflow_param_conflict"
+            )
+        )
+        withr::local_options(pipeflow.warn_param_conflicts = FALSE)
+        expect_no_warning(pip_add(p, "s3", \(x = 3) x))
+    })
+})
+
 
 # ======================================================================================
 # Execution
@@ -2468,10 +2692,54 @@ describe("pip_get_params", {
         expect_equal(pip_get_params(v), list())
     })
 
+    it("returns the values of all steps by name if simplify = FALSE", {
+        p <- test_pip()
+
+        params <- pip_get_params(p, simplify = FALSE)
+
+        expect_equal(
+            params,
+            list(
+                data = list(s1 = data.frame(a = 1:2)),
+                x = list(s2 = 1, s4 = 9)
+            )
+        )
+    })
+
+    it("keeps list and NULL values if simplify = FALSE", {
+        p <- pip_new() |>
+            pip_add("s1", \(x = list(a = 1), y = NULL) x) |>
+            pip_add("s2", \(y = NULL) y)
+
+        expect_equal(
+            pip_get_params(p, simplify = FALSE),
+            list(x = list(s1 = list(a = 1)), y = list(s1 = NULL, s2 = NULL))
+        )
+    })
+
+    it("includes locked steps and respects views if simplify = FALSE", {
+        p <- test_pip()
+        pip_lock(p["s2"])
+
+        expect_equal(
+            pip_get_params(p, simplify = FALSE)[["x"]],
+            list(s2 = 1, s4 = 9)
+        )
+        expect_equal(
+            pip_get_params(p[c("s3", "s4")], simplify = FALSE),
+            list(x = list(s4 = 9))
+        )
+        expect_equal(pip_get_params(p["s3"], simplify = FALSE), list())
+    })
+
     it("signals invalid input", {
         expect_error(
             pip_get_params(1),
             "x must be a pipeflow pip or view"
+        )
+        expect_error(
+            pip_get_params(test_pip(), simplify = NA),
+            "simplify must be a single logical value"
         )
     })
 })
@@ -2615,12 +2883,12 @@ describe("pip_set_params", {
         )
     })
 
-    it("sets parameters only within the selected view", {
+    it("sets parameters only within the selected view if scope = 'view'", {
         p <- test_pip()
 
         v <- pip_view(p, step = "s3")
         expect_warning(
-            pip_set_params(v, params = list(z = 33, x = 11, y = 22)),
+            pip_set_params(v, params = list(z = 33, x = 11, y = 22), scope = "view"),
             "Trying to set parameters not defined in the target: y"
         )
         after <- p[["params"]]
@@ -2629,6 +2897,155 @@ describe("pip_set_params", {
         expect_equal(after[[2]][["y"]], 2)
         expect_equal(after[[3]][["x"]], 11)
         expect_equal(after[[3]][["z"]], 33)
+    })
+
+    scope_pip <- function() {
+        pip_new() |>
+            pip_add("fit", \(alpha = 1) alpha) |>
+            pip_add("plot", \(x = ~fit, alpha = 1) c(x, alpha), tags = "rep")
+    }
+
+    it("sets the view's params in the whole pipeline by default", {
+        p <- scope_pip()
+        v <- pip_view(p, tags = "rep")
+
+        pip_set_params(v, list(alpha = 5))
+
+        expect_equal(p[["fit", "params"]], list(alpha = 5))
+        expect_equal(p[["plot", "params"]][["alpha"]], 5)
+        pip_run(v, lgr = NULL)
+        expect_equal(p[["plot", "out"]], c(5, 5))
+    })
+
+    it("sets the view's params only in the view if scope = 'view'", {
+        p <- scope_pip()
+        v <- pip_view(p, tags = "rep")
+
+        pip_set_params(v, list(alpha = 5), scope = "view")
+
+        expect_equal(p[["fit", "params"]], list(alpha = 1))
+        expect_equal(p[["plot", "params"]][["alpha"]], 5)
+        pip_run(v, lgr = NULL)
+        expect_equal(p[["plot", "out"]], c(1, 5))
+    })
+
+    it("outdates changed steps outside the view and their downstream steps", {
+        p <- pip_new() |>
+            pip_add("a", \(k = 1) k) |>
+            pip_add("b", \(x = ~a) x) |>
+            pip_add("c", \(k = 1) k) |>
+            pip_add("d", \(k = 1) k)
+        pip_run(p[c("a", "b", "d")], lgr = NULL)
+        expect_equal(unname(p[["state"]]), c("done", "done", "new", "done"))
+
+        pip_set_params(p["d"], list(k = 2))
+
+        expect_equal(
+            unname(p[["state"]]),
+            c("outdated", "outdated", "new", "outdated")
+        )
+        expect_equal(p[["c", "params"]], list(k = 2))
+    })
+
+    it("treats params that are unbound only outside the view as unknown", {
+        p <- test_pip()
+        v <- pip_view(p, step = "s3")
+
+        for (scope in c("pipeline", "view")) {
+            expect_warning(
+                pip_set_params(v, list(y = 22), scope = scope),
+                "not defined in the target: y"
+            )
+            expect_no_warning(
+                pip_set_params(v, list(y = 22), unknown = "ignore", scope = scope)
+            )
+            expect_error(
+                pip_set_params(v, list(y = 22), unknown = "error", scope = scope),
+                "not defined in the target: y"
+            )
+            expect_equal(p[["s2", "params"]][["y"]], 2)
+        }
+    })
+
+    it("doesn't change locked steps inside or outside the view", {
+        p <- pip_new() |>
+            pip_add("a", \(k = 1) k) |>
+            pip_add("b", \(k = 1) k) |>
+            pip_add("c", \(k = 1) k) |>
+            pip_add("d", \(k = 1) k)
+        pip_lock(p[c("a", "c")])
+
+        pip_set_params(p[c("c", "d")], list(k = 2))
+
+        expect_equal(
+            vapply(p[["params"]], \(par) par[["k"]], numeric(1)),
+            c(a = 1, b = 2, c = 1, d = 2)
+        )
+    })
+
+    it("sets the params of a locked view in the unlocked steps outside of it", {
+        p <- scope_pip()
+        pip_lock(p["plot"])
+        v <- pip_view(p, tags = "rep")
+
+        expect_message(
+            pip_set_params(v, list(alpha = 5), scope = "view"),
+            "all selected steps are locked"
+        )
+        expect_equal(p[["fit", "params"]], list(alpha = 1))
+
+        expect_no_message(pip_set_params(v, list(alpha = 5)))
+        expect_equal(p[["fit", "params"]], list(alpha = 5))
+        expect_equal(p[["plot", "params"]][["alpha"]], 1)
+    })
+
+    it("outdates every step with the param in the scope if force = TRUE", {
+        p <- pip_new() |>
+            pip_add("a", \(k = 1) k) |>
+            pip_add("b", \(j = 1) j) |>
+            pip_add("c", \(k = 1) k)
+        pip_run(p, lgr = NULL)
+
+        pip_set_params(p["c"], list(k = 1), force = TRUE, scope = "view")
+        expect_equal(unname(p[["state"]]), c("done", "done", "outdated"))
+
+        pip_run(p, lgr = NULL)
+        pip_set_params(p["c"], list(k = 1), force = TRUE)
+        expect_equal(unname(p[["state"]]), c("outdated", "done", "outdated"))
+    })
+
+    it("sets one step only via [[<- and [<- with 'params'", {
+        p <- pip_new() |>
+            pip_add("a", \(k = 1) k) |>
+            pip_add("b", \(k = 1) k) |>
+            pip_add("c", \(k = 1) k)
+
+        p[["b", "params"]] <- list(k = 2)
+        p[c("a", "b"), "params"] <- list(list(k = 3), list(k = 4))
+
+        expect_equal(
+            vapply(p[["params"]], \(par) par[["k"]], numeric(1)),
+            c(a = 3, b = 4, c = 1)
+        )
+    })
+
+    it("gives the same result for both scopes on a pipeline", {
+        p <- test_pip()
+        q <- test_pip()
+
+        pip_set_params(p, list(x = 11, y = 22), scope = "pipeline")
+        pip_set_params(q, list(x = 11, y = 22), scope = "view")
+
+        expect_equal(p[["params"]], q[["params"]])
+        expect_equal(p[["state"]], q[["state"]])
+    })
+
+    it("fails for invalid values of scope", {
+        p <- test_pip()
+        expect_error(
+            pip_set_params(p, list(x = 5), scope = "foo"),
+            "'arg' should be one of"
+        )
     })
 
     it("marks changed and dependent downstream steps as 'outdated'", {
@@ -2737,7 +3154,7 @@ describe("pip_set_params", {
 
     it("compares the values of each step separately", {
         p <- test_pip()
-        pip_set_params(pip_view(p, step = "s3"), params = list(x = 5))
+        pip_set_params(pip_view(p, step = "s3"), list(x = 5), scope = "view")
         pip_run(p, lgr = NULL)
 
         pip_set_params(p, params = list(x = 1))
@@ -3014,6 +3431,44 @@ describe("pip_set_params", {
 
         expect_equal(p[["data", "params"]], list(n = 6))
         expect_equal(p[["rep1", "params"]], list(model = 0, k = 1))
+    })
+
+    it("binds only within a view with both scopes", {
+        for (scope in c("pipeline", "view")) {
+            p <- bind_pip()
+
+            pip_set_params(p["rep2"], list(model = ~fit1), scope = scope)
+
+            expect_equal(p[["depends"]][["rep2"]], c(model = "fit1"))
+            expect_equal(p[["depends"]][["rep1"]], character(0))
+            expect_equal(p[["rep1", "params"]], list(model = 0, k = 1))
+        }
+    })
+
+    it("doesn't check the order of bindings outside the view", {
+        p <- pip_new() |>
+            pip_add("early", \(data = 0) data) |>
+            pip_add("load", \() 1) |>
+            pip_add("late", \(data = 0) data)
+
+        expect_no_error(pip_set_params(p["late"], list(data = ~load)))
+
+        expect_equal(p[["depends"]][["late"]], c(data = "load"))
+        expect_equal(p[["early", "params"]], list(data = 0))
+    })
+
+    it("sets values in the scope and binds in the view in one call", {
+        p <- pip_new() |>
+            pip_add("load", \() 1) |>
+            pip_add("a", \(data = 0, alpha = 1) data + alpha) |>
+            pip_add("b", \(data = 0, alpha = 1) data + alpha)
+
+        pip_set_params(p["b"], list(alpha = 5, data = ~load))
+
+        expect_equal(p[["a", "params"]], list(data = 0, alpha = 5))
+        expect_equal(p[["b", "params"]], list(data = ~load, alpha = 5))
+        expect_equal(p[["depends"]][["a"]], character(0))
+        expect_equal(p[["depends"]][["b"]], c(data = "load"))
     })
 
     it("binds via p[[step, 'params']] <- value", {
@@ -7355,7 +7810,11 @@ describe("pip_param_value<-", {
             pip_add("s1", \(x = 1) x) |>
             pip_add("s2", \(x = 1, y = 2) x + y)
         pip_set_params(p, list(x = sv_quantity(1, "km")))
-        pip_set_params(pip_view(p, step = "s2"), list(x = sv_quantity(1, "mi")))
+        pip_set_params(
+            pip_view(p, step = "s2"),
+            list(x = sv_quantity(1, "mi")),
+            scope = "view"
+        )
 
         pip_set_params(p, list(x = 4))
 
@@ -7440,6 +7899,30 @@ describe("pip_param_value<-", {
         # nothing was set and no step was outdated
         expect_s3_class(pip_get_params(p)[["a"]], "sv_broken")
         expect_equal(unname(p[["state"]]), c("done", "done"))
+    })
+
+    it("reports failures in steps outside the view and sets nothing", {
+        register_setter("sv_outside", function(x, ..., value) {
+            stop("cannot set")
+        })
+        p <- pip_new() |>
+            pip_add("s1", \(a = 1) a) |>
+            pip_add("s2", \(a = 2) a)
+        pip_set_params(
+            p["s1"],
+            list(a = structure(1, class = "sv_outside")),
+            scope = "view"
+        )
+
+        err <- expect_error(
+            pip_set_params(p["s2"], list(a = 9)),
+            class = "pipeflow_set_params_error"
+        )
+        expect_equal(err[["errors"]][["step"]], "s1")
+        expect_equal(p[["s2", "params"]], list(a = 2))
+
+        pip_set_params(p["s2"], list(a = 9), scope = "view")
+        expect_equal(p[["s2", "params"]], list(a = 9))
     })
 
     it("leaves the stored value of a copying method untouched on failure", {

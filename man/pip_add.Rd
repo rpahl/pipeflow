@@ -24,11 +24,8 @@ default value in \code{fun} or an entry in \code{params}. Default values that ar
 constants are resolved immediately. Default values that are formulas like
 \code{~other_step} are treated as dependencies to those steps and resolved to the
 respective output values at runtime once the step is executed. A reference wrapped in
-\code{try()}, like \code{~try(other_step)}, accepts a failed input when the pipeline is run
-with \code{on_error = "continue"}: instead of the output of the referenced step, the
-argument then receives a condition of class \code{pipeflow_failure} (see section
-'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). The function can refer to the running
-pipeline as \code{.self} (see section 'The pipeline as \code{.self}' in \code{\link[=pip_add]{pip_add()}}).}
+\code{try()}, like \code{~try(other_step)}, accepts a failed input when the pipeline was run
+with \code{on_error = "continue"} (see section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}).}
 
 \item{tags}{Optional character vector of tags belonging to the step. Can also be
 adjusted later using \verb{[pip_tag()]}.}
@@ -38,38 +35,35 @@ to last position). Can be a step name or an integer index. If set to 0, the new 
 will be inserted at the beginning of the pipeline.}
 
 \item{params}{Optional named list of parameter values. They override the defaults of
-\code{fun} and give a value to parameters of \code{fun} that have no default. As in the
-defaults of \code{fun}, a formula like \code{~other_step} refers to the output of another step.
-Names that are no parameters of \code{fun} add params to the step, which are passed on to
-\code{fun} as well, so \code{fun} needs a \code{...} argument for them. Use cases for \code{params} are:
+\code{fun} and can be used to give a value to parameters of \code{fun} that have no default.
+As in \code{fun}, a formula like \code{~other_step} refers to the output of another step.
+It can contain names that are no parameters of \code{fun}, which are passed on to
+\code{fun} as well, but \code{fun} needs a \code{...} argument in this case for them.
+Use cases for \code{params} are:
 \enumerate{
 \item Set param values programmatically, e.g. when adding steps in a loop or at runtime.
 \item Use existing functions whose parameters have no defaults, e.g.
 \code{pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))}.
 \item Provide extra param values to "mark" dependencies that are defined in pipelines
 nested in a step, which ensures that it is re-executed when one of the nested param
-values change. See the
-\href{../doc/v05b-nested-pipeline.html}{nested pipelines vignette}.
+values change. See
+\code{vignette("v05b-nested-pipeline", package = "pipeflow")}.
 }}
 
-\item{exec}{Execution mode for this step. One of "auto", "split", "reduce" or
-"plain". Using execution mode \code{exec = split}, the output of the step is marked as
-partitioned output. In this mode, any step that depends on the split step (directly
-or indirectly) will have its output automatically mapped partition-wise during step
-execution. The \code{reduce} mode expects partitioned input and passes it through without
-mapping, while \code{plain} mode only accepts non-partitioned input and always intends to
-execute a single call. In a run with \code{on_error = "continue"}, a mapped step that
-fails for some partition keys keeps the outputs of the other keys (see section
-'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). If a split step fails, a \code{reduce} step
-also accepts the resulting failure object when it takes it via \code{~try()}. In summary:
+\item{exec}{Execution mode for this step, which controls how partitioned input is
+handled. One of:
 \itemize{
-\item auto: map if partitioned input appears, otherwise single call. Several partitioned
-inputs must have the same keys in the same order.
-\item split: single call, then mark output as partitioned
-\item reduce: single call, but only valid with partitioned input or, via \code{~try()}, a
-failure object
-\item plain: single call, only valid with non-partitioned input
-}}
+\item "auto": map over the partitions if an input is partitioned, otherwise a single
+call. Several partitioned inputs must have the same keys in the same order.
+\item "split": single call, then mark the output as partitioned.
+\item "reduce": single call, only valid with partitioned input (or, via \code{~try()}, a
+failure object).
+\item "plain": single call, only valid with non-partitioned input.
+}
+
+A mapped step that fails for some partition keys in a run with
+\code{on_error = "continue"} keeps the outputs of the other keys (see section
+'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}).}
 }
 \value{
 The updated pipeline, invisibly.
@@ -85,6 +79,17 @@ position. Be aware that in contrast to adding a step at the end, inserting a ste
 the middle is a rather expensive operation as it requires re-wiring parts of the
 internal pipeline structure, especially if the new step is inserted at an early
 position.
+\subsection{Params with the same name}{
+
+A param name is meant to have one value in the whole pipeline.Therefore,
+\code{\link[=pip_add]{pip_add()}}, \code{\link[=pip_replace]{pip_replace()}} and \link[=rbind.pipeflow]{rbind()}
+signal a warning if the default param value of a new step differs from the value
+of the same param in the other steps.
+To give steps different values on purpose, give the params different names, silence
+the warning with \code{suppressWarnings(..., classes = "pipeflow_param_conflict")}, or
+turn it off with \code{options(pipeflow.warn_param_conflicts = FALSE)}.
+}
+
 \subsection{The pipeline as \code{.self}}{
 
 A step function can refer to the pipeline that is being run as \code{.self} without

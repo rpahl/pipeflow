@@ -17,7 +17,9 @@ A new pipeflow pipeline object representing the bound pipelines.
 \description{
 Binds two or more pipelines together by concatenating their steps. If the pipelines
 have steps with the same name, the step names of later pipelines are automatically
-adapted to avoid name clashes. A single pipeline is returned unchanged.
+adapted to avoid name clashes. A single pipeline is returned unchanged. A warning is
+signalled if an unbound param of a later pipeline has another value than the same
+param in the earlier ones (see Params with the same name in \code{\link[=pip_add]{pip_add()}}).
 }
 \details{
 To feed steps of the second pipeline with the output of steps of the first one, bind
@@ -34,7 +36,7 @@ a <- pip_new("a") |>
   pip_add("fit", \(x = ~prep) x + 10)
 
 # "prep" exists in both pipelines; the one from b gets a numeric suffix
-b <- pip_new("b") |> pip_add("prep", \(x = 5) x * 3)
+b <- pip_new("b") |> pip_add("prep", \(y = 5) y * 3)
 
 ab <- rbind(a, b)
 ab[["step"]] # "prep", "fit", "prep2" (step name conflict auto-resolved)

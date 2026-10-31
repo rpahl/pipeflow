@@ -298,7 +298,10 @@ p[["b", "out"]]
 2 * b_full
 ```
 
-The recipe: give each step a `seed` parameter and set it inside the step.
+The recipe: give each step its own seed parameter (`seed_a`, `seed_b`, ...)
+and set it inside the step. Use different names, because params with the
+same name share one value: `pip_add()` warns if they differ, and
+`pip_set_params()` sets them all at once.
 A small helper also restores the global random number state afterwards, so
 running the pipeline doesn't change the numbers that the rest of your
 session draws. `withr::with_seed()` does the same, if you have {withr}
@@ -323,9 +326,9 @@ Now `b` gets the same numbers, whether it runs alone or with `a`.
 
 ```{r seed-recipe}
 p <- pip_new("rng") |>
-    pip_add("a", \(n = 3, seed = 1) with_seed(seed, rnorm(n))) |>
-    pip_add("b", \(n = 3, scale = 1, seed = 2) {
-        with_seed(seed, scale * rnorm(n))
+    pip_add("a", \(n = 3, seed_a = 1) with_seed(seed_a, rnorm(n))) |>
+    pip_add("b", \(n = 3, scale = 1, seed_b = 2) {
+        with_seed(seed_b, scale * rnorm(n))
     })
 
 pip_run(p, lgr = NULL)
@@ -340,8 +343,8 @@ p[["b", "out"]]
 **Limits.**
 
 * You choose the seeds. {targets} derives them from the target names.
-* `pip_set_params(p, list(seed = 42))` sets the seed of *all* steps with a
-  `seed` parameter, so they would all draw the same numbers.
+* Each step needs its own seed parameter name. A shared `seed` would get
+  one value in all steps, so they would all draw the same numbers.
 * Steps that run code in parallel need a parallel-safe generator, as with
   any R code.
 

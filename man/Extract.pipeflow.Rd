@@ -104,9 +104,9 @@ meta fields are accessible by name.
 
 The following meta fields are available via \code{p[["..."]]} (or \code{p$...}):
 \itemize{
-\item \code{name} -- the name of the pipeline.
-\item \code{view} -- the names of the steps covered by a view, or \code{NULL} for a full pipeline.
-\item \code{pipenv} -- the shared inner environment holding the pipeline's state. All views
+\item \code{name}: the name of the pipeline.
+\item \code{view}: the names of the steps covered by a view, or \code{NULL} for a full pipeline.
+\item \code{pipenv}: the shared inner environment holding the pipeline's state. All views
 and extracted subsets reference the same environment, so mutations are shared. The
 step table is available as \code{p[["pipenv"]][["data"]]} (see also \code{\link[=pip_data]{pip_data()}}).
 }
@@ -154,7 +154,7 @@ dependencies; same as \code{pip_remove(p, step, force = TRUE)}
 \item \code{p[[step, "fun"]] <- fun} -- replace the step's function; same as \code{\link[=pip_replace]{pip_replace()}},
 that is, tags and execution mode are kept
 \item \code{p[[step, "params"]] <- list(...)} -- update the step's parameters; same as
-\code{pip_set_params(p, list(...))}
+\code{pip_set_params(pip_view(p, step = step), list(...), scope = "view")}
 \item \code{p[[step, "tags"]] <- tags} -- set the step's tags explicitly to \code{tags} (a
 character vector); in contrast, \code{\link[=pip_tag]{pip_tag()}} will just add tags.
 \itemize{
@@ -209,38 +209,49 @@ of the view.
 
 \code{p[i, j] <- value} assigns the step property \code{j} to the selected steps (see
 \verb{[[<-.pipeflow} above for the supported properties), mirroring the row and column
-selection of the extraction form \code{p[i, j]}. \code{i} selects rows like in the extraction
-form (including negative row indices, which select all rows but the excluded ones)
-and \code{j} must be a single property name; \code{p[, j] <- value} selects all steps. With
-more than one selected row, a value of length 1 is replicated to all selected rows
-and a value whose length equals the number of selected rows is assigned element-wise
-(\code{p[i, j] <- value} behaves like \code{p[[i[k], j]] <- value[[k]]}). As in base R, longer
-values are recycled if the number of selected rows is a multiple of the value length,
-otherwise an error is raised. To assign the same list value (e.g. a set of tags) to
-all rows, wrap it in \code{list(...)}. With a single selected row, \code{value} is stored as-is
-(like \code{p[[i, j]] <- value}). For the \code{params} property, the value of each row must
-itself be a list (e.g. \code{p[1:2, "params"] <- list(list(a = 1), list(b = 2))}).
+selection of the extraction form \code{p[i, j]}: \code{i} selects rows (negative indices select
+all rows but the excluded ones), \code{j} must be a single property name, and
+\code{p[, j] <- value} selects all steps.
+\itemize{
+\item With a \emph{single selected row}, \code{value} is stored \emph{as-is} (like
+\code{p[[i, j]] <- value}).
+\item With \emph{more than one selected row}, a value of length 1 is \emph{replicated} to all rows
+and a value with one element per row is assigned \emph{element-wise}
+(\code{p[i, j] <- value} behaves like \code{p[[i[k], j]] <- value[[k]]}). As in base R,
+longer values are \emph{recycled} if the number of rows is a multiple of the value
+length, otherwise an error is raised.
+\item To assign the \emph{same list value} (e.g. a set of tags) to all rows, wrap it in
+\code{list(...)}.
+\item For the \code{params} property, the value of each row must \emph{itself be a list}, e.g.
+\code{p[1:2, "params"] <- list(list(a = 1), list(b = 2))}.
+}
 
 The selected steps are assigned one after another, but the assignment changes all of
-them or none, that is, if it fails for one step, the pipeline is restored as it was.
+them or none: if it fails for one step, the pipeline is restored as it was.
 
 If \code{value} is a \code{pipeflow} pipeline or view, the writable step properties of its
 steps are copied to the selected rows: \code{p[i, ] <- q[i, ]} copies the steps of \code{q}
-selected by \code{i} into the steps of \code{p} selected by \code{i} (the rows of both sides are
-aligned by position and must have the same length). In this form, \code{i} is required and
-\code{j} must be omitted. The properties are copied in the order \code{step}, \code{fun}, \code{params},
-\code{exec}, \code{out}, \code{state}, \code{time}, \code{time_start}, \code{duration}, \code{tags}, \code{locked}: the step
-is renamed to the source name (a no-op when it is unchanged), the function, the
-params and the execution mode are replaced with those of the source (same as
-\code{\link[=pip_replace]{pip_replace()}} with the params and \code{exec} of the source), and the runtime state and
-annotation columns are overwritten (locked steps included). A copied step refers to
-the steps that the source step depends on by name, also if it was defined with a
-relative reference such as \code{~-1}, and these steps are looked up in \code{p}. The
-structural columns \code{nodeId}, \code{depends} and \code{unbound} are not copied but recomputed
-against the steps of \code{p}. If a step can't be copied (e.g. because it refers to a step
-that is not in \code{p}), \code{p} is left as it was. Instead of \code{p[i, j] <- q}, use
-\code{p[i, j] <- q[i, j]} to copy the values of a single property; the one-column table
-returned by the extraction form is unwrapped and assigned element-wise.
+selected by \code{i} into the steps of \code{p} selected by \code{i}. In this form, \code{i} is required
+and \code{j} must be omitted.
+\itemize{
+\item The rows of both sides are \emph{aligned by position} and must have the same length.
+\item The step is \emph{renamed} to the source name (a no-op when it is unchanged), and its
+function, params and execution mode are \emph{replaced} with those of the source (same
+as \code{\link[=pip_replace]{pip_replace()}} with the params and \code{exec} of the source).
+\item The runtime state and annotation columns (\code{out}, \code{state}, \code{time}, \code{time_start},
+\code{duration}, \code{tags}, \code{locked}) are \emph{overwritten}, locked steps included.
+\item A copied step refers to the steps that the source step depends on \emph{by name}, also
+if it was defined with a relative reference such as \code{~-1}, and these steps are
+\emph{looked up in \code{p}}.
+\item The structural columns \code{nodeId}, \code{depends} and \code{unbound} are not copied but
+\emph{recomputed} against the steps of \code{p}.
+\item If a step can't be copied (e.g. because it refers to a step that is not in \code{p}),
+\code{p} is \emph{left as it was}.
+}
+
+Instead of \code{p[i, j] <- q}, use \code{p[i, j] <- q[i, j]} to copy the values of a single
+property; the one-column table returned by the extraction form is unwrapped and
+assigned element-wise.
 }
 
 \subsection{Extract and assign via $ (\code{x$i / x$i <- value})}{

@@ -152,8 +152,12 @@ pip |> pip_replace(
 )
 ```
 
+pipeflow warns here, because `fit` now has another `xVar` than `plot`,
+whose `xVar` we set to `"Solar.R"` before. Params with the same name are
+meant to have one value, and `pip_set_params()` sets them all at once.
 
-The `plot` step needs to be updated in a similar way.
+The `plot` step needs to be updated in a similar way, which also resolves
+the warning.
 
 ```{r replace-model-plot-step}
 pip |> pip_replace(
