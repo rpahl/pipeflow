@@ -1,3 +1,25 @@
+# pipeflow 0.5.0.9028
+
+## Breaking changes
+
+- `pip_add()` and `pip_replace()` now signal an error for `params` whose
+  names are no arguments of the step function, unless the function has a
+  `...` argument that takes them. Before, they were stored and shown by
+  `pip_get_params()`, and the run failed with "unused argument".
+- The argument `after` of `pip_add()` moved to the end, after `exec`, so
+  that `pip_add()` and `pip_replace()` share the order
+  `x, step, fun, tags, params, exec`. A call that gave `after` by position
+  must name it now.
+
+## New features
+
+- `pip_replace()` gets the argument `keep_params`. With `TRUE`, the new step
+  keeps the current values of the unbound params that are arguments of the
+  new function (e.g. values set with `pip_set_params()`, annotated values
+  included, but also the defaults of the old function), unless `params` give
+  them or the new function binds them to a step. Bound params are not kept,
+  so replacing a step still unbinds them.
+
 # pipeflow 0.5.0.9027
 
 ## Breaking changes

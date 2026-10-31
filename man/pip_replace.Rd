@@ -4,7 +4,15 @@
 \alias{pip_replace}
 \title{Replace a step}
 \usage{
-pip_replace(x, step, fun, tags = NULL, params = list(), exec = NULL)
+pip_replace(
+  x,
+  step,
+  fun,
+  tags = NULL,
+  params = list(),
+  exec = NULL,
+  keep_params = FALSE
+)
 }
 \arguments{
 \item{x}{A pipeflow pipeline or view object.}
@@ -26,8 +34,8 @@ tags.}
 \item{params}{Optional named list of parameter values. They override the defaults of
 \code{fun} and can be used to give a value to parameters of \code{fun} that have no default.
 As in \code{fun}, a formula like \code{~other_step} refers to the output of another step.
-It can contain names that are no parameters of \code{fun}, which are passed on to
-\code{fun} as well, but \code{fun} needs a \code{...} argument in this case for them.
+Names that are no parameters of \code{fun} are an error, unless \code{fun} has a \code{...}
+argument, which then takes them.
 Use cases for \code{params} are:
 \enumerate{
 \item Set param values programmatically, e.g. when adding steps in a loop or at runtime.
@@ -41,6 +49,15 @@ values change. See
 
 \item{exec}{Execution mode for the step, see \code{\link[=pip_add]{pip_add()}}. If \code{NULL} (the default),
 the current execution mode of the step is kept.}
+
+\item{keep_params}{Logical. If \code{TRUE}, the new step keeps the current values of the
+unbound params of the old step that are also parameters of the new function, unless
+\code{params} give them or their default in the new function is a step reference
+(\code{~step}). The current values include the defaults of the old function, so a changed
+default of a kept param has no effect. Bound params are never kept, so replacing a
+step still unbinds them, and neither are params that went into the \code{...} of the old
+function: give them in \code{params} again.
+If \code{FALSE} (the default), all params are taken from the new function and \code{params}.}
 }
 \value{
 The updated pipeline, invisibly.
@@ -51,8 +68,9 @@ Downstream steps that have run before are automatically marked as outdated and w
 re-run on the next \code{\link[=pip_run]{pip_run()}}.
 }
 \details{
-The step keeps its tags and execution mode by default, while parameters, output,
-state and lock status are always reset, like for a freshly added step.
+The step keeps its tags and execution mode by default, while output, state and lock
+status are always reset, like for a freshly added step. The parameters are taken from
+the new function and \code{params}, unless \code{keep_params = TRUE}.
 \itemize{
 \item \code{tags = NULL} and \code{exec = NULL} mean \emph{keep the current value}. To change them, pass
 explicit values.
@@ -62,7 +80,9 @@ mode to its default.
 
 As in \code{\link[=pip_add]{pip_add()}}, a warning is signalled if a param of the
 new function has another value than the same param in other steps (see Params with
-the same name in \code{\link[=pip_add]{pip_add()}}).
+the same name in \code{\link[=pip_add]{pip_add()}}). So if you set a param with \code{\link[=pip_set_params]{pip_set_params()}} and
+replace the step, the new function's default causes this warning, unless
+\code{keep_params = TRUE} keeps the value that was set.
 }
 \examples{
 p <- pip_new() |>
@@ -92,4 +112,9 @@ pip_replace(p, "load", \(n = 4) seq_len(n))
 p[, "tags"]
 pip_replace(p, "load", \(n = 4) seq_len(n), tags = character(0))
 p[, "tags"]
+
+# Keep the params set before
+pip_set_params(p, list(n = 10))
+pip_replace(p, "load", \(n = 4) rev(seq_len(n)), keep_params = TRUE)
+p[["load", "params"]]                       # n = 10, not 4
 }

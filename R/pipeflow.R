@@ -561,10 +561,11 @@
 #' @param fun The step function.
 #' @param params Named list of param values. They override the defaults of `fun` and
 #' give a value to arguments of `fun` that have no default. Names that are no arguments
-#' of `fun` are added.
+#' of `fun` are added if `fun` has a `...` argument, which takes them in the run.
 #' @return Named list: the arguments of `fun` (without `...`) in their order, followed
 #' by the other `params`. The defaults of `fun` are resolved in its environment, except
-#' for those that `params` override.
+#' for those that `params` override. Signals an error for `params` that are no
+#' arguments of `fun` if it has no `...` argument.
 #' @noRd
 .extract_fun_params <- function(fun, params = list()) {
     args <- formals(fun)
@@ -573,6 +574,16 @@
     hasDots <- "..." %in% names(args)
     if (hasDots) {
         args <- args[!names(args) %in% "..."]
+    } else {
+        # The run would fail with "unused argument"
+        unused <- setdiff(names(params), names(args))
+        if (length(unused) > 0L) {
+            stop_no_call(
+                "params are no arguments of the step function: ",
+                paste0("'", unused, "'", collapse = ", "),
+                " - fun needs a '...' argument to take them"
+            )
+        }
     }
     isGiven <- names(args) %in% names(params)
 
@@ -597,6 +608,40 @@
     )
     values[names(params)] <- params
     values
+}
+
+#' The params of a step that its replacement keeps
+#'
+#' Used by `pip_replace(keep_params = TRUE)`. A bound param is not kept, so that
+#' replacing a step still unbinds it, and a param that `params` give or whose default
+#' in `fun` is a step reference takes that value instead.
+#'
+#' @param oldParams Named list of the stored params of the replaced step.
+#' @param unbound Character vector of the names of its unbound params.
+#' @param fun The new step function.
+#' @param params The params given for the replacement.
+#' @return Named list of the stored values of the unbound params that are arguments of
+#' `fun` (not those that go into its `...`), are not in `params` and have no step
+#' reference as default in `fun`. The stored values include the defaults of the old
+#' function. A value can be a one-sided formula (set by the function made by
+#' [as.function.pipeflow()]), which is no step reference.
+#' @noRd
+.kept_step_params <- function(oldParams, unbound, fun, params) {
+    args <- formals(fun)
+    keep <- intersect(unbound, setdiff(names(args), c("...", names(params))))
+
+    # A default is a reference if it evaluates to one, as in .extract_fun_params(), so
+    # also `x = ref` with `ref <- ~a`. A default that fails to evaluate is no reference.
+    is_ref_default <- function(x) {
+        if (identical(x, quote(expr = ))) {
+            return(FALSE)
+        }
+        value <- tryCatch(eval(x, envir = environment(fun)), error = \(e) NULL)
+        is_one_sided_formula(value)
+    }
+    isRef <- vapply(args[keep], is_ref_default, logical(1))
+    keep <- keep[!isRef]
+    oldParams[intersect(names(oldParams), keep)]
 }
 
 #' Resolve the step references in the params of a step
@@ -2314,14 +2359,11 @@ pip_new <- function(name = "pipe") {
 #' with `on_error = "continue"` (see section 'Continuing after errors' in [pip_run()]).
 #' @param tags Optional character vector of tags belonging to the step. Can also be
 #' adjusted later using `[pip_tag()]`.
-#' @param after Optional position after which the new step should be inserted (defaults
-#' to last position). Can be a step name or an integer index. If set to 0, the new step
-#' will be inserted at the beginning of the pipeline.
 #' @param params Optional named list of parameter values. They override the defaults of
 #' `fun` and can be used to give a value to parameters of `fun` that have no default.
 #' As in `fun`, a formula like `~other_step` refers to the output of another step.
-#' It can contain names that are no parameters of `fun`, which are passed on to
-#' `fun` as well, but `fun` needs a `...` argument in this case for them.
+#' Names that are no parameters of `fun` are an error, unless `fun` has a `...`
+#' argument, which then takes them.
 #' Use cases for `params` are:
 #' 1. Set param values programmatically, e.g. when adding steps in a loop or at runtime.
 #' 2. Use existing functions whose parameters have no defaults, e.g.
@@ -2342,6 +2384,9 @@ pip_new <- function(name = "pipe") {
 #' A mapped step that fails for some partition keys in a run with
 #' `on_error = "continue"` keeps the outputs of the other keys (see section
 #' 'Continuing after errors' in [pip_run()]).
+#' @param after Optional position after which the new step should be inserted (defaults
+#' to last position). Can be a step name or an integer index. If set to 0, the new step
+#' will be inserted at the beginning of the pipeline.
 #'
 #' @details
 #' If `after` was specified, the new step will be inserted after the given step or
@@ -2442,9 +2487,9 @@ pip_add <- function(
     step,
     fun,
     tags = character(0),
-    after = length(x),
     params = list(),
-    exec = "auto"
+    exec = "auto",
+    after = length(x)
 ) {
     .assert_pip(x)
     if (!.is_single(step, "character")) {
@@ -3279,8 +3324,9 @@ pip_rename <- function(x, from, to) {
 #' Downstream steps that have run before are automatically marked as outdated and will
 #' re-run on the next [pip_run()].
 #'
-#' The step keeps its tags and execution mode by default, while parameters, output,
-#' state and lock status are always reset, like for a freshly added step.
+#' The step keeps its tags and execution mode by default, while output, state and lock
+#' status are always reset, like for a freshly added step. The parameters are taken from
+#' the new function and `params`, unless `keep_params = TRUE`.
 #'
 #' * `tags = NULL` and `exec = NULL` mean *keep the current value*. To change them, pass
 #'   explicit values.
@@ -3289,7 +3335,9 @@ pip_rename <- function(x, from, to) {
 #'
 #' As in [pip_add()], a warning is signalled if a param of the
 #' new function has another value than the same param in other steps (see Params with
-#' the same name in [pip_add()]).
+#' the same name in [pip_add()]). So if you set a param with [pip_set_params()] and
+#' replace the step, the new function's default causes this warning, unless
+#' `keep_params = TRUE` keeps the value that was set.
 #'
 #' @inheritParams pip_add
 #' @param x A pipeflow pipeline or view object.
@@ -3298,6 +3346,14 @@ pip_rename <- function(x, from, to) {
 #' tags.
 #' @param exec Execution mode for the step, see [pip_add()]. If `NULL` (the default),
 #' the current execution mode of the step is kept.
+#' @param keep_params Logical. If `TRUE`, the new step keeps the current values of the
+#' unbound params of the old step that are also parameters of the new function, unless
+#' `params` give them or their default in the new function is a step reference
+#' (`~step`). The current values include the defaults of the old function, so a changed
+#' default of a kept param has no effect. Bound params are never kept, so replacing a
+#' step still unbinds them, and neither are params that went into the `...` of the old
+#' function: give them in `params` again.
+#' If `FALSE` (the default), all params are taken from the new function and `params`.
 #' @return The updated pipeline, invisibly.
 #' @examples
 #' p <- pip_new() |>
@@ -3327,6 +3383,11 @@ pip_rename <- function(x, from, to) {
 #' p[, "tags"]
 #' pip_replace(p, "load", \(n = 4) seq_len(n), tags = character(0))
 #' p[, "tags"]
+#'
+#' # Keep the params set before
+#' pip_set_params(p, list(n = 10))
+#' pip_replace(p, "load", \(n = 4) rev(seq_len(n)), keep_params = TRUE)
+#' p[["load", "params"]]                       # n = 10, not 4
 #' @export
 pip_replace <- function(
     x,
@@ -3334,7 +3395,8 @@ pip_replace <- function(
     fun,
     tags = NULL,
     params = list(),
-    exec = NULL
+    exec = NULL,
+    keep_params = FALSE
 ) {
     .assert_pip_or_view(x)
     if (!.is_single(step, "character")) {
@@ -3380,6 +3442,9 @@ pip_replace <- function(
     if (!is.null(exec)) {
         .assert_exec_mode(exec)
     }
+    if (!.is_single(keep_params, "logical") || is.na(keep_params)) {
+        stop("keep_params must be TRUE or FALSE")
+    }
 
     env <- .pip_pipenv(x)
     data <- env[["data"]]
@@ -3393,12 +3458,25 @@ pip_replace <- function(
         exec <- data[["exec"]][[iStep]]
     }
 
+    kept <- list()
+    if (keep_params) {
+        kept <- .kept_step_params(
+            oldParams = data[["params"]][[iStep]],
+            unbound = data[["unbound"]][[iStep]],
+            fun = fun,
+            params = params
+        )
+        params <- c(params, kept)
+    }
+
     params <- .extract_fun_params(fun, params)
 
-    # Dependencies of the replacement may only point to earlier steps
+    # Dependencies of the replacement may only point to earlier steps. Kept values are
+    # no references, also if they are formulas.
     prefixSteps <- data[["step"]][seq_len(iStep - 1L)]
     steps <- c(prefixSteps, step)
-    depends <- .extract_depends(params = params, steps = steps)
+    isKept <- names(params) %in% names(kept)
+    depends <- .extract_depends(params = params[!isKept], steps = steps)
     if (length(depends) > 0L) {
         bad <- unname(depends[!(depends %in% prefixSteps)])
         # As in .pip_insert(), but a reference to the step itself is unknown

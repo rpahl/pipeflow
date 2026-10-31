@@ -349,19 +349,17 @@ pipelines it updates in another process would be lost, so its subsets are
 still run one after another. A function made with `cache = FALSE` keeps
 nothing and runs a new copy of the inner pipeline for each call, so its
 subsets can run in parallel. Here we replace the function of the
-`inner_run` step in a copy of `outer`. As `pip_replace()` takes the params
-of the new function, we give the binding and the model settings again:
+`inner_run` step in a copy of `outer`. With `keep_params = TRUE`,
+`pip_replace()` keeps the model settings set before. The binding to
+`split_df` is not kept, so we give it again:
 
 ```{r parallel-inner, eval = .Platform$OS.type == "unix"}
 par_outer <- pip_clone(outer) |>
     pip_replace(
         "inner_run",
         as.function(inner, out = "coefs", cache = FALSE),
-        params = list(
-            input_df = ~split_df,
-            xVar = "Petal.Length",
-            yVar = "Sepal.Width"
-        )
+        params = list(input_df = ~split_df),
+        keep_params = TRUE
     )
 
 mc2 <- \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)

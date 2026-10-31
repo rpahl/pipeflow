@@ -320,6 +320,7 @@ sequenceDiagram
     A->>A: validate step name, fun, params, exec, after
     A->>I: pos == n ? append : insert at pos
     I->>P: defaults of fun, overridden by params
+    P-->>I: error for params that are no formals (unless fun has ...)
     I->>D: formula refs -> step names (resolves ~-1)
     D-->>I: depends (named chr: arg -> step)
     I->>I: refs only to earlier steps (insert)
@@ -359,7 +360,7 @@ which shows such conflicts.
 
 | Operation | Entry point | What changes |
 |---|---|---|
-| Replace a step | `pip_replace()`, `p[[s, "fun"]] <-` | Recomputes `params`, `depends` and `unbound`. Swaps the incoming DAG edges (`dag_remove_edge()`, `dag_add_edges_to()`). Keeps the node id. Outdates the step and its downstream steps. Warns about params whose values differ from other steps. |
+| Replace a step | `pip_replace()`, `p[[s, "fun"]] <-` | Recomputes `params`, `depends` and `unbound`. With `keep_params = TRUE`, the unbound params that are formals of the new function (and not given or a reference default) keep their values (`.kept_step_params()`); kept formula values go in as placeholders and are put back after `.extract_depends()`. Swaps the incoming DAG edges (`dag_remove_edge()`, `dag_add_edges_to()`). Keeps the node id. Outdates the step and its downstream steps. Warns about params whose values differ from other steps. |
 | Remove a step | `pip_remove()`, `p[[s, "step"]] <- NULL` | Without `force`, fails if other steps depend on the step. With `force`, removes all downstream steps too. Tombstones DAG nodes, then `dag_tidy_up()`. Updates `data` and `.steps_to_nodes`. |
 | Rename a step | `pip_rename()`, `p[[s, "step"]] <-` | Updates `step`, all `depends`, the reference formulas (`formula_set_ref()`), the failures of failed keys in the outputs (`.pip_rename_failures()`), `.steps_to_nodes` and `.steps_with_current_out`. Calls `.fun_rename()`. The DAG is unchanged, because it works on ids. |
 | Set params | `pip_set_params()`, `p[[s, "params"]] <-` | `.pip_set_params()` computes all new values first (two phases, `pip_param_value<-`). On a view, the view's rows select the names; values go to the unlocked rows of `scope` (`"pipeline"`: all rows that have the name unbound, `"view"`: the view's rows). A formula binds the param in the view's rows only (`.pip_bind_row()` adds DAG edges). `[[<-` uses `scope = "view"`. Outdates the changed steps and their downstream steps. |

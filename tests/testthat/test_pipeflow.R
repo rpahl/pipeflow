@@ -2024,7 +2024,7 @@ describe("pip_add", {
         pip_add(
             p,
             "s1",
-            function(x = 1, y = 2) x + y,
+            function(x = 1, y = 2, ...) x + y,
             params = list(x = 10, z = 99)
         )
 
@@ -2032,6 +2032,22 @@ describe("pip_add", {
         expect_equal(pars[["x"]], 10) # params take precedence
         expect_equal(pars[["y"]], 2)
         expect_equal(pars[["z"]], 99) # extra param carried through
+    })
+
+    it("signals params that are no arguments of fun and changes nothing", {
+        p <- pip_new() |> pip_add("s1", \(x = 1) x)
+        before <- pip_clone(p)
+
+        expect_error(
+            pip_add(p, "s2", \(x = 1) x, params = list(z = 2, w = 3)),
+            "params are no arguments of the step function: 'z', 'w'"
+        )
+        expect_error(
+            pip_add(p, "s2", \(x = 1) x, params = list(z = 2), after = 0),
+            "params are no arguments of the step function: 'z'"
+        )
+        expect_equal(p[["step"]], before[["step"]])
+        expect_equal(p[["params"]], before[["params"]])
     })
 
     it("uses extra params passed via ... at runtime", {
@@ -4173,6 +4189,192 @@ describe("pip_replace", {
         pip_replace(p, "b", \(y = ~ try(a)) conditionMessage(y))
         suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
         expect_equal(p[["b", "out"]], "step 'a' failed: boom")
+    })
+
+    it("signals params that are no arguments of fun and changes nothing", {
+        p <- test_pip()
+        before <- pip_clone(p)
+        expect_error(
+            pip_replace(p, "f2", \(x = 20) x, params = list(z = 5)),
+            "params are no arguments of the step function: 'z'"
+        )
+        expect_equal(p[["params"]], before[["params"]])
+        expect_equal(p[["fun"]][["f2"]], before[["fun"]][["f2"]])
+
+        pip_replace(p, "f2", \(x = 20, ...) x + sum(...), params = list(z = 5))
+        expect_equal(p[["f2", "params"]], list(x = 20, z = 5))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["f2", "out"]], 25)
+    })
+
+    describe("keep_params", {
+        set_pip <- function() {
+            p <- pip_new("p") |>
+                pip_add("a", \(x = "x") x) |>
+                pip_add("b", \(x = "x", y = 1, z = ~a) paste(x, y, z))
+            pip_set_params(p, list(x = "user", y = 3))
+            p
+        }
+
+        it("keeps the values that were set, without a conflict warning", {
+            withr::local_options(pipeflow.warn_param_conflicts = TRUE)
+            p <- set_pip()
+            pip_add(p, "c", \(v = ~b) v)
+            pip_run(p, lgr = NULL)
+
+            expect_no_warning(
+                pip_replace(
+                    p,
+                    "b",
+                    \(x = "x", y = 1, z = ~a) paste0(x, y, z),
+                    keep_params = TRUE
+                )
+            )
+            expect_equal(p[["b", "params"]], list(x = "user", y = 3, z = ~a))
+            expect_equal(p[["b", "depends"]], c(z = "a"))
+            expect_equal(unname(p[["state"]]), c("done", "new", "outdated"))
+
+            pip_run(p, lgr = NULL)
+            expect_equal(p[["c", "out"]], "user3user")
+        })
+
+        it("takes the defaults with keep_params = FALSE (the default)", {
+            withr::local_options(pipeflow.warn_param_conflicts = TRUE)
+            p <- set_pip()
+            expect_warning(
+                pip_replace(p, "b", \(x = "x", y = 1, z = ~a) paste0(x, y, z)),
+                class = "pipeflow_param_conflict"
+            )
+            expect_equal(p[["b", "params"]], list(x = "x", y = 1, z = ~a))
+        })
+
+        it("keeps an annotated value as the same object", {
+            registerS3method(
+                "pip_param_value",
+                class = "kp_quantity",
+                method = function(x, ...) x[["value"]],
+                envir = asNamespace("pipeflow")
+            )
+            q <- structure(list(value = 2, unit = "m"), class = "kp_quantity")
+            p <- pip_new("p") |>
+                pip_add("a", \(n = 1) n, params = list(n = q))
+
+            pip_replace(p, "a", \(n = 1) n * 10, keep_params = TRUE)
+            expect_identical(p[["a", "params"]][["n"]], q)
+            pip_run(p, lgr = NULL)
+            expect_equal(p[["a", "out"]], 20)
+        })
+
+        it("lets params win, takes new defaults and drops removed params", {
+            p <- set_pip()
+            pip_replace(
+                p,
+                "b",
+                \(y = 1, w = "new", z = ~a) paste(y, w, z),
+                params = list(y = 5),
+                keep_params = TRUE
+            )
+            expect_equal(p[["b", "params"]], list(y = 5, w = "new", z = ~a))
+        })
+
+        it("keeps a value for an argument without default", {
+            p <- set_pip()
+            pip_replace(p, "b", \(x, z = ~a) paste(x, z), keep_params = TRUE)
+            expect_equal(p[["b", "params"]], list(x = "user", z = ~a))
+        })
+
+        it("lets a reference default of fun win over a kept value", {
+            p <- set_pip()
+            pip_replace(p, "b", \(x = ~a, y = 1) paste(x, y), keep_params = TRUE)
+            expect_equal(p[["b", "params"]], list(x = ~a, y = 3))
+            expect_equal(p[["b", "depends"]], c(x = "a"))
+            expect_equal(p[["b", "unbound"]], "y")
+        })
+
+        it("lets a default of fun that evaluates to a reference win", {
+            p <- set_pip()
+            ref <- ~a
+            pip_replace(p, "b", \(x = ref, y = 1) paste(x, y), keep_params = TRUE)
+            expect_equal(p[["b", "params"]], list(x = ~a, y = 3))
+            expect_equal(p[["b", "depends"]], c(x = "a"))
+
+            p <- set_pip()
+            pip_replace(p, "b", \(x = (~a), y = 1) x, keep_params = TRUE)
+            expect_equal(p[["b", "params"]], list(x = ~a, y = 3))
+            expect_equal(p[["b", "depends"]], c(x = "a"))
+        })
+
+        it("does not evaluate the defaults of params that are not kept", {
+            p <- set_pip()
+            pip_replace(
+                p,
+                "b",
+                \(x = stop("evaluated"), y = 1) y,
+                params = list(x = "given"),
+                keep_params = TRUE
+            )
+            expect_equal(p[["b", "params"]], list(x = "given", y = 3))
+        })
+
+        it("keeps a default of the old function over a new default", {
+            p <- pip_new("p") |> pip_add("a", \(n = 4) n)
+            pip_replace(p, "a", \(n = 5) n, keep_params = TRUE)
+            expect_equal(p[["a", "params"]], list(n = 4))
+        })
+
+        it("does not keep bound params, so that they are unbound", {
+            p <- set_pip()
+            pip_replace(p, "b", \(x = "x", y = 1, z = 0) y, keep_params = TRUE)
+            expect_equal(p[["b", "params"]], list(x = "user", y = 3, z = 0))
+            expect_equal(p[["b", "depends"]], character(0))
+            reach <- .pip_get_reachable_nodes(p, "a")
+            expect_equal(.pip_filter_nodes(p, reach)[["step"]], "a")
+        })
+
+        it("keeps a formula value as value, not as reference", {
+            p <- pip_new("p") |>
+                pip_add("a", \(x = 1) x) |>
+                pip_add("b", \(f = y ~ x) f)
+            .pip_set_params(p, list(f = ~a), bind = FALSE)
+
+            pip_replace(p, "b", \(f = y ~ x) format(f), keep_params = TRUE)
+            expect_equal(p[["b", "params"]], list(f = ~a))
+            expect_equal(p[["b", "depends"]], character(0))
+            expect_equal(p[["b", "unbound"]], "f")
+            reach <- .pip_get_reachable_nodes(p, "a")
+            expect_equal(.pip_filter_nodes(p, reach)[["step"]], "a")
+        })
+
+        it("does not keep params that went into ... of the old function", {
+            p <- pip_new("p") |>
+                pip_add("a", \(x = 1, ...) x, params = list(z = 2))
+            pip_replace(p, "a", \(x = 0, ...) x, keep_params = TRUE)
+            expect_equal(p[["a", "params"]], list(x = 1))
+        })
+
+        it("works through a view and via .self$replace()", {
+            p <- set_pip()
+            v <- pip_view(p, step = "b")
+            pip_replace(v, "b", \(x = "x", z = ~a) x, keep_params = TRUE)
+            expect_equal(p[["b", "params"]], list(x = "user", z = ~a))
+
+            pip_add(p, "c", \(k = 1) {
+                .self$replace("b", \(x = "x") x, keep_params = TRUE)
+                k
+            })
+            pip_run(p, lgr = NULL)
+            expect_equal(p[["b", "params"]], list(x = "user"))
+        })
+
+        it("signals an invalid keep_params", {
+            p <- set_pip()
+            for (bad in list(NA, c(TRUE, TRUE), "yes", 1)) {
+                expect_error(
+                    pip_replace(p, "b", \(x = 1) x, keep_params = bad),
+                    "keep_params must be TRUE or FALSE"
+                )
+            }
+        })
     })
 })
 
