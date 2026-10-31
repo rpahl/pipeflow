@@ -1,4 +1,4 @@
-# pipeflow (development version)
+# pipeflow 0.5.0.9027
 
 ## Breaking changes
 
