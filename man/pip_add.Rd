@@ -24,11 +24,8 @@ default value in \code{fun} or an entry in \code{params}. Default values that ar
 constants are resolved immediately. Default values that are formulas like
 \code{~other_step} are treated as dependencies to those steps and resolved to the
 respective output values at runtime once the step is executed. A reference wrapped in
-\code{try()}, like \code{~try(other_step)}, accepts a failed input when the pipeline is run
-with \code{on_error = "continue"}: instead of the output of the referenced step, the
-argument then receives a condition of class \code{pipeflow_failure} (see section
-'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). The function can refer to the running
-pipeline as \code{.self} (see section 'The pipeline as \code{.self}' in \code{\link[=pip_add]{pip_add()}}).}
+\code{try()}, like \code{~try(other_step)}, accepts a failed input when the pipeline was run
+with \code{on_error = "continue"} (see section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}).}
 
 \item{tags}{Optional character vector of tags belonging to the step. Can also be
 adjusted later using \verb{[pip_tag()]}.}
@@ -38,10 +35,11 @@ to last position). Can be a step name or an integer index. If set to 0, the new 
 will be inserted at the beginning of the pipeline.}
 
 \item{params}{Optional named list of parameter values. They override the defaults of
-\code{fun} and give a value to parameters of \code{fun} that have no default. As in the
-defaults of \code{fun}, a formula like \code{~other_step} refers to the output of another step.
-Names that are no parameters of \code{fun} add params to the step, which are passed on to
-\code{fun} as well, so \code{fun} needs a \code{...} argument for them. Use cases for \code{params} are:
+\code{fun} and can be used to give a value to parameters of \code{fun} that have no default.
+As in \code{fun}, a formula like \code{~other_step} refers to the output of another step.
+It can contain names that are no parameters of \code{fun}, which are passed on to
+\code{fun} as well, but \code{fun} needs a \code{...} argument in this case for them.
+Use cases for \code{params} are:
 \enumerate{
 \item Set param values programmatically, e.g. when adding steps in a loop or at runtime.
 \item Use existing functions whose parameters have no defaults, e.g.
@@ -87,17 +85,13 @@ internal pipeline structure, especially if the new step is inserted at an early
 position.
 \subsection{Params with the same name}{
 
-A param name is meant to have one value in the whole pipeline: \code{\link[=pip_get_params]{pip_get_params()}}
-returns one value per name, and \code{\link[=pip_set_params]{pip_set_params()}} sets a value in all steps that
-have the param. Therefore, \code{\link[=pip_add]{pip_add()}}, \code{\link[=pip_replace]{pip_replace()}} and \link[=rbind.pipeflow]{rbind()}
-signal a warning of class \code{pipeflow_param_conflict} if an unbound param of a new step
-has another value than the same param in the other steps (compared with
-\code{\link[=identical]{identical()}} after \code{\link[=pip_param_value]{pip_param_value()}}). Its field \code{conflicts} is a data.frame of
-the conflicting params, and \code{pip_get_params(x, simplify = FALSE)} shows the values of
-all steps. To give steps different values on purpose, give the params
-different names, silence the warning with
-\code{suppressWarnings(..., classes = "pipeflow_param_conflict")}, or turn it off with
-\code{options(pipeflow.warn_param_conflicts = FALSE)}.
+A param name is meant to have one value in the whole pipeline.Therefore,
+\code{\link[=pip_add]{pip_add()}}, \code{\link[=pip_replace]{pip_replace()}} and \link[=rbind.pipeflow]{rbind()}
+signal a warning if the default param value of a new step differs from the value
+of the same param in the other steps.
+To give steps different values on purpose, give the params different names, silence
+the warning with \code{suppressWarnings(..., classes = "pipeflow_param_conflict")}, or
+turn it off with \code{options(pipeflow.warn_param_conflicts = FALSE)}.
 }
 
 \subsection{The pipeline as \code{.self}}{

@@ -16,21 +16,19 @@ default value in \code{fun} or an entry in \code{params}. Default values that ar
 constants are resolved immediately. Default values that are formulas like
 \code{~other_step} are treated as dependencies to those steps and resolved to the
 respective output values at runtime once the step is executed. A reference wrapped in
-\code{try()}, like \code{~try(other_step)}, accepts a failed input when the pipeline is run
-with \code{on_error = "continue"}: instead of the output of the referenced step, the
-argument then receives a condition of class \code{pipeflow_failure} (see section
-'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}). The function can refer to the running
-pipeline as \code{.self} (see section 'The pipeline as \code{.self}' in \code{\link[=pip_add]{pip_add()}}).}
+\code{try()}, like \code{~try(other_step)}, accepts a failed input when the pipeline was run
+with \code{on_error = "continue"} (see section 'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}).}
 
 \item{tags}{Optional character vector of tags belonging to the step. If \code{NULL} (the
 default), the current tags of the step are kept. Use \code{character(0)} to remove all
 tags.}
 
 \item{params}{Optional named list of parameter values. They override the defaults of
-\code{fun} and give a value to parameters of \code{fun} that have no default. As in the
-defaults of \code{fun}, a formula like \code{~other_step} refers to the output of another step.
-Names that are no parameters of \code{fun} add params to the step, which are passed on to
-\code{fun} as well, so \code{fun} needs a \code{...} argument for them. Use cases for \code{params} are:
+\code{fun} and can be used to give a value to parameters of \code{fun} that have no default.
+As in \code{fun}, a formula like \code{~other_step} refers to the output of another step.
+It can contain names that are no parameters of \code{fun}, which are passed on to
+\code{fun} as well, but \code{fun} needs a \code{...} argument in this case for them.
+Use cases for \code{params} are:
 \enumerate{
 \item Set param values programmatically, e.g. when adding steps in a loop or at runtime.
 \item Use existing functions whose parameters have no defaults, e.g.

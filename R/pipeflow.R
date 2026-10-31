@@ -2310,21 +2310,19 @@ pip_new <- function(name = "pipe") {
 #' constants are resolved immediately. Default values that are formulas like
 #' `~other_step` are treated as dependencies to those steps and resolved to the
 #' respective output values at runtime once the step is executed. A reference wrapped in
-#' `try()`, like `~try(other_step)`, accepts a failed input when the pipeline is run
-#' with `on_error = "continue"`: instead of the output of the referenced step, the
-#' argument then receives a condition of class `pipeflow_failure` (see section
-#' 'Continuing after errors' in [pip_run()]). The function can refer to the running
-#' pipeline as `.self` (see section 'The pipeline as `.self`' in [pip_add()]).
+#' `try()`, like `~try(other_step)`, accepts a failed input when the pipeline was run
+#' with `on_error = "continue"` (see section 'Continuing after errors' in [pip_run()]).
 #' @param tags Optional character vector of tags belonging to the step. Can also be
 #' adjusted later using `[pip_tag()]`.
 #' @param after Optional position after which the new step should be inserted (defaults
 #' to last position). Can be a step name or an integer index. If set to 0, the new step
 #' will be inserted at the beginning of the pipeline.
 #' @param params Optional named list of parameter values. They override the defaults of
-#' `fun` and give a value to parameters of `fun` that have no default. As in the
-#' defaults of `fun`, a formula like `~other_step` refers to the output of another step.
-#' Names that are no parameters of `fun` add params to the step, which are passed on to
-#' `fun` as well, so `fun` needs a `...` argument for them. Use cases for `params` are:
+#' `fun` and can be used to give a value to parameters of `fun` that have no default.
+#' As in `fun`, a formula like `~other_step` refers to the output of another step.
+#' It can contain names that are no parameters of `fun`, which are passed on to
+#' `fun` as well, but `fun` needs a `...` argument in this case for them.
+#' Use cases for `params` are:
 #' 1. Set param values programmatically, e.g. when adding steps in a loop or at runtime.
 #' 2. Use existing functions whose parameters have no defaults, e.g.
 #'   `pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))`.
@@ -2357,17 +2355,13 @@ pip_new <- function(name = "pipe") {
 #' position.
 #'
 #' ## Params with the same name
-#' A param name is meant to have one value in the whole pipeline: [pip_get_params()]
-#' returns one value per name, and [pip_set_params()] sets a value in all steps that
-#' have the param. Therefore, [pip_add()], [pip_replace()] and [rbind()][rbind.pipeflow]
-#' signal a warning of class `pipeflow_param_conflict` if an unbound param of a new step
-#' has another value than the same param in the other steps (compared with
-#' [identical()] after [pip_param_value()]). Its field `conflicts` is a data.frame of
-#' the conflicting params, and `pip_get_params(x, simplify = FALSE)` shows the values of
-#' all steps. To give steps different values on purpose, give the params
-#' different names, silence the warning with
-#' `suppressWarnings(..., classes = "pipeflow_param_conflict")`, or turn it off with
-#' `options(pipeflow.warn_param_conflicts = FALSE)`.
+#' A param name is meant to have one value in the whole pipeline.Therefore,
+#' [pip_add()], [pip_replace()] and [rbind()][rbind.pipeflow]
+#' signal a warning if the default param value of a new step differs from the value
+#' of the same param in the other steps.
+#' To give steps different values on purpose, give the params different names, silence
+#' the warning with `suppressWarnings(..., classes = "pipeflow_param_conflict")`, or
+#' turn it off with `options(pipeflow.warn_param_conflicts = FALSE)`.
 #'
 #' ## The pipeline as `.self`
 #' A step function can refer to the pipeline that is being run as `.self` without
