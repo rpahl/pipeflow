@@ -2587,21 +2587,17 @@ pip_clone <- function(x, name = NULL) {
 #' default) the result is a named list of step outputs. With any other column, the
 #' outputs are grouped by the values of that column (typically `"tags"`).
 #'
-#' The result always takes one of two shapes:
+#' The result is one of two shapes:
 #'
-#' * **Flat**: a named list whose elements are the step outputs directly, e.g.
-#'   `list(s1 = 1, s2 = 2)`.
-#' * **Grouped**: a named list whose elements are themselves named lists of step
-#'   outputs, one per group, e.g.
+#' * **Flat**: a named list of step outputs, e.g. `list(s1 = 1, s2 = 2)`.
+#' * **Grouped**: a named list of such lists, one per group, e.g.
 #'   `list(io = list(s1 = 1, s2 = 2), model = list(s3 = 4))`.
 #'
-#' With `simplify = TRUE` (the default) the result is *flat* whenever every group
-#' contains exactly one step, which, for example, is always the case for `by = "step"`
-#' as step names are unique. If any group contains more than one step (or
-#' `simplify = FALSE`) the result is *grouped*. For list columns such as `tags`, a step
-#' with several entries contributes its output to every corresponding group, and steps
-#' without an entry (e.g. untagged steps) are omitted. You can use [pip_view()] to
-#' further narrow the selection before collecting.
+#' With `simplify = TRUE` (the default) the result is flat whenever every group has
+#' exactly one step, as is always the case for `by = "step"`. Otherwise, or with
+#' `simplify = FALSE`, it is grouped. For list columns such as `tags`, a step with
+#' several entries contributes to every group, and steps without an entry are omitted.
+#' Use [pip_view()] to narrow the selection first.
 #'
 #' @param x A pipeflow pip or view.
 #' @param by Single step-table column name to group by.
@@ -3540,9 +3536,8 @@ pip_replace <- function(
 #'   run. A failed run does not change it. It is the time stamp that
 #'   [pip_output_value()] gets in `ctx`.
 #'
-#' With `t0 <- Sys.time()` taken before `pip_run()`, a step was run in that run if
-#' `time_start >= t0`. Its last run succeeded if its state is `"done"` and
-#' `time >= time_start`.
+#' A step ran in a run if its `time_start` is not before a `Sys.time()` taken before the
+#' run, and it succeeded if its state is `"done"` and `time >= time_start`.
 #'
 #' ## Running views
 #' When `x` is a view, the requested rows are run together with their upstream
@@ -3556,10 +3551,9 @@ pip_replace <- function(
 #' error is stored as its output, the pipeline run state becomes `"failed"`, and steps
 #' after it that were not reached are marked `"outdated"`, so the next run retries them.
 #'
-#' The error message names the step, and for a step mapped over partitions (see `exec`
-#' in [pip_add()]) also the partition key, e.g. `"step 'fit': key 'b': negative"`. The
-#' error has class `pipeflow_step_error` and keeps the original error in its field
-#' `parent`: `tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)`.
+#' The error message names the step and, for a mapped step, the partition key. The error
+#' has class `pipeflow_step_error` and keeps the original error in its field `parent`:
+#' `tryCatch(pip_run(p), pipeflow_step_error = function(e) e$parent)`.
 #'
 #' ## Continuing after errors
 #' With `on_error = "continue"`, the run does not stop at a failed step:
@@ -3592,34 +3586,25 @@ pip_replace <- function(
 #' class `pipeflow_run_failed` lists the failed steps (with the number of failed keys)
 #' and the steps that were not run.
 #'
-#' The next run retries the failed steps and the steps that were not run; once a failed
-#' step succeeds, the steps after it, including those that received failure objects, are
-#' run again. A mapped step is only run again for its failed keys, keeping the results
-#' of the other keys, unless something changed that affects all keys: its parameters,
-#' its execution mode or an input step (which marks it `"outdated"`), an input step that
-#' is run again in the same run, or `force = TRUE`. See
-#' `vignette("v05c-error-handling", package = "pipeflow")` for examples.
+#' The next run retries the failed steps and the steps that were not run. Once a failed
+#' step succeeds, the steps after it are run again, including those that received
+#' failure objects. A mapped step is only run again for its failed keys, unless
+#' something changed that affects all keys (its params or exec mode, an input step, or
+#' `force = TRUE`). See `vignette("v05c-error-handling", package = "pipeflow")`.
 #'
 #' ## Mapping in parallel
 #'
-#' With `map`, the keys of a step that is mapped over partitions are run by `map`, for
-#' example in parallel processes. This applies to all mapped steps of the run, but not
-#' to the runs of inner pipelines, such as of a function made by
-#' [as.function.pipeflow()]. For backends that need more arguments, pass a wrapper, e.g.
-#' `\(X, FUN) parallel::parLapply(cl, X, FUN)` or
+#' With `map`, the keys of a mapped step are run by `map`, for example in parallel
+#' processes. This applies to all mapped steps of the run, but not to inner pipelines of
+#' functions made by [as.function.pipeflow()], which run in parallel only if made with
+#' `cache = FALSE` (the cached inner pipelines would be lost in another process). For
+#' backends that need more arguments, pass a wrapper, e.g.
 #' `\(X, FUN) parallel::mclapply(X, FUN, mc.cores = 4)`.
 #'
-#' The keys of a step whose function was made by [as.function.pipeflow()] run in
-#' parallel only if the function was made with `cache = FALSE`. With `cache = TRUE` (the
-#' default), they run one after another, because the inner pipelines that the function
-#' keeps for them would be lost in another process.
-#'
-#' Errors are handled as without `map` (see 'Runtime errors' and 'Continuing after
-#' errors' above), but all keys of a step run before the error of the first failed key
-#' is raised. Warnings and messages of the step reach `lgr` only if the backend relays
-#' them, as `future.apply::future_lapply` does and `parallel::mclapply` does not. Random
-#' numbers are up to the backend as well, e.g. `future.seed = TRUE` for
-#' `future.apply::future_lapply`.
+#' Errors are handled as without `map`, but all keys of a step run before the error of
+#' the first failed key is raised. Warnings, messages and random numbers are up to the
+#' backend, e.g. `future.apply::future_lapply` relays warnings and messages and needs
+#' `future.seed = TRUE`, while `parallel::mclapply` does not relay them.
 #'
 #' ## Runtime control flow via restart and halt
 #'
@@ -4308,24 +4293,16 @@ pip_param_value.default <- function(x, ...) {
 
 #' Annotated step outputs
 #'
-#' `pip_output_value()` is an extension point for annotating the outputs of a pipeline,
-#' for example to stamp a result with the step it came from or the time it was computed.
-#' It can be thought of as a hook that allows you to postprocess or annotate the output
-#' of a step before it is stored. The generic is applied to the output of a step right
-#' after the step function returns, and its result is what is stored as the step's
-#' output.
+#' `pip_output_value()` is a hook to annotate or postprocess the output of a step, for
+#' example to stamp a result with the step it came from or the time it was computed. It
+#' is applied to the output right after the step function returns, and its result is
+#' what is stored as the step's output. The default method returns `x` unchanged.
+#' Methods are meant for your own classes, not for base classes such as `numeric`.
 #'
-#' The default method returns `x` unchanged. Methods are meant for your own classes, not
-#' for base classes such as `numeric` or `character`.
-#'
-#' The generic is applied once to the output as a whole, so a method sees the whole
-#' object a step returned. The one exception is a partitioned output (a step with
-#' `exec = "split"`, or a step that was mapped over a partitioned input): there the
-#' generic is applied once per partition, and each partition gets its key in `ctx$key`.
-#'
-#' If you want to annotate an output element-wise instead of the whole object, just
-#' write a method that walks over each element. For example, for a plain list, a method
-#' could look something like this:
+#' The generic is applied once to the whole output, except for a partitioned output (see
+#' `exec` in [pip_add()]): there it is applied once per partition, with the key in
+#' `ctx$key`. To annotate an output element-wise, write a method that walks over the
+#' elements, e.g. for a plain list:
 #'
 #' ```r
 #' pip_output_value.list <- function(x, ctx = list(), ...) {
@@ -4334,11 +4311,9 @@ pip_param_value.default <- function(x, ...) {
 #' }
 #' ```
 #'
-#' The generic is *not* applied to the outputs of failed steps (see
-#' `pip_run(on_error = "continue")`), which remain the condition of the failure, nor to
-#' the inputs a step receives from other steps: it acts on what a step returns, once. An
-#' error in a method is an error of the step and is handled like any other step error;
-#' for a partitioned output it names the partition key the method failed for.
+#' It is *not* applied to the outputs of failed steps, which remain the failure
+#' condition, nor to the inputs a step receives from other steps. An error in a method
+#' is a step error and, for a partitioned output, names the partition key.
 #'
 #' @param x The output value of a step, or one of its partitions if the output is
 #' partitioned.
