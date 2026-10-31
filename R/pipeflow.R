@@ -2351,9 +2351,6 @@ pip_new <- function(name = "pipe") {
 #' with `on_error = "continue"` (see section 'Continuing after errors' in [pip_run()]).
 #' @param tags Optional character vector of tags belonging to the step. Can also be
 #' adjusted later using `[pip_tag()]`.
-#' @param after Optional position after which the new step should be inserted (defaults
-#' to last position). Can be a step name or an integer index. If set to 0, the new step
-#' will be inserted at the beginning of the pipeline.
 #' @param params Optional named list of parameter values. They override the defaults of
 #' `fun` and can be used to give a value to parameters of `fun` that have no default.
 #' As in `fun`, a formula like `~other_step` refers to the output of another step.
@@ -2379,6 +2376,9 @@ pip_new <- function(name = "pipe") {
 #' A mapped step that fails for some partition keys in a run with
 #' `on_error = "continue"` keeps the outputs of the other keys (see section
 #' 'Continuing after errors' in [pip_run()]).
+#' @param after Optional position after which the new step should be inserted (defaults
+#' to last position). Can be a step name or an integer index. If set to 0, the new step
+#' will be inserted at the beginning of the pipeline.
 #'
 #' @details
 #' If `after` was specified, the new step will be inserted after the given step or
@@ -2479,9 +2479,9 @@ pip_add <- function(
     step,
     fun,
     tags = character(0),
-    after = length(x),
     params = list(),
-    exec = "auto"
+    exec = "auto",
+    after = length(x)
 ) {
     .assert_pip(x)
     if (!.is_single(step, "character")) {
@@ -3336,13 +3336,13 @@ pip_rename <- function(x, from, to) {
 #' @param tags Optional character vector of tags belonging to the step. If `NULL` (the
 #' default), the current tags of the step are kept. Use `character(0)` to remove all
 #' tags.
+#' @param exec Execution mode for the step, see [pip_add()]. If `NULL` (the default),
+#' the current execution mode of the step is kept.
 #' @param keep_params Logical. If `TRUE`, the new step keeps overlapping param values
 #' of the old step, unless they were explicitly set via `params = ...` or marking a
 #' step reference (`~step`) in the new function.
 #' Bound params are never kept, so replacing a step still unbinds them.
 #' If `FALSE` (the default), all params are taken from the new function and `params`.
-#' @param exec Execution mode for the step, see [pip_add()]. If `NULL` (the default),
-#' the current execution mode of the step is kept.
 #' @return The updated pipeline, invisibly.
 #' @examples
 #' p <- pip_new() |>
@@ -3384,8 +3384,8 @@ pip_replace <- function(
     fun,
     tags = NULL,
     params = list(),
-    keep_params = FALSE,
-    exec = NULL
+    exec = NULL,
+    keep_params = FALSE
 ) {
     .assert_pip_or_view(x)
     if (!.is_single(step, "character")) {
@@ -3428,11 +3428,11 @@ pip_replace <- function(
         )
     }
     .assert_step_params(params)
-    if (!is.logical(keep_params) || length(keep_params) != 1L || is.na(keep_params)) {
-        stop("keep_params must be TRUE or FALSE")
-    }
     if (!is.null(exec)) {
         .assert_exec_mode(exec)
+    }
+    if (!is.logical(keep_params) || length(keep_params) != 1L || is.na(keep_params)) {
+        stop("keep_params must be TRUE or FALSE")
     }
 
     env <- .pip_pipenv(x)

@@ -6,6 +6,10 @@
   names are no arguments of the step function, unless the function has a
   `...` argument that takes them. Before, they were stored and shown by
   `pip_get_params()`, and the run failed with "unused argument".
+- The argument `after` of `pip_add()` moved to the end, after `exec`, so
+  that `pip_add()` and `pip_replace()` share the order
+  `x, step, fun, tags, params, exec`. A call that gave `after` by position
+  must name it now.
 
 ## New features
 

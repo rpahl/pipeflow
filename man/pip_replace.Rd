@@ -10,8 +10,8 @@ pip_replace(
   fun,
   tags = NULL,
   params = list(),
-  keep_params = FALSE,
-  exec = NULL
+  exec = NULL,
+  keep_params = FALSE
 )
 }
 \arguments{
@@ -47,14 +47,14 @@ values change. See
 \code{vignette("v05b-nested-pipeline", package = "pipeflow")}.
 }}
 
+\item{exec}{Execution mode for the step, see \code{\link[=pip_add]{pip_add()}}. If \code{NULL} (the default),
+the current execution mode of the step is kept.}
+
 \item{keep_params}{Logical. If \code{TRUE}, the new step keeps overlapping param values
 of the old step, unless they were explicitly set via \code{params = ...} or marking a
 step reference (\code{~step}) in the new function.
 Bound params are never kept, so replacing a step still unbinds them.
 If \code{FALSE} (the default), all params are taken from the new function and \code{params}.}
-
-\item{exec}{Execution mode for the step, see \code{\link[=pip_add]{pip_add()}}. If \code{NULL} (the default),
-the current execution mode of the step is kept.}
 }
 \value{
 The updated pipeline, invisibly.
