@@ -126,7 +126,7 @@ describe("print.pipeflow", {
 
         p <- pip_new("pipe") |>
             pip_add("s1", \(x = 1) x) |>
-            pip_add("s2", \(x = ~s1) x + 1, params = list(y = "hi"))
+            pip_add("s2", \(x = ~s1, ...) x + 1, params = list(y = "hi"))
 
         expect_true(grepl("^\\s*\\d+:\\s+s1\\s+x\\s", get_step_line(p, "s1")))
         expect_true(grepl(

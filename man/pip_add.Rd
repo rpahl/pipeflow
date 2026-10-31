@@ -37,8 +37,8 @@ will be inserted at the beginning of the pipeline.}
 \item{params}{Optional named list of parameter values. They override the defaults of
 \code{fun} and can be used to give a value to parameters of \code{fun} that have no default.
 As in \code{fun}, a formula like \code{~other_step} refers to the output of another step.
-It can contain names that are no parameters of \code{fun}, which are passed on to
-\code{fun} as well, but \code{fun} needs a \code{...} argument in this case for them.
+Names that are no parameters of \code{fun} are an error, unless \code{fun} has a \code{...}
+argument, which then takes them.
 Use cases for \code{params} are:
 \enumerate{
 \item Set param values programmatically, e.g. when adding steps in a loop or at runtime.

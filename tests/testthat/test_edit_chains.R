@@ -457,14 +457,16 @@ describe("random chains of edits", {
                 } else {
                     pip_view(p, step = steps[[k]])
                 }
+                keep <- stats::runif(1) < 0.5
                 pip_replace(
                     x,
                     steps[[k]],
                     s$fun,
                     params = s$params,
+                    keep_params = keep,
                     exec = s$exec
                 )
-                paste("replace", steps[[k]])
+                paste("replace", steps[[k]], if (keep) "keeping params")
             },
             params = function(steps) {
                 step <- sample(steps, 1)
