@@ -2854,15 +2854,18 @@ pip_get_params <- function(x, simplify = TRUE) {
 #' unless `force = TRUE`.
 #'
 #' @section Storing annotated values:
-#' The value that is stored for a step is the result of `` `pip_param_value<-`() ``
-#' applied to the value the step currently holds, which by default is the given value. A
-#' method of that generic can merge the given value into an annotated object instead, so
-#' that its annotations survive (see [pip_param_value()]). The merged values of all
-#' affected steps are computed before anything is changed: if a method fails, nothing is
-#' set and an error of class `pipeflow_set_params_error` reports every failure at once.
-#' The merged value is also what is compared with the stored one, so setting a plain
-#' value that an annotated object already holds doesn't outdate the step.
+#' A new value does not simply replace the stored one. For a step whose param currently
+#' holds `x`, the pipeline basically does `pip_param_value(x) <- new_value`
+#' and stores the result. For plain values, this is just `new_value`. For an annotated
+#' object (e.g. a value with units or labels), a method for its class can instead merge
+#' `new_value` into `x`, so that the annotations survive (see [pip_param_value()]).
+#' Here, the merging follows these rules:
 #'
+#' * *All or nothing*: the merged values of all affected steps are computed before
+#'   anything is changed. If a method fails, nothing is set and an error of class
+#'   `pipeflow_set_params_error` reports every failure at once.
+#' * *Comparison*: the merged value is what is compared with the stored one, so setting
+#'   a plain value that an annotated object already holds doesn't outdate the step.
 #'
 #' @param x A pipeflow pip or view.
 #' @param simplify If `TRUE` [pip_get_params()] returns one value per parameter name,
@@ -2885,6 +2888,7 @@ pip_get_params <- function(x, simplify = TRUE) {
 #' which is a list of the values named by step, e.g.
 #' `list(x = list(s1 = 1, s2 = 2), y = list(s1 = 3))`. For [pip_set_params()], the
 #' updated pipeline or view, invisibly.
+#' @seealso [pip_param_value()] for storing and passing on annotated parameter values.
 #' @examples
 #' p <- pip_new() |>
 #'   pip_add("load", \(n = 10) seq_len(n)) |>
