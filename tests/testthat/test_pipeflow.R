@@ -4291,6 +4291,37 @@ describe("pip_replace", {
             expect_equal(p[["b", "unbound"]], "y")
         })
 
+        it("lets a default of fun that evaluates to a reference win", {
+            p <- set_pip()
+            ref <- ~a
+            pip_replace(p, "b", \(x = ref, y = 1) paste(x, y), keep_params = TRUE)
+            expect_equal(p[["b", "params"]], list(x = ~a, y = 3))
+            expect_equal(p[["b", "depends"]], c(x = "a"))
+
+            p <- set_pip()
+            pip_replace(p, "b", \(x = (~a), y = 1) x, keep_params = TRUE)
+            expect_equal(p[["b", "params"]], list(x = ~a, y = 3))
+            expect_equal(p[["b", "depends"]], c(x = "a"))
+        })
+
+        it("does not evaluate the defaults of params that are not kept", {
+            p <- set_pip()
+            pip_replace(
+                p,
+                "b",
+                \(x = stop("evaluated"), y = 1) y,
+                params = list(x = "given"),
+                keep_params = TRUE
+            )
+            expect_equal(p[["b", "params"]], list(x = "given", y = 3))
+        })
+
+        it("keeps a default of the old function over a new default", {
+            p <- pip_new("p") |> pip_add("a", \(n = 4) n)
+            pip_replace(p, "a", \(n = 5) n, keep_params = TRUE)
+            expect_equal(p[["a", "params"]], list(n = 4))
+        })
+
         it("does not keep bound params, so that they are unbound", {
             p <- set_pip()
             pip_replace(p, "b", \(x = "x", y = 1, z = 0) y, keep_params = TRUE)

@@ -622,17 +622,25 @@
 #' @param params The params given for the replacement.
 #' @return Named list of the stored values of the unbound params that are arguments of
 #' `fun` (not those that go into its `...`), are not in `params` and have no step
-#' reference as default in `fun`. A value can be a one-sided formula (set by the
-#' function made by [as.function.pipeflow()]), which is no step reference.
+#' reference as default in `fun`. The stored values include the defaults of the old
+#' function. A value can be a one-sided formula (set by the function made by
+#' [as.function.pipeflow()]), which is no step reference.
 #' @noRd
 .kept_step_params <- function(oldParams, unbound, fun, params) {
     args <- formals(fun)
+    keep <- intersect(unbound, setdiff(names(args), c("...", names(params))))
+
+    # A default is a reference if it evaluates to one, as in .extract_fun_params(), so
+    # also `x = ref` with `ref <- ~a`. A default that fails to evaluate is no reference.
     is_ref_default <- function(x) {
-        is.call(x) && identical(x[[1L]], as.name("~")) && length(x) == 2L
+        if (identical(x, quote(expr = ))) {
+            return(FALSE)
+        }
+        value <- tryCatch(eval(x, envir = environment(fun)), error = \(e) NULL)
+        is_one_sided_formula(value)
     }
-    isRef <- vapply(args, is_ref_default, logical(1))
-    keep <- intersect(unbound, setdiff(names(args)[!isRef], "..."))
-    keep <- setdiff(keep, names(params))
+    isRef <- vapply(args[keep], is_ref_default, logical(1))
+    keep <- keep[!isRef]
     oldParams[intersect(names(oldParams), keep)]
 }
 
@@ -3338,10 +3346,13 @@ pip_rename <- function(x, from, to) {
 #' tags.
 #' @param exec Execution mode for the step, see [pip_add()]. If `NULL` (the default),
 #' the current execution mode of the step is kept.
-#' @param keep_params Logical. If `TRUE`, the new step keeps overlapping param values
-#' of the old step, unless they were explicitly set via `params = ...` or marking a
-#' step reference (`~step`) in the new function.
-#' Bound params are never kept, so replacing a step still unbinds them.
+#' @param keep_params Logical. If `TRUE`, the new step keeps the current values of the
+#' unbound params of the old step that are also parameters of the new function, unless
+#' `params` give them or their default in the new function is a step reference
+#' (`~step`). The current values include the defaults of the old function, so a changed
+#' default of a kept param has no effect. Bound params are never kept, so replacing a
+#' step still unbinds them, and neither are params that went into the `...` of the old
+#' function: give them in `params` again.
 #' If `FALSE` (the default), all params are taken from the new function and `params`.
 #' @return The updated pipeline, invisibly.
 #' @examples
@@ -3431,7 +3442,7 @@ pip_replace <- function(
     if (!is.null(exec)) {
         .assert_exec_mode(exec)
     }
-    if (!is.logical(keep_params) || length(keep_params) != 1L || is.na(keep_params)) {
+    if (!.is_single(keep_params, "logical") || is.na(keep_params)) {
         stop("keep_params must be TRUE or FALSE")
     }
 
@@ -3447,8 +3458,6 @@ pip_replace <- function(
         exec <- data[["exec"]][[iStep]]
     }
 
-    # A kept formula value would be taken as a reference, so it is given as a
-    # placeholder and put back once the references are resolved.
     kept <- list()
     if (keep_params) {
         kept <- .kept_step_params(
@@ -3457,17 +3466,17 @@ pip_replace <- function(
             fun = fun,
             params = params
         )
-        isFormula <- vapply(kept, is_one_sided_formula, logical(1))
-        params <- c(params, replace(kept, isFormula, list(NULL)))
-        kept <- kept[isFormula]
+        params <- c(params, kept)
     }
 
     params <- .extract_fun_params(fun, params)
 
-    # Dependencies of the replacement may only point to earlier steps
+    # Dependencies of the replacement may only point to earlier steps. Kept values are
+    # no references, also if they are formulas.
     prefixSteps <- data[["step"]][seq_len(iStep - 1L)]
     steps <- c(prefixSteps, step)
-    depends <- .extract_depends(params = params, steps = steps)
+    isKept <- names(params) %in% names(kept)
+    depends <- .extract_depends(params = params[!isKept], steps = steps)
     if (length(depends) > 0L) {
         bad <- unname(depends[!(depends %in% prefixSteps)])
         # As in .pip_insert(), but a reference to the step itself is unknown
@@ -3520,7 +3529,6 @@ pip_replace <- function(
     if (length(toAdd) > 0L) {
         dag_add_edges_to(d, from = toAdd, to = nodeId)
     }
-    params[names(kept)] <- kept
 
     # Reset the step row: new function and params, fresh runtime state (like a freshly
     # added step), but with the given or kept tags and exec.

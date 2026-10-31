@@ -16,8 +16,9 @@
 - `pip_replace()` gets the argument `keep_params`. With `TRUE`, the new step
   keeps the current values of the unbound params that are arguments of the
   new function (e.g. values set with `pip_set_params()`, annotated values
-  included), unless `params` give them or the new function binds them to a
-  step. Bound params are not kept, so replacing a step still unbinds them.
+  included, but also the defaults of the old function), unless `params` give
+  them or the new function binds them to a step. Bound params are not kept,
+  so replacing a step still unbinds them.
 
 # pipeflow 0.5.0.9027
 

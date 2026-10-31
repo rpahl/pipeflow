@@ -50,10 +50,13 @@ values change. See
 \item{exec}{Execution mode for the step, see \code{\link[=pip_add]{pip_add()}}. If \code{NULL} (the default),
 the current execution mode of the step is kept.}
 
-\item{keep_params}{Logical. If \code{TRUE}, the new step keeps overlapping param values
-of the old step, unless they were explicitly set via \code{params = ...} or marking a
-step reference (\code{~step}) in the new function.
-Bound params are never kept, so replacing a step still unbinds them.
+\item{keep_params}{Logical. If \code{TRUE}, the new step keeps the current values of the
+unbound params of the old step that are also parameters of the new function, unless
+\code{params} give them or their default in the new function is a step reference
+(\code{~step}). The current values include the defaults of the old function, so a changed
+default of a kept param has no effect. Bound params are never kept, so replacing a
+step still unbinds them, and neither are params that went into the \code{...} of the old
+function: give them in \code{params} again.
 If \code{FALSE} (the default), all params are taken from the new function and \code{params}.}
 }
 \value{
