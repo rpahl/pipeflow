@@ -2828,12 +2828,13 @@ pip_get_params <- function(x, simplify = TRUE) {
 #' @section Binding parameters to steps:
 #' A one-sided formula binds a parameter to the output of a step, e.g.
 #' `pip_set_params(p, list(model = ~fit))`, as in [pip_add()].
-#' The parameter is bound in all selected steps, except for locked steps.
-#' These steps must come after the step that the formula refers to, otherwise an
-#' error is signalled and nothing is changed.
-#' If you want to bind parameters only for certain steps, use a view to select the
-#' desired steps. A relative reference such as `~-1` is not allowed,
-#' but `~try(fit)` works as in [pip_add()].
+#'
+#' * The parameter is bound in *all selected steps*, except for *locked steps*. To bind
+#'   it only in certain steps, select them with a view.
+#' * The bound steps *must come after* the step that the formula refers to, otherwise an
+#'   error is signalled and nothing is changed.
+#' * A *relative reference* such as `~-1` is not allowed, but `~try(fit)` works as in
+#'   [pip_add()].
 #'
 #' A bound parameter is no longer unbound: [pip_get_params()] doesn't return it, and
 #' [pip_set_params()] can't change it any more. To unbind or rebind it, replace the
@@ -3274,11 +3275,15 @@ pip_rename <- function(x, from, to) {
 #' Downstream steps that have run before are automatically marked as outdated and will
 #' re-run on the next [pip_run()].
 #'
-#' By default, the step keeps its tags and execution mode: `tags = NULL` and
-#' `exec = NULL` mean "keep the current value". To change them, pass explicit values,
-#' where `tags = character(0)` removes all tags and `exec = "auto"` resets the execution
-#' mode to its default. Parameters, output, state and lock status are always reset, like
-#' for a freshly added step. As in [pip_add()], a warning is signalled if a param of the
+#' The step keeps its tags and execution mode by default, while parameters, output,
+#' state and lock status are always reset, like for a freshly added step.
+#'
+#' * `tags = NULL` and `exec = NULL` mean *keep the current value*. To change them, pass
+#'   explicit values.
+#' * `tags = character(0)` *removes all tags* and `exec = "auto"` *resets* the execution
+#'   mode to its default.
+#'
+#' As in [pip_add()], a warning is signalled if a param of the
 #' new function has another value than the same param in other steps (see Params with
 #' the same name in [pip_add()]).
 #'
@@ -4052,12 +4057,15 @@ pip_run <- function(
 #'
 #' Resets all unlocked steps of a pipeline (or a subset of steps defined by a view) to
 #' state `"new"` and clears their outputs, so a subsequent [pip_run()] re-executes the
-#' cleaned steps from scratch. Their downstream steps that have run are marked
-#' `"outdated"`, as they ran with the cleared outputs. Any pending restart counters are
-#' cleared, but parameters, tags, and locked flags are left unchanged. If all steps of
-#' the pipeline are selected, the run state is set to `"ready"` and the time of the last
-#' run is cleared. A view that covers only some steps leaves both alone, as they
-#' describe the whole pipeline.
+#' cleaned steps from scratch. Parameters, tags, and locked flags are left unchanged.
+#' Further effects:
+#'
+#' * *Downstream steps* that have run are marked `"outdated"`, as they ran with the
+#'   cleared outputs.
+#' * Any pending *restart counters* are cleared.
+#' * If *all steps* of the pipeline are selected, the *run state* is set to `"ready"`
+#'   and the time of the last run is cleared. A view that covers only some steps leaves
+#'   both alone, as they describe the whole pipeline.
 #'
 #' @details Locked steps are skipped: their state and output are preserved, also if they
 #' are downstream of a reset step. If all selected steps are locked, a message is shown

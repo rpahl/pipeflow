@@ -30,13 +30,16 @@
 
 \item{cols}{The columns to be printed. Can be either one of \code{core} or \code{all} to print
 the core or all columns, respectively, or an explicit character vector of columns to
-be printed. The \code{params} column lists the names of the step's parameters. In the
-\code{out} column, some outputs are shown in short form: a condition (the output of a step
-that failed in a run with \code{on_error = "continue"}) as \verb{<kind/class>}, e.g.
-\verb{<error/simpleError>}; a matrix, array or table as \verb{<class[dims]>}, e.g.
-\verb{<matrix[4x2]>}; and a function or environment (e.g. an R6 object) as \verb{<class>}.
-Strings longer than 40 characters are cut off and marked with \code{"..."}. The \code{duration}
-column is shown in short form, e.g. \verb{0.251 s} or \verb{2 min 5 s}.}
+be printed. Some columns are shown in short form:
+\itemize{
+\item \code{params}: the names of the step's parameters.
+\item \code{out}: a condition (the output of a step that failed in a run with
+\code{on_error = "continue"}) as \verb{<kind/class>}, e.g. \verb{<error/simpleError>}; a matrix,
+array or table as \verb{<class[dims]>}, e.g. \verb{<matrix[4x2]>}; a function or environment
+(e.g. an R6 object) as \verb{<class>}; strings longer than 40 characters are cut off and
+marked with \code{"..."}.
+\item \code{duration}: e.g. \verb{0.251 s} or \verb{2 min 5 s}.
+}}
 
 \item{topn}{The number of rows to be printed from the beginning and end of tables
 with more than \code{nrows} rows.}

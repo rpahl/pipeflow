@@ -76,12 +76,14 @@ is set in the whole pipeline while \code{data} is only bound in the steps of \co
 
 A one-sided formula binds a parameter to the output of a step, e.g.
 \code{pip_set_params(p, list(model = ~fit))}, as in \code{\link[=pip_add]{pip_add()}}.
-The parameter is bound in all selected steps, except for locked steps.
-These steps must come after the step that the formula refers to, otherwise an
+\itemize{
+\item The parameter is bound in \emph{all selected steps}, except for \emph{locked steps}. To bind
+it only in certain steps, select them with a view.
+\item The bound steps \emph{must come after} the step that the formula refers to, otherwise an
 error is signalled and nothing is changed.
-If you want to bind parameters only for certain steps, use a view to select the
-desired steps. A relative reference such as \code{~-1} is not allowed,
-but \code{~try(fit)} works as in \code{\link[=pip_add]{pip_add()}}.
+\item A \emph{relative reference} such as \code{~-1} is not allowed, but \code{~try(fit)} works as in
+\code{\link[=pip_add]{pip_add()}}.
+}
 
 A bound parameter is no longer unbound: \code{\link[=pip_get_params]{pip_get_params()}} doesn't return it, and
 \code{\link[=pip_set_params]{pip_set_params()}} can't change it any more. To unbind or rebind it, replace the
