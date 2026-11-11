@@ -1,3 +1,17 @@
+# pipeflow 0.5.0.9029
+
+## Bug fixes
+
+- A step function is now called by the step name with its arguments as
+  symbols, e.g. `fit(x = x)`, instead of with the values inlined in the
+  call. So an error raised in a step, and a `pipeflow_failure` that keeps it
+  as `parent`, no longer carries the inputs of the step in its call, which
+  could be megabytes of data. Tracebacks and error messages show the step
+  name.
+- An output that keeps the frame of the step call, such as a function made in
+  the step, no longer keeps the pipeline through an argument that the step
+  didn't use.
+
 # pipeflow 0.5.0.9028
 
 ## Breaking changes

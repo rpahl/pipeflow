@@ -1681,6 +1681,14 @@
 #' one of the caller on exit, also on error, so that a nested run (e.g. of an inner
 #' pipeline of a function made by `as.function.pipeflow()`) leaves it as it was.
 #'
+#' The function is called by name with its arguments as symbols, e.g. `b(x = x)` for
+#' step `b`, evaluated in an environment that binds them. So the call of an error
+#' raised in the step (and of a traceback) doesn't hold the inputs of the step, which
+#' a failure (see `.pip_failure()`) would otherwise carry along. The function is named
+#' after the step, with dots prepended if an argument has the same name. Arguments that
+#' are symbols or calls stay in the call, so they are evaluated once more, as with
+#' `do.call()`.
+#'
 #' @param fun The step function.
 #' @param args Named list of the arguments.
 #' @param step The name of the step.
@@ -1692,7 +1700,22 @@
     caller <- .pip_step_call()
     on.exit(list2env(caller, envir = .step_call), add = TRUE)
     list2env(list(step = step, key = key, keys = keys), envir = .step_call)
-    do.call(fun, args = args)
+
+    funName <- step
+    while (funName %in% names(args)) {
+        funName <- paste0(".", funName)
+    }
+    # Symbols and calls stay in the call, so they are evaluated as with do.call(). The
+    # parent is the namespace, not this frame: an argument that the step doesn't force
+    # keeps the environment, and through the frames of the run the pipeline.
+    isLang <- vapply(args, is.language, logical(1))
+    env <- list2env(args[!isLang], parent = topenv())
+    assign(funName, fun, envir = env)
+    callArgs <- lapply(names(args), as.name)
+    callArgs[isLang] <- args[isLang]
+    call <- as.call(c(as.name(funName), callArgs))
+    names(call) <- c("", names(args))
+    eval(call, envir = env)
 }
 
 #' Call a step function according to its exec mode

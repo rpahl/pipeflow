@@ -112,7 +112,7 @@ sequenceDiagram
     participant K as .fun_check_run / .fun_out
 
     O->>CS: step, key, keys (sets .step_call)
-    CS->>F: do.call(f_inner, args)
+    CS->>F: f_inner(arg = arg) (args bound in an env)
     F->>C: runner(list(a = a, ...))
     C->>C: stepCall = .pip_step_call()  (read BEFORE the inner run)
     C->>P: .fun_pip(cache, stepCall, ctx)

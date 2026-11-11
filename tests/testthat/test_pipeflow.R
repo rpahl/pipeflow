@@ -1118,6 +1118,82 @@ describe(".pip_call_step", {
         suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
         expect_identical(.pip_step_call(), no_call)
     })
+
+    it("calls the function by the step name with its arguments as symbols", {
+        e <- tryCatch(
+            .pip_call_step(
+                \(x, y) stop("boom"),
+                args = list(x = numeric(1e5), y = 1),
+                step = "s"
+            ),
+            error = identity
+        )
+
+        expect_identical(conditionCall(e), quote(s(x = x, y = y)))
+    })
+
+    it("prepends dots to the function name if an argument has the step name", {
+        e <- tryCatch(
+            .pip_call_step(
+                \(s, .s) stop("boom"),
+                args = list(s = 1, .s = 2),
+                step = "s"
+            ),
+            error = identity
+        )
+
+        expect_identical(conditionCall(e), quote(..s(s = s, .s = .s)))
+    })
+
+    it("works for a function without arguments and with '...'", {
+        expect_identical(.pip_call_step(\() 1, list(), step = "s"), 1)
+        expect_identical(
+            .pip_call_step(\(...) list(...), list(a = 1, b = NULL), step = "s"),
+            list(a = 1, b = NULL)
+        )
+    })
+
+    it("evaluates symbols and calls in the arguments once more, as do.call()", {
+        res <- .pip_call_step(
+            \(x, y) list(x = x, y = y),
+            args = list(x = quote(pi), y = quote(1 + 2)),
+            step = "s"
+        )
+
+        expect_identical(res, list(x = pi, y = 3))
+    })
+
+    it("keeps a failure light that a dependent gets via try()", {
+        p <- pip_new("p") |>
+            pip_add("data", \(n = 1e6) numeric(n)) |>
+            pip_add("fit", \(x = ~data) stop("boom")) |>
+            pip_add("report", \(x = ~ try(fit)) x)
+
+        suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+        failure <- p[["report", "out"]]
+
+        expect_s3_class(failure, "pipeflow_failure")
+        expect_identical(conditionCall(failure$parent), quote(fit(x = x)))
+        expect_lt(length(serialize(failure, connection = NULL)), 1e4)
+    })
+
+    it("doesn't let an output that keeps the step frame keep the pipeline", {
+        # The closure keeps the frame of the step call, where y is not forced. The
+        # step function is not defined here, where p would be its environment, and
+        # has no srcref, which would keep the lines of this file.
+        closureStep <- removeSource(\(y = ~total) \() y)
+        environment(closureStep) <- globalenv()
+        p <- pip_new("p") |>
+            pip_add("data", \(n = 1e6) numeric(n)) |>
+            pip_add("total", \(x = ~data) sum(x)) |>
+            pip_add("closure", closureStep)
+
+        pip_run(p, lgr = NULL)
+        out <- p[["closure", "out"]]
+
+        expect_identical(out(), 0)
+        expect_lt(length(serialize(out, connection = NULL)), 1e4)
+    })
 })
 
 describe(".pip_map_keys", {
