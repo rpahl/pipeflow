@@ -244,6 +244,22 @@
     rows <- .pip_view_rows(x)
     sub <- if (view) dat[rows] else dat
 
+    # `p[step]` with a variable `step` of the caller selects by the column
+    if (is.name(i_expr) && as.character(i_expr) %in% names(dat)) {
+        name <- as.character(i_expr)
+        callerValue <- get0(name, envir = enclos)
+        if (!is.null(callerValue) && !is.function(callerValue)) {
+            warning(sprintf(
+                paste(
+                    "'%1$s' is a column of the step table, so the selection uses the",
+                    "column, not the variable '%1$s' - rename the variable or use",
+                    "pip_view()"
+                ),
+                name
+            ))
+        }
+    }
+
     value <- eval(
         i_expr,
         envir = sub,
@@ -885,6 +901,10 @@ dim.pipeflow <- function(x) {
 #' \pkg{data.table} (`%like%`, `%ilike%`, `%flike%`, `%plike%`, `%chin%`, `%between%`,
 #' `%inrange%` and `%notin%`) are available in the filter without attaching
 #' \pkg{data.table}. `p[]` returns a copy of the pipeline.
+#'
+#' As the columns come first, a variable named like a column can't be used as a
+#' selector: with `step <- "load"`, `p[step]` selects all steps (by the `step` column),
+#' and `[` warns. Use another name, e.g. `p[steps]`, or `pip_view(p, step = step)`.
 #'
 #' Note that `tags` is a list column, so `%like%` matches the pattern against the tags
 #' of each step converted to a single string, e.g. `"character(0)"` for a step without

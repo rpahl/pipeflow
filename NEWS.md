@@ -12,6 +12,15 @@
   the step, no longer keeps the pipeline through an argument that the step
   didn't use.
 
+## New features
+
+- `[` warns if the selector is a column name that is also a variable of the
+  caller: with `step <- "load"`, `p[step]` selects all steps by the `step`
+  column, not the step `"load"`.
+- The option `pipeflow.lgr` sets the default logger of `pip_run()`, e.g.
+  `options(pipeflow.lgr = function(level, msg) NULL)` switches logging off
+  for all runs.
+
 # pipeflow 0.5.0.9028
 
 ## Breaking changes

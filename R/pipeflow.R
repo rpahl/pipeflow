@@ -3592,8 +3592,10 @@ pip_replace <- function(
 #' @param x A pipeflow pip or view
 #' @param lgr A logging function with the arguments `level` (`"info"`, `"warn"` or
 #' `"error"`) and `msg`, which is called as `lgr(level = level, msg = msg)`. The default
-#' is [pipeflow_lgr()], which can also be used to build custom loggers. To suppress
-#' logging, you can set `lgr = NULL`.
+#' is the option `pipeflow.lgr` if set, otherwise [pipeflow_lgr()], which can also be
+#' used to build custom loggers. To suppress logging, you can set `lgr = NULL`, or for
+#' all runs `options(pipeflow.lgr = function(level, msg) NULL)` (an option can't be
+#' `NULL`).
 #' @param force Logical indicating if all steps should be forced to run, regardless of
 #' whether they are outdated or not.
 #' @param progress Optional callback of the form `function(value, detail)` called before
@@ -3828,7 +3830,7 @@ pip_replace <- function(
 #' @export
 pip_run <- function(
     x,
-    lgr = pipeflow_lgr,
+    lgr = getOption("pipeflow.lgr", default = pipeflow_lgr),
     force = FALSE,
     progress = NULL,
     on_error = c("stop", "continue"),
