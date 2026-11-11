@@ -2442,6 +2442,13 @@ pip_new <- function(name = "pipe") {
 #' For this reason, a step that returns a function referring to `.self` fails with
 #' `object '.self' not found` when called later.
 #'
+#' ## Outputs that keep an environment
+#' An output that keeps the environment it was made in, such as a function or a ggplot
+#' made in the step, also keeps the environment of the step function. If that function
+#' was defined where the pipeline is (e.g. in a function that builds it), saving the
+#' output saves the whole pipeline too. Define step functions in a package or at top
+#' level, or return a form without an environment (e.g. an image instead of a ggplot).
+#'
 #' @return The updated pipeline, invisibly.
 #' @examples
 #' # --- Tags, and view filtering ---
@@ -4625,6 +4632,11 @@ pip_unlock <- function(x) {
 #' the underlying pipeline without copying it, so operations like [pip_run()] and
 #' [pip_set_params()] applied to a view work directly on the underlying pipeline, but
 #' are restricted to the steps defined by the view.
+#'
+#' A view covers only the selected steps, not their upstream steps, as does `p[i]` (see
+#' [`[`][Extract.pipeflow]). So [pip_reset()] or [pip_lock()] on a view leave the
+#' upstream steps alone. Running a view is different: [pip_run()] also runs the upstream
+#' steps that are not done (see section 'Running views' there).
 #'
 #' A view keeps covering its steps when steps are added, removed, renamed or replaced,
 #' also through the pipeline or another view. Removed steps drop out of the view, and

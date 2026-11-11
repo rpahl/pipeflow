@@ -21,6 +21,13 @@
   `options(pipeflow.lgr = function(level, msg) NULL)` switches logging off
   for all runs.
 
+## Documentation
+
+- `?pip_add` explains how outputs that keep an environment (functions,
+  ggplots) can keep the whole pipeline, and how to avoid it.
+- `?pip_view` says that a view covers only the selected steps, while running
+  it also runs their upstream steps.
+
 # pipeflow 0.5.0.9028
 
 ## Breaking changes
