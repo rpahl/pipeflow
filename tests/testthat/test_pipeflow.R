@@ -1163,6 +1163,40 @@ describe(".pip_call_step", {
         expect_identical(res, list(x = pi, y = 3))
     })
 
+    it("evaluates them neither with the step function nor the other arguments", {
+        res <- .pip_call_step(
+            \(x, data) list(x = x, data = data),
+            args = list(x = quote(c(1, 2)), data = quote(data)),
+            step = "c"
+        )
+
+        expect_identical(res$x, c(1, 2))
+        expect_identical(res$data, utils::data)
+    })
+
+    it("evaluates them only when used, as do.call()", {
+        res <- .pip_call_step(
+            \(x, y) y,
+            args = list(x = quote(stop("not used")), y = 1),
+            step = "s"
+        )
+
+        expect_identical(res, 1)
+    })
+
+    it("keeps no call or formula argument in the call", {
+        e <- tryCatch(
+            .pip_call_step(
+                \(x, f) stop("boom"),
+                args = list(x = quote(c(1, 2)), f = y ~ x),
+                step = "s"
+            ),
+            error = identity
+        )
+
+        expect_identical(conditionCall(e), quote(s(x = x, f = f)))
+    })
+
     it("keeps a failure light that a dependent gets via try()", {
         p <- pip_new("p") |>
             pip_add("data", \(n = 1e6) numeric(n)) |>

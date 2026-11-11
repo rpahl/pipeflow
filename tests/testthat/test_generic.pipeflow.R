@@ -321,8 +321,10 @@ describe(".pip_select_rows", {
         p <- test_pip()
         expect_no_warning(p[locked])
         expect_no_warning(p[step %in% "s1"])
-        state <- \() "new"
-        expect_no_warning(p[state == "new"])
+        locked <- \() TRUE
+        expect_no_warning(p[locked])
+        k <- function(p, locked = stop("lazy default")) p[locked]
+        expect_no_warning(k(p))
         steps <- "s2"
         expect_no_warning(p[steps])
     })

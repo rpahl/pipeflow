@@ -342,20 +342,18 @@ describe("pipeflow_lgr", {
     it("is replaced as default logger by the option 'pipeflow.lgr'", {
         msgs <- character()
         collect <- function(level, msg) msgs <<- c(msgs, msg)
-        oldOpts <- options(pipeflow.lgr = collect)
-        on.exit(options(oldOpts))
+        withr::local_options(pipeflow.lgr = collect)
         p <- test_pip()
 
         expect_silent(pip_run(p))
         expect_match(msgs[[1]], "Starting run of pipeflow")
 
-        options(pipeflow.lgr = function(level, msg) NULL)
+        withr::local_options(pipeflow.lgr = function(level, msg) NULL)
         expect_silent(pip_run(p, force = TRUE))
     })
 
     it("is used over the option 'pipeflow.lgr' when given", {
-        oldOpts <- options(pipeflow.lgr = function(level, msg) NULL)
-        on.exit(options(oldOpts))
+        withr::local_options(pipeflow.lgr = function(level, msg) NULL)
 
         expect_output(pip_run(test_pip(), lgr = pipeflow_lgr), "Starting run")
     })

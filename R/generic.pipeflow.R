@@ -245,19 +245,23 @@
     sub <- if (view) dat[rows] else dat
 
     # `p[step]` with a variable `step` of the caller selects by the column
-    if (is.name(i_expr) && as.character(i_expr) %in% names(dat)) {
-        name <- as.character(i_expr)
-        callerValue <- get0(name, envir = enclos)
-        if (!is.null(callerValue) && !is.function(callerValue)) {
-            warning(sprintf(
+    # (get0() forces a promise of the caller, which must not fail the selection)
+    name <- if (is.name(i_expr)) as.character(i_expr) else ""
+    callerValue <- if (name %in% names(dat)) {
+        tryCatch(get0(name, envir = enclos), error = \(e) NULL)
+    }
+    if (!is.null(callerValue) && !is.function(callerValue)) {
+        warning(
+            sprintf(
                 paste(
                     "'%1$s' is a column of the step table, so the selection uses the",
                     "column, not the variable '%1$s' - rename the variable or use",
                     "pip_view()"
                 ),
                 name
-            ))
-        }
+            ),
+            call. = FALSE
+        )
     }
 
     value <- eval(

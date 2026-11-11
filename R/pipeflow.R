@@ -1686,8 +1686,9 @@
 #' raised in the step (and of a traceback) doesn't hold the inputs of the step, which
 #' a failure (see `.pip_failure()`) would otherwise carry along. The function is named
 #' after the step, with dots prepended if an argument has the same name. Arguments that
-#' are symbols or calls stay in the call, so they are evaluated once more, as with
-#' `do.call()`.
+#' are symbols or calls are evaluated once more when used, as with `do.call()`, in the
+#' package namespace. As the call has only symbols, `match.call()` in the step function
+#' gives e.g. `b(x = x)`, which can't be evaluated after the step returned.
 #'
 #' @param fun The step function.
 #' @param args Named list of the arguments.
@@ -1705,17 +1706,18 @@
     while (funName %in% names(args)) {
         funName <- paste0(".", funName)
     }
-    # Symbols and calls stay in the call, so they are evaluated as with do.call(). The
-    # parent is the namespace, not this frame: an argument that the step doesn't force
-    # keeps the environment, and through the frames of the run the pipeline.
+    # The parent is the namespace, not this frame: an argument that the step doesn't
+    # force keeps the environment, and through the frames of the run the pipeline.
     isLang <- vapply(args, is.language, logical(1))
     env <- list2env(args[!isLang], parent = topenv())
+    # Symbols and calls are evaluated once more when used, as with do.call(), but in
+    # the namespace, so that they don't see the step function or the other arguments
+    for (name in names(args)[isLang]) {
+        do.call(delayedAssign, list(name, args[[name]], topenv(), env))
+    }
     assign(funName, fun, envir = env)
-    callArgs <- lapply(names(args), as.name)
-    callArgs[isLang] <- args[isLang]
-    call <- as.call(c(as.name(funName), callArgs))
-    names(call) <- c("", names(args))
-    eval(call, envir = env)
+    callArgs <- sapply(names(args), as.name, simplify = FALSE)
+    eval(as.call(c(as.name(funName), callArgs)), envir = env)
 }
 
 #' Call a step function according to its exec mode

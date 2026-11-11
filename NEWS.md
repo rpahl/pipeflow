@@ -7,7 +7,9 @@
   call. So an error raised in a step, and a `pipeflow_failure` that keeps it
   as `parent`, no longer carries the inputs of the step in its call, which
   could be megabytes of data. Tracebacks and error messages show the step
-  name.
+  name. Also `match.call()` in a step function gives this call, so a step
+  function such as `lm` stores `fit(formula = formula, data = data)`, which
+  `update()` can't evaluate after the run.
 - An output that keeps the frame of the step call, such as a function made in
   the step, no longer keeps the pipeline through an argument that the step
   didn't use.
