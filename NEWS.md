@@ -9,7 +9,10 @@
   could be megabytes of data. Tracebacks and error messages show the step
   name. Also `match.call()` in a step function gives this call, so a step
   function such as `lm` stores `fit(formula = formula, data = data)`, which
-  `update()` can't evaluate after the run.
+  `update()` can't evaluate after the run. Params that are symbols or calls
+  are still put into the call as they are, so a step function that captures
+  them unevaluated, such as `subset()` with `subset = quote(v > 1)`, works as
+  before, and so do params named like dots, such as `..1`.
 - An output that keeps the frame of the step call, such as a function made in
   the step, no longer keeps the pipeline through an argument that the step
   didn't use.

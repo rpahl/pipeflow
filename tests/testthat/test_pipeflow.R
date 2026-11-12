@@ -1163,7 +1163,7 @@ describe(".pip_call_step", {
         expect_identical(res, list(x = pi, y = 3))
     })
 
-    it("evaluates them neither with the step function nor the other arguments", {
+    it("evaluates them in the namespace, not with the step function", {
         res <- .pip_call_step(
             \(x, data) list(x = x, data = data),
             args = list(x = quote(c(1, 2)), data = quote(data)),
@@ -1184,7 +1184,7 @@ describe(".pip_call_step", {
         expect_identical(res, 1)
     })
 
-    it("keeps no call or formula argument in the call", {
+    it("puts symbols and calls into the call as they are, but not formulas", {
         e <- tryCatch(
             .pip_call_step(
                 \(x, f) stop("boom"),
@@ -1194,7 +1194,35 @@ describe(".pip_call_step", {
             error = identity
         )
 
-        expect_identical(conditionCall(e), quote(s(x = x, f = f)))
+        expect_identical(conditionCall(e), quote(s(x = c(1, 2), f = f)))
+    })
+
+    it("passes the expressions to a function that captures them unevaluated", {
+        res <- .pip_call_step(
+            subset,
+            args = list(x = data.frame(v = 1:3), subset = quote(v > 1)),
+            step = "s"
+        )
+        expect_identical(res[["v"]], 2:3)
+
+        p <- pip_new("p") |>
+            pip_add(
+                "s",
+                subset,
+                params = list(x = data.frame(v = 1:3), subset = quote(v > 1))
+            )
+        pip_run(p, lgr = NULL)
+        expect_identical(p[["s", "out"]][["v"]], 2:3)
+    })
+
+    it("binds arguments named like dots under other names", {
+        res <- .pip_call_step(\(...) list(...), list(..1 = 7, ... = 8), step = "s")
+        expect_identical(res, list(..1 = 7, ... = 8))
+
+        p <- pip_new("p") |>
+            pip_add("d", \(...) list(...), params = list(..1 = 7))
+        pip_run(p, lgr = NULL)
+        expect_identical(p[["d", "out"]], list(..1 = 7))
     })
 
     it("keeps a failure light that a dependent gets via try()", {

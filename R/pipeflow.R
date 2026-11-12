@@ -1684,11 +1684,18 @@
 #' The function is called by name with its arguments as symbols, e.g. `b(x = x)` for
 #' step `b`, evaluated in an environment that binds them. So the call of an error
 #' raised in the step (and of a traceback) doesn't hold the inputs of the step, which
-#' a failure (see `.pip_failure()`) would otherwise carry along. The function is named
-#' after the step, with dots prepended if an argument has the same name. Arguments that
-#' are symbols or calls are evaluated once more when used, as with `do.call()`, in the
-#' package namespace. As the call has only symbols, `match.call()` in the step function
-#' gives e.g. `b(x = x)`, which can't be evaluated after the step returned.
+#' a failure (see `.pip_failure()`) would otherwise carry along. As the call has
+#' symbols, `match.call()` in the step function gives e.g. `b(x = x)`, which can't be
+#' evaluated after the step returned.
+#'
+#' Arguments that are symbols or calls go into the call as they are, as with
+#' `do.call()`, so that a function that captures an argument unevaluated (such as
+#' [subset()]) gets the expression. They are evaluated when used, in the environment
+#' of the call, whose parent is the package namespace. Formulas are bound as symbols
+#' and evaluated once more when used, in the namespace. An argument named `...` or
+#' `..1` is bound with a dot prepended, as R takes these names as dots. The function is
+#' named after the step, with dots prepended if an argument or one of the expressions
+#' uses the name.
 #'
 #' @param fun The step function.
 #' @param args Named list of the arguments.
@@ -1702,22 +1709,34 @@
     on.exit(list2env(caller, envir = .step_call), add = TRUE)
     list2env(list(step = step, key = key, keys = keys), envir = .step_call)
 
+    # Symbols and calls (but not formulas) go into the call as they are, as with
+    # do.call(), so that a step function that captures an argument unevaluated (e.g.
+    # subset()) gets the expression. The parent is the namespace, not this frame: an
+    # argument that the step doesn't force keeps the environment, and through the
+    # frames of the run the pipeline.
+    ns <- asNamespace("pipeflow")
+    isExpr <- vapply(
+        args,
+        \(arg) is.language(arg) && !inherits(arg, "formula"),
+        logical(1)
+    )
+    env <- new.env(parent = ns)
+    callArgs <- args
+    for (name in names(args)[!isExpr]) {
+        # R takes `...` and `..1` as dots, so they can't be bound under their name
+        isDots <- grepl("^(\\.\\.\\.|\\.\\.[0-9]+)$", name)
+        bindName <- if (isDots) paste0(".", name) else name
+        # Bound as a promise, so that a formula is evaluated once more when used, in
+        # the namespace (other values evaluate to themselves)
+        do.call(delayedAssign, list(bindName, args[[name]], ns, env))
+        callArgs[[name]] <- as.name(bindName)
+    }
     funName <- step
-    while (funName %in% names(args)) {
+    exprNames <- unlist(lapply(args[isExpr], all.names))
+    while (funName %in% c(names(args), exprNames)) {
         funName <- paste0(".", funName)
     }
-    # The parent is the namespace, not this frame: an argument that the step doesn't
-    # force keeps the environment, and through the frames of the run the pipeline.
-    ns <- asNamespace("pipeflow")
-    isLang <- vapply(args, is.language, logical(1))
-    env <- list2env(args[!isLang], parent = ns)
-    # Symbols and calls are evaluated once more when used, as with do.call(), but in
-    # the namespace, so that they don't see the step function or the other arguments
-    for (name in names(args)[isLang]) {
-        do.call(delayedAssign, list(name, args[[name]], ns, env))
-    }
     assign(funName, fun, envir = env)
-    callArgs <- sapply(names(args), as.name, simplify = FALSE)
     eval(as.call(c(as.name(funName), callArgs)), envir = env)
 }
 
