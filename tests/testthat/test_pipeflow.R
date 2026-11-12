@@ -1487,6 +1487,13 @@ describe(".pip_unrun_inputs", {
         expect_length(.pip_unrun_inputs(dat, 4L, failures), 0L)
     })
 
+    it("also returns the inputs skipped in this run", {
+        expect_equal(
+            .pip_unrun_inputs(dat, 4L, list(), unrunNodes = dat[["nodeId"]][[1L]]),
+            c(x = "a", y = "b")
+        )
+    })
+
     it("is empty for a step without inputs", {
         expect_length(.pip_unrun_inputs(dat, 1L, list()), 0L)
     })
@@ -6063,6 +6070,16 @@ describe("pip_run", {
             expect_equal(p[["c", "out"]], "c from b out")
         })
 
+        it("names the current step in the error of a renamed step", {
+            p <- pip_new() |>
+                pip_add("b", \() {
+                    pip_rename(.self, "b", "b2")
+                    stop("boom")
+                })
+            e <- expect_error(pip_run(p, lgr = NULL), class = "pipeflow_step_error")
+            expect_equal(e[["step"]], "b2")
+        })
+
         it("marks a step that renamed itself and failed as failed", {
             p <- pip_new() |>
                 pip_add("b", \() {
@@ -6152,6 +6169,32 @@ describe("pip_run", {
             pip_run(p, lgr = NULL)
             expect_equal(unname(p[["state"]]), c("new", "done"))
             expect_equal(p[["out"]][["b"]], "b from ")
+        })
+
+        it("skips the dependents of a skipped step that is outdated", {
+            # In the second run, 's' replaces 'z', which already ran, so 'y' and 'w'
+            # are outdated and 'y' is skipped, as its input 'z' is new.
+            flag <- new.env()
+            flag[["replace"]] <- FALSE
+            p <- pip_new() |>
+                pip_add("z", \() 1) |>
+                pip_add("s", \() {
+                    if (flag[["replace"]]) {
+                        pip_replace(.self, "z", \() 2)
+                    }
+                    "s"
+                }) |>
+                pip_add("y", \(x = ~z) x + 10) |>
+                pip_add("w", \(x = ~y) x + 100)
+            pip_run(p, lgr = NULL)
+            flag[["replace"]] <- TRUE
+            suppressWarnings(pip_run(p, force = TRUE, lgr = NULL))
+
+            expect_equal(
+                unname(p[["state"]]),
+                c("new", "done", "outdated", "outdated")
+            )
+            expect_equal(p[["out"]][["w"]], 111)
         })
 
         it("passes a skipped failed input to a try() argument", {

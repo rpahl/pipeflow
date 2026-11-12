@@ -437,11 +437,11 @@ sequenceDiagram
     loop each node (topological order)
         R->>R: progress(i, step) returns FALSE? halted (break)
         R->>E: row = current row of the node; removed? skip
+        R->>R: locked? skip
         R->>R: .pip_failed_inputs not all ~try()? record .pip_input_failure, skip
         R->>R: (input failed for some keys counts only if not exec auto)
         R->>R: .pip_unrun_inputs (input still new, not locked)? skip
         R->>R: done, not force, no input re-run? skip
-        R->>R: locked? skip
         R->>RR: .pip_run_row(self = full pipeline, row, failed, onError)
         RR->>E: args = params + outputs of depends (+ failures)
         RR->>RR: .wrap_self(fun) if body uses .self
@@ -490,8 +490,9 @@ Things to keep in mind:
   `pipenv$data` just before it runs; a step removed in the meantime is
   skipped, and steps added during the run are not run (they stay `new`).
   Neither is a step whose input is still `new` and not locked
-  (`.pip_unrun_inputs()`), as it would get no input; it keeps its state, so
-  its own dependents are skipped too and the next run computes them. After
+  (`.pip_unrun_inputs()`), as it would get no input; it keeps its state, and
+  its dependents are skipped too (`unrunNodes`), so the next run computes
+  them. After
   the call, `.pip_run_row()` finds the step's row by node id, and `pip_run()`
   records a failure under the step's current name. A step that changed its
   own function, params or exec mode during the call gets state `outdated`

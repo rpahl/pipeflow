@@ -2357,7 +2357,8 @@
                 )
             }
             lgr(level = "error", msg = e$message)
-            stop(.pip_step_error(step, parent = e))
+            stepNow <- if (is.na(rowNow)) step else dat[["step"]][[rowNow]]
+            stop(.pip_step_error(stepNow, parent = e))
         },
         warning = function(w) {
             lgr(level = "warn", msg = w$message)
@@ -2516,19 +2517,25 @@
 #' Get the inputs of a step that have not run
 #'
 #' An input that is still `"new"` has no output yet, for example a step that an earlier
-#' step added during the run. Inputs in `failures` are left out, as they are handled
-#' as failed inputs, and so are locked inputs, whose output is kept as it is.
+#' step added during the run. An input that was skipped in this run because one of its
+#' own inputs had not run only has a stale output. Inputs in `failures` are left out,
+#' as they are handled as failed inputs, and so are locked inputs, whose output is kept
+#' as it is.
 #'
 #' @param dat The step table.
 #' @param row The row of the step.
 #' @param failures Failures by step name, as collected by `pip_run()`.
+#' @param unrunNodes Node ids of the steps that `pip_run()` skipped in this run
+#' because an input had not run.
 #' @return Named character vector by argument of the input steps that have not run.
 #' @noRd
-.pip_unrun_inputs <- function(dat, row, failures) {
+.pip_unrun_inputs <- function(dat, row, failures, unrunNodes = integer()) {
     depends <- dat[["depends"]][[row]]
     depends <- depends[!depends %in% names(failures)]
-    rows <- match(depends, dat[["step"]])
-    isUnrun <- dat[["state"]][rows] == "new" & !dat[["locked"]][rows]
+    rows <- data.table::chmatch(depends, dat[["step"]])
+    isNew <- dat[["state"]][rows] == .step_states[["new"]][["name"]]
+    isSkipped <- dat[["nodeId"]][rows] %in% unrunNodes
+    isUnrun <- (isNew | isSkipped) & !dat[["locked"]][rows]
     depends[isUnrun]
 }
 
@@ -4348,6 +4355,8 @@ pip_run <- function(
     # The node ids of the executed steps, whose downstream steps are outdated at the end
     # of the run
     executedNodes <- integer()
+    # Steps skipped because an input had not run, whose dependents are skipped too
+    unrunNodes <- integer()
 
     # Failure objects of the steps that failed or were not run because an input failed,
     # by step name (only used with on_error = "continue").
@@ -4388,14 +4397,15 @@ pip_run <- function(
                     log_info(sprintf("%s - skipping removed step", msg))
                     next()
                 }
+                if (dat[["locked"]][[row]]) {
+                    log_info(sprintf("%s - skipping locked step", msg))
+                    next()
+                }
 
                 # Unless all failed inputs are referred to via try(), the step is not
-                # run and counts as failed for its own dependents. A locked step is not
-                # run anyway.
+                # run and counts as failed for its own dependents.
                 depends <- dat[["depends"]][[row]]
-                failedInputs <- if (!dat[["locked"]][[row]]) {
-                    .pip_failed_inputs(dat, row, failures)
-                }
+                failedInputs <- .pip_failed_inputs(dat, row, failures)
                 hasFailedInput <- length(failedInputs) > 0L
                 if (hasFailedInput) {
                     notAllowed <- setdiff(
@@ -4420,10 +4430,9 @@ pip_run <- function(
 
                 # A step whose input has not run (e.g. a step added during the run)
                 # would get no input, so it is not run and keeps its state.
-                unrunInputs <- if (!dat[["locked"]][[row]]) {
-                    .pip_unrun_inputs(dat, row, failures)
-                }
+                unrunInputs <- .pip_unrun_inputs(dat, row, failures, unrunNodes)
                 if (length(unrunInputs) > 0L) {
+                    unrunNodes <- c(unrunNodes, node)
                     log_info(sprintf(
                         "%s - skipping step, input '%s' has not run",
                         msg,
@@ -4434,15 +4443,12 @@ pip_run <- function(
 
                 # A done step is re-run if one of its inputs was executed in this run,
                 # since its output may then be stale.
-                executedNow <- dat[["step"]][dat[["nodeId"]] %in% executedNodes]
-                inputsChanged <- hasFailedInput || any(depends %in% executedNow)
+                inputRows <- data.table::chmatch(depends, dat[["step"]])
+                inputNodes <- dat[["nodeId"]][inputRows]
+                inputsChanged <- hasFailedInput || any(inputNodes %in% executedNodes)
                 isDone <- dat[["state"]][[row]] == "done"
                 if (isDone && !force && !inputsChanged) {
                     log_info(sprintf("%s - skipping done step", msg))
-                    next()
-                }
-                if (dat[["locked"]][[row]]) {
-                    log_info(sprintf("%s - skipping locked step", msg))
                     next()
                 }
 
