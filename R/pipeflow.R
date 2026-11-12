@@ -2389,6 +2389,69 @@
     out
 }
 
+#' Find the steps that a step changed among itself and the done steps before it
+#'
+#' A step that changes (via `.self`) itself or a done step before it in the pipeline
+#' outdates it and its downstream steps, so that the next run computes them again.
+#'
+#' @param pipenv The `pipenv` of the running pipeline.
+#' @param step Name of the step that ran.
+#' @param steps,states Names and states of the steps up to `step`, taken just before
+#' it ran.
+#' @return Names of the steps that `step` changed, without the steps that are only
+#' outdated because a step before them changed.
+#' @noRd
+.pip_changed_before <- function(pipenv, step, steps, states) {
+    dat <- pipenv[["data"]]
+    rows <- data.table::chmatch(steps, dat[["step"]])
+    statesNow <- dat[["state"]][rows]
+    isSelf <- steps == step
+    isChanged <- statesNow %in% .stale_states & (statesNow != states | isSelf)
+    changed <- steps[isChanged]
+    if (length(changed) == 0L) {
+        return(character())
+    }
+    isRoot <- vapply(
+        dat[["depends"]][rows[isChanged]],
+        \(deps) !any(deps %in% changed),
+        logical(1)
+    )
+    mayNotChange <- (states == .step_states[["done"]][["name"]] | isSelf)[isChanged]
+    changed[isRoot & mayNotChange]
+}
+
+#' Warning about steps that changed themselves or the steps before them
+#'
+#' @param changed Named list: for each step that changed itself or steps before it, the
+#' names of the changed steps (see `.pip_changed_before()`).
+#' @return A condition of class `c("pipeflow_changed_before", "warning", "condition")`
+#' with the field `steps` (`changed`).
+#' @noRd
+.pip_changed_before_warning <- function(changed) {
+    what <- vapply(
+        changed,
+        \(steps) toString(paste0("'", steps, "'")),
+        character(1)
+    )
+    msg <- paste(
+        paste0(
+            "Step '",
+            names(changed),
+            "' changed itself or steps before it: ",
+            what,
+            ".",
+            collapse = " "
+        ),
+        "They and their downstream steps run again in the next run.",
+        "A step should only change the steps after it, or call .self$restart()",
+        "to run them again now."
+    )
+    structure(
+        class = c("pipeflow_changed_before", "warning", "condition"),
+        list(message = msg, call = NULL, steps = changed)
+    )
+}
+
 # -------------
 # State updates
 # -------------
@@ -2595,10 +2658,13 @@ pip_new <- function(name = "pipe") {
 #' not detected.
 #'
 #' A step that changes its own function, params or exec mode via `.self`, ends the run
-#' as `"outdated"`. The same is true for other steps changed via `.self`. Lastly,
-#' `.self` is only valid while the step runs and released once the step was returned.
-#' For this reason, a step that returns a function referring to `.self` fails with
-#' `object '.self' not found` when called later.
+#' as `"outdated"`. The same is true for other steps changed via `.self`. As these
+#' steps and their downstream steps run again in the next run, [pip_run()] warns (class
+#' `pipeflow_changed_before`) if a step changes itself or a done step before it, unless
+#' the step halts the run or the run is restarted. Lastly, `.self` is only valid while
+#' the step runs and released once the step was returned. For this reason, a step that
+#' returns a function referring to `.self` fails with `object '.self' not found` when
+#' called later.
 #'
 #' ## Outputs that keep an environment
 #' An output that keeps the environment it was made in, such as a function or a ggplot
@@ -4040,6 +4106,11 @@ pip_run <- function(
     # Failure objects of the steps that failed or were not run because an input failed,
     # by step name (only used with on_error = "continue").
     failures <- list()
+
+    # The steps that a step changed among itself and the done steps before it, by step
+    # name. A restart runs them again, so they are only reported if the run didn't
+    # restart.
+    changedBefore <- list()
     outdate_downstream_of_executed <- function() {
         dat <- pipenv[["data"]]
         locked <- dat[["step"]][dat[["locked"]]]
@@ -4052,12 +4123,8 @@ pip_run <- function(
         # during the run, by itself or by a later step, so the steps after it that ran
         # with its output are outdated too. Failed steps are left out, as their
         # dependents only run again once they succeed.
-        staleStates <- c(
-            .step_states[["outdated"]][["name"]],
-            .step_states[["new"]][["name"]]
-        )
         isExecuted <- dat[["step"]] %in% executedSteps
-        isStale <- isExecuted & dat[["state"]] %in% staleStates
+        isStale <- isExecuted & dat[["state"]] %in% .stale_states
         .pip_outdate_downstream(
             x,
             steps = dat[["step"]][isStale],
@@ -4194,6 +4261,12 @@ pip_run <- function(
                 execStep <- pipenv[["data"]][["step"]][[row]]
                 executedSteps <- c(executedSteps, execStep)
 
+                # The steps up to this one and their states, to find the ones that the
+                # step changes
+                upTo <- seq_len(row)
+                stepsBefore <- pipenv[["data"]][["step"]][upTo]
+                statesBefore <- pipenv[["data"]][["state"]][upTo]
+
                 # Prepare the list of failed inputs for the current step. An input that
                 # failed for some keys is passed as it is.
                 failed <- stats::setNames(
@@ -4262,6 +4335,15 @@ pip_run <- function(
                     halted <- TRUE
                     break
                 }
+                changed <- .pip_changed_before(
+                    pipenv,
+                    step = execStep,
+                    steps = stepsBefore,
+                    states = statesBefore
+                )
+                if (length(changed) > 0L) {
+                    changedBefore[[execStep]] <- changed
+                }
             }
 
             # Determine the total number of done, skipped, and failed steps.
@@ -4306,10 +4388,18 @@ pip_run <- function(
         }
     )
 
-    # Report the failures of a continued run once all states are final, so that
-    # condition handlers already see them.
-    if (length(failures) > 0L) {
+    # Report steps that changed themselves or the steps before them, and the failures of
+    # a continued run, once all states are final, so that condition handlers already
+    # see them.
+    if (length(changedBefore) > 0L || length(failures) > 0L) {
         outdate_downstream_of_executed()
+    }
+    if (length(changedBefore) > 0L) {
+        w <- .pip_changed_before_warning(changedBefore)
+        lgr(level = "warn", msg = conditionMessage(w))
+        warning(w)
+    }
+    if (length(failures) > 0L) {
         w <- .pip_run_failed_warning(pipname, failures)
         lgr(level = "warn", msg = conditionMessage(w))
         warning(w)

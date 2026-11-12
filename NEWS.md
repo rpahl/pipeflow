@@ -1,3 +1,12 @@
+# pipeflow 0.5.0.9031
+
+## New features
+
+- `pip_run()` warns (class `pipeflow_changed_before`) if a step changes
+  itself or a done step before it via `.self` (e.g. sets its params), as
+  these steps and their downstream steps then run again in the next run.
+  There is no warning if the step halts the run or the run is restarted.
+
 # pipeflow 0.5.0.9030
 
 ## New features

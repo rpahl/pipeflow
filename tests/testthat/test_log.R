@@ -232,7 +232,7 @@ describe("pip_run step counts", {
         p <- pip_new() |>
             pip_add("bad", \(x = 1) stop("boom")) |>
             pip_add("fix", \(x = 1) {
-                .self$set_params(list(x = 2), step = "bad")
+                pip_set_params(.self["bad"], list(x = 2), scope = "view")
                 x
             })
 

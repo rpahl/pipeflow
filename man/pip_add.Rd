@@ -116,10 +116,13 @@ within functions defined in the body). Indirect access, such as \code{get(".self
 not detected.
 
 A step that changes its own function, params or exec mode via \code{.self}, ends the run
-as \code{"outdated"}. The same is true for other steps changed via \code{.self}. Lastly,
-\code{.self} is only valid while the step runs and released once the step was returned.
-For this reason, a step that returns a function referring to \code{.self} fails with
-\verb{object '.self' not found} when called later.
+as \code{"outdated"}. The same is true for other steps changed via \code{.self}. As these
+steps and their downstream steps run again in the next run, \code{\link[=pip_run]{pip_run()}} warns (class
+\code{pipeflow_changed_before}) if a step changes itself or a done step before it, unless
+the step halts the run or the run is restarted. Lastly, \code{.self} is only valid while
+the step runs and released once the step was returned. For this reason, a step that
+returns a function referring to \code{.self} fails with \verb{object '.self' not found} when
+called later.
 }
 
 \subsection{Outputs that keep an environment}{
