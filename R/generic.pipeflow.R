@@ -663,39 +663,17 @@
             #    the steps that the step of q depends on, by name, because a relative
             #    reference (~-1) is stale once steps were inserted or removed before it.
             #    pip_replace() then resolves them against the steps of `x`.
-            params <- qVals[["params"]]
-            depends <- qSnapshot[["depends"]][[k]]
-            for (arg in intersect(names(depends), names(params))) {
-                params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
-            }
-            # An unbound param can still have a formula as value: the function made by
-            # as.function() sets its arguments as values, also formulas, and a step can
-            # expose that pipeline, e.g. via pip_clone(.self). pip_replace() would take
-            # it as a reference, so it is replaced with a placeholder and its value is
-            # put back below.
-            isValue <- !(names(params) %in% names(depends)) &
-                vapply(params, is_one_sided_formula, logical(1))
-            values <- params[isValue]
-            params[isValue] <- list(NULL)
+            #    Formula values are put back after pip_replace() (see
+            #    .params_copy()).
+            copy <- .params_copy(qVals[["params"]], qSnapshot[["depends"]][[k]])
             pip_replace(
                 x,
                 step = qVals[["step"]],
                 fun = qVals[["fun"]],
-                params = params,
+                params = copy[["params"]],
                 exec = qVals[["exec"]]
             )
-            if (length(values) > 0L) {
-                dataX <- .pip_pipenv(x)[["data"]]
-                iRow <- data.table::chmatch(qVals[["step"]], dataX[["step"]])
-                stored <- dataX[["params"]][[iRow]]
-                stored[names(values)] <- values
-                data.table::set(
-                    dataX,
-                    i = iRow,
-                    j = "params",
-                    value = list(list(stored))
-                )
-            }
+            .pip_put_values(x, step = qVals[["step"]], values = copy[["values"]])
 
             # 3) Runtime state and annotation columns.
             for (prop in setdiff(props, c("step", "fun", "params", "exec"))) {
@@ -761,14 +739,11 @@
         fun <- yyDat[["fun"]][[k]]
         tags <- yyDat[["tags"]][[k]]
         exec <- yyDat[["exec"]][[k]]
-        params <- yyDat[["params"]][[k]]
         depends <- yyDat[["depends"]][[k]]
 
         # Point the formula dependencies to the (renamed) steps of y, which also turns
         # relative references into step names. References wrapped in try() stay wrapped.
-        for (arg in intersect(names(depends), names(params))) {
-            params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
-        }
+        params <- .params_refs_by_name(yyDat[["params"]][[k]], depends)
         # Fold current parameter values into the defaults of the existing function
         # arguments. `[<-` with list() keeps a NULL value, which `[[<-` would drop
         # together with the argument.

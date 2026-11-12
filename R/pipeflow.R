@@ -864,6 +864,129 @@
     x
 }
 
+#' Get the position after which a step is added
+#'
+#' @param x A pipeflow pipeline (not a view).
+#' @param after The `after` of [pip_add()]: a step name or an index from 0 to the number
+#' of steps.
+#' @return The index of the step after which the step is added, 0 for the beginning.
+#' Signals an error if `after` is invalid.
+#' @noRd
+.pip_after_pos <- function(x, after) {
+    n <- length(x)
+    if (is.character(after)) {
+        if (!.is_single(after, "character") || is.na(after) || !nzchar(after)) {
+            stop_no_call("after must be a non-empty step name or integer index")
+        }
+        if (!.pip_step_exists(x, after)) {
+            stop_no_call("step '", after, "' does not exist")
+        }
+        # Most of the time the new step is added at the end, so we check that first to
+        # avoid the more expensive match() call in the common case.
+        pos <- n
+        last <- .pip_pipenv(x)[["data"]][["step"]][n]
+        if (after != last) {
+            pos <- data.table::chmatch(
+                after,
+                .pip_pipenv(x)[["data"]][["step"]]
+            )
+        }
+    } else if (is.numeric(after)) {
+        if (length(after) != 1 || is.na(after)) {
+            stop_no_call("after must be a non-empty step name or integer index")
+        }
+        if (!is.finite(after) || after != as.integer(after)) {
+            stop_no_call("after index must be a whole number")
+        }
+        pos <- as.integer(after)
+        if (pos < 0L || pos > n) {
+            stop_no_call("after index must be between 0 and ", n)
+        }
+    } else {
+        stop_no_call("after must be a non-empty step name or integer index")
+    }
+    pos
+}
+
+#' Prepare the params of a step to be copied
+#'
+#' The references are pointed to step names (see `.params_refs_by_name()`), so that
+#' they are resolved by name where the step is copied to. An unbound param can still
+#' have a formula as value: the function made by as.function() sets its arguments as
+#' values, also formulas, and a step can expose that pipeline, e.g. via
+#' `pip_clone(.self)`.
+#' [pip_add()] and [pip_replace()] would take it as a reference, so it is replaced with
+#' a placeholder, and `.pip_put_values()` puts it back once the step was added.
+#'
+#' @param params,depends The `params` and `depends` of the step to copy.
+#' @return A list of `params`, to give to [pip_add()] or [pip_replace()], and the
+#' formula `values`, to give to `.pip_put_values()`.
+#' @noRd
+.params_copy <- function(params, depends) {
+    params <- .params_refs_by_name(params, depends)
+    isValue <- !(names(params) %in% names(depends)) &
+        vapply(params, is_one_sided_formula, logical(1))
+    values <- params[isValue]
+    params[isValue] <- list(NULL)
+    list(params = params, values = values)
+}
+
+#' Put back the formula values of a copied step
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param step The name of the copied step.
+#' @param values The formula values from `.params_copy()`.
+#' @return `x`, invisibly.
+#' @noRd
+.pip_put_values <- function(x, step, values) {
+    if (length(values) > 0L) {
+        dat <- .pip_pipenv(x)[["data"]]
+        row <- data.table::chmatch(step, dat[["step"]])
+        stored <- dat[["params"]][[row]]
+        stored[names(values)] <- values
+        data.table::set(dat, i = row, j = "params", value = list(list(stored)))
+    }
+    invisible(x)
+}
+
+#' Add copies of the steps of another pipeline or view
+#'
+#' Does the work of [pip_add()] with a pipeline or view as `step` (see 'Copying steps'
+#' in [pip_add()]): adds each step with [pip_add()], after the step added before it.
+#' The param conflicts are checked once, after all steps were added.
+#'
+#' @param x A pipeflow pipeline (not a view).
+#' @param from A pipeflow pipeline or view whose steps are copied.
+#' @param after As for [pip_add()].
+#' @return `x`, invisibly.
+#' @noRd
+.pip_add_from <- function(x, from, after) {
+    cols <- c("step", "fun", "tags", "params", "exec", "depends")
+    dat <- .pip_pipenv(from)[["data"]][.pip_view_rows(from), cols, with = FALSE]
+    steps <- dat[["step"]]
+    oldOpts <- options(pipeflow.warn_param_conflicts = FALSE)
+    on.exit(options(oldOpts), add = TRUE)
+    .pip_all_or_nothing(x, {
+        for (k in seq_along(steps)) {
+            copy <- .params_copy(dat[["params"]][[k]], dat[["depends"]][[k]])
+            pip_add(
+                x,
+                step = steps[[k]],
+                fun = dat[["fun"]][[k]],
+                tags = dat[["tags"]][[k]],
+                params = copy[["params"]],
+                exec = dat[["exec"]][[k]],
+                after = after
+            )
+            .pip_put_values(x, step = steps[[k]], values = copy[["values"]])
+            after <- steps[[k]]
+        }
+    })
+    options(oldOpts)
+    .pip_warn_param_conflicts(x, steps = steps)
+    invisible(x)
+}
+
 #' Warn about unbound params whose values differ between steps
 #'
 #' A param name is meant to have one value in the whole pipeline: [pip_get_params()]
@@ -2394,7 +2517,9 @@ pip_new <- function(name = "pipe") {
 #' (`~step_name`). Dependencies are validated when the step is added.
 #'
 #' @param x A pipeflow pipeline object.
-#' @param step Unique step name.
+#' @param step Unique step name, or a pipeline or view whose steps are copied into `x`
+#' (see 'Copying steps' below), in which case `fun`, `tags`, `params` and `exec` must
+#' not be given.
 #' @param fun Function to execute for the step. Each function parameter needs a value: a
 #' default value in `fun` or an entry in `params`. Default values that are simple
 #' constants are resolved immediately. Default values that are formulas like
@@ -2439,6 +2564,16 @@ pip_new <- function(name = "pipe") {
 #' the middle is a rather expensive operation as it requires re-wiring parts of the
 #' internal pipeline structure, especially if the new step is inserted at an early
 #' position.
+#'
+#' ## Copying steps
+#' If an entire pipeline or view is provided as `step`, its steps are added in their
+#' order, with their functions, current params, tags and exec modes. Upstream steps of
+#' views are *not* copied, which means that references (including relative references
+#' like `~-1`) are resolved (and must be valid) within `x`. If this blocks a step from
+#' being added (e.g., its name already exists in `x`, or it refers to a step not
+#' existing in `x`), `x` is left unchanged. Outputs and locks are not copied either. To
+#' copy a view `v` *with* its upstream steps, use `pip_add(x, v[, view = FALSE])` (see
+#' [`[`][Extract.pipeflow]), to bind whole pipelines, [rbind()][rbind.pipeflow].
 #'
 #' ## Params with the same name
 #' A param name is meant to have one value in the whole pipeline.Therefore,
@@ -2515,6 +2650,12 @@ pip_new <- function(name = "pipe") {
 #' pip_add(p2, "preload", \(x = 1) x, after = 0)
 #' p2
 #'
+#' # --- Copy steps of another pipeline, without their upstream steps ---
+#' other <- pip_new("other-data") |> pip_add("load", \(x = 10) x)
+#' pip_add(other, p2["fit"]) # "fit" now refers to "load" of `other`
+#' pip_run(other)
+#' other[["fit", "out"]] # 11
+#'
 #' # --- Provide parameter values with 'params' ---
 #' # 'params' override the defaults of the function ...
 #' p3 <- pip_new("params-demo") |>
@@ -2544,8 +2685,18 @@ pip_add <- function(
     after = length(x)
 ) {
     .assert_pip(x)
+    if (.is_pipeflow(step)) {
+        if (!missing(fun) || !missing(tags) || !missing(params) || !missing(exec)) {
+            stop_no_call(
+                "fun, tags, params and exec must not be given when copying the ",
+                "steps of a pipeline or view"
+            )
+        }
+        .pip_after_pos(x, after)
+        return(.pip_add_from(x, from = step, after = after))
+    }
     if (!.is_single(step, "character")) {
-        stop("step must be a single string")
+        stop("step must be a single string or a pipeline or view")
     }
     if (is.na(step)) {
         stop("step must not be NA")
@@ -2583,38 +2734,7 @@ pip_add <- function(
     .assert_exec_mode(exec)
 
     n <- length(x)
-
-    if (is.character(after)) {
-        if (!.is_single(after, "character") || is.na(after) || !nzchar(after)) {
-            stop("after must be a non-empty step name or integer index")
-        }
-        if (!.pip_step_exists(x, after)) {
-            stop("step '", after, "' does not exist")
-        }
-        # Most of the time the new step is added at the end, so we check that first to
-        # avoid the more expensive match() call in the common case.
-        pos <- n
-        last <- .pip_pipenv(x)[["data"]][["step"]][n]
-        if (after != last) {
-            pos <- data.table::chmatch(
-                after,
-                .pip_pipenv(x)[["data"]][["step"]]
-            )
-        }
-    } else if (is.numeric(after)) {
-        if (length(after) != 1 || is.na(after)) {
-            stop("after must be a non-empty step name or integer index")
-        }
-        if (!is.finite(after) || after != as.integer(after)) {
-            stop("after index must be a whole number")
-        }
-        pos <- as.integer(after)
-        if (pos < 0L || pos > n) {
-            stop("after index must be between 0 and ", n)
-        }
-    } else {
-        stop("after must be a non-empty step name or integer index")
-    }
+    pos <- .pip_after_pos(x, after)
 
     if (pos == n) {
         .pip_append(
@@ -3393,6 +3513,7 @@ pip_rename <- function(x, from, to) {
 #'
 #' @inheritParams pip_add
 #' @param x A pipeflow pipeline or view object.
+#' @param step Name of the step to replace.
 #' @param tags Optional character vector of tags belonging to the step. If `NULL` (the
 #' default), the current tags of the step are kept. Use `character(0)` to remove all
 #' tags.

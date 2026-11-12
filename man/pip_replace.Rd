@@ -17,7 +17,7 @@ pip_replace(
 \arguments{
 \item{x}{A pipeflow pipeline or view object.}
 
-\item{step}{Unique step name.}
+\item{step}{Name of the step to replace.}
 
 \item{fun}{Function to execute for the step. Each function parameter needs a value: a
 default value in \code{fun} or an entry in \code{params}. Default values that are simple

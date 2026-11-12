@@ -317,6 +317,7 @@ sequenceDiagram
     participant E as pipenv
 
     U->>A: pip_add(p, "fit", fun, params, after)
+    Note over A: step a pipeline or view: .pip_add_from() calls pip_add() per step<br/>(refs by name, all or nothing, one conflict warning)
     A->>A: validate step name, fun, params, exec, after
     A->>I: pos == n ? append : insert at pos
     I->>P: defaults of fun, overridden by params
@@ -675,9 +676,9 @@ slots, so the new table is stored back in `pipenv`. Every access to
 
 | Task | Start here | Also touch |
 |---|---|---|
-| New step column | `.empty_pipeline()`, `.new_step()` | `.pip_bind()` (runtime columns), `.pip_copy_from()` props, `[[<-` dispatch, `print.pipeflow()`, `str.pipeflow()`, `pip_collect()` (`allowedBy`), `pip_replace()`/`pip_reset()` (runtime columns), a default for saved pipelines in `.pip_pipenv()` |
+| New step column | `.empty_pipeline()`, `.new_step()` | `.pip_bind()` (runtime columns), `.pip_copy_from()` props, `.pip_add_from()`, `[[<-` dispatch, `print.pipeflow()`, `str.pipeflow()`, `pip_collect()` (`allowedBy`), `pip_replace()`/`pip_reset()` (runtime columns), a default for saved pipelines in `.pip_pipenv()` |
 | New exec mode | `.assert_exec_mode()`, `.pip_execute_step_call()` | `.pip_annotate_output()`, docs of `pip_add()` |
-| New reference syntax | `utils.R` formula helpers | `.extract_depends()`, `formula_set_ref()` users (rename, rbind, copy) |
+| New reference syntax | `utils.R` formula helpers | `.extract_depends()`, `formula_set_ref()` users (`pip_rename()`, `.params_refs_by_name()`) |
 | New step or run state | `.step_states` / `.run_states` in `pipeflow-package.R` | `pip_run()`, `.pip_outdate_downstream()`, print colours, `.format_state_counts()` |
 | New structural edit | Follow `pip_replace()` / `pip_remove()` | Keep invariants 1–4. Gate with `.pip_step_in_view()`. Call `.fun_rename()` if steps are renamed. Removed steps keep their cache slots until the function is garbage-collected (see [as_function.md](as_function.md)). |
 | New view filter | `pip_view()` (`validFilters`) | `[.pipeflow` |

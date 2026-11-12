@@ -160,6 +160,26 @@ steps of the second pipeline by position, e.g.
 `pip_bound[-seq_along(pip1)]`. Steps where `x` already refers to
 another step, like `fit` and `predict`, are left as they are.
 
+### Copying steps
+
+Instead of binding whole pipelines, `pip_add()` also accepts a pipeline or a
+view as `step` and copies its steps into another pipeline. Unlike `rbind()`,
+upstream steps of a view are not copied, so the references of the copied
+steps are resolved by name in the target pipeline. For example, to run the
+modelling steps of `pip2` on the `data` step of `pip1`:
+
+```{r copy-steps}
+pip3 <- pip_clone(pip1) |>
+    pip_add(pip2[c("fit", "predict")])
+
+pip3
+```
+
+The `fit` step now refers to the `data` step of `pip3`. If a step can't be
+added, for example because its name already exists or it refers to a step
+that does not exist in the target pipeline, the target pipeline is left
+unchanged.
+
 
 ### Combined pipeline results
 
