@@ -4400,9 +4400,9 @@ pip_run <- function(
         }
     )
 
-    # Report steps that outdated themselves or the steps before them, and the failures of
-    # a continued run, once all states are final, so that condition handlers already
-    # see them.
+    # Report the steps that outdated themselves or the steps before them, and the
+    # failures of a continued run, once all states are final, so that condition handlers
+    # already see them.
     if (length(outdatedBefore) > 0L || length(failures) > 0L) {
         outdate_downstream_of_executed()
     }
