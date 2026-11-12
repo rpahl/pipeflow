@@ -1,3 +1,18 @@
+# pipeflow 0.5.0.9033
+
+## Bug fixes
+
+- `pip_run()` tracks the steps of a run by node id, so a step that changes its
+  own pipeline via `.self` (or a `progress` callback) no longer makes the run
+  run the wrong step or fail with "subscript out of bounds" (#157). A step
+  removed during the run is skipped, a step that inserts steps before itself
+  runs only once, and a step that renames itself keeps its output (or its
+  failure), so its dependents no longer run with a `NULL` input.
+- `pip_run()` skips a step whose input is still `"new"`, for example a step that
+  an earlier step added via `.self` during the run. Such a step ran with a
+  `NULL` input and was marked `"done"`. It now keeps its state and runs in the
+  next run.
+
 # pipeflow 0.5.0.9032
 
 ## Bug fixes

@@ -72,7 +72,10 @@ aborted early due to a failed step
 
 Only steps that have run before can become outdated: a step in state \code{"new"} stays
 \code{"new"} until it is executed. A "done" step is skipped unless \code{force = TRUE} was set.
-For all other states, the step will be re-executed in the next \code{\link[=pip_run]{pip_run()}}.
+For all other states, the step will be re-executed in the next \code{\link[=pip_run]{pip_run()}}. A step
+whose input is still \code{"new"} (and not locked), for example a step that an earlier
+step added via \code{.self} during the run, is skipped and keeps its state, as the input
+has no output yet.
 }
 
 \subsection{Time stamps}{
@@ -82,7 +85,7 @@ The step table has two time stamps and a duration per step:
 \item \code{time_start}: the start of the step's last run. It is set each time the step is
 run, also if the run fails. It is \code{NA} for a step that has not run since it was
 added, replaced (see \code{\link[=pip_replace]{pip_replace()}}) or reset (see \code{\link[=pip_reset]{pip_reset()}}). A skipped step
-(because it is \code{"done"}, locked or has a failed input) keeps its value.
+(because it is \code{"done"}, locked or has a failed or new input) keeps its value.
 \item \code{duration}: how long the step's last run took (a \code{difftime} in seconds), also if
 the run failed. It is \code{NA} and kept in the same cases as \code{time_start}.
 \item \code{time}: the time the step was added or replaced, or the end of its last successful

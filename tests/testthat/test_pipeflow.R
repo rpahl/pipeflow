@@ -1468,6 +1468,37 @@ describe(".pip_failed_inputs", {
     })
 })
 
+describe(".pip_unrun_inputs", {
+    p <- pip_new() |>
+        pip_add("a", \(x = 1) x) |>
+        pip_add("b", \(x = 2) x) |>
+        pip_add("c", \(x = 3) x) |>
+        pip_add("d", \(x = ~a, y = ~b, z = ~c) x)
+    pip_run(p["a", ], lgr = NULL)
+    pip_lock(p["c", ])
+    dat <- p[["pipenv"]][["data"]]
+
+    it("returns the new inputs by argument, but not the locked ones", {
+        expect_equal(.pip_unrun_inputs(dat, 4L, list()), c(y = "b"))
+    })
+
+    it("leaves out the inputs in the failures", {
+        failures <- list(b = .pip_failure("b", parent = simpleError("boom")))
+        expect_length(.pip_unrun_inputs(dat, 4L, failures), 0L)
+    })
+
+    it("also returns the inputs skipped in this run", {
+        expect_equal(
+            .pip_unrun_inputs(dat, 4L, list(), unrunNodes = dat[["nodeId"]][[1L]]),
+            c(x = "a", y = "b")
+        )
+    })
+
+    it("is empty for a step without inputs", {
+        expect_length(.pip_unrun_inputs(dat, 1L, list()), 0L)
+    })
+})
+
 describe(".pip_retry_keys", {
     boom <- simpleError("boom")
     out <- .as_pipeflow_partitioned(list(
@@ -1509,6 +1540,7 @@ describe(".pip_run_summary", {
     pipenv <- new.env()
     pipenv[["data"]] <- data.table::data.table(
         step = c("done", "failed", "skipped", "other", "new"),
+        nodeId = 1:5,
         time_start = c(at(0), at(1), at(-10), at(-10), NA),
         time = c(at(1), at(-10), at(-9), at(-9), NA)
     )
@@ -1517,7 +1549,7 @@ describe(".pip_run_summary", {
         expect_equal(
             .pip_run_summary(
                 pipenv,
-                steps = c("done", "failed", "skipped", "new"),
+                nodes = c(1L, 2L, 3L, 5L),
                 runStart = runStart,
                 lastRun = at(2)
             ),
@@ -1525,9 +1557,9 @@ describe(".pip_run_summary", {
         )
     })
 
-    it("counts a step that ran in the run also if it is not in 'steps'", {
+    it("counts a step that ran in the run also if it is not in 'nodes'", {
         expect_equal(
-            .pip_run_summary(pipenv, "skipped", runStart, lastRun = at(2)),
+            .pip_run_summary(pipenv, 3L, runStart, lastRun = at(2)),
             "Finished in 2.000 s (1 done, 1 skipped, 1 failed)"
         )
     })
@@ -1650,6 +1682,7 @@ describe(".pip_outdate_executed", {
             pip_add("d", \(x = ~a) x) |>
             pip_run(lgr = NULL)
     }
+    nodes <- function(p, steps) unlist(.pip_steps_to_nodes(p, steps))
     setState <- function(p, step, state) {
         dat <- p[["pipenv"]][["data"]]
         data.table::set(dat, i = match(step, dat[["step"]]), j = "state", value = state)
@@ -1658,15 +1691,15 @@ describe(".pip_outdate_executed", {
     it("outdates the steps downstream of the executed steps, except locked ones", {
         p <- test_pip()
         pip_lock(pip_view(p, step = "d"))
-        res <- .pip_outdate_executed(p, executed = c("a", "b"))
-        expect_identical(res, character())
+        res <- .pip_outdate_executed(p, nodes(p, c("a", "b")))
+        expect_identical(res, integer())
         expect_equal(unname(p[["state"]]), c("done", "done", "outdated", "done"))
     })
 
     it("also outdates executed steps after a step that ended stale", {
         p <- test_pip()
         setState(p, "a", "outdated")
-        .pip_outdate_executed(p, executed = c("a", "b"))
+        .pip_outdate_executed(p, nodes(p, c("a", "b")))
         expect_equal(
             unname(p[["state"]]),
             c("outdated", "outdated", "outdated", "outdated")
@@ -1676,13 +1709,13 @@ describe(".pip_outdate_executed", {
     it("leaves the steps after a failed executed step alone", {
         p <- test_pip()
         setState(p, "a", "failed")
-        .pip_outdate_executed(p, executed = c("a", "b", "c", "d"))
+        .pip_outdate_executed(p, nodes(p, c("a", "b", "c", "d")))
         expect_equal(unname(p[["state"]]), c("failed", "done", "done", "done"))
     })
 
     it("does nothing without executed steps", {
         p <- test_pip()
-        expect_invisible(.pip_outdate_executed(p, character()))
+        expect_invisible(.pip_outdate_executed(p, integer()))
         expect_true(all(p[["state"]] == "done"))
     })
 })
@@ -5915,11 +5948,13 @@ describe("pip_run", {
         pip_set_params(pip, list(xInit = 11))
         pip_run(pip, lgr = NULL)
         expect_equal(unname(pip[["step"]]), c("init", "f1", "f2a", "f2b", "f3"))
+        # The steps added during the run are not run, so f3 (replaced, but the
+        # same node), whose input f2b has not run, is not run either.
         expect_equal(
             unname(pip[["state"]]),
-            c("done", "done", "new", "done", "new")
+            c("done", "done", "new", "new", "new")
         )
-        expect_equal(unname(pip[["out"]]), list(11, 12, NULL, NULL + 22, NULL))
+        expect_equal(unname(pip[["out"]]), list(11, 12, NULL, NULL, NULL))
 
         pip_set_params(pip, list(xInit = 11))
         pip_run(pip, lgr = NULL)
@@ -5967,6 +6002,230 @@ describe("pip_run", {
         expect_equal(unname(pip[["step"]]), c("init", "f1", "f2a", "f2b", "f3"))
         expect_equal(unname(pip[["state"]]), rep("done", 5))
         expect_equal(unname(pip[["out"]]), list(11, 12, 33, 55, 85))
+    })
+
+    describe("tracks the steps by node id, if a step changes the pipeline", {
+        it("skips a later step that a step removed", {
+            p <- pip_new() |>
+                pip_add("a", \() "a") |>
+                pip_add("b", \() {
+                    pip_remove(.self, "z")
+                    "b"
+                }) |>
+                pip_add("c", \() "c") |>
+                pip_add("z", \() "z") |>
+                pip_add("d", \() "d")
+            logged <- character()
+            pip_run(p, lgr = \(level, msg) logged <<- c(logged, msg))
+            expect_equal(unname(p[["step"]]), c("a", "b", "c", "d"))
+            expect_equal(unname(p[["state"]]), rep("done", 4))
+            expect_equal(unname(p[["out"]]), list("a", "b", "c", "d"))
+            expect_true(any(grepl("Step 4/5 z - skipping removed step", logged)))
+        })
+
+        it("runs the steps after a step that removed a step before it", {
+            p <- pip_new() |>
+                pip_add("a", \() "a") |>
+                pip_add("x", \() "x") |>
+                pip_add("b", \() {
+                    pip_remove(.self, "x")
+                    "b"
+                }) |>
+                pip_add("c", \(y = ~a) paste("c from", y)) |>
+                pip_add("d", \() "d")
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), rep("done", 4))
+            expect_equal(p[["c", "out"]], "c from a")
+        })
+
+        it("runs a step once and the steps after it, if it inserts steps before it", {
+            nCalls <- 0L
+            p <- pip_new() |>
+                pip_add("a", \() "a") |>
+                pip_add("b", \() {
+                    nCalls <<- nCalls + 1L
+                    if (!"pre" %in% .self[["step"]]) {
+                        pip_add(.self, "pre", \() "pre", after = "a")
+                    }
+                    "b"
+                }) |>
+                pip_add("c", \() "c")
+            pip_run(p, lgr = NULL)
+            expect_equal(nCalls, 1L)
+            expect_equal(unname(p[["step"]]), c("a", "pre", "b", "c"))
+            # A step added during the run is not run
+            expect_equal(unname(p[["state"]]), c("done", "new", "done", "done"))
+        })
+
+        it("stores the output of a step that renamed itself", {
+            p <- pip_new() |>
+                pip_add("b", \() {
+                    pip_rename(.self, "b", "b2")
+                    "b out"
+                }) |>
+                pip_add("c", \(x = ~b) paste("c from", x))
+            expect_no_warning(pip_run(p, lgr = NULL))
+            expect_equal(unname(p[["state"]]), c("done", "done"))
+            expect_equal(p[["b2", "out"]], "b out")
+            expect_equal(p[["c", "out"]], "c from b out")
+        })
+
+        it("renames the key failures of a mapped step that renamed itself", {
+            p <- pip_new() |>
+                pip_add("parts", \() list(a = 1, b = -1), exec = "split") |>
+                pip_add("fit", \(x = ~parts) {
+                    if ("fit" %in% .self[["step"]]) {
+                        pip_rename(.self, "fit", "fit2")
+                    }
+                    if (x < 0) stop("negative") else x * 10
+                })
+            w <- expect_warning(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                class = "pipeflow_run_failed"
+            )
+            f <- p[["fit2", "out"]][["b"]]
+            expect_equal(f[["step"]], "fit2")
+            expect_equal(f[["failed_step"]], "fit2")
+            expect_named(w[["failed"]], "fit2")
+            expect_length(w[["skipped"]], 0L)
+        })
+
+        it("names the current step in the error of a renamed step", {
+            p <- pip_new() |>
+                pip_add("b", \() {
+                    pip_rename(.self, "b", "b2")
+                    stop("boom")
+                })
+            e <- expect_error(pip_run(p, lgr = NULL), class = "pipeflow_step_error")
+            expect_equal(e[["step"]], "b2")
+        })
+
+        it("marks a step that renamed itself and failed as failed", {
+            p <- pip_new() |>
+                pip_add("b", \() {
+                    pip_rename(.self, "b", "b2")
+                    stop("boom")
+                }) |>
+                pip_add("c", \(x = ~b) paste("c from", x))
+            w <- expect_warning(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                class = "pipeflow_run_failed"
+            )
+            expect_equal(unname(p[["state"]]), c("failed", "new"))
+            expect_equal(w[["skipped"]], "c")
+        })
+
+        it("skips a step that the progress callback removed", {
+            p <- pip_new() |>
+                pip_add("a", \() "a") |>
+                pip_add("z", \() "z") |>
+                pip_add("c", \() "c")
+            progress <- function(value, detail) {
+                if (detail == "a") {
+                    pip_remove(p, "z")
+                }
+                TRUE
+            }
+            pip_run(p, lgr = NULL, progress = progress)
+            expect_equal(unname(p[["step"]]), c("a", "c"))
+            expect_equal(unname(p[["state"]]), c("done", "done"))
+        })
+    })
+
+    describe("skips a step whose input has not run", {
+        # 'prep' inserts 'scale' before 'model' and points 'model' to it
+        test_pip <- function() {
+            pip_new("p") |>
+                pip_add("load", \() 1:3) |>
+                pip_add("prep", \(x = ~load) {
+                    pip_add(.self, "scale", \(x = ~prep) x / max(x), after = "prep")
+                    pip_replace(.self, "model", \(x = ~scale) sum(x))
+                    x * 10
+                }) |>
+                pip_add("model", \(x = ~prep) sum(x)) |>
+                pip_add("report", \(x = ~model) paste("sum", x))
+        }
+
+        it("does not run a step whose input was added during the run", {
+            p <- test_pip()
+            logs <- character(0)
+            lgr <- function(level, msg) logs <<- c(logs, msg)
+            pip_run(p, lgr = lgr)
+
+            expect_equal(
+                unname(p[["step"]]),
+                c("load", "prep", "scale", "model", "report")
+            )
+            expect_equal(
+                unname(p[["state"]]),
+                c("done", "done", "new", "new", "new")
+            )
+            expect_null(p[["out"]][["model"]])
+            expect_true(any(grepl(
+                "Step 3/4 model - skipping step, input 'x' has not run",
+                logs,
+                fixed = TRUE
+            )))
+            expect_true(any(grepl("(2 done, 2 skipped, 0 failed)", logs, fixed = TRUE)))
+        })
+
+        it("also skips the steps after it and runs them in the next run", {
+            p <- test_pip()
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]])[4:5], c("new", "new"))
+
+            pip_replace(p, "prep", \(x = ~load) x * 10)
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), rep("done", 5))
+            expect_equal(p[["out"]][["model"]], 2)
+            expect_equal(p[["out"]][["report"]], "sum 2")
+        })
+
+        it("runs a step whose input is a locked new step", {
+            p <- pip_new() |>
+                pip_add("a", \() 1) |>
+                pip_add("b", \(x = ~a) paste("b from", x))
+            pip_lock(p["a", ])
+            pip_run(p, lgr = NULL)
+            expect_equal(unname(p[["state"]]), c("new", "done"))
+            expect_equal(p[["out"]][["b"]], "b from ")
+        })
+
+        it("skips the dependents of a skipped step that is outdated", {
+            # In the second run, 's' replaces 'z', which already ran, so 'y' and 'w'
+            # are outdated and 'y' is skipped, as its input 'z' is new.
+            flag <- new.env()
+            flag[["replace"]] <- FALSE
+            p <- pip_new() |>
+                pip_add("z", \() 1) |>
+                pip_add("s", \() {
+                    if (flag[["replace"]]) {
+                        pip_replace(.self, "z", \() 2)
+                    }
+                    "s"
+                }) |>
+                pip_add("y", \(x = ~z) x + 10) |>
+                pip_add("w", \(x = ~y) x + 100)
+            pip_run(p, lgr = NULL)
+            flag[["replace"]] <- TRUE
+            suppressWarnings(pip_run(p, force = TRUE, lgr = NULL))
+
+            expect_equal(
+                unname(p[["state"]]),
+                c("new", "done", "outdated", "outdated")
+            )
+            expect_equal(p[["out"]][["w"]], 111)
+        })
+
+        it("passes a skipped failed input to a try() argument", {
+            p <- pip_new() |>
+                pip_add("a", \() stop("boom")) |>
+                pip_add("b", \(x = ~a) x) |>
+                pip_add("c", \(x = ~ try(b)) inherits(x, "pipeflow_failure"))
+            suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+            expect_equal(unname(p[["state"]]), c("failed", "new", "done"))
+            expect_true(p[["out"]][["c"]])
+        })
     })
 
     it("keeps .self bound to the same pipeline across a restart", {

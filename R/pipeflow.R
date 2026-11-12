@@ -515,6 +515,22 @@
     )
 }
 
+#' Get the current name of a step by its node id
+#'
+#' Node ids are never reused, so they identify a step also after its row moved or it
+#' was renamed.
+#'
+#' @param pipenv The `pipenv` of the pipeline.
+#' @param node Node id of the step.
+#' @param default Name to return if the step was removed.
+#' @return The name of the step, or `default`.
+#' @noRd
+.pip_node_step <- function(pipenv, node, default) {
+    dat <- pipenv[["data"]]
+    row <- match(node, dat[["nodeId"]])
+    if (is.na(row)) default else dat[["step"]][[row]]
+}
+
 #' Get the DAG nodes reachable from steps
 #'
 #' @param x A pipeflow pipeline or view. A view does not restrict the steps.
@@ -2202,9 +2218,9 @@
 #' duration in the step's row. Messages, warnings and errors of the step are passed to
 #' `lgr`. If the step fails, its state becomes `"failed"` and a `pipeflow_step_error` is
 #' signalled (see `.pip_step_error()`). The step may change the pipeline via `.self`, so
-#' its row is looked up again by name after the call. If the step was removed, nothing
-#' is stored. If it changed its own function, params or exec mode, its state becomes
-#' `"outdated"` instead of `"done"`.
+#' its row is looked up again by node id after the call. If the step was removed,
+#' nothing is stored. If it changed its own function, params or exec mode, its state
+#' becomes `"outdated"` instead of `"done"`.
 #'
 #' @param x A pipeflow pipeline or view. `.self` refers to `x`.
 #' @param i The row index of the step in the step table.
@@ -2250,6 +2266,9 @@
     args[names(failed)] <- failed
 
     step <- dat[["step"]][[i]]
+    # The step call may shift the rows or rename the step (via `.self`), so the step's
+    # row is looked up afterwards by its node id, which never changes.
+    node <- dat[["nodeId"]][[i]]
 
     # Provide `.self` (the full pipeline being run) to a step function that refers to
     # it, in an environment of its own for this call. That environment is released once
@@ -2319,13 +2338,12 @@
             )
         },
         error = function(e) {
-            # The step call may have shifted the rows (via `.self`), so the step's row
-            # is looked up by name. The condition is stored as the output, so that the
-            # output of a failed step always comes from its last attempt. The step still
-            # stays unmarked in `.steps_with_current_out`, which only marks outputs with
-            # failed keys, as only these are reused by a retry.
+            # The condition is stored as the output, so that the output of a failed
+            # step always comes from its last attempt. The step still stays unmarked in
+            # `.steps_with_current_out`, which only marks outputs with failed keys, as
+            # only these are reused by a retry.
             dat <- .pip_pipenv(x)[["data"]]
-            rowNow <- data.table::chmatch(step, dat[["step"]])
+            rowNow <- match(node, dat[["nodeId"]])
             if (!is.na(rowNow)) {
                 data.table::set(
                     dat,
@@ -2339,7 +2357,8 @@
                 )
             }
             lgr(level = "error", msg = e$message)
-            stop(.pip_step_error(step, parent = e))
+            stepNow <- if (is.na(rowNow)) step else dat[["step"]][[rowNow]]
+            stop(.pip_step_error(stepNow, parent = e))
         },
         warning = function(w) {
             lgr(level = "warn", msg = w$message)
@@ -2360,10 +2379,10 @@
     }
 
     # Re-read pipeline after execution to handle scenarios where the pipeline modified
-    # itself at runtime. Since we update by step name, if the current step does not
-    # exist anymore, we simply skip the update.
+    # itself at runtime. If the current step does not exist anymore, we simply skip the
+    # update.
     dat <- .pip_pipenv(x)[["data"]]
-    rowNow <- data.table::chmatch(step, dat[["step"]])
+    rowNow <- match(node, dat[["nodeId"]])
     stepStillExists <- !is.na(rowNow)
     # Whether the step changed its own function, params or exec mode during the attempt
     # (via `.self`), so that its output is stale already.
@@ -2374,6 +2393,11 @@
             !identical(dat[["exec"]][[rowNow]], exec)
         )
     if (stepStillExists && length(failedKeys) > 0L) {
+        # A step that renamed itself during the call stored failures under its old name
+        stepNow <- dat[["step"]][[rowNow]]
+        if (!identical(stepNow, step)) {
+            out <- .pip_rename_failures(out, from = step, to = stepNow)
+        }
         data.table::set(
             dat,
             i = rowNow,
@@ -2387,7 +2411,7 @@
         # Remember that the step's output now comes from this (current) attempt, unless
         # the step changed itself during the attempt.
         if (!stepHasChangedItself) {
-            currentOut[[step]] <- TRUE
+            currentOut[[stepNow]] <- TRUE
         }
     } else if (stepStillExists) {
         # A step that changed itself computed its output with the old definition, so it
@@ -2495,6 +2519,31 @@
     inputs
 }
 
+#' Get the inputs of a step that have not run
+#'
+#' An input that is still `"new"` has no output yet, for example a step that an earlier
+#' step added during the run. An input that was skipped in this run because one of its
+#' own inputs had not run only has a stale output. Inputs in `failures` are left out,
+#' as they are handled as failed inputs, and so are locked inputs, whose output is kept
+#' as it is.
+#'
+#' @param dat The step table.
+#' @param row The row of the step.
+#' @param failures Failures by step name, as collected by `pip_run()`.
+#' @param unrunNodes Node ids of the steps that `pip_run()` skipped in this run
+#' because an input had not run.
+#' @return Named character vector by argument of the input steps that have not run.
+#' @noRd
+.pip_unrun_inputs <- function(dat, row, failures, unrunNodes = integer()) {
+    depends <- dat[["depends"]][[row]]
+    depends <- depends[!depends %in% names(failures)]
+    rows <- data.table::chmatch(depends, dat[["step"]])
+    isNew <- dat[["state"]][rows] == .step_states[["new"]][["name"]]
+    isSkipped <- dat[["nodeId"]][rows] %in% unrunNodes
+    isUnrun <- (isNew | isSkipped) & !dat[["locked"]][rows]
+    depends[isUnrun]
+}
+
 #' Get the keys of a step to run again
 #'
 #' A step that failed for some keys and is still `"failed"` (its params and upstream
@@ -2592,17 +2641,17 @@
 #' failed run keeps `time`). The other steps of the run were skipped.
 #'
 #' @param pipenv The `pipenv` of the pipeline.
-#' @param steps Names of the steps of the run.
+#' @param nodes Node ids of the steps of the run.
 #' @param runStart,lastRun Start and end time of the run.
 #' @return The log message, as a single string.
 #' @noRd
-.pip_run_summary <- function(pipenv, steps, runStart, lastRun) {
+.pip_run_summary <- function(pipenv, nodes, runStart, lastRun) {
     dat <- pipenv[["data"]]
     timeStart <- dat[["time_start"]]
     timeEnd <- dat[["time"]]
     ran <- !is.na(timeStart) & timeStart >= runStart
     done <- ran & !is.na(timeEnd) & timeEnd >= timeStart
-    skipped <- !ran & dat[["step"]] %in% steps
+    skipped <- !ran & dat[["nodeId"]] %in% nodes
     sprintf(
         "Finished in %s (%d done, %d skipped, %d failed)",
         .formatted_duration(difftime(lastRun, runStart)),
@@ -2686,20 +2735,21 @@
 #' they succeed.
 #'
 #' @param x A pipeflow pipeline or view.
-#' @param executed Names of the executed steps.
-#' @return `character()`, invisibly, to reset the executed steps of the run. The step
+#' @param nodes Node ids of the executed steps. Steps removed since are ignored.
+#' @return `integer()`, invisibly, to reset the executed steps of the run. The step
 #' states are updated in place.
 #' @noRd
-.pip_outdate_executed <- function(x, executed) {
-    if (length(executed) == 0L) {
-        return(invisible(character()))
+.pip_outdate_executed <- function(x, nodes) {
+    if (length(nodes) == 0L) {
+        return(invisible(integer()))
     }
     dat <- .pip_pipenv(x)[["data"]]
+    executed <- dat[["step"]][dat[["nodeId"]] %in% nodes]
     locked <- dat[["step"]][dat[["locked"]]]
     .pip_outdate_downstream(x, steps = executed, keep = c(executed, locked))
     isStale <- dat[["step"]] %in% executed & dat[["state"]] %in% .stale_states
     .pip_outdate_downstream(x, steps = dat[["step"]][isStale], keep = locked)
-    invisible(character())
+    invisible(integer())
 }
 
 #' Set the run state and time of a finished run
@@ -4083,7 +4133,10 @@ pip_replace <- function(
 #'
 #' Only steps that have run before can become outdated: a step in state `"new"` stays
 #' `"new"` until it is executed. A "done" step is skipped unless `force = TRUE` was set.
-#' For all other states, the step will be re-executed in the next [pip_run()].
+#' For all other states, the step will be re-executed in the next [pip_run()]. A step
+#' whose input is still `"new"` (and not locked), for example a step that an earlier
+#' step added via `.self` during the run, is skipped and keeps its state, as the input
+#' has no output yet.
 #'
 #' ## Time stamps
 #'
@@ -4092,7 +4145,7 @@ pip_replace <- function(
 #' * `time_start`: the start of the step's last run. It is set each time the step is
 #'   run, also if the run fails. It is `NA` for a step that has not run since it was
 #'   added, replaced (see [pip_replace()]) or reset (see [pip_reset()]). A skipped step
-#'   (because it is `"done"`, locked or has a failed input) keeps its value.
+#'   (because it is `"done"`, locked or has a failed or new input) keeps its value.
 #' * `duration`: how long the step's last run took (a `difftime` in seconds), also if
 #'   the run failed. It is `NA` and kept in the same cases as `time_start`.
 #' * `time`: the time the step was added or replaced, or the end of its last successful
@@ -4296,12 +4349,19 @@ pip_run <- function(
     isView <- .is_pipeflow_view(x)
     pipenv <- .pip_pipenv(x)
     pipname <- x[["name"]]
+    # A step can change its own pipeline (via `.self`), which can shift the rows or
+    # rename steps. So the steps of the run are tracked by node id, which never changes,
+    # and each step's row is looked up just before it runs.
     dat <- pipenv[["data"]]
     rowsToRun <- .pip_run_rows(x)
+    nodesToRun <- stats::setNames(dat[["nodeId"]][rowsToRun], names(rowsToRun))
     stepsToRun <- dat[["step"]][rowsToRun]
 
-    # The executed steps, whose downstream steps are outdated at the end of the run
-    executedSteps <- character()
+    # The node ids of the executed steps, whose downstream steps are outdated at the end
+    # of the run
+    executedNodes <- integer()
+    # Steps skipped because an input had not run, whose dependents are skipped too
+    unrunNodes <- integer()
 
     # Failure objects of the steps that failed or were not run because an input failed,
     # by step name (only used with on_error = "continue").
@@ -4311,7 +4371,7 @@ pip_run <- function(
     # name. A restart runs them again, so they are only reported if the run didn't
     # restart.
     outdatedBefore <- list()
-    on.exit(.pip_outdate_executed(x, executedSteps))
+    on.exit(.pip_outdate_executed(x, executedNodes))
 
     isRestart <- pipenv[[".run_state"]] == .run_states[["restart"]][["name"]]
     runStart <- .pip_take_run_start(pipenv, isRestart)
@@ -4321,26 +4381,36 @@ pip_run <- function(
     halted <- FALSE
     tryCatch(
         {
-            for (i in seq_along(rowsToRun)) {
-                row <- rowsToRun[[i]]
-                step <- dat[["step"]][[row]]
+            for (i in seq_along(nodesToRun)) {
+                node <- nodesToRun[[i]]
                 # A progress callback that returns FALSE cancels the run before the
                 # step, like a halt.
-                if (!is.null(progress) && isFALSE(progress(value = i, detail = step))) {
-                    log_info("Aborting pipeline execution on cancel.")
-                    halted <- TRUE
-                    break
+                if (!is.null(progress)) {
+                    step <- .pip_node_step(pipenv, node, default = stepsToRun[[i]])
+                    if (isFALSE(progress(value = i, detail = step))) {
+                        log_info("Aborting pipeline execution on cancel.")
+                        halted <- TRUE
+                        break
+                    }
                 }
-                marker <- if (isView) sprintf(" [%s]", names(rowsToRun)[[i]]) else ""
-                msg <- sprintf("Step %i/%i%s %s", i, length(rowsToRun), marker, step)
+                dat <- pipenv[["data"]]
+                row <- match(node, dat[["nodeId"]])
+                step <- if (is.na(row)) stepsToRun[[i]] else dat[["step"]][[row]]
+                marker <- if (isView) sprintf(" [%s]", names(nodesToRun)[[i]]) else ""
+                msg <- sprintf("Step %i/%i%s %s", i, length(nodesToRun), marker, step)
+                if (is.na(row)) {
+                    log_info(sprintf("%s - skipping removed step", msg))
+                    next()
+                }
+                if (dat[["locked"]][[row]]) {
+                    log_info(sprintf("%s - skipping locked step", msg))
+                    next()
+                }
 
                 # Unless all failed inputs are referred to via try(), the step is not
-                # run and counts as failed for its own dependents. A locked step is not
-                # run anyway.
+                # run and counts as failed for its own dependents.
                 depends <- dat[["depends"]][[row]]
-                failedInputs <- if (!dat[["locked"]][[row]]) {
-                    .pip_failed_inputs(dat, row, failures)
-                }
+                failedInputs <- .pip_failed_inputs(dat, row, failures)
                 hasFailedInput <- length(failedInputs) > 0L
                 if (hasFailedInput) {
                     notAllowed <- setdiff(
@@ -4363,16 +4433,27 @@ pip_run <- function(
                     }
                 }
 
+                # A step whose input has not run (e.g. a step added during the run)
+                # would get no input, so it is not run and keeps its state.
+                unrunInputs <- .pip_unrun_inputs(dat, row, failures, unrunNodes)
+                if (length(unrunInputs) > 0L) {
+                    unrunNodes <- c(unrunNodes, node)
+                    log_info(sprintf(
+                        "%s - skipping step, input '%s' has not run",
+                        msg,
+                        names(unrunInputs)[[1L]]
+                    ))
+                    next()
+                }
+
                 # A done step is re-run if one of its inputs was executed in this run,
                 # since its output may then be stale.
-                inputsChanged <- hasFailedInput || any(depends %in% executedSteps)
+                inputRows <- data.table::chmatch(depends, dat[["step"]])
+                inputNodes <- dat[["nodeId"]][inputRows]
+                inputsChanged <- hasFailedInput || any(inputNodes %in% executedNodes)
                 isDone <- dat[["state"]][[row]] == "done"
                 if (isDone && !force && !inputsChanged) {
                     log_info(sprintf("%s - skipping done step", msg))
-                    next()
-                }
-                if (dat[["locked"]][[row]]) {
-                    log_info(sprintf("%s - skipping locked step", msg))
                     next()
                 }
 
@@ -4387,17 +4468,13 @@ pip_run <- function(
                     )
                 }
                 log_info(msg)
+                executedNodes <- c(executedNodes, node)
 
-                # Take the name from the current data, since a step that modified the
-                # pipeline may have shifted the rows.
-                execStep <- pipenv[["data"]][["step"]][[row]]
-                executedSteps <- c(executedSteps, execStep)
-
-                # The steps up to this one (by node id, which a rename keeps) and their
-                # states, to find the ones that the step outdates
+                # The steps up to this one and their states, to find the ones that the
+                # step outdates
                 upTo <- seq_len(row)
-                nodesBefore <- pipenv[["data"]][["nodeId"]][upTo]
-                statesBefore <- pipenv[["data"]][["state"]][upTo]
+                nodesBefore <- dat[["nodeId"]][upTo]
+                statesBefore <- dat[["state"]][upTo]
 
                 # An input that failed for some keys is not passed as failed, the step
                 # gets its output per key.
@@ -4429,12 +4506,15 @@ pip_run <- function(
 
                 # The failed step already holds its condition as its output (see
                 # .pip_run_row()). A step that failed for some keys keeps its output,
-                # which its dependents get per key (see .pip_execute_step_call()).
+                # which its dependents get per key (see .pip_execute_step_call()). The
+                # failure is recorded under the step's current name, which its
+                # dependents refer to, in case it renamed itself.
+                stepNow <- .pip_node_step(pipenv, node, default = step)
                 if (!is.null(cond)) {
-                    failures[[execStep]] <- .pip_failure(execStep, cond)
+                    failures[[stepNow]] <- .pip_failure(stepNow, cond)
                 }
                 if (length(.pip_failed_keys(out)) > 0L) {
-                    failures[[execStep]] <- out
+                    failures[[stepNow]] <- out
                 }
 
                 # Check for restart or stop signals
@@ -4444,7 +4524,7 @@ pip_run <- function(
                     # Mark what has run so far before handing the remaining work to a
                     # nested run, which then re-runs the outdated steps and does its own
                     # marking at the end.
-                    executedSteps <- .pip_outdate_executed(x, executedSteps)
+                    executedNodes <- .pip_outdate_executed(x, executedNodes)
                     pipenv[[".run_start"]] <- runStart
                     pip_run(
                         x,
@@ -4464,24 +4544,17 @@ pip_run <- function(
 
                 outdated <- .pip_outdated_before(
                     pipenv,
-                    node = nodesBefore[[row]],
+                    node = node,
                     nodes = nodesBefore,
                     states = statesBefore
                 )
                 if (length(outdated) > 0L) {
-                    # The step's current name, in case it renamed itself
-                    selfRow <- match(nodesBefore[[row]], pipenv[["data"]][["nodeId"]])
-                    stepNow <- if (is.na(selfRow)) {
-                        execStep
-                    } else {
-                        pipenv[["data"]][["step"]][[selfRow]]
-                    }
                     outdatedBefore[[stepNow]] <- outdated
                 }
             }
 
             lastRun <- Sys.time()
-            log_info(.pip_run_summary(pipenv, stepsToRun, runStart, lastRun))
+            log_info(.pip_run_summary(pipenv, nodesToRun, runStart, lastRun))
             runState <- if (halted) {
                 "halted"
             } else if (length(failures) > 0L) {
@@ -4505,7 +4578,7 @@ pip_run <- function(
     # Report the steps that outdated themselves or the steps before them, and the
     # failures of a continued run, once all states are final, so that condition handlers
     # already see them.
-    executedSteps <- .pip_outdate_executed(x, executedSteps)
+    executedNodes <- .pip_outdate_executed(x, executedNodes)
     .pip_run_report(lgr, pipname, outdatedBefore, failures)
 
     invisible(x)

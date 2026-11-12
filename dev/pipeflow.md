@@ -432,13 +432,16 @@ sequenceDiagram
     participant E as pipenv
 
     R->>R: .pip_assert_run_args, rows = .pip_run_rows (all, or view + upstream)
+    R->>R: nodes = node ids of the rows
     R->>E: .run_state = running
-    loop each row (topological order)
+    loop each node (topological order)
         R->>R: progress(i, step) returns FALSE? halted (break)
+        R->>E: row = current row of the node; removed? skip
+        R->>R: locked? skip
         R->>R: .pip_failed_inputs not all ~try()? record .pip_input_failure, skip
         R->>R: (input failed for some keys counts only if not exec auto)
+        R->>R: .pip_unrun_inputs (input still new, not locked)? skip
         R->>R: done, not force, no input re-run? skip
-        R->>R: locked? skip
         R->>RR: .pip_run_row(self = full pipeline, row, failed, onError)
         RR->>E: args = params + outputs of depends (+ failures)
         RR->>RR: .wrap_self(fun) if body uses .self
@@ -460,11 +463,11 @@ sequenceDiagram
         C->>F: step(arg = arg), args bound in an env (expressions inlined); sets .step_call and restores it on exit
         F-->>RR: value
         RR->>RR: .pip_annotate_output (pip_output_value)
-        RR->>E: re-read data by step name, set out/time/state = done/duration
+        RR->>E: re-read data by node id, set out/time/state = done/duration
         RR->>E: (failed keys: set out, state = failed, duration, keep time)
         R->>R: failed keys: record the output in failures
         alt step error
-            RR->>E: by step name: out = condition, state = failed, duration
+            RR->>E: by node id: out = condition, state = failed, duration
             RR-->>R: pipeflow_step_error
             R->>R: stop: re-signal / continue: record the failure
         end
@@ -481,10 +484,18 @@ Things to keep in mind:
 - **Self-modifying steps.** A step whose body mentions `.self` gets the full
   pipeline injected (`.wrap_self()`, released by `.release_self()`). It may
   call `.self$restart()` or `.self$halt()`, which set `.run_state`
-  (`.pip_restart()`, `.pip_halt()`). After the
-  call, `.pip_run_row()` and `pip_run()` re-read `pipenv$data` *by step
-  name*, because the rows may have moved. A step that changed its own
-  function, params or exec mode during the call gets state `outdated`
+  (`.pip_restart()`, `.pip_halt()`). Such a step (or a `progress`
+  callback) can move rows and rename steps, so `pip_run()` tracks the steps
+  of the run *by node id* and looks up each step's row in the current
+  `pipenv$data` just before it runs; a step removed in the meantime is
+  skipped, and steps added during the run are not run (they stay `new`).
+  Neither is a step whose input is still `new` and not locked
+  (`.pip_unrun_inputs()`), as it would get no input; it keeps its state, and
+  its dependents are skipped too (`unrunNodes`), so the next run computes
+  them. After
+  the call, `.pip_run_row()` finds the step's row by node id, and `pip_run()`
+  records a failure under the step's current name. A step that changed its
+  own function, params or exec mode during the call gets state `outdated`
   instead of `done` (`isChanged` in `.pip_run_row()`), because its output
   comes from the old definition. A later step can also change an executed
   step, which then is `outdated` (or `new`, if replaced). At the end of the
