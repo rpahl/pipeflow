@@ -1199,7 +1199,7 @@ describe(".pip_call_step", {
 
     it("keeps a failure light that a dependent gets via try()", {
         p <- pip_new("p") |>
-            pip_add("data", \(n = 1e6) numeric(n)) |>
+            pip_add("data", \(n = 1e5) numeric(n)) |>
             pip_add("fit", \(x = ~data) stop("boom")) |>
             pip_add("report", \(x = ~ try(fit)) x)
 
@@ -1218,7 +1218,7 @@ describe(".pip_call_step", {
         closureStep <- removeSource(\(y = ~total) \() y)
         environment(closureStep) <- globalenv()
         p <- pip_new("p") |>
-            pip_add("data", \(n = 1e6) numeric(n)) |>
+            pip_add("data", \(n = 1e5) numeric(n)) |>
             pip_add("total", \(x = ~data) sum(x)) |>
             pip_add("closure", closureStep)
 

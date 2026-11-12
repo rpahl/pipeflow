@@ -20,8 +20,8 @@ pip_run(
 \code{"error"}) and \code{msg}, which is called as \code{lgr(level = level, msg = msg)}. The default
 is the option \code{pipeflow.lgr} if set, otherwise \code{\link[=pipeflow_lgr]{pipeflow_lgr()}}, which can also be
 used to build custom loggers. To suppress logging, you can set \code{lgr = NULL}, or for
-all runs \code{options(pipeflow.lgr = function(level, msg) NULL)} (an option can't be
-\code{NULL}).}
+all runs \code{options(pipeflow.lgr = function(level, msg) NULL)}. Setting the option
+to \code{NULL} removes it, so that \code{\link[=pipeflow_lgr]{pipeflow_lgr()}} is used again.}
 
 \item{force}{Logical indicating if all steps should be forced to run, regardless of
 whether they are outdated or not.}

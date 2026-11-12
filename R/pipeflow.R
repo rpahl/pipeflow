@@ -1708,12 +1708,13 @@
     }
     # The parent is the namespace, not this frame: an argument that the step doesn't
     # force keeps the environment, and through the frames of the run the pipeline.
+    ns <- asNamespace("pipeflow")
     isLang <- vapply(args, is.language, logical(1))
-    env <- list2env(args[!isLang], parent = topenv())
+    env <- list2env(args[!isLang], parent = ns)
     # Symbols and calls are evaluated once more when used, as with do.call(), but in
     # the namespace, so that they don't see the step function or the other arguments
     for (name in names(args)[isLang]) {
-        do.call(delayedAssign, list(name, args[[name]], topenv(), env))
+        do.call(delayedAssign, list(name, args[[name]], ns, env))
     }
     assign(funName, fun, envir = env)
     callArgs <- sapply(names(args), as.name, simplify = FALSE)
@@ -3603,8 +3604,8 @@ pip_replace <- function(
 #' `"error"`) and `msg`, which is called as `lgr(level = level, msg = msg)`. The default
 #' is the option `pipeflow.lgr` if set, otherwise [pipeflow_lgr()], which can also be
 #' used to build custom loggers. To suppress logging, you can set `lgr = NULL`, or for
-#' all runs `options(pipeflow.lgr = function(level, msg) NULL)` (an option can't be
-#' `NULL`).
+#' all runs `options(pipeflow.lgr = function(level, msg) NULL)`. Setting the option
+#' to `NULL` removes it, so that [pipeflow_lgr()] is used again.
 #' @param force Logical indicating if all steps should be forced to run, regardless of
 #' whether they are outdated or not.
 #' @param progress Optional callback of the form `function(value, detail)` called before
