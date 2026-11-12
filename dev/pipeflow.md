@@ -276,7 +276,7 @@ flowchart LR
     run --> rr --> ex --> cs
     rr --> hooks
     run --> reach
-    run --> out
+    run -. ".pip_outdate_executed" .-> out
     view --> vr
     view --> wrap
     cln --> pcl --> dag
@@ -431,11 +431,11 @@ sequenceDiagram
     participant F as step fun
     participant E as pipenv
 
-    R->>R: rows = all, or view rows + upstream rows
+    R->>R: .pip_assert_run_args, rows = .pip_run_rows (all, or view + upstream)
     R->>E: .run_state = running
     loop each row (topological order)
         R->>R: progress(i, step) returns FALSE? halted (break)
-        R->>R: input failed and not ~try()? record .pip_failure, skip
+        R->>R: .pip_failed_inputs not all ~try()? record .pip_input_failure, skip
         R->>R: (input failed for some keys counts only if not exec auto)
         R->>R: done, not force, no input re-run? skip
         R->>R: locked? skip
@@ -471,9 +471,9 @@ sequenceDiagram
         R->>E: check .run_state for restart (re-run pip_run) / halted (break)
         R->>R: else record the steps it outdated: itself or before it (.pip_outdated_before)
     end
-    R->>R: on.exit: .pip_outdate_downstream(executed steps)
-    R->>E: .run_state = ready | halted | continued | failed
-    R-->>R: warn pipeflow_outdated_before (if recorded), pipeflow_run_failed (continued)
+    R->>R: on.exit: .pip_outdate_executed(executed steps)
+    R->>E: .pip_end_run: .run_state = ready | halted | continued | failed
+    R-->>R: .pip_run_report: warn pipeflow_outdated_before, pipeflow_run_failed
 ```
 
 Things to keep in mind:
@@ -488,10 +488,10 @@ Things to keep in mind:
   instead of `done` (`isChanged` in `.pip_run_row()`), because its output
   comes from the old definition. A later step can also change an executed
   step, which then is `outdated` (or `new`, if replaced). At the end of the
-  run (and before a restart), `pip_run()` outdates the steps after every
-  executed step in one of these two states, also the ones that ran with
-  its stale output. Failed steps are left out, as their dependents run
-  again once they succeed anyway. Unless the step halted the run,
+  run (and before a restart), `.pip_outdate_executed()` outdates the steps
+  after every executed step in one of these two states, also the ones that
+  ran with its stale output. Failed steps are left out, as their dependents
+  run again once they succeed anyway. Unless the step halted the run,
   `pip_run()` records which of itself and the steps before it that were
   `done` when it started the step left `outdated` or `new`
   (`.pip_outdated_before()`, by node id, so that a rename keeps them), as
@@ -501,11 +501,11 @@ Things to keep in mind:
 - **Restart.** `pip_run()` calls itself recursively and returns. The outer
   loop does not continue. It hands over the start of the run
   (`.run_start`), so that the last log line and `.last_run_duration` cover
-  the whole run. Its step
-  counts are derived from the step table at the end: a step ran in the run
-  if its `time_start` is not before the start of the run, and it succeeded
-  if its `time` is not before its `time_start` (a failed run keeps `time`;
-  the state is not used, as a later step may change it). The other steps
+  the whole run. Its step counts are derived from the step table at the end
+  (`.pip_run_summary()`): a step ran in the run if its `time_start` is not
+  before the start of the run, and it succeeded if its `time` is not before
+  its `time_start` (a failed run keeps `time`; the state is not used, as a
+  later step may change it). The other steps
   of the run were skipped.
 - **Outdating.** Steps downstream of executed steps, if they did not run
   themselves, become `outdated`. This happens on exit, after a restart and
@@ -606,14 +606,15 @@ stateDiagram-v2
   a failure object per whole-step failure and the partitioned output per
   step with failed keys; `.is_pipeflow_partitioned()` tells them apart.
   A step that is mapped (`exec = "auto"`) ignores an input with failed keys
-  in the failed-input check (it handles the keys itself); any other step
-  treats it as a failed input. Such an input is never passed via `failed =`,
-  the step reads the stored output.
+  in the failed-input check, as it handles the keys itself
+  (`.pip_failed_inputs()`); any other step treats it as a failed input.
+  Such an input is never passed via `failed =`, the step reads the stored
+  output.
 - **Retry of failed keys.** A step that is still `failed` at its turn has
   not been outdated (function, params, exec mode and upstream steps
   unchanged). If its output has failed keys, no input ran in this run
   (`inputsChanged`) and the run is not forced, `pip_run()` passes
-  `retry = TRUE` to `.pip_run_row()`,
+  `retry = TRUE` (`.pip_retry_keys()`) to `.pip_run_row()`,
   which hands the outputs of the other keys as `keep` to
   `.pip_execute_step_call()`: the key loop copies them instead of calling
   the function, and `.pip_annotate_output()` skips them (they were
