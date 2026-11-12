@@ -9121,6 +9121,66 @@ describe("pip_lock", {
         expect_true(p[["locked"]][[2]])
         expect_true(p[["locked"]][[3]])
     })
+
+    it("outdates the dependents of a step that is not done (#147)", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) if (x < 0) stop("boom") else x) |>
+            pip_add("b", \(x = ~a) x + 1) |>
+            pip_add("c", \(x = ~ try(b)) if (inherits(x, "error")) 0 else x)
+        pip_run(p)
+        pip_set_params(p, list(x = -1))
+        pip_run(p, on_error = "continue") |> suppressWarnings()
+        expect_equal(p[["c", "out"]], 0)
+        expect_equal(p[["c", "state"]], "done")
+
+        pip_lock(p["b"])
+        expect_equal(p[["b", "state"]], "outdated")
+        expect_equal(p[["c", "state"]], "outdated")
+
+        pip_run(p, on_error = "continue") |> suppressWarnings()
+        expect_equal(p[["c", "out"]], 2)
+    })
+
+    it("keeps the dependents of a done step and locked dependents as they are", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x + 1) |>
+            pip_add("c", \(x = ~b) x + 1)
+        pip_run(p)
+        pip_lock(p["a"])
+        expect_equal(unname(p[["state"]]), rep("done", 3))
+
+        pip_unlock(p)
+        pip_lock(p["c"])
+        pip_reset(p["b"])
+        pip_lock(p["b"])
+        expect_equal(unname(p[["state"]]), c("done", "new", "done"))
+    })
+
+    it("warns if a step locks a step before it that is not done", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) if (x < 0) stop("boom") else x) |>
+            pip_add("b", \(x = ~a) x + 1) |>
+            pip_add("c", \(x = ~ try(b)) if (inherits(x, "error")) 0 else x) |>
+            pip_add("d", \(y = 1) {
+                if (y == 2) {
+                    pip_lock(.self["b"])
+                }
+                y
+            })
+        pip_run(p, lgr = NULL)
+        pip_set_params(p, list(x = -1, y = 2))
+
+        w <- withCallingHandlers(
+            expect_warning(
+                pip_run(p, on_error = "continue", lgr = NULL),
+                class = "pipeflow_outdated_before"
+            ),
+            pipeflow_run_failed = \(w) invokeRestart("muffleWarning")
+        )
+        expect_equal(w[["steps"]], list(d = "c"))
+        expect_equal(p[["c", "state"]], "outdated")
+    })
 })
 
 

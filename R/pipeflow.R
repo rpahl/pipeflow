@@ -4816,6 +4816,11 @@ pip_untag <- function(x, tags = character()) {
 #' Locked steps are skipped during [pip_run()] and are protected against modification
 #' from [pip_set_params()], [pip_tag()] or [pip_untag()]. Calling [pip_unlock()] removes
 #' the lock again.
+#'
+#' @details A locked step passes its stored output to its dependents. Locking a step
+#' that is not `"done"` therefore marks its downstream steps (except locked ones) as
+#' `"outdated"`, as they may have run with a failure of the step instead (see section
+#' 'Continuing after errors' in [pip_run()]).
 #' @param x A pipeflow pip or view.
 #' @return The updated pipeline or view, invisibly.
 #' @examples
@@ -4855,7 +4860,17 @@ pip_lock <- function(x) {
         return(invisible(x))
     }
 
+    # A step that is not done may have passed a failure to its dependents (in a
+    # continued run), while a locked step passes its stored output. So its dependents
+    # are outdated, except for locked ones.
+    isNotDone <- !dat[["locked"]][rows] &
+        dat[["state"]][rows] != .step_states[["done"]][["name"]]
     data.table::set(dat, i = rows, j = "locked", value = TRUE)
+    .pip_outdate_downstream(
+        x,
+        steps = dat[["step"]][rows[isNotDone]],
+        keep = dat[["step"]][dat[["locked"]]]
+    )
     invisible(x)
 }
 
