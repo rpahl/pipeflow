@@ -19,7 +19,8 @@ pip_add(
 
 \item{step}{Unique step name, or a pipeline or view whose steps are copied into \code{x}
 (see 'Copying steps' below), in which case \code{fun}, \code{tags}, \code{params} and \code{exec} must
-not be given.}
+not be given. A step name must not start with \code{-}, which marks a relative reference
+like \code{~-1}.}
 
 \item{fun}{Function to execute for the step. Each function parameter needs a value: a
 default value in \code{fun} or an entry in \code{params}. Default values that are simple

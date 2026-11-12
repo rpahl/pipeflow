@@ -2519,7 +2519,8 @@ pip_new <- function(name = "pipe") {
 #' @param x A pipeflow pipeline object.
 #' @param step Unique step name, or a pipeline or view whose steps are copied into `x`
 #' (see 'Copying steps' below), in which case `fun`, `tags`, `params` and `exec` must
-#' not be given.
+#' not be given. A step name must not start with `-`, which marks a relative reference
+#' like `~-1`.
 #' @param fun Function to execute for the step. Each function parameter needs a value: a
 #' default value in `fun` or an entry in `params`. Default values that are simple
 #' constants are resolved immediately. Default values that are formulas like
@@ -2703,6 +2704,10 @@ pip_add <- function(
     }
     if (!nzchar(step)) {
         stop("step must be a non-empty string")
+    }
+    # A reference ~-1 counts back, so a step named "-1" could not be referred to
+    if (startsWith(step, "-")) {
+        stop("step must not start with '-', as in a relative reference like ~-1")
     }
     if (.pip_step_exists(x, step)) {
         stop("step '", step, "' already exists in the pipeline")
@@ -3360,7 +3365,7 @@ pip_remove <- function(x, step, force = FALSE) {
 #' Renames the selected step and updates dependency references in downstream steps.
 #' @param x A pipeflow pip or view
 #' @param from Existing step name
-#' @param to New step name
+#' @param to New step name, which must not start with `-` (see [pip_add()])
 #' @return The updated pipeline, invisibly.
 #' @examples
 #' p <- pip_new() |>
@@ -3403,6 +3408,9 @@ pip_rename <- function(x, from, to) {
     }
     if (!nzchar(to)) {
         stop("to must be a non-empty string")
+    }
+    if (startsWith(to, "-")) {
+        stop("to must not start with '-', as in a relative reference like ~-1")
     }
     # A name, e.g. of a step taken from `p[["step"]]` (a named vector), would fail the
     # identical() checks below and in .pip_rename_failures(), and `to` would carry it
