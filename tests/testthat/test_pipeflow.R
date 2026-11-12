@@ -1839,7 +1839,7 @@ describe("pip_add params overriding the defaults of fun", {
             "'y' has no default value - set one in fun or give a value in",
             fixed = TRUE
         )
-        expect_equal(length(p), 0L)
+        expect_length(p[["step"]], 0L)
     })
 
     it("does not evaluate the defaults that params override", {
@@ -1894,7 +1894,7 @@ describe("pip_add params overriding the defaults of fun", {
             pip_add(p, "s", f, params = list(x = 1, x = 2)),
             expected
         )
-        expect_equal(length(p), 0L)
+        expect_length(p[["step"]], 0L)
     })
 })
 
@@ -1904,6 +1904,13 @@ describe("pip_add", {
         p <- pip_new()
         expect_error(pip_add(p, ""), "step must be a non-empty string")
         expect_error(pip_add(p, c("a", "b")), "step must be a single string")
+    })
+
+    it("signals if step starts with '-', which marks a relative reference", {
+        p <- pip_new()
+        expect_error(pip_add(p, "-1", \() 1), "step must not start with '-'")
+        expect_error(pip_add(p, "-a", \() 1), "step must not start with '-'")
+        expect_length(p[["step"]], 0L)
     })
 
     it("signals if fun is not a function", {
@@ -1931,7 +1938,7 @@ describe("pip_add", {
             pip_add(p, "s1", fun = sum),
             "fun must not be a primitive function; wrap it"
         )
-        expect_equal(length(p), 0L)
+        expect_length(p[["step"]], 0L)
     })
 
     it("signals duplicate step names", {
@@ -2411,6 +2418,159 @@ describe("pip_add try() references", {
             "cannot reference unknown steps: 'try(a, silent = TRUE)'"
         )
         expect_equal(unname(p[["step"]]), "a")
+    })
+})
+
+
+describe("pip_add with a pipeline or view as step", {
+    src <- function() {
+        pip_new("src") |>
+            pip_add("data", \(x = 1) x) |>
+            pip_add("fit", \(x = ~data, k = 2) x * k, tags = "model") |>
+            pip_add("plot", \(x = ~ -1, y = ~ try(data)) x + y, exec = "plain")
+    }
+
+    it("copies the steps without their upstream steps", {
+        q <- src()
+        pip_set_params(q, list(k = 3))
+        pip_lock(q["fit"])
+        pip_run(q, lgr = NULL)
+        p <- pip_new() |> pip_add("data", \(x = 10) x)
+
+        pip_add(p, q[c("fit", "plot")])
+
+        edit_chain()(p)
+        expect_equal(unname(p[["step"]]), c("data", "fit", "plot"))
+        expect_identical(p[["fit", "fun"]], q[["fit", "fun"]])
+        expect_equal(p[["fit", "params"]][["k"]], 3)
+        expect_equal(p[["fit", "tags"]], "model")
+        expect_equal(p[["plot", "exec"]], "plain")
+        expect_equal(p[["state"]], c(data = "new", fit = "new", plot = "new"))
+        expect_false(p[["fit", "locked"]])
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["plot", "out"]], 40)
+    })
+
+    it("turns relative references into references by name and keeps try()", {
+        p <- pip_new() |>
+            pip_add("fit", \(x = 5) x) |>
+            pip_add("data", \(x = 10) x) |>
+            pip_add("last", \(x = 1) x)
+
+        pip_add(p, src()["plot"], after = "data")
+
+        expect_equal(unname(p[["step"]]), c("fit", "data", "plot", "last"))
+        expect_equal(p[["plot", "depends"]], c(x = "fit", y = "data"))
+        expect_equal(p[["plot", "params"]][["x"]], ~fit, ignore_attr = TRUE)
+        expect_equal(p[["plot", "params"]][["y"]], ~ try(data), ignore_attr = TRUE)
+    })
+
+    it("errors with a reference to a step that comes later", {
+        p <- pip_new() |>
+            pip_add("data", \(x = 10) x) |>
+            pip_add("fit", \(x = 5) x)
+
+        expect_error(
+            pip_add(p, src()["plot"], after = 0),
+            "come after the insertion point"
+        )
+    })
+
+    it("copies all steps of a pipeline, after a given step", {
+        p <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x)
+
+        pip_add(p, src(), after = "a")
+
+        edit_chain()(p)
+        expect_equal(unname(p[["step"]]), c("a", "data", "fit", "plot", "b"))
+        expect_equal(p[["fit", "depends"]], c(x = "data"))
+    })
+
+    it("changes nothing if a step can't be added", {
+        q <- pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("y", \(x = 1) x) |>
+            pip_add("b", \(x = ~y) x)
+        p <- pip_new() |> pip_add("other", \(x = 10) x)
+        before <- pip_internals(p)
+
+        expect_error(pip_add(p, q[c("a", "b")]), "unknown steps: 'y'")
+        expect_equal(pip_internals(p), before)
+
+        pip_add(p, pip_new() |> pip_add("b", \(x = 1) x))
+        before <- pip_internals(p)
+        expect_error(pip_add(p, q), "'b' already exists")
+        expect_equal(pip_internals(p), before)
+    })
+
+    it("does nothing for an empty view", {
+        p <- pip_new() |> pip_add("data", \(x = 10) x)
+        before <- pip_internals(p)
+
+        pip_add(p, src()[integer()])
+
+        expect_equal(pip_internals(p), before)
+    })
+
+    it("checks after also for an empty view", {
+        p <- pip_new() |> pip_add("data", \(x = 10) x)
+
+        expect_error(pip_add(p, src()[integer()], after = "nope"), "does not exist")
+        expect_error(pip_add(p, pip_new(), after = 2), "between 0 and 1")
+    })
+
+    it("warns once about param conflicts", {
+        q <- pip_new() |>
+            pip_add("s1", \(k = 2) k) |>
+            pip_add("s2", \(k = 2) k)
+        p <- pip_new() |> pip_add("data", \(k = 1) k)
+        withr::local_options(pipeflow.warn_param_conflicts = TRUE)
+        n <- 0
+
+        withCallingHandlers(
+            pip_add(p, q),
+            pipeflow_param_conflict = \(w) {
+                n <<- n + 1
+                invokeRestart("muffleWarning")
+            }
+        )
+
+        expect_equal(n, 1)
+    })
+
+    it("keeps formula values in a pipeline of an as.function() run", {
+        inner <- pip_new("inner") |>
+            pip_add("x", \() 1) |>
+            pip_add("s", \(model = NULL) model) |>
+            pip_add("snap", \(dummy = ~s) pip_clone(.self))
+        snap <- as.function(inner, out = "snap")(model = ~x)
+        p <- pip_new() |> pip_add("x", \() 2)
+
+        pip_add(p, snap["s"])
+
+        expect_equal(p[["depends"]][["s"]], character(0))
+        pip_run(p, lgr = NULL)
+        expect_equal(p[["s", "out"]], ~x)
+    })
+
+    it("rejects the arguments of a single step", {
+        p <- pip_new() |> pip_add("data", \(x = 10) x)
+
+        expect_error(
+            pip_add(p, src()["fit"], tags = "x"),
+            "must not be given when copying"
+        )
+        expect_error(
+            pip_add(p, src()["fit"], fun = identity),
+            "must not be given when copying"
+        )
+    })
+
+    it("rejects a view as the target", {
+        q <- src()
+        expect_error(pip_add(q["fit"], src()["plot"]), "not a view")
     })
 })
 
@@ -3807,6 +3967,8 @@ describe("pip_rename", {
         expect_error(pip_rename(p, "f1", c("a", "b")))
         expect_error(pip_rename(p, "f1", NA_character_))
         expect_error(pip_rename(p, "f1", ""))
+        expect_error(pip_rename(p, "f1", "-1"), "to must not start with '-'")
+        expect_equal(unname(p[["step"]]), c("f1", "f2", "f3"))
     })
 
     it("signals missing old step and name clashes", {

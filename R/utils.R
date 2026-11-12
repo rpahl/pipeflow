@@ -95,6 +95,23 @@ formula_set_ref <- function(x, step) {
     x
 }
 
+#' Point the step references of params to step names
+#'
+#' Used where steps are copied to another place, where a relative reference (`~-1`)
+#' would point to another step. A `try()` wrapper is kept (see `formula_set_ref()`).
+#'
+#' @param params Named list of the params of a step.
+#' @param depends Named character vector of the steps that the params refer to, as in
+#' the `depends` column.
+#' @return `params`, whose references name the steps in `depends`.
+#' @noRd
+.params_refs_by_name <- function(params, depends) {
+    for (arg in intersect(names(depends), names(params))) {
+        params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
+    }
+    params
+}
+
 #' Format a value in short form
 #'
 #' A language object or a short atomic vector is deparsed, any other value is shown as

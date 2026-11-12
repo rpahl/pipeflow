@@ -777,6 +777,12 @@
       #fn[`saveRDS(p, "p.rds")`, `p <- readRDS("p.rds")`][
         save and restore a pipeline with its outputs and states.
       ]
+      #fn[`pip_add(p, q["fit"])`][
+        copy steps into `p`, without their upstream steps.
+      ]
+      #fn[`pip_add(p, q["fit", view = FALSE])`][
+        the same, but with their upstream steps.
+      ]
     ]
 
     #section("Handle failures", vignette: "v05c-error-handling")[

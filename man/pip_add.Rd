@@ -17,7 +17,10 @@ pip_add(
 \arguments{
 \item{x}{A pipeflow pipeline object.}
 
-\item{step}{Unique step name.}
+\item{step}{Unique step name, or a pipeline or view whose steps are copied into \code{x}
+(see 'Copying steps' below), in which case \code{fun}, \code{tags}, \code{params} and \code{exec} must
+not be given. A step name must not start with \code{-}, which marks a relative reference
+like \code{~-1}.}
 
 \item{fun}{Function to execute for the step. Each function parameter needs a value: a
 default value in \code{fun} or an entry in \code{params}. Default values that are simple
@@ -79,6 +82,18 @@ position. Be aware that in contrast to adding a step at the end, inserting a ste
 the middle is a rather expensive operation as it requires re-wiring parts of the
 internal pipeline structure, especially if the new step is inserted at an early
 position.
+\subsection{Copying steps}{
+
+If an entire pipeline or view is provided as \code{step}, its steps are added in their
+order, with their functions, current params, tags and exec modes. Upstream steps of
+views are \emph{not} copied, which means that references (including relative references
+like \code{~-1}) are resolved (and must be valid) within \code{x}. If this blocks a step from
+being added (e.g., its name already exists in \code{x}, or it refers to a step not
+existing in \code{x}), \code{x} is left unchanged. Outputs and locks are not copied either. To
+copy a view \code{v} \emph{with} its upstream steps, use \code{pip_add(x, v[, view = FALSE])} (see
+\code{\link[=Extract.pipeflow]{[}}), to bind whole pipelines, \link[=rbind.pipeflow]{rbind()}.
+}
+
 \subsection{Params with the same name}{
 
 A param name is meant to have one value in the whole pipeline.Therefore,
@@ -158,6 +173,12 @@ p2  # "load", "clean", "fit" — inserted after "load"
 # after = 0 inserts the new step at the very beginning
 pip_add(p2, "preload", \(x = 1) x, after = 0)
 p2
+
+# --- Copy steps of another pipeline, without their upstream steps ---
+other <- pip_new("other-data") |> pip_add("load", \(x = 10) x)
+pip_add(other, p2["fit"]) # "fit" now refers to "load" of `other`
+pip_run(other)
+other[["fit", "out"]] # 11
 
 # --- Provide parameter values with 'params' ---
 # 'params' override the defaults of the function ...

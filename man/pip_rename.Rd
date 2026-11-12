@@ -11,7 +11,7 @@ pip_rename(x, from, to)
 
 \item{from}{Existing step name}
 
-\item{to}{New step name}
+\item{to}{New step name, which must not start with \code{-} (see \code{\link[=pip_add]{pip_add()}})}
 }
 \value{
 The updated pipeline, invisibly.

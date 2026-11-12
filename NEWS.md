@@ -1,3 +1,21 @@
+# pipeflow 0.5.0.9030
+
+## New features
+
+- `pip_add()` takes a pipeline or view as `step` and copies its steps, with
+  their functions, params, tags and exec modes, but without their upstream
+  steps: references are resolved by step name in the target pipeline, e.g.
+  `pip_add(p, q[c("fit", "plot")])` runs the analysis steps of `q` on the
+  data steps of `p`. If a step can't be added, the pipeline is left
+  unchanged.
+
+## Bug fixes
+
+- `pip_add()` and `pip_rename()` reject step names that start with `-`, such
+  as `"-1"`. A reference `~-1` to such a step was taken as a relative
+  reference, so a step could refer to the wrong step, e.g. after it was
+  renamed or copied.
+
 # pipeflow 0.5.0.9029
 
 ## Bug fixes
