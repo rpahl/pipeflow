@@ -2393,6 +2393,11 @@
             !identical(dat[["exec"]][[rowNow]], exec)
         )
     if (stepStillExists && length(failedKeys) > 0L) {
+        # A step that renamed itself during the call stored failures under its old name
+        stepNow <- dat[["step"]][[rowNow]]
+        if (!identical(stepNow, step)) {
+            out <- .pip_rename_failures(out, from = step, to = stepNow)
+        }
         data.table::set(
             dat,
             i = rowNow,
@@ -2406,7 +2411,7 @@
         # Remember that the step's output now comes from this (current) attempt, unless
         # the step changed itself during the attempt.
         if (!stepHasChangedItself) {
-            currentOut[[dat[["step"]][[rowNow]]]] <- TRUE
+            currentOut[[stepNow]] <- TRUE
         }
     } else if (stepStillExists) {
         # A step that changed itself computed its output with the old definition, so it

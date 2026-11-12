@@ -6070,6 +6070,26 @@ describe("pip_run", {
             expect_equal(p[["c", "out"]], "c from b out")
         })
 
+        it("renames the key failures of a mapped step that renamed itself", {
+            p <- pip_new() |>
+                pip_add("parts", \() list(a = 1, b = -1), exec = "split") |>
+                pip_add("fit", \(x = ~parts) {
+                    if ("fit" %in% .self[["step"]]) {
+                        pip_rename(.self, "fit", "fit2")
+                    }
+                    if (x < 0) stop("negative") else x * 10
+                })
+            w <- expect_warning(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                class = "pipeflow_run_failed"
+            )
+            f <- p[["fit2", "out"]][["b"]]
+            expect_equal(f[["step"]], "fit2")
+            expect_equal(f[["failed_step"]], "fit2")
+            expect_named(w[["failed"]], "fit2")
+            expect_length(w[["skipped"]], 0L)
+        })
+
         it("names the current step in the error of a renamed step", {
             p <- pip_new() |>
                 pip_add("b", \() {
