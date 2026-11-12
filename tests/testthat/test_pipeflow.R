@@ -4662,7 +4662,7 @@ describe("pip_replace", {
                 .self$replace("b", \(x = "x") x, keep_params = TRUE)
                 k
             })
-            expect_warning(pip_run(p, lgr = NULL), "'c' changed .* 'b'")
+            expect_warning(pip_run(p, lgr = NULL), "'c' outdated .* 'b'")
             expect_equal(p[["b", "params"]], list(x = "user"))
         })
 
@@ -5916,7 +5916,7 @@ describe("pip_run", {
                 })
 
             # The run maps 'fit' over the keys, so its output is stale
-            expect_warning(pip_run(p, lgr = NULL), "'fit' changed .* 'fit'")
+            expect_warning(pip_run(p, lgr = NULL), "'fit' outdated .* 'fit'")
             expect_equal(unname(p[["fit", "state"]]), "outdated")
             expect_equal(unclass(p[["fit", "out"]]), list(a = 1, b = 2))
 
@@ -5933,7 +5933,7 @@ describe("pip_run", {
                 }) |>
                 pip_add("b", \(x = ~a) x * 10)
 
-            expect_warning(pip_run(p, lgr = NULL), "'a' changed .* 'a'")
+            expect_warning(pip_run(p, lgr = NULL), "'a' outdated .* 'a'")
             expect_equal(unname(p[["state"]]), c("outdated", "outdated"))
             expect_equal(unname(p[["out"]]), list(1, 10))
 
@@ -5965,7 +5965,7 @@ describe("pip_run", {
                     k
                 })
 
-            expect_warning(pip_run(p, lgr = NULL), "'a' changed .* 'a'")
+            expect_warning(pip_run(p, lgr = NULL), "'a' outdated .* 'a'")
             expect_equal(unname(p[["a", "state"]]), "outdated")
             expect_equal(p[["a", "out"]], 1)
 
@@ -5988,7 +5988,7 @@ describe("pip_run", {
             # Only 'a' is named, not 'b', which is outdated by 'a'
             expect_warning(
                 pip_run(p, lgr = NULL),
-                "'c' changed itself or steps before it: 'a'\\."
+                "'c' outdated itself or steps before it: 'a'\\."
             )
             expect_equal(unname(p[["state"]]), rep("outdated", 3))
 
@@ -6007,7 +6007,7 @@ describe("pip_run", {
                     x * 10
                 })
 
-            expect_warning(pip_run(p, lgr = NULL), "'b' changed .* 'a'")
+            expect_warning(pip_run(p, lgr = NULL), "'b' outdated .* 'a'")
             expect_equal(unname(p[["state"]]), c("new", "outdated"))
 
             pip_run(p, lgr = NULL)
@@ -6030,7 +6030,7 @@ describe("pip_run", {
                 expect_warning(
                     pip_run(p, lgr = lgr),
                     paste0(
-                        "Step 'setup' changed itself or steps before it: 'unit'\\. ",
+                        "Step 'setup' outdated itself or steps before it: 'unit'\\. ",
                         "They and their downstream steps run again"
                     )
                 )
@@ -6129,6 +6129,40 @@ describe("pip_run", {
                 expect_equal(p[["c", "out"]], 2)
             })
 
+            it("names a step changed and renamed by its new name", {
+                p <- pip_new("p") |>
+                    pip_add("a", \(k = 1) k) |>
+                    pip_add("b", \(x = ~a) {
+                        pip_set_params(.self["a"], list(k = 2))
+                        pip_rename(.self, "a", "a2")
+                        x
+                    })
+
+                w <- expect_warning(
+                    pip_run(p, lgr = NULL),
+                    class = "pipeflow_outdated_before"
+                )
+                expect_equal(w[["steps"]], list(b = "a2"))
+            })
+
+            it("names the steps it outdated, not the ones it changed", {
+                # Setting the output of 'a' keeps it done, but outdates 'b'
+                p <- pip_new("p") |>
+                    pip_add("a", \(k = 1) k) |>
+                    pip_add("b", \(x = ~a) x) |>
+                    pip_add("c", \(m = 1) {
+                        .self[["a", "out"]] <- 42
+                        m
+                    })
+
+                w <- expect_warning(
+                    pip_run(p, lgr = NULL),
+                    "Step 'c' outdated itself or steps before it: 'b'\\."
+                )
+                expect_equal(w[["steps"]], list(c = "b"))
+                expect_equal(unname(p[["state"]]), c("done", "outdated", "done"))
+            })
+
             it("warns once at the end of the run, with a class and the steps", {
                 p <- pip_new("p") |>
                     pip_add("a", \(k = 1) k) |>
@@ -6146,7 +6180,7 @@ describe("pip_run", {
                 stateOfD <- NULL
                 withCallingHandlers(
                     pip_run(p, lgr = NULL),
-                    pipeflow_changed_before = function(w) {
+                    pipeflow_outdated_before = function(w) {
                         warnings[[length(warnings) + 1L]] <<- w
                         stateOfD <<- unname(p[["d", "state"]])
                         invokeRestart("muffleWarning")

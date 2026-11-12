@@ -2389,55 +2389,60 @@
     out
 }
 
-#' Find the steps that a step changed among itself and the done steps before it
+#' Find the steps that a step outdated among itself and the done steps before it
 #'
-#' A step that changes (via `.self`) itself or a done step before it in the pipeline
-#' outdates it and its downstream steps, so that the next run computes them again.
+#' A step that changes (via `.self`) itself or a step before it in the pipeline can
+#' leave itself or done steps before it `"outdated"` (or `"new"`), so that the next run
+#' computes them again. The steps are tracked by node id, which a rename keeps.
 #'
 #' @param pipenv The `pipenv` of the running pipeline.
-#' @param step Name of the step that ran.
-#' @param steps,states Names and states of the steps up to `step`, taken just before
-#' it ran.
-#' @return Names of the steps that `step` changed, without the steps that are only
-#' outdated because a step before them changed.
+#' @param node Node id of the step that ran.
+#' @param nodes,states Node ids and states of the steps up to the one that ran, taken
+#' just before it ran.
+#' @return Current names of the steps that the step outdated, without the steps that
+#' are only outdated through another step that it made stale (also one that was not
+#' done). Steps removed by the step are left out.
 #' @noRd
-.pip_changed_before <- function(pipenv, step, steps, states) {
+.pip_outdated_before <- function(pipenv, node, nodes, states) {
     dat <- pipenv[["data"]]
-    rows <- data.table::chmatch(steps, dat[["step"]])
+    rows <- match(nodes, dat[["nodeId"]])
     statesNow <- dat[["state"]][rows]
-    isSelf <- steps == step
-    isChanged <- statesNow %in% .stale_states & (statesNow != states | isSelf)
-    changed <- steps[isChanged]
-    if (length(changed) == 0L) {
+    isSelf <- nodes == node
+    # All steps that the step made stale, also those that were not done (e.g. failed)
+    isMadeStale <- statesNow %in% .stale_states & (statesNow != states | isSelf)
+    madeStale <- dat[["step"]][rows[isMadeStale]]
+    isDone <- states == .step_states[["done"]][["name"]]
+    isOutdated <- isMadeStale & (isSelf | isDone)
+    if (!any(isOutdated)) {
         return(character())
     }
     isRoot <- vapply(
-        dat[["depends"]][rows[isChanged]],
-        \(deps) !any(deps %in% changed),
+        dat[["depends"]][rows[isOutdated]],
+        \(deps) !any(deps %in% madeStale),
         logical(1)
     )
-    mayNotChange <- (states == .step_states[["done"]][["name"]] | isSelf)[isChanged]
-    changed[isRoot & mayNotChange]
+    dat[["step"]][rows[isOutdated]][isRoot]
 }
 
-#' Warning about steps that changed themselves or the steps before them
+#' Warning about steps that outdated themselves or the steps before them
 #'
-#' @param changed Named list: for each step that changed itself or steps before it, the
-#' names of the changed steps (see `.pip_changed_before()`).
-#' @return A condition of class `c("pipeflow_changed_before", "warning", "condition")`
-#' with the field `steps` (`changed`).
+#' @param outdated Named list: for each step (by its name at the end of the run) that
+#' outdated itself or steps before it, the names of these steps (see
+#' `.pip_outdated_before()`).
+#' @return A condition of class `c("pipeflow_outdated_before", "warning", "condition")`
+#' with the field `steps` (`outdated`).
 #' @noRd
-.pip_changed_before_warning <- function(changed) {
+.pip_outdated_before_warning <- function(outdated) {
     what <- vapply(
-        changed,
+        outdated,
         \(steps) toString(paste0("'", steps, "'")),
         character(1)
     )
     msg <- paste(
         paste0(
             "Step '",
-            names(changed),
-            "' changed itself or steps before it: ",
+            names(outdated),
+            "' outdated itself or steps before it: ",
             what,
             ".",
             collapse = " "
@@ -2447,8 +2452,8 @@
         "to run them again now."
     )
     structure(
-        class = c("pipeflow_changed_before", "warning", "condition"),
-        list(message = msg, call = NULL, steps = changed)
+        class = c("pipeflow_outdated_before", "warning", "condition"),
+        list(message = msg, call = NULL, steps = outdated)
     )
 }
 
@@ -2660,7 +2665,7 @@ pip_new <- function(name = "pipe") {
 #' A step that changes its own function, params or exec mode via `.self`, ends the run
 #' as `"outdated"`. The same is true for other steps changed via `.self`. As these
 #' steps and their downstream steps run again in the next run, [pip_run()] warns (class
-#' `pipeflow_changed_before`) if a step changes itself or a done step before it, unless
+#' `pipeflow_outdated_before`) if a step changes itself or a done step before it, unless
 #' the step halts the run or the run is restarted. Lastly, `.self` is only valid while
 #' the step runs and released once the step was returned. For this reason, a step that
 #' returns a function referring to `.self` fails with `object '.self' not found` when
@@ -4107,10 +4112,10 @@ pip_run <- function(
     # by step name (only used with on_error = "continue").
     failures <- list()
 
-    # The steps that a step changed among itself and the done steps before it, by step
+    # The steps that a step outdated among itself and the done steps before it, by step
     # name. A restart runs them again, so they are only reported if the run didn't
     # restart.
-    changedBefore <- list()
+    outdatedBefore <- list()
     outdate_downstream_of_executed <- function() {
         dat <- pipenv[["data"]]
         locked <- dat[["step"]][dat[["locked"]]]
@@ -4261,10 +4266,10 @@ pip_run <- function(
                 execStep <- pipenv[["data"]][["step"]][[row]]
                 executedSteps <- c(executedSteps, execStep)
 
-                # The steps up to this one and their states, to find the ones that the
-                # step changes
+                # The steps up to this one (by node id, which a rename keeps) and their
+                # states, to find the ones that the step outdates
                 upTo <- seq_len(row)
-                stepsBefore <- pipenv[["data"]][["step"]][upTo]
+                nodesBefore <- pipenv[["data"]][["nodeId"]][upTo]
                 statesBefore <- pipenv[["data"]][["state"]][upTo]
 
                 # Prepare the list of failed inputs for the current step. An input that
@@ -4335,14 +4340,21 @@ pip_run <- function(
                     halted <- TRUE
                     break
                 }
-                changed <- .pip_changed_before(
+                outdated <- .pip_outdated_before(
                     pipenv,
-                    step = execStep,
-                    steps = stepsBefore,
+                    node = nodesBefore[[row]],
+                    nodes = nodesBefore,
                     states = statesBefore
                 )
-                if (length(changed) > 0L) {
-                    changedBefore[[execStep]] <- changed
+                if (length(outdated) > 0L) {
+                    # The step's current name, in case it renamed itself
+                    selfRow <- match(nodesBefore[[row]], pipenv[["data"]][["nodeId"]])
+                    stepNow <- if (is.na(selfRow)) {
+                        execStep
+                    } else {
+                        pipenv[["data"]][["step"]][[selfRow]]
+                    }
+                    outdatedBefore[[stepNow]] <- outdated
                 }
             }
 
@@ -4388,14 +4400,14 @@ pip_run <- function(
         }
     )
 
-    # Report steps that changed themselves or the steps before them, and the failures of
+    # Report steps that outdated themselves or the steps before them, and the failures of
     # a continued run, once all states are final, so that condition handlers already
     # see them.
-    if (length(changedBefore) > 0L || length(failures) > 0L) {
+    if (length(outdatedBefore) > 0L || length(failures) > 0L) {
         outdate_downstream_of_executed()
     }
-    if (length(changedBefore) > 0L) {
-        w <- .pip_changed_before_warning(changedBefore)
+    if (length(outdatedBefore) > 0L) {
+        w <- .pip_outdated_before_warning(outdatedBefore)
         lgr(level = "warn", msg = conditionMessage(w))
         warning(w)
     }
