@@ -673,13 +673,7 @@ describe("random chains of edits", {
                 paste("copy", sel, "from a clone")
             },
             lock = function(steps) {
-                # A step that is not done may have passed a failure to its dependents,
-                # which they would not get from a locked step
-                isDone <- p[["state"]] == "done"
-                if (!any(isDone)) {
-                    return("no step to lock")
-                }
-                step <- sample(steps[isDone], 1)
+                step <- sample(steps, 1)
                 pip_lock(pip_view(p, step = step))
                 paste("lock", step)
             },

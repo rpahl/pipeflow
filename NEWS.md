@@ -1,3 +1,13 @@
+# pipeflow 0.5.0.9032
+
+## Bug fixes
+
+- `pip_lock()` on a step that is not done marks its downstream steps as
+  outdated (#147). After a run with `on_error = "continue"`, a step that
+  referred to it via `~try()` could have turned its failure into a value,
+  while the locked step now passes its stored output, so the next run
+  re-runs it.
+
 # pipeflow 0.5.0.9031
 
 ## New features

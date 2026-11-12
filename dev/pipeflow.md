@@ -371,7 +371,7 @@ which shows such conflicts.
 | Assign to several steps | `p[i, j] <- value` → `[<-.pipeflow` | Calls `[[<-` per row. If a row fails, the rows before it are undone (invariant 8). |
 | Copy steps | `p[i, ] <- q[i, ]` → `.pip_copy_from()` | Per row: rename, then `pip_replace()` (with the exec mode of the source, so that the copied state is not outdated again), then overwrite the runtime columns. If a row fails, the rows before it are undone (invariant 8). |
 | Reset steps | `pip_reset()` | Clears `out`, `time_start` and `duration` of the covered unlocked steps and makes them `new`. Outdates their downstream steps, except locked ones. |
-| Tag, lock | `pip_tag()`, `pip_lock()`, … | Plain column writes on the covered rows. |
+| Tag, lock | `pip_tag()`, `pip_lock()`, … | Plain column writes on the covered rows. `pip_lock()` also outdates the downstream steps (except locked ones) of newly locked steps that are not `done`, as these may have passed a failure to them. |
 | Annotate | `p[[s, j]] <-` for `state`, `time`, `time_start`, `duration`, `tags`, `locked` | Plain column writes. Outdate nothing. |
 
 `.pip_outdate_downstream(x, steps, keep)` is the one place that marks steps

@@ -21,6 +21,12 @@ Locked steps are skipped during \code{\link[=pip_run]{pip_run()}} and are protec
 from \code{\link[=pip_set_params]{pip_set_params()}}, \code{\link[=pip_tag]{pip_tag()}} or \code{\link[=pip_untag]{pip_untag()}}. Calling \code{\link[=pip_unlock]{pip_unlock()}} removes
 the lock again.
 }
+\details{
+A locked step passes its stored output to its dependents. Locking a step
+that is not \code{"done"} therefore marks its downstream steps (except locked ones) as
+\code{"outdated"}, as they may have run with a failure of the step instead (see section
+'Continuing after errors' in \code{\link[=pip_run]{pip_run()}}).
+}
 \examples{
 p <- pip_new() |>
   pip_add("x", \(x = 1) x) |>
