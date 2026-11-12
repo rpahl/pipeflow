@@ -86,9 +86,10 @@ The full list of invariants, with the functions that keep them, is in "Invariant
   shrink by reference but not grow. `pip_add()`, `pip_clone()` and `rbind()` reject
   views; `pip_remove()`, `pip_rename()` and `pip_replace()` edit through a view and gate
   the named step with `.pip_step_in_view()`.
-- **Steps can change their own pipeline** (via `.self`). After each step,
-  `.pip_run_row()` re-reads `pipenv$data` by step name, so never hold row indices
-  across a step call.
+- **Steps can change their own pipeline** (via `.self`), which can shift rows and
+  rename steps. `pip_run()` and `.pip_run_row()` track the steps of a run by node id
+  and look up their rows in the current `pipenv$data`, so never hold row indices or
+  step names across a step call.
 - **A new `pipenv` field that edits change** must be added to `.pip_snapshot()` and
   `.pip_restore()`, so a failed `[<-` changes nothing.
 - Don't edit the generated `R/RcppExports.R` and `src/RcppExports.cpp`; run
