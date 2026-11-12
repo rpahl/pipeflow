@@ -904,6 +904,36 @@ describe(".pip_first_failure", {
     })
 })
 
+describe(".pip_input_failure", {
+    boom <- simpleError("boom")
+
+    it("passes on the parent and the failed step of a failed input", {
+        cause <- .pip_failure("b", parent = boom, failedStep = "a")
+        f <- .pip_input_failure("c", input = "b", cause = cause)
+        expect_s3_class(f, "pipeflow_failure")
+        expect_equal(f[["step"]], "c")
+        expect_equal(f[["failed_step"]], "a")
+        expect_identical(f[["parent"]], boom)
+        expect_equal(
+            conditionMessage(f),
+            "step 'c' was not run: step 'a' failed: boom"
+        )
+    })
+
+    it("uses the first failure of an input with failed keys", {
+        other <- simpleError("other")
+        cause <- .as_pipeflow_partitioned(list(
+            k1 = 1,
+            k2 = .pip_failure("b", parent = other, failedStep = "a", key = "k2"),
+            k3 = .pip_failure("b", parent = boom, key = "k3")
+        ))
+        f <- .pip_input_failure("c", input = "b", cause = cause)
+        expect_equal(f[["failed_step"]], "b")
+        expect_identical(f[["parent"]], boom)
+        expect_false("key" %in% names(f))
+    })
+})
+
 describe(".pip_keys_mismatch", {
     prefix <- "partitioned arguments must share identical keys: "
 
@@ -1330,6 +1360,215 @@ describe(".pip_map_keys", {
     })
 })
 
+describe(".pip_assert_run_args", {
+    it("accepts valid arguments", {
+        expect_invisible(.pip_assert_run_args(TRUE, progress = NULL, map = NULL))
+        expect_null(.pip_assert_run_args(FALSE, progress = print, map = lapply))
+    })
+
+    it("signals invalid arguments", {
+        expect_error(
+            .pip_assert_run_args(c(TRUE, FALSE), NULL, NULL),
+            "force must be a single logical value"
+        )
+        expect_error(
+            .pip_assert_run_args("yes", NULL, NULL),
+            "force must be a single logical value"
+        )
+        expect_error(
+            .pip_assert_run_args(TRUE, progress = 1, map = NULL),
+            "progress must be a function"
+        )
+        expect_error(
+            .pip_assert_run_args(TRUE, progress = NULL, map = "lapply"),
+            "map must be a function"
+        )
+    })
+})
+
+describe(".pip_run_rows", {
+    p <- pip_new() |>
+        pip_add("a", \(x = 1) x) |>
+        pip_add("b", \(x = 2) x) |>
+        pip_add("c", \(x = ~a) x) |>
+        pip_add("d", \(x = ~c) x)
+
+    it("selects all rows of a pipeline, unnamed", {
+        expect_identical(.pip_run_rows(p), 1:4)
+    })
+
+    it("adds the upstream rows of a view in table order and names them", {
+        v <- pip_view(p, step = c("d", "b"))
+        expect_identical(
+            .pip_run_rows(v),
+            c(upstream = 1L, view = 2L, upstream = 3L, view = 4L)
+        )
+    })
+
+    it("selects no rows for an empty pipeline", {
+        expect_identical(.pip_run_rows(pip_new()), integer())
+    })
+})
+
+describe(".pip_take_run_start", {
+    handedOver <- as.POSIXct("2026-01-01 10:00:00", tz = "UTC")
+
+    it("returns the handed over start of a restart and removes it", {
+        pipenv <- new.env()
+        pipenv[[".run_start"]] <- handedOver
+        expect_identical(.pip_take_run_start(pipenv, isRestart = TRUE), handedOver)
+        expect_false(exists(".run_start", envir = pipenv, inherits = FALSE))
+    })
+
+    it("starts a new run now, also if a start was handed over", {
+        pipenv <- new.env()
+        pipenv[[".run_start"]] <- handedOver
+        before <- Sys.time()
+        runStart <- .pip_take_run_start(pipenv, isRestart = FALSE)
+        expect_gte(runStart, before)
+        expect_false(exists(".run_start", envir = pipenv, inherits = FALSE))
+    })
+
+    it("starts a restart now if no start was handed over", {
+        before <- Sys.time()
+        expect_gte(.pip_take_run_start(new.env(), isRestart = TRUE), before)
+    })
+})
+
+describe(".pip_failed_inputs", {
+    boom <- simpleError("boom")
+    failA <- .pip_failure("a", parent = boom)
+    partialB <- .as_pipeflow_partitioned(list(
+        k1 = 1,
+        k2 = .pip_failure("b", parent = boom, key = "k2")
+    ))
+    failures <- list(a = failA, b = partialB)
+    p <- pip_new() |>
+        pip_add("a", \(x = 1) x) |>
+        pip_add("b", \(x = 2) x) |>
+        pip_add("c", \(x = 3) x) |>
+        pip_add("mapped", \(x = ~a, y = ~b, z = ~c) x) |>
+        pip_add("plain", \(x = ~a, y = ~b, z = ~c) x, exec = "plain")
+    dat <- p[["pipenv"]][["data"]]
+
+    it("returns the failed inputs by argument", {
+        expect_identical(
+            .pip_failed_inputs(dat, 5L, failures),
+            list(x = failA, y = partialB)
+        )
+    })
+
+    it("leaves out inputs with failed keys for a mapped step", {
+        expect_identical(.pip_failed_inputs(dat, 4L, failures), list(x = failA))
+    })
+
+    it("is empty if no input failed", {
+        expect_length(.pip_failed_inputs(dat, 5L, list()), 0L)
+        expect_length(.pip_failed_inputs(dat, 1L, failures), 0L)
+    })
+})
+
+describe(".pip_retry_keys", {
+    boom <- simpleError("boom")
+    out <- .as_pipeflow_partitioned(list(
+        k1 = 1,
+        k2 = .pip_failure("s", parent = boom, key = "k2"),
+        k3 = .pip_failure("s", parent = boom, key = "k3")
+    ))
+    dat <- data.table::data.table(
+        step = c("s", "t"),
+        state = c("failed", "failed"),
+        out = list(out, boom)
+    )
+    currentOut <- new.env()
+    currentOut[["s"]] <- TRUE
+    currentOut[["t"]] <- TRUE
+
+    it("returns the failed keys of a failed step with a current output", {
+        expect_equal(.pip_retry_keys(dat, 1L, currentOut), c("k2", "k3"))
+    })
+
+    it("runs all keys if the output is not from the last attempt", {
+        expect_identical(.pip_retry_keys(dat, 1L, new.env()), character())
+        currentOut <- new.env()
+        currentOut[["s"]] <- FALSE
+        expect_identical(.pip_retry_keys(dat, 1L, currentOut), character())
+    })
+
+    it("runs all keys if the step is not failed or has no failed keys", {
+        notFailed <- data.table::copy(dat)
+        notFailed[["state"]] <- "outdated"
+        expect_identical(.pip_retry_keys(notFailed, 1L, currentOut), character())
+        expect_identical(.pip_retry_keys(dat, 2L, currentOut), character())
+    })
+})
+
+describe(".pip_run_summary", {
+    runStart <- as.POSIXct("2026-01-01 10:00:00", tz = "UTC")
+    at <- function(secs) runStart + secs
+    pipenv <- new.env()
+    pipenv[["data"]] <- data.table::data.table(
+        step = c("done", "failed", "skipped", "other", "new"),
+        time_start = c(at(0), at(1), at(-10), at(-10), NA),
+        time = c(at(1), at(-10), at(-9), at(-9), NA)
+    )
+
+    it("counts the done, skipped and failed steps of the run", {
+        expect_equal(
+            .pip_run_summary(
+                pipenv,
+                steps = c("done", "failed", "skipped", "new"),
+                runStart = runStart,
+                lastRun = at(2)
+            ),
+            "Finished in 2.000 s (1 done, 2 skipped, 1 failed)"
+        )
+    })
+
+    it("counts a step that ran in the run also if it is not in 'steps'", {
+        expect_equal(
+            .pip_run_summary(pipenv, "skipped", runStart, lastRun = at(2)),
+            "Finished in 2.000 s (1 done, 1 skipped, 1 failed)"
+        )
+    })
+})
+
+describe(".pip_run_report", {
+    logged <- NULL
+    lgr <- function(level, msg) logged <<- c(logged, level)
+    failures <- list(a = .pip_failure("a", parent = simpleError("boom")))
+
+    it("does nothing if nothing is to be reported", {
+        logged <<- NULL
+        expect_no_warning(.pip_run_report(lgr, "pipe", list(), list()))
+        expect_null(logged)
+    })
+
+    it("logs and signals the outdated steps first, then the failures", {
+        logged <<- NULL
+        classes <- list()
+        withCallingHandlers(
+            .pip_run_report(lgr, "pipe", list(b = "a"), failures),
+            warning = function(w) {
+                classes[[length(classes) + 1L]] <<- class(w)[[1L]]
+                invokeRestart("muffleWarning")
+            }
+        )
+        expect_equal(logged, c("warn", "warn"))
+        expect_equal(
+            unlist(classes),
+            c("pipeflow_outdated_before", "pipeflow_run_failed")
+        )
+    })
+
+    it("reports the failures alone", {
+        expect_warning(
+            .pip_run_report(lgr, "pipe", list(), failures),
+            class = "pipeflow_run_failed"
+        )
+    })
+})
+
 # -------------
 # State updates
 # -------------
@@ -1401,6 +1640,74 @@ describe(".pip_outdate_downstream", {
     })
 })
 
+
+describe(".pip_outdate_executed", {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = ~a) x) |>
+            pip_add("c", \(x = ~b) x) |>
+            pip_add("d", \(x = ~a) x) |>
+            pip_run(lgr = NULL)
+    }
+    setState <- function(p, step, state) {
+        dat <- p[["pipenv"]][["data"]]
+        data.table::set(dat, i = match(step, dat[["step"]]), j = "state", value = state)
+    }
+
+    it("outdates the steps downstream of the executed steps, except locked ones", {
+        p <- test_pip()
+        pip_lock(pip_view(p, step = "d"))
+        res <- .pip_outdate_executed(p, executed = c("a", "b"))
+        expect_identical(res, character())
+        expect_equal(unname(p[["state"]]), c("done", "done", "outdated", "done"))
+    })
+
+    it("also outdates executed steps after a step that ended stale", {
+        p <- test_pip()
+        setState(p, "a", "outdated")
+        .pip_outdate_executed(p, executed = c("a", "b"))
+        expect_equal(
+            unname(p[["state"]]),
+            c("outdated", "outdated", "outdated", "outdated")
+        )
+    })
+
+    it("leaves the steps after a failed executed step alone", {
+        p <- test_pip()
+        setState(p, "a", "failed")
+        .pip_outdate_executed(p, executed = c("a", "b", "c", "d"))
+        expect_equal(unname(p[["state"]]), c("failed", "done", "done", "done"))
+    })
+
+    it("does nothing without executed steps", {
+        p <- test_pip()
+        expect_invisible(.pip_outdate_executed(p, character()))
+        expect_true(all(p[["state"]] == "done"))
+    })
+})
+
+describe(".pip_end_run", {
+    it("sets the run state, the time and the duration of the last run", {
+        p <- pip_new()
+        pipenv <- p[["pipenv"]]
+        runStart <- as.POSIXct("2026-01-01 10:00:00", tz = "UTC")
+        expect_invisible(
+            .pip_end_run(pipenv, "continued", runStart, lastRun = runStart + 2)
+        )
+        expect_equal(pip_run_state(p), "continued")
+        expect_identical(pipenv[[".last_run"]], runStart + 2)
+        expect_equal(pipenv[[".last_run_duration"]], as.difftime(2, units = "secs"))
+    })
+
+    it("ends the run now by default", {
+        p <- pip_new()
+        before <- Sys.time()
+        .pip_end_run(p[["pipenv"]], "failed", runStart = before)
+        expect_equal(pip_run_state(p), "failed")
+        expect_gte(p[["pipenv"]][[".last_run"]], before)
+    })
+})
 
 # ======================================================================================
 # Exported API
