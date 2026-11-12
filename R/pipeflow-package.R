@@ -13,6 +13,12 @@
 .step_states[["outdated"]] <- c(name = "outdated", color = "#ffa040ff")
 .step_states[["failed"]] <- c(name = "failed", color = "#ff4c4cff")
 
+# States of a step that was changed (outdated) or replaced (new) after it ran
+.stale_states <- c(
+    .step_states[["outdated"]][["name"]],
+    .step_states[["new"]][["name"]]
+)
+
 # The step call that runs (see `.pip_call_step()`): the name of the step, and for a call
 # mapped over partitions its partition key and all keys (`NULL` for a single call). All
 # `NULL` outside of a run.

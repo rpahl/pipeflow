@@ -469,10 +469,11 @@ sequenceDiagram
             R->>R: stop: re-signal / continue: record the failure
         end
         R->>E: check .run_state for restart (re-run pip_run) / halted (break)
+        R->>R: else record the steps it outdated: itself or before it (.pip_outdated_before)
     end
     R->>R: on.exit: .pip_outdate_downstream(executed steps)
     R->>E: .run_state = ready | halted | continued | failed
-    R-->>R: continued: warn pipeflow_run_failed
+    R-->>R: warn pipeflow_outdated_before (if recorded), pipeflow_run_failed (continued)
 ```
 
 Things to keep in mind:
@@ -490,7 +491,13 @@ Things to keep in mind:
   run (and before a restart), `pip_run()` outdates the steps after every
   executed step in one of these two states, also the ones that ran with
   its stale output. Failed steps are left out, as their dependents run
-  again once they succeed anyway.
+  again once they succeed anyway. Unless the step halted the run,
+  `pip_run()` records which of itself and the steps before it that were
+  `done` when it started the step left `outdated` or `new`
+  (`.pip_outdated_before()`, by node id, so that a rename keeps them), as
+  the next run computes them again. At the end of the run, once the states
+  are final, it warns about them (`pipeflow_outdated_before`). A restart
+  drops the record, as the restarted run computes them again.
 - **Restart.** `pip_run()` calls itself recursively and returns. The outer
   loop does not continue. It hands over the start of the run
   (`.run_start`), so that the last log line and `.last_run_duration` cover
