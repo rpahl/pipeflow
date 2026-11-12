@@ -303,6 +303,32 @@ describe(".pip_select_rows", {
         expect_equal(select(p, -1), 2:4)
     })
 
+    it("warns if a selector is a column name that is also a variable", {
+        p <- test_pip()
+        step <- "s2"
+        expect_warning(
+            rows <- p[step][["step"]],
+            "'step' is a column of the step table"
+        )
+        expect_equal(unname(rows), c("s1", "s2", "s3", "s4"))
+
+        locked <- TRUE
+        expect_warning(p[locked], "'locked' is a column")
+        expect_warning(p[step, "out"], "'step' is a column")
+    })
+
+    it("doesn't warn for a column name without a variable, or a function", {
+        p <- test_pip()
+        expect_no_warning(p[locked])
+        expect_no_warning(p[step %in% "s1"])
+        locked <- \() TRUE
+        expect_no_warning(p[locked])
+        k <- function(p, locked = stop("lazy default")) p[locked]
+        expect_no_warning(k(p))
+        steps <- "s2"
+        expect_no_warning(p[steps])
+    })
+
     it("counts positions among the rows of a view", {
         v <- pip_view(test_pip(), step = c("s2", "s4"))
         expect_equal(select(v, 1), 2L)

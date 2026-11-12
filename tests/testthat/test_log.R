@@ -327,13 +327,35 @@ describe("pipeflow_lgr", {
 
     it("is the default logger of pip_run()", {
         expect_no_error(.assert_logger(pipeflow_lgr))
-        expect_identical(formals(pip_run)[["lgr"]], quote(pipeflow_lgr))
+        expect_identical(
+            formals(pip_run)[["lgr"]],
+            quote(getOption("pipeflow.lgr", default = pipeflow_lgr))
+        )
 
         p <- test_pip()
         expect_output(
             pip_run(p),
             paste0("info \\[", timePattern, "\\]: Starting run of pipeflow")
         )
+    })
+
+    it("is replaced as default logger by the option 'pipeflow.lgr'", {
+        msgs <- character()
+        collect <- function(level, msg) msgs <<- c(msgs, msg)
+        withr::local_options(pipeflow.lgr = collect)
+        p <- test_pip()
+
+        expect_silent(pip_run(p))
+        expect_match(msgs[[1]], "Starting run of pipeflow")
+
+        withr::local_options(pipeflow.lgr = function(level, msg) NULL)
+        expect_silent(pip_run(p, force = TRUE))
+    })
+
+    it("is used over the option 'pipeflow.lgr' when given", {
+        withr::local_options(pipeflow.lgr = function(level, msg) NULL)
+
+        expect_output(pip_run(test_pip(), lgr = pipeflow_lgr), "Starting run")
     })
 
     it("can be wrapped to add a prefix", {

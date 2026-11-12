@@ -1,3 +1,38 @@
+# pipeflow 0.5.0.9029
+
+## Bug fixes
+
+- A step function is now called by the step name with its arguments as
+  symbols, e.g. `fit(x = x)`, instead of with the values inlined in the
+  call. So an error raised in a step, and a `pipeflow_failure` that keeps it
+  as `parent`, no longer carries the inputs of the step in its call, which
+  could be megabytes of data. Tracebacks and error messages show the step
+  name. Also `match.call()` in a step function gives this call, so a step
+  function such as `lm` stores `fit(formula = formula, data = data)`, which
+  `update()` can't evaluate after the run. Params that are symbols or calls
+  are still put into the call as they are, so a step function that captures
+  them unevaluated, such as `subset()` with `subset = quote(v > 1)`, works as
+  before, and so do params named like dots, such as `..1`.
+- An output that keeps the frame of the step call, such as a function made in
+  the step, no longer keeps the pipeline through an argument that the step
+  didn't use.
+
+## New features
+
+- `[` warns if the selector is a column name that is also a variable of the
+  caller: with `step <- "load"`, `p[step]` selects all steps by the `step`
+  column, not the step `"load"`.
+- The option `pipeflow.lgr` sets the default logger of `pip_run()`, e.g.
+  `options(pipeflow.lgr = function(level, msg) NULL)` switches logging off
+  for all runs.
+
+## Documentation
+
+- `?pip_add` explains how outputs that keep an environment (functions,
+  ggplots) can keep the whole pipeline, and how to avoid it.
+- `?pip_view` says that a view covers only the selected steps, while running
+  it also runs their upstream steps.
+
 # pipeflow 0.5.0.9028
 
 ## Breaking changes

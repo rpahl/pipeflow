@@ -78,6 +78,10 @@ Boolean filters may reference the columns of the step table (\code{step}, \code{
 \verb{\%inrange\%} and \verb{\%notin\%}) are available in the filter without attaching
 \pkg{data.table}. \code{p[]} returns a copy of the pipeline.
 
+As the columns come first, a variable named like a column can't be used as a
+selector: with \code{step <- "load"}, \code{p[step]} selects all steps (by the \code{step} column),
+and \code{[} warns. Use another name, e.g. \code{p[steps]}, or \code{pip_view(p, step = step)}.
+
 Note that \code{tags} is a list column, so \verb{\%like\%} matches the pattern against the tags
 of each step converted to a single string, e.g. \code{"character(0)"} for a step without
 tags and \code{'c("io", "daily")'} for a step with two tags. A pattern can therefore also

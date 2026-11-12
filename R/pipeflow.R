@@ -1681,6 +1681,22 @@
 #' one of the caller on exit, also on error, so that a nested run (e.g. of an inner
 #' pipeline of a function made by `as.function.pipeflow()`) leaves it as it was.
 #'
+#' The function is called by name with its arguments as symbols, e.g. `b(x = x)` for
+#' step `b`, evaluated in an environment that binds them. So the call of an error
+#' raised in the step (and of a traceback) doesn't hold the inputs of the step, which
+#' a failure (see `.pip_failure()`) would otherwise carry along. As the call has
+#' symbols, `match.call()` in the step function gives e.g. `b(x = x)`, which can't be
+#' evaluated after the step returned.
+#'
+#' Arguments that are symbols or calls go into the call as they are, as with
+#' `do.call()`, so that a function that captures an argument unevaluated (such as
+#' [subset()]) gets the expression. They are evaluated when used, in the environment
+#' of the call, whose parent is the package namespace. Formulas are bound as symbols
+#' and evaluated once more when used, in the namespace. An argument named `...` or
+#' `..1` is bound with a dot prepended, as R takes these names as dots. The function is
+#' named after the step, with dots prepended if an argument or one of the expressions
+#' uses the name.
+#'
 #' @param fun The step function.
 #' @param args Named list of the arguments.
 #' @param step The name of the step.
@@ -1692,7 +1708,36 @@
     caller <- .pip_step_call()
     on.exit(list2env(caller, envir = .step_call), add = TRUE)
     list2env(list(step = step, key = key, keys = keys), envir = .step_call)
-    do.call(fun, args = args)
+
+    # Symbols and calls (but not formulas) go into the call as they are, as with
+    # do.call(), so that a step function that captures an argument unevaluated (e.g.
+    # subset()) gets the expression. The parent is the namespace, not this frame: an
+    # argument that the step doesn't force keeps the environment, and through the
+    # frames of the run the pipeline.
+    ns <- asNamespace("pipeflow")
+    isExpr <- vapply(
+        args,
+        \(arg) is.language(arg) && !inherits(arg, "formula"),
+        logical(1)
+    )
+    env <- new.env(parent = ns)
+    callArgs <- args
+    for (name in names(args)[!isExpr]) {
+        # R takes `...` and `..1` as dots, so they can't be bound under their name
+        isDots <- grepl("^(\\.\\.\\.|\\.\\.[0-9]+)$", name)
+        bindName <- if (isDots) paste0(".", name) else name
+        # Bound as a promise, so that a formula is evaluated once more when used, in
+        # the namespace (other values evaluate to themselves)
+        do.call(delayedAssign, list(bindName, args[[name]], ns, env))
+        callArgs[[name]] <- as.name(bindName)
+    }
+    funName <- step
+    exprNames <- unlist(lapply(args[isExpr], all.names))
+    while (funName %in% c(names(args), exprNames)) {
+        funName <- paste0(".", funName)
+    }
+    assign(funName, fun, envir = env)
+    eval(as.call(c(as.name(funName), callArgs)), envir = env)
 }
 
 #' Call a step function according to its exec mode
@@ -2418,6 +2463,13 @@ pip_new <- function(name = "pipe") {
 #' `.self` is only valid while the step runs and released once the step was returned.
 #' For this reason, a step that returns a function referring to `.self` fails with
 #' `object '.self' not found` when called later.
+#'
+#' ## Outputs that keep an environment
+#' An output that keeps the environment it was made in, such as a function or a ggplot
+#' made in the step, also keeps the environment of the step function. If that function
+#' was defined where the pipeline is (e.g. in a function that builds it), saving the
+#' output saves the whole pipeline too. Define step functions in a package or at top
+#' level, or return a form without an environment (e.g. an image instead of a ggplot).
 #'
 #' @return The updated pipeline, invisibly.
 #' @examples
@@ -3569,8 +3621,10 @@ pip_replace <- function(
 #' @param x A pipeflow pip or view
 #' @param lgr A logging function with the arguments `level` (`"info"`, `"warn"` or
 #' `"error"`) and `msg`, which is called as `lgr(level = level, msg = msg)`. The default
-#' is [pipeflow_lgr()], which can also be used to build custom loggers. To suppress
-#' logging, you can set `lgr = NULL`.
+#' is the option `pipeflow.lgr` if set, otherwise [pipeflow_lgr()], which can also be
+#' used to build custom loggers. To suppress logging, you can set `lgr = NULL`, or for
+#' all runs `options(pipeflow.lgr = function(level, msg) NULL)`. Setting the option
+#' to `NULL` removes it, so that [pipeflow_lgr()] is used again.
 #' @param force Logical indicating if all steps should be forced to run, regardless of
 #' whether they are outdated or not.
 #' @param progress Optional callback of the form `function(value, detail)` called before
@@ -3805,7 +3859,7 @@ pip_replace <- function(
 #' @export
 pip_run <- function(
     x,
-    lgr = pipeflow_lgr,
+    lgr = getOption("pipeflow.lgr", default = pipeflow_lgr),
     force = FALSE,
     progress = NULL,
     on_error = c("stop", "continue"),
@@ -4600,6 +4654,11 @@ pip_unlock <- function(x) {
 #' the underlying pipeline without copying it, so operations like [pip_run()] and
 #' [pip_set_params()] applied to a view work directly on the underlying pipeline, but
 #' are restricted to the steps defined by the view.
+#'
+#' A view covers only the selected steps, not their upstream steps, as does `p[i]` (see
+#' [`[`][Extract.pipeflow]). So [pip_reset()] or [pip_lock()] on a view leave the
+#' upstream steps alone. Running a view is different: [pip_run()] also runs the upstream
+#' steps that are not done (see section 'Running views' there).
 #'
 #' A view keeps covering its steps when steps are added, removed, renamed or replaced,
 #' also through the pipeline or another view. Removed steps drop out of the view, and

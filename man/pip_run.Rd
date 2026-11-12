@@ -6,7 +6,7 @@
 \usage{
 pip_run(
   x,
-  lgr = pipeflow_lgr,
+  lgr = getOption("pipeflow.lgr", default = pipeflow_lgr),
   force = FALSE,
   progress = NULL,
   on_error = c("stop", "continue"),
@@ -18,8 +18,10 @@ pip_run(
 
 \item{lgr}{A logging function with the arguments \code{level} (\code{"info"}, \code{"warn"} or
 \code{"error"}) and \code{msg}, which is called as \code{lgr(level = level, msg = msg)}. The default
-is \code{\link[=pipeflow_lgr]{pipeflow_lgr()}}, which can also be used to build custom loggers. To suppress
-logging, you can set \code{lgr = NULL}.}
+is the option \code{pipeflow.lgr} if set, otherwise \code{\link[=pipeflow_lgr]{pipeflow_lgr()}}, which can also be
+used to build custom loggers. To suppress logging, you can set \code{lgr = NULL}, or for
+all runs \code{options(pipeflow.lgr = function(level, msg) NULL)}. Setting the option
+to \code{NULL} removes it, so that \code{\link[=pipeflow_lgr]{pipeflow_lgr()}} is used again.}
 
 \item{force}{Logical indicating if all steps should be forced to run, regardless of
 whether they are outdated or not.}

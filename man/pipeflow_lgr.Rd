@@ -48,5 +48,5 @@ pip_run(p, lgr = quiet, force = TRUE)
 }
 \seealso{
 \code{\link[=pip_run]{pip_run()}} for how loggers are used and how to switch logging off with
-\code{lgr = NULL}.
+\code{lgr = NULL}. The option \code{pipeflow.lgr} sets another default logger for all runs.
 }

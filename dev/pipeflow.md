@@ -456,7 +456,7 @@ sequenceDiagram
         else plain / reduce / no partition
             X->>C: one call
         end
-        C->>F: do.call, sets .step_call and restores it on exit
+        C->>F: step(arg = arg), args bound in an env (expressions inlined); sets .step_call and restores it on exit
         F-->>RR: value
         RR->>RR: .pip_annotate_output (pip_output_value)
         RR->>E: re-read data by step name, set out/time/state = done/duration

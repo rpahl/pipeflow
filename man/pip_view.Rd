@@ -35,6 +35,11 @@ the underlying pipeline without copying it, so operations like \code{\link[=pip_
 are restricted to the steps defined by the view.
 }
 \details{
+A view covers only the selected steps, not their upstream steps, as does \code{p[i]} (see
+\code{\link[=Extract.pipeflow]{[}}). So \code{\link[=pip_reset]{pip_reset()}} or \code{\link[=pip_lock]{pip_lock()}} on a view leave the
+upstream steps alone. Running a view is different: \code{\link[=pip_run]{pip_run()}} also runs the upstream
+steps that are not done (see section 'Running views' there).
+
 A view keeps covering its steps when steps are added, removed, renamed or replaced,
 also through the pipeline or another view. Removed steps drop out of the view, and
 new steps are not added to it, even if they match the filters.

@@ -106,6 +106,15 @@ as \code{"outdated"}. The same is true for other steps changed via \code{.self}.
 For this reason, a step that returns a function referring to \code{.self} fails with
 \verb{object '.self' not found} when called later.
 }
+
+\subsection{Outputs that keep an environment}{
+
+An output that keeps the environment it was made in, such as a function or a ggplot
+made in the step, also keeps the environment of the step function. If that function
+was defined where the pipeline is (e.g. in a function that builds it), saving the
+output saves the whole pipeline too. Define step functions in a package or at top
+level, or return a form without an environment (e.g. an image instead of a ggplot).
+}
 }
 \examples{
 # --- Tags, and view filtering ---

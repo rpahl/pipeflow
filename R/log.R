@@ -46,7 +46,7 @@
 #' @param msg The message, a single string.
 #' @return `NULL`, invisibly.
 #' @seealso [pip_run()] for how loggers are used and how to switch logging off with
-#' `lgr = NULL`.
+#' `lgr = NULL`. The option `pipeflow.lgr` sets another default logger for all runs.
 #' @examples
 #' pipeflow_lgr("info", "Hello")
 #'
