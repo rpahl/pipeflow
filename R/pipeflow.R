@@ -515,20 +515,24 @@
     )
 }
 
-#' Get the current name of a step by its node id
+#' Get the current names of steps by their node ids
 #'
 #' Node ids are never reused, so they identify a step also after its row moved or it
 #' was renamed.
 #'
 #' @param pipenv The `pipenv` of the pipeline.
-#' @param node Node id of the step.
-#' @param default Name to return if the step was removed.
-#' @return The name of the step, or `default`.
+#' @param node Node ids of the steps (integer, or as character).
+#' @param default Names to return for the steps that were removed (recycled to the
+#' length of `node`).
+#' @return Character vector of the names of the steps, or of their `default`.
 #' @noRd
 .pip_node_step <- function(pipenv, node, default) {
     dat <- pipenv[["data"]]
-    row <- match(node, dat[["nodeId"]])
-    if (is.na(row)) default else dat[["step"]][[row]]
+    rows <- match(node, dat[["nodeId"]])
+    steps <- dat[["step"]][rows]
+    isRemoved <- is.na(rows)
+    steps[isRemoved] <- rep_len(default, length(steps))[isRemoved]
+    steps
 }
 
 #' Get the DAG nodes reachable from steps
@@ -1668,8 +1672,14 @@
         SIMPLIFY = FALSE
     )
 
-    failedSteps <- vapply(conds, \(f) f[["failed_step"]], FUN.VALUE = "")
-    isFailed <- isPartial | names(failures) == failedSteps
+    # A failure is the step's own if it names the step as the one that failed. This is
+    # read from the failure itself, as the step may have been renamed after it failed.
+    isOwn <- vapply(
+        conds,
+        \(f) identical(f[["step"]], f[["failed_step"]]),
+        FUN.VALUE = logical(1)
+    )
+    isFailed <- isPartial | isOwn
     failed <- lapply(conds[isFailed], \(f) f[["parent"]])
     skipped <- names(failures)[!isFailed]
 
@@ -2505,14 +2515,18 @@
 #'
 #' @param dat The step table.
 #' @param row The row of the step.
-#' @param failures Failure objects (or outputs with failed keys) by step name, as
-#' collected by `pip_run()`.
+#' @param failures Failure objects (or outputs with failed keys) by node id (as
+#' character), as collected by `pip_run()`.
 #' @return Named list by argument of the failures of the input steps.
 #' @noRd
 .pip_failed_inputs <- function(dat, row, failures) {
+    if (length(failures) == 0L) {
+        return(list())
+    }
     depends <- dat[["depends"]][[row]]
-    depends <- depends[depends %in% names(failures)]
-    inputs <- stats::setNames(failures[unname(depends)], names(depends))
+    nodes <- as.character(dat[["nodeId"]][data.table::chmatch(depends, dat[["step"]])])
+    isFailed <- nodes %in% names(failures)
+    inputs <- stats::setNames(failures[nodes[isFailed]], names(depends)[isFailed])
     if (dat[["exec"]][[row]] == "auto") {
         inputs <- Filter(Negate(.is_pipeflow_partitioned), inputs)
     }
@@ -2529,18 +2543,19 @@
 #'
 #' @param dat The step table.
 #' @param row The row of the step.
-#' @param failures Failures by step name, as collected by `pip_run()`.
+#' @param failures Failures by node id (as character), as collected by `pip_run()`.
 #' @param unrunNodes Node ids of the steps that `pip_run()` skipped in this run
 #' because an input had not run.
 #' @return Named character vector by argument of the input steps that have not run.
 #' @noRd
 .pip_unrun_inputs <- function(dat, row, failures, unrunNodes = integer()) {
     depends <- dat[["depends"]][[row]]
-    depends <- depends[!depends %in% names(failures)]
     rows <- data.table::chmatch(depends, dat[["step"]])
+    nodes <- dat[["nodeId"]][rows]
     isNew <- dat[["state"]][rows] == .step_states[["new"]][["name"]]
-    isSkipped <- dat[["nodeId"]][rows] %in% unrunNodes
-    isUnrun <- (isNew | isSkipped) & !dat[["locked"]][rows]
+    isSkipped <- nodes %in% unrunNodes
+    isFailed <- as.character(nodes) %in% names(failures)
+    isUnrun <- (isNew | isSkipped) & !dat[["locked"]][rows] & !isFailed
     depends[isUnrun]
 }
 
@@ -4364,7 +4379,8 @@ pip_run <- function(
     unrunNodes <- integer()
 
     # Failure objects of the steps that failed or were not run because an input failed,
-    # by step name (only used with on_error = "continue").
+    # by node id, as a step can rename the steps before it (only used with
+    # on_error = "continue"). They are named by step only at the end of the run.
     failures <- list()
 
     # The steps that a step outdated among itself and the done steps before it, by step
@@ -4383,6 +4399,7 @@ pip_run <- function(
         {
             for (i in seq_along(nodesToRun)) {
                 node <- nodesToRun[[i]]
+                key <- as.character(node)
                 # A progress callback that returns FALSE cancels the run before the
                 # step, like a halt.
                 if (!is.null(progress)) {
@@ -4419,7 +4436,7 @@ pip_run <- function(
                     )
                     if (length(notAllowed) > 0L) {
                         arg <- notAllowed[[1L]]
-                        failures[[step]] <- .pip_input_failure(
+                        failures[[key]] <- .pip_input_failure(
                             step,
                             input = depends[[arg]],
                             cause = failedInputs[[arg]]
@@ -4507,14 +4524,14 @@ pip_run <- function(
                 # The failed step already holds its condition as its output (see
                 # .pip_run_row()). A step that failed for some keys keeps its output,
                 # which its dependents get per key (see .pip_execute_step_call()). The
-                # failure is recorded under the step's current name, which its
-                # dependents refer to, in case it renamed itself.
+                # failure names the step by its current name, in case it renamed
+                # itself.
                 stepNow <- .pip_node_step(pipenv, node, default = step)
                 if (!is.null(cond)) {
-                    failures[[stepNow]] <- .pip_failure(stepNow, cond)
+                    failures[[key]] <- .pip_failure(stepNow, cond)
                 }
                 if (length(.pip_failed_keys(out)) > 0L) {
-                    failures[[stepNow]] <- out
+                    failures[[key]] <- out
                 }
 
                 # Check for restart or stop signals
@@ -4579,6 +4596,12 @@ pip_run <- function(
     # failures of a continued run, once all states are final, so that condition handlers
     # already see them.
     executedNodes <- .pip_outdate_executed(x, executedNodes)
+    # A removed step keeps its name from the start of the run
+    names(failures) <- .pip_node_step(
+        pipenv,
+        names(failures),
+        default = stepsToRun[match(names(failures), nodesToRun)]
+    )
     .pip_run_report(lgr, pipname, outdatedBefore, failures)
 
     invisible(x)

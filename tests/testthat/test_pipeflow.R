@@ -393,6 +393,27 @@ describe(".pip_steps_to_nodes", {
     })
 })
 
+describe(".pip_node_step", {
+    p <- pip_new() |>
+        pip_add("s1", \(x = 1) x) |>
+        pip_add("s2", \(x = ~s1) x)
+    pip_rename(p, "s1", "s1b")
+    pipenv <- p[["pipenv"]]
+
+    it("gets the current names of steps by node id, also given as character", {
+        expect_equal(.pip_node_step(pipenv, c(1L, 0L), default = "x"), c("s2", "s1b"))
+        expect_equal(.pip_node_step(pipenv, c("1", "0"), default = "x"), c("s2", "s1b"))
+    })
+
+    it("falls back to the default of a removed step", {
+        expect_equal(
+            .pip_node_step(pipenv, c(0L, 9L, 8L), default = c("a", "b", "c")),
+            c("s1b", "b", "c")
+        )
+        expect_equal(.pip_node_step(pipenv, 9L, default = "gone"), "gone")
+    })
+})
+
 describe(".pip_get_reachable_nodes", {
     # a -> b -> d, a -> c, e
     test_pip <- function() {
@@ -1442,7 +1463,6 @@ describe(".pip_failed_inputs", {
         k1 = 1,
         k2 = .pip_failure("b", parent = boom, key = "k2")
     ))
-    failures <- list(a = failA, b = partialB)
     p <- pip_new() |>
         pip_add("a", \(x = 1) x) |>
         pip_add("b", \(x = 2) x) |>
@@ -1450,6 +1470,8 @@ describe(".pip_failed_inputs", {
         pip_add("mapped", \(x = ~a, y = ~b, z = ~c) x) |>
         pip_add("plain", \(x = ~a, y = ~b, z = ~c) x, exec = "plain")
     dat <- p[["pipenv"]][["data"]]
+    failures <- list(failA, partialB)
+    names(failures) <- dat[["nodeId"]][1:2]
 
     it("returns the failed inputs by argument", {
         expect_identical(
@@ -1483,7 +1505,8 @@ describe(".pip_unrun_inputs", {
     })
 
     it("leaves out the inputs in the failures", {
-        failures <- list(b = .pip_failure("b", parent = simpleError("boom")))
+        failures <- list(.pip_failure("b", parent = simpleError("boom")))
+        names(failures) <- dat[["nodeId"]][[2L]]
         expect_length(.pip_unrun_inputs(dat, 4L, failures), 0L)
     })
 
@@ -6098,6 +6121,62 @@ describe("pip_run", {
                 })
             e <- expect_error(pip_run(p, lgr = NULL), class = "pipeflow_step_error")
             expect_equal(e[["step"]], "b2")
+        })
+
+        it("skips the dependents of a failed step that a later step renamed", {
+            p <- pip_new() |>
+                pip_add("a", \() stop("boom")) |>
+                pip_add("b", \() {
+                    pip_rename(.self, "a", "a2")
+                    "b"
+                }) |>
+                pip_add("c", \(x = ~a) class(x)[[1]])
+            w <- expect_warning(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                class = "pipeflow_run_failed"
+            )
+            expect_equal(unname(p[["state"]]), c("failed", "done", "new"))
+            expect_null(p[["c", "out"]])
+            expect_named(w[["failed"]], "a2")
+            expect_equal(w[["skipped"]], "c")
+        })
+
+        it("names the failed and skipped steps by their names at the end of the run", {
+            p <- pip_new() |>
+                pip_add("a", \() stop("boom")) |>
+                pip_add("b", \(x = ~a) x) |>
+                pip_add("c", \() {
+                    pip_rename(.self, "a", "a2")
+                    pip_rename(.self, "b", "b2")
+                    "c"
+                }) |>
+                pip_add("d", \(x = ~b) x)
+            w <- expect_warning(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                "'a2': boom\nSteps not run because an input failed: 'b2', 'd'$",
+                class = "pipeflow_run_failed"
+            )
+            expect_named(w[["failed"]], "a2")
+            expect_equal(w[["skipped"]], c("b2", "d"))
+        })
+
+        it("skips the plain dependents of a mapped step renamed after it failed", {
+            p <- pip_new() |>
+                pip_add("parts", \() list(a = 1, b = -1), exec = "split") |>
+                pip_add("fit", \(x = ~parts) if (x < 0) stop("negative") else x) |>
+                pip_add("rename", \() {
+                    pip_rename(.self, "fit", "fit2")
+                    "r"
+                }) |>
+                pip_add("all", \(x = ~fit) length(x), exec = "plain")
+            w <- expect_warning(
+                pip_run(p, lgr = NULL, on_error = "continue"),
+                class = "pipeflow_run_failed"
+            )
+            expect_named(w[["failed"]], "fit2")
+            expect_equal(w[["keys"]], list(fit2 = "b"))
+            expect_equal(w[["skipped"]], "all")
+            expect_equal(p[["all", "state"]], "new")
         })
 
         it("marks a step that renamed itself and failed as failed", {

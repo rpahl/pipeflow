@@ -1,3 +1,11 @@
+# pipeflow 0.5.0.9034
+
+## Bug fixes
+
+- `pip_run()` keeps track of the failures of a run by node id, so a step that
+  renames an earlier failed step via `.self` no longer makes the run run its
+  dependents with the failure as input (#160).
+
 # pipeflow 0.5.0.9033
 
 ## Bug fixes

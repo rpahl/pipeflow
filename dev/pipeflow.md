@@ -494,7 +494,7 @@ Things to keep in mind:
   its dependents are skipped too (`unrunNodes`), so the next run computes
   them. After
   the call, `.pip_run_row()` finds the step's row by node id, and `pip_run()`
-  records a failure under the step's current name. A step that changed its
+  records a failure by node id. A step that changed its
   own function, params or exec mode during the call gets state `outdated`
   instead of `done` (`isChanged` in `.pip_run_row()`), because its output
   comes from the old definition. A later step can also change an executed
@@ -613,9 +613,15 @@ stateDiagram-v2
   `.pip_annotate_output()` leaves failed keys alone. `.pip_run_row()` then
   stores the output with state `failed` and keeps `time` (it marks the last
   successful run).
-- **Bookkeeping in `pip_run()`.** `failures` holds, by step and in run order,
+- **Bookkeeping in `pip_run()`.** `failures` holds, by node id (as
+  character, since a step can rename the steps before it) and in run order,
   a failure object per whole-step failure and the partitioned output per
-  step with failed keys; `.is_pipeflow_partitioned()` tells them apart.
+  step with failed keys; `.is_pipeflow_partitioned()` tells them apart. At
+  the end of the run, they are named by their current step names (a removed
+  step keeps its name from the start of the run) for `.pip_run_report()`.
+  The step names inside the failure objects are not renamed along, so
+  `.pip_run_failed_warning()` tells a step's own failure from a skipped
+  step by the failure itself (`step` is `failed_step`).
   A step that is mapped (`exec = "auto"`) ignores an input with failed keys
   in the failed-input check, as it handles the keys itself
   (`.pip_failed_inputs()`); any other step treats it as a failed input.
