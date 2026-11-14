@@ -30,6 +30,15 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
 
+      # The formatting, including the indentation, is checked by air, not lintr
+      # (lintr's indentation_linter takes minutes on the large test files)
+      - uses: posit-dev/setup-air@482cb5912394878ab5a63b75db0f9d19cc6df5ba  # v1
+        with:
+          version: "0.13.0"
+
+      - name: Check formatting (air)
+        run: air format --check .
+
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.9
         with:
           r-version: renv          # R version from renv.lock
