@@ -18,7 +18,7 @@ env:
 
 jobs:
   lint:
-    name: Lint (air, lintr)
+    name: Lint (lintr)
     # Not ubuntu-latest: renv.lock pins the P3M binaries for Ubuntu 24.04
     # (noble), which don't load on newer Ubuntu releases
     runs-on: ubuntu-24.04
