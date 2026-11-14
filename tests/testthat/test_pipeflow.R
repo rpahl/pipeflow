@@ -160,6 +160,43 @@ describe(".pip_clone", {
 })
 
 # -------
+# Asserts
+# -------
+
+describe(".assert_step_name", {
+    it("passes a non-empty string", {
+        expect_invisible(.assert_step_name("a"))
+        expect_equal(.assert_step_name("a"), "a")
+    })
+
+    it("names the argument in the error", {
+        expect_error(.assert_step_name(1, arg = "to"), "to must be a single string")
+        expect_error(.assert_step_name(c("a", "b")), "step must be a single string")
+        expect_error(.assert_step_name(NA_character_), "step must not be NA")
+        expect_error(.assert_step_name(""), "step must be a non-empty string")
+    })
+})
+
+describe(".assert_step_in_view", {
+    p <- pip_new() |>
+        pip_add("a", \(x = 1) x) |>
+        pip_add("b", \(x = 2) x)
+
+    it("passes a step of the pipeline or view", {
+        expect_invisible(.assert_step_in_view(p, "a"))
+        expect_equal(.assert_step_in_view(pip_view(p, step = "b"), "b"), "b")
+    })
+
+    it("signals an unknown step and a step outside of the view", {
+        expect_error(.assert_step_in_view(p, "zz"), "step 'zz' does not exist")
+        expect_error(
+            .assert_step_in_view(pip_view(p, step = "b"), "a"),
+            "step 'a' is not part of the view"
+        )
+    })
+})
+
+# -------
 # Wrapper
 # -------
 
@@ -648,6 +685,71 @@ describe(".extract_depends", {
 # -----------------
 # Pipeline addition
 # -----------------
+
+describe(".pip_step_refs", {
+    test_pip <- function() {
+        pip_new() |>
+            pip_add("a", \(x = 1) x) |>
+            pip_add("b", \(x = 2) x) |>
+            pip_add("c", \(x = 3) x)
+    }
+
+    it("gets the references and their nodes", {
+        p <- test_pip()
+        nodes <- unlist(.pip_steps_to_nodes(p, c("a", "b", "c")))
+        params <- list(x = ~c, y = ~a, z = 1)
+
+        refs <- .pip_step_refs(p, "new", params = params, pos = 3L)
+        expect_equal(refs[["depends"]], c(x = "c", y = "a"))
+        expect_equal(refs[["nodes"]], unname(nodes[c("c", "a")]))
+
+        refs <- .pip_step_refs(p, "new", params = list(x = ~ -1), pos = 2L)
+        expect_equal(refs[["depends"]], c(x = "b"))
+
+        refs <- .pip_step_refs(p, "new", params = list(z = 1), pos = 0L)
+        expect_equal(refs, list(depends = character(), nodes = integer()))
+    })
+
+    it("signals references to later steps before unknown ones", {
+        p <- test_pip()
+        params <- list(x = ~a, y = ~zz, z = ~c)
+        expect_error(
+            .pip_step_refs(p, "s", params = params, pos = 1L),
+            paste(
+                "while adding step 's' - cannot reference steps that come after",
+                "the insertion point: 'c'"
+            ),
+            fixed = TRUE
+        )
+        expect_error(
+            .pip_step_refs(p, "s", params = list(x = ~a), pos = 0L),
+            "come after the insertion point: 'a'",
+            fixed = TRUE
+        )
+        expect_error(
+            .pip_step_refs(p, "s", params = params, pos = 3L),
+            "while adding step 's' - cannot reference unknown steps: 'zz'",
+            fixed = TRUE
+        )
+    })
+
+    it("treats a reference to the replaced step itself as unknown", {
+        p <- test_pip()
+        expect_error(
+            .pip_step_refs(p, "b", params = list(x = ~c), pos = 1L, replace = TRUE),
+            paste(
+                "while replacing step 'b' - cannot reference steps that come after",
+                "the replaced step: 'c'"
+            ),
+            fixed = TRUE
+        )
+        expect_error(
+            .pip_step_refs(p, "b", params = list(x = ~b), pos = 1L, replace = TRUE),
+            "while replacing step 'b' - cannot reference unknown steps: 'b'",
+            fixed = TRUE
+        )
+    })
+})
 
 describe(".pip_warn_param_conflicts", {
     local_conflict_warnings <- function(envir = parent.frame()) {
@@ -4382,6 +4484,7 @@ describe("pip_remove", {
             "step must be a single string"
         )
         expect_error(pip_remove(p, NA_character_), "step must not be NA")
+        expect_error(pip_remove(p, ""), "step must be a non-empty string")
         expect_error(pip_remove(p, "unknown"), "step 'unknown' does not exist")
         expect_error(
             pip_remove(p, "f1", force = NA),

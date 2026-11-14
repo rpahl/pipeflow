@@ -169,8 +169,8 @@ done hold the outputs of a run from scratch), and `test_edit_chains.R`
 checks them after each edit of long chains of edits, some of them random:
 
 1. **Row order is a topological order.** A step may only refer to steps in
-   earlier rows. `.pip_insert()`, `pip_replace()`,
-   `.pip_check_bind_order()` and `.pip_bind()` enforce this. `pip_run()`
+   earlier rows. `.pip_step_refs()` (for `.pip_append()`,
+   `.pip_insert()` and `pip_replace()`), `.pip_check_bind_order()` and `.pip_bind()` enforce this. `pip_run()`
    relies on it: it simply loops over the rows.
 2. **The `nodeId` column, `.steps_to_nodes` and the DAG agree.** Every
    function that adds, removes or renames a step updates all three.
@@ -230,6 +230,7 @@ flowchart LR
 
     subgraph Build["Build & edit"]
         app[".pip_append / .pip_insert"]
+        chk[".assert_step_fun<br/>.pip_step_refs<br/>.assert_step_in_view"]
         par[".extract_fun_params<br/>.extract_depends<br/>.new_step"]
         bnd[".pip_bind"]
         sp[".pip_set_params"]
@@ -264,12 +265,17 @@ flowchart LR
     new --> dnew
     add --> app --> par
     app --> dag
+    add --> chk
+    app --> chk
+    rep --> chk
+    rem --> chk
+    ren --> chk
     rep --> par
     rep --> out
     rep --> dag
     rem --> reach
     rem --> dag
-    ren -. "formula_set_ref, .fun_rename" .-> par
+    ren -. ".params_refs_by_name, .fun_rename" .-> par
     set --> sp --> br --> dag
     sp --> out --> reach --> dag
     rbd --> bnd --> cln
@@ -326,8 +332,7 @@ sequenceDiagram
     P-->>I: error for params that are no formals (unless fun has ...)
     I->>D: formula refs -> step names (resolves ~-1)
     D-->>I: depends (named chr: arg -> step)
-    I->>I: refs only to earlier steps (insert)
-    I->>E: mget(depends, .steps_to_nodes)
+    I->>E: .pip_step_refs(): refs only to earlier steps, nodes from .steps_to_nodes
     I->>G: dag_add_node() / dag_add_node_at(pos)
     I->>G: dag_add_edges_to(refNodes, nodeId)
     I->>E: rbindlist(data, .new_step(...))
@@ -363,9 +368,9 @@ which shows such conflicts.
 
 | Operation | Entry point | What changes |
 |---|---|---|
-| Replace a step | `pip_replace()`, `p[[s, "fun"]] <-` | Recomputes `params`, `depends` and `unbound`. With `keep_params = TRUE`, the unbound params that are formals of the new function (and not given or a reference default) keep their values (`.kept_step_params()`); kept formula values go in as placeholders and are put back after `.extract_depends()`. Swaps the incoming DAG edges (`dag_remove_edge()`, `dag_add_edges_to()`). Keeps the node id. Outdates the step and its downstream steps. Warns about params whose values differ from other steps. |
+| Replace a step | `pip_replace()`, `p[[s, "fun"]] <-` | Recomputes `params`, `depends` and `unbound`. With `keep_params = TRUE`, the unbound params that are formals of the new function (and not given or a reference default) keep their values (`.kept_step_params()`); kept formula values go in as placeholders and are put back after `.extract_depends()`. Swaps the incoming DAG edges (`dag_remove_edge()`, `dag_add_edges_to()`). Resets the row from `.new_step()`, keeping the name and node id. Outdates the step and its downstream steps. Warns about params whose values differ from other steps. |
 | Remove a step | `pip_remove()`, `p[[s, "step"]] <- NULL` | Without `force`, fails if other steps depend on the step. With `force`, removes all downstream steps too. Tombstones DAG nodes, then `dag_tidy_up()`. Updates `data` and `.steps_to_nodes`. |
-| Rename a step | `pip_rename()`, `p[[s, "step"]] <-` | Updates `step`, all `depends`, the reference formulas (`formula_set_ref()`), the failures of failed keys in the outputs (`.pip_rename_failures()`), `.steps_to_nodes` and `.steps_with_current_out`. Calls `.fun_rename()`. The DAG is unchanged, because it works on ids. |
+| Rename a step | `pip_rename()`, `p[[s, "step"]] <-` | Updates `step`, all `depends`, the reference formulas (`.params_refs_by_name()`), the failures of failed keys in the outputs (`.pip_rename_failures()`), `.steps_to_nodes` and `.steps_with_current_out`. Calls `.fun_rename()`. The DAG is unchanged, because it works on ids. |
 | Set params | `pip_set_params()`, `p[[s, "params"]] <-` | `.pip_set_params()` computes all new values first (two phases, `pip_param_value<-`). On a view, the view's rows select the names; values go to the unlocked rows of `scope` (`"pipeline"`: all rows that have the name unbound, `"view"`: the view's rows). A formula binds the param in the view's rows only (`.pip_bind_row()` adds DAG edges). `[[<-` uses `scope = "view"`. Outdates the changed steps and their downstream steps. |
 | Set the exec mode | `p[[s, "exec"]] <-` | Writes `exec` if the mode is new. Then outdates the step and its downstream steps. |
 | Set the output | `p[[s, "out"]] <-` | Writes `out` and sets the step to `FALSE` in `.steps_with_current_out`. Outdates the downstream steps; the step keeps its state. |
@@ -410,7 +415,7 @@ flowchart TD
   because the node ids live in the handle and not in `pipenv`.
 - Edits through a view (`pip_remove()`, `pip_rename()`, `pip_replace()`,
   `[[<-`) change the shared pipeline. They check `.pip_step_in_view()`
-  first.
+  first (the `pip_*` functions via `.assert_step_in_view()`).
 - `pip_set_params()` on a view sets the names that are unbound in the
   view's rows (locked ones included). By default (`scope = "pipeline"`), the
   values go to all unlocked rows of the pipeline that have the name, so
@@ -703,11 +708,11 @@ slots, so the new table is stored back in `pipenv`. Every access to
 
 | Task | Start here | Also touch |
 |---|---|---|
-| New step column | `.empty_pipeline()`, `.new_step()` | `.pip_bind()` (runtime columns), `.pip_copy_from()` props, `.pip_add_from()`, `[[<-` dispatch, `print.pipeflow()`, `str.pipeflow()`, `pip_collect()` (`allowedBy`), `pip_replace()`/`pip_reset()` (runtime columns), a default for saved pipelines in `.pip_pipenv()` |
+| New step column | `.empty_pipeline()`, `.new_step()` | `.pip_bind()` (runtime columns), `.pip_copy_from()` props, `.pip_add_from()`, `[[<-` dispatch, `print.pipeflow()`, `str.pipeflow()`, `pip_collect()` (`allowedBy`), `pip_reset()` (runtime columns), a default for saved pipelines in `.pip_pipenv()` |
 | New exec mode | `.assert_exec_mode()`, `.pip_execute_step_call()` | `.pip_annotate_output()`, docs of `pip_add()` |
-| New reference syntax | `utils.R` formula helpers | `.extract_depends()`, `formula_set_ref()` users (`pip_rename()`, `.params_refs_by_name()`) |
+| New reference syntax | `utils.R` formula helpers | `.extract_depends()`, `formula_set_ref()` users (`.params_refs_by_name()`, which `pip_rename()`, `rbind()` and `.params_copy()` use) |
 | New step or run state | `.step_states` / `.run_states` in `pipeflow-package.R` | `pip_run()`, `.pip_outdate_downstream()`, print colours, `.format_state_counts()` |
-| New structural edit | Follow `pip_replace()` / `pip_remove()` | Keep invariants 1–4. Gate with `.pip_step_in_view()`. Call `.fun_rename()` if steps are renamed. Removed steps keep their cache slots until the function is garbage-collected (see [as_function.md](as_function.md)). |
+| New structural edit | Follow `pip_replace()` / `pip_remove()` | Keep invariants 1–4. Gate with `.assert_step_in_view()`. Call `.fun_rename()` if steps are renamed. Removed steps keep their cache slots until the function is garbage-collected (see [as_function.md](as_function.md)). |
 | New view filter | `pip_view()` (`validFilters`) | `[.pipeflow` |
 | New `pip_*` function | `R/pipeflow.R` with roxygen and `@export` | `.pip_method_table()` if it should work as `p$fn()`, `_pkgdown.yml` reference index, cheat sheet, `NEWS.md` |
 

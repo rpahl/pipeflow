@@ -169,10 +169,18 @@
     invisible(params)
 }
 
-#' A pipeline is no step function, but can be turned into one
+#' Check the function and params of a step
+#'
+#' A pipeline is no step function, but can be turned into one with `as.function()`.
+#' `.self` is provided to the step function when it runs, so it must not be declared or
+#' set as a param.
+#'
 #' @param fun The step function given to `pip_add()` or `pip_replace()`.
+#' @param params The params given for the step.
+#' @param step The name of the step.
+#' @return `fun`, invisibly.
 #' @noRd
-.assert_fun_not_pipeline <- function(fun) {
+.assert_step_fun <- function(fun, params, step) {
     if (.is_pipeflow(fun)) {
         stop_no_call(
             "fun must be a function, not a pipeline - to use a pipeline as ",
@@ -180,7 +188,67 @@
             "see ?as.function.pipeflow"
         )
     }
+    if (!is.function(fun)) {
+        stop_no_call("fun must be a function")
+    }
+    if (is.primitive(fun)) {
+        stop_no_call(
+            "fun must not be a primitive function; wrap it, ",
+            "e.g. \\(x = 1) sum(x)"
+        )
+    }
+    if (".self" %in% names(formals(fun))) {
+        stop_no_call(
+            "'.self' is a reserved parameter name and must not be declared ",
+            "in step '",
+            step,
+            "' - it is provided automatically"
+        )
+    }
+    if (".self" %in% names(params)) {
+        stop_no_call(
+            "'.self' is a reserved parameter name and must not be set via ",
+            "params - it is provided automatically"
+        )
+    }
+    .assert_step_params(params)
     invisible(fun)
+}
+
+#' Check a step name given to an editing function
+#'
+#' @param name The value of the argument.
+#' @param arg The name of the argument, for the error message.
+#' @return `name`, invisibly.
+#' @noRd
+.assert_step_name <- function(name, arg = "step") {
+    if (!.is_single(name, "character")) {
+        stop_no_call(arg, " must be a single string")
+    }
+    if (is.na(name)) {
+        stop_no_call(arg, " must not be NA")
+    }
+    if (!nzchar(name)) {
+        stop_no_call(arg, " must be a non-empty string")
+    }
+    invisible(name)
+}
+
+#' Check that a step can be edited through a pipeline or view
+#'
+#' @param x A pipeflow pipeline or view.
+#' @param step A single step name.
+#' @return `step`, invisibly. Signals an error if the step does not exist or, for a
+#' view, is not part of it.
+#' @noRd
+.assert_step_in_view <- function(x, step) {
+    if (!.pip_step_exists(x, step)) {
+        stop_no_call("step '", step, "' does not exist")
+    }
+    if (!.pip_step_in_view(x, step)) {
+        stop_no_call("step '", step, "' is not part of the view")
+    }
+    invisible(step)
 }
 
 .assert_logger <- function(lgr) {
@@ -555,12 +623,7 @@
         return(integer(0))
     }
 
-    start_ids <- as.integer(mget(
-        steps,
-        envir = env[[".steps_to_nodes"]],
-        ifnotfound = NA_integer_,
-        inherits = FALSE
-    ))
+    start_ids <- as.integer(.pip_steps_to_nodes(x, steps))
     start_ids <- start_ids[!is.na(start_ids)]
     if (length(start_ids) == 0L) {
         return(integer(0))
@@ -743,29 +806,15 @@
 
     # Determine and verify potential links to existing steps
     env <- .pip_pipenv(x)
-    steps <- c(env[["data"]][["step"]], step)
-    depends <- .extract_depends(params = params, steps = steps)
-    refNodes <- mget(
-        depends,
-        envir = env[[".steps_to_nodes"]],
-        ifnotfound = NA_integer_,
-        inherits = FALSE
-    )
-    if (anyNA(refNodes)) {
-        notFound <- Filter(is.na, refNodes)
-        stop_no_call(
-            "while adding step '",
-            step,
-            "' - cannot reference unknown steps: ",
-            paste0("'", names(notFound), "'", collapse = ", ")
-        )
-    }
+    refs <- .pip_step_refs(x, step, params = params, pos = nrow(env[["data"]]))
+    depends <- refs[["depends"]]
+    refNodes <- refs[["nodes"]]
 
     # Update DAG
     d <- .pip_dag(env)
     nodeId <- as.integer(dag_add_node(d))
     if (length(refNodes) > 0) {
-        dag_add_edges_to(d, from = unique(as.integer(refNodes)), to = nodeId)
+        dag_add_edges_to(d, from = unique(refNodes), to = nodeId)
     }
 
     # Create and append step
@@ -810,55 +859,17 @@
     env <- .pip_pipenv(x)
     data <- env[["data"]]
 
-    # Dependencies may only point to steps that precede the insertion point (mirroring
-    # the previous step-by-step rebuild, this keeps the row order a valid topological
-    # order).
-    prefixSteps <- data[["step"]][seq_len(pos)]
-    steps <- c(prefixSteps, step)
-    depends <- .extract_depends(params = params, steps = steps)
-    if (length(depends) > 0L) {
-        forbidden <- unname(depends[!(depends %in% prefixSteps)])
-        if (length(forbidden) > 0L) {
-            later <- forbidden[forbidden %in% data[["step"]]]
-            if (length(later) > 0L) {
-                stop_no_call(
-                    "while adding step '",
-                    step,
-                    "' - cannot reference steps that come after the ",
-                    "insertion point: ",
-                    paste0("'", later, "'", collapse = ", ")
-                )
-            }
-            stop_no_call(
-                "while adding step '",
-                step,
-                "' - cannot reference unknown steps: ",
-                paste0("'", forbidden, "'", collapse = ", ")
-            )
-        }
-    }
-
-    refNodes <- mget(
-        depends,
-        envir = env[[".steps_to_nodes"]],
-        ifnotfound = NA_integer_,
-        inherits = FALSE
-    )
-    if (anyNA(refNodes)) {
-        notFound <- Filter(is.na, refNodes)
-        stop_no_call(
-            "while adding step '",
-            step,
-            "' - cannot reference unknown steps: ",
-            paste0("'", names(notFound), "'", collapse = ", ")
-        )
-    }
+    # Dependencies may only point to steps that precede the insertion point, which
+    # keeps the row order a valid topological order.
+    refs <- .pip_step_refs(x, step, params = params, pos = pos)
+    depends <- refs[["depends"]]
+    refNodes <- refs[["nodes"]]
 
     # Update DAG: add the node at the insertion position of its order
     d <- .pip_dag(env)
     nodeId <- as.integer(dag_add_node_at(d, pos))
     if (length(refNodes) > 0) {
-        dag_add_edges_to(d, from = unique(as.integer(refNodes)), to = nodeId)
+        dag_add_edges_to(d, from = unique(refNodes), to = nodeId)
     }
 
     # Create the new step and insert its row after the first `pos` steps
@@ -882,6 +893,68 @@
     )
     env[[".steps_to_nodes"]][[step]] <- nodeId
     x
+}
+
+#' Get the step references of a new or replaced step
+#'
+#' The references may only point to steps that come before the step, which keeps the
+#' row order a valid topological order.
+#'
+#' @param x A pipeflow pipeline or view. A view does not restrict the steps.
+#' @param step The name of the step.
+#' @param params The params of the step, see `.extract_fun_params()`. Relative
+#' references count back from the step.
+#' @param pos The number of steps that come before the step.
+#' @param replace `TRUE` if the step replaces the step after `pos`, which then counts
+#' neither as an earlier nor as a later step. Only changes the error message.
+#' @return A list of `depends` (see `.extract_depends()`) and `nodes`, the node ids of
+#' the referenced steps in the same order. Signals an error, before anything is changed,
+#' for references to steps that come later, and then for references to unknown steps.
+#' @noRd
+.pip_step_refs <- function(x, step, params, pos, replace = FALSE) {
+    steps <- .pip_pipenv(x)[["data"]][["step"]]
+    isAppend <- pos == length(steps)
+    prefixSteps <- if (isAppend) steps else steps[seq_len(pos)]
+    depends <- .extract_depends(params = params, steps = c(prefixSteps, step))
+    nodes <- unlist(.pip_steps_to_nodes(x, depends), use.names = FALSE)
+
+    # When appending, all known steps come before, so the lookup in `.steps_to_nodes`
+    # is enough (and does not hash all steps, which matters when a large pipeline is
+    # built step by step).
+    isBefore <- if (isAppend) {
+        !is.na(nodes)
+    } else {
+        depends %in% prefixSteps
+    }
+    if (all(isBefore)) {
+        return(list(depends = depends, nodes = as.integer(nodes)))
+    }
+
+    action <- if (replace) "replacing" else "adding"
+    where <- if (replace) "replaced step" else "insertion point"
+    bad <- unname(depends[!isBefore])
+    skip <- pos + replace
+    later <- bad[bad %in% steps[seq_len(length(steps) - skip) + skip]]
+    if (length(later) > 0L) {
+        stop_no_call(
+            "while ",
+            action,
+            " step '",
+            step,
+            "' - cannot reference steps that come after the ",
+            where,
+            ": ",
+            paste0("'", later, "'", collapse = ", ")
+        )
+    }
+    stop_no_call(
+        "while ",
+        action,
+        " step '",
+        step,
+        "' - cannot reference unknown steps: ",
+        paste0("'", bad, "'", collapse = ", ")
+    )
 }
 
 #' Get the position after which a step is added
@@ -3135,12 +3208,7 @@ pip_add <- function(
     if (!.is_single(step, "character")) {
         stop("step must be a single string or a pipeline or view")
     }
-    if (is.na(step)) {
-        stop("step must not be NA")
-    }
-    if (!nzchar(step)) {
-        stop("step must be a non-empty string")
-    }
+    .assert_step_name(step)
     # A reference ~-1 counts back, so a step named "-1" could not be referred to
     if (startsWith(step, "-")) {
         stop("step must not start with '-', as in a relative reference like ~-1")
@@ -3148,30 +3216,7 @@ pip_add <- function(
     if (.pip_step_exists(x, step)) {
         stop("step '", step, "' already exists in the pipeline")
     }
-    .assert_fun_not_pipeline(fun)
-    if (!is.function(fun)) {
-        stop("fun must be a function")
-    }
-    if (is.primitive(fun)) {
-        stop(
-            "fun must not be a primitive function; wrap it, ",
-            "e.g. \\(x = 1) sum(x)"
-        )
-    }
-    if (".self" %in% names(formals(fun))) {
-        stop_no_call(
-            "'.self' is a reserved parameter name and must not be declared ",
-            "in step '",
-            step,
-            "' - it is provided automatically"
-        )
-    }
-    if (".self" %in% names(params)) {
-        stop_no_call(
-            "'.self' is a reserved parameter name and cannot be used in params"
-        )
-    }
-    .assert_step_params(params)
+    .assert_step_fun(fun, params = params, step = step)
     .assert_exec_mode(exec)
 
     n <- length(x)
@@ -3707,18 +3752,8 @@ pip_set_params <- function(
 #' @export
 pip_remove <- function(x, step, force = FALSE) {
     .assert_pip_or_view(x)
-    if (!.is_single(step, "character")) {
-        stop("step must be a single string")
-    }
-    if (is.na(step)) {
-        stop("step must not be NA")
-    }
-    if (!.pip_step_exists(x, step)) {
-        stop("step '", step, "' does not exist")
-    }
-    if (!.pip_step_in_view(x, step)) {
-        stop("step '", step, "' is not part of the view")
-    }
+    .assert_step_name(step)
+    .assert_step_in_view(x, step)
     if (!is.logical(force) || length(force) != 1L || is.na(force)) {
         stop("force must be a single logical value")
     }
@@ -3825,26 +3860,8 @@ pip_remove <- function(x, step, force = FALSE) {
 #' @export
 pip_rename <- function(x, from, to) {
     .assert_pip_or_view(x)
-
-    if (!.is_single(from, "character")) {
-        stop("from must be a single string")
-    }
-    if (is.na(from)) {
-        stop("from must not be NA")
-    }
-    if (!nzchar(from)) {
-        stop("from must be a non-empty string")
-    }
-
-    if (!.is_single(to, "character")) {
-        stop("to must be a single string")
-    }
-    if (is.na(to)) {
-        stop("to must not be NA")
-    }
-    if (!nzchar(to)) {
-        stop("to must be a non-empty string")
-    }
+    .assert_step_name(from, arg = "from")
+    .assert_step_name(to, arg = "to")
     if (startsWith(to, "-")) {
         stop("to must not start with '-', as in a relative reference like ~-1")
     }
@@ -3854,12 +3871,7 @@ pip_rename <- function(x, from, to) {
     from <- unname(from)
     to <- unname(to)
 
-    if (!.pip_step_exists(x, from)) {
-        stop("step '", from, "' does not exist")
-    }
-    if (!.pip_step_in_view(x, from)) {
-        stop("step '", from, "' is not part of the view")
-    }
+    .assert_step_in_view(x, from)
     if (identical(from, to)) {
         return(invisible(x))
     }
@@ -3887,19 +3899,11 @@ pip_rename <- function(x, from, to) {
     # Keep the formula references in params in sync with the renamed steps. The formulas
     # are informational (step resolution uses `depends`), but they are user visible
     # (e.g. when printing the params column).
-    newParams <- dat[["params"]]
-    for (i in seq_along(newParams)) {
-        dep <- newDepends[[i]]
-        if (length(dep) == 0L) {
-            next
-        }
-        for (arg in names(dep)) {
-            fml <- newParams[[i]][[arg]]
-            if (inherits(fml, "formula")) {
-                newParams[[i]][[arg]] <- formula_set_ref(fml, dep[[arg]])
-            }
-        }
-    }
+    newParams <- Map(
+        .params_refs_by_name,
+        params = dat[["params"]],
+        depends = newDepends
+    )
 
     data.table::set(dat, j = "step", value = newSteps)
     data.table::set(dat, j = "depends", value = newDepends)
@@ -4016,46 +4020,9 @@ pip_replace <- function(
     keep_params = FALSE
 ) {
     .assert_pip_or_view(x)
-    if (!.is_single(step, "character")) {
-        stop("step must be a single string")
-    }
-    if (is.na(step)) {
-        stop("step must not be NA")
-    }
-    if (!nzchar(step)) {
-        stop("step must be a non-empty string")
-    }
-    if (!.pip_step_exists(x, step)) {
-        stop("step '", step, "' does not exist")
-    }
-    if (!.pip_step_in_view(x, step)) {
-        stop("step '", step, "' is not part of the view")
-    }
-    .assert_fun_not_pipeline(fun)
-    if (!is.function(fun)) {
-        stop("fun must be a function")
-    }
-    if (is.primitive(fun)) {
-        stop(
-            "fun must not be a primitive function; wrap it, ",
-            "e.g. \\(x = 1) sum(x)"
-        )
-    }
-    if (".self" %in% names(formals(fun))) {
-        stop_no_call(
-            "'.self' is a reserved parameter name and must not be declared ",
-            "in step '",
-            step,
-            "' - it is provided automatically"
-        )
-    }
-    if (".self" %in% names(params)) {
-        stop_no_call(
-            "'.self' is a reserved parameter name and must not be set via ",
-            "params - it is provided automatically"
-        )
-    }
-    .assert_step_params(params)
+    .assert_step_name(step)
+    .assert_step_in_view(x, step)
+    .assert_step_fun(fun, params = params, step = step)
     if (!is.null(exec)) {
         .assert_exec_mode(exec)
     }
@@ -4089,56 +4056,25 @@ pip_replace <- function(
     params <- .extract_fun_params(fun, params)
 
     # Dependencies of the replacement may only point to earlier steps. Kept values are
-    # no references, also if they are formulas.
-    prefixSteps <- data[["step"]][seq_len(iStep - 1L)]
-    steps <- c(prefixSteps, step)
+    # no references, also if they are formulas. A reference to the step itself is
+    # unknown.
     isKept <- names(params) %in% names(kept)
-    depends <- .extract_depends(params = params[!isKept], steps = steps)
-    if (length(depends) > 0L) {
-        bad <- unname(depends[!(depends %in% prefixSteps)])
-        # As in .pip_insert(), but a reference to the step itself is unknown
-        later <- bad[bad %in% data[["step"]][-seq_len(iStep)]]
-        if (length(later) > 0L) {
-            stop_no_call(
-                "while replacing step '",
-                step,
-                "' - cannot reference steps that come after the ",
-                "replaced step: ",
-                paste0("'", later, "'", collapse = ", ")
-            )
-        }
-        if (length(bad) > 0L) {
-            stop_no_call(
-                "while replacing step '",
-                step,
-                "' - cannot reference unknown steps: ",
-                paste0("'", bad, "'", collapse = ", ")
-            )
-        }
-    }
-
-    refNodes <- mget(
-        depends,
-        envir = env[[".steps_to_nodes"]],
-        inherits = FALSE
+    refs <- .pip_step_refs(
+        x,
+        step,
+        params = params[!isKept],
+        pos = iStep - 1L,
+        replace = TRUE
     )
+    depends <- refs[["depends"]]
+    newRefs <- refs[["nodes"]]
 
     # Update the incoming DAG edges of the replaced step (its node and all outgoing
     # edges stay the same).
     d <- .pip_dag(env)
-    nodeId <- env[[".steps_to_nodes"]][[step]]
-    oldDeps <- data[["depends"]][[iStep]]
-    oldRefs <- if (length(oldDeps) > 0L) {
-        as.integer(unlist(mget(
-            unname(oldDeps),
-            envir = env[[".steps_to_nodes"]],
-            inherits = FALSE
-        )))
-    } else {
-        integer()
-    }
-    newRefs <- as.integer(refNodes)
-
+    nodeId <- data[["nodeId"]][[iStep]]
+    oldRefs <- .pip_steps_to_nodes(x, data[["depends"]][[iStep]])
+    oldRefs <- as.integer(unlist(oldRefs, use.names = FALSE))
     for (from in setdiff(oldRefs, newRefs)) {
         dag_remove_edge(d, from = from, to = nodeId, force = TRUE)
     }
@@ -4147,23 +4083,19 @@ pip_replace <- function(
         dag_add_edges_to(d, from = toAdd, to = nodeId)
     }
 
-    # Reset the step row: new function and params, fresh runtime state (like a freshly
-    # added step), but with the given or kept tags and exec.
-    values <- list(
-        "fun" = list(fun),
-        "params" = list(params),
-        "out" = list(NULL),
-        "state" = .step_states[["new"]][["name"]],
-        "tags" = list(tags),
-        "locked" = FALSE,
-        "exec" = exec,
-        "time" = Sys.time(),
-        "time_start" = as.POSIXct(NA),
-        "duration" = .as_duration(NA),
-        "depends" = list(depends),
-        "unbound" = list(setdiff(names(params), names(depends)))
+    # Reset the step row like for a freshly added step, but with the given or kept tags
+    # and exec. Its name and node stay the same.
+    newStep <- .new_step(
+        step = step,
+        fun = fun,
+        params = params,
+        depends = depends,
+        tags = tags,
+        exec = exec,
+        nodeId = nodeId
     )
-    data.table::set(data, i = iStep, j = names(values), value = values)
+    cols <- setdiff(names(newStep), c("step", "nodeId"))
+    data.table::set(data, i = iStep, j = cols, value = newStep[cols])
 
     # Mark downstream dependent steps as outdated (the replaced step itself is "new" and
     # therefore stays "new").
