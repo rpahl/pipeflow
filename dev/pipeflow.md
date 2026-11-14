@@ -96,7 +96,7 @@ flowchart TD
     int --> rcpp
     gen --> rcpp
     rcpp --> cpp
-    int -. ".pip_execute_step_call → .fun_release<br/>pip_rename → .fun_rename" .-> asf
+    int -. ".pip_map_step → .fun_release<br/>pip_rename → .fun_rename" .-> asf
 ```
 
 There are two back-edges from the core into `as_function.R`, the dotted
@@ -239,9 +239,10 @@ flowchart LR
 
     subgraph Run["Run"]
         rr[".pip_run_row"]
-        ex[".pip_execute_step_call"]
+        ex[".pip_execute_step_call<br/>.pip_map_step"]
         cs[".pip_call_step"]
         hooks[".wrap_self<br/>.pip_unwrap_params<br/>.pip_annotate_output"]
+        store[".pip_step_args<br/>.pip_store_step_output<br/>.pip_store_step_error"]
     end
 
     subgraph Access["Lookup & views"]
@@ -275,6 +276,7 @@ flowchart LR
     bnd --> ren
     run --> rr --> ex --> cs
     rr --> hooks
+    rr --> store
     run --> reach
     run -. ".pip_outdate_executed" .-> out
     view --> vr
@@ -443,17 +445,17 @@ sequenceDiagram
         R->>R: .pip_unrun_inputs (input still new, not locked)? skip
         R->>R: done, not force, no input re-run? skip
         R->>RR: .pip_run_row(self = full pipeline, row, failed, onError)
-        RR->>E: args = params + outputs of depends (+ failures)
+        RR->>E: .pip_step_args: params + outputs of depends (+ failures)
         RR->>RR: .wrap_self(fun) if body uses .self
         RR->>E: set time_start of row (before the call shifts rows)
         RR->>RR: .pip_unwrap_params(unbound args)
         RR->>X: exec mode (retry: keep = outputs of the keys that did not fail)
         alt split
             X->>C: one call, then mark output as pipeflow_partitioned
-        else auto + partitioned input
+        else auto + partitioned input (.pip_map_step)
             loop each key
                 X->>X: key in keep? copy its output
-                X->>X: slice of non-try arg is a failure? key "not run"
+                X->>X: slice of non-try arg is a failure? key "not run" (.pip_key_input_failure)
                 X->>C: call with sliced args (key, keys)
                 X->>X: continue: key error -> .pip_failure(key) as value
             end
@@ -463,11 +465,11 @@ sequenceDiagram
         C->>F: step(arg = arg), args bound in an env (expressions inlined); sets .step_call and restores it on exit
         F-->>RR: value
         RR->>RR: .pip_annotate_output (pip_output_value)
-        RR->>E: re-read data by node id, set out/time/state = done/duration
+        RR->>E: .pip_store_step_output: re-read data by node id, set out/time/state = done/duration
         RR->>E: (failed keys: set out, state = failed, duration, keep time)
         R->>R: failed keys: record the output in failures
         alt step error
-            RR->>E: by node id: out = condition, state = failed, duration
+            RR->>E: .pip_store_step_error: by node id, out = condition, state = failed, duration
             RR-->>R: pipeflow_step_error
             R->>R: stop: re-signal / continue: record the failure
         end
@@ -496,7 +498,7 @@ Things to keep in mind:
   the call, `.pip_run_row()` finds the step's row by node id, and `pip_run()`
   records a failure by node id. A step that changed its
   own function, params or exec mode during the call gets state `outdated`
-  instead of `done` (`isChanged` in `.pip_run_row()`), because its output
+  instead of `done` (`.pip_store_step_output()`), because its output
   comes from the old definition. A later step can also change an executed
   step, which then is `outdated` (or `new`, if replaced). At the end of the
   run (and before a restart), `.pip_outdate_executed()` outdates the steps
@@ -525,7 +527,7 @@ Things to keep in mind:
   below.
 - **Mapping with `map`.** `pip_run(map = )` is passed via `.pip_run_row()`
   (also to the nested run of a restart, but not to inner runs of
-  `as.function()`) to `.pip_execute_step_call()`. Its key loop then only
+  `as.function()`) to `.pip_map_step()`. Its key loop then only
   prepares the keys (`keep`, failed inputs) and collects the ones to run;
   `.pip_map_keys()` calls `map(todo, FUN)` with the worker of
   `.pip_key_worker()`, which catches errors and returns `list(ok, value)`.
@@ -604,7 +606,7 @@ stateDiagram-v2
   Errors outside of the per-key calls (split steps, `plain`/`reduce`
   steps, `pip_output_value()`, a step function failing before mapping) are
   always whole-step failures.
-- **Per-key failures.** In a continued run, `.pip_execute_step_call()`
+- **Per-key failures.** In a continued run, `.pip_map_step()`
   stores a `.pip_failure(key = )` for each failed key instead of stopping.
   Before calling a key, it checks the sliced partitioned arguments: if a
   non-`~try()` argument holds a failure, the key is not run and gets a
@@ -633,7 +635,7 @@ stateDiagram-v2
   (`inputsChanged`) and the run is not forced, `pip_run()` passes
   `retry = TRUE` (`.pip_retry_keys()`) to `.pip_run_row()`,
   which hands the outputs of the other keys as `keep` to
-  `.pip_execute_step_call()`: the key loop copies them instead of calling
+  `.pip_map_step()`: the key loop copies them instead of calling
   the function, and `.pip_annotate_output()` skips them (they were
   annotated in their own run). All keys are still passed as `keys`, so a
   function made by `as.function()` keeps the inner pipelines of all keys.
