@@ -233,7 +233,7 @@ flowchart LR
         chk[".assert_step_fun<br/>.pip_step_refs<br/>.assert_step_in_view"]
         par[".extract_fun_params<br/>.extract_depends<br/>.new_step"]
         bnd[".pip_bind"]
-        sp[".pip_set_params"]
+        sp[".pip_set_params<br/>.pip_params_to_set<br/>.pip_new_param_values<br/>.pip_write_params"]
         br[".pip_bind_row"]
         out[".pip_outdate_downstream"]
     end
@@ -371,7 +371,7 @@ which shows such conflicts.
 | Replace a step | `pip_replace()`, `p[[s, "fun"]] <-` | Recomputes `params`, `depends` and `unbound`. With `keep_params = TRUE`, the unbound params that are formals of the new function (and not given or a reference default) keep their values (`.kept_step_params()`); kept formula values go in as placeholders and are put back after `.extract_depends()`. Swaps the incoming DAG edges (`dag_remove_edge()`, `dag_add_edges_to()`). Resets the row from `.new_step()`, keeping the name and node id. Outdates the step and its downstream steps. Warns about params whose values differ from other steps. |
 | Remove a step | `pip_remove()`, `p[[s, "step"]] <- NULL` | Without `force`, fails if other steps depend on the step. With `force`, removes all downstream steps too. Tombstones DAG nodes, then `dag_tidy_up()`. Updates `data` and `.steps_to_nodes`. |
 | Rename a step | `pip_rename()`, `p[[s, "step"]] <-` | Updates `step`, all `depends`, the reference formulas (`.params_refs_by_name()`), the failures of failed keys in the outputs (`.pip_rename_failures()`), `.steps_to_nodes` and `.steps_with_current_out`. Calls `.fun_rename()`. The DAG is unchanged, because it works on ids. |
-| Set params | `pip_set_params()`, `p[[s, "params"]] <-` | `.pip_set_params()` computes all new values first (two phases, `pip_param_value<-`). On a view, the view's rows select the names; values go to the unlocked rows of `scope` (`"pipeline"`: all rows that have the name unbound, `"view"`: the view's rows). A formula binds the param in the view's rows only (`.pip_bind_row()` adds DAG edges). `[[<-` uses `scope = "view"`. Outdates the changed steps and their downstream steps. |
+| Set params | `pip_set_params()`, `p[[s, "params"]] <-` | `.pip_set_params()` checks and computes everything before it writes: `.pip_params_to_set()` selects the rows and names, `.pip_new_param_values()` computes the new values (`pip_param_value<-`, all failures in one error), and `.pip_write_params()` stores them. On a view, the view's rows select the names; values go to the unlocked rows of `scope` (`"pipeline"`: all rows that have the name unbound, `"view"`: the view's rows). A formula binds the param in the view's rows only (`.pip_bind_row()` adds DAG edges). `[[<-` uses `scope = "view"`. Outdates the changed steps and their downstream steps. |
 | Set the exec mode | `p[[s, "exec"]] <-` | Writes `exec` if the mode is new. Then outdates the step and its downstream steps. |
 | Set the output | `p[[s, "out"]] <-` | Writes `out` and sets the step to `FALSE` in `.steps_with_current_out`. Outdates the downstream steps; the step keeps its state. |
 | Bind pipelines | `rbind.pipeflow()` → `.pip_bind()` | Clones both pipelines and renames clashing steps of `y` with a number suffix. Folds params into the function defaults. Adds new nodes and edges. Warns about params of `y` whose values differ from `x`. |

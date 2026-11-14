@@ -1212,44 +1212,95 @@
     if (length(params) == 0L) {
         return(invisible(x))
     }
-    parNames <- names(params)
     env <- .pip_pipenv(x)
     dat <- env[["data"]]
     rows <- .pip_view_rows(x)
 
-    # A one-sided formula binds the param to the step it refers to. The references are
-    # checked only for the params that are bound below.
+    # A one-sided formula binds the param to the step it refers to, unless
+    # `bind = FALSE`, which sets all params as values.
     isRef <- bind & vapply(params, is_one_sided_formula, logical(1))
     refs <- params[isRef]
     targets <- formula_deps(refs)
 
-    # Signal parameters that are not defined in any of the selected steps, including the
-    # locked ones. A param that is bound as given already is not unknown, so that
+    # Params that are not defined in any of the selected steps (also the locked ones)
+    # are unknown. A param that is bound as given already is not unknown, so that
     # setting the binding again just does nothing.
     defined <- unique(unlist(dat[["unbound"]][rows]))
-    isBound <- vapply(
-        names(refs),
-        \(name) {
-            .pip_has_binding(dat, rows, name, refs[[name]], targets[[name]])
-        },
-        logical(1)
-    )
-    undefined <- setdiff(parNames, c(defined, names(refs)[isBound]))
-    if (length(undefined) > 0L && unknown != "ignore") {
-        msg <- paste0(
-            "Trying to set parameters not defined in the target: ",
-            toString(undefined)
+    if (unknown != "ignore") {
+        isBound <- vapply(
+            names(refs),
+            \(name) {
+                .pip_has_binding(dat, rows, name, refs[[name]], targets[[name]])
+            },
+            logical(1)
         )
-        if (unknown == "error") {
-            stop_no_call(msg)
+        undefined <- setdiff(names(params), c(defined, names(refs)[isBound]))
+        if (length(undefined) > 0L) {
+            msg <- paste0(
+                "Trying to set parameters not defined in the target: ",
+                toString(undefined)
+            )
+            if (unknown == "error") {
+                stop_no_call(msg)
+            }
+            warning(msg, call. = FALSE)
         }
-        warning(msg, call. = FALSE)
     }
 
-    # The view selects the names to set. Values go to the unlocked rows of the scope,
-    # that is, with scope "pipeline", to all rows that have the name unbound, while
-    # bindings only go to the unlocked rows of the view.
-    valueNames <- intersect(setdiff(parNames, names(refs)), defined)
+    valueNames <- intersect(setdiff(names(params), names(refs)), defined)
+    toSet <- .pip_params_to_set(dat, rows, valueNames, names(refs), scope)
+    if (is.null(toSet)) {
+        message("No steps to update: all selected steps are locked")
+        return(invisible(x))
+    }
+
+    # Everything is checked, and the values are computed, before anything is changed,
+    # so that a failed call leaves the pipeline untouched. Bindings must refer to a
+    # step that comes before the bound step.
+    toBind <- unique(unlist(toSet[["bound"]]))
+    .pip_assert_bind_targets(x, refs[toBind])
+    .pip_check_bind_order(dat, toSet[["rows"]], toSet[["bound"]], targets[toBind])
+    values <- .pip_new_param_values(
+        dat,
+        toSet[["rows"]],
+        toSet[["values"]],
+        params = params,
+        setValue = setValue
+    )
+
+    changed <- .pip_write_params(
+        env,
+        toSet[["rows"]],
+        values = values,
+        bound = toSet[["bound"]],
+        refs = refs,
+        targets = targets,
+        force = force
+    )
+    if (length(changed) > 0L) {
+        .pip_outdate_downstream(x, steps = dat[["step"]][changed])
+    }
+    invisible(x)
+}
+
+#' Select the rows and params that pip_set_params() sets
+#'
+#' The view selects the names to set. Values go to the unlocked rows of the scope, that
+#' is, with scope `"pipeline"`, to all rows that have the name unbound, while bindings
+#' only go to the unlocked rows of the view.
+#'
+#' @param dat The step table.
+#' @param rows Row indices of the view.
+#' @param valueNames Names of the params that are set as values. These must be unbound
+#' in one of the `rows`, as the view selects the names to set.
+#' @param refNames Names of the params that are bound to steps.
+#' @param scope As for [pip_set_params()].
+#' @return `NULL` if there are no rows to consider, as all of them are locked (or
+#' there are none). Otherwise a list with the
+#' affected `rows` (those with any of the names unbound), and for each of them the
+#' names of the params that are set as `values` and of those that are `bound`.
+#' @noRd
+.pip_params_to_set <- function(dat, rows, valueNames, refNames, scope) {
     locked <- which(dat[["locked"]])
     bindRows <- setdiff(rows, locked)
     valueRows <- if (scope == "pipeline" && length(valueNames) > 0L) {
@@ -1257,107 +1308,25 @@
     } else {
         bindRows
     }
-    rowsConsidered <- sort(union(valueRows, bindRows))
-    if (length(rowsConsidered) == 0L) {
-        message("No steps to update: all selected steps are locked")
-        return(invisible(x))
+    candidates <- sort(union(valueRows, bindRows))
+    if (length(candidates) == 0L) {
+        return(NULL)
     }
 
-    # Determine which steps/rows are affected, i.e. have intersecting params
-    unbound <- dat[["unbound"]][rowsConsidered] # names of unbound params
-    intersects <- Map(
-        \(unboundNames, isValueRow, isBindRow) {
-            c(
-                if (isValueRow) intersect(unboundNames, valueNames),
-                if (isBindRow) intersect(unboundNames, names(refs))
-            )
-        },
-        unbound,
-        rowsConsidered %in% valueRows,
-        rowsConsidered %in% bindRows
+    unbound <- dat[["unbound"]][candidates]
+    namesIn <- function(isRow, names) {
+        res <- rep(list(character(0)), length(candidates))
+        res[isRow] <- lapply(unbound[isRow], intersect, names)
+        res
+    }
+    values <- namesIn(candidates %in% valueRows, valueNames)
+    bound <- namesIn(candidates %in% bindRows, refNames)
+    isAffected <- lengths(values) + lengths(bound) > 0L
+    list(
+        rows = candidates[isAffected],
+        values = values[isAffected],
+        bound = bound[isAffected]
     )
-    hasOverlap <- lengths(intersects) > 0
-    namesAffected <- intersects[hasOverlap]
-    rowsAffected <- rowsConsidered[hasOverlap]
-
-    if (any(hasOverlap)) {
-        # Bindings must refer to a step that comes before the bound step, which is
-        # checked before anything is changed.
-        namesBound <- lapply(namesAffected, FUN = intersect, y = names(refs))
-        toBind <- unique(unlist(namesBound))
-        .pip_assert_bind_targets(x, refs[toBind])
-        .pip_check_bind_order(
-            dat,
-            rowsAffected,
-            namesBound,
-            targets[toBind]
-        )
-
-        # Determine the value to store for every affected row and name before anything
-        # is changed, so that a failing method leaves the pipeline untouched and all
-        # failures are reported at once.
-        merged <- vector("list", length(rowsAffected))
-        errors <- list()
-        for (j in seq_along(rowsAffected)) {
-            i <- rowsAffected[[j]]
-            rowPars <- dat[["params"]][[i]]
-            names <- setdiff(namesAffected[[j]], namesBound[[j]])
-            values <- stats::setNames(vector("list", length(names)), names)
-            for (name in names) {
-                values[name] <- list(tryCatch(
-                    setValue(rowPars[[name]], value = params[[name]]),
-                    error = function(e) {
-                        errors[[length(errors) + 1L]] <<- list(
-                            step = dat[["step"]][[i]],
-                            name = name,
-                            parent = e
-                        )
-                        NULL
-                    }
-                ))
-            }
-            merged[[j]] <- values
-        }
-        if (length(errors) > 0L) {
-            stop(.pip_set_params_error(errors))
-        }
-
-        # Update parameters in all affected rows, skipping values that are identical to
-        # the stored ones (unless forced), and bind params, which always changes the
-        # step
-        isChanged <- logical(length(rowsAffected))
-        for (j in seq_along(rowsAffected)) {
-            i <- rowsAffected[[j]]
-            rowPars <- dat[["params"]][[i]]
-            values <- merged[[j]]
-            names <- names(values)
-            if (!force) {
-                names <- Filter(
-                    \(name) !identical(rowPars[[name]], values[[name]]),
-                    names
-                )
-            }
-            if (length(names) > 0L) {
-                rowPars[names] <- values[names]
-                value <- list(list(rowPars)) # need to wrap in list() for set
-                data.table::set(dat, i = i, j = "params", value = value)
-                isChanged[[j]] <- TRUE
-            }
-            bound <- namesBound[[j]]
-            if (length(bound) > 0L) {
-                .pip_bind_row(env, i, refs[bound], targets[bound])
-                isChanged[[j]] <- TRUE
-            }
-        }
-
-        # Update states of changed steps and their downstream steps
-        rowsChanged <- rowsAffected[isChanged]
-        if (length(rowsChanged) > 0L) {
-            .pip_outdate_downstream(x, steps = dat[["step"]][rowsChanged])
-        }
-    }
-
-    invisible(x)
 }
 
 #' Check the steps that the bindings of pip_set_params() refer to
@@ -1444,6 +1413,95 @@
         }
     }
     invisible(NULL)
+}
+
+#' Compute the values that pip_set_params() stores
+#'
+#' The values of all rows and names are computed before anything is changed, so that a
+#' failing method leaves the pipeline untouched and all failures are reported at once.
+#'
+#' @param dat The step table.
+#' @param rows Row indices of the steps to set.
+#' @param valueNames List with the names of the params to set in each of the `rows`.
+#' @param params Named list of the given values.
+#' @param setValue Function of the current and the given value that returns the value to
+#' store, see `.pip_set_params()`.
+#' @return List with one named list of the values to store per row. Signals a
+#' `pipeflow_set_params_error` (see `.pip_set_params_error()`) if `setValue` failed for
+#' any of them.
+#' @noRd
+.pip_new_param_values <- function(dat, rows, valueNames, params, setValue) {
+    errors <- list()
+    values <- Map(
+        \(i, rowNames) {
+            rowPars <- dat[["params"]][[i]]
+            res <- stats::setNames(vector("list", length(rowNames)), rowNames)
+            for (name in rowNames) {
+                res[name] <- list(tryCatch(
+                    setValue(rowPars[[name]], value = params[[name]]),
+                    error = function(e) {
+                        errors[[length(errors) + 1L]] <<- list(
+                            step = dat[["step"]][[i]],
+                            name = name,
+                            parent = e
+                        )
+                        NULL
+                    }
+                ))
+            }
+            res
+        },
+        rows,
+        valueNames
+    )
+    if (length(errors) > 0L) {
+        stop(.pip_set_params_error(errors))
+    }
+    values
+}
+
+#' Store the params that pip_set_params() sets
+#'
+#' Values that are identical to the stored ones are skipped (unless forced), while a
+#' binding always changes the step.
+#'
+#' @param env The inner pipeline environment.
+#' @param rows Row indices of the steps to set.
+#' @param values List with one named list of the values to store per row, see
+#' `.pip_new_param_values()`.
+#' @param bound List with the names of the params to bind in each of the `rows`.
+#' @param refs,targets Named list of the one-sided formulas of the bindings and named
+#' character vector of the steps they refer to.
+#' @param force As for [pip_set_params()].
+#' @return The `rows` that changed.
+#' @noRd
+.pip_write_params <- function(env, rows, values, bound, refs, targets, force) {
+    dat <- env[["data"]]
+    isChanged <- logical(length(rows))
+    for (j in seq_along(rows)) {
+        i <- rows[[j]]
+        rowPars <- dat[["params"]][[i]]
+        rowValues <- values[[j]]
+        toWrite <- names(rowValues)
+        if (!force) {
+            toWrite <- Filter(
+                \(name) !identical(rowPars[[name]], rowValues[[name]]),
+                toWrite
+            )
+        }
+        if (length(toWrite) > 0L) {
+            rowPars[toWrite] <- rowValues[toWrite]
+            value <- list(list(rowPars)) # need to wrap in list() for set
+            data.table::set(dat, i = i, j = "params", value = value)
+            isChanged[[j]] <- TRUE
+        }
+        rowBound <- bound[[j]]
+        if (length(rowBound) > 0L) {
+            .pip_bind_row(env, i, refs[rowBound], targets[rowBound])
+            isChanged[[j]] <- TRUE
+        }
+    }
+    rows[isChanged]
 }
 
 #' Bind params of a step to other steps

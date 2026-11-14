@@ -972,6 +972,136 @@ describe(".pip_warn_param_conflicts", {
 })
 
 
+# -----------------
+# Parameter binding
+# -----------------
+describe(".pip_params_to_set", {
+    new_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(a = 1, b = 2) a) |>
+            pip_add("s2", \(a = 1, x = NA) a) |>
+            pip_add("s3", \(b = 2, x = NA) b)
+    }
+
+    it("sets values in all rows of the pipeline with scope 'pipeline'", {
+        p <- new_pip()
+        dat <- .pip_pipenv(p)[["data"]]
+        res <- .pip_params_to_set(dat, 2L, "a", character(0), "pipeline")
+        expect_equal(res[["rows"]], 1:2)
+        expect_equal(res[["values"]], list("a", "a"))
+        expect_equal(res[["bound"]], list(character(0), character(0)))
+    })
+
+    it("sets values only in the rows of the view with scope 'view'", {
+        p <- new_pip()
+        dat <- .pip_pipenv(p)[["data"]]
+        res <- .pip_params_to_set(dat, 2L, "a", character(0), "view")
+        expect_equal(res[["rows"]], 2L)
+        expect_equal(res[["values"]], list("a"))
+    })
+
+    it("binds only in the rows of the view, also with scope 'pipeline'", {
+        p <- new_pip()
+        dat <- .pip_pipenv(p)[["data"]]
+        res <- .pip_params_to_set(dat, 3L, "b", "x", "pipeline")
+        expect_equal(res[["rows"]], c(1L, 3L))
+        expect_equal(res[["values"]], list("b", "b"))
+        expect_equal(res[["bound"]], list(character(0), "x"))
+    })
+
+    it("skips locked rows and returns NULL if all rows are locked", {
+        p <- new_pip()
+        pip_lock(p["s1"])
+        dat <- .pip_pipenv(p)[["data"]]
+        res <- .pip_params_to_set(dat, 1:2, "a", character(0), "pipeline")
+        expect_equal(res[["rows"]], 2L)
+        expect_null(.pip_params_to_set(dat, 1L, character(0), "x", "view"))
+    })
+
+    it("gives no rows if no row has any of the names unbound", {
+        p <- new_pip()
+        dat <- .pip_pipenv(p)[["data"]]
+        res <- .pip_params_to_set(dat, 1:3, "zz", character(0), "pipeline")
+        expect_length(res[["rows"]], 0L)
+    })
+})
+
+describe(".pip_new_param_values", {
+    it("computes the values of each row with setValue", {
+        p <- pip_new() |>
+            pip_add("s1", \(a = 1, b = 2) a) |>
+            pip_add("s2", \(a = 10) a)
+        dat <- .pip_pipenv(p)[["data"]]
+        res <- .pip_new_param_values(
+            dat,
+            1:2,
+            list(c("a", "b"), "a"),
+            params = list(a = 5, b = 6),
+            setValue = \(current, value) current + value
+        )
+        expect_equal(res, list(list(a = 6, b = 8), list(a = 15)))
+    })
+
+    it("reports all failures of setValue in one error", {
+        p <- pip_new() |>
+            pip_add("s1", \(a = 1, b = 2) a) |>
+            pip_add("s2", \(a = 10) a)
+        dat <- .pip_pipenv(p)[["data"]]
+        err <- tryCatch(
+            .pip_new_param_values(
+                dat,
+                1:2,
+                list(c("a", "b"), "a"),
+                params = list(a = 5, b = 6),
+                setValue = \(current, value) stop("bad")
+            ),
+            error = identity
+        )
+        expect_s3_class(err, "pipeflow_set_params_error")
+        expect_equal(err[["errors"]][["step"]], c("s1", "s1", "s2"))
+        expect_equal(err[["errors"]][["name"]], c("a", "b", "a"))
+    })
+})
+
+describe(".pip_write_params", {
+    new_pip <- function() {
+        pip_new() |>
+            pip_add("s1", \(a = 1) a) |>
+            pip_add("s2", \(a = 1, x = NA) a)
+    }
+
+    it("returns the changed rows and skips identical values unless forced", {
+        p <- new_pip()
+        env <- .pip_pipenv(p)
+        values <- list(list(a = 1), list(a = 2))
+        bound <- list(character(0), character(0))
+        res <- .pip_write_params(env, 1:2, values, bound, list(), character(0), FALSE)
+        expect_equal(res, 2L)
+        expect_equal(env[["data"]][["params"]][[2]][["a"]], 2)
+
+        res <- .pip_write_params(env, 1:2, values, bound, list(), character(0), TRUE)
+        expect_equal(res, 1:2)
+    })
+
+    it("binds params, which always changes the step", {
+        p <- new_pip()
+        env <- .pip_pipenv(p)
+        res <- .pip_write_params(
+            env,
+            2L,
+            values = list(list()),
+            bound = list("x"),
+            refs = list(x = ~s1),
+            targets = c(x = "s1"),
+            force = FALSE
+        )
+        expect_equal(res, 2L)
+        expect_equal(env[["data"]][["depends"]][[2]], c(x = "s1"))
+        expect_false("x" %in% env[["data"]][["unbound"]][[2]])
+    })
+})
+
+
 # ======================================================================================
 # Execution
 # ======================================================================================
