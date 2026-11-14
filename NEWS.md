@@ -1,3 +1,10 @@
+# pipeflow 0.5.0.9037
+
+## Bug fixes
+
+- `pip_set_params()` on a pipeline or view without steps no longer says that all
+  selected steps are locked.
+
 # pipeflow 0.5.0.9036
 
 ## Minor improvements

@@ -1018,6 +1018,13 @@ describe(".pip_params_to_set", {
         expect_null(.pip_params_to_set(dat, 1L, character(0), "x", "view"))
     })
 
+    it("gives no rows, but not NULL, if there are no rows to consider", {
+        dat <- .pip_pipenv(pip_new())[["data"]]
+        res <- .pip_params_to_set(dat, integer(0), character(0), "x", "view")
+        expect_false(is.null(res))
+        expect_length(res[["rows"]], 0L)
+    })
+
     it("gives no rows if no row has any of the names unbound", {
         p <- new_pip()
         dat <- .pip_pipenv(p)[["data"]]
@@ -4289,6 +4296,17 @@ describe("pip_set_params", {
         p <- test_pip()
         pip_set_params(p, params = list())
         expect_equal(unname(p[["state"]]), rep("new", 4))
+    })
+
+    it("doesn't say the steps are locked if there are no steps", {
+        p <- pip_new()
+        expect_no_message(
+            expect_warning(
+                pip_set_params(p, params = list(x = 5)),
+                "Trying to set parameters not defined in the target: x"
+            )
+        )
+        expect_no_message(pip_set_params(p, list(x = 5), unknown = "ignore"))
     })
 
     it("no-ops if all considered steps are locked, with a warning", {

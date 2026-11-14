@@ -1295,22 +1295,22 @@
 #' in one of the `rows`, as the view selects the names to set.
 #' @param refNames Names of the params that are bound to steps.
 #' @param scope As for [pip_set_params()].
-#' @return `NULL` if there are no rows to consider, as all of them are locked (or
-#' there are none). Otherwise a list with the
+#' @return `NULL` if all rows to consider are locked. Otherwise a list with the
 #' affected `rows` (those with any of the names unbound), and for each of them the
 #' names of the params that are set as `values` and of those that are `bound`.
 #' @noRd
 .pip_params_to_set <- function(dat, rows, valueNames, refNames, scope) {
-    locked <- which(dat[["locked"]])
-    bindRows <- setdiff(rows, locked)
     valueRows <- if (scope == "pipeline" && length(valueNames) > 0L) {
-        setdiff(seq_len(nrow(dat)), locked)
+        seq_len(nrow(dat))
     } else {
-        bindRows
+        rows
     }
-    candidates <- sort(union(valueRows, bindRows))
-    if (length(candidates) == 0L) {
-        return(NULL)
+    candidates <- sort(union(valueRows, rows))
+    if (length(candidates) > 0L) {
+        candidates <- candidates[!dat[["locked"]][candidates]]
+        if (length(candidates) == 0L) {
+            return(NULL)
+        }
     }
 
     unbound <- dat[["unbound"]][candidates]
@@ -1320,7 +1320,7 @@
         res
     }
     values <- namesIn(candidates %in% valueRows, valueNames)
-    bound <- namesIn(candidates %in% bindRows, refNames)
+    bound <- namesIn(candidates %in% rows, refNames)
     isAffected <- lengths(values) + lengths(bound) > 0L
     list(
         rows = candidates[isAffected],
