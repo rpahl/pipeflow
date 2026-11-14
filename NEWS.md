@@ -1,3 +1,11 @@
+# pipeflow 0.5.0.9036
+
+## Minor improvements
+
+- `pip_add()`, `pip_remove()`, `pip_rename()` and `pip_replace()` share their
+  checks of the step name, function and params, so their error messages are the
+  same. `pip_remove(p, "")` now says that the step must be a non-empty string.
+
 # pipeflow 0.5.0.9035
 
 ## Bug fixes
