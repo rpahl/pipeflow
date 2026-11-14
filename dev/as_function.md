@@ -183,7 +183,7 @@ How slots change with the outer pipeline:
 |---|---|---|
 | Partition keys change | Pipelines of keys that are gone are removed | `.fun_keep_keys()` (first call of the run) |
 | Step switches between mapped and single | All pipelines of the other mode are dropped | `.fun_keep_keys()` (`mapped` changed) |
-| Mapped over zero keys | No call happens, so the slots are dropped explicitly | `.pip_execute_step_call()` → `.fun_release()` |
+| Mapped over zero keys | No call happens, so the slots are dropped explicitly | `.pip_map_step()` → `.fun_release()` |
 | Outer step renamed | `slots[[from]]` moves to `slots[[to]]` | `pip_rename()` → `.fun_rename()` |
 | A `[<-` that renamed the step fails | The slots move back | `.pip_restore()` |
 | Outer step removed or replaced | The slots stay until the function is garbage-collected | — |
@@ -233,7 +233,7 @@ flowchart TD
 flowchart LR
     subgraph core["R/pipeflow.R"]
         pcs[".pip_call_step / .pip_step_call<br/>(.step_call env)"]
-        pesc[".pip_execute_step_call"]
+        pesc[".pip_execute_step_call<br/>.pip_map_step"]
         pren["pip_rename"]
         psp[".pip_set_params(bind = FALSE)"]
         prun["pip_run"]

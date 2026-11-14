@@ -953,6 +953,14 @@ describe(".pip_input_failure", {
         expect_identical(f[["parent"]], boom)
         expect_false("key" %in% names(f))
     })
+
+    it("can be the failure of a key", {
+        cause <- .pip_failure("b", parent = boom)
+        f <- .pip_input_failure("c", cause = cause, key = "k1")
+        expect_equal(f[["key"]], "k1")
+        expect_equal(f[["failed_step"]], "b")
+        expect_identical(f[["parent"]], boom)
+    })
 })
 
 describe(".pip_keys_mismatch", {
@@ -1309,6 +1317,31 @@ describe(".pip_call_step", {
     })
 })
 
+describe(".pip_key_input_failure", {
+    boom <- simpleError("boom")
+    failure <- .pip_failure("a", parent = boom, key = "k1")
+
+    it("is NULL if no argument gets a failure", {
+        expect_null(.pip_key_input_failure(list(x = 1, y = 2), character(), "s", "k1"))
+    })
+
+    it("is NULL if all arguments that get a failure are try() arguments", {
+        partArgs <- list(x = failure, y = 2)
+        expect_null(.pip_key_input_failure(partArgs, "x", "s", "k1"))
+    })
+
+    it("is the failure of the key for the first other argument", {
+        other <- .pip_failure("b", parent = simpleError("other"), key = "k1")
+        partArgs <- list(x = failure, y = other, z = 3)
+        f <- .pip_key_input_failure(partArgs, "x", step = "s", key = "k1")
+        expect_s3_class(f, "pipeflow_failure")
+        expect_equal(f[["step"]], "s")
+        expect_equal(f[["failed_step"]], "b")
+        expect_equal(f[["key"]], "k1")
+        expect_equal(conditionMessage(f[["parent"]]), "other")
+    })
+})
+
 describe(".pip_map_keys", {
     todo <- list(
         k1 = list(key = "k1", args = list(x = 1)),
@@ -1378,6 +1411,175 @@ describe(".pip_map_keys", {
             "not an object of class integer",
             fixed = TRUE
         )
+    })
+})
+
+describe(".pip_step_args", {
+    p <- pip_new() |>
+        pip_add("a", \(x = 1) x) |>
+        pip_add("b", \(x = ~a, y = 2) x + y)
+    dat <- .pip_pipenv(p)[["data"]]
+
+    it("sets the outputs of the referenced steps as arguments", {
+        data.table::set(dat, i = 1L, j = "out", value = list(list(10)))
+        expect_equal(.pip_step_args(dat, 2L), list(x = 10, y = 2))
+        expect_equal(.pip_step_args(dat, 1L), list(x = 1))
+    })
+
+    it("sets a NULL output as the argument", {
+        data.table::set(dat, i = 1L, j = "out", value = list(list(NULL)))
+        expect_equal(.pip_step_args(dat, 2L), list(x = NULL, y = 2))
+    })
+
+    it("sets the failures instead of the outputs", {
+        failure <- .pip_failure("a", parent = simpleError("boom"))
+        expect_equal(
+            .pip_step_args(dat, 2L, failed = list(x = failure)),
+            list(x = failure, y = 2)
+        )
+    })
+})
+
+describe(".pip_store_step_error", {
+    boom <- simpleError("boom")
+
+    it("stores the error by node id", {
+        p <- pip_new() |> pip_add("a", \(x = 1) x) |> pip_add("b", \(x = ~a) x)
+        pipenv <- .pip_pipenv(p)
+        node <- p[["b", "nodeId"]]
+        pip_rename(p, "b", "c")
+        .pip_store_step_error(pipenv, node, boom, Sys.time())
+        expect_identical(p[["c", "out"]], boom)
+        expect_equal(unname(p[["c", "state"]]), "failed")
+    })
+
+    it("stores nothing if the step was removed", {
+        p <- pip_new() |> pip_add("a", \(x = 1) x)
+        pipenv <- .pip_pipenv(p)
+        node <- p[["a", "nodeId"]]
+        pip_remove(p, "a")
+        expect_invisible(.pip_store_step_error(pipenv, node, boom, Sys.time()))
+        expect_equal(nrow(pipenv[["data"]]), 0L)
+    })
+})
+
+describe(".pip_store_step_output", {
+    runTime <- Sys.time()
+    store <- function(p, step, out, before = NULL, currentOut = new.env()) {
+        dat <- .pip_pipenv(p)[["data"]]
+        row <- match(step, dat[["step"]])
+        if (is.null(before)) {
+            before <- list(
+                step = step,
+                fun = dat[["fun"]][[row]],
+                params = dat[["params"]][[row]],
+                exec = dat[["exec"]][[row]]
+            )
+        }
+        .pip_store_step_output(
+            .pip_pipenv(p),
+            node = dat[["nodeId"]][[row]],
+            out = out,
+            before = before,
+            startTime = runTime,
+            runTime = runTime,
+            currentOut = currentOut
+        )
+    }
+    keyFailure <- function(step, key) {
+        .pip_failure(step, parent = simpleError("boom"), key = key)
+    }
+
+    it("stores the output with state done and the time", {
+        p <- pip_new() |> pip_add("a", \(x = 1) x)
+        expect_equal(store(p, "a", out = 1), 1)
+        expect_equal(p[["a", "out"]], 1)
+        expect_equal(unname(p[["a", "state"]]), "done")
+        expect_equal(as.numeric(p[["a", "time"]]), as.numeric(runTime))
+    })
+
+    it("sets state outdated if the step changed itself", {
+        p <- pip_new() |> pip_add("a", \(x = 1) x)
+        dat <- .pip_pipenv(p)[["data"]]
+        before <- list(
+            step = "a",
+            fun = dat[["fun"]][[1L]],
+            params = list(x = 0),
+            exec = dat[["exec"]][[1L]]
+        )
+        store(p, "a", out = 1, before = before)
+        expect_equal(p[["a", "out"]], 1)
+        expect_equal(unname(p[["a", "state"]]), "outdated")
+    })
+
+    it("stores failed keys with state failed, keeps the time and marks the step", {
+        p <- pip_new() |> pip_add("a", \(x = 1) x)
+        timeBefore <- p[["a", "time"]]
+        out <- .as_pipeflow_partitioned(list(k1 = 1, k2 = keyFailure("a", "k2")))
+        currentOut <- new.env()
+        expect_identical(store(p, "a", out = out, currentOut = currentOut), out)
+        expect_identical(p[["a", "out"]], out)
+        expect_equal(unname(p[["a", "state"]]), "failed")
+        expect_equal(p[["a", "time"]], timeBefore)
+        expect_true(currentOut[["a"]])
+    })
+
+    it("renames the failed keys of a step that renamed itself", {
+        p <- pip_new() |> pip_add("b", \(x = 1) x)
+        dat <- .pip_pipenv(p)[["data"]]
+        before <- list(
+            step = "a",
+            fun = dat[["fun"]][[1L]],
+            params = dat[["params"]][[1L]],
+            exec = dat[["exec"]][[1L]]
+        )
+        out <- .as_pipeflow_partitioned(list(k1 = keyFailure("a", "k1")))
+        currentOut <- new.env()
+        res <- store(p, "b", out = out, before = before, currentOut = currentOut)
+        expect_equal(res[["k1"]][["step"]], "b")
+        expect_identical(p[["b", "out"]], res)
+        expect_true(currentOut[["b"]])
+    })
+
+    it("does not mark a step with failed keys that changed itself", {
+        p <- pip_new() |> pip_add("a", \(x = 1) x)
+        dat <- .pip_pipenv(p)[["data"]]
+        before <- list(
+            step = "a",
+            fun = \(x) x,
+            params = dat[["params"]][[1L]],
+            exec = dat[["exec"]][[1L]]
+        )
+        out <- .as_pipeflow_partitioned(list(k1 = keyFailure("a", "k1")))
+        currentOut <- new.env()
+        store(p, "a", out = out, before = before, currentOut = currentOut)
+        expect_equal(unname(p[["a", "state"]]), "failed")
+        expect_null(currentOut[["a"]])
+    })
+
+    it("stores nothing if the step was removed", {
+        p <- pip_new() |> pip_add("a", \(x = 1) x) |> pip_add("b", \(x = 2) x)
+        dat <- .pip_pipenv(p)[["data"]]
+        before <- list(
+            step = "a",
+            fun = dat[["fun"]][[1L]],
+            params = dat[["params"]][[1L]],
+            exec = dat[["exec"]][[1L]]
+        )
+        node <- p[["a", "nodeId"]]
+        pip_remove(p, "a")
+        res <- .pip_store_step_output(
+            .pip_pipenv(p),
+            node = node,
+            out = 1,
+            before = before,
+            startTime = runTime,
+            runTime = runTime,
+            currentOut = new.env()
+        )
+        expect_equal(res, 1)
+        expect_null(p[["b", "out"]])
+        expect_equal(unname(p[["b", "state"]]), "new")
     })
 })
 
@@ -5526,6 +5728,7 @@ describe("pip_run", {
             expect_equal(plusOneOut[["b"]], 16)
             expect_equal(p[["pipenv"]][["data"]]$out[[5]], 9.5)
         })
+
         it("keeps a key whose output is NULL and passes it on", {
             for (map in list(NULL, lapply)) {
                 p <- pip_new() |>
