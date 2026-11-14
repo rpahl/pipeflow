@@ -1,3 +1,12 @@
+# pipeflow 0.5.0.9035
+
+## Bug fixes
+
+- A key of a partitioned output whose value is `NULL` is kept. Without `map`,
+  `pip_run()` dropped such a key from the output of a mapped step, and a step
+  mapped over a `NULL` key did not get the argument (it got the default instead,
+  or failed if it had several partitioned inputs).
+
 # pipeflow 0.5.0.9034
 
 ## Bug fixes

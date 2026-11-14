@@ -5526,6 +5526,24 @@ describe("pip_run", {
             expect_equal(plusOneOut[["b"]], 16)
             expect_equal(p[["pipenv"]][["data"]]$out[[5]], 9.5)
         })
+        it("keeps a key whose output is NULL and passes it on", {
+            for (map in list(NULL, lapply)) {
+                p <- pip_new() |>
+                    pip_add(
+                        "parts",
+                        \(x = list(a = 1, b = 2)) x,
+                        exec = "split"
+                    ) |>
+                    pip_add("fit", \(x = ~parts) if (x == 1) NULL else x) |>
+                    pip_add("isNull", \(x = ~fit, y = ~parts) is.null(x))
+                pip_run(p, lgr = NULL, map = map)
+                expect_equal(unclass(p[["fit", "out"]]), list(a = NULL, b = 2))
+                expect_equal(
+                    unclass(p[["isNull", "out"]]),
+                    list(a = TRUE, b = FALSE)
+                )
+            }
+        })
 
         it("errors when reduce mode receives only non-partitioned inputs", {
             p <- pip_new() |>

@@ -2021,9 +2021,10 @@
             out[key] <- keep[key]
             next
         }
+        # `[<-`, as `[[<-` would drop an argument whose value is NULL
         keyArgs <- args
         for (idx in partIdx) {
-            keyArgs[[idx]] <- args[[idx]][[key]]
+            keyArgs[idx] <- list(args[[idx]][[key]])
         }
 
         # A key whose input failed (in a continued run) is only allowed to run if all
@@ -2058,7 +2059,8 @@
             next
         }
 
-        out[[key]] <- tryCatch(
+        # `[<-`, as `[[<-` would drop a key whose output is NULL
+        out[key] <- list(tryCatch(
             expr = .pip_call_step(
                 fun,
                 args = keyArgs,
@@ -2067,7 +2069,7 @@
                 keys = keys
             ),
             error = function(e) keyFailed(e, key)
-        )
+        ))
     }
 
     # The errors of the keys are only raised (or kept) after all keys ran, in the order
