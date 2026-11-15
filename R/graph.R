@@ -153,11 +153,6 @@ pip_graph <- function(
 }
 
 
-#' Escape the HTML special characters of strings
-#'
-#' @param x Character vector.
-#' @return `x` with `&`, `<`, `>`, `"` and `'` replaced by HTML entities.
-#' @noRd
 .html_escape <- function(x) {
     x <- gsub("&", "&amp;", x, fixed = TRUE)
     x <- gsub("<", "&lt;", x, fixed = TRUE)
@@ -166,13 +161,6 @@ pip_graph <- function(
     gsub("'", "&#39;", x, fixed = TRUE)
 }
 
-#' Collapse strings to a short list
-#'
-#' @param x Character vector.
-#' @param maxItems The maximum number of items shown. If `x` is longer, the rest is
-#' marked with `"..."`.
-#' @return A single character string with the items separated by `", "`.
-#' @noRd
 .pip_graph_format_list <- function(x, maxItems = 5L) {
     if (length(x) > maxItems) {
         x <- c(x[seq_len(maxItems)], "...")
@@ -203,16 +191,6 @@ pip_graph <- function(
     )
 }
 
-#' Build the hover text of a step for the graph
-#'
-#' Lists the state, the exec mode and, if set, the tags, the lock, the last run (its
-#' start and, if it succeeded, its duration), the failed keys of a mapped step, the
-#' unbound parameters and the referenced steps (a `~try()` reference as `try(step)`).
-#'
-#' @param dat The step table.
-#' @param k The row of the step.
-#' @return A single string in HTML, with all values escaped.
-#' @noRd
 .pip_graph_title <- function(dat, k) {
     state <- dat[["state"]][[k]]
     params <- dat[["params"]][[k]]

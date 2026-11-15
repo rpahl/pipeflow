@@ -132,13 +132,6 @@
 # ----
 # Call
 # ----
-#' One call of the function: find or make the pipeline, set, run, extract
-#'
-#' @param args All arguments of the call, as a named list.
-#' @param ctx The context made by `as.function.pipeflow()`.
-#' @param cache The kept pipelines of the function.
-#' @return The result of the call, see `.fun_out()`.
-#' @noRd
 .fun_call <- function(args, ctx, cache) {
     # Read before the inner run, whose steps set their own
     stepCall <- .pip_step_call()
@@ -266,11 +259,6 @@
 }
 
 
-#' The kept pipelines of a step, in the order of its partition keys
-#'
-#' @param slots The slots of the step, see `.fun_slots()`.
-#' @return A list of pipelines, named by partition key.
-#' @noRd
 .fun_slot_pips <- function(slots) {
     keys <- intersect(slots$keys, names(slots$pips))
     mget(keys, envir = slots$pips)
@@ -440,13 +428,6 @@
 }
 
 
-#' Whether a function made by `as.function.pipeflow()` keeps its pipelines
-#'
-#' @param fun Any object.
-#' @return `TRUE` if `fun` was made by `as.function.pipeflow()` with `cache = TRUE`,
-#' else `FALSE`. A function made with `cache = FALSE` runs a new copy of the pipeline
-#' for each call and keeps nothing.
-#' @noRd
 .fun_keeps <- function(fun) {
     if (is.null(.fun_cache(fun))) {
         return(FALSE)
@@ -477,13 +458,6 @@
 }
 
 
-#' Move the kept pipelines of a renamed step to its new name
-#'
-#' @param fun The function of the step.
-#' @param from,to The old and the new name of the step.
-#' @return `NULL`, invisibly. Nothing happens if `fun` was not made by
-#' `as.function.pipeflow()`.
-#' @noRd
 .fun_rename <- function(fun, from, to) {
     cache <- .fun_cache(fun)
     if (!is.null(cache) && !is.null(cache$slots[[from]])) {

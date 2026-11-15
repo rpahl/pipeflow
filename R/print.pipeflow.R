@@ -1,12 +1,3 @@
-#' Format a condition in short form
-#'
-#' Formats a condition as `<kind/class>`, where `kind` is `"error"`, `"warning"`,
-#' `"message"` or `"condition"`, and `class` is the first class of the condition, e.g.
-#' `<error/simpleError>`. If the first class is the kind itself, only `<kind>` is shown.
-#'
-#' @param x A condition.
-#' @return A single character string.
-#' @noRd
 .format_condition <- function(x) {
     kinds <- c("error", "warning", "message")
     kind <- kinds[vapply(kinds, \(k) inherits(x, k), logical(1))]
@@ -71,14 +62,6 @@
 }
 
 
-#' Format the number of steps per state
-#'
-#' Counts the steps per state, in the order `done`, `outdated`, `failed`, `new`, and
-#' leaves out the states without steps, e.g. `"steps: 3 done, 1 failed, 2 new"`.
-#'
-#' @param states A character vector with the state of each step.
-#' @return A single character string.
-#' @noRd
 .format_state_counts <- function(states) {
     order <- c("done", "outdated", "failed", "new")
     counts <- table(factor(states, levels = order))

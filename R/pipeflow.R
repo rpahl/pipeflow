@@ -24,19 +24,6 @@
     )
 }
 
-#' Create the row of a new step
-#'
-#' @param step The name of the step.
-#' @param fun The step function.
-#' @param params Named list of the params of the step, see `.extract_fun_params()`.
-#' @param depends Named character vector of the steps that params refer to, see
-#' `.extract_depends()`. The other params are the unbound ones.
-#' @param nodeId The id of the step's node in the DAG.
-#' @param tags,exec As for [pip_add()].
-#' @return A list with one element per column of `.empty_pipeline()`, to be bound to the
-#' step table with `data.table::rbindlist()`. The step is in state `"new"`, unlocked and
-#' without output.
-#' @noRd
 .new_step <- function(
     step,
     fun,
@@ -64,15 +51,6 @@
     )
 }
 
-#' Convert to a duration in seconds
-#'
-#' The `duration` column of the step table is a `difftime` in seconds.
-#' `data.table::set()` writes only the numbers into the column and keeps its units, so
-#' every value is converted to seconds before it is stored.
-#'
-#' @param x A `difftime`, a number of seconds, or `NA`.
-#' @return A `difftime` with units `"secs"`.
-#' @noRd
 .as_duration <- function(x) {
     secs <- if (inherits(x, "difftime")) {
         as.numeric(x, units = "secs")
@@ -146,14 +124,6 @@
     invisible(exec)
 }
 
-#' Check the params of a step
-#'
-#' The params given to `pip_add()` or `pip_replace()` are merged with the defaults of
-#' the step function by name, so each of them needs a unique name.
-#'
-#' @param params The params given for the step.
-#' @return `params`, invisibly.
-#' @noRd
 .assert_step_params <- function(params) {
     parNames <- names(params)
     if (length(params) > 0L && is.null(parNames)) {
@@ -169,17 +139,6 @@
     invisible(params)
 }
 
-#' Check the function and params of a step
-#'
-#' A pipeline is no step function, but can be turned into one with `as.function()`.
-#' `.self` is provided to the step function when it runs, so it must not be declared or
-#' set as a param.
-#'
-#' @param fun The step function given to `pip_add()` or `pip_replace()`.
-#' @param params The params given for the step.
-#' @param step The name of the step.
-#' @return `fun`, invisibly.
-#' @noRd
 .assert_step_fun <- function(fun, params, step) {
     if (.is_pipeflow(fun)) {
         stop_no_call(
@@ -215,12 +174,6 @@
     invisible(fun)
 }
 
-#' Check a step name given to an editing function
-#'
-#' @param name The value of the argument.
-#' @param arg The name of the argument, for the error message.
-#' @return `name`, invisibly.
-#' @noRd
 .assert_step_name <- function(name, arg = "step") {
     if (!.is_single(name, "character")) {
         stop_no_call(arg, " must be a single string")
@@ -234,13 +187,6 @@
     invisible(name)
 }
 
-#' Check that a step can be edited through a pipeline or view
-#'
-#' @param x A pipeflow pipeline or view.
-#' @param step A single step name.
-#' @return `step`, invisibly. Signals an error if the step does not exist or, for a
-#' view, is not part of it.
-#' @noRd
 .assert_step_in_view <- function(x, step) {
     if (!.pip_step_exists(x, step)) {
         stop_no_call("step '", step, "' does not exist")
@@ -497,13 +443,6 @@
     as.integer(pipenv[["data"]][["nodeId"]][rows])
 }
 
-#' Get the rows of the step table covered by a pipeline or view
-#'
-#' @param x A pipeflow pipeline or view.
-#' @return Integer vector of absolute row indices in pipeline order: all rows for a
-#' pipeline, the rows of the steps in the selector for a view. Steps that were removed
-#' from the pipeline are no longer covered.
-#' @noRd
 .pip_view_rows <- function(x) {
     view <- .subset2(x, "view")
     nodeIds <- .pip_pipenv(x)[["data"]][["nodeId"]]
@@ -513,23 +452,11 @@
     which(nodeIds %in% view)
 }
 
-#' Get the rows of the step table covered by a pipeline or view
-#'
-#' @param x A pipeflow pipeline or view.
-#' @return A copy of the covered rows (see `.pip_view_rows()`) as a `data.table`.
-#' @noRd
 .pip_view_data <- function(x) {
     rows <- .pip_view_rows(x)
     .pip_pipenv(x)[["data"]][rows, ]
 }
 
-#' Is a step covered by a pipeline or view?
-#'
-#' @param x A pipeflow pipeline or view.
-#' @param step A single step name.
-#' @return `TRUE` if `step` is a step of the pipeline and, for a view, is covered by it.
-#' `FALSE` otherwise, also for an unknown step.
-#' @noRd
 .pip_step_in_view <- function(x, step) {
     absRow <- data.table::chmatch(step, .pip_pipenv(x)[["data"]][["step"]])
     if (is.na(absRow)) {
@@ -553,13 +480,6 @@
 # ---------------------------
 # Step lookup & DAG traversal
 # ---------------------------
-#' Is a step in the pipeline?
-#'
-#' @param x A pipeflow pipeline or view. A view does not restrict the steps, see
-#' `.pip_step_in_view()` for that.
-#' @param step A single, non-empty step name.
-#' @return `TRUE` if the pipeline has a step of that name.
-#' @noRd
 .pip_step_exists <- function(x, step) {
     exists(
         step,
@@ -568,12 +488,6 @@
     )
 }
 
-#' Get the DAG node ids of steps
-#'
-#' @param x A pipeflow pipeline or view. A view does not restrict the steps.
-#' @param steps Character vector of non-empty step names.
-#' @return Named list by step of the node ids, with `NA` for unknown steps.
-#' @noRd
 .pip_steps_to_nodes <- function(x, steps) {
     mget(
         steps,
@@ -791,16 +705,6 @@
 # -----------------
 # Pipeline addition
 # -----------------
-#' Append a step to the end of a pipeline
-#'
-#' Does the work of [pip_add()] without `after`, whose inputs are checked.
-#'
-#' @param x A pipeflow pipeline (not a view).
-#' @param step The name of the new step, not yet in the pipeline.
-#' @param fun,tags,exec,params As for [pip_add()].
-#' @return `x`, with the step added to the step table, the DAG and the step to node map.
-#' Signals an error, before anything is changed, if `params` refer to unknown steps.
-#' @noRd
 .pip_append <- function(x, step, fun, tags, exec = "auto", params = list()) {
     params <- .extract_fun_params(fun, params)
 
@@ -957,14 +861,6 @@
     )
 }
 
-#' Get the position after which a step is added
-#'
-#' @param x A pipeflow pipeline (not a view).
-#' @param after The `after` of [pip_add()]: a step name or an index from 0 to the number
-#' of steps.
-#' @return The index of the step after which the step is added, 0 for the beginning.
-#' Signals an error if `after` is invalid.
-#' @noRd
 .pip_after_pos <- function(x, after) {
     n <- length(x)
     if (is.character(after)) {
@@ -1024,13 +920,6 @@
     list(params = params, values = values)
 }
 
-#' Put back the formula values of a copied step
-#'
-#' @param x A pipeflow pipeline or view.
-#' @param step The name of the copied step.
-#' @param values The formula values from `.params_copy()`.
-#' @return `x`, invisibly.
-#' @noRd
 .pip_put_values <- function(x, step, values) {
     if (length(values) > 0L) {
         dat <- .pip_pipenv(x)[["data"]]
@@ -1151,14 +1040,6 @@
     invisible(x)
 }
 
-#' Create the warning about params whose values differ between steps
-#'
-#' @param conflicts A data.frame with one row per conflict and the columns `step`,
-#' `param`, `value` (the value in `step`, formatted), `other` (the step whose value
-#' differs) and `other_value`.
-#' @return A condition of class `c("pipeflow_param_conflict", "warning", "condition")`
-#' with the field `conflicts`.
-#' @noRd
 .pip_param_conflict_warning <- function(conflicts) {
     lines <- sprintf(
         "- '%s' is %s in step '%s', but %s in step '%s'",
@@ -1329,13 +1210,6 @@
     )
 }
 
-#' Check the steps that the bindings of pip_set_params() refer to
-#'
-#' @param x A pipeflow pipeline or view.
-#' @param refs Named list of one-sided formulas, e.g. `list(model = ~fit)`.
-#' @return `refs`, invisibly. Signals an error for a relative reference (e.g. `~-1`) or
-#' a step that is not in the pipeline.
-#' @noRd
 .pip_assert_bind_targets <- function(x, refs) {
     targets <- formula_deps(refs)
     if (length(targets) == 0L) {
@@ -1361,16 +1235,6 @@
     invisible(refs)
 }
 
-#' Is a param bound as given in one of the rows?
-#'
-#' @param dat The step table.
-#' @param rows Row indices of `dat`.
-#' @param name Name of the param.
-#' @param ref The one-sided formula that binds the param.
-#' @param target The step that `ref` refers to.
-#' @return `TRUE` if the param of one of the `rows` refers to `target`, and is wrapped
-#' in `try()` just like `ref`.
-#' @noRd
 .pip_has_binding <- function(dat, rows, name, ref, target) {
     for (i in rows) {
         depends <- dat[["depends"]][[i]]
@@ -1384,15 +1248,6 @@
     FALSE
 }
 
-#' Check that params are bound to steps that come before
-#'
-#' @param dat The step table.
-#' @param rows Row indices of the steps whose params are bound.
-#' @param bound List with the names of the bound params of each of the `rows`.
-#' @param targets Named character vector: the step that each param is bound to.
-#' @return `NULL`, invisibly. Signals an error if a param is bound to a step that is the
-#' step itself or comes after it.
-#' @noRd
 .pip_check_bind_order <- function(dat, rows, bound, targets) {
     for (name in names(targets)) {
         target <- targets[[name]]
@@ -1692,12 +1547,6 @@
     structure(class = c("pipeflow_failure", "error", "condition"), fields)
 }
 
-#' Get the partition keys of an output that hold a failure
-#'
-#' @param out A step output.
-#' @return Character vector of the keys of a partitioned `out` whose output is a failure
-#' object (see `.pip_failure()`), empty for any other `out`.
-#' @noRd
 .pip_failed_keys <- function(out) {
     if (!.is_pipeflow_partitioned(out)) {
         return(character())
@@ -1755,13 +1604,6 @@
     )
 }
 
-#' Rename a step in the failures of a partitioned output
-#'
-#' @param out A partitioned step output.
-#' @param from,to The old and the new name of the step.
-#' @return `out`, with each failure of a key that names step `from` (as its step or as
-#' the step that failed) rebuilt with `to` instead, including its message.
-#' @noRd
 .pip_rename_failures <- function(out, from, to) {
     for (key in .pip_failed_keys(out)) {
         f <- out[[key]]
@@ -1969,11 +1811,6 @@
     x
 }
 
-#' The step call that runs
-#'
-#' @return A list of `step`, `key` and `keys`, see `.pip_call_step()`. All of them are
-#' `NULL` outside of a run.
-#' @noRd
 .pip_step_call <- function() {
     mget(c("step", "key", "keys"), envir = .step_call)
 }
@@ -2329,12 +2166,6 @@
     }
 }
 
-#' Apply pip_param_value() to the unbound arguments of a step call
-#'
-#' @param args Named list of all arguments of the step call.
-#' @param unbound Names of the unbound arguments.
-#' @return `args`, with the unbound arguments passed through [pip_param_value()].
-#' @noRd
 .pip_unwrap_params <- function(args, unbound) {
     unbound <- intersect(unbound, names(args))
     if (length(unbound) > 0L) {
@@ -2526,15 +2357,6 @@
     )
 }
 
-#' Collect the arguments of a step call
-#'
-#' @param dat The step table.
-#' @param i The row of the step.
-#' @param failed Named list by argument of failure objects that replace the outputs of
-#' the referenced steps, see `.pip_run_row()`.
-#' @return Named list: the params of the step, with the outputs of the steps it refers
-#' to (or the failures in `failed`) as the values of the referring arguments.
-#' @noRd
 .pip_step_args <- function(dat, i, failed = list()) {
     args <- dat[["params"]][[i]]
     depends <- dat[["depends"]][[i]]
@@ -2652,11 +2474,6 @@
     out
 }
 
-#' Check the arguments of `pip_run()`
-#'
-#' @param force,progress,map The arguments of [pip_run()].
-#' @return `NULL`, invisibly.
-#' @noRd
 .pip_assert_run_args <- function(force, progress, map) {
     if (!.is_single(force, "logical")) {
         stop("force must be a single logical value")
@@ -2824,14 +2641,6 @@
     dat[["step"]][rows[isOutdated]][isRoot]
 }
 
-#' Warning about steps that outdated themselves or the steps before them
-#'
-#' @param outdated Named list: for each step (by its name at the end of the run) that
-#' outdated itself or steps before it, the names of these steps (see
-#' `.pip_outdated_before()`).
-#' @return A condition of class `c("pipeflow_outdated_before", "warning", "condition")`
-#' with the field `steps` (`outdated`).
-#' @noRd
 .pip_outdated_before_warning <- function(outdated) {
     what <- vapply(
         outdated,
@@ -2885,15 +2694,6 @@
     )
 }
 
-#' Log and signal the warnings at the end of a run
-#'
-#' @param lgr The logger of the run.
-#' @param pipname Name of the pipeline.
-#' @param outdatedBefore The steps that steps outdated among themselves and the steps
-#' before them (see `.pip_outdated_before_warning()`).
-#' @param failures The failures of a continued run (see `.pip_run_failed_warning()`).
-#' @return `NULL`, invisibly.
-#' @noRd
 .pip_run_report <- function(lgr, pipname, outdatedBefore, failures) {
     warn <- function(w) {
         lgr(level = "warn", msg = conditionMessage(w))
@@ -2976,13 +2776,6 @@
     invisible(integer())
 }
 
-#' Set the run state and time of a finished run
-#'
-#' @param pipenv The `pipenv` of the pipeline.
-#' @param runState Name of the run state (see `.run_states`).
-#' @param runStart,lastRun Start and end time of the run.
-#' @return `NULL`, invisibly. `pipenv` is updated in place.
-#' @noRd
 .pip_end_run <- function(pipenv, runState, runStart, lastRun = Sys.time()) {
     pipenv[[".run_state"]][] <- .run_states[[runState]][["name"]]
     pipenv[[".last_run"]] <- lastRun
