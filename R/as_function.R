@@ -39,17 +39,17 @@
         # language construct such as `if`
         outArgs <- args(out)
         if (is.null(outArgs) || length(formals(outArgs)) == 0L) {
-            stop_no_call(msg)
+            .stop_no_call(msg)
         }
         return(invisible(out))
     }
     steps <- .pip_pipenv(x)[["data"]][["step"]]
     if (!is.character(out) || anyNA(out) || length(out) == 0L) {
-        stop_no_call(msg)
+        .stop_no_call(msg)
     }
     missingSteps <- setdiff(out, steps)
     if (length(missingSteps) > 0L) {
-        stop_no_call(
+        .stop_no_call(
             "out has steps that are not in the pipeline: ",
             toString(missingSteps)
         )
@@ -60,7 +60,7 @@
 
 .assert_fun_cache <- function(cache) {
     if (!.is_single(cache, "logical") || is.na(cache)) {
-        stop_no_call("cache must be a single logical value (TRUE or FALSE)")
+        .stop_no_call("cache must be a single logical value (TRUE or FALSE)")
     }
     invisible(cache)
 }
@@ -350,7 +350,7 @@
         }
         depends <- dat[["depends"]][[i]]
         failedArgs <- names(depends)[depends %in% names(causes)]
-        tryArgs <- formula_try_args(dat[["params"]][[i]])
+        tryArgs <- .formula_try_args(dat[["params"]][[i]])
         blocked <- setdiff(failedArgs, tryArgs)
         if (length(blocked) > 0L) {
             causes[[step]] <- causes[[depends[[blocked[[1L]]]]]]
@@ -743,11 +743,11 @@ as.function.pipeflow <- function(
 pip_inner <- function(x, step) {
     .assert_pip_or_view(x)
     if (!.pip_step_exists(x, step)) {
-        stop_no_call("step '", step, "' does not exist")
+        .stop_no_call("step '", step, "' does not exist")
     }
     cache <- .fun_cache(x[[step, "fun"]])
     if (is.null(cache)) {
-        stop_no_call(
+        .stop_no_call(
             "the function of step '",
             step,
             "' was not made by as.function()"

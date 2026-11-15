@@ -69,7 +69,7 @@ pip_invariant_violations <- function(x) {
 
         # 5. The reference formulas mirror the dependencies. A relative reference (e.g.
         #    ~-1) was resolved when the step was added.
-        refs <- formula_deps(params)
+        refs <- .formula_deps(params)
         isName <- !grepl("^-?[0-9]+$", refs)
         check(
             setequal(names(refs), names(depends)) &&

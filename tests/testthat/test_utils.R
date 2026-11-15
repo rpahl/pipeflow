@@ -53,10 +53,10 @@ describe(".is_single", {
     })
 })
 
-describe("unlist1", {
-    f <- unlist1
+describe(".unlist1", {
+    f <- .unlist1
 
-    test_that("unlist1 unravels a list by one level", {
+    test_that(".unlist1 unravels a list by one level", {
         l <- list(a = list(x = list(1, 2)))
 
         expect_equal(as.numeric(unlist(l)), 1:2)
@@ -65,12 +65,12 @@ describe("unlist1", {
     })
 })
 
-describe("stop_no_call", {
+describe(".stop_no_call", {
     f1 <- function(x) {
         if (x > 5) stop("x is too big")
     }
     f2 <- function(x) {
-        if (x > 5) stop_no_call("x is too big")
+        if (x > 5) .stop_no_call("x is too big")
     }
 
     it("in contrast to standard stop gives an error without the call", {
@@ -83,149 +83,149 @@ describe("stop_no_call", {
 })
 
 
-describe("formula_deps", {
+describe(".formula_deps", {
     it("extracts dependencies from one-sided formulas", {
-        expect_equal(formula_deps(list(x = ~s1)), c(x = "s1"))
+        expect_equal(.formula_deps(list(x = ~s1)), c(x = "s1"))
         expect_equal(
-            formula_deps(list(x = ~s1, y = ~s2)),
+            .formula_deps(list(x = ~s1, y = ~s2)),
             c(x = "s1", y = "s2")
         )
     })
 
     it("works with unnamed lists", {
-        expect_equal(formula_deps(list(~s1, ~s2)), c("s1", "s2"))
+        expect_equal(.formula_deps(list(~s1, ~s2)), c("s1", "s2"))
     })
 
     it("ignores non-formula values, keeping formula order", {
         expect_equal(
-            formula_deps(list(x = ~s1, y = 2, z = "abc", w = TRUE)),
+            .formula_deps(list(x = ~s1, y = 2, z = "abc", w = TRUE)),
             c(x = "s1")
         )
         expect_equal(
-            formula_deps(list(x = ~s1, y = ~s2, z = "~s3")),
+            .formula_deps(list(x = ~s1, y = ~s2, z = "~s3")),
             c(x = "s1", y = "s2")
         )
     })
 
     it("returns an empty vector for empty or formula-free lists", {
-        expect_equal(formula_deps(list()), character(0))
-        expect_equal(formula_deps(list(a = 1, b = "x")), character(0))
+        expect_equal(.formula_deps(list()), character(0))
+        expect_equal(.formula_deps(list(a = 1, b = "x")), character(0))
         expect_equal(
-            formula_deps(list(a = NULL, b = NA, c = 1.5)),
+            .formula_deps(list(a = NULL, b = NA, c = 1.5)),
             character(0)
         )
     })
 
     it("extracts relative positional dependencies", {
-        expect_equal(formula_deps(list(x = ~ -1)), c(x = "-1"))
-        expect_equal(formula_deps(list(x = ~ -2)), c(x = "-2"))
+        expect_equal(.formula_deps(list(x = ~ -1)), c(x = "-1"))
+        expect_equal(.formula_deps(list(x = ~ -2)), c(x = "-2"))
     })
 
     it("unwraps references wrapped in try()", {
         expect_equal(
-            formula_deps(list(x = ~ try(s1), y = ~ try(-1), z = ~s2)),
+            .formula_deps(list(x = ~ try(s1), y = ~ try(-1), z = ~s2)),
             c(x = "s1", y = "-1", z = "s2")
         )
     })
 
     it("does not unwrap try() calls with more than one argument", {
         expect_equal(
-            formula_deps(list(x = ~ try(s1, silent = TRUE))),
+            .formula_deps(list(x = ~ try(s1, silent = TRUE))),
             c(x = "try(s1, silent = TRUE)")
         )
     })
 
     it("treats strings starting with ~ as plain values, not formulas", {
-        expect_equal(formula_deps(list(x = "~s1")), character(0))
+        expect_equal(.formula_deps(list(x = "~s1")), character(0))
     })
 
     it("ignores two-sided formulas", {
-        expect_equal(formula_deps(list(f = y ~ x)), character(0))
+        expect_equal(.formula_deps(list(f = y ~ x)), character(0))
     })
 
     it("detects formulas created by as.formula()", {
         expect_equal(
-            formula_deps(list(x = as.formula("~s1"))),
+            .formula_deps(list(x = as.formula("~s1"))),
             c(x = "s1")
         )
     })
 
     it("ignores plain language objects and calls", {
         # quote(~s1) is an unevaluated "~" call, not a formula
-        expect_equal(formula_deps(list(x = quote(~s1))), character(0))
-        expect_equal(formula_deps(list(x = quote(s1))), character(0))
-        expect_equal(formula_deps(list(x = quote(foo()))), character(0))
+        expect_equal(.formula_deps(list(x = quote(~s1))), character(0))
+        expect_equal(.formula_deps(list(x = quote(s1))), character(0))
+        expect_equal(.formula_deps(list(x = quote(foo()))), character(0))
     })
 
     it("ignores functions and vectors", {
         expect_equal(
-            formula_deps(list(f = function(x) x, v = c(1, 2))),
+            .formula_deps(list(f = function(x) x, v = c(1, 2))),
             character(0)
         )
     })
 
     it("keeps the tail after the tilde for complex RHS", {
-        expect_equal(formula_deps(list(x = ~ s1 + s2)), c(x = "s1 + s2"))
-        expect_equal(formula_deps(list(x = ~ sqrt(s1))), c(x = "sqrt(s1)"))
-        expect_equal(formula_deps(list(x = ~1)), c(x = "1"))
+        expect_equal(.formula_deps(list(x = ~ s1 + s2)), c(x = "s1 + s2"))
+        expect_equal(.formula_deps(list(x = ~ sqrt(s1))), c(x = "sqrt(s1)"))
+        expect_equal(.formula_deps(list(x = ~1)), c(x = "1"))
     })
 
     it("returns non-syntactic step names without backticks", {
         expect_equal(
-            formula_deps(list(x = ~`my step`)),
+            .formula_deps(list(x = ~`my step`)),
             c(x = "my step")
         )
         expect_equal(
-            formula_deps(list(x = ~`my-step`, y = ~`if`)),
+            .formula_deps(list(x = ~`my-step`, y = ~`if`)),
             c(x = "my-step", y = "if")
         )
         expect_equal(
-            formula_deps(list(x = ~ try(`my step`))),
+            .formula_deps(list(x = ~ try(`my step`))),
             c(x = "my step")
         )
     })
 })
 
 
-describe("formula_set_ref", {
+describe(".formula_set_ref", {
     it("points a reference to another step", {
-        expect_equal(formula_set_ref(~s1, "s2"), ~s2)
-        expect_equal(formula_set_ref(~ -1, "s2"), ~s2)
+        expect_equal(.formula_set_ref(~s1, "s2"), ~s2)
+        expect_equal(.formula_set_ref(~ -1, "s2"), ~s2)
     })
 
     it("keeps a try() wrapper", {
-        expect_equal(formula_set_ref(~ try(s1), "s2"), ~ try(s2))
-        expect_equal(formula_set_ref(~ try(-1), "s2"), ~ try(s2))
+        expect_equal(.formula_set_ref(~ try(s1), "s2"), ~ try(s2))
+        expect_equal(.formula_set_ref(~ try(-1), "s2"), ~ try(s2))
     })
 
     it("refers to non-syntactic step names", {
-        expect_equal(formula_set_ref(~s1, "my step"), ~`my step`)
-        expect_equal(formula_set_ref(~ try(s1), "if"), ~ try(`if`))
-        fml <- formula_set_ref(~s1, "a-b")
-        expect_equal(formula_deps(list(x = fml)), c(x = "a-b"))
+        expect_equal(.formula_set_ref(~s1, "my step"), ~`my step`)
+        expect_equal(.formula_set_ref(~ try(s1), "if"), ~ try(`if`))
+        fml <- .formula_set_ref(~s1, "a-b")
+        expect_equal(.formula_deps(list(x = fml)), c(x = "a-b"))
     })
 
     it("keeps the environment of the formula", {
         fml <- local(~s1)
         expect_identical(
-            environment(formula_set_ref(fml, "s2")),
+            environment(.formula_set_ref(fml, "s2")),
             environment(fml)
         )
     })
 })
 
 
-describe("formula_try_args", {
+describe(".formula_try_args", {
     it("returns the names of the args with references wrapped in try()", {
         params <- list(a = ~ try(s1), b = ~s2, c = 1, d = ~ try(-1), e = "try")
-        expect_equal(formula_try_args(params), c("a", "d"))
+        expect_equal(.formula_try_args(params), c("a", "d"))
     })
 
     it("returns an empty vector if there are no try() references", {
-        expect_equal(formula_try_args(list()), character(0))
-        expect_equal(formula_try_args(list(a = ~s1, b = ~try)), character(0))
+        expect_equal(.formula_try_args(list()), character(0))
+        expect_equal(.formula_try_args(list(a = ~s1, b = ~try)), character(0))
         expect_equal(
-            formula_try_args(list(a = ~ try(s1, silent = TRUE))),
+            .formula_try_args(list(a = ~ try(s1, silent = TRUE))),
             character(0)
         )
     })

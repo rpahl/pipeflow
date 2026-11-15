@@ -979,7 +979,7 @@ describe("extract operator [", {
             pip_add("b", \(x = ~ try(a)) x)
         suppressMessages(sub <- p["b", view = FALSE])
 
-        expect_equal(formula_try_args(sub[["b", "params"]]), "x")
+        expect_equal(.formula_try_args(sub[["b", "params"]]), "x")
     })
 
     it("returns a pipeline by step names with view = FALSE", {
@@ -1941,10 +1941,10 @@ describe("assignment operator [[<-", {
             pip_add("s2", \(x = ~ try(s1)) x + 1)
 
         p[["s2", "fun"]] <- \(x = ~s1) x * 2
-        expect_equal(formula_try_args(p[["s2", "params"]]), character(0))
+        expect_equal(.formula_try_args(p[["s2", "params"]]), character(0))
 
         p[["s2", "fun"]] <- \(y = ~ try(s1)) y
-        expect_equal(formula_try_args(p[["s2", "params"]]), "y")
+        expect_equal(.formula_try_args(p[["s2", "params"]]), "y")
     })
 
     it("updates the parameters of a single step", {
@@ -2852,7 +2852,7 @@ describe("cross-pipeline assignment", {
 
         expect_equal(p[["depends"]][["c"]], c(x = "b"))
         expect_equal(p[["depends"]][["d"]], c(x = "b"))
-        expect_equal(formula_try_args(p[["d", "params"]]), "x")
+        expect_equal(.formula_try_args(p[["d", "params"]]), "x")
         pip_run(p, lgr = NULL)
         expect_equal(p[["c", "out"]], 2)
     })
@@ -2962,7 +2962,7 @@ describe("cross-pipeline assignment", {
         p[3, ] <- q[3, ]
 
         expect_equal(p[["depends"]][["s"]], c(model = "y"))
-        expect_equal(formula_try_args(p[["s", "params"]]), "model")
+        expect_equal(.formula_try_args(p[["s", "params"]]), "model")
         pip_run(p, lgr = NULL)
         expect_equal(p[["s", "out"]], 2)
     })
@@ -3019,7 +3019,7 @@ describe("cross-pipeline assignment", {
 
         p[3, ] <- q[3, ]
 
-        expect_equal(formula_try_args(p[["s2", "params"]]), "y")
+        expect_equal(.formula_try_args(p[["s2", "params"]]), "y")
     })
 })
 

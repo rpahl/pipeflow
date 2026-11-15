@@ -175,10 +175,11 @@ pip_graph <- function(
 #' parameter.
 #' @return A `data.frame` with one row per referenced step and columns `step` and `try`.
 #' `try` is `TRUE` if all parameters that reference the step are `~try()` references
-#' (see `formula_try_args()`), i.e. if the step also runs if the referenced step failed.
+#' (see `.formula_try_args()`), i.e. if the step also runs if the referenced step
+#' failed.
 #' @noRd
 .pip_graph_refs <- function(params, depends) {
-    isTry <- names(depends) %in% formula_try_args(params)
+    isTry <- names(depends) %in% .formula_try_args(params)
     steps <- as.character(unique(unname(depends)))
     data.frame(
         step = steps,

@@ -1,3 +1,10 @@
+# pipeflow 0.5.0.9039
+
+## Minor improvements
+
+- Internal: the helpers of `utils.R` that were not exported now start with a dot
+  like the other internal helpers.
+
 # pipeflow 0.5.0.9038
 
 ## Minor improvements

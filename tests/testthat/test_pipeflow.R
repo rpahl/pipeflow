@@ -2606,7 +2606,7 @@ describe("pip_add params overriding the defaults of fun", {
             pip_add("c", \(x = ~a) x, params = list(x = ~ try(b)))
 
         expect_equal(p[["depends"]][["c"]], c(x = "b"))
-        expect_equal(formula_try_args(p[["c", "params"]]), "x")
+        expect_equal(.formula_try_args(p[["c", "params"]]), "x")
     })
 
     it("passes a failure to a try() reference given via params", {
@@ -4423,7 +4423,7 @@ describe("pip_set_params", {
         pip_set_params(p, list(x = ~ try(fail)))
 
         expect_equal(p[["depends"]][["s"]], c(x = "fail"))
-        expect_equal(formula_try_args(p[["s", "params"]]), "x")
+        expect_equal(.formula_try_args(p[["s", "params"]]), "x")
         suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
         expect_true(p[["s", "out"]])
     })
@@ -4465,7 +4465,7 @@ describe("pip_set_params", {
             "not defined in the target: model"
         )
         expect_equal(p[["depends"]][["rep1"]], c(model = "fit2"))
-        expect_equal(formula_try_args(p[["rep1", "params"]]), character(0))
+        expect_equal(.formula_try_args(p[["rep1", "params"]]), character(0))
     })
 
     it("signals bindings to steps that don't come before, changing nothing", {
