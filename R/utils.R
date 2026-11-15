@@ -10,6 +10,10 @@
     identical(data.class(x), mode)
 }
 
+`%||%` <- function(x, y) {
+    if (is.null(x)) y else x
+}
+
 .unlist1 <- function(x, ...) {
     unlist(x, recursive = FALSE, ...)
 }
@@ -57,7 +61,7 @@
             }
         }) |>
         unlist()
-    if (is.null(deps)) character(0) else deps
+    deps %||% character(0)
 }
 
 .formula_try_args <- function(x) {

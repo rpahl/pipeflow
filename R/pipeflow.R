@@ -3169,7 +3169,7 @@ pip_clone <- function(x, name = NULL, out = NULL) {
     if (!is.null(name) && (!.is_single(name, "character") || is.na(name))) {
         stop("name must be a single non-NA string")
     }
-    newName <- if (is.null(name)) x[["name"]] else name
+    newName <- name %||% x[["name"]]
     if (is.null(out)) {
         return(.pip_clone(x, name = newName))
     }
@@ -3270,9 +3270,7 @@ pip_collect <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
     if (!.is_single(simplify, "logical") || is.na(simplify)) {
         stop("simplify must be a single logical value")
     }
-    if (is.null(by)) {
-        by <- "step"
-    }
+    by <- by %||% "step"
     if (!.is_single(by, "character") || is.na(by) || !nzchar(by)) {
         stop("by must be a single column name")
     }
@@ -3955,12 +3953,8 @@ pip_replace <- function(
     iStep <- data.table::chmatch(step, data[["step"]])
 
     # NULL means "keep the current value"
-    if (is.null(tags)) {
-        tags <- data[["tags"]][[iStep]]
-    }
-    if (is.null(exec)) {
-        exec <- data[["exec"]][[iStep]]
-    }
+    tags <- tags %||% data[["tags"]][[iStep]]
+    exec <- exec %||% data[["exec"]][[iStep]]
 
     kept <- list()
     if (keep_params) {
