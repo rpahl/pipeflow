@@ -240,7 +240,7 @@ flowchart LR
         pclone["pip_clone / .pip_clone(deep = FALSE)"]
         pcol["pip_collect"]
         pse[".pip_step_error"]
-        fta["formula_try_args (utils.R)"]
+        fta[".formula_try_args (utils.R)"]
     end
     subgraph gen["R/generic.pipeflow.R"]
         pcf[".pip_copy_from<br/>(keeps formula values)"]

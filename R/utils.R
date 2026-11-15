@@ -10,15 +10,15 @@
     identical(data.class(x), mode)
 }
 
-unlist1 <- function(x, ...) {
+.unlist1 <- function(x, ...) {
     unlist(x, recursive = FALSE, ...)
 }
 
-stop_no_call <- function(...) {
+.stop_no_call <- function(...) {
     stop(..., call. = FALSE)
 }
 
-is_one_sided_formula <- function(x) {
+.is_one_sided_formula <- function(x) {
     inherits(x, "formula") && length(x) == 2L
 }
 
@@ -31,8 +31,8 @@ is_one_sided_formula <- function(x) {
 #' @param x Any object.
 #' @return `TRUE` if `x` is a one-sided formula of the form `~try(<ref>)`, else `FALSE`.
 #' @noRd
-is_try_ref <- function(x) {
-    is_one_sided_formula(x) &&
+.is_try_ref <- function(x) {
+    .is_one_sided_formula(x) &&
         is.call(x[[2L]]) &&
         identical(x[[2L]][[1L]], as.name("try")) &&
         length(x[[2L]]) == 2L
@@ -41,15 +41,15 @@ is_try_ref <- function(x) {
 #' Extract the step references of a list of parameters
 #'
 #' @param x List of parameters. Its one-sided formulas are step references, where a
-#' reference wrapped in `try()` (see `is_try_ref()`) is unwrapped.
+#' reference wrapped in `try()` (see `.is_try_ref()`) is unwrapped.
 #' @return Character vector of the referenced step names or relative positions (e.g.
 #' `"-1"`), named like the respective elements of `x`. A step name is returned as is,
 #' also if it is non-syntactic, e.g. `"source data"` for ``~`source data` ``.
 #' @noRd
-formula_deps <- function(x) {
-    deps <- Filter(f = is_one_sided_formula, x = x) |>
+.formula_deps <- function(x) {
+    deps <- Filter(f = .is_one_sided_formula, x = x) |>
         lapply(\(x) {
-            ref <- if (is_try_ref(x)) x[[2L]][[2L]] else x[[2L]]
+            ref <- if (.is_try_ref(x)) x[[2L]][[2L]] else x[[2L]]
             if (is.name(ref)) {
                 as.character(ref)
             } else {
@@ -60,23 +60,23 @@ formula_deps <- function(x) {
     if (is.null(deps)) character(0) else deps
 }
 
-formula_try_args <- function(x) {
-    as.character(names(Filter(f = is_try_ref, x = x)))
+.formula_try_args <- function(x) {
+    as.character(names(Filter(f = .is_try_ref, x = x)))
 }
 
 #' Point a step reference to another step
 #'
 #' Only the referenced name is swapped, so that the formula keeps its environment and a
-#' `try()` wrapper (see `is_try_ref()`). Building the formula from a string instead
+#' `try()` wrapper (see `.is_try_ref()`). Building the formula from a string instead
 #' would attach the calling frame and fail for non-syntactic step names.
 #'
 #' @param x One-sided formula that references a step.
 #' @param step Name of the step to refer to.
 #' @return `x`, referring to `step`.
 #' @noRd
-formula_set_ref <- function(x, step) {
+.formula_set_ref <- function(x, step) {
     ref <- as.name(step)
-    if (is_try_ref(x)) {
+    if (.is_try_ref(x)) {
         x[[2L]][[2L]] <- ref
     } else {
         x[[2L]] <- ref
@@ -87,7 +87,7 @@ formula_set_ref <- function(x, step) {
 #' Point the step references of params to step names
 #'
 #' Used where steps are copied to another place, where a relative reference (`~-1`)
-#' would point to another step. A `try()` wrapper is kept (see `formula_set_ref()`).
+#' would point to another step. A `try()` wrapper is kept (see `.formula_set_ref()`).
 #'
 #' @param params Named list of the params of a step.
 #' @param depends Named character vector of the steps that the params refer to, as in
@@ -96,7 +96,7 @@ formula_set_ref <- function(x, step) {
 #' @noRd
 .params_refs_by_name <- function(params, depends) {
     for (arg in intersect(names(depends), names(params))) {
-        params[[arg]] <- formula_set_ref(params[[arg]], depends[[arg]])
+        params[[arg]] <- .formula_set_ref(params[[arg]], depends[[arg]])
     }
     params
 }

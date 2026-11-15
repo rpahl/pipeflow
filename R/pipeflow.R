@@ -134,30 +134,30 @@
         all(nzchar(parNames)) &&
         !anyDuplicated(parNames)
     if (!isValid) {
-        stop_no_call("params must be a list with unique names")
+        .stop_no_call("params must be a list with unique names")
     }
     invisible(params)
 }
 
 .assert_step_fun <- function(fun, params, step) {
     if (.is_pipeflow(fun)) {
-        stop_no_call(
+        .stop_no_call(
             "fun must be a function, not a pipeline - to use a pipeline as ",
             "a step, turn it into a function with as.function(), ",
             "see ?as.function.pipeflow"
         )
     }
     if (!is.function(fun)) {
-        stop_no_call("fun must be a function")
+        .stop_no_call("fun must be a function")
     }
     if (is.primitive(fun)) {
-        stop_no_call(
+        .stop_no_call(
             "fun must not be a primitive function; wrap it, ",
             "e.g. \\(x = 1) sum(x)"
         )
     }
     if (".self" %in% names(formals(fun))) {
-        stop_no_call(
+        .stop_no_call(
             "'.self' is a reserved parameter name and must not be declared ",
             "in step '",
             step,
@@ -165,7 +165,7 @@
         )
     }
     if (".self" %in% names(params)) {
-        stop_no_call(
+        .stop_no_call(
             "'.self' is a reserved parameter name and must not be set via ",
             "params - it is provided automatically"
         )
@@ -176,23 +176,23 @@
 
 .assert_step_name <- function(name, arg = "step") {
     if (!.is_single(name, "character")) {
-        stop_no_call(arg, " must be a single string")
+        .stop_no_call(arg, " must be a single string")
     }
     if (is.na(name)) {
-        stop_no_call(arg, " must not be NA")
+        .stop_no_call(arg, " must not be NA")
     }
     if (!nzchar(name)) {
-        stop_no_call(arg, " must be a non-empty string")
+        .stop_no_call(arg, " must be a non-empty string")
     }
     invisible(name)
 }
 
 .assert_step_in_view <- function(x, step) {
     if (!.pip_step_exists(x, step)) {
-        stop_no_call("step '", step, "' does not exist")
+        .stop_no_call("step '", step, "' does not exist")
     }
     if (!.pip_step_in_view(x, step)) {
-        stop_no_call("step '", step, "' is not part of the view")
+        .stop_no_call("step '", step, "' is not part of the view")
     }
     invisible(step)
 }
@@ -209,7 +209,7 @@
 
 .assert_pip_or_view <- function(x) {
     if (!.is_pipeflow(x)) {
-        stop_no_call("x must be a pipeflow pip or view")
+        .stop_no_call("x must be a pipeflow pip or view")
     }
     invisible(x)
 }
@@ -217,10 +217,10 @@
 # Structural operations require a full pipeline, not a view.
 .assert_pip <- function(x) {
     if (!.is_pipeflow(x)) {
-        stop_no_call("x must be a pipeflow pip")
+        .stop_no_call("x must be a pipeflow pip")
     }
     if (.is_pipeflow_view(x)) {
-        stop_no_call(
+        .stop_no_call(
             "x must be a full pipeline, not a view - use ",
             "x[, view = FALSE] to turn the view into a standalone pipeline"
         )
@@ -405,7 +405,7 @@
         length(stepsToNodes) != length(steps) ||
             !identical(as.integer(unlist(mapped, use.names = FALSE)), ids)
     ) {
-        stop_no_call(
+        .stop_no_call(
             "cannot rebuild the pipeline DAG: the step to node map does not ",
             "match the step table"
         )
@@ -418,7 +418,7 @@
     to <- rep.int(ids, lengths(from))
     from <- as.integer(unlist(from))
     if (anyNA(from)) {
-        stop_no_call(
+        .stop_no_call(
             "cannot rebuild the pipeline DAG: steps depend on unknown steps"
         )
     }
@@ -575,7 +575,7 @@
         # The run would fail with "unused argument"
         unused <- setdiff(names(params), names(args))
         if (length(unused) > 0L) {
-            stop_no_call(
+            .stop_no_call(
                 "params are no arguments of the step function: ",
                 paste0("'", unused, "'", collapse = ", "),
                 " - fun needs a '...' argument to take them"
@@ -590,7 +590,7 @@
     }
     undef <- names(Filter(args[!isGiven], f = is_missing_default))
     if (length(undef) > 0L) {
-        stop_no_call(
+        .stop_no_call(
             paste0("'", undef, "'", collapse = ", "),
             ifelse(length(undef) > 1L, " have ", " has "),
             "no default value - set one in fun or give a value in params"
@@ -634,7 +634,7 @@
             return(FALSE)
         }
         value <- tryCatch(eval(x, envir = environment(fun)), error = \(e) NULL)
-        is_one_sided_formula(value)
+        .is_one_sided_formula(value)
     }
     isRef <- vapply(args[keep], is_ref_default, logical(1))
     keep <- keep[!isRef]
@@ -660,16 +660,16 @@
     toPos = as.integer(length(steps))
 ) {
     if (!is.list(params)) {
-        stop_no_call("params must be a list")
+        .stop_no_call("params must be a list")
     }
     if (!is.character(steps)) {
-        stop_no_call("steps must be a character vector")
+        .stop_no_call("steps must be a character vector")
     }
     if (toPos < 1) {
-        stop_no_call("toPos (", toPos, ") must be at least 1")
+        .stop_no_call("toPos (", toPos, ") must be at least 1")
     }
     if (toPos > length(steps)) {
-        stop_no_call(
+        .stop_no_call(
             sprintf(
                 "toPos (%d) exceeds number of steps (%d)",
                 toPos,
@@ -681,7 +681,7 @@
     # References to other steps are marked using a formula and can be either referencing
     # earlier steps (e.g. x = ~step1) or using positional indices by pointing backwards
     # a certain number of steps (e.g. x = ~-2)
-    depends <- formula_deps(params)
+    depends <- .formula_deps(params)
     if (length(depends) == 0) {
         return(character(0))
     }
@@ -694,7 +694,7 @@
             firstBad <- which(stepNumbers < 1)[1]
             badIdx <- depends[iRelPos[firstBad]]
             info <- "relative index %s = ~%s points outside pipeline"
-            stop_no_call(sprintf(info, names(badIdx), badIdx))
+            .stop_no_call(sprintf(info, names(badIdx), badIdx))
         }
         depends[iRelPos] <- steps[as.integer(stepNumbers)]
     }
@@ -840,7 +840,7 @@
     skip <- pos + replace
     later <- bad[bad %in% steps[seq_len(length(steps) - skip) + skip]]
     if (length(later) > 0L) {
-        stop_no_call(
+        .stop_no_call(
             "while ",
             action,
             " step '",
@@ -851,7 +851,7 @@
             paste0("'", later, "'", collapse = ", ")
         )
     }
-    stop_no_call(
+    .stop_no_call(
         "while ",
         action,
         " step '",
@@ -865,10 +865,10 @@
     n <- length(x)
     if (is.character(after)) {
         if (!.is_single(after, "character") || is.na(after) || !nzchar(after)) {
-            stop_no_call("after must be a non-empty step name or integer index")
+            .stop_no_call("after must be a non-empty step name or integer index")
         }
         if (!.pip_step_exists(x, after)) {
-            stop_no_call("step '", after, "' does not exist")
+            .stop_no_call("step '", after, "' does not exist")
         }
         # Most of the time the new step is added at the end, so we check that first to
         # avoid the more expensive match() call in the common case.
@@ -882,17 +882,17 @@
         }
     } else if (is.numeric(after)) {
         if (length(after) != 1 || is.na(after)) {
-            stop_no_call("after must be a non-empty step name or integer index")
+            .stop_no_call("after must be a non-empty step name or integer index")
         }
         if (!is.finite(after) || after != as.integer(after)) {
-            stop_no_call("after index must be a whole number")
+            .stop_no_call("after index must be a whole number")
         }
         pos <- as.integer(after)
         if (pos < 0L || pos > n) {
-            stop_no_call("after index must be between 0 and ", n)
+            .stop_no_call("after index must be between 0 and ", n)
         }
     } else {
-        stop_no_call("after must be a non-empty step name or integer index")
+        .stop_no_call("after must be a non-empty step name or integer index")
     }
     pos
 }
@@ -914,7 +914,7 @@
 .params_copy <- function(params, depends) {
     params <- .params_refs_by_name(params, depends)
     isValue <- !(names(params) %in% names(depends)) &
-        vapply(params, is_one_sided_formula, logical(1))
+        vapply(params, .is_one_sided_formula, logical(1))
     values <- params[isValue]
     params[isValue] <- list(NULL)
     list(params = params, values = values)
@@ -1099,9 +1099,9 @@
 
     # A one-sided formula binds the param to the step it refers to, unless
     # `bind = FALSE`, which sets all params as values.
-    isRef <- bind & vapply(params, is_one_sided_formula, logical(1))
+    isRef <- bind & vapply(params, .is_one_sided_formula, logical(1))
     refs <- params[isRef]
-    targets <- formula_deps(refs)
+    targets <- .formula_deps(refs)
 
     # Params that are not defined in any of the selected steps (also the locked ones)
     # are unknown. A param that is bound as given already is not unknown, so that
@@ -1122,7 +1122,7 @@
                 toString(undefined)
             )
             if (unknown == "error") {
-                stop_no_call(msg)
+                .stop_no_call(msg)
             }
             warning(msg, call. = FALSE)
         }
@@ -1211,21 +1211,21 @@
 }
 
 .pip_assert_bind_targets <- function(x, refs) {
-    targets <- formula_deps(refs)
+    targets <- .formula_deps(refs)
     if (length(targets) == 0L) {
         return(invisible(refs))
     }
     text <- paste0(names(refs), " = ", vapply(refs, deparse1, character(1)))
     isRelative <- startsWith(targets, "-")
     if (any(isRelative)) {
-        stop_no_call(
+        .stop_no_call(
             "params must refer to steps by name, not by relative position: ",
             toString(text[isRelative])
         )
     }
     isUnknown <- !(targets %in% .pip_pipenv(x)[["data"]][["step"]])
     if (any(isUnknown)) {
-        stop_no_call(
+        .stop_no_call(
             "params refer to steps that are not in the pipeline: ",
             toString(text[isUnknown]),
             " - to set a formula as value, give it as a string and turn it ",
@@ -1239,8 +1239,8 @@
     for (i in rows) {
         depends <- dat[["depends"]][[i]]
         if (identical(unname(depends[name]), target)) {
-            isTry <- is_try_ref(dat[["params"]][[i]][[name]])
-            if (isTry == is_try_ref(ref)) {
+            isTry <- .is_try_ref(dat[["params"]][[i]][[name]])
+            if (isTry == .is_try_ref(ref)) {
                 return(TRUE)
             }
         }
@@ -1256,7 +1256,7 @@
             isBound & rows <= data.table::chmatch(target, dat[["step"]])
         ]
         if (length(bad) > 0L) {
-            stop_no_call(
+            .stop_no_call(
                 "cannot bind '",
                 name,
                 "' to step '",
@@ -2308,7 +2308,7 @@
                 exec = exec,
                 step = step,
                 onError = onError,
-                tryArgs = formula_try_args(params),
+                tryArgs = .formula_try_args(params),
                 keep = keep,
                 map = map
             )
@@ -3048,7 +3048,7 @@ pip_add <- function(
     .assert_pip(x)
     if (.is_pipeflow(step)) {
         if (!missing(fun) || !missing(tags) || !missing(params) || !missing(exec)) {
-            stop_no_call(
+            .stop_no_call(
                 "fun, tags, params and exec must not be given when copying the ",
                 "steps of a pipeline or view"
             )
@@ -3282,7 +3282,7 @@ pip_collect <- function(x, by = "step", as.table = FALSE, simplify = TRUE) {
     if (simplify && all(lengths(collected) == 1L)) {
         # ... list(grpA = list(x = 1), grpB = list(y = 2)) can be flattened
         # to  list(grpA = 1, grpB = 2)
-        collected <- unlist1(collected)
+        collected <- .unlist1(collected)
     }
 
     if (as.table) {
@@ -3341,7 +3341,7 @@ pip_get_params <- function(x, simplify = TRUE) {
         Filter(f = \(x) length(x) > 0)
 
     parNames <- unlist(lapply(params, FUN = names))
-    parValues <- stats::setNames(unlist1(unname(params)), parNames)
+    parValues <- stats::setNames(.unlist1(unname(params)), parNames)
     if (length(parValues) == 0L) {
         return(list())
     }
@@ -4293,7 +4293,7 @@ pip_run <- function(
                 if (hasFailedInput) {
                     notAllowed <- setdiff(
                         names(failedInputs),
-                        formula_try_args(dat[["params"]][[row]])
+                        .formula_try_args(dat[["params"]][[row]])
                     )
                     if (length(notAllowed) > 0L) {
                         arg <- notAllowed[[1L]]
@@ -4449,7 +4449,7 @@ pip_run <- function(
             if (inherits(e, "pipeflow_step_error")) {
                 stop(e)
             }
-            stop_no_call(e$message)
+            .stop_no_call(e$message)
         }
     )
 
