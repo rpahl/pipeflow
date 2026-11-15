@@ -1,3 +1,10 @@
+# pipeflow 0.5.0.9038
+
+## Minor improvements
+
+- Internal: the roxygen headers of internal helpers are kept only where they
+  explain more than the name, the signature and the body do.
+
 # pipeflow 0.5.0.9037
 
 ## Bug fixes
