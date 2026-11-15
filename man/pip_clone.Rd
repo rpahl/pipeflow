@@ -4,13 +4,16 @@
 \alias{pip_clone}
 \title{Clone a pipeline}
 \usage{
-pip_clone(x, name = NULL)
+pip_clone(x, name = NULL, out = NULL)
 }
 \arguments{
 \item{x}{A pipeflow pipeline object.}
 
 \item{name}{Optional name for the cloned pipeline. If \code{NULL}, the original name is
 used.}
+
+\item{out}{\code{NULL} (all outputs) or a character vector of the steps whose outputs the
+copy keeps (\code{character(0)}: none), see "Copies without some outputs".}
 }
 \value{
 A cloned pipeflow pipeline object.
@@ -19,6 +22,26 @@ A cloned pipeflow pipeline object.
 Creates an independent copy of the pipeline. Changes to the cloned pipeline do not
 affect the original pipeline, and vice versa.
 }
+\section{Copies without some outputs}{
+
+With \code{out}, the copy keeps the outputs of the named steps only, e.g. to send the
+results of a run back from another R process (a parallel worker) without the data of
+the steps in between. Everything else is copied: the steps, their params, times and
+failures, and the states except for these changes:
+\itemize{
+\item A step that was \code{"done"} and loses its output becomes \code{"outdated"}, so the copy
+never passes on a missing output: running it runs these steps again, and with them
+the steps after them, also those that kept their output.
+\item Failed steps keep their output (the failure, or for a mapped step the outputs and
+failures of its keys), which tells why the steps after them are not done.
+\item Locked steps keep their output, as a run passes it on.
+}
+
+The copy still holds the step functions, with their environments: a function
+defined inside another function keeps that function's frame and the data in it (see
+"Outputs that keep an environment" in \code{\link[=pip_add]{pip_add()}}).
+}
+
 \examples{
 p <- pip_new("original") |>
   pip_add("s1", \(x = 1) x) |>
@@ -33,4 +56,16 @@ cp
 
 # ... while the original is left unchanged
 p
+
+# A copy with the output of the last step only, e.g. to return from a worker
+p <- pip_new("worker") |>
+  pip_add("data", \(n = 1e5) rnorm(n)) |>
+  pip_add("summary", \(x = ~data) summary(x))
+pip_run(p)
+result <- pip_clone(p, out = "summary")
+result[["summary", "out"]]
+is.null(result[["data", "out"]])
+
+# The step without output is outdated, so a run computes it again
+result
 }

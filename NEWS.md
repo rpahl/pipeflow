@@ -1,3 +1,13 @@
+# pipeflow 0.5.0.9040
+
+## New features
+
+- `pip_clone(out = )` copies a pipeline with the outputs of the named steps only,
+  e.g. to send the results of a run back from a parallel worker without the data of
+  the steps in between. Steps that were done and lose their output become
+  "outdated", so running the copy computes them again; failed and locked steps keep
+  their outputs.
+
 # pipeflow 0.5.0.9039
 
 ## Minor improvements
