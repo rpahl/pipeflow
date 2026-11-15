@@ -12,12 +12,16 @@
 <url><loc>https://rpahl.github.io/pipeflow/articles/v05b-nested-pipeline.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/articles/v05c-error-handling.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/articles/v05d-param-value.html</loc></url>
+<url><loc>https://rpahl.github.io/pipeflow/articles/v05e-output-value.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/articles/v07-vs-targets.html</loc></url>
+<url><loc>https://rpahl.github.io/pipeflow/articles/v07b-emulate-targets.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/authors.html</loc></url>
+<url><loc>https://rpahl.github.io/pipeflow/copilot-instructions.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/index.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/news/index.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/Extract.pipeflow.html</loc></url>
+<url><loc>https://rpahl.github.io/pipeflow/reference/as.function.pipeflow.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/dim.pipeflow.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/index.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/pip_add.html</loc></url>
@@ -25,8 +29,10 @@
 <url><loc>https://rpahl.github.io/pipeflow/reference/pip_collect.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/pip_data.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/pip_graph.html</loc></url>
+<url><loc>https://rpahl.github.io/pipeflow/reference/pip_inner.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/pip_lock.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/pip_new.html</loc></url>
+<url><loc>https://rpahl.github.io/pipeflow/reference/pip_output_value.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/pip_param_value.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/pip_remove.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/pip_rename.html</loc></url>
@@ -37,7 +43,6 @@
 <url><loc>https://rpahl.github.io/pipeflow/reference/pip_set_params.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/pip_tag.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/pip_view.html</loc></url>
-<url><loc>https://rpahl.github.io/pipeflow/reference/pipeflow-operators.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/pipeflow-package.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/pipeflow_lgr.html</loc></url>
 <url><loc>https://rpahl.github.io/pipeflow/reference/print.html</loc></url>

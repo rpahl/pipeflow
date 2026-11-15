@@ -38,8 +38,9 @@
 - [Nested
   pipelines](https://rpahl.github.io/pipeflow/articles/v05b-nested-pipeline.md):
 
-  Shows how to embed pipelines within pipeline steps and how to mark
-  their parameters so that changing them re-executes the outer step.
+  Shows how to run a pipeline as a step of another pipeline with
+  as.function(), so that changing its parameters re-executes the outer
+  step and only the inner steps that are affected.
 
 - [Handling
   failures](https://rpahl.github.io/pipeflow/articles/v05c-error-handling.md):
@@ -55,6 +56,13 @@
   as step parameters and how to unwrap them right before a step function
   is called, using the pip_param_value() generic.
 
+- [Annotated step
+  outputs](https://rpahl.github.io/pipeflow/articles/v05e-output-value.md):
+
+  Shows how to annotate the output of a step when the step returns, for
+  example to stamp a result with the step it came from and the time it
+  was computed, using the pip_output_value() generic.
+
 - [Self-modifying
   pipelines](https://rpahl.github.io/pipeflow/articles/v06-self-modify-pipeline.md):
 
@@ -63,8 +71,14 @@
   intermediate results or even dynamically modify the pipeline’s own
   structure during a pipeline run.
 
-- [pipeflow vs
-  targets](https://rpahl.github.io/pipeflow/articles/v07-vs-targets.md):
+- [Comparison and
+  benchmarks](https://rpahl.github.io/pipeflow/articles/v07-vs-targets.md):
 
   Comparing general properties and performance of {pipeflow} vs
   {targets} in a scoped latency comparison.
+
+- [Emulating targets
+  features](https://rpahl.github.io/pipeflow/articles/v07b-emulate-targets.md):
+
+  Recipes that emulate features of {targets} with existing {pipeflow}
+  functions and a few lines of R code, and where the emulation stops.

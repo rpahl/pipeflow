@@ -38,12 +38,13 @@ calls it as `lgr(level = level, msg = msg)`.
 
 [`pip_run()`](https://rpahl.github.io/pipeflow/reference/pip_run.md) for
 how loggers are used and how to switch logging off with `lgr = NULL`.
+The option `pipeflow.lgr` sets another default logger for all runs.
 
 ## Examples
 
 ``` r
 pipeflow_lgr("info", "Hello")
-#> info [2026-10-15 11:21:07.914 UTC]: Hello
+#> info [2026-11-15 12:47:04.997 UTC]: Hello
 
 p <- pip_new("demo") |>
     pip_add("load", \(n = 3) seq_len(n)) |>
@@ -54,10 +55,10 @@ prefixed <- function(level, msg) {
     pipeflow_lgr(level, paste("[demo]", msg))
 }
 pip_run(p, lgr = prefixed)
-#> info [2026-10-15 11:21:07.916 UTC]: [demo] Starting run of pipeflow 'demo'
-#> info [2026-10-15 11:21:07.917 UTC]: [demo] Step 1/2 load
-#> info [2026-10-15 11:21:07.917 UTC]: [demo] Step 2/2 double
-#> info [2026-10-15 11:21:07.918 UTC]: [demo] Finished run of pipeflow 'demo'
+#> info [2026-11-15 12:47:05.000 UTC]: [demo] Starting run of pipeflow 'demo'
+#> info [2026-11-15 12:47:05.000 UTC]: [demo] Step 1/2 load
+#> info [2026-11-15 12:47:05.001 UTC]: [demo] Step 2/2 double
+#> info [2026-11-15 12:47:05.002 UTC]: [demo] Finished in 0.002 s (2 done, 0 skipped, 0 failed)
 
 # Drop the "info" messages and pass the rest on
 quiet <- function(level, msg) {

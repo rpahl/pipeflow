@@ -21,7 +21,8 @@ pip_rename(x, from, to)
 
 - to:
 
-  New step name
+  New step name, which must not start with `-` (see
+  [`pip_add()`](https://rpahl.github.io/pipeflow/reference/pip_add.md))
 
 ## Value
 
@@ -44,6 +45,7 @@ p
 #> 2:        s2      x load_data   new
 #> -------------------------
 #> <ready> last run: never
+#> steps: 2 new
 
 # Trying to rename to an existing step name raises an error:
 try(pip_rename(p, "load_data", to = "s2"))  # step 's2' already exists!
@@ -55,8 +57,8 @@ pip_rename(v, from = "load_data", to = "input")
 p[["step"]]                                 # "input", "s2"
 #>   input      s2 
 #> "input"    "s2" 
+
 v2 <- pip_view(p, step = "s2")
 try(pip_rename(v2, from = "input", to = "data"))
-#> Error in pip_rename(v2, from = "input", to = "data") : 
-#>   step 'input' is not part of the view
+#> Error : step 'input' is not part of the view
 ```

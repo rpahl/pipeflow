@@ -50,11 +50,12 @@ p
 #> 3:   total      x squared   new
 #> -------------------------
 #> <ready> last run: never
+#> steps: 3 new
 str(p)
 #> List of 3
 #>  $ name  : chr "demo"
 #>  $ view  : NULL
-#>  $ pipenv:<environment: 0x556c5ba07988> 
+#>  $ pipenv:<environment: 0x55b76ae88678> 
 p[["name"]]  # "demo"
 #> [1] "demo"
 p[["view"]]  # initially NULL
@@ -64,19 +65,22 @@ p[["view"]]  # initially NULL
 ls(p[["pipenv"]])                # shows "data"
 #> [1] "data"
 ls(p[["pipenv"]], all = TRUE)    # also shows hidden variables
-#> [1] ".dag"            ".last_run"       ".restart_count"  ".restart_force" 
-#> [5] ".run_state"      ".steps_to_nodes" "data"           
+#> [1] ".dag"                    ".last_run"              
+#> [3] ".last_run_duration"      ".restart_count"         
+#> [5] ".restart_force"          ".run_state"             
+#> [7] ".steps_to_nodes"         ".steps_with_current_out"
+#> [9] "data"                   
 
 # Save the pipeline and read it back
 file <- tempfile(fileext = ".rds")
 saveRDS(p, file)
 p2 <- readRDS(file)
 pip_run(p2)
-#> info [2026-10-15 11:21:05.518 UTC]: Starting run of pipeflow 'demo'
-#> info [2026-10-15 11:21:05.518 UTC]: Step 1/3 numbers
-#> info [2026-10-15 11:21:05.518 UTC]: Step 2/3 squared
-#> info [2026-10-15 11:21:05.520 UTC]: Step 3/3 total
-#> info [2026-10-15 11:21:05.520 UTC]: Finished run of pipeflow 'demo'
+#> info [2026-11-15 12:47:01.441 UTC]: Starting run of pipeflow 'demo'
+#> info [2026-11-15 12:47:01.441 UTC]: Step 1/3 numbers
+#> info [2026-11-15 12:47:01.443 UTC]: Step 2/3 squared
+#> info [2026-11-15 12:47:01.443 UTC]: Step 3/3 total
+#> info [2026-11-15 12:47:01.444 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)
 p2
 #> <pipeflow> demo (3 steps)
 #> -------------------------
@@ -85,6 +89,7 @@ p2
 #> 2: squared      x numbers  done  1, 4, 9,16,25
 #> 3:   total      x squared  done             55
 #> -------------------------
-#> <ready> last run: 2026-10-15 11:21:05
+#> <ready> last run: 2026-11-15 12:47:01 (0.003 s)
+#> steps: 3 done
 unlink(file)
 ```

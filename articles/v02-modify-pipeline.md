@@ -17,7 +17,8 @@ pip
 # 3:  fit                  data,xVar     prep  done           <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep  done  <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-15 11:21:20
+# <ready> last run: 2026-11-15 12:47:23 (0.386 s)
+# steps: 4 done
 ```
 
 with the following set data
@@ -63,7 +64,8 @@ pip
 # 4:         fit                  data,xVar     prep  done           <lm[13]>
 # 5:        plot model,data,xVar,xLab,title fit,prep  done  <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-15 11:21:20
+# <ready> last run: 2026-11-15 12:47:23 (0.386 s)
+# steps: 4 done, 1 new
 ```
 
 ``` r
@@ -104,9 +106,21 @@ pip |> pip_replace(
         lm(paste(yVar, "~", xVar), data = data)
     }
 )
+# Warning: Params with the same name have different values, but pip_set_params() sets one value in all steps that have the param:
+# - 'xVar' is "Temp.Celsius" in step 'fit', but "Solar.R" in step 'plot'
+# pip_get_params() with simplify = FALSE shows the values of all steps.
 ```
 
-The `plot` step needs to be updated in a similar way.
+pipeflow warns here, because `fit` now has another `xVar` than `plot`,
+whose `xVar` we set to `"Solar.R"` before. Params with the same name are
+meant to have one value, and
+[`pip_set_params()`](https://rpahl.github.io/pipeflow/reference/pip_set_params.md)
+sets them all at once. Here we want the new default. To keep the values
+set before instead, replace the step with
+`pip_replace(..., keep_params = TRUE)`.
+
+The `plot` step needs to be updated in a similar way, which also
+resolves the warning.
 
 ``` r
 
@@ -140,7 +154,8 @@ pip
 # 4:         fit             data,xVar,yVar     standardize   new             [NULL]
 # 5:        plot model,data,xVar,yVar,title fit,standardize   new             [NULL]
 # ---------------------------
-# <ready> last run: 2026-10-15 11:21:20
+# <ready> last run: 2026-11-15 12:47:23 (0.386 s)
+# steps: 2 done, 3 new
 ```
 
 We see that the `fit` and `plot` steps now use (i.e., depend on) the
@@ -150,13 +165,13 @@ standardized data. Let’s re-run the pipeline and inspect the output.
 
 pip_set_params(pip, params = list(xVar = "Solar.R", yVar = "Wind"))
 pip_run(pip)
-# info [2026-10-15 11:21:21.104 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-10-15 11:21:21.104 UTC]: Step 1/5 data - skipping done step
-# info [2026-10-15 11:21:21.104 UTC]: Step 2/5 prep - skipping done step
-# info [2026-10-15 11:21:21.104 UTC]: Step 3/5 standardize
-# info [2026-10-15 11:21:21.105 UTC]: Step 4/5 fit
-# info [2026-10-15 11:21:21.107 UTC]: Step 5/5 plot
-# info [2026-10-15 11:21:21.115 UTC]: Finished run of pipeflow 'my-pip'
+# info [2026-11-15 12:47:24.907 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-11-15 12:47:24.907 UTC]: Step 1/5 data - skipping done step
+# info [2026-11-15 12:47:24.907 UTC]: Step 2/5 prep - skipping done step
+# info [2026-11-15 12:47:24.907 UTC]: Step 3/5 standardize
+# info [2026-11-15 12:47:24.909 UTC]: Step 4/5 fit
+# info [2026-11-15 12:47:24.910 UTC]: Step 5/5 plot
+# info [2026-11-15 12:47:24.919 UTC]: Finished in 0.013 s (3 done, 2 skipped, 0 failed)
 ```
 
 ``` r
@@ -189,7 +204,8 @@ pip
 # 4:         fit             data,xVar,yVar     standardize  done           <lm[13]>
 # 5:        plot model,data,xVar,yVar,title fit,standardize  done  <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-10-15 11:21:21
+# <ready> last run: 2026-11-15 12:47:24 (0.013 s)
+# steps: 5 done
 ```
 
 When you are trying to remove a step, {pipeflow} by default checks if
@@ -221,7 +237,8 @@ pip
 # 1: data   data          done <data.frame[10x6]>
 # 2: prep     df    data  done <data.frame[10x7]>
 # ---------------------------
-# <ready> last run: 2026-10-15 11:21:21
+# <ready> last run: 2026-11-15 12:47:24 (0.013 s)
+# steps: 2 done
 ```
 
 Naturally, the last step never has any downstream dependencies, so it
@@ -241,7 +258,8 @@ pip
 #    step params depends state                out
 # 1: data   data          done <data.frame[10x6]>
 # --------------------------
-# <ready> last run: 2026-10-15 11:21:21
+# <ready> last run: 2026-11-15 12:47:24 (0.013 s)
+# steps: 1 done
 ```
 
 Replacing steps in a pipeline as shown in this vignette will allow to

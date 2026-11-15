@@ -12,7 +12,6 @@ Create a pipeline, add steps, and collect results.
 - [`pip_add()`](https://rpahl.github.io/pipeflow/reference/pip_add.md) :
   Add a step
 - [`pip_collect()`](https://rpahl.github.io/pipeflow/reference/pip_collect.md)
-  [`pip_collect_out()`](https://rpahl.github.io/pipeflow/reference/pip_collect.md)
   : Collect step outputs
 
 ## Modify steps
@@ -33,12 +32,16 @@ Replace, rename, remove, reset, or re-configure steps.
 
 ## Pipeline composition
 
-Combine or clone pipelines.
+Combine or clone pipelines, or turn a pipeline into a function.
 
 - [`rbind(`*`<pipeflow>`*`)`](https://rpahl.github.io/pipeflow/reference/rbind.pipeflow.md)
   : Bind pipelines
 - [`pip_clone()`](https://rpahl.github.io/pipeflow/reference/pip_clone.md)
   : Clone a pipeline
+- [`as.function(`*`<pipeflow>`*`)`](https://rpahl.github.io/pipeflow/reference/as.function.pipeflow.md)
+  : Turn a pipeline into a function
+- [`pip_inner()`](https://rpahl.github.io/pipeflow/reference/pip_inner.md)
+  : Inner pipelines of a pipeline function step
 
 ## Running pipelines
 
@@ -49,7 +52,10 @@ Execute pipeline steps or views.
 - [`pip_run_state()`](https://rpahl.github.io/pipeflow/reference/pip_run_state.md)
   : Get the run state of a pipeline
 - [`pip_param_value()`](https://rpahl.github.io/pipeflow/reference/pip_param_value.md)
-  : Unwrap a parameter value before a step function is called
+  [`` `pip_param_value<-`() ``](https://rpahl.github.io/pipeflow/reference/pip_param_value.md)
+  : Annotated parameter values
+- [`pip_output_value()`](https://rpahl.github.io/pipeflow/reference/pip_output_value.md)
+  : Annotated step outputs
 - [`pipeflow_lgr()`](https://rpahl.github.io/pipeflow/reference/pipeflow_lgr.md)
   : Default logger of pipeflow
 
@@ -74,7 +80,6 @@ filtered views.
 - [`pip_data()`](https://rpahl.github.io/pipeflow/reference/pip_data.md)
   : Access the underlying step table
 - [`pip_graph()`](https://rpahl.github.io/pipeflow/reference/pip_graph.md)
-  [`pip_get_graph()`](https://rpahl.github.io/pipeflow/reference/pip_graph.md)
   : Build pipeline graph data
 
 ## Extract and replace operators
@@ -99,19 +104,3 @@ Generic methods for pipeflow objects.
 - [`str(`*`<pipeflow>`*`)`](https://rpahl.github.io/pipeflow/reference/print.md)
   [`print(`*`<pipeflow>`*`)`](https://rpahl.github.io/pipeflow/reference/print.md)
   : Print pipeflow objects
-
-## Filtering helpers
-
-Filter operators from data.table re-exported for use in view and subset
-expressions.
-
-- [`pipeflow-operators`](https://rpahl.github.io/pipeflow/reference/pipeflow-operators.md)
-  [`%like%`](https://rpahl.github.io/pipeflow/reference/pipeflow-operators.md)
-  [`%ilike%`](https://rpahl.github.io/pipeflow/reference/pipeflow-operators.md)
-  [`%flike%`](https://rpahl.github.io/pipeflow/reference/pipeflow-operators.md)
-  [`%plike%`](https://rpahl.github.io/pipeflow/reference/pipeflow-operators.md)
-  [`%chin%`](https://rpahl.github.io/pipeflow/reference/pipeflow-operators.md)
-  [`%between%`](https://rpahl.github.io/pipeflow/reference/pipeflow-operators.md)
-  [`%inrange%`](https://rpahl.github.io/pipeflow/reference/pipeflow-operators.md)
-  [`%notin%`](https://rpahl.github.io/pipeflow/reference/pipeflow-operators.md)
-  : Row-filter operators re-exported from data.table
