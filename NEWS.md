@@ -1,3 +1,9 @@
+# pipeflow 0.5.0.9041
+
+## Minor improvements
+
+- Internal: added a `%||%` helper and use it for NULL defaults.
+
 # pipeflow 0.5.0.9040
 
 ## New features

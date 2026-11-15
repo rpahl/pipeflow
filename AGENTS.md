@@ -56,11 +56,7 @@ Before opening a PR, clean up and review the branch's changes against `main`. Fi
 simplify them (Claude Code: `/simplify`), then review them for bugs (Claude Code:
 `/code-review high`), and fix or explicitly dismiss each finding. Then run the full
 check in this order: `air format --check`, lint, then tests, then `rcmdcheck`. The
-target is 0 errors and 0 warnings, with 0 notes if possible. CI
-(`.github/workflows/ci.yaml`) runs the air format check and lint, then R CMD check on Ubuntu, Windows and macOS. If the same failure is still there after 3 fix attempts (or after 6 attempts
-in total), stop and summarize instead of weakening tests or masking errors. If CI is
-still not green after about 45 minutes of work on an issue, commit the latest changes,
-summarize the attempts and blockers, and don't open a PR.
+target is 0 errors and 0 warnings, with 0 notes if possible.
 
 ## Rules that are easy to break
 

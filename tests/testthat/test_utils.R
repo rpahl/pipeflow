@@ -230,3 +230,17 @@ describe(".formula_try_args", {
         )
     })
 })
+
+describe("%||%", {
+    it("returns the left side unless it is NULL", {
+        expect_identical(1 %||% 2, 1)
+        expect_identical(NULL %||% 2, 2)
+        expect_identical(NULL %||% NULL, NULL)
+        expect_identical(character(0) %||% "a", character(0))
+        expect_identical(NA %||% 2, NA)
+    })
+
+    it("does not evaluate the right side when not needed", {
+        expect_identical(1 %||% stop("never"), 1)
+    })
+})
