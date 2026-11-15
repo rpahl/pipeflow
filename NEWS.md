@@ -85,6 +85,8 @@
   returns `FALSE`, the run is halted before the next step.
 - A mapped step that failed for some keys is only called for the failed keys in
   the next run, unless its parameters or inputs changed or the run is forced.
+  This does not hold for a copy made by `pip_clone()`, which runs all keys
+  again (known issue, #172).
 - `pip_run()` warns (class `pipeflow_outdated_before`) if a step changes itself
   or a done step before it via `.self`, as these steps then run again in the
   next run.
