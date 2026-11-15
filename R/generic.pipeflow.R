@@ -81,13 +81,6 @@
 }
 
 
-#' Restore a pipeline from a snapshot
-#'
-#' @param pipenv The inner pipeline environment.
-#' @param snapshot The result of `.pip_snapshot(pipenv)`.
-#' @return `pipenv`, invisibly. The snapshot is written into `pipenv`, so the views of
-#' the pipeline see the restored pipeline as well.
-#' @noRd
 .pip_restore <- function(pipenv, snapshot) {
     # The step table that was edited in place, or replaced by a new one if steps were
     # removed
@@ -345,13 +338,6 @@
     ))
 }
 
-#' Get the rows of the step table of steps
-#'
-#' @param x A pipeflow pipeline or view. A view does not restrict the steps.
-#' @param steps Character vector of step names.
-#' @return Integer vector of absolute row indices, in the order of `steps`. Signals an
-#' error for `NA`, empty or unknown step names.
-#' @noRd
 .pip_steps_to_rows <- function(x, steps) {
     data <- .pip_pipenv(x)[["data"]]
 
@@ -374,6 +360,7 @@
 # -----------
 # Run control
 # -----------
+#' Restart a running pipeline from its first step
 #'
 #' Does the work of `.self$restart()`, called from within a step (see the `$` method).
 #' Sets the run state to `"restart"`, so that `pip_run()` starts over after the step.
@@ -405,14 +392,6 @@
     invisible()
 }
 
-#' Ask a running pipeline to stop after the current step
-#'
-#' Does the work of `.self$halt()`, called from within a step (see the `$` method). Sets
-#' the run state to `"halted"`, so that `pip_run()` runs no further steps.
-#'
-#' @param pipenv The inner pipeline environment.
-#' @return `NULL`, invisibly.
-#' @noRd
 .pip_halt <- function(pipenv) {
     pipenv[[".run_state"]][] <- .run_states[["halted"]][["name"]]
     invisible()

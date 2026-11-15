@@ -18,11 +18,6 @@ stop_no_call <- function(...) {
     stop(..., call. = FALSE)
 }
 
-#' Check for a one-sided formula
-#'
-#' @param x Any object.
-#' @return `TRUE` if `x` is a formula without a left-hand side, else `FALSE`.
-#' @noRd
 is_one_sided_formula <- function(x) {
     inherits(x, "formula") && length(x) == 2L
 }
@@ -65,12 +60,6 @@ formula_deps <- function(x) {
     if (is.null(deps)) character(0) else deps
 }
 
-#' Get the arguments with step references wrapped in `try()`
-#'
-#' @param x List of parameters.
-#' @return Character vector of the names of the elements of `x` that are step references
-#' wrapped in `try()` (see `is_try_ref()`).
-#' @noRd
 formula_try_args <- function(x) {
     as.character(names(Filter(f = is_try_ref, x = x)))
 }
@@ -112,16 +101,6 @@ formula_set_ref <- function(x, step) {
     params
 }
 
-#' Format a value in short form
-#'
-#' A language object or a short atomic vector is deparsed, any other value is shown as
-#' `<class>`, so that a large value (e.g. a data set) is not deparsed. The result is cut
-#' off after `maxChars` characters.
-#'
-#' @param x Any value.
-#' @param maxChars The maximum number of characters.
-#' @return A single character string.
-#' @noRd
 .format_value_short <- function(x, maxChars = 30L) {
     isShort <- is.null(x) ||
         is.language(x) ||

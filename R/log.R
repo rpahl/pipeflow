@@ -9,14 +9,6 @@
 }
 
 
-#' Format a duration for the log and for print()
-#'
-#' Durations below a minute are shown in seconds with milliseconds, longer ones in
-#' minutes and seconds, or in hours and minutes.
-#'
-#' @param duration A `difftime` or a number of seconds.
-#' @return A single string, e.g. `"0.251 s"`, `"2 min 5 s"` or `"1 h 3 min"`.
-#' @noRd
 .formatted_duration <- function(duration) {
     secs <- as.numeric(duration, units = "secs")
     if (secs < 60) {
