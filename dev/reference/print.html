@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9025</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -111,13 +111,14 @@
 <dt id="arg-cols">cols<a class="anchor" aria-label="anchor" href="#arg-cols"></a></dt>
 <dd><p>The columns to be printed. Can be either one of <code>core</code> or <code>all</code> to print
 the core or all columns, respectively, or an explicit character vector of columns to
-be printed. The <code>params</code> column lists the names of the step's parameters. In the
-<code>out</code> column, some outputs are shown in short form: a condition (the output of a step
-that failed in a run with <code>on_error = "continue"</code>) as <code>&lt;kind/class&gt;</code>, e.g.
-<code>&lt;error/simpleError&gt;</code>; a matrix, array or table as <code>&lt;class[dims]&gt;</code>, e.g.
-<code>&lt;matrix[4x2]&gt;</code>; and a function or environment (e.g. an R6 object) as <code>&lt;class&gt;</code>.
-Strings longer than 40 characters are cut off and marked with <code>"..."</code>. The <code>duration</code>
-column is shown in short form, e.g. <code>0.251 s</code> or <code>2 min 5 s</code>.</p></dd>
+be printed. Some columns are shown in short form:</p><ul><li><p><code>params</code>: the names of the step's parameters.</p></li>
+<li><p><code>out</code>: a condition (the output of a step that failed in a run with
+<code>on_error = "continue"</code>) as <code>&lt;kind/class&gt;</code>, e.g. <code>&lt;error/simpleError&gt;</code>; a matrix,
+array or table as <code>&lt;class[dims]&gt;</code>, e.g. <code>&lt;matrix[4x2]&gt;</code>; a function or environment
+(e.g. an R6 object) as <code>&lt;class&gt;</code>; strings longer than 40 characters are cut off and
+marked with <code>"..."</code>.</p></li>
+<li><p><code>duration</code>: e.g. <code>0.251 s</code> or <code>2 min 5 s</code>.</p></li>
+</ul></dd>
 
 
 <dt id="arg-topn">topn<a class="anchor" aria-label="anchor" href="#arg-topn"></a></dt>
@@ -176,9 +177,9 @@ the last run, and how many of the printed steps are in each state, e.g.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: square &lt;function[1]&gt;      x [NULL]   new compute  FALSE auto</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  total &lt;function[1]&gt;      x [NULL]   new compute  FALSE auto</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                   time time_start duration depends unbound nodeId</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 2026-10-26 16:50:52       &lt;NA&gt;     &lt;NA&gt;               n      0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 2026-10-26 16:50:52       &lt;NA&gt;     &lt;NA&gt;    load              1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: 2026-10-26 16:50:52       &lt;NA&gt;     &lt;NA&gt;  square              2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 2026-11-15 20:37:48       &lt;NA&gt;     &lt;NA&gt;               n      0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 2026-11-15 20:37:48       &lt;NA&gt;     &lt;NA&gt;    load              1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: 2026-11-15 20:37:48       &lt;NA&gt;     &lt;NA&gt;  square              2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: never</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 3 new</span>

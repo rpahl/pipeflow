@@ -55,10 +55,10 @@ p
 # <ready> last run: never
 # steps: 2 new
 pip_run(p)
-# info [2026-10-26 16:58:04.293 UTC]: Starting run of pipeflow 'files'
-# info [2026-10-26 16:58:04.293 UTC]: Step 1/2 read
-# info [2026-10-26 16:58:04.296 UTC]: Step 2/2 total
-# info [2026-10-26 16:58:04.296 UTC]: Finished in 0.003 s (2 done, 0 skipped, 0 failed)
+# info [2026-11-15 20:44:57.634 UTC]: Starting run of pipeflow 'files'
+# info [2026-11-15 20:44:57.635 UTC]: Step 1/2 read
+# info [2026-11-15 20:44:57.637 UTC]: Step 2/2 total
+# info [2026-11-15 20:44:57.638 UTC]: Finished in 0.004 s (2 done, 0 skipped, 0 failed)
 ```
 
 Setting a parameter to the value it already has is not a change (see
@@ -77,13 +77,13 @@ p
 # 1:  read path,rev          done <data.frame[3x1]>
 # 2: total     data    read  done                 6
 # --------------------------
-# <ready> last run: 2026-10-26 16:58:04 (0.003 s)
+# <ready> last run: 2026-11-15 20:44:57 (0.004 s)
 # steps: 2 done
 pip_run(p)
-# info [2026-10-26 16:58:04.378 UTC]: Starting run of pipeflow 'files'
-# info [2026-10-26 16:58:04.378 UTC]: Step 1/2 read - skipping done step
-# info [2026-10-26 16:58:04.378 UTC]: Step 2/2 total - skipping done step
-# info [2026-10-26 16:58:04.378 UTC]: Finished in 0.001 s (0 done, 2 skipped, 0 failed)
+# info [2026-11-15 20:44:57.718 UTC]: Starting run of pipeflow 'files'
+# info [2026-11-15 20:44:57.718 UTC]: Step 1/2 read - skipping done step
+# info [2026-11-15 20:44:57.718 UTC]: Step 2/2 total - skipping done step
+# info [2026-11-15 20:44:57.718 UTC]: Finished in 0.001 s (0 done, 2 skipped, 0 failed)
 ```
 
 Once the file is edited, its fingerprint changes. `refresh()` outdates
@@ -101,13 +101,13 @@ p
 # 1:  read path,rev         outdated <data.frame[3x1]>
 # 2: total     data    read outdated                 6
 # --------------------------
-# <ready> last run: 2026-10-26 16:58:04 (0.001 s)
+# <ready> last run: 2026-11-15 20:44:57 (0.001 s)
 # steps: 2 outdated
 pip_run(p)
-# info [2026-10-26 16:58:04.450 UTC]: Starting run of pipeflow 'files'
-# info [2026-10-26 16:58:04.450 UTC]: Step 1/2 read
-# info [2026-10-26 16:58:04.452 UTC]: Step 2/2 total
-# info [2026-10-26 16:58:04.454 UTC]: Finished in 0.005 s (2 done, 0 skipped, 0 failed)
+# info [2026-11-15 20:44:57.787 UTC]: Starting run of pipeflow 'files'
+# info [2026-11-15 20:44:57.787 UTC]: Step 1/2 read
+# info [2026-11-15 20:44:57.789 UTC]: Step 2/2 total
+# info [2026-11-15 20:44:57.791 UTC]: Finished in 0.004 s (2 done, 0 skipped, 0 failed)
 p[["total", "out"]]
 # [1] 10
 ```
@@ -164,7 +164,7 @@ p
 # 1:    data      n          done 0.3333333,0.6666667,1.0000000,1.3333333
 # 2: cleaned x,code    data  done                         0.3,0.7,1.0,1.3
 # -------------------------
-# <ready> last run: 2026-10-26 16:58:04 (0.002 s)
+# <ready> last run: 2026-11-15 20:44:57 (0.002 s)
 # steps: 2 done
 ```
 
@@ -186,7 +186,7 @@ p
 # 1:    data      n          done 0.3333333,0.6666667,1.0000000,1.3333333
 # 2: cleaned x,code    data  done                         0.3,0.7,1.0,1.3
 # -------------------------
-# <ready> last run: 2026-10-26 16:58:04 (0.002 s)
+# <ready> last run: 2026-11-15 20:44:57 (0.002 s)
 # steps: 2 done
 ```
 
@@ -204,13 +204,13 @@ p
 # 1:    data      n             done 0.3333333,0.6666667,1.0000000,1.3333333
 # 2: cleaned x,code    data outdated                         0.3,0.7,1.0,1.3
 # -------------------------
-# <ready> last run: 2026-10-26 16:58:04 (0.002 s)
+# <ready> last run: 2026-11-15 20:44:57 (0.002 s)
 # steps: 1 done, 1 outdated
 pip_run(p)
-# info [2026-10-26 16:58:04.670 UTC]: Starting run of pipeflow 'code'
-# info [2026-10-26 16:58:04.670 UTC]: Step 1/2 data - skipping done step
-# info [2026-10-26 16:58:04.671 UTC]: Step 2/2 cleaned
-# info [2026-10-26 16:58:04.672 UTC]: Finished in 0.002 s (1 done, 1 skipped, 0 failed)
+# info [2026-11-15 20:44:58.001 UTC]: Starting run of pipeflow 'code'
+# info [2026-11-15 20:44:58.001 UTC]: Step 1/2 data - skipping done step
+# info [2026-11-15 20:44:58.001 UTC]: Step 2/2 cleaned
+# info [2026-11-15 20:44:58.003 UTC]: Finished in 0.002 s (1 done, 1 skipped, 0 failed)
 p[["cleaned", "out"]]
 # [1] 0.33 0.67 1.00 1.33
 ```
@@ -279,9 +279,9 @@ p <- pip_new("meta") |>
 pip_run(p, lgr = NULL)
 meta(p)
 #     step state               start seconds bytes error
-# 1   load  done 2026-10-26 16:58:04     0.2    64  <NA>
-# 2    fit  done 2026-10-26 16:58:05     0.0    56  <NA>
-# 3 report  done 2026-10-26 16:58:05     0.0   120  <NA>
+# 1   load  done 2026-11-15 20:44:58     0.2    64  <NA>
+# 2    fit  done 2026-11-15 20:44:58     0.0    56  <NA>
+# 3 report  done 2026-11-15 20:44:58     0.0   120  <NA>
 ```
 
 Now the input grows and `fit` fails. With `on_error = "continue"`, the
@@ -296,9 +296,9 @@ pip_run(p, lgr = NULL, on_error = "continue")
 # Steps not run because an input failed: 'report'
 meta(p)
 #     step    state               start seconds bytes           error
-# 1   load     done 2026-10-26 16:58:05     0.2    80            <NA>
-# 2    fit   failed 2026-10-26 16:58:05      NA    NA too many values
-# 3 report outdated 2026-10-26 16:58:05     0.0   120            <NA>
+# 1   load     done 2026-11-15 20:44:58     0.2    80            <NA>
+# 2    fit   failed 2026-11-15 20:44:58      NA    NA too many values
+# 3 report outdated 2026-11-15 20:44:58     0.0   120            <NA>
 ```
 
 The table shows the error of `fit`. `report` is `outdated` and still has
@@ -345,7 +345,7 @@ pip_run(p, lgr = NULL)
 str(attr(p[["cars", "out"]], "meta"))
 # List of 4
 #  $ step : chr "cars"
-#  $ time : POSIXct[1:1], format: "2026-10-26 16:58:05"
+#  $ time : POSIXct[1:1], format: "2026-11-15 20:44:58"
 #  $ class: chr "data.frame"
 #  $ bytes: num 2976
 ```
@@ -382,10 +382,15 @@ p[["b", "out"]]
 # [1]  3.1905616  0.6590155 -1.6409368
 ```
 
-The recipe: give each step a `seed` parameter and set it inside the
-step. A small helper also restores the global random number state
-afterwards, so running the pipeline doesn’t change the numbers that the
-rest of your session draws.
+The recipe: give each step its own seed parameter (`seed_a`, `seed_b`,
+…) and set it inside the step. Use different names, because params with
+the same name share one value:
+[`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
+warns if they differ, and
+[`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md)
+sets them all at once. A small helper also restores the global random
+number state afterwards, so running the pipeline doesn’t change the
+numbers that the rest of your session draws.
 [`withr::with_seed()`](https://withr.r-lib.org/reference/with_seed.html)
 does the same, if you have {withr} installed.
 
@@ -410,9 +415,9 @@ Now `b` gets the same numbers, whether it runs alone or with `a`.
 ``` r
 
 p <- pip_new("rng") |>
-    pip_add("a", \(n = 3, seed = 1) with_seed(seed, rnorm(n))) |>
-    pip_add("b", \(n = 3, scale = 1, seed = 2) {
-        with_seed(seed, scale * rnorm(n))
+    pip_add("a", \(n = 3, seed_a = 1) with_seed(seed_a, rnorm(n))) |>
+    pip_add("b", \(n = 3, scale = 1, seed_b = 2) {
+        with_seed(seed_b, scale * rnorm(n))
     })
 
 pip_run(p, lgr = NULL)
@@ -429,8 +434,8 @@ p[["b", "out"]]
 **Limits.**
 
 - You choose the seeds. {targets} derives them from the target names.
-- `pip_set_params(p, list(seed = 42))` sets the seed of *all* steps with
-  a `seed` parameter, so they would all draw the same numbers.
+- Each step needs its own seed parameter name. A shared `seed` would get
+  one value in all steps, so they would all draw the same numbers.
 - Steps that run code in parallel need a parallel-safe generator, as
   with any R code.
 
@@ -477,14 +482,14 @@ p
 # 1:  read path,rev          done <data.frame[4x1]>
 # 2: total     data    read  done                10
 # --------------------------
-# <ready> last run: 2026-10-26 16:58:05 (0.002 s)
+# <ready> last run: 2026-11-15 20:44:58 (0.002 s)
 # steps: 2 done
 
 refresh(p) |> pip_run()
-# info [2026-10-26 16:58:05.713 UTC]: Starting run of pipeflow 'files'
-# info [2026-10-26 16:58:05.713 UTC]: Step 1/2 read - skipping done step
-# info [2026-10-26 16:58:05.713 UTC]: Step 2/2 total - skipping done step
-# info [2026-10-26 16:58:05.714 UTC]: Finished in 0.001 s (0 done, 2 skipped, 0 failed)
+# info [2026-11-15 20:44:59.060 UTC]: Starting run of pipeflow 'files'
+# info [2026-11-15 20:44:59.060 UTC]: Step 1/2 read - skipping done step
+# info [2026-11-15 20:44:59.060 UTC]: Step 2/2 total - skipping done step
+# info [2026-11-15 20:44:59.061 UTC]: Finished in 0.001 s (0 done, 2 skipped, 0 failed)
 ```
 
 Step functions keep their enclosing environment. If a step function was
@@ -536,7 +541,7 @@ p
 # 1:  data      n          done 1,2,3,4,5
 # 2: total      x    data  done        15
 # --------------------------
-# <ready> last run: 2026-10-26 16:58:06 (0.003 s)
+# <ready> last run: 2026-11-15 20:44:59 (0.003 s)
 # steps: 2 done
 ```
 
@@ -599,7 +604,7 @@ pip_view(p, state = c("new", "outdated", "failed"))
 #    step params depends    state out
 # 1:    d      y         outdated   1
 # ---------------------------------------
-# <ready> last run: 2026-10-26 16:58:06 (0.003 s)
+# <ready> last run: 2026-11-15 20:45:00 (0.004 s)
 # steps: 1 outdated
 ```
 
@@ -624,15 +629,15 @@ pip_view(p, state = c("new", "outdated", "failed"))
 # 1:    a      x         outdated   1
 # 2:    d      y         outdated   1
 # ---------------------------------------
-# <ready> last run: 2026-10-26 16:58:06 (0.003 s)
+# <ready> last run: 2026-11-15 20:45:00 (0.004 s)
 # steps: 2 outdated
 pip_run(p)
-# info [2026-10-26 16:58:06.740 UTC]: Starting run of pipeflow 'outdated'
-# info [2026-10-26 16:58:06.740 UTC]: Step 1/4 a
-# info [2026-10-26 16:58:06.742 UTC]: Step 2/4 b
-# info [2026-10-26 16:58:06.743 UTC]: Step 3/4 c
-# info [2026-10-26 16:58:06.745 UTC]: Step 4/4 d
-# info [2026-10-26 16:58:06.746 UTC]: Finished in 0.006 s (4 done, 0 skipped, 0 failed)
+# info [2026-11-15 20:45:00.099 UTC]: Starting run of pipeflow 'outdated'
+# info [2026-11-15 20:45:00.099 UTC]: Step 1/4 a
+# info [2026-11-15 20:45:00.101 UTC]: Step 2/4 b
+# info [2026-11-15 20:45:00.113 UTC]: Step 3/4 c
+# info [2026-11-15 20:45:00.115 UTC]: Step 4/4 d
+# info [2026-11-15 20:45:00.116 UTC]: Finished in 0.018 s (4 done, 0 skipped, 0 failed)
 ```
 
 **Limits.**

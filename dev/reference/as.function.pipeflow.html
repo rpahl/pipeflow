@@ -19,7 +19,7 @@ pip_add(outer, "inner", f_inner, params = list(df = ~outer_step)).'><meta proper
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9025</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -155,13 +155,11 @@ formula argument does not bind a param of <code>x</code> to a step.</p><div clas
 
 
 <p>With step names in <code>out</code>, the function returns their outputs. If <code>out</code> is a function,
-it is called with the run inner pipeline, and its result is the result of the
-function, e.g. <code>out = \(p) pip_collect(p, by = "tags")</code> groups the outputs by tags.
-The pipeline that <code>out</code> gets is a light copy of the kept one: it has its own steps,
-but the values (params and outputs) are the same objects. Returning it, or a view of
-it, therefore keeps no extra copy of the data, and later calls of the function don't
-change it. Since the values are shared, don't modify them in place (e.g. with <code>:=</code> on
-a <code>data.table</code> output).</p>
+it is called with the run inner pipeline and its result is returned, e.g.
+<code>out = \(p) pip_collect(p, by = "tags")</code> groups the outputs by tags. That pipeline is
+a light copy that shares its values with the kept one, so returning it (or a view of
+it) keeps no extra copy of the data. Don't modify the values in place (e.g. with <code>:=</code>
+on a <code>data.table</code> output).</p>
 </div>
 
 <div class="section">
@@ -171,8 +169,7 @@ a <code>data.table</code> output).</p>
 <p>If an inner step fails, the error names it, e.g. <code>step 'fit': negative</code>. As a step of
 an outer pipeline, the error also names the outer step and, if that step is mapped
 over partitions, the key: <code>step 'by_batch': key 'D': step 'fit': negative</code>. Nested
-pipeline functions add one step per level:
-<code>step 'outer': step 'middle': step 'fit': negative</code>.</p>
+pipeline functions add one step per level.</p>
 </div>
 
 <div class="section">
@@ -180,13 +177,11 @@ pipeline functions add one step per level:
 
 
 <p>With <code>on_error = "continue"</code> the inner pipeline is run like
-<code>pip_run(on_error = "continue")</code>, that is, a failing inner step gets state
-<code>"failed"</code>, the inner steps that do not depend on it still run, and an inner step
-that refers to it via <code>~try(step)</code> runs and receives the failure.</p>
-<p>The function still fails if one of the steps named in <code>out</code> failed or was not run
-because an input failed. Since with <code>out = NULL</code> or a function <code>out</code> <em>all</em> steps are
-requested, you need to name the relevant steps in <code>out</code> to profit from a continuing
-inner run.</p>
+<code>pip_run(on_error = "continue")</code>: inner steps that do not depend on a failed step
+still run, and a step that refers to it via <code>~try(step)</code> receives the failure. The
+function still fails if a step named in <code>out</code> failed or was not run. Since
+<code>out = NULL</code> or a function <code>out</code> requests <em>all</em> steps, name the relevant steps in
+<code>out</code> to profit from a continuing inner run.</p>
 </div>
 
 <div class="section">
@@ -194,11 +189,9 @@ inner run.</p>
 
 
 <p>If the step with the pipeline function receives partitioned inputs (from an earlier
-step with <code>exec = "split"</code>), the function is called once per partition caching one
-inner pipeline of <code>x</code> per step and partition key. A call updates its parameters and
-inputs in the respective pipeline, so that (as usual in pipelines) only outdated
-inner steps are run again. This works for inputs bound via <code>params</code> of <code><a href="pip_add.html">pip_add()</a></code> as
-well as for those bound in the step function.</p><ul><li><p>A partition caches one pipeline for each key, which hold their inputs and outputs,
+step with <code>exec = "split"</code>), the function is called once per partition, caching one
+inner pipeline of <code>x</code> per step and partition key. A call updates the params and
+inputs of the respective pipeline, so that only outdated inner steps are run again.</p><ul><li><p>A partition caches one pipeline for each key, which hold their inputs and outputs,
 so they need memory.</p></li>
 <li><p>A step without partitioned inputs keeps a single pipeline.</p></li>
 <li><p>Pure calls of the pipeline function (outside of a step) always share one pipeline,
@@ -343,7 +336,7 @@ steps, which keep their outputs.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  coefs input_df,degree,digits  by_cyl outdated           &lt;list[3]&gt;   auto</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4:  table                  coefs   coefs outdated       &lt;matrix[3x2]&gt; reduce</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-26 16:50:45 (0.017 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 20:37:42 (0.019 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 2 done, 2 outdated</span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">outer</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">outer</span><span class="op">[[</span><span class="st">"table"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></span>

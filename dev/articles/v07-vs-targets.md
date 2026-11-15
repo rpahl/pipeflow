@@ -265,7 +265,7 @@ print(p)
 # 3:   s2      x      s1 outdated   2
 # 4:   s3      x      s2 outdated   3
 # ---------------------------
-# <ready> last run: 2026-10-26 16:52:35 (0.004 s)
+# <ready> last run: 2026-11-15 20:39:31 (0.005 s)
 # steps: 4 outdated
 pip_run(p, lgr = NULL)
 
@@ -292,7 +292,7 @@ build that `tar_manifest()` performs[^1].
 
 ![](v07-vs-targets_files/figure-html/define-plot-1.png)
 
-Declaring the pipeline is roughly 15 to 86 times faster in pipeflow
+Declaring the pipeline is roughly 13 to 65 times faster in pipeflow
 across the four sizes, and the gap widens with `n`. Again, the targets
 bar covers writing `_targets.R` and the parse and graph build that
 `tar_manifest()` performs once here and then on every run.
@@ -304,7 +304,7 @@ already up to date, and we time a no-op run.
 
 ![](v07-vs-targets_files/figure-html/skip-plot-1.png)
 
-pipeflow’s skip check stays at or below 5.36 ms even at 128 steps.
+pipeflow’s skip check stays at or below 13.16 ms even at 128 steps.
 targets pays its per-run script re-source and graph rebuild even when no
 target runs. That fixed cost is what a targets user pays on *every*
 `tar_make()` in an interactive session — it buys the persistent,
@@ -496,7 +496,7 @@ updates avoid copying and keep re-runs cheap.
     # [1] stats     graphics  grDevices datasets  utils     methods   base     
     # 
     # other attached packages:
-    # [1] ggplot2_4.0.3       bench_1.1.4         targets_1.12.0      pipeflow_0.5.0.9025
+    # [1] ggplot2_4.0.3       bench_1.1.4         targets_1.12.0      pipeflow_0.6.0.9000
     # 
     # loaded via a namespace (and not attached):
     #  [1] sass_0.4.10         renv_1.3.1          digest_0.6.39       magrittr_2.0.5     

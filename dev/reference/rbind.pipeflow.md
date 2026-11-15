@@ -3,7 +3,10 @@
 Binds two or more pipelines together by concatenating their steps. If
 the pipelines have steps with the same name, the step names of later
 pipelines are automatically adapted to avoid name clashes. A single
-pipeline is returned unchanged.
+pipeline is returned unchanged. A warning is signalled if an unbound
+param of a later pipeline has another value than the same param in the
+earlier ones (see Params with the same name in
+[`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)).
 
 ## Usage
 
@@ -50,7 +53,7 @@ a <- pip_new("a") |>
   pip_add("fit", \(x = ~prep) x + 10)
 
 # "prep" exists in both pipelines; the one from b gets a numeric suffix
-b <- pip_new("b") |> pip_add("prep", \(x = 5) x * 3)
+b <- pip_new("b") |> pip_add("prep", \(y = 5) y * 3)
 
 ab <- rbind(a, b)
 ab[["step"]] # "prep", "fit", "prep2" (step name conflict auto-resolved)
@@ -62,7 +65,7 @@ ab
 #>     step params depends state
 #> 1:  prep      x           new
 #> 2:   fit      x    prep   new
-#> 3: prep2      x           new
+#> 3: prep2      y           new
 #> ------------------------
 #> <ready> last run: never
 #> steps: 3 new
@@ -75,8 +78,8 @@ abc
 #>     step params depends state
 #> 1:  prep      x           new
 #> 2:   fit      x    prep   new
-#> 3: prep2      x           new
-#> 4: prep3      x           new
+#> 3: prep2      y           new
+#> 4: prep3      y           new
 #> --------------------------
 #> <ready> last run: never
 #> steps: 4 new
@@ -96,11 +99,11 @@ pip_get_params(ad) # `data` is no longer a param
 #> [1] 3
 #> 
 pip_run(ad)
-#> info [2026-10-26 16:50:52.805 UTC]: Starting run of pipeflow 'a-d'
-#> info [2026-10-26 16:50:52.806 UTC]: Step 1/3 prep
-#> info [2026-10-26 16:50:52.807 UTC]: Step 2/3 fit
-#> info [2026-10-26 16:50:52.807 UTC]: Step 3/3 scale
-#> info [2026-10-26 16:50:52.808 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)
+#> info [2026-11-15 20:37:49.396 UTC]: Starting run of pipeflow 'a-d'
+#> info [2026-11-15 20:37:49.396 UTC]: Step 1/3 prep
+#> info [2026-11-15 20:37:49.397 UTC]: Step 2/3 fit
+#> info [2026-11-15 20:37:49.398 UTC]: Step 3/3 scale
+#> info [2026-11-15 20:37:49.399 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)
 ad[["scale", "out"]]
 #> [1] 6
 ```

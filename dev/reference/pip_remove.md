@@ -62,7 +62,7 @@ p                        # "load", "transform"
 # If a view is passed, the step must be part of the view.
 v <- pip_view(p, step = "transform")
 try(pip_remove(v, "load"))  # Error: "load" is not part of the view
-#> Error in pip_remove(v, "load") : step 'load' is not part of the view
+#> Error : step 'load' is not part of the view
 
 # Views stay valid, the removed steps just drop out of them
 v <- pip_view(p, step = c("load", "transform"))

@@ -50,6 +50,18 @@ the selected steps.
 
 ## Details
 
+A view covers only the selected steps, not their upstream steps, as does
+`p[i]` (see
+[`[`](https://rpahl.github.io/pipeflow/dev/reference/Extract.pipeflow.md)).
+So
+[`pip_reset()`](https://rpahl.github.io/pipeflow/dev/reference/pip_reset.md)
+or
+[`pip_lock()`](https://rpahl.github.io/pipeflow/dev/reference/pip_lock.md)
+on a view leave the upstream steps alone. Running a view is different:
+[`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
+also runs the upstream steps that are not done (see section 'Running
+views' there).
+
 A view keeps covering its steps when steps are added, removed, renamed
 or replaced, also through the pipeline or another view. Removed steps
 drop out of the view, and new steps are not added to it, even if they

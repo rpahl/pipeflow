@@ -45,15 +45,18 @@ print(
 
   The columns to be printed. Can be either one of `core` or `all` to
   print the core or all columns, respectively, or an explicit character
-  vector of columns to be printed. The `params` column lists the names
-  of the step's parameters. In the `out` column, some outputs are shown
-  in short form: a condition (the output of a step that failed in a run
-  with `on_error = "continue"`) as `<kind/class>`, e.g.
-  `<error/simpleError>`; a matrix, array or table as `<class[dims]>`,
-  e.g. `<matrix[4x2]>`; and a function or environment (e.g. an R6
-  object) as `<class>`. Strings longer than 40 characters are cut off
-  and marked with `"..."`. The `duration` column is shown in short form,
-  e.g. `0.251 s` or `2 min 5 s`.
+  vector of columns to be printed. Some columns are shown in short form:
+
+  - `params`: the names of the step's parameters.
+
+  - `out`: a condition (the output of a step that failed in a run with
+    `on_error = "continue"`) as `<kind/class>`, e.g.
+    `<error/simpleError>`; a matrix, array or table as `<class[dims]>`,
+    e.g. `<matrix[4x2]>`; a function or environment (e.g. an R6 object)
+    as `<class>`; strings longer than 40 characters are cut off and
+    marked with `"..."`.
+
+  - `duration`: e.g. `0.251 s` or `2 min 5 s`.
 
 - topn:
 
@@ -113,9 +116,9 @@ print(p, cols = "all") # all step-table columns
 #> 2: square <function[1]>      x [NULL]   new compute  FALSE auto
 #> 3:  total <function[1]>      x [NULL]   new compute  FALSE auto
 #>                   time time_start duration depends unbound nodeId
-#> 1: 2026-10-26 16:50:52       <NA>     <NA>               n      0
-#> 2: 2026-10-26 16:50:52       <NA>     <NA>    load              1
-#> 3: 2026-10-26 16:50:52       <NA>     <NA>  square              2
+#> 1: 2026-11-15 20:37:48       <NA>     <NA>               n      0
+#> 2: 2026-11-15 20:37:48       <NA>     <NA>    load              1
+#> 3: 2026-11-15 20:37:48       <NA>     <NA>  square              2
 #> -------------------------
 #> <ready> last run: never
 #> steps: 3 new

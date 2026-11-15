@@ -32,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9025</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -151,10 +151,10 @@ file before each run.</p>
 <span><span class="co"># &lt;ready&gt; last run: never</span></span>
 <span><span class="co"># steps: 2 new</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.293 UTC]: Starting run of pipeflow 'files'</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.293 UTC]: Step 1/2 read</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.296 UTC]: Step 2/2 total</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.296 UTC]: Finished in 0.003 s (2 done, 0 skipped, 0 failed)</span></span></code></pre></div>
+<span><span class="co"># info [2026-11-15 20:44:57.634 UTC]: Starting run of pipeflow 'files'</span></span>
+<span><span class="co"># info [2026-11-15 20:44:57.635 UTC]: Step 1/2 read</span></span>
+<span><span class="co"># info [2026-11-15 20:44:57.637 UTC]: Step 2/2 total</span></span>
+<span><span class="co"># info [2026-11-15 20:44:57.638 UTC]: Finished in 0.004 s (2 done, 0 skipped, 0 failed)</span></span></code></pre></div>
 <p>Setting a parameter to the value it already has is not a change (see
 <a href="v01-get-started.html#setting-identical-values">Setting
 Identical Values</a>). So if the file is unchanged,
@@ -168,13 +168,13 @@ Identical Values</a>). So if the file is unchanged,
 <span><span class="co"># 1:  read path,rev          done &lt;data.frame[3x1]&gt;</span></span>
 <span><span class="co"># 2: total     data    read  done                 6</span></span>
 <span><span class="co"># --------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:58:04 (0.003 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 20:44:57 (0.004 s)</span></span>
 <span><span class="co"># steps: 2 done</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.378 UTC]: Starting run of pipeflow 'files'</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.378 UTC]: Step 1/2 read - skipping done step</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.378 UTC]: Step 2/2 total - skipping done step</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.378 UTC]: Finished in 0.001 s (0 done, 2 skipped, 0 failed)</span></span></code></pre></div>
+<span><span class="co"># info [2026-11-15 20:44:57.718 UTC]: Starting run of pipeflow 'files'</span></span>
+<span><span class="co"># info [2026-11-15 20:44:57.718 UTC]: Step 1/2 read - skipping done step</span></span>
+<span><span class="co"># info [2026-11-15 20:44:57.718 UTC]: Step 2/2 total - skipping done step</span></span>
+<span><span class="co"># info [2026-11-15 20:44:57.718 UTC]: Finished in 0.001 s (0 done, 2 skipped, 0 failed)</span></span></code></pre></div>
 <p>Once the file is edited, its fingerprint changes.
 <code>refresh()</code> outdates the step that reads it and all steps
 downstream of it.</p>
@@ -189,13 +189,13 @@ downstream of it.</p>
 <span><span class="co"># 1:  read path,rev         outdated &lt;data.frame[3x1]&gt;</span></span>
 <span><span class="co"># 2: total     data    read outdated                 6</span></span>
 <span><span class="co"># --------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:58:04 (0.001 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 20:44:57 (0.001 s)</span></span>
 <span><span class="co"># steps: 2 outdated</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.450 UTC]: Starting run of pipeflow 'files'</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.450 UTC]: Step 1/2 read</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.452 UTC]: Step 2/2 total</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.454 UTC]: Finished in 0.005 s (2 done, 0 skipped, 0 failed)</span></span>
+<span><span class="co"># info [2026-11-15 20:44:57.787 UTC]: Starting run of pipeflow 'files'</span></span>
+<span><span class="co"># info [2026-11-15 20:44:57.787 UTC]: Step 1/2 read</span></span>
+<span><span class="co"># info [2026-11-15 20:44:57.789 UTC]: Step 2/2 total</span></span>
+<span><span class="co"># info [2026-11-15 20:44:57.791 UTC]: Finished in 0.004 s (2 done, 0 skipped, 0 failed)</span></span>
 <span><span class="va">p</span><span class="op">[[</span><span class="st">"total"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co"># [1] 10</span></span></code></pre></div>
 <p>To refresh and run in one go, use
@@ -247,7 +247,7 @@ fingerprint.</p>
 <span><span class="co"># 1:    data      n          done 0.3333333,0.6666667,1.0000000,1.3333333</span></span>
 <span><span class="co"># 2: cleaned x,code    data  done                         0.3,0.7,1.0,1.3</span></span>
 <span><span class="co"># -------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:58:04 (0.002 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 20:44:57 (0.002 s)</span></span>
 <span><span class="co"># steps: 2 done</span></span></code></pre></div>
 <p><code><a href="https://rdrr.io/r/utils/removeSource.html" class="external-link">removeSource()</a></code> matters: in an interactive session, R
 keeps the source code of every function you define, and the hash would
@@ -264,7 +264,7 @@ Without the source, defining the same helper again changes nothing:</p>
 <span><span class="co"># 1:    data      n          done 0.3333333,0.6666667,1.0000000,1.3333333</span></span>
 <span><span class="co"># 2: cleaned x,code    data  done                         0.3,0.7,1.0,1.3</span></span>
 <span><span class="co"># -------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:58:04 (0.002 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 20:44:57 (0.002 s)</span></span>
 <span><span class="co"># steps: 2 done</span></span></code></pre></div>
 <p>A new version of the helper outdates the step that calls it.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
@@ -278,13 +278,13 @@ Without the source, defining the same helper again changes nothing:</p>
 <span><span class="co"># 1:    data      n             done 0.3333333,0.6666667,1.0000000,1.3333333</span></span>
 <span><span class="co"># 2: cleaned x,code    data outdated                         0.3,0.7,1.0,1.3</span></span>
 <span><span class="co"># -------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:58:04 (0.002 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 20:44:57 (0.002 s)</span></span>
 <span><span class="co"># steps: 1 done, 1 outdated</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.670 UTC]: Starting run of pipeflow 'code'</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.670 UTC]: Step 1/2 data - skipping done step</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.671 UTC]: Step 2/2 cleaned</span></span>
-<span><span class="co"># info [2026-10-26 16:58:04.672 UTC]: Finished in 0.002 s (1 done, 1 skipped, 0 failed)</span></span>
+<span><span class="co"># info [2026-11-15 20:44:58.001 UTC]: Starting run of pipeflow 'code'</span></span>
+<span><span class="co"># info [2026-11-15 20:44:58.001 UTC]: Step 1/2 data - skipping done step</span></span>
+<span><span class="co"># info [2026-11-15 20:44:58.001 UTC]: Step 2/2 cleaned</span></span>
+<span><span class="co"># info [2026-11-15 20:44:58.003 UTC]: Finished in 0.002 s (1 done, 1 skipped, 0 failed)</span></span>
 <span><span class="va">p</span><span class="op">[[</span><span class="st">"cleaned"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co"># [1] 0.33 0.67 1.00 1.33</span></span></code></pre></div>
 <p><strong>Limits.</strong></p>
@@ -348,9 +348,9 @@ fails for large inputs.</p>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span><span class="fu">meta</span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
 <span><span class="co">#     step state               start seconds bytes error</span></span>
-<span><span class="co"># 1   load  done 2026-10-26 16:58:04     0.2    64  &lt;NA&gt;</span></span>
-<span><span class="co"># 2    fit  done 2026-10-26 16:58:05     0.0    56  &lt;NA&gt;</span></span>
-<span><span class="co"># 3 report  done 2026-10-26 16:58:05     0.0   120  &lt;NA&gt;</span></span></code></pre></div>
+<span><span class="co"># 1   load  done 2026-11-15 20:44:58     0.2    64  &lt;NA&gt;</span></span>
+<span><span class="co"># 2    fit  done 2026-11-15 20:44:58     0.0    56  &lt;NA&gt;</span></span>
+<span><span class="co"># 3 report  done 2026-11-15 20:44:58     0.0   120  &lt;NA&gt;</span></span></code></pre></div>
 <p>Now the input grows and <code>fit</code> fails. With
 <code>on_error = "continue"</code>, the run goes on, and
 <code>report</code> is skipped because its input failed.</p>
@@ -362,9 +362,9 @@ fails for large inputs.</p>
 <span><span class="co"># Steps not run because an input failed: 'report'</span></span>
 <span><span class="fu">meta</span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
 <span><span class="co">#     step    state               start seconds bytes           error</span></span>
-<span><span class="co"># 1   load     done 2026-10-26 16:58:05     0.2    80            &lt;NA&gt;</span></span>
-<span><span class="co"># 2    fit   failed 2026-10-26 16:58:05      NA    NA too many values</span></span>
-<span><span class="co"># 3 report outdated 2026-10-26 16:58:05     0.0   120            &lt;NA&gt;</span></span></code></pre></div>
+<span><span class="co"># 1   load     done 2026-11-15 20:44:58     0.2    80            &lt;NA&gt;</span></span>
+<span><span class="co"># 2    fit   failed 2026-11-15 20:44:58      NA    NA too many values</span></span>
+<span><span class="co"># 3 report outdated 2026-11-15 20:44:58     0.0   120            &lt;NA&gt;</span></span></code></pre></div>
 <p>The table shows the error of <code>fit</code>. <code>report</code> is
 <code>outdated</code> and still has the start time and output of the
 first run.</p>
@@ -405,7 +405,7 @@ details.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">p</span><span class="op">[[</span><span class="st">"cars"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span>, <span class="st">"meta"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co"># List of 4</span></span>
 <span><span class="co">#  $ step : chr "cars"</span></span>
-<span><span class="co">#  $ time : POSIXct[1:1], format: "2026-10-26 16:58:05"</span></span>
+<span><span class="co">#  $ time : POSIXct[1:1], format: "2026-11-15 20:44:58"</span></span>
 <span><span class="co">#  $ class: chr "data.frame"</span></span>
 <span><span class="co">#  $ bytes: num 2976</span></span></code></pre></div>
 <p><strong>Limits.</strong> Each step has to mark its output with the
@@ -438,11 +438,15 @@ reruns alone than in a full run, although the seed is the same.</p>
 <span><span class="co"># [1] -1.2529076  0.3672866 -1.6712572</span></span>
 <span><span class="fl">2</span> <span class="op">*</span> <span class="va">b_full</span></span>
 <span><span class="co"># [1]  3.1905616  0.6590155 -1.6409368</span></span></code></pre></div>
-<p>The recipe: give each step a <code>seed</code> parameter and set it
-inside the step. A small helper also restores the global random number
-state afterwards, so running the pipeline doesn’t change the numbers
-that the rest of your session draws. <code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::with_seed()</a></code>
-does the same, if you have {withr} installed.</p>
+<p>The recipe: give each step its own seed parameter
+(<code>seed_a</code>, <code>seed_b</code>, …) and set it inside the
+step. Use different names, because params with the same name share one
+value: <code><a href="../reference/pip_add.html">pip_add()</a></code> warns if they differ, and
+<code><a href="../reference/pip_set_params.html">pip_set_params()</a></code> sets them all at once. A small helper also
+restores the global random number state afterwards, so running the
+pipeline doesn’t change the numbers that the rest of your session draws.
+<code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::with_seed()</a></code> does the same, if you have {withr}
+installed.</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">with_seed</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">seed</span>, <span class="va">code</span><span class="op">)</span> <span class="op">{</span></span>
 <span>    <span class="va">old</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">get0</a></span><span class="op">(</span><span class="st">".Random.seed"</span>, envir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">globalenv</a></span><span class="op">(</span><span class="op">)</span>, inherits <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
@@ -460,9 +464,9 @@ does the same, if you have {withr} installed.</p>
 with <code>a</code>.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"rng"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"a"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">3</span>, <span class="va">seed</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="fu">with_seed</span><span class="op">(</span><span class="va">seed</span>, <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
-<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"b"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">3</span>, <span class="va">scale</span> <span class="op">=</span> <span class="fl">1</span>, <span class="va">seed</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">{</span></span>
-<span>        <span class="fu">with_seed</span><span class="op">(</span><span class="va">seed</span>, <span class="va">scale</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"a"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">3</span>, <span class="va">seed_a</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="fu">with_seed</span><span class="op">(</span><span class="va">seed_a</span>, <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span>
+<span>    <span class="fu"><a href="../reference/pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"b"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">3</span>, <span class="va">scale</span> <span class="op">=</span> <span class="fl">1</span>, <span class="va">seed_b</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">{</span></span>
+<span>        <span class="fu">with_seed</span><span class="op">(</span><span class="va">seed_b</span>, <span class="va">scale</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span></span>
 <span>    <span class="op">}</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span>, lgr <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
@@ -478,9 +482,8 @@ with <code>a</code>.</p>
 <ul>
 <li>You choose the seeds. {targets} derives them from the target
 names.</li>
-<li>
-<code>pip_set_params(p, list(seed = 42))</code> sets the seed of
-<em>all</em> steps with a <code>seed</code> parameter, so they would all
+<li>Each step needs its own seed parameter name. A shared
+<code>seed</code> would get one value in all steps, so they would all
 draw the same numbers.</li>
 <li>Steps that run code in parallel need a parallel-safe generator, as
 with any R code.</li>
@@ -522,14 +525,14 @@ reruns steps if the file changed in the meantime.</p>
 <span><span class="co"># 1:  read path,rev          done &lt;data.frame[4x1]&gt;</span></span>
 <span><span class="co"># 2: total     data    read  done                10</span></span>
 <span><span class="co"># --------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:58:05 (0.002 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 20:44:58 (0.002 s)</span></span>
 <span><span class="co"># steps: 2 done</span></span>
 <span></span>
 <span><span class="fu">refresh</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-26 16:58:05.713 UTC]: Starting run of pipeflow 'files'</span></span>
-<span><span class="co"># info [2026-10-26 16:58:05.713 UTC]: Step 1/2 read - skipping done step</span></span>
-<span><span class="co"># info [2026-10-26 16:58:05.713 UTC]: Step 2/2 total - skipping done step</span></span>
-<span><span class="co"># info [2026-10-26 16:58:05.714 UTC]: Finished in 0.001 s (0 done, 2 skipped, 0 failed)</span></span></code></pre></div>
+<span><span class="co"># info [2026-11-15 20:44:59.060 UTC]: Starting run of pipeflow 'files'</span></span>
+<span><span class="co"># info [2026-11-15 20:44:59.060 UTC]: Step 1/2 read - skipping done step</span></span>
+<span><span class="co"># info [2026-11-15 20:44:59.060 UTC]: Step 2/2 total - skipping done step</span></span>
+<span><span class="co"># info [2026-11-15 20:44:59.061 UTC]: Finished in 0.001 s (0 done, 2 skipped, 0 failed)</span></span></code></pre></div>
 <p>Step functions keep their enclosing environment. If a step function
 was created inside another function, that environment is saved with it,
 including every object in it, which can make the file large. The global
@@ -578,7 +581,7 @@ to the new process, run there and copied back.</p>
 <span><span class="co"># 1:  data      n          done 1,2,3,4,5</span></span>
 <span><span class="co"># 2: total      x    data  done        15</span></span>
 <span><span class="co"># --------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:58:06 (0.003 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 20:44:59 (0.003 s)</span></span>
 <span><span class="co"># steps: 2 done</span></span></code></pre></div>
 <p>What you get back is a new pipeline object, so assign it
 (<code>p &lt;-</code>). Views and other references to the old object
@@ -635,7 +638,7 @@ lists what the next run does.</p>
 <span><span class="co">#    step params depends    state out</span></span>
 <span><span class="co"># 1:    d      y         outdated   1</span></span>
 <span><span class="co"># ---------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:58:06 (0.003 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 20:45:00 (0.004 s)</span></span>
 <span><span class="co"># steps: 1 outdated</span></span></code></pre></div>
 <p>The view misses a <code>done</code> step that reruns because a step
 upstream of it runs. {pipeflow} functions such as
@@ -653,15 +656,15 @@ again with the new output of <code>a</code>.</p>
 <span><span class="co"># 1:    a      x         outdated   1</span></span>
 <span><span class="co"># 2:    d      y         outdated   1</span></span>
 <span><span class="co"># ---------------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-10-26 16:58:06 (0.003 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 20:45:00 (0.004 s)</span></span>
 <span><span class="co"># steps: 2 outdated</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-10-26 16:58:06.740 UTC]: Starting run of pipeflow 'outdated'</span></span>
-<span><span class="co"># info [2026-10-26 16:58:06.740 UTC]: Step 1/4 a</span></span>
-<span><span class="co"># info [2026-10-26 16:58:06.742 UTC]: Step 2/4 b</span></span>
-<span><span class="co"># info [2026-10-26 16:58:06.743 UTC]: Step 3/4 c</span></span>
-<span><span class="co"># info [2026-10-26 16:58:06.745 UTC]: Step 4/4 d</span></span>
-<span><span class="co"># info [2026-10-26 16:58:06.746 UTC]: Finished in 0.006 s (4 done, 0 skipped, 0 failed)</span></span></code></pre></div>
+<span><span class="co"># info [2026-11-15 20:45:00.099 UTC]: Starting run of pipeflow 'outdated'</span></span>
+<span><span class="co"># info [2026-11-15 20:45:00.099 UTC]: Step 1/4 a</span></span>
+<span><span class="co"># info [2026-11-15 20:45:00.101 UTC]: Step 2/4 b</span></span>
+<span><span class="co"># info [2026-11-15 20:45:00.113 UTC]: Step 3/4 c</span></span>
+<span><span class="co"># info [2026-11-15 20:45:00.115 UTC]: Step 4/4 d</span></span>
+<span><span class="co"># info [2026-11-15 20:45:00.116 UTC]: Finished in 0.018 s (4 done, 0 skipped, 0 failed)</span></span></code></pre></div>
 <p><strong>Limits.</strong></p>
 <ul>
 <li>Locked steps are listed but skipped. Leave them out with

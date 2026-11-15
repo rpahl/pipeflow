@@ -1,11 +1,11 @@
 # Annotated step outputs
 
-`pip_output_value()` is an extension point for annotating the outputs of
-a pipeline, for example to stamp a result with the step it came from or
-the time it was computed. It can be thought of as a hook that allows you
-to postprocess or annotate the output of a step before it is stored. The
-generic is applied to the output of a step right after the step function
-returns, and its result is what is stored as the step's output.
+`pip_output_value()` is a hook to annotate or postprocess the output of
+a step, for example to stamp a result with the step it came from or the
+time it was computed. It is applied to the output right after the step
+function returns, and its result is what is stored as the step's output.
+The default method returns `x` unchanged. Methods are meant for your own
+classes, not for base classes such as `numeric`.
 
 ## Usage
 
@@ -43,30 +43,22 @@ The value that is stored as the step's output.
 
 ## Details
 
-The default method returns `x` unchanged. Methods are meant for your own
-classes, not for base classes such as `numeric` or `character`.
-
-The generic is applied once to the output as a whole, so a method sees
-the whole object a step returned. The one exception is a partitioned
-output (a step with `exec = "split"`, or a step that was mapped over a
-partitioned input): there the generic is applied once per partition, and
-each partition gets its key in `ctx$key`.
-
-If you want to annotate an output element-wise instead of the whole
-object, just write a method that walks over each element. For example,
-for a plain list, a method could look something like this:
+The generic is applied once to the whole output, except for a
+partitioned output (see `exec` in
+[`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)):
+there it is applied once per partition, with the key in `ctx$key`. To
+annotate an output element-wise, write a method that walks over the
+elements, e.g. for a plain list:
 
     pip_output_value.list <- function(x, ctx = list(), ...) {
         x[] <- lapply(x, FUN = pip_output_value, ctx = ctx)
         x
     }
 
-The generic is *not* applied to the outputs of failed steps (see
-`pip_run(on_error = "continue")`), which remain the condition of the
-failure, nor to the inputs a step receives from other steps: it acts on
-what a step returns, once. An error in a method is an error of the step
-and is handled like any other step error; for a partitioned output it
-names the partition key the method failed for.
+It is *not* applied to the outputs of failed steps, which remain the
+failure condition, nor to the inputs a step receives from other steps.
+An error in a method is a step error and, for a partitioned output,
+names the partition key.
 
 ## See also
 

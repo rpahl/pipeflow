@@ -167,6 +167,40 @@ all steps of the second pipeline by position, e.g.
 `pip_bound[-seq_along(pip1)]`. Steps where `x` already refers to another
 step, like `fit` and `predict`, are left as they are.
 
+### Copying steps
+
+Instead of binding whole pipelines,
+[`pip_add()`](https://rpahl.github.io/pipeflow/dev/reference/pip_add.md)
+also accepts a pipeline or a view as `step` and copies its steps into
+another pipeline. Unlike [`rbind()`](https://rdrr.io/r/base/cbind.html),
+upstream steps of a view are not copied, so the references of the copied
+steps are resolved by name in the target pipeline. For example, to run
+the modelling steps of `pip2` on the `data` step of `pip1`:
+
+``` r
+
+pip3 <- pip_clone(pip1) |>
+    pip_add(pip2[c("fit", "predict")])
+
+pip3
+# <pipeflow> preprocess (5 steps)
+# -------------------------------
+#           step  params depends state
+# 1:        data       x           new
+# 2:        prep       x    data   new
+# 3: standardize x,scale    prep   new
+# 4:         fit   x,k,b    data   new
+# 5:     predict       x     fit   new
+# -------------------------------
+# <ready> last run: never
+# steps: 5 new
+```
+
+The `fit` step now refers to the `data` step of `pip3`. If a step can’t
+be added, for example because its name already exists or it refers to a
+step that does not exist in the target pipeline, the target pipeline is
+left unchanged.
+
 ### Combined pipeline results
 
 Let’s now run the combined pipeline and inspect the results of the final
@@ -175,14 +209,14 @@ step.
 ``` r
 
 pip_run(pip)
-# info [2026-10-26 16:51:20.422 UTC]: Starting run of pipeflow 'preprocess-model'
-# info [2026-10-26 16:51:20.422 UTC]: Step 1/6 data
-# info [2026-10-26 16:51:20.424 UTC]: Step 2/6 prep
-# info [2026-10-26 16:51:20.425 UTC]: Step 3/6 standardize
-# info [2026-10-26 16:51:20.425 UTC]: Step 4/6 data2
-# info [2026-10-26 16:51:20.426 UTC]: Step 5/6 fit
-# info [2026-10-26 16:51:20.426 UTC]: Step 6/6 predict
-# info [2026-10-26 16:51:20.427 UTC]: Finished in 0.005 s (6 done, 0 skipped, 0 failed)
+# info [2026-11-15 20:38:17.104 UTC]: Starting run of pipeflow 'preprocess-model'
+# info [2026-11-15 20:38:17.105 UTC]: Step 1/6 data
+# info [2026-11-15 20:38:17.107 UTC]: Step 2/6 prep
+# info [2026-11-15 20:38:17.107 UTC]: Step 3/6 standardize
+# info [2026-11-15 20:38:17.108 UTC]: Step 4/6 data2
+# info [2026-11-15 20:38:17.109 UTC]: Step 5/6 fit
+# info [2026-11-15 20:38:17.109 UTC]: Step 6/6 predict
+# info [2026-11-15 20:38:17.110 UTC]: Finished in 0.006 s (6 done, 0 skipped, 0 failed)
 ```
 
 ``` r
@@ -203,14 +237,14 @@ pip_set_params(pip, params = list(k = 3))
 ``` r
 
 pip_run(pip)
-# info [2026-10-26 16:51:20.693 UTC]: Starting run of pipeflow 'preprocess-model'
-# info [2026-10-26 16:51:20.693 UTC]: Step 1/6 data - skipping done step
-# info [2026-10-26 16:51:20.693 UTC]: Step 2/6 prep - skipping done step
-# info [2026-10-26 16:51:20.693 UTC]: Step 3/6 standardize - skipping done step
-# info [2026-10-26 16:51:20.693 UTC]: Step 4/6 data2 - skipping done step
-# info [2026-10-26 16:51:20.694 UTC]: Step 5/6 fit
-# info [2026-10-26 16:51:20.696 UTC]: Step 6/6 predict
-# info [2026-10-26 16:51:20.697 UTC]: Finished in 0.004 s (2 done, 4 skipped, 0 failed)
+# info [2026-11-15 20:38:17.373 UTC]: Starting run of pipeflow 'preprocess-model'
+# info [2026-11-15 20:38:17.373 UTC]: Step 1/6 data - skipping done step
+# info [2026-11-15 20:38:17.373 UTC]: Step 2/6 prep - skipping done step
+# info [2026-11-15 20:38:17.373 UTC]: Step 3/6 standardize - skipping done step
+# info [2026-11-15 20:38:17.374 UTC]: Step 4/6 data2 - skipping done step
+# info [2026-11-15 20:38:17.374 UTC]: Step 5/6 fit
+# info [2026-11-15 20:38:17.376 UTC]: Step 6/6 predict
+# info [2026-11-15 20:38:17.377 UTC]: Finished in 0.005 s (2 done, 4 skipped, 0 failed)
 ```
 
 ``` r
@@ -243,7 +277,7 @@ pip_restored
 # 5:         fit   x,k,b       data2  done                               12,18,24,30,36
 # 6:     predict       x         fit  done pred: 12,pred: 18,pred: 24,pred: 30,pred: 36
 # -------------------------------------
-# <ready> last run: 2026-10-26 16:51:20 (0.004 s)
+# <ready> last run: 2026-11-15 20:38:17 (0.005 s)
 # steps: 6 done
 ```
 
@@ -255,14 +289,14 @@ the steps that need an update are run again:
 
 pip_set_params(pip_restored, params = list(k = 4))
 pip_run(pip_restored)
-# info [2026-10-26 16:51:20.898 UTC]: Starting run of pipeflow 'preprocess-model'
-# info [2026-10-26 16:51:20.898 UTC]: Step 1/6 data - skipping done step
-# info [2026-10-26 16:51:20.898 UTC]: Step 2/6 prep - skipping done step
-# info [2026-10-26 16:51:20.898 UTC]: Step 3/6 standardize - skipping done step
-# info [2026-10-26 16:51:20.898 UTC]: Step 4/6 data2 - skipping done step
-# info [2026-10-26 16:51:20.898 UTC]: Step 5/6 fit
-# info [2026-10-26 16:51:20.899 UTC]: Step 6/6 predict
-# info [2026-10-26 16:51:20.900 UTC]: Finished in 0.002 s (2 done, 4 skipped, 0 failed)
+# info [2026-11-15 20:38:17.571 UTC]: Starting run of pipeflow 'preprocess-model'
+# info [2026-11-15 20:38:17.572 UTC]: Step 1/6 data - skipping done step
+# info [2026-11-15 20:38:17.572 UTC]: Step 2/6 prep - skipping done step
+# info [2026-11-15 20:38:17.572 UTC]: Step 3/6 standardize - skipping done step
+# info [2026-11-15 20:38:17.572 UTC]: Step 4/6 data2 - skipping done step
+# info [2026-11-15 20:38:17.572 UTC]: Step 5/6 fit
+# info [2026-11-15 20:38:17.573 UTC]: Step 6/6 predict
+# info [2026-11-15 20:38:17.574 UTC]: Finished in 0.002 s (2 done, 4 skipped, 0 failed)
 
 pip_restored[["predict", "out"]]
 # [1] "pred: 16" "pred: 24" "pred: 32" "pred: 40" "pred: 48"

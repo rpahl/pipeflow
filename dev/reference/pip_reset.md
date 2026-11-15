@@ -3,13 +3,8 @@
 Resets all unlocked steps of a pipeline (or a subset of steps defined by
 a view) to state `"new"` and clears their outputs, so a subsequent
 [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
-re-executes the cleaned steps from scratch. Their downstream steps that
-have run are marked `"outdated"`, as they ran with the cleared outputs.
-Any pending restart counters are cleared, but parameters, tags, and
-locked flags are left unchanged. If all steps of the pipeline are
-selected, the run state is set to `"ready"` and the time of the last run
-is cleared. A view that covers only some steps leaves both alone, as
-they describe the whole pipeline.
+re-executes the cleaned steps from scratch. Parameters, tags, and locked
+flags are left unchanged. Further effects:
 
 ## Usage
 
@@ -30,6 +25,16 @@ The updated pipeline or view, invisibly.
 
 ## Details
 
+- *Downstream steps* that have run are marked `"outdated"`, as they ran
+  with the cleared outputs.
+
+- Any pending *restart counters* are cleared.
+
+- If *all steps* of the pipeline are selected, the *run state* is set to
+  `"ready"` and the time of the last run is cleared. A view that covers
+  only some steps leaves both alone, as they describe the whole
+  pipeline.
+
 Locked steps are skipped: their state and output are preserved, also if
 they are downstream of a reset step. If all selected steps are locked, a
 message is shown and nothing is changed.
@@ -42,10 +47,10 @@ p <- pip_new() |>
   pip_add("square", \(x = ~load) x^2)
 
 pip_run(p)
-#> info [2026-10-26 16:50:50.022 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-26 16:50:50.023 UTC]: Step 1/2 load
-#> info [2026-10-26 16:50:50.024 UTC]: Step 2/2 square
-#> info [2026-10-26 16:50:50.024 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
+#> info [2026-11-15 20:37:46.646 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-11-15 20:37:46.646 UTC]: Step 1/2 load
+#> info [2026-11-15 20:37:46.647 UTC]: Step 2/2 square
+#> info [2026-11-15 20:37:46.648 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
 p[["state"]] # "done", "done"
 #>   load square 
 #> "done" "done" 
@@ -97,10 +102,10 @@ p[["out"]]   # NULL, NULL
 
 # Resetting a step outdates its downstream steps
 pip_run(p)
-#> info [2026-10-26 16:50:50.034 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-26 16:50:50.034 UTC]: Step 1/2 load
-#> info [2026-10-26 16:50:50.035 UTC]: Step 2/2 square
-#> info [2026-10-26 16:50:50.036 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
+#> info [2026-11-15 20:37:46.658 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-11-15 20:37:46.658 UTC]: Step 1/2 load
+#> info [2026-11-15 20:37:46.659 UTC]: Step 2/2 square
+#> info [2026-11-15 20:37:46.660 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
 pip_reset(pip_view(p, step = "load"))
 p[["state"]] # "new", "outdated"
 #>       load     square 

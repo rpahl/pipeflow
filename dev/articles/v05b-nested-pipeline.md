@@ -70,11 +70,11 @@ see this now:
 
 params <- list(input_df = iris, xVar = "Sepal.Length", yVar = "Sepal.Width")
 pip_set_params(inner, params) |> pip_run()
-# info [2026-10-26 16:51:53.632 UTC]: Starting run of pipeflow 'coefficients'
-# info [2026-10-26 16:51:53.632 UTC]: Step 1/3 input
-# info [2026-10-26 16:51:53.634 UTC]: Step 2/3 fit
-# info [2026-10-26 16:51:53.638 UTC]: Step 3/3 coefs
-# info [2026-10-26 16:51:53.639 UTC]: Finished in 0.007 s (3 done, 0 skipped, 0 failed)
+# info [2026-11-15 20:38:49.497 UTC]: Starting run of pipeflow 'coefficients'
+# info [2026-11-15 20:38:49.498 UTC]: Step 1/3 input
+# info [2026-11-15 20:38:49.500 UTC]: Step 2/3 fit
+# info [2026-11-15 20:38:49.503 UTC]: Step 3/3 coefs
+# info [2026-11-15 20:38:49.504 UTC]: Finished in 0.006 s (3 done, 0 skipped, 0 failed)
 
 inner[["coefs", "out"]]
 #  (Intercept) Sepal.Length 
@@ -147,10 +147,10 @@ outer_all |>
         list(df = iris, xVar = "Sepal.Length", yVar = "Sepal.Width")
     ) |>
     pip_run()
-# info [2026-10-26 16:51:53.848 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-10-26 16:51:53.848 UTC]: Step 1/2 df
-# info [2026-10-26 16:51:53.849 UTC]: Step 2/2 inner_run
-# info [2026-10-26 16:51:53.871 UTC]: Finished in 0.022 s (2 done, 0 skipped, 0 failed)
+# info [2026-11-15 20:38:49.705 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-11-15 20:38:49.705 UTC]: Step 1/2 df
+# info [2026-11-15 20:38:49.706 UTC]: Step 2/2 inner_run
+# info [2026-11-15 20:38:49.723 UTC]: Finished in 0.019 s (2 done, 0 skipped, 0 failed)
 
 outer_all[["inner_run", "out"]]
 #  (Intercept) Sepal.Length 
@@ -265,12 +265,12 @@ outer |>
         )
     ) |>
     pip_run()
-# info [2026-10-26 16:51:54.151 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-26 16:51:54.151 UTC]: Step 1/4 df
-# info [2026-10-26 16:51:54.152 UTC]: Step 2/4 split_df
-# info [2026-10-26 16:51:54.153 UTC]: Step 3/4 inner_run
-# info [2026-10-26 16:51:54.166 UTC]: Step 4/4 combine
-# info [2026-10-26 16:51:54.167 UTC]: Finished in 0.017 s (4 done, 0 skipped, 0 failed)
+# info [2026-11-15 20:38:50.001 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-11-15 20:38:50.001 UTC]: Step 1/4 df
+# info [2026-11-15 20:38:50.002 UTC]: Step 2/4 split_df
+# info [2026-11-15 20:38:50.003 UTC]: Step 3/4 inner_run
+# info [2026-11-15 20:38:50.017 UTC]: Step 4/4 combine
+# info [2026-11-15 20:38:50.018 UTC]: Finished in 0.017 s (4 done, 0 skipped, 0 failed)
 ```
 
 The output of the `inner_run` step is a partitioned list of coefficient
@@ -322,7 +322,7 @@ outer
 # 3: inner_run input_df,xVar,yVar,digits  split_df outdated           <list[3]>   auto
 # 4:   combine                     coefs inner_run outdated   <data.frame[3x2]> reduce
 # ----------------------------------
-# <ready> last run: 2026-10-26 16:51:54 (0.017 s)
+# <ready> last run: 2026-11-15 20:38:50 (0.017 s)
 # steps: 2 done, 2 outdated
 ```
 
@@ -438,7 +438,7 @@ inner_pips[["a"]]
 # 2: square         x   input  done      1, 4, 9,16
 # 3:  scale sq,factor  square  done  10, 40, 90,160
 # ------------------------------
-# <ready> last run: 2026-10-26 16:51:54 (0.007 s)
+# <ready> last run: 2026-11-15 20:38:50 (0.003 s)
 # steps: 3 done
 ```
 
@@ -473,10 +473,10 @@ pipelines it updates in another process would be lost, so its subsets
 are still run one after another. A function made with `cache = FALSE`
 keeps nothing and runs a new copy of the inner pipeline for each call,
 so its subsets can run in parallel. Here we replace the function of the
-`inner_run` step in a copy of `outer`. As
+`inner_run` step in a copy of `outer`. With `keep_params = TRUE`,
 [`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
-takes the params of the new function, we give the binding and the model
-settings again:
+keeps the model settings set before. The binding to `split_df` is not
+kept, so we give it again:
 
 ``` r
 
@@ -484,21 +484,18 @@ par_outer <- pip_clone(outer) |>
     pip_replace(
         "inner_run",
         as.function(inner, out = "coefs", cache = FALSE),
-        params = list(
-            input_df = ~split_df,
-            xVar = "Petal.Length",
-            yVar = "Sepal.Width"
-        )
+        params = list(input_df = ~split_df),
+        keep_params = TRUE
     )
 
 mc2 <- \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
 pip_run(par_outer, map = mc2)
-# info [2026-10-26 16:51:54.796 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-26 16:51:54.797 UTC]: Step 1/4 df - skipping done step
-# info [2026-10-26 16:51:54.797 UTC]: Step 2/4 split_df - skipping done step
-# info [2026-10-26 16:51:54.797 UTC]: Step 3/4 inner_run
-# info [2026-10-26 16:51:54.827 UTC]: Step 4/4 combine
-# info [2026-10-26 16:51:54.831 UTC]: Finished in 0.034 s (2 done, 2 skipped, 0 failed)
+# info [2026-11-15 20:38:50.640 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-11-15 20:38:50.640 UTC]: Step 1/4 df - skipping done step
+# info [2026-11-15 20:38:50.641 UTC]: Step 2/4 split_df - skipping done step
+# info [2026-11-15 20:38:50.641 UTC]: Step 3/4 inner_run
+# info [2026-11-15 20:38:50.671 UTC]: Step 4/4 combine
+# info [2026-11-15 20:38:50.675 UTC]: Finished in 0.035 s (2 done, 2 skipped, 0 failed)
 
 par_outer[["combine", "out"]]
 #            (Intercept) Petal.Length
@@ -608,12 +605,12 @@ manual |>
         )
     ) |>
     pip_run()
-# info [2026-10-26 16:51:54.974 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-10-26 16:51:54.974 UTC]: Step 1/4 df
-# info [2026-10-26 16:51:54.975 UTC]: Step 2/4 split_df
-# info [2026-10-26 16:51:54.976 UTC]: Step 3/4 inner_run
-# info [2026-10-26 16:51:54.994 UTC]: Step 4/4 combine
-# info [2026-10-26 16:51:54.995 UTC]: Finished in 0.021 s (4 done, 0 skipped, 0 failed)
+# info [2026-11-15 20:38:50.816 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-11-15 20:38:50.816 UTC]: Step 1/4 df
+# info [2026-11-15 20:38:50.817 UTC]: Step 2/4 split_df
+# info [2026-11-15 20:38:50.818 UTC]: Step 3/4 inner_run
+# info [2026-11-15 20:38:50.842 UTC]: Step 4/4 combine
+# info [2026-11-15 20:38:50.842 UTC]: Finished in 0.027 s (4 done, 0 skipped, 0 failed)
 
 manual[["combine", "out"]]
 #            (Intercept) Sepal.Length

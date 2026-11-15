@@ -37,24 +37,20 @@ A named list of outputs
 
 ## Details
 
-The result always takes one of two shapes:
+The result is one of two shapes:
 
-- **Flat**: a named list whose elements are the step outputs directly,
-  e.g. `list(s1 = 1, s2 = 2)`.
+- **Flat**: a named list of step outputs, e.g. `list(s1 = 1, s2 = 2)`.
 
-- **Grouped**: a named list whose elements are themselves named lists of
-  step outputs, one per group, e.g.
+- **Grouped**: a named list of such lists, one per group, e.g.
   `list(io = list(s1 = 1, s2 = 2), model = list(s3 = 4))`.
 
-With `simplify = TRUE` (the default) the result is *flat* whenever every
-group contains exactly one step, which, for example, is always the case
-for `by = "step"` as step names are unique. If any group contains more
-than one step (or `simplify = FALSE`) the result is *grouped*. For list
-columns such as `tags`, a step with several entries contributes its
-output to every corresponding group, and steps without an entry (e.g.
-untagged steps) are omitted. You can use
+With `simplify = TRUE` (the default) the result is flat whenever every
+group has exactly one step, as is always the case for `by = "step"`.
+Otherwise, or with `simplify = FALSE`, it is grouped. For list columns
+such as `tags`, a step with several entries contributes to every group,
+and steps without an entry are omitted. Use
 [`pip_view()`](https://rpahl.github.io/pipeflow/dev/reference/pip_view.md)
-to further narrow the selection before collecting.
+to narrow the selection first.
 
 ## Examples
 
@@ -64,11 +60,11 @@ p <- pip_new() |>
   pip_add("clean", \(x = ~load) x + 1, tags = "io") |>
   pip_add("model", \(x = ~clean) x * 2, tags = "model")
 pip_run(p)
-#> info [2026-10-26 16:50:46.736 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-10-26 16:50:46.736 UTC]: Step 1/3 load
-#> info [2026-10-26 16:50:46.737 UTC]: Step 2/3 clean
-#> info [2026-10-26 16:50:46.738 UTC]: Step 3/3 model
-#> info [2026-10-26 16:50:46.738 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)
+#> info [2026-11-15 20:37:43.462 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-11-15 20:37:43.462 UTC]: Step 1/3 load
+#> info [2026-11-15 20:37:43.463 UTC]: Step 2/3 clean
+#> info [2026-11-15 20:37:43.464 UTC]: Step 3/3 model
+#> info [2026-11-15 20:37:43.464 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)
 
 # By default, a flat named list with one entry per step
 pip_collect(p)

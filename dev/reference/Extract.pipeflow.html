@@ -11,7 +11,7 @@ and the replacement operators update steps (or their properties) in place."><met
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9025</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -159,6 +159,9 @@ e.g. <code>p[state == "new"]</code> or <code>p[step %in% c("load", "fit") &amp; 
 <span class="pkg">data.table</span> (<code>%like%</code>, <code>%ilike%</code>, <code>%flike%</code>, <code>%plike%</code>, <code>%chin%</code>, <code>%between%</code>,
 <code>%inrange%</code> and <code>%notin%</code>) are available in the filter without attaching
 <span class="pkg">data.table</span>. <code>p[]</code> returns a copy of the pipeline.</p>
+<p>As the columns come first, a variable named like a column can't be used as a
+selector: with <code>step &lt;- "load"</code>, <code>p[step]</code> selects all steps (by the <code>step</code> column),
+and <code>[</code> warns. Use another name, e.g. <code>p[steps]</code>, or <code>pip_view(p, step = step)</code>.</p>
 <p>Note that <code>tags</code> is a list column, so <code>%like%</code> matches the pattern against the tags
 of each step converted to a single string, e.g. <code>"character(0)"</code> for a step without
 tags and <code>'c("io", "daily")'</code> for a step with two tags. A pattern can therefore also
@@ -184,9 +187,9 @@ meta fields are accessible by name.</p><div class="section">
 <h4 id="meta-fields">Meta fields<a class="anchor" aria-label="anchor" href="#meta-fields"></a></h4>
 
 
-<p>The following meta fields are available via <code>p[["..."]]</code> (or <code>p$...</code>):</p><ul><li><p><code>name</code> – the name of the pipeline.</p></li>
-<li><p><code>view</code> – the names of the steps covered by a view, or <code>NULL</code> for a full pipeline.</p></li>
-<li><p><code>pipenv</code> – the shared inner environment holding the pipeline's state. All views
+<p>The following meta fields are available via <code>p[["..."]]</code> (or <code>p$...</code>):</p><ul><li><p><code>name</code>: the name of the pipeline.</p></li>
+<li><p><code>view</code>: the names of the steps covered by a view, or <code>NULL</code> for a full pipeline.</p></li>
+<li><p><code>pipenv</code>: the shared inner environment holding the pipeline's state. All views
 and extracted subsets reference the same environment, so mutations are shared. The
 step table is available as <code>p[["pipenv"]][["data"]]</code> (see also <code><a href="pip_data.html">pip_data()</a></code>).</p></li>
 </ul></div>
@@ -238,7 +241,7 @@ dependencies; same as <code>pip_remove(p, step, force = TRUE)</code></p></li>
 <li><p><code>p[[step, "fun"]] &lt;- fun</code> – replace the step's function; same as <code><a href="pip_replace.html">pip_replace()</a></code>,
 that is, tags and execution mode are kept</p></li>
 <li><p><code>p[[step, "params"]] &lt;- list(...)</code> – update the step's parameters; same as
-<code>pip_set_params(p, list(...))</code></p></li>
+<code>pip_set_params(pip_view(p, step = step), list(...), scope = "view")</code></p></li>
 <li><p><code>p[[step, "tags"]] &lt;- tags</code> – set the step's tags explicitly to <code>tags</code> (a
 character vector); in contrast, <code><a href="pip_tag.html">pip_tag()</a></code> will just add tags.</p><ul><li><p><code>p[[step, "tags"]] &lt;- NULL</code> clears all tags</p></li>
 </ul></li>
@@ -289,36 +292,40 @@ of the view.</p>
 
 <p><code>p[i, j] &lt;- value</code> assigns the step property <code>j</code> to the selected steps (see
 <code>[[&lt;-.pipeflow</code> above for the supported properties), mirroring the row and column
-selection of the extraction form <code>p[i, j]</code>. <code>i</code> selects rows like in the extraction
-form (including negative row indices, which select all rows but the excluded ones)
-and <code>j</code> must be a single property name; <code>p[, j] &lt;- value</code> selects all steps. With
-more than one selected row, a value of length 1 is replicated to all selected rows
-and a value whose length equals the number of selected rows is assigned element-wise
-(<code>p[i, j] &lt;- value</code> behaves like <code>p[[i[k], j]] &lt;- value[[k]]</code>). As in base R, longer
-values are recycled if the number of selected rows is a multiple of the value length,
-otherwise an error is raised. To assign the same list value (e.g. a set of tags) to
-all rows, wrap it in <code>list(...)</code>. With a single selected row, <code>value</code> is stored as-is
-(like <code>p[[i, j]] &lt;- value</code>). For the <code>params</code> property, the value of each row must
-itself be a list (e.g. <code>p[1:2, "params"] &lt;- list(list(a = 1), list(b = 2))</code>).</p>
-<p>The selected steps are assigned one after another, but the assignment changes all of
-them or none, that is, if it fails for one step, the pipeline is restored as it was.</p>
+selection of the extraction form <code>p[i, j]</code>: <code>i</code> selects rows (negative indices select
+all rows but the excluded ones), <code>j</code> must be a single property name, and
+<code>p[, j] &lt;- value</code> selects all steps.</p><ul><li><p>With a <em>single selected row</em>, <code>value</code> is stored <em>as-is</em> (like
+<code>p[[i, j]] &lt;- value</code>).</p></li>
+<li><p>With <em>more than one selected row</em>, a value of length 1 is <em>replicated</em> to all rows
+and a value with one element per row is assigned <em>element-wise</em>
+(<code>p[i, j] &lt;- value</code> behaves like <code>p[[i[k], j]] &lt;- value[[k]]</code>). As in base R,
+longer values are <em>recycled</em> if the number of rows is a multiple of the value
+length, otherwise an error is raised.</p></li>
+<li><p>To assign the <em>same list value</em> (e.g. a set of tags) to all rows, wrap it in
+<code>list(...)</code>.</p></li>
+<li><p>For the <code>params</code> property, the value of each row must <em>itself be a list</em>, e.g.
+<code>p[1:2, "params"] &lt;- list(list(a = 1), list(b = 2))</code>.</p></li>
+</ul><p>The selected steps are assigned one after another, but the assignment changes all of
+them or none: if it fails for one step, the pipeline is restored as it was.</p>
 <p>If <code>value</code> is a <code>pipeflow</code> pipeline or view, the writable step properties of its
 steps are copied to the selected rows: <code>p[i, ] &lt;- q[i, ]</code> copies the steps of <code>q</code>
-selected by <code>i</code> into the steps of <code>p</code> selected by <code>i</code> (the rows of both sides are
-aligned by position and must have the same length). In this form, <code>i</code> is required and
-<code>j</code> must be omitted. The properties are copied in the order <code>step</code>, <code>fun</code>, <code>params</code>,
-<code>exec</code>, <code>out</code>, <code>state</code>, <code>time</code>, <code>time_start</code>, <code>duration</code>, <code>tags</code>, <code>locked</code>: the step
-is renamed to the source name (a no-op when it is unchanged), the function, the
-params and the execution mode are replaced with those of the source (same as
-<code><a href="pip_replace.html">pip_replace()</a></code> with the params and <code>exec</code> of the source), and the runtime state and
-annotation columns are overwritten (locked steps included). A copied step refers to
-the steps that the source step depends on by name, also if it was defined with a
-relative reference such as <code>~-1</code>, and these steps are looked up in <code>p</code>. The
-structural columns <code>nodeId</code>, <code>depends</code> and <code>unbound</code> are not copied but recomputed
-against the steps of <code>p</code>. If a step can't be copied (e.g. because it refers to a step
-that is not in <code>p</code>), <code>p</code> is left as it was. Instead of <code>p[i, j] &lt;- q</code>, use
-<code>p[i, j] &lt;- q[i, j]</code> to copy the values of a single property; the one-column table
-returned by the extraction form is unwrapped and assigned element-wise.</p>
+selected by <code>i</code> into the steps of <code>p</code> selected by <code>i</code>. In this form, <code>i</code> is required
+and <code>j</code> must be omitted.</p><ul><li><p>The rows of both sides are <em>aligned by position</em> and must have the same length.</p></li>
+<li><p>The step is <em>renamed</em> to the source name (a no-op when it is unchanged), and its
+function, params and execution mode are <em>replaced</em> with those of the source (same
+as <code><a href="pip_replace.html">pip_replace()</a></code> with the params and <code>exec</code> of the source).</p></li>
+<li><p>The runtime state and annotation columns (<code>out</code>, <code>state</code>, <code>time</code>, <code>time_start</code>,
+<code>duration</code>, <code>tags</code>, <code>locked</code>) are <em>overwritten</em>, locked steps included.</p></li>
+<li><p>A copied step refers to the steps that the source step depends on <em>by name</em>, also
+if it was defined with a relative reference such as <code>~-1</code>, and these steps are
+<em>looked up in <code>p</code></em>.</p></li>
+<li><p>The structural columns <code>nodeId</code>, <code>depends</code> and <code>unbound</code> are not copied but
+<em>recomputed</em> against the steps of <code>p</code>.</p></li>
+<li><p>If a step can't be copied (e.g. because it refers to a step that is not in <code>p</code>),
+<code>p</code> is <em>left as it was</em>.</p></li>
+</ul><p>Instead of <code>p[i, j] &lt;- q</code>, use <code>p[i, j] &lt;- q[i, j]</code> to copy the values of a single
+property; the one-column table returned by the extraction form is unwrapped and
+assigned element-wise.</p>
 </div>
 
 <div class="section">
@@ -371,11 +378,11 @@ fields, step-table columns, and the virtual methods (e.g. <code>p$add(...)</code
 <span class="r-in"><span><span class="co"># No arguments returns a copy of the pipeline</span></span></span>
 <span class="r-in"><span><span class="va">p2</span> <span class="op">&lt;-</span> <span class="va">p</span><span class="op">[</span><span class="op">]</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p2</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.478 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.478 UTC]: Step 1/3 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.480 UTC]: Step 2/3 square</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.481 UTC]: Step 3/3 total</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.482 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.250 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.251 UTC]: Step 1/3 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.253 UTC]: Step 2/3 square</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.253 UTC]: Step 3/3 total</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.254 UTC]: Finished in 0.004 s (3 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
@@ -394,7 +401,7 @@ fields, step-table columns, and the virtual methods (e.g. <code>p$add(...)</code
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: square      x    load  done  1, 4, 9,16,25        model</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  total      x  square  done             55 model,report</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-10-26 16:50:44 (0.003 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 20:37:41 (0.004 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 3 done</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Two-index extraction selects step-table columns by name</span></span></span>
@@ -425,10 +432,10 @@ fields, step-table columns, and the virtual methods (e.g. <code>p$add(...)</code
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"load"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="va">x</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"fit"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">load</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.501 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.501 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.502 UTC]: Step 2/2 fit</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.503 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.266 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.267 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.268 UTC]: Step 2/2 fit</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.268 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Meta fields</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"name"</span><span class="op">]</span><span class="op">]</span>              <span class="co"># "pipe"</span></span></span>
@@ -436,7 +443,7 @@ fields, step-table columns, and the virtual methods (e.g. <code>p$add(...)</code
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"view"</span><span class="op">]</span><span class="op">]</span>              <span class="co"># NULL - not a view</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> NULL</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"pipenv"</span><span class="op">]</span><span class="op">]</span>            <span class="co"># the inner pipeline environment</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x556bf7fa3178&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x55a81ab75a80&gt;</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"pipenv"</span><span class="op">]</span><span class="op">]</span><span class="op">[[</span><span class="st">"data"</span><span class="op">]</span><span class="op">]</span>  <span class="co"># the underlying step table</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Indices: &lt;step&gt;, &lt;nodeId&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      step           fun    params    out  state   tags locked   exec</span>
@@ -445,8 +452,8 @@ fields, step-table columns, and the virtual methods (e.g. <code>p$add(...)</code
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:    fit &lt;function[1]&gt; &lt;list[1]&gt;      2   done         FALSE   auto</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                   time          time_start          duration depends unbound</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                 &lt;POSc&gt;              &lt;POSc&gt;        &lt;difftime&gt;  &lt;list&gt;  &lt;list&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 2026-10-26 16:50:44 2026-10-26 16:50:44 0.0001914501 secs               x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 2026-10-26 16:50:44 2026-10-26 16:50:44 0.0002110004 secs    load        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 2026-11-15 20:37:41 2026-11-15 20:37:41 0.0001435280 secs               x</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 2026-11-15 20:37:41 2026-11-15 20:37:41 0.0001318455 secs    load        </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    nodeId</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     &lt;int&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:      0</span>
@@ -455,21 +462,21 @@ fields, step-table columns, and the virtual methods (e.g. <code>p$add(...)</code
 <span class="r-in"><span><span class="co"># Virtual methods</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">add</span><span class="op">(</span><span class="st">"s3"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span><span class="op">)</span> <span class="va">x</span> <span class="op">*</span> <span class="fl">10</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="fu">run</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.510 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.510 UTC]: Step 1/3 load - skipping done step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.510 UTC]: Step 2/3 fit - skipping done step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.510 UTC]: Step 3/3 s3</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-10-26 16:50:44.511 UTC]: Finished in 0.001 s (1 done, 2 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.274 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.275 UTC]: Step 1/3 load - skipping done step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.275 UTC]: Step 2/3 fit - skipping done step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.275 UTC]: Step 3/3 s3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 20:37:41.276 UTC]: Finished in 0.001 s (1 done, 2 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="va">restart</span>   <span class="co"># a function; call p$restart() to request a restart</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> function (...) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> fn(x, ...)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x556bf6ecea98&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x556bf4deaab0&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x55a8197d7220&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x55a81b4c7078&gt;</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="va">halt</span>      <span class="co"># a function; call p$halt() to halt the current run</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> function (...) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> fn(x, ...)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x556bf6ecea98&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x556bf5a101c8&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x55a8197d7220&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x55a81b599788&gt;</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Column access, named by steps</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"step"</span><span class="op">]</span><span class="op">]</span>   <span class="co"># c(load = "load", fit = "fit")</span></span></span>
@@ -592,8 +599,8 @@ fields, step-table columns, and the virtual methods (e.g. <code>p$add(...)</code
 <span class="r-in"><span><span class="va">p</span><span class="op">$</span><span class="va">run</span>                 <span class="co"># a virtual method; call p$run() to run the pipeline</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> function (...) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> fn(x, ...)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x556bf6ecea98&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x556bf7dea4e8&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x55a8197d7220&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x55a81af460f8&gt;</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

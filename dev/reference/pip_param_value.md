@@ -29,7 +29,11 @@ pip_param_value(x, ...) <- value
 
 - ...:
 
-  Currently unused, reserved for future extensions. Methods should
+  For `pip_param_value()`, currently unused, reserved for future
+  extensions. For `` `pip_param_value<-`() ``, the options given to
+  `...` of
+  [`pip_set_params()`](https://rpahl.github.io/pipeflow/dev/reference/pip_set_params.md),
+  which can't be named like its arguments (e.g. `scope`). Methods should
   accept it.
 
 - value:

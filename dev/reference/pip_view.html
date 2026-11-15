@@ -13,7 +13,7 @@ are restricted to the steps defined by the view."><meta property="og:image" cont
 
     <a class="navbar-brand me-2" href="../index.html">pipeflow</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.5.0.9025</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.6.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -117,7 +117,11 @@ selected steps.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>A view keeps covering its steps when steps are added, removed, renamed or replaced,
+    <p>A view covers only the selected steps, not their upstream steps, as does <code>p[i]</code> (see
+<code><a href="Extract.pipeflow.html">[</a></code>). So <code><a href="pip_reset.html">pip_reset()</a></code> or <code><a href="pip_lock.html">pip_lock()</a></code> on a view leave the
+upstream steps alone. Running a view is different: <code><a href="pip_run.html">pip_run()</a></code> also runs the upstream
+steps that are not done (see section 'Running views' there).</p>
+<p>A view keeps covering its steps when steps are added, removed, renamed or replaced,
 also through the pipeline or another view. Removed steps drop out of the view, and
 new steps are not added to it, even if they match the filters.</p>
     </div>

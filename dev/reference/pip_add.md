@@ -13,9 +13,9 @@ pip_add(
   step,
   fun,
   tags = character(0),
-  after = length(x),
   params = list(),
-  exec = "auto"
+  exec = "auto",
+  after = length(x)
 )
 ```
 
@@ -27,7 +27,10 @@ pip_add(
 
 - step:
 
-  Unique step name.
+  Unique step name, or a pipeline or view whose steps are copied into
+  `x` (see 'Copying steps' below), in which case `fun`, `tags`, `params`
+  and `exec` must not be given. A step name must not start with `-`,
+  which marks a relative reference like `~-1`.
 
 - fun:
 
@@ -38,34 +41,23 @@ pip_add(
   dependencies to those steps and resolved to the respective output
   values at runtime once the step is executed. A reference wrapped in
   [`try()`](https://rdrr.io/r/base/try.html), like `~try(other_step)`,
-  accepts a failed input when the pipeline is run with
-  `on_error = "continue"`: instead of the output of the referenced step,
-  the argument then receives a condition of class `pipeflow_failure`
-  (see section 'Continuing after errors' in
+  accepts a failed input when the pipeline was run with
+  `on_error = "continue"` (see section 'Continuing after errors' in
   [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)).
-  The function can refer to the running pipeline as `.self` (see section
-  'The pipeline as `.self`' in `pip_add()`).
 
 - tags:
 
   Optional character vector of tags belonging to the step. Can also be
   adjusted later using `[pip_tag()]`.
 
-- after:
-
-  Optional position after which the new step should be inserted
-  (defaults to last position). Can be a step name or an integer index.
-  If set to 0, the new step will be inserted at the beginning of the
-  pipeline.
-
 - params:
 
   Optional named list of parameter values. They override the defaults of
-  `fun` and give a value to parameters of `fun` that have no default. As
-  in the defaults of `fun`, a formula like `~other_step` refers to the
-  output of another step. Names that are no parameters of `fun` add
-  params to the step, which are passed on to `fun` as well, so `fun`
-  needs a `...` argument for them. Use cases for `params` are:
+  `fun` and can be used to give a value to parameters of `fun` that have
+  no default. As in `fun`, a formula like `~other_step` refers to the
+  output of another step. Names that are no parameters of `fun` are an
+  error, unless `fun` has a `...` argument, which then takes them. Use
+  cases for `params` are:
 
   1.  Set param values programmatically, e.g. when adding steps in a
       loop or at runtime.
@@ -75,37 +67,36 @@ pip_add(
 
   3.  Provide extra param values to "mark" dependencies that are defined
       in pipelines nested in a step, which ensures that it is
-      re-executed when one of the nested param values change. See the
-      [nested pipelines
-      vignette](https://rpahl.github.io/pipeflow/dev/doc/v05b-nested-pipeline.md).
+      re-executed when one of the nested param values change. See
+      [`vignette("v05b-nested-pipeline", package = "pipeflow")`](https://rpahl.github.io/pipeflow/dev/articles/v05b-nested-pipeline.md).
 
 - exec:
 
-  Execution mode for this step. One of "auto", "split", "reduce" or
-  "plain". Using execution mode `exec = split`, the output of the step
-  is marked as partitioned output. In this mode, any step that depends
-  on the split step (directly or indirectly) will have its output
-  automatically mapped partition-wise during step execution. The
-  `reduce` mode expects partitioned input and passes it through without
-  mapping, while `plain` mode only accepts non-partitioned input and
-  always intends to execute a single call. In a run with
-  `on_error = "continue"`, a mapped step that fails for some partition
-  keys keeps the outputs of the other keys (see section 'Continuing
-  after errors' in
+  Execution mode for this step, which controls how partitioned input is
+  handled. One of:
+
+  - "auto": map over the partitions if an input is partitioned,
+    otherwise a single call. Several partitioned inputs must have the
+    same keys in the same order.
+
+  - "split": single call, then mark the output as partitioned.
+
+  - "reduce": single call, only valid with partitioned input (or, via
+    `~try()`, a failure object).
+
+  - "plain": single call, only valid with non-partitioned input.
+
+  A mapped step that fails for some partition keys in a run with
+  `on_error = "continue"` keeps the outputs of the other keys (see
+  section 'Continuing after errors' in
   [`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)).
-  If a split step fails, a `reduce` step also accepts the resulting
-  failure object when it takes it via `~try()`. In summary:
 
-  - auto: map if partitioned input appears, otherwise single call.
-    Several partitioned inputs must have the same keys in the same
-    order.
+- after:
 
-  - split: single call, then mark output as partitioned
-
-  - reduce: single call, but only valid with partitioned input or, via
-    `~try()`, a failure object
-
-  - plain: single call, only valid with non-partitioned input
+  Optional position after which the new step should be inserted
+  (defaults to last position). Can be a step name or an integer index.
+  If set to 0, the new step will be inserted at the beginning of the
+  pipeline.
 
 ## Value
 
@@ -118,6 +109,34 @@ step or position. Be aware that in contrast to adding a step at the end,
 inserting a step in the middle is a rather expensive operation as it
 requires re-wiring parts of the internal pipeline structure, especially
 if the new step is inserted at an early position.
+
+### Copying steps
+
+If an entire pipeline or view is provided as `step`, its steps are added
+in their order, with their functions, current params, tags and exec
+modes. Upstream steps of views are *not* copied, which means that
+references (including relative references like `~-1`) are resolved (and
+must be valid) within `x`. If this blocks a step from being added (e.g.,
+its name already exists in `x`, or it refers to a step not existing in
+`x`), `x` is left unchanged. Outputs and locks are not copied either. To
+copy a view `v` *with* its upstream steps, use
+`pip_add(x, v[, view = FALSE])` (see
+[`[`](https://rpahl.github.io/pipeflow/dev/reference/Extract.pipeflow.md)),
+to bind whole pipelines,
+[rbind()](https://rpahl.github.io/pipeflow/dev/reference/rbind.pipeflow.md).
+
+### Params with the same name
+
+A param name is meant to have one value in the whole pipeline.Therefore,
+`pip_add()`,
+[`pip_replace()`](https://rpahl.github.io/pipeflow/dev/reference/pip_replace.md)
+and
+[rbind()](https://rpahl.github.io/pipeflow/dev/reference/rbind.pipeflow.md)
+signal a warning if the default param value of a new step differs from
+the value of the same param in the other steps. To give steps different
+values on purpose, give the params different names, silence the warning
+with `suppressWarnings(..., classes = "pipeflow_param_conflict")`, or
+turn it off with `options(pipeflow.warn_param_conflicts = FALSE)`.
 
 ### The pipeline as `.self`
 
@@ -133,10 +152,24 @@ body). Indirect access, such as `get(".self")`, is not detected.
 
 A step that changes its own function, params or exec mode via `.self`,
 ends the run as `"outdated"`. The same is true for other steps changed
-via `.self`. Lastly, `.self` is only valid while the step runs and
+via `.self`. As these steps and their downstream steps run again in the
+next run,
+[`pip_run()`](https://rpahl.github.io/pipeflow/dev/reference/pip_run.md)
+warns (class `pipeflow_outdated_before`) if a step changes itself or a
+done step before it, unless the step halts the run or the run is
+restarted. Lastly, `.self` is only valid while the step runs and
 released once the step was returned. For this reason, a step that
 returns a function referring to `.self` fails with
 `object '.self' not found` when called later.
+
+### Outputs that keep an environment
+
+An output that keeps the environment it was made in, such as a function
+or a ggplot made in the step, also keeps the environment of the step
+function. If that function was defined where the pipeline is (e.g. in a
+function that builds it), saving the output saves the whole pipeline
+too. Define step functions in a package or at top level, or return a
+form without an environment (e.g. an image instead of a ggplot).
 
 ## Examples
 
@@ -149,12 +182,12 @@ p <- pip_new("analysis") |>
   pip_add("report", \(x = ~fit) paste("result:", x), tags = "report")
 
 pip_run(p)
-#> info [2026-10-26 16:50:46.139 UTC]: Starting run of pipeflow 'analysis'
-#> info [2026-10-26 16:50:46.139 UTC]: Step 1/4 load
-#> info [2026-10-26 16:50:46.140 UTC]: Step 2/4 clean
-#> info [2026-10-26 16:50:46.141 UTC]: Step 3/4 fit
-#> info [2026-10-26 16:50:46.142 UTC]: Step 4/4 report
-#> info [2026-10-26 16:50:46.143 UTC]: Finished in 0.004 s (4 done, 0 skipped, 0 failed)
+#> info [2026-11-15 20:37:42.798 UTC]: Starting run of pipeflow 'analysis'
+#> info [2026-11-15 20:37:42.799 UTC]: Step 1/4 load
+#> info [2026-11-15 20:37:42.800 UTC]: Step 2/4 clean
+#> info [2026-11-15 20:37:42.800 UTC]: Step 3/4 fit
+#> info [2026-11-15 20:37:42.801 UTC]: Step 4/4 report
+#> info [2026-11-15 20:37:42.805 UTC]: Finished in 0.007 s (4 done, 0 skipped, 0 failed)
 p
 #> <pipeflow> analysis (4 steps)
 #> -----------------------------
@@ -164,7 +197,7 @@ p
 #> 3:    fit      x   clean  done             30 model,core,daily
 #> 4: report      x     fit  done     result: 30           report
 #> -----------------------------
-#> <ready> last run: 2026-10-26 16:50:46 (0.004 s)
+#> <ready> last run: 2026-11-15 20:37:42 (0.007 s)
 #> steps: 4 done
 
 # Filter by tag using pip_view — keeps steps with any matching tag
@@ -174,7 +207,7 @@ pip_view(p, tags = "daily")
 #>    step params depends state out             tags
 #> 1:  fit      x   clean  done  30 model,core,daily
 #> ---------------------------------------
-#> <ready> last run: 2026-10-26 16:50:46 (0.004 s)
+#> <ready> last run: 2026-11-15 20:37:42 (0.007 s)
 #> steps: 1 done
 pip_view(p, tags = "core")
 #> <pipeflow_view> analysis (1 of 4 steps)
@@ -182,7 +215,7 @@ pip_view(p, tags = "core")
 #>    step params depends state out             tags
 #> 1:  fit      x   clean  done  30 model,core,daily
 #> ---------------------------------------
-#> <ready> last run: 2026-10-26 16:50:46 (0.004 s)
+#> <ready> last run: 2026-11-15 20:37:42 (0.007 s)
 #> steps: 1 done
 pip_view(p, tags = c("raw", "report"))
 #> <pipeflow_view> analysis (2 of 4 steps)
@@ -191,7 +224,7 @@ pip_view(p, tags = c("raw", "report"))
 #> 1:   load      n          done  1,2,3,4,5 io,raw
 #> 2: report      x     fit  done result: 30 report
 #> ---------------------------------------
-#> <ready> last run: 2026-10-26 16:50:46 (0.004 s)
+#> <ready> last run: 2026-11-15 20:37:42 (0.007 s)
 #> steps: 2 done
 
 # --- Split / reduce execution modes ---
@@ -206,12 +239,12 @@ q <- pip_new("split-demo") |>
   )
 
 pip_run(q)
-#> info [2026-10-26 16:50:46.156 UTC]: Starting run of pipeflow 'split-demo'
-#> info [2026-10-26 16:50:46.157 UTC]: Step 1/4 data
-#> info [2026-10-26 16:50:46.157 UTC]: Step 2/4 split
-#> info [2026-10-26 16:50:46.158 UTC]: Step 3/4 stats
-#> info [2026-10-26 16:50:46.164 UTC]: Step 4/4 combine
-#> info [2026-10-26 16:50:46.164 UTC]: Finished in 0.008 s (4 done, 0 skipped, 0 failed)
+#> info [2026-11-15 20:37:42.819 UTC]: Starting run of pipeflow 'split-demo'
+#> info [2026-11-15 20:37:42.819 UTC]: Step 1/4 data
+#> info [2026-11-15 20:37:42.820 UTC]: Step 2/4 split
+#> info [2026-11-15 20:37:42.821 UTC]: Step 3/4 stats
+#> info [2026-11-15 20:37:42.826 UTC]: Step 4/4 combine
+#> info [2026-11-15 20:37:42.827 UTC]: Finished in 0.008 s (4 done, 0 skipped, 0 failed)
 q[["stats", "out"]]   # partitioned list — one summary per species
 #> $setosa
 #>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   
@@ -335,6 +368,17 @@ p2
 #> <ready> last run: never
 #> steps: 4 new
 
+# --- Copy steps of another pipeline, without their upstream steps ---
+other <- pip_new("other-data") |> pip_add("load", \(x = 10) x)
+pip_add(other, p2["fit"]) # "fit" now refers to "load" of `other`
+pip_run(other)
+#> info [2026-11-15 20:37:42.844 UTC]: Starting run of pipeflow 'other-data'
+#> info [2026-11-15 20:37:42.844 UTC]: Step 1/2 load
+#> info [2026-11-15 20:37:42.845 UTC]: Step 2/2 fit
+#> info [2026-11-15 20:37:42.845 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
+other[["fit", "out"]] # 11
+#> [1] 11
+
 # --- Provide parameter values with 'params' ---
 # 'params' override the defaults of the function ...
 p3 <- pip_new("params-demo") |>
@@ -345,11 +389,11 @@ p3 <- pip_new("params-demo") |>
   # ... and give values to parameters without default, e.g. of mean()
   pip_add("avg", mean, params = list(x = ~scale, na.rm = TRUE))
 pip_run(p3)
-#> info [2026-10-26 16:50:46.180 UTC]: Starting run of pipeflow 'params-demo'
-#> info [2026-10-26 16:50:46.180 UTC]: Step 1/3 data
-#> info [2026-10-26 16:50:46.181 UTC]: Step 2/3 scale
-#> info [2026-10-26 16:50:46.182 UTC]: Step 3/3 avg
-#> info [2026-10-26 16:50:46.183 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)
+#> info [2026-11-15 20:37:42.850 UTC]: Starting run of pipeflow 'params-demo'
+#> info [2026-11-15 20:37:42.850 UTC]: Step 1/3 data
+#> info [2026-11-15 20:37:42.851 UTC]: Step 2/3 scale
+#> info [2026-11-15 20:37:42.852 UTC]: Step 3/3 avg
+#> info [2026-11-15 20:37:42.852 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)
 p3
 #> <pipeflow> params-demo (3 steps)
 #> --------------------------------
@@ -358,7 +402,7 @@ p3
 #> 2: scale x,factor    data  done 10,NA,30
 #> 3:   avg  x,na.rm   scale  done       20
 #> --------------------------------
-#> <ready> last run: 2026-10-26 16:50:46 (0.003 s)
+#> <ready> last run: 2026-11-15 20:37:42 (0.002 s)
 #> steps: 3 done
 p3[["avg", "out"]] # 20
 #> [1] 20
@@ -367,9 +411,9 @@ p3[["avg", "out"]] # 20
 p4 <- pip_new("dots-demo") |>
   pip_add("load", \(x = 1, ...) c(x, ...), params = list(size = 42))
 pip_run(p4)
-#> info [2026-10-26 16:50:46.188 UTC]: Starting run of pipeflow 'dots-demo'
-#> info [2026-10-26 16:50:46.188 UTC]: Step 1/1 load
-#> info [2026-10-26 16:50:46.189 UTC]: Finished in 0.001 s (1 done, 0 skipped, 0 failed)
+#> info [2026-11-15 20:37:42.862 UTC]: Starting run of pipeflow 'dots-demo'
+#> info [2026-11-15 20:37:42.862 UTC]: Step 1/1 load
+#> info [2026-11-15 20:37:42.863 UTC]: Finished in 0.001 s (1 done, 0 skipped, 0 failed)
 p4[["load", "out"]] # c(1, size = 42)
 #>      size 
 #>    1   42 
