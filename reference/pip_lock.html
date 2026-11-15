@@ -67,7 +67,7 @@ the lock again."><meta property="og:image" content="https://rpahl.github.io/pipe
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Lock or unlock steps</h1>
-      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/v0.6.0/R/pipeflow.R" class="external-link"><code>R/pipeflow.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/main/R/pipeflow.R" class="external-link"><code>R/pipeflow.R</code></a></small>
       <div class="d-none name"><code>pip_lock.Rd</code></div>
     </div>
 
@@ -112,11 +112,11 @@ that is not <code>"done"</code> therefore marks its downstream steps (except loc
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"y"</span>, \<span class="op">(</span><span class="va">y</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="va">y</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"sum"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span>, <span class="va">y</span> <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="va">x</span> <span class="op">+</span> <span class="va">y</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.961 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.961 UTC]: Step 1/3 x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.962 UTC]: Step 2/3 y</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.963 UTC]: Step 3/3 sum</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.964 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.413 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.413 UTC]: Step 1/3 x</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.414 UTC]: Step 2/3 y</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.415 UTC]: Step 3/3 sum</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.415 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    step params depends state out</span>
@@ -124,7 +124,7 @@ that is not <code>"done"</code> therefore marks its downstream steps (except loc
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:    y      y          done   2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  sum    x,y          done   3</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:47:00 (0.003 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:48 (0.002 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 3 done</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"sum"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="co"># 3</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 3</span>
@@ -140,11 +140,11 @@ that is not <code>"done"</code> therefore marks its downstream steps (except loc
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">pip_lock</span><span class="op">(</span><span class="va">p</span><span class="op">[</span><span class="st">"sum"</span>, <span class="op">]</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.970 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.970 UTC]: Step 1/3 x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.971 UTC]: Step 2/3 y</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.971 UTC]: Step 3/3 sum - skipping locked step</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.971 UTC]: Finished in 0.002 s (2 done, 1 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.420 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.420 UTC]: Step 1/3 x</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.421 UTC]: Step 2/3 y</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.421 UTC]: Step 3/3 sum - skipping locked step</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.421 UTC]: Finished in 0.001 s (2 done, 1 skipped, 0 failed)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    step params depends    state out locked</span>
@@ -152,7 +152,7 @@ that is not <code>"done"</code> therefore marks its downstream steps (except loc
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:    y      y             done  20  FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  sum    x,y         outdated   3   TRUE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:47:00 (0.002 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:48 (0.001 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 2 done, 1 outdated</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"sum"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="co"># still 3</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 3</span>
@@ -179,11 +179,11 @@ that is not <code>"done"</code> therefore marks its downstream steps (except loc
 <span class="r-in"><span><span class="fu">pip_unlock</span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">p</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="fl">100</span>, y <span class="op">=</span> <span class="fl">200</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.980 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.980 UTC]: Step 1/3 x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.981 UTC]: Step 2/3 y</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.981 UTC]: Step 3/3 sum</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:00.982 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.428 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.428 UTC]: Step 1/3 x</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.429 UTC]: Step 2/3 y</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.429 UTC]: Step 3/3 sum</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:48.430 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    step params depends state out</span>
@@ -191,7 +191,7 @@ that is not <code>"done"</code> therefore marks its downstream steps (except loc
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:    y      y          done 200</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:  sum    x,y          done 300</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:47:00 (0.002 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:48 (0.002 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 3 done</span>
 </code></pre></div>
     </div>

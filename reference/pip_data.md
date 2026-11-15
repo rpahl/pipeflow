@@ -42,6 +42,6 @@ pip_data(p)
 #> 2:  model <function[1]> <list[1]> [NULL]    new         FALSE   auto
 #>                   time time_start   duration depends unbound nodeId
 #>                 <POSc>     <POSc> <difftime>  <list>  <list>  <int>
-#> 1: 2026-11-15 12:46:59       <NA>    NA secs               n      0
-#> 2: 2026-11-15 12:46:59       <NA>    NA secs    load              1
+#> 1: 2026-11-15 19:18:47       <NA>    NA secs               n      0
+#> 2: 2026-11-15 19:18:47       <NA>    NA secs    load              1
 ```

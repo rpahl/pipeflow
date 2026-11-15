@@ -116,9 +116,9 @@ print(p, cols = "all") # all step-table columns
 #> 2: square <function[1]>      x [NULL]   new compute  FALSE auto
 #> 3:  total <function[1]>      x [NULL]   new compute  FALSE auto
 #>                   time time_start duration depends unbound nodeId
-#> 1: 2026-11-15 12:47:05       <NA>     <NA>               n      0
-#> 2: 2026-11-15 12:47:05       <NA>     <NA>    load              1
-#> 3: 2026-11-15 12:47:05       <NA>     <NA>  square              2
+#> 1: 2026-11-15 19:18:52       <NA>     <NA>               n      0
+#> 2: 2026-11-15 19:18:52       <NA>     <NA>    load              1
+#> 3: 2026-11-15 19:18:52       <NA>     <NA>  square              2
 #> -------------------------
 #> <ready> last run: never
 #> steps: 3 new

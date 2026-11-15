@@ -99,7 +99,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Nested pipelines</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/v0.6.0/vignettes/v05b-nested-pipeline.Rmd" class="external-link"><code>vignettes/v05b-nested-pipeline.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/main/vignettes/v05b-nested-pipeline.Rmd" class="external-link"><code>vignettes/v05b-nested-pipeline.Rmd</code></a></small>
       <div class="d-none name"><code>v05b-nested-pipeline.Rmd</code></div>
     </div>
 
@@ -165,11 +165,11 @@ see this now:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">params</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>input_df <span class="op">=</span> <span class="va">iris</span>, xVar <span class="op">=</span> <span class="st">"Sepal.Length"</span>, yVar <span class="op">=</span> <span class="st">"Sepal.Width"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pip_set_params.html">pip_set_params</a></span><span class="op">(</span><span class="va">inner</span>, <span class="va">params</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-11-15 12:48:06.543 UTC]: Starting run of pipeflow 'coefficients'</span></span>
-<span><span class="co"># info [2026-11-15 12:48:06.543 UTC]: Step 1/3 input</span></span>
-<span><span class="co"># info [2026-11-15 12:48:06.546 UTC]: Step 2/3 fit</span></span>
-<span><span class="co"># info [2026-11-15 12:48:06.549 UTC]: Step 3/3 coefs</span></span>
-<span><span class="co"># info [2026-11-15 12:48:06.549 UTC]: Finished in 0.007 s (3 done, 0 skipped, 0 failed)</span></span>
+<span><span class="co"># info [2026-11-15 19:19:43.843 UTC]: Starting run of pipeflow 'coefficients'</span></span>
+<span><span class="co"># info [2026-11-15 19:19:43.843 UTC]: Step 1/3 input</span></span>
+<span><span class="co"># info [2026-11-15 19:19:43.845 UTC]: Step 2/3 fit</span></span>
+<span><span class="co"># info [2026-11-15 19:19:43.848 UTC]: Step 3/3 coefs</span></span>
+<span><span class="co"># info [2026-11-15 19:19:43.848 UTC]: Finished in 0.005 s (3 done, 0 skipped, 0 failed)</span></span>
 <span></span>
 <span><span class="va">inner</span><span class="op">[[</span><span class="st">"coefs"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co">#  (Intercept) Sepal.Length </span></span>
@@ -232,10 +232,10 @@ without having to forward them:</p>
 <span>        <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>df <span class="op">=</span> <span class="va">iris</span>, xVar <span class="op">=</span> <span class="st">"Sepal.Length"</span>, yVar <span class="op">=</span> <span class="st">"Sepal.Width"</span><span class="op">)</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-11-15 12:48:06.755 UTC]: Starting run of pipeflow 'analysis'</span></span>
-<span><span class="co"># info [2026-11-15 12:48:06.755 UTC]: Step 1/2 df</span></span>
-<span><span class="co"># info [2026-11-15 12:48:06.756 UTC]: Step 2/2 inner_run</span></span>
-<span><span class="co"># info [2026-11-15 12:48:06.774 UTC]: Finished in 0.019 s (2 done, 0 skipped, 0 failed)</span></span>
+<span><span class="co"># info [2026-11-15 19:19:43.998 UTC]: Starting run of pipeflow 'analysis'</span></span>
+<span><span class="co"># info [2026-11-15 19:19:43.999 UTC]: Step 1/2 df</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.000 UTC]: Step 2/2 inner_run</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.014 UTC]: Finished in 0.016 s (2 done, 0 skipped, 0 failed)</span></span>
 <span></span>
 <span><span class="va">outer_all</span><span class="op">[[</span><span class="st">"inner_run"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co">#  (Intercept) Sepal.Length </span></span>
@@ -335,12 +335,12 @@ step:</p>
 <span>        <span class="op">)</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.051 UTC]: Starting run of pipeflow 'full analysis'</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.051 UTC]: Step 1/4 df</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.052 UTC]: Step 2/4 split_df</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.053 UTC]: Step 3/4 inner_run</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.068 UTC]: Step 4/4 combine</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.069 UTC]: Finished in 0.018 s (4 done, 0 skipped, 0 failed)</span></span></code></pre></div>
+<span><span class="co"># info [2026-11-15 19:19:44.219 UTC]: Starting run of pipeflow 'full analysis'</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.219 UTC]: Step 1/4 df</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.220 UTC]: Step 2/4 split_df</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.221 UTC]: Step 3/4 inner_run</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.233 UTC]: Step 4/4 combine</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.233 UTC]: Finished in 0.014 s (4 done, 0 skipped, 0 failed)</span></span></code></pre></div>
 <p>The output of the <code>inner_run</code> step is a partitioned list
 of coefficient vectors, one for each species,</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
@@ -382,7 +382,7 @@ predictor.</p>
 <span><span class="co"># 3: inner_run input_df,xVar,yVar,digits  split_df outdated           &lt;list[3]&gt;   auto</span></span>
 <span><span class="co"># 4:   combine                     coefs inner_run outdated   &lt;data.frame[3x2]&gt; reduce</span></span>
 <span><span class="co"># ----------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 12:48:07 (0.018 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 19:19:44 (0.014 s)</span></span>
 <span><span class="co"># steps: 2 done, 2 outdated</span></span></code></pre></div>
 <p>Since <code>xVar</code> is a parameter of the <code>inner_run</code>
 step, this step and its downstream steps have been marked as
@@ -480,7 +480,7 @@ partition key:</p>
 <span><span class="co"># 2: square         x   input  done      1, 4, 9,16</span></span>
 <span><span class="co"># 3:  scale sq,factor  square  done  10, 40, 90,160</span></span>
 <span><span class="co"># ------------------------------</span></span>
-<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 12:48:07 (0.004 s)</span></span>
+<span><span class="co"># &lt;ready&gt; last run: 2026-11-15 19:19:44 (0.003 s)</span></span>
 <span><span class="co"># steps: 3 done</span></span></code></pre></div>
 <p>A few things to know:</p>
 <ul>
@@ -525,12 +525,12 @@ binding to <code>split_df</code> is not kept, so we give it again:</p>
 <span></span>
 <span><span class="va">mc2</span> <span class="op">&lt;-</span> \<span class="op">(</span><span class="va">X</span>, <span class="va">FUN</span><span class="op">)</span> <span class="fu">parallel</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/parallel/mclapply.html" class="external-link">mclapply</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">FUN</span>, mc.cores <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">par_outer</span>, map <span class="op">=</span> <span class="va">mc2</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.705 UTC]: Starting run of pipeflow 'full analysis'</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.705 UTC]: Step 1/4 df - skipping done step</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.705 UTC]: Step 2/4 split_df - skipping done step</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.706 UTC]: Step 3/4 inner_run</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.738 UTC]: Step 4/4 combine</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.742 UTC]: Finished in 0.037 s (2 done, 2 skipped, 0 failed)</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.698 UTC]: Starting run of pipeflow 'full analysis'</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.699 UTC]: Step 1/4 df - skipping done step</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.699 UTC]: Step 2/4 split_df - skipping done step</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.699 UTC]: Step 3/4 inner_run</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.727 UTC]: Step 4/4 combine</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.731 UTC]: Finished in 0.032 s (2 done, 2 skipped, 0 failed)</span></span>
 <span></span>
 <span><span class="va">par_outer</span><span class="op">[[</span><span class="st">"combine"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co">#            (Intercept) Petal.Length</span></span>
@@ -641,12 +641,12 @@ be aware of.</li>
 <span>        <span class="op">)</span></span>
 <span>    <span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>    <span class="fu"><a href="../reference/pip_run.html">pip_run</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.887 UTC]: Starting run of pipeflow 'full analysis'</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.887 UTC]: Step 1/4 df</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.889 UTC]: Step 2/4 split_df</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.890 UTC]: Step 3/4 inner_run</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.915 UTC]: Step 4/4 combine</span></span>
-<span><span class="co"># info [2026-11-15 12:48:07.916 UTC]: Finished in 0.029 s (4 done, 0 skipped, 0 failed)</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.843 UTC]: Starting run of pipeflow 'full analysis'</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.844 UTC]: Step 1/4 df</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.845 UTC]: Step 2/4 split_df</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.846 UTC]: Step 3/4 inner_run</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.867 UTC]: Step 4/4 combine</span></span>
+<span><span class="co"># info [2026-11-15 19:19:44.868 UTC]: Finished in 0.024 s (4 done, 0 skipped, 0 failed)</span></span>
 <span></span>
 <span><span class="va">manual</span><span class="op">[[</span><span class="st">"combine"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="co">#            (Intercept) Sepal.Length</span></span>

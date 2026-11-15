@@ -63,7 +63,7 @@ affect the original pipeline, and vice versa."><meta property="og:image" content
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Clone a pipeline</h1>
-      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/v0.6.0/R/pipeflow.R" class="external-link"><code>R/pipeflow.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/main/R/pipeflow.R" class="external-link"><code>R/pipeflow.R</code></a></small>
       <div class="d-none name"><code>pip_clone.Rd</code></div>
     </div>
 
@@ -155,10 +155,10 @@ defined inside another function keeps that function's frame and the data in it (
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"data"</span>, \<span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">1e5</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"summary"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">data</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.417 UTC]: Starting run of pipeflow 'worker'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.417 UTC]: Step 1/2 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.422 UTC]: Step 2/2 summary</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.427 UTC]: Finished in 0.010 s (2 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:47.026 UTC]: Starting run of pipeflow 'worker'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:47.027 UTC]: Step 1/2 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:47.030 UTC]: Step 2/2 summary</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:47.035 UTC]: Finished in 0.009 s (2 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">pip_clone</span><span class="op">(</span><span class="va">p</span>, out <span class="op">=</span> <span class="st">"summary"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">result</span><span class="op">[[</span><span class="st">"summary"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. </span>

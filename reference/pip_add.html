@@ -65,7 +65,7 @@ hold constant defaults or reference the output of a prior step using formula not
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Add a step</h1>
-      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/v0.6.0/R/pipeflow.R" class="external-link"><code>R/pipeflow.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/main/R/pipeflow.R" class="external-link"><code>R/pipeflow.R</code></a></small>
       <div class="d-none name"><code>pip_add.Rd</code></div>
     </div>
 
@@ -234,12 +234,12 @@ level, or return a form without an environment (e.g. an image instead of a ggplo
 <span class="r-in"><span>  <span class="fu">pip_add</span><span class="op">(</span><span class="st">"report"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">fit</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"result:"</span>, <span class="va">x</span><span class="op">)</span>, tags <span class="op">=</span> <span class="st">"report"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:58.972 UTC]: Starting run of pipeflow 'analysis'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:58.972 UTC]: Step 1/4 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:58.973 UTC]: Step 2/4 clean</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:58.974 UTC]: Step 3/4 fit</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:58.974 UTC]: Step 4/4 report</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:58.975 UTC]: Finished in 0.003 s (4 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.647 UTC]: Starting run of pipeflow 'analysis'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.647 UTC]: Step 1/4 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.648 UTC]: Step 2/4 clean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.649 UTC]: Step 3/4 fit</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.649 UTC]: Step 4/4 report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.650 UTC]: Finished in 0.003 s (4 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">p</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; analysis (4 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------------</span>
@@ -249,7 +249,7 @@ level, or return a form without an environment (e.g. an image instead of a ggplo
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:    fit      x   clean  done             30 model,core,daily</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4: report      x     fit  done     result: 30           report</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -----------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:46:58 (0.003 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:46 (0.003 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 4 done</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Filter by tag using pip_view — keeps steps with any matching tag</span></span></span>
@@ -259,7 +259,7 @@ level, or return a form without an environment (e.g. an image instead of a ggplo
 <span class="r-out co"><span class="r-pr">#&gt;</span>    step params depends state out             tags</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  fit      x   clean  done  30 model,core,daily</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:46:58 (0.003 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:46 (0.003 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 1 done</span>
 <span class="r-in"><span><span class="fu"><a href="pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">p</span>, tags <span class="op">=</span> <span class="st">"core"</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; analysis (1 of 4 steps)</span>
@@ -267,7 +267,7 @@ level, or return a form without an environment (e.g. an image instead of a ggplo
 <span class="r-out co"><span class="r-pr">#&gt;</span>    step params depends state out             tags</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  fit      x   clean  done  30 model,core,daily</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:46:58 (0.003 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:46 (0.003 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 1 done</span>
 <span class="r-in"><span><span class="fu"><a href="pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">p</span>, tags <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"raw"</span>, <span class="st">"report"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow_view&gt; analysis (2 of 4 steps)</span>
@@ -276,7 +276,7 @@ level, or return a form without an environment (e.g. an image instead of a ggplo
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:   load      n          done  1,2,3,4,5 io,raw</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: report      x     fit  done result: 30 report</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:46:58 (0.003 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:46 (0.003 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 2 done</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># --- Split / reduce execution modes ---</span></span></span>
@@ -291,12 +291,12 @@ level, or return a form without an environment (e.g. an image instead of a ggplo
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">q</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:58.988 UTC]: Starting run of pipeflow 'split-demo'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:58.988 UTC]: Step 1/4 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:58.989 UTC]: Step 2/4 split</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:58.990 UTC]: Step 3/4 stats</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:58.995 UTC]: Step 4/4 combine</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:58.996 UTC]: Finished in 0.008 s (4 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.661 UTC]: Starting run of pipeflow 'split-demo'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.661 UTC]: Step 1/4 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.662 UTC]: Step 2/4 split</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.663 UTC]: Step 3/4 stats</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.667 UTC]: Step 4/4 combine</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.667 UTC]: Finished in 0.007 s (4 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">q</span><span class="op">[[</span><span class="st">"stats"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span>   <span class="co"># partitioned list — one summary per species</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $setosa</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Sepal.Length    Sepal.Width     Petal.Length    Petal.Width   </span>
@@ -424,10 +424,10 @@ level, or return a form without an environment (e.g. an image instead of a ggplo
 <span class="r-in"><span><span class="va">other</span> <span class="op">&lt;-</span> <span class="fu"><a href="pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"other-data"</span><span class="op">)</span> <span class="op">|&gt;</span> <span class="fu">pip_add</span><span class="op">(</span><span class="st">"load"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">10</span><span class="op">)</span> <span class="va">x</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">pip_add</span><span class="op">(</span><span class="va">other</span>, <span class="va">p2</span><span class="op">[</span><span class="st">"fit"</span><span class="op">]</span><span class="op">)</span> <span class="co"># "fit" now refers to "load" of `other`</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">other</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.019 UTC]: Starting run of pipeflow 'other-data'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.019 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.020 UTC]: Step 2/2 fit</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.020 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.688 UTC]: Starting run of pipeflow 'other-data'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.688 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.689 UTC]: Step 2/2 fit</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.689 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">other</span><span class="op">[[</span><span class="st">"fit"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="co"># 11</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 11</span>
 <span class="r-in"><span></span></span>
@@ -441,11 +441,11 @@ level, or return a form without an environment (e.g. an image instead of a ggplo
 <span class="r-in"><span>  <span class="co"># ... and give values to parameters without default, e.g. of mean()</span></span></span>
 <span class="r-in"><span>  <span class="fu">pip_add</span><span class="op">(</span><span class="st">"avg"</span>, <span class="va">mean</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>x <span class="op">=</span> <span class="op">~</span><span class="va">scale</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p3</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.025 UTC]: Starting run of pipeflow 'params-demo'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.025 UTC]: Step 1/3 data</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.026 UTC]: Step 2/3 scale</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.027 UTC]: Step 3/3 avg</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.028 UTC]: Finished in 0.003 s (3 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.693 UTC]: Starting run of pipeflow 'params-demo'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.693 UTC]: Step 1/3 data</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.694 UTC]: Step 2/3 scale</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.694 UTC]: Step 3/3 avg</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.695 UTC]: Finished in 0.002 s (3 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">p3</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; params-demo (3 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------</span>
@@ -454,7 +454,7 @@ level, or return a form without an environment (e.g. an image instead of a ggplo
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    data  done 10,NA,30</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3:   avg  x,na.rm   scale  done       20</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> --------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:46:59 (0.003 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:46 (0.002 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 3 done</span>
 <span class="r-in"><span><span class="va">p3</span><span class="op">[[</span><span class="st">"avg"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="co"># 20</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 20</span>
@@ -463,9 +463,9 @@ level, or return a form without an environment (e.g. an image instead of a ggplo
 <span class="r-in"><span><span class="va">p4</span> <span class="op">&lt;-</span> <span class="fu"><a href="pip_new.html">pip_new</a></span><span class="op">(</span><span class="st">"dots-demo"</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu">pip_add</span><span class="op">(</span><span class="st">"load"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="fl">1</span>, <span class="va">...</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>size <span class="op">=</span> <span class="fl">42</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p4</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.033 UTC]: Starting run of pipeflow 'dots-demo'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.033 UTC]: Step 1/1 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:46:59.034 UTC]: Finished in 0.001 s (1 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.699 UTC]: Starting run of pipeflow 'dots-demo'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.699 UTC]: Step 1/1 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:46.700 UTC]: Finished in 0.001 s (1 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">p4</span><span class="op">[[</span><span class="st">"load"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span> <span class="co"># c(1, size = 42)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      size </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    1   42 </span>

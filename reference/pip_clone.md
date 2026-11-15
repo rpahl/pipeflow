@@ -93,10 +93,10 @@ p <- pip_new("worker") |>
   pip_add("data", \(n = 1e5) rnorm(n)) |>
   pip_add("summary", \(x = ~data) summary(x))
 pip_run(p)
-#> info [2026-11-15 12:46:59.417 UTC]: Starting run of pipeflow 'worker'
-#> info [2026-11-15 12:46:59.417 UTC]: Step 1/2 data
-#> info [2026-11-15 12:46:59.422 UTC]: Step 2/2 summary
-#> info [2026-11-15 12:46:59.427 UTC]: Finished in 0.010 s (2 done, 0 skipped, 0 failed)
+#> info [2026-11-15 19:18:47.026 UTC]: Starting run of pipeflow 'worker'
+#> info [2026-11-15 19:18:47.027 UTC]: Step 1/2 data
+#> info [2026-11-15 19:18:47.030 UTC]: Step 2/2 summary
+#> info [2026-11-15 19:18:47.035 UTC]: Finished in 0.009 s (2 done, 0 skipped, 0 failed)
 result <- pip_clone(p, out = "summary")
 result[["summary", "out"]]
 #>      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 

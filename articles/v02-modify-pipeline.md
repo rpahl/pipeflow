@@ -17,7 +17,7 @@ pip
 # 3:  fit                  data,xVar     prep  done           <lm[13]>
 # 4: plot model,data,xVar,xLab,title fit,prep  done  <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-11-15 12:47:23 (0.386 s)
+# <ready> last run: 2026-11-15 19:19:07 (0.330 s)
 # steps: 4 done
 ```
 
@@ -64,7 +64,7 @@ pip
 # 4:         fit                  data,xVar     prep  done           <lm[13]>
 # 5:        plot model,data,xVar,xLab,title fit,prep  done  <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-11-15 12:47:23 (0.386 s)
+# <ready> last run: 2026-11-15 19:19:07 (0.330 s)
 # steps: 4 done, 1 new
 ```
 
@@ -154,7 +154,7 @@ pip
 # 4:         fit             data,xVar,yVar     standardize   new             [NULL]
 # 5:        plot model,data,xVar,yVar,title fit,standardize   new             [NULL]
 # ---------------------------
-# <ready> last run: 2026-11-15 12:47:23 (0.386 s)
+# <ready> last run: 2026-11-15 19:19:07 (0.330 s)
 # steps: 2 done, 3 new
 ```
 
@@ -165,13 +165,13 @@ standardized data. Let’s re-run the pipeline and inspect the output.
 
 pip_set_params(pip, params = list(xVar = "Solar.R", yVar = "Wind"))
 pip_run(pip)
-# info [2026-11-15 12:47:24.907 UTC]: Starting run of pipeflow 'my-pip'
-# info [2026-11-15 12:47:24.907 UTC]: Step 1/5 data - skipping done step
-# info [2026-11-15 12:47:24.907 UTC]: Step 2/5 prep - skipping done step
-# info [2026-11-15 12:47:24.907 UTC]: Step 3/5 standardize
-# info [2026-11-15 12:47:24.909 UTC]: Step 4/5 fit
-# info [2026-11-15 12:47:24.910 UTC]: Step 5/5 plot
-# info [2026-11-15 12:47:24.919 UTC]: Finished in 0.013 s (3 done, 2 skipped, 0 failed)
+# info [2026-11-15 19:19:08.507 UTC]: Starting run of pipeflow 'my-pip'
+# info [2026-11-15 19:19:08.508 UTC]: Step 1/5 data - skipping done step
+# info [2026-11-15 19:19:08.508 UTC]: Step 2/5 prep - skipping done step
+# info [2026-11-15 19:19:08.508 UTC]: Step 3/5 standardize
+# info [2026-11-15 19:19:08.509 UTC]: Step 4/5 fit
+# info [2026-11-15 19:19:08.511 UTC]: Step 5/5 plot
+# info [2026-11-15 19:19:08.518 UTC]: Finished in 0.010 s (3 done, 2 skipped, 0 failed)
 ```
 
 ``` r
@@ -204,7 +204,7 @@ pip
 # 4:         fit             data,xVar,yVar     standardize  done           <lm[13]>
 # 5:        plot model,data,xVar,yVar,title fit,standardize  done  <ggplot2::ggplot>
 # ---------------------------
-# <ready> last run: 2026-11-15 12:47:24 (0.013 s)
+# <ready> last run: 2026-11-15 19:19:08 (0.010 s)
 # steps: 5 done
 ```
 
@@ -237,7 +237,7 @@ pip
 # 1: data   data          done <data.frame[10x6]>
 # 2: prep     df    data  done <data.frame[10x7]>
 # ---------------------------
-# <ready> last run: 2026-11-15 12:47:24 (0.013 s)
+# <ready> last run: 2026-11-15 19:19:08 (0.010 s)
 # steps: 2 done
 ```
 
@@ -258,7 +258,7 @@ pip
 #    step params depends state                out
 # 1: data   data          done <data.frame[10x6]>
 # --------------------------
-# <ready> last run: 2026-11-15 12:47:24 (0.013 s)
+# <ready> last run: 2026-11-15 19:19:08 (0.010 s)
 # steps: 1 done
 ```
 

@@ -277,7 +277,7 @@ print(outer)
 #> 3:  coefs input_df,degree,digits  by_cyl outdated           <list[3]>   auto
 #> 4:  table                  coefs   coefs outdated       <matrix[3x2]> reduce
 #> --------------------------
-#> <ready> last run: 2026-11-15 12:46:58 (0.019 s)
+#> <ready> last run: 2026-11-15 19:18:45 (0.016 s)
 #> steps: 2 done, 2 outdated
 pip_run(outer, lgr = NULL)
 outer[["table", "out"]]

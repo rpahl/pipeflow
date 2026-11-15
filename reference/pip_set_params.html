@@ -71,7 +71,7 @@ are skipped and don't outdate any step, unless force = TRUE."><meta property="og
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Get or set unbound parameters</h1>
-      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/v0.6.0/R/pipeflow.R" class="external-link"><code>R/pipeflow.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/main/R/pipeflow.R" class="external-link"><code>R/pipeflow.R</code></a></small>
       <div class="d-none name"><code>pip_set_params.Rd</code></div>
     </div>
 
@@ -225,17 +225,17 @@ a plain value that an annotated object already holds doesn't outdate the step.</
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.937 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.937 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.938 UTC]: Step 2/2 scale</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.939 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.970 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.971 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.972 UTC]: Step 2/2 scale</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.972 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     step   params depends state                             out</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n          done             1,2,3,4,5,6,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load  done 0.5,1.0,1.5,2.0,2.5,3.0,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:47:03 (0.002 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:50 (0.002 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 2 done</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Updating params marks affected steps (and their dependents) outdated</span></span></span>
@@ -247,20 +247,20 @@ a plain value that an annotated object already holds doesn't outdate the step.</
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n         outdated             1,2,3,4,5,6,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load outdated 0.5,1.0,1.5,2.0,2.5,3.0,...[10]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:47:03 (0.002 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:50 (0.002 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 2 outdated</span>
 <span class="r-in"><span><span class="op">(</span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.945 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.945 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.946 UTC]: Step 2/2 scale</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.947 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.977 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.977 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.978 UTC]: Step 2/2 scale</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.978 UTC]: Finished in 0.001 s (2 done, 0 skipped, 0 failed)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;pipeflow&gt; pipe (2 steps)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     step   params depends state            out</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n          done      1,2,3,4,5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load  done  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:47:03 (0.002 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:50 (0.001 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 2 done</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Setting the same values again doesn't outdate any step</span></span></span>
@@ -272,7 +272,7 @@ a plain value that an annotated object already holds doesn't outdate the step.</
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n          done      1,2,3,4,5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load  done  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:47:03 (0.002 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:50 (0.001 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 2 done</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use force = TRUE to outdate the steps anyway</span></span></span>
@@ -284,7 +284,7 @@ a plain value that an annotated object already holds doesn't outdate the step.</
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:  load        n         outdated      1,2,3,4,5</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2: scale x,factor    load outdated  2, 4, 6, 8,10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 12:47:03 (0.002 s)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: 2026-11-15 19:18:50 (0.001 s)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 2 outdated</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Setting a parameter that is not defined in the pipeline yields a warning</span></span></span>
@@ -346,7 +346,7 @@ a plain value that an annotated object already holds doesn't outdate the step.</
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot$x</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ~fit</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x55b76ad0b818&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x56250f7f2b80&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot$alpha</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 5</span>
@@ -362,7 +362,7 @@ a plain value that an annotated object already holds doesn't outdate the step.</
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot$x</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ~fit</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x55b76ad0b818&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x56250f7f2b80&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $plot$alpha</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
@@ -395,13 +395,13 @@ a plain value that an annotated object already holds doesn't outdate the step.</
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ready&gt; last run: never</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> steps: 5 new</span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">q</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.979 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.980 UTC]: Step 1/5 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.981 UTC]: Step 2/5 fit_mean</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.981 UTC]: Step 3/5 fit_max</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.982 UTC]: Step 4/5 report</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.983 UTC]: Step 5/5 report_mean</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:03.983 UTC]: Finished in 0.004 s (5 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:51.003 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:51.003 UTC]: Step 1/5 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:51.004 UTC]: Step 2/5 fit_mean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:51.004 UTC]: Step 3/5 fit_max</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:51.005 UTC]: Step 4/5 report</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:51.005 UTC]: Step 5/5 report_mean</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:51.006 UTC]: Finished in 0.003 s (5 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">q</span><span class="op">[[</span><span class="st">"report"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "result: 5"</span>
 <span class="r-in"><span><span class="va">q</span><span class="op">[[</span><span class="st">"report_mean"</span>, <span class="st">"out"</span><span class="op">]</span><span class="op">]</span></span></span>

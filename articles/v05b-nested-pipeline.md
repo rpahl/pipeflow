@@ -70,11 +70,11 @@ see this now:
 
 params <- list(input_df = iris, xVar = "Sepal.Length", yVar = "Sepal.Width")
 pip_set_params(inner, params) |> pip_run()
-# info [2026-11-15 12:48:06.543 UTC]: Starting run of pipeflow 'coefficients'
-# info [2026-11-15 12:48:06.543 UTC]: Step 1/3 input
-# info [2026-11-15 12:48:06.546 UTC]: Step 2/3 fit
-# info [2026-11-15 12:48:06.549 UTC]: Step 3/3 coefs
-# info [2026-11-15 12:48:06.549 UTC]: Finished in 0.007 s (3 done, 0 skipped, 0 failed)
+# info [2026-11-15 19:19:43.843 UTC]: Starting run of pipeflow 'coefficients'
+# info [2026-11-15 19:19:43.843 UTC]: Step 1/3 input
+# info [2026-11-15 19:19:43.845 UTC]: Step 2/3 fit
+# info [2026-11-15 19:19:43.848 UTC]: Step 3/3 coefs
+# info [2026-11-15 19:19:43.848 UTC]: Finished in 0.005 s (3 done, 0 skipped, 0 failed)
 
 inner[["coefs", "out"]]
 #  (Intercept) Sepal.Length 
@@ -147,10 +147,10 @@ outer_all |>
         list(df = iris, xVar = "Sepal.Length", yVar = "Sepal.Width")
     ) |>
     pip_run()
-# info [2026-11-15 12:48:06.755 UTC]: Starting run of pipeflow 'analysis'
-# info [2026-11-15 12:48:06.755 UTC]: Step 1/2 df
-# info [2026-11-15 12:48:06.756 UTC]: Step 2/2 inner_run
-# info [2026-11-15 12:48:06.774 UTC]: Finished in 0.019 s (2 done, 0 skipped, 0 failed)
+# info [2026-11-15 19:19:43.998 UTC]: Starting run of pipeflow 'analysis'
+# info [2026-11-15 19:19:43.999 UTC]: Step 1/2 df
+# info [2026-11-15 19:19:44.000 UTC]: Step 2/2 inner_run
+# info [2026-11-15 19:19:44.014 UTC]: Finished in 0.016 s (2 done, 0 skipped, 0 failed)
 
 outer_all[["inner_run", "out"]]
 #  (Intercept) Sepal.Length 
@@ -265,12 +265,12 @@ outer |>
         )
     ) |>
     pip_run()
-# info [2026-11-15 12:48:07.051 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-11-15 12:48:07.051 UTC]: Step 1/4 df
-# info [2026-11-15 12:48:07.052 UTC]: Step 2/4 split_df
-# info [2026-11-15 12:48:07.053 UTC]: Step 3/4 inner_run
-# info [2026-11-15 12:48:07.068 UTC]: Step 4/4 combine
-# info [2026-11-15 12:48:07.069 UTC]: Finished in 0.018 s (4 done, 0 skipped, 0 failed)
+# info [2026-11-15 19:19:44.219 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-11-15 19:19:44.219 UTC]: Step 1/4 df
+# info [2026-11-15 19:19:44.220 UTC]: Step 2/4 split_df
+# info [2026-11-15 19:19:44.221 UTC]: Step 3/4 inner_run
+# info [2026-11-15 19:19:44.233 UTC]: Step 4/4 combine
+# info [2026-11-15 19:19:44.233 UTC]: Finished in 0.014 s (4 done, 0 skipped, 0 failed)
 ```
 
 The output of the `inner_run` step is a partitioned list of coefficient
@@ -322,7 +322,7 @@ outer
 # 3: inner_run input_df,xVar,yVar,digits  split_df outdated           <list[3]>   auto
 # 4:   combine                     coefs inner_run outdated   <data.frame[3x2]> reduce
 # ----------------------------------
-# <ready> last run: 2026-11-15 12:48:07 (0.018 s)
+# <ready> last run: 2026-11-15 19:19:44 (0.014 s)
 # steps: 2 done, 2 outdated
 ```
 
@@ -438,7 +438,7 @@ inner_pips[["a"]]
 # 2: square         x   input  done      1, 4, 9,16
 # 3:  scale sq,factor  square  done  10, 40, 90,160
 # ------------------------------
-# <ready> last run: 2026-11-15 12:48:07 (0.004 s)
+# <ready> last run: 2026-11-15 19:19:44 (0.003 s)
 # steps: 3 done
 ```
 
@@ -490,12 +490,12 @@ par_outer <- pip_clone(outer) |>
 
 mc2 <- \(X, FUN) parallel::mclapply(X, FUN, mc.cores = 2)
 pip_run(par_outer, map = mc2)
-# info [2026-11-15 12:48:07.705 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-11-15 12:48:07.705 UTC]: Step 1/4 df - skipping done step
-# info [2026-11-15 12:48:07.705 UTC]: Step 2/4 split_df - skipping done step
-# info [2026-11-15 12:48:07.706 UTC]: Step 3/4 inner_run
-# info [2026-11-15 12:48:07.738 UTC]: Step 4/4 combine
-# info [2026-11-15 12:48:07.742 UTC]: Finished in 0.037 s (2 done, 2 skipped, 0 failed)
+# info [2026-11-15 19:19:44.698 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-11-15 19:19:44.699 UTC]: Step 1/4 df - skipping done step
+# info [2026-11-15 19:19:44.699 UTC]: Step 2/4 split_df - skipping done step
+# info [2026-11-15 19:19:44.699 UTC]: Step 3/4 inner_run
+# info [2026-11-15 19:19:44.727 UTC]: Step 4/4 combine
+# info [2026-11-15 19:19:44.731 UTC]: Finished in 0.032 s (2 done, 2 skipped, 0 failed)
 
 par_outer[["combine", "out"]]
 #            (Intercept) Petal.Length
@@ -605,12 +605,12 @@ manual |>
         )
     ) |>
     pip_run()
-# info [2026-11-15 12:48:07.887 UTC]: Starting run of pipeflow 'full analysis'
-# info [2026-11-15 12:48:07.887 UTC]: Step 1/4 df
-# info [2026-11-15 12:48:07.889 UTC]: Step 2/4 split_df
-# info [2026-11-15 12:48:07.890 UTC]: Step 3/4 inner_run
-# info [2026-11-15 12:48:07.915 UTC]: Step 4/4 combine
-# info [2026-11-15 12:48:07.916 UTC]: Finished in 0.029 s (4 done, 0 skipped, 0 failed)
+# info [2026-11-15 19:19:44.843 UTC]: Starting run of pipeflow 'full analysis'
+# info [2026-11-15 19:19:44.844 UTC]: Step 1/4 df
+# info [2026-11-15 19:19:44.845 UTC]: Step 2/4 split_df
+# info [2026-11-15 19:19:44.846 UTC]: Step 3/4 inner_run
+# info [2026-11-15 19:19:44.867 UTC]: Step 4/4 combine
+# info [2026-11-15 19:19:44.868 UTC]: Finished in 0.024 s (4 done, 0 skipped, 0 failed)
 
 manual[["combine", "out"]]
 #            (Intercept) Sepal.Length

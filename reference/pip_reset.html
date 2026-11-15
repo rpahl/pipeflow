@@ -67,7 +67,7 @@ Further effects:'><meta property="og:image" content="https://rpahl.github.io/pip
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Reset a pipeline to its initial state</h1>
-      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/v0.6.0/R/pipeflow.R" class="external-link"><code>R/pipeflow.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/rpahl/pipeflow/blob/main/R/pipeflow.R" class="external-link"><code>R/pipeflow.R</code></a></small>
       <div class="d-none name"><code>pip_reset.Rd</code></div>
     </div>
 
@@ -117,10 +117,10 @@ and nothing is changed.</p>
 <span class="r-in"><span>  <span class="fu"><a href="pip_add.html">pip_add</a></span><span class="op">(</span><span class="st">"square"</span>, \<span class="op">(</span><span class="va">x</span> <span class="op">=</span> <span class="op">~</span><span class="va">load</span><span class="op">)</span> <span class="va">x</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:02.899 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:02.899 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:02.901 UTC]: Step 2/2 square</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:02.901 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.050 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.050 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.051 UTC]: Step 2/2 square</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.056 UTC]: Finished in 0.006 s (2 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"state"</span><span class="op">]</span><span class="op">]</span> <span class="co"># "done", "done"</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   load square </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> "done" "done" </span>
@@ -172,10 +172,10 @@ and nothing is changed.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Resetting a step outdates its downstream steps</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pip_run.html">pip_run</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:02.911 UTC]: Starting run of pipeflow 'pipe'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:02.912 UTC]: Step 1/2 load</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:02.912 UTC]: Step 2/2 square</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 12:47:02.913 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.064 UTC]: Starting run of pipeflow 'pipe'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.064 UTC]: Step 1/2 load</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.065 UTC]: Step 2/2 square</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> info [2026-11-15 19:18:50.065 UTC]: Finished in 0.001 s (2 done, 0 skipped, 0 failed)</span>
 <span class="r-in"><span><span class="fu">pip_reset</span><span class="op">(</span><span class="fu"><a href="pip_view.html">pip_view</a></span><span class="op">(</span><span class="va">p</span>, step <span class="op">=</span> <span class="st">"load"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">p</span><span class="op">[[</span><span class="st">"state"</span><span class="op">]</span><span class="op">]</span> <span class="co"># "new", "outdated"</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>       load     square </span>

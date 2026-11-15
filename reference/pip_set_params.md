@@ -173,17 +173,17 @@ pip_get_params(p) # list(n = 10, factor = 0.5)
 #> [1] 0.5
 #> 
 (pip_run(p))
-#> info [2026-11-15 12:47:03.937 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-11-15 12:47:03.937 UTC]: Step 1/2 load
-#> info [2026-11-15 12:47:03.938 UTC]: Step 2/2 scale
-#> info [2026-11-15 12:47:03.939 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
+#> info [2026-11-15 19:18:50.970 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-11-15 19:18:50.971 UTC]: Step 1/2 load
+#> info [2026-11-15 19:18:50.972 UTC]: Step 2/2 scale
+#> info [2026-11-15 19:18:50.972 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
 #> <pipeflow> pipe (2 steps)
 #> -------------------------
 #>     step   params depends state                             out
 #> 1:  load        n          done             1,2,3,4,5,6,...[10]
 #> 2: scale x,factor    load  done 0.5,1.0,1.5,2.0,2.5,3.0,...[10]
 #> -------------------------
-#> <ready> last run: 2026-11-15 12:47:03 (0.002 s)
+#> <ready> last run: 2026-11-15 19:18:50 (0.002 s)
 #> steps: 2 done
 
 # Updating params marks affected steps (and their dependents) outdated
@@ -195,20 +195,20 @@ p
 #> 1:  load        n         outdated             1,2,3,4,5,6,...[10]
 #> 2: scale x,factor    load outdated 0.5,1.0,1.5,2.0,2.5,3.0,...[10]
 #> -------------------------
-#> <ready> last run: 2026-11-15 12:47:03 (0.002 s)
+#> <ready> last run: 2026-11-15 19:18:50 (0.002 s)
 #> steps: 2 outdated
 (pip_run(p))
-#> info [2026-11-15 12:47:03.945 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-11-15 12:47:03.945 UTC]: Step 1/2 load
-#> info [2026-11-15 12:47:03.946 UTC]: Step 2/2 scale
-#> info [2026-11-15 12:47:03.947 UTC]: Finished in 0.002 s (2 done, 0 skipped, 0 failed)
+#> info [2026-11-15 19:18:50.977 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-11-15 19:18:50.977 UTC]: Step 1/2 load
+#> info [2026-11-15 19:18:50.978 UTC]: Step 2/2 scale
+#> info [2026-11-15 19:18:50.978 UTC]: Finished in 0.001 s (2 done, 0 skipped, 0 failed)
 #> <pipeflow> pipe (2 steps)
 #> -------------------------
 #>     step   params depends state            out
 #> 1:  load        n          done      1,2,3,4,5
 #> 2: scale x,factor    load  done  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-11-15 12:47:03 (0.002 s)
+#> <ready> last run: 2026-11-15 19:18:50 (0.001 s)
 #> steps: 2 done
 
 # Setting the same values again doesn't outdate any step
@@ -220,7 +220,7 @@ p
 #> 1:  load        n          done      1,2,3,4,5
 #> 2: scale x,factor    load  done  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-11-15 12:47:03 (0.002 s)
+#> <ready> last run: 2026-11-15 19:18:50 (0.001 s)
 #> steps: 2 done
 
 # Use force = TRUE to outdate the steps anyway
@@ -232,7 +232,7 @@ p
 #> 1:  load        n         outdated      1,2,3,4,5
 #> 2: scale x,factor    load outdated  2, 4, 6, 8,10
 #> -------------------------
-#> <ready> last run: 2026-11-15 12:47:03 (0.002 s)
+#> <ready> last run: 2026-11-15 19:18:50 (0.001 s)
 #> steps: 2 outdated
 
 # Setting a parameter that is not defined in the pipeline yields a warning
@@ -294,7 +294,7 @@ r[["params"]] # alpha = 5 in both steps
 #> $plot
 #> $plot$x
 #> ~fit
-#> <environment: 0x55b76ad0b818>
+#> <environment: 0x56250f7f2b80>
 #> 
 #> $plot$alpha
 #> [1] 5
@@ -310,7 +310,7 @@ r[["params"]] # alpha = 5 in "fit", 2 in "plot"
 #> $plot
 #> $plot$x
 #> ~fit
-#> <environment: 0x55b76ad0b818>
+#> <environment: 0x56250f7f2b80>
 #> 
 #> $plot$alpha
 #> [1] 2
@@ -343,13 +343,13 @@ q
 #> <ready> last run: never
 #> steps: 5 new
 pip_run(q)
-#> info [2026-11-15 12:47:03.979 UTC]: Starting run of pipeflow 'pipe'
-#> info [2026-11-15 12:47:03.980 UTC]: Step 1/5 load
-#> info [2026-11-15 12:47:03.981 UTC]: Step 2/5 fit_mean
-#> info [2026-11-15 12:47:03.981 UTC]: Step 3/5 fit_max
-#> info [2026-11-15 12:47:03.982 UTC]: Step 4/5 report
-#> info [2026-11-15 12:47:03.983 UTC]: Step 5/5 report_mean
-#> info [2026-11-15 12:47:03.983 UTC]: Finished in 0.004 s (5 done, 0 skipped, 0 failed)
+#> info [2026-11-15 19:18:51.003 UTC]: Starting run of pipeflow 'pipe'
+#> info [2026-11-15 19:18:51.003 UTC]: Step 1/5 load
+#> info [2026-11-15 19:18:51.004 UTC]: Step 2/5 fit_mean
+#> info [2026-11-15 19:18:51.004 UTC]: Step 3/5 fit_max
+#> info [2026-11-15 19:18:51.005 UTC]: Step 4/5 report
+#> info [2026-11-15 19:18:51.005 UTC]: Step 5/5 report_mean
+#> info [2026-11-15 19:18:51.006 UTC]: Finished in 0.003 s (5 done, 0 skipped, 0 failed)
 q[["report", "out"]]
 #> [1] "result: 5"
 q[["report_mean", "out"]]
