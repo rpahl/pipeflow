@@ -1,11 +1,11 @@
 ## Release summary
 
-This is a minor release (0.4.0 -> 0.5.0). It adds `pip_run(on_error =
-"continue")`, `pip_param_value()`, `pip_run_state()`, the exported logger
-`pipeflow_lgr()` and the `unknown` and `force` arguments of
-`pip_set_params()`, lets pipelines survive `saveRDS()`, and fixes several
-bugs. It also changes some behaviour (see "Breaking changes" in NEWS.md);
-the package has no reverse dependencies (see below).
+This is a minor release (0.5.0 -> 0.6.0). It adds pipelines as functions
+(`as.function()`, `pip_inner()`), `pip_add()` of pipelines, `pip_clone(out =
+)`, `pip_output_value()`, a `map` argument of `pip_run()` for parallel runs,
+mermaid output of `pip_graph()` and more, and fixes several bugs. It also
+changes some behaviour and removes two deprecated functions (see "Breaking
+changes" in NEWS.md); the package has no reverse dependencies (see below).
 
 ## Test environments
 

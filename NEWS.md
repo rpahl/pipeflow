@@ -1,622 +1,197 @@
-# pipeflow 0.5.0.9041
+# pipeflow 0.6.0
 
-## Minor improvements
+## Breaking changes
 
-- Internal: added a `%||%` helper and use it for NULL defaults.
-
-# pipeflow 0.5.0.9040
+- `pip_add()` and `pip_replace()` now signal an error for `params` whose names
+  are no arguments of the step function, unless the function has a `...`
+  argument that takes them.
+- The argument `after` of `pip_add()` moved to the end, after `exec`, so that
+  `pip_add()` and `pip_replace()` share the order
+  `x, step, fun, tags, params, exec`. A call that gave `after` by position must
+  name it now.
+- `params` of `pip_add()` and `pip_replace()` override the defaults of `fun`
+  again, as before 0.4.0 (in 0.5.0 the defaults won and `pip_add()` warned). They
+  must be a list with unique names, and the params of a step list the arguments
+  of `fun` first, followed by the other params.
+- `pip_set_params()` on a view sets the values in every step of the pipeline
+  that has the param, also outside the view, so that a param keeps one value.
+  `scope = "view"` gives the old behavior. An option named `scope` in `...` no
+  longer reaches the methods of `pip_param_value<-()`.
+- `.self` is released when a step returns, so that step outputs no longer keep
+  the pipeline alive. A function returned by a step that refers to `.self`
+  fails with `object '.self' not found` when it is called after the run.
+- A step that changes its own function, params or exec mode while it runs (via
+  `.self`), or that a later step changes during the run, now ends the run as
+  `"outdated"` instead of `"done"` and runs again in the next run, as do the
+  steps that ran with its output.
+- In a run with `on_error = "continue"`, a step mapped over partitioned inputs
+  fails per partition key: its output keeps the results of the keys that
+  succeeded, and each failed key holds a `pipeflow_failure` with the field
+  `key`. The step gets state `"failed"`. Mapped steps downstream are not run
+  for the failed keys, unless they take the input via `~try()`. The
+  `pipeflow_run_failed` warning has a new field `keys`.
+- The deprecated aliases `pip_collect_out()` and `pip_get_graph()` were
+  removed. Use `pip_collect()` and `pip_graph()`.
+- pipeflow no longer re-exports the data.table operators `%like%`, `%ilike%`,
+  `%flike%`, `%plike%`, `%chin%`, `%between%`, `%inrange%` and `%notin%`. They
+  still work in the filters of `[`, e.g. `p[tags %like% "model"]`, without
+  attaching data.table. To use them elsewhere, call `library(data.table)`.
 
 ## New features
 
-- `pip_clone(out = )` copies a pipeline with the outputs of the named steps only,
-  e.g. to send the results of a run back from a parallel worker without the data of
-  the steps in between. Steps that were done and lose their output become
-  "outdated", so running the copy computes them again; failed and locked steps keep
-  their outputs.
-
-# pipeflow 0.5.0.9039
-
-## Minor improvements
-
-- Internal: the helpers of `utils.R` that were not exported now start with a dot
-  like the other internal helpers.
-
-# pipeflow 0.5.0.9038
-
-## Minor improvements
-
-- Internal: the roxygen headers of internal helpers are kept only where they
-  explain more than the name, the signature and the body do.
-
-# pipeflow 0.5.0.9037
-
-## Bug fixes
-
-- `pip_set_params()` on a pipeline or view without steps no longer says that all
-  selected steps are locked.
-
-# pipeflow 0.5.0.9036
-
-## Minor improvements
-
-- `pip_add()`, `pip_remove()`, `pip_rename()` and `pip_replace()` share their
-  checks of the step name, function and params, so their error messages are the
-  same. `pip_remove(p, "")` now says that the step must be a non-empty string.
-
-# pipeflow 0.5.0.9035
-
-## Bug fixes
-
-- A key of a partitioned output whose value is `NULL` is kept. Without `map`,
-  `pip_run()` dropped such a key from the output of a mapped step, and a step
-  mapped over a `NULL` key did not get the argument (it got the default instead,
-  or failed if it had several partitioned inputs).
-
-# pipeflow 0.5.0.9034
-
-## Bug fixes
-
-- `pip_run()` keeps track of the failures of a run by node id, so a step that
-  renames an earlier failed step via `.self` no longer makes the run run its
-  dependents with the failure as input (#160).
-
-# pipeflow 0.5.0.9033
+- Pipelines as functions: `as.function()` turns a pipeline into a function
+  whose arguments are the unbound params of the pipeline, so that a pipeline
+  can be a step of another pipeline, e.g.
+  `pip_add(outer, "step", as.function(inner), params = list(df = ~split))`.
+  The exec modes map it over partitions, and the function keeps one inner
+  pipeline per outer step and partition key, so that a changed param only
+  reruns the affected inner steps. `out` can be a function that is called with
+  a light copy of the run inner pipeline, `on_error = "continue"` continues
+  the inner run, `lgr` sets the logger of the inner run, and `cache = FALSE`
+  switches the kept pipelines off. New `pip_inner(x, step)` returns the inner
+  pipelines kept by such a step, e.g. to debug an inner run. See
+  `?as.function.pipeflow` and the "Nested pipelines" vignette.
+- `pip_add()` takes a pipeline or view as `step` and copies its steps, with
+  their functions, params, tags and exec modes, but without their upstream
+  steps: references are resolved by step name in the target pipeline, e.g.
+  `pip_add(p, q[c("fit", "plot")])`. If a step can't be added, the pipeline is
+  left unchanged.
+- `pip_clone(out = )` copies a pipeline with the outputs of the named steps
+  only, e.g. to send the results of a run back from a parallel worker.
+- `pip_output_value()` is a generic for annotating the output of a step when
+  the step returns, e.g. to stamp a result with the step it came from and the
+  time of the run. `` `pip_param_value<-`() `` is the write side of
+  `pip_param_value()`: `pip_set_params()` uses it to keep the annotations of a
+  stored object when it is given a plain value, and passes `...` on to its
+  methods. It determines the values for all affected steps before it changes
+  anything, and reports all failures at once with an error of class
+  `pipeflow_set_params_error`. See the vignette "Annotated step outputs".
+- `pip_set_params()` can bind params to steps: a one-sided formula as value,
+  e.g. `pip_set_params(p, list(model = ~fit))`, binds the param in all selected,
+  unlocked steps that have it unbound, as a formula does in the defaults of a
+  step function and in `params` of `pip_add()`. (A formula was set as a value
+  before; to do so now, give it as a string and turn it into a formula in the
+  step.)
+- `params` of `pip_add()` and `pip_replace()` can give values to parameters of
+  `fun` that have no default, so that existing functions can be steps without a
+  wrapper, e.g. `pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))`.
+- `pip_replace()` gets the argument `keep_params`. With `TRUE`, the new step
+  keeps the current values of the unbound params that are arguments of the new
+  function, unless `params` give them or the new function binds them.
+- `pip_run()` has a new argument `map`, a function like `lapply()` that runs
+  the keys of a step mapped over partitions (`exec = "auto"`), e.g. in parallel
+  with `parallel::mclapply` or `future.apply::future_lapply`.
+- A run can be cancelled from the `progress` callback of `pip_run()`: if it
+  returns `FALSE`, the run is halted before the next step.
+- A mapped step that failed for some keys is only called for the failed keys in
+  the next run, unless its parameters or inputs changed or the run is forced.
+  This does not hold for a copy made by `pip_clone()`, which runs all keys
+  again (known issue, #172).
+- `pip_run()` warns (class `pipeflow_outdated_before`) if a step changes itself
+  or a done step before it via `.self`, as these steps then run again in the
+  next run.
+- The step table has new columns `time_start` (the start of the step's last
+  run, also set if the run fails) and `duration` (how long the last run took,
+  as a `difftime`). Both are `NA` for a step that has not run since it was
+  added, replaced or reset, and pipelines saved with an earlier version get the
+  columns when read.
+- The log of `pip_run()` names the pipeline and ends with a summary of the
+  whole run, including restarts, e.g.
+  `Finished in 0.251 s (3 done, 1 skipped, 0 failed)`. The footer of `print()`
+  shows the duration of the last run and the number of steps per state.
+- The option `pipeflow.lgr` sets the default logger of `pip_run()`, e.g.
+  `options(pipeflow.lgr = function(level, msg) NULL)` switches logging off.
+- `pip_get_params(x, simplify = FALSE)` returns the values of all steps,
+  grouped by param name and named by step, e.g. to find params whose values
+  differ between steps.
+- `pip_add()`, `pip_replace()` and `rbind()` warn (class
+  `pipeflow_param_conflict`) if an unbound param of a new step has another
+  value than the same param in other steps. Turn it off with
+  `options(pipeflow.warn_param_conflicts = FALSE)`.
+- `[` warns if the selector is a column name that is also a variable of the
+  caller: with `step <- "load"`, `p[step]` selects by the `step` column.
+- `pip_graph()`: the nodes have a `title` column (shown by visNetwork on
+  hover), the edges a `dashes` column (a `~try()` reference is dashed), and
+  `format = "mermaid"` returns the graph as a mermaid flowchart, which renders
+  e.g. on GitHub and in Quarto.
 
 ## Bug fixes
 
 - `pip_run()` tracks the steps of a run by node id, so a step that changes its
   own pipeline via `.self` (or a `progress` callback) no longer makes the run
-  run the wrong step or fail with "subscript out of bounds" (#157). A step
-  removed during the run is skipped, a step that inserts steps before itself
-  runs only once, and a step that renames itself keeps its output (or its
-  failure), so its dependents no longer run with a `NULL` input.
-- `pip_run()` skips a step whose input is still `"new"`, for example a step that
-  an earlier step added via `.self` during the run. Such a step ran with a
-  `NULL` input and was marked `"done"`. It now keeps its state and runs in the
-  next run.
-
-# pipeflow 0.5.0.9032
-
-## Bug fixes
-
+  run the wrong step, fail with "subscript out of bounds" (#157) or run the
+  dependents of a renamed failed step with the failure as input (#160). A
+  step that was removed during the run is skipped, and a step that renames
+  itself keeps its output.
+- `pip_run()` skips a step whose input is still `"new"`, e.g. a step added via
+  `.self` during the run, instead of running it with a `NULL` input.
+- A step that fails in a run with `on_error = "stop"` stores its error as its
+  output, as with `"continue"`, instead of keeping the output of an earlier
+  attempt.
+- A step function is called by the step name with its arguments as symbols,
+  e.g. `fit(x = x)`, so errors and `pipeflow_failure`s no longer carry the
+  inputs of the step in their call (megabytes of data), and an output that
+  keeps the frame of the step call no longer keeps the pipeline.
+- A key of a partitioned output whose value is `NULL` is kept, and a step
+  mapped over it gets the argument.
 - `pip_lock()` on a step that is not done marks its downstream steps as
-  outdated (#147). After a run with `on_error = "continue"`, a step that
-  referred to it via `~try()` could have turned its failure into a value,
-  while the locked step now passes its stored output, so the next run
-  re-runs it.
-
-# pipeflow 0.5.0.9031
-
-## New features
-
-- `pip_run()` warns (class `pipeflow_outdated_before`) if a step changes
-  itself or a done step before it via `.self` (e.g. sets its params), as
-  these steps and their downstream steps then run again in the next run.
-  There is no warning if the step halts the run or the run is restarted.
-
-# pipeflow 0.5.0.9030
-
-## New features
-
-- `pip_add()` takes a pipeline or view as `step` and copies its steps, with
-  their functions, params, tags and exec modes, but without their upstream
-  steps: references are resolved by step name in the target pipeline, e.g.
-  `pip_add(p, q[c("fit", "plot")])` runs the analysis steps of `q` on the
-  data steps of `p`. If a step can't be added, the pipeline is left
-  unchanged.
-
-## Bug fixes
-
-- `pip_add()` and `pip_rename()` reject step names that start with `-`, such
-  as `"-1"`. A reference `~-1` to such a step was taken as a relative
-  reference, so a step could refer to the wrong step, e.g. after it was
-  renamed or copied.
-
-# pipeflow 0.5.0.9029
-
-## Bug fixes
-
-- A step function is now called by the step name with its arguments as
-  symbols, e.g. `fit(x = x)`, instead of with the values inlined in the
-  call. So an error raised in a step, and a `pipeflow_failure` that keeps it
-  as `parent`, no longer carries the inputs of the step in its call, which
-  could be megabytes of data. Tracebacks and error messages show the step
-  name. Also `match.call()` in a step function gives this call, so a step
-  function such as `lm` stores `fit(formula = formula, data = data)`, which
-  `update()` can't evaluate after the run. Params that are symbols or calls
-  are still put into the call as they are, so a step function that captures
-  them unevaluated, such as `subset()` with `subset = quote(v > 1)`, works as
-  before, and so do params named like dots, such as `..1`.
-- An output that keeps the frame of the step call, such as a function made in
-  the step, no longer keeps the pipeline through an argument that the step
-  didn't use.
-
-## New features
-
-- `[` warns if the selector is a column name that is also a variable of the
-  caller: with `step <- "load"`, `p[step]` selects all steps by the `step`
-  column, not the step `"load"`.
-- The option `pipeflow.lgr` sets the default logger of `pip_run()`, e.g.
-  `options(pipeflow.lgr = function(level, msg) NULL)` switches logging off
-  for all runs.
-
-## Documentation
-
-- `?pip_add` explains how outputs that keep an environment (functions,
-  ggplots) can keep the whole pipeline, and how to avoid it.
-- `?pip_view` says that a view covers only the selected steps, while running
-  it also runs their upstream steps.
-
-# pipeflow 0.5.0.9028
-
-## Breaking changes
-
-- `pip_add()` and `pip_replace()` now signal an error for `params` whose
-  names are no arguments of the step function, unless the function has a
-  `...` argument that takes them. Before, they were stored and shown by
-  `pip_get_params()`, and the run failed with "unused argument".
-- The argument `after` of `pip_add()` moved to the end, after `exec`, so
-  that `pip_add()` and `pip_replace()` share the order
-  `x, step, fun, tags, params, exec`. A call that gave `after` by position
-  must name it now.
-
-## New features
-
-- `pip_replace()` gets the argument `keep_params`. With `TRUE`, the new step
-  keeps the current values of the unbound params that are arguments of the
-  new function (e.g. values set with `pip_set_params()`, annotated values
-  included, but also the defaults of the old function), unless `params` give
-  them or the new function binds them to a step. Bound params are not kept,
-  so replacing a step still unbinds them.
-
-# pipeflow 0.5.0.9027
-
-## Breaking changes
-
-- `pip_set_params()` on a view now sets the values in every step of the
-  pipeline that has the param, also outside the view, so that a param keeps
-  one value. The view still selects which params can be set. The new
-  argument `scope = "view"` gives the old behaviour of setting the values in
-  the steps of the view only. Bindings (`list(x = ~step)`) are unchanged and
-  only apply to the steps of the view. An option named `scope` in `...` no
-  longer reaches the methods of `pip_param_value<-()`.
-
-## New features
-
-- `pip_add()`, `pip_replace()` and `rbind()` warn if an unbound param of a
-  new step has another value than the same param in the other steps, since
-  `pip_get_params()` shows one value per name and `pip_set_params()` sets
-  it in all steps. The warning has class `pipeflow_param_conflict` and can
-  be turned off with `options(pipeflow.warn_param_conflicts = FALSE)`.
-- `pip_get_params(x, simplify = FALSE)` returns the values of all steps,
-  grouped by param name and named by step, e.g. to find the params whose
-  values differ between steps.
-
-# pipeflow 0.5.0.9026
-
-## Bug fixes
-
-- A step that fails in a run with `on_error = "stop"` (the default) now
-  stores its error as its output, as in a run with `on_error = "continue"`.
-  Before, it kept the output of an earlier attempt, which could come from
-  other params, so the output of a `"failed"` step could not be told apart
-  from a stale one.
-
-# pipeflow 0.5.0.9025
-
-## New features
-
-- `pip_run()` has a new argument `map`, a function like `lapply()` that runs
-  the keys of a step mapped over partitions (`exec = "auto"`), for example
-  in parallel with `parallel::mclapply` or `future.apply::future_lapply`.
-  Steps that refer to `.self` or whose function was made by
-  `as.function()` (with `cache = TRUE`, the default) still run their keys
-  one after another.
-
-# pipeflow 0.5.0.9024
-
-## New features
-
-- The nodes of `pip_graph()` have a `title` column, which visNetwork shows
-  when hovering over a step: its state, exec mode, tags, lock, the start
-  and duration of its last run, the failed keys of a mapped step, its
-  parameters and the steps it depends on.
-- The edges of `pip_graph()` have a `dashes` column, so that visNetwork
-  draws a `~try()` reference as a dashed edge.
-- `pip_graph(format = "mermaid")` returns the graph as the text of a
-  mermaid flowchart, which renders e.g. on GitHub and in Quarto. It has the
-  colors and dashed edges of the visNetwork graph, a hexagon for `auto` and
-  `plain` steps and a trapezoid for `split` (widening) and `reduce`
-  (narrowing) steps.
-
-# pipeflow 0.5.0.9023
-
-## New features
-
-- The step table has a new column `duration`: how long the step's last run
-  took, as a `difftime` in seconds. Unlike `time - time_start`, it is also
-  set if the run failed (`time` keeps the end of the last successful run).
-  It is `NA` for a step that has not run since it was added, replaced or
-  reset. Set it with `p[[step, "duration"]] <- value` (`NA` allowed).
-  Pipelines saved with an earlier version get the column (all `NA`) when
-  read.
-- The footer of `print()` shows the duration of the last run, and how many
-  of the printed steps are in each state, e.g.
-  `<ready> last run: 2026-10-25 14:03:12 (0.251 s)` and
-  `steps: 3 done, 1 failed, 2 new`. The `duration` column (e.g. with
-  `cols = "all"`) is printed in short form, e.g. `0.251 s`.
-
-# pipeflow 0.5.0.9022
-
-## Bug fixes
-
-- `pip_reset()` on a view that covers only some steps now keeps the time of
-  the last run and the run state of the pipeline. Before, resetting a
-  single step showed `last run: never`.
-
-## Documentation
-
-- New article "Emulating targets features" with recipes for file tracking,
-  rebuilds after helper changes, a `tar_meta()`-like table, reproducible
-  random numbers, saved results, runs in a fresh R process and a list of
-  outdated steps, and the limits of each. The article "pipeflow vs
-  targets" is now called "Comparison and benchmarks" and links to the
-  recipes.
-
-# pipeflow 0.5.0.9021
-
-## New features
-
-- A run can be cancelled from the `progress` callback of `pip_run()`: if it
-  returns `FALSE`, the run is halted before the next step, as by
-  `.self$halt()`. This lets a Shiny app stop a run between steps.
-
-# pipeflow 0.5.0.9020
-
-## Bug fixes
-
-- `pip_rename()` now also renames the step in the failures of failed keys
-  if the step name has a name attribute, e.g. if it is taken from
-  `p[["step"]]`. Before, the failures in the outputs of the step and its
-  dependents kept the old name, and renaming a step to its own name this
-  way failed with "already exists".
-- `pip_reset()` now marks the downstream steps of the reset steps as
-  `"outdated"`, as they ran with the cleared outputs. Locked steps keep
-  their state. Before, the downstream steps stayed `"done"`, and if a reset
-  step was then locked, the next run kept their results.
-- `p[i, view = FALSE]` no longer warns that an edge already exists if a
-  step refers to the same step with several arguments.
-
-# pipeflow 0.5.0.9019
-
-## Breaking changes
-
-- The deprecated aliases `pip_collect_out()` and `pip_get_graph()` were
-  removed. Use `pip_collect()` and `pip_graph()`.
-- pipeflow no longer re-exports the data.table operators `%like%`,
-  `%ilike%`, `%flike%`, `%plike%`, `%chin%`, `%between%`, `%inrange%` and
-  `%notin%`. They still work in the filters of `[`, e.g.
-  `p[tags %like% "model"]`, without attaching data.table. To use them
-  elsewhere, call `library(data.table)`.
-
-# pipeflow 0.5.0.9018
-
-## Changes
-
-- The error of a mapped step whose partitioned inputs don't have the same
-  keys names the arguments that differ and lists the keys that are missing,
-  extra or in a different order, e.g. `partitioned arguments must share
-  identical keys: argument 'r' differs from 'l' (missing 'b'; extra 'd')`.
-
-## Documentation
-
-- `?as.function.pipeflow` has a new section 'Errors of inner steps' with
-  examples of the error messages: they name the outer step, the partition
-  key and the failed inner step, e.g.
-  `step 'by_batch': key 'D': step 'fit': negative`. The vignette on error
-  handling shows how to get the outer step, the key and the inner step from
-  the error.
-
-# pipeflow 0.5.0.9017
-
-## Bug fixes
-
-- An assignment to several steps, `p[i, j] <- value`, and a copy of steps,
-  `p[i, ] <- q[i, ]`, now change all selected steps or none: if a step
-  fails (e.g. because a new step name already exists), the steps assigned
-  before are restored. Before, they kept their changes.
-
-# pipeflow 0.5.0.9016
-
-## Breaking changes
-
-- A step that changes its own function, params or exec mode while it runs
-  (via `.self`) now ends the run as `"outdated"` instead of `"done"`, as
-  its output comes from the old definition, and runs again in the next run.
-  The same holds for a step that a later step changes during the run. The
-  steps that ran with the output of such a step are marked `"outdated"`
-  too. Before, all of them stayed `"done"` with stale results, also after
-  `.self$restart(force = FALSE)`. A step that sets its own params to fixed
-  values settles after one more run, while a step that sets new values in
-  every run now runs again in every run.
-
-## Bug fixes
-
-- Changing the execution mode of a step with `p[[step, "exec"]] <- mode`
-  (also via `p[i, "exec"] <-` and views) now marks the step and its
-  downstream steps as `"outdated"`, so that the next run uses the new mode.
-  Before, a step that had run kept its state and its output from the old
-  mode. A step that failed for some keys and got a new mode is run again
-  for all keys.
-- Setting the output of a step with `p[[step, "out"]] <- value` (also via
-  `p[i, "out"] <-`, views and `p[i, ] <- q[j, ]`) now marks its downstream
-  steps as `"outdated"`, so that the next run computes them from the new
-  output. Before, they stayed `"done"` with the results of the old output.
-  The step itself keeps its state. `?Extract.pipeflow` lists which
-  assignments outdate steps.
-
-# pipeflow 0.5.0.9015
-
-## Breaking changes
-
-- In a run with `on_error = "continue"`, a step mapped over partitioned
-  inputs now fails per partition key: its output keeps the results of the
-  keys that succeeded, and each failed key holds a `pipeflow_failure` with
-  the field `key` (before, the whole step failed and its output was the
-  `pipeflow_key_error`). The step gets state `"failed"`. Mapped steps
-  downstream are not run for the failed keys, unless they take the input
-  via `~try()`; other steps get the output with the failed keys via
-  `~try()` and are skipped otherwise. The `pipeflow_run_failed` warning
-  has a new field `keys` with the failed keys per step.
-
-## New features
-
-- When a mapped step failed for some keys, the next run only calls it for
-  the failed keys and keeps the results of the other keys, unless its
-  parameters or inputs changed or the run is forced.
-- The log line at the end of `pip_run()` is shorter and counts the steps
-  that were done, skipped (already done, locked or with a failed input) and
-  failed in the whole run, including restarts, e.g.
-  `Finished in 0.251 s (3 done, 1 skipped, 0 failed)`. The pipeline is
-  named in the log line at the start of the run.
-
-# pipeflow 0.5.0.9014
-
-## New features
-
-- The step table has a new column `time_start`: the start of the step's last
-  run, set each time the step is run, also if the run fails. It is `NA` for
-  a step that has not run since it was added, replaced or reset. `time`
-  keeps its meaning (end of the last successful run), so
-  `time - time_start` is the duration of a successful run, and
-  `time_start >= t0` tells which steps a run started at `t0` attempted.
-  Set it with `p[[step, "time_start"]] <- value` (`NA` allowed). Pipelines
-  saved with an earlier version get the column (all `NA`) when read.
-- The log line at the end of `pip_run()` shows the total time of the run,
-  including restarts, e.g. `Finished run of pipeflow 'demo' in 0.251 s`.
-
-# pipeflow 0.5.0.9013
-
-## Breaking changes
-
-- `rbind()` of pipelines lost the argument `bind` (added in 0.5.0.9008).
-  Bind the params after binding the pipelines with `pip_set_params()`, using
-  a view to select the steps, e.g.
-  `pip_set_params(ab[-seq_along(a)], list(data = ~prep))`.
-
-# pipeflow 0.5.0.9012
-
-## Breaking changes
-
-- `as.function()` lost the argument `bind`. Bind the inputs of the function
-  with `params` of `pip_add()` instead, as for any other step function, e.g.
-  `pip_add(outer, "step", f, params = list(input_df = ~split))`.
-- The argument `cache` of `as.function()` is now `TRUE` (the default) or
-  `FALSE` instead of the number of inner pipelines to keep.
-
-## New features
-
-- `out` of `as.function()` can be a function. It is called with a light copy
-  of the run inner pipeline, and its result is the result of the function,
-  e.g. `out = \(p) pip_collect(p, by = "tags")`.
-- New `pip_inner(x, step)` returns the inner pipelines that the function of
-  a step, made by `as.function()`, has kept: one per partition key for a
-  mapped step. Use it e.g. to debug an inner run.
-
-## Changes
-
-- A function made by `as.function()` keeps one inner pipeline per outer step
-  and partition key, so a later call only reruns the inner steps whose
-  params or inputs changed, for any number of partitions. This also works
-  for inputs bound via `params` of `pip_add()`.
-
-## Documentation
-
-- The "Nested pipelines" vignette shows a function as `out` and
-  `pip_inner()`, and its "Full control" example forwards the step's params
-  with `pip_set_params(p, list(...))`.
-
-# pipeflow 0.5.0.9011
-
-## Documentation
-
-- The cheat sheet shows "Ways to connect steps" again on page 2.
-
-# pipeflow 0.5.0.9010
-
-## Breaking changes
-
-- `pip_set_params()` binds a param to a step if its value is a one-sided
-  formula, e.g. `pip_set_params(p, list(model = ~fit))`, as a formula does
-  in the defaults of a step function and in `params` of `pip_add()`. Before,
-  the formula was set as value. To set a formula as value, give it as a
-  string and turn it into a formula in the step, e.g. with `as.formula()`.
-  Because of this, `as.function()` no longer turns such a value into a
-  reference to a step of the outer pipeline.
-
-## New features
-
-- `pip_set_params()` can bind params to steps. The param is bound in all
-  selected, unlocked steps that have it unbound, which must come after the
-  step it is bound to; a view selects the steps to bind. A bound param is no
-  longer unbound, and setting the same binding again does nothing.
-
-## Changes
-
-- The warning of `pip_set_params()` about unknown params no longer shows
-  the call.
-
-# pipeflow 0.5.0.9009
-
-## Breaking changes
-
-- `params` of `pip_add()` and `pip_replace()` now override the defaults of
-  `fun`, as they did before 0.4.0. Before, the defaults of `fun` won and
-  `pip_add()` warned that the values in `params` were dropped. A formula in
-  `params` makes the parameter a reference to another step, also if its
-  default is a value.
-
-## New features
-
-- `params` can give a value to parameters of `fun` that have no default, so
-  that existing functions can be steps without a wrapper, e.g.
-  `pip_add(p, "avg", mean, params = list(x = ~data, na.rm = TRUE))`.
-
-## Changes
-
-- `params` of `pip_add()` and `pip_replace()` must be a list with unique
-  names.
-- The params of a step list the arguments of `fun` first, in their order,
-  followed by the other params (before: the given `params` came first).
-- `pip_add()` and `pip_replace()` point to `as.function()` if `fun` is a
+  outdated (#147).
+- `pip_reset()` marks the downstream steps of the reset steps as `"outdated"`,
+  and on a view it keeps the time of the last run and the run state of the
   pipeline.
-- Replacing a step with one that references a step which comes after it
-  now reports "cannot reference steps that come after the replaced step",
-  matching `pip_add()`, instead of "cannot reference unknown steps".
+- Setting `exec` or `out` of a step with `p[[step, "exec"]] <-` or
+  `p[[step, "out"]] <-` (also via `p[i, j] <-` and views) marks the affected
+  steps as `"outdated"`, so the next run uses the new value. See
+  `?Extract.pipeflow`.
+- An assignment to several steps, `p[i, j] <- value` or `p[i, ] <- q[i, ]`,
+  changes all selected steps or none.
+- Copying steps with `p[i] <- q[j]` keeps the params given via `params` and
+  resolves relative references such as `~-1` by name, also onto themselves.
+- `rbind()` no longer drops arguments with a `NULL` value from the step
+  functions of the second pipeline, and no longer fails if it references a
+  step with a non-syntactic name.
+- Steps with non-syntactic names, e.g. `"source data"`, can be referenced with
+  backticks, ``x = ~`source data` ``.
+- `pip_add()` and `pip_rename()` reject step names that start with `-`, which
+  a reference `~-1` would take as a relative reference.
+- `pip_rename()` also renames the step in the failures of failed keys if the
+  step name has a name attribute, e.g. if it is taken from `p[["step"]]`.
+- `p[i, view = FALSE]` no longer warns that an edge already exists if a step
+  refers to the same step with several arguments, and `v[, view = FALSE]`
+  returns a standalone pipeline instead of the view.
+- `pip_set_params()` on a pipeline or view without steps no longer says that
+  all selected steps are locked.
 
-## Bug fixes
+## Minor improvements
 
-- Copying steps between pipelines with `p[i] <- q[j]` dropped the params
-  that were given via `params` (e.g. extra params passed via `...`), and
-  took references from the defaults of the function, ignoring a renamed
-  upstream step.
-- Copying steps with `p[i] <- q[j]`, also onto themselves, resolved
-  relative references such as `~-1` again, so that after inserting or
-  removing a step, the copied step depended on another step or failed. A
-  copied step now depends on the same steps as the source step, by name.
-- `rbind()` dropped the arguments with a `NULL` value from the step
-  functions of the second pipeline, so that these steps failed with
-  "unused argument".
-
-# pipeflow 0.5.0.9008
-
-## New features
-
-- `rbind()` of pipelines gained the argument `bind`, a named list of
-  one-sided formulas as in `as.function()`, e.g.
-  `rbind(a, b, bind = list(data = ~prep))`. It binds unbound params of the
-  second pipeline to steps of the first one, so that the pipelines are
-  connected without editing the second one first.
-
-## Bug fixes
-
-- Steps with non-syntactic names, e.g. `"source data"`, can be referenced
-  with backticks, ``x = ~`source data` ``. Before, `pip_add()` reported them
-  as unknown steps.
-- `rbind()` no longer fails if the second pipeline references a step with a
-  non-syntactic name, e.g. after `pip_rename()`.
-
-# pipeflow 0.5.0.9007
-
-## New features
-
-- `as.function()` gained the argument `on_error`. Set to `"continue"`, the
-  inner pipeline is run as `pip_run(on_error = "continue")` runs it: inner
-  steps that do not depend on a failed step still run, and a `~try(step)`
-  reference inside the inner pipeline receives the failure. The function
-  still fails if one of the steps named in `out` failed or was not run
-  because an input failed.
-- `as.function()` gained the argument `lgr`, the logger of the inner run.
-  The inner pipeline is still run silently by default (`lgr = NULL`), but
-  its steps can now be logged, e.g. `as.function(x, lgr = pipeflow_lgr)`.
-
-# pipeflow 0.5.0.9006
-
-## New features
-
-- `as.function()` turns a pipeline into a function whose arguments are the
-  unbound params of the pipeline, so that a pipeline can be a step of
-  another pipeline, e.g.
-  `pip_add(outer, "step", as.function(inner), params = list(df = ~split))`.
-  The params of the inner pipeline become params of the outer step, the exec
-  modes map it over partitions, and the function keeps the inner pipelines it
-  has run, so that a changed param only reruns the affected inner steps. See
-  `?as.function.pipeflow` and the "Nested pipelines" vignette.
-
-# pipeflow 0.5.0.9005
-
-## Changes
-
-- Adding a step that references a step which exists but comes after the
-  insertion point now reports "cannot reference steps that come after the
-  insertion point" instead of "cannot reference unknown steps".
-- The error raised when `pip_add()`, `pip_clone()` or `rbind()` is given a
-  view now points at `x[, view = FALSE]`.
-
-## Bug fixes
-
-- `v[, view = FALSE]` returned the view instead of a standalone pipeline of
-  the covered steps, silently ignoring `view = FALSE`.
-
-# pipeflow 0.5.0.9004
-
-## New features
-
-- `` `pip_param_value<-`() `` is the write side of `pip_param_value()`: a
-  generic that turns a plain value into the value stored in a step, so
-  that `pip_set_params()` keeps the annotations of a stored object when it
-  is given a plain value.
-- `pip_set_params()` gained `...`, which is passed on to the methods of
-  `` `pip_param_value<-`() ``. It now determines the value to store for
-  every affected step before it changes anything: if a method fails,
-  nothing is set and an error of class `pipeflow_set_params_error`
-  reports all failures at once.
+- The error messages of `pip_add()`, `pip_remove()`, `pip_rename()` and
+  `pip_replace()` for step name, function and params are the same, e.g.
+  `pip_remove(p, "")` says that the step must be a non-empty string.
+- Adding or replacing a step that references a step that comes after the
+  insertion point reports "cannot reference steps that come after ...", and
+  the error for a view given to `pip_add()`, `pip_clone()` or `rbind()` points
+  at `x[, view = FALSE]`.
+- The error of a mapped step whose partitioned inputs have different keys names
+  the arguments that differ and the keys that are missing, extra or in a
+  different order.
+- The warning of `pip_set_params()` about unknown params no longer shows the
+  call.
+- Internal helpers were renamed and documented consistently, and a `%||%`
+  helper is used for NULL defaults.
 
 ## Documentation
 
-- `pip_get_params()` notes that a view excludes locked steps,
-  `pip_get_params(p[!locked])`.
-
-# pipeflow 0.5.0.9003
-
-## New features
-
-- `pip_output_value()` is a generic for annotating the output of a step
-  when the step returns, for example to stamp a result with the step it
-  came from and the time of the run. It is applied once to the output,
-  and once per partition for a partitioned output, which gets its key in
-  `ctx$key`. See the new vignette "Annotated step outputs".
-
-# pipeflow 0.5.0.9002
-
-## Breaking changes
-
-- `.self` is released when a step returns, so that step outputs no longer
-  keep the pipeline alive. A step that returns a function which refers to
-  `.self` now fails with `object '.self' not found` when that function is
-  called after the run.
-
-# pipeflow 0.5.0.9001
-
-## Documentation
-
-- New hexagon logo with the package name, used in the README and as
-  pkgdown logo and favicons. The source is `logo/logo.svg`.
-- New two-page cheat sheet (`cheatsheet/pipeflow-cheatsheet.pdf`), shown
-  in the README between "Installation" and "Usage".
-- Shorter README introduction and "Why pipeflow?" list.
-- The pkgdown site is centered again, and its home page shows the logo
-  left of the package name.
+- New articles "Emulating targets features" (recipes for file tracking,
+  rebuilds after helper changes, a `tar_meta()`-like table, reproducible random
+  numbers, saved results, runs in a fresh R process and outdated steps) and
+  "Comparison and benchmarks" (formerly "pipeflow vs targets"), and the
+  vignettes "Annotated step outputs" and "Nested pipelines".
+- `?as.function.pipeflow` shows the error messages of inner steps, `?pip_add`
+  explains how outputs that keep an environment can keep the whole pipeline,
+  and `?pip_view` says that running a view also runs the upstream steps of its
+  steps.
+- New hexagon logo, two-page cheat sheet (shown in the README), shorter README
+  introduction, and a centered pkgdown site with the logo.
 
 # pipeflow 0.5.0
 
