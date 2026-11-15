@@ -3489,6 +3489,134 @@ describe("pip_clone", {
         expect_equal(p2[["name"]], p[["name"]])
         expect_false(identical(p2, p))
     })
+
+    describe("out", {
+        run_pip <- function() {
+            p <- pip_new("p") |>
+                pip_add("data", \(n = 3) seq_len(n)) |>
+                pip_add("sum", \(x = ~data) sum(x)) |>
+                pip_add("fail", \(x = ~data) stop("boom")) |>
+                pip_add("after", \(x = ~fail) x) |>
+                pip_add("report", \(s = ~sum, f = ~ try(fail)) list(s, f)) |>
+                pip_add("later", \(n = 1) n)
+            suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+        }
+
+        it("signals invalid steps", {
+            p <- run_pip()
+            msg <- "out must be NULL or a character vector of step names"
+            expect_error(pip_clone(p, out = 1), msg)
+            expect_error(pip_clone(p, out = NA_character_), msg)
+            expect_error(
+                pip_clone(p, out = c("sum", "nope", "nix")),
+                "out has steps that are not in the pipeline: nope, nix"
+            )
+        })
+
+        it("keeps all outputs and states by default", {
+            p <- run_pip()
+            q <- pip_clone(p)
+            expect_equal(q[["out"]], p[["out"]])
+            expect_equal(q[["state"]], p[["state"]])
+        })
+
+        it("keeps the outputs of the named steps only", {
+            p <- run_pip()
+            q <- pip_clone(p, out = "report")
+
+            expect_equal(q[["report", "out"]], p[["report", "out"]])
+            expect_null(q[["data", "out"]])
+            expect_null(q[["sum", "out"]])
+            expect_equal(q[["params"]], p[["params"]])
+            expect_equal(q[["time"]], p[["time"]])
+            expect_equal(q[["time_start"]], p[["time_start"]])
+        })
+
+        it("outdates the done steps without output and keeps the other states", {
+            p <- run_pip()
+            q <- pip_clone(p, out = "report")
+
+            expect_equal(
+                q[["state"]],
+                c(
+                    data = "outdated",
+                    sum = "outdated",
+                    fail = "failed",
+                    after = "new",
+                    report = "done",
+                    later = "outdated"
+                )
+            )
+        })
+
+        it("keeps the outputs of failed steps", {
+            p <- run_pip()
+            q <- pip_clone(p, out = character(0))
+
+            expect_s3_class(q[["fail", "out"]], "simpleError")
+            expect_true(all(lengths(q[["out"]][c("data", "sum", "report")]) == 0L))
+        })
+
+        it("keeps the outputs of the keys of a failed mapped step", {
+            p <- pip_new("m") |>
+                pip_add("keys", \() list(a = 1, b = 2), exec = "split") |>
+                pip_add("each", \(x = ~keys) if (x == 2) stop("b fails") else x) |>
+                pip_add("all", \(x = ~ try(each)) length(x), exec = "reduce")
+            suppressWarnings(pip_run(p, lgr = NULL, on_error = "continue"))
+            q <- pip_clone(p, out = character(0))
+
+            expect_equal(q[["each", "state"]], "failed")
+            expect_equal(q[["each", "out"]], p[["each", "out"]])
+            expect_null(q[["keys", "out"]])
+        })
+
+        it("changes nothing if all outputs are kept", {
+            p <- run_pip()
+            q <- pip_clone(p, out = p[["step"]])
+            expect_equal(q[["out"]], p[["out"]])
+            expect_equal(q[["state"]], p[["state"]])
+        })
+
+        it("keeps the outputs of locked steps", {
+            p <- run_pip()
+            pip_lock(pip_view(p, step = "data"))
+            q <- pip_clone(p, out = "report")
+
+            expect_equal(q[["data", "out"]], 1:3)
+            expect_equal(q[["data", "state"]], "done")
+        })
+
+        it("keeps the original unchanged", {
+            p <- run_pip()
+            before <- p[["out"]]
+            pip_clone(p, out = "report")
+
+            expect_equal(p[["out"]], before)
+            expect_equal(p[["sum", "state"]], "done")
+        })
+
+        it("is a valid pipeline that runs the steps without output again", {
+            p <- run_pip()
+            q <- pip_clone(p, out = "report")
+            expect_equal(pip_invariant_violations(q), character(0))
+
+            pip_replace(q, "fail", \(x = ~data) length(x))
+            suppressWarnings(pip_run(q, lgr = NULL, on_error = "continue"))
+
+            expect_equal(q[["sum", "out"]], 6L)
+            expect_equal(q[["report", "out"]], list(6L, 3L))
+            expect_equal(freshness_violations(q), character(0))
+        })
+
+        it("survives serialization", {
+            p <- run_pip()
+            q <- unserialize(serialize(pip_clone(p, out = "report"), NULL))
+
+            expect_equal(q[["report", "out"]], p[["report", "out"]])
+            pip_run(pip_view(q, step = "sum"), lgr = NULL)
+            expect_equal(q[["sum", "out"]], 6L)
+        })
+    })
 })
 
 # -------------

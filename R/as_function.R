@@ -43,17 +43,10 @@
         }
         return(invisible(out))
     }
-    steps <- .pip_pipenv(x)[["data"]][["step"]]
     if (!is.character(out) || anyNA(out) || length(out) == 0L) {
         .stop_no_call(msg)
     }
-    missingSteps <- setdiff(out, steps)
-    if (length(missingSteps) > 0L) {
-        .stop_no_call(
-            "out has steps that are not in the pipeline: ",
-            toString(missingSteps)
-        )
-    }
+    .assert_out_steps(x, out)
     invisible(out)
 }
 

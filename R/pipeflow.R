@@ -113,6 +113,17 @@
 # -------
 # Asserts
 # -------
+# Stops if `out` names steps that are not in the pipeline
+.assert_out_steps <- function(x, out) {
+    missingSteps <- setdiff(out, .pip_pipenv(x)[["data"]][["step"]])
+    if (length(missingSteps) > 0L) {
+        .stop_no_call(
+            "out has steps that are not in the pipeline: ",
+            toString(missingSteps)
+        )
+    }
+}
+
 .assert_exec_mode <- function(exec) {
     if (!.is_single(exec, "character") || is.na(exec)) {
         stop("exec must be a single string")
@@ -3102,9 +3113,28 @@ pip_add <- function(
 #' Creates an independent copy of the pipeline. Changes to the cloned pipeline do not
 #' affect the original pipeline, and vice versa.
 #'
+#' @section Copies without some outputs:
+#' With `out`, the copy keeps the outputs of the named steps only, e.g. to send the
+#' results of a run back from another R process (a parallel worker) without the data of
+#' the steps in between. Everything else is copied: the steps, their params, times and
+#' failures, and the states except for these changes:
+#'
+#' * A step that was `"done"` and loses its output becomes `"outdated"`, so the copy
+#'   never passes on a missing output: running it runs these steps again, and with them
+#'   the steps after them, also those that kept their output.
+#' * Failed steps keep their output (the failure, or for a mapped step the outputs and
+#'   failures of its keys), which tells why the steps after them are not done.
+#' * Locked steps keep their output, as a run passes it on.
+#'
+#' The copy still holds the step functions, with their environments: a function
+#' defined inside another function keeps that function's frame and the data in it (see
+#' "Outputs that keep an environment" in [pip_add()]).
+#'
 #' @param x A pipeflow pipeline object.
 #' @param name Optional name for the cloned pipeline. If `NULL`, the original name is
 #' used.
+#' @param out `NULL` (all outputs) or a character vector of the steps whose outputs the
+#'   copy keeps (`character(0)`: none), see "Copies without some outputs".
 #'
 #' @return A cloned pipeflow pipeline object.
 #' @examples
@@ -3121,15 +3151,54 @@ pip_add <- function(
 #'
 #' # ... while the original is left unchanged
 #' p
+#'
+#' # A copy with the output of the last step only, e.g. to return from a worker
+#' p <- pip_new("worker") |>
+#'   pip_add("data", \(n = 1e5) rnorm(n)) |>
+#'   pip_add("summary", \(x = ~data) summary(x))
+#' pip_run(p)
+#' result <- pip_clone(p, out = "summary")
+#' result[["summary", "out"]]
+#' is.null(result[["data", "out"]])
+#'
+#' # The step without output is outdated, so a run computes it again
+#' result
 #' @export
-pip_clone <- function(x, name = NULL) {
+pip_clone <- function(x, name = NULL, out = NULL) {
     .assert_pip(x)
     if (!is.null(name) && (!.is_single(name, "character") || is.na(name))) {
         stop("name must be a single non-NA string")
     }
-
     newName <- if (is.null(name)) x[["name"]] else name
-    .pip_clone(x, name = newName)
+    if (is.null(out)) {
+        return(.pip_clone(x, name = newName))
+    }
+
+    if (!is.character(out) || anyNA(out)) {
+        .stop_no_call("out must be NULL or a character vector of step names")
+    }
+    .assert_out_steps(x, out)
+    # Drop the outputs from a light copy first, so that they are never copied
+    light <- .pip_clone(x, deep = FALSE)
+    dat <- .pip_pipenv(light)[["data"]]
+    isDropped <- !dat[["step"]] %in% out &
+        !dat[["locked"]] &
+        dat[["state"]] != .step_states[["failed"]][["name"]]
+    rows <- which(isDropped)
+    data.table::set(
+        dat,
+        i = rows,
+        j = "out",
+        value = list(vector("list", length(rows)))
+    )
+    rows <- which(isDropped & dat[["state"]] == .step_states[["done"]][["name"]])
+    data.table::set(
+        dat,
+        i = rows,
+        j = "state",
+        value = .step_states[["outdated"]][["name"]]
+    )
+    .pip_clone(light, name = newName)
 }
 
 # -------------
